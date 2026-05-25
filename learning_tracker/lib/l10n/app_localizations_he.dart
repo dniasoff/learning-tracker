@@ -600,6 +600,23 @@ class AppLocalizationsHe extends AppLocalizations {
   String get markComplete => 'סמן כהושלם';
 
   @override
+  String get markCompleteTutorUnavailable => 'לא זמין (מצב מדריך)';
+
+  @override
+  String markCompleteCompletedStage(String stageName) {
+    return 'הושלם ($stageName)';
+  }
+
+  @override
+  String unableToLoadCompletionContext(String error) {
+    return 'לא ניתן לטעון את נתוני ההשלמה: $error';
+  }
+
+  @override
+  String get accountOfflineSignInToSync =>
+      'עובד במצב לא מקוון עבור חשבון זה. התחבר כדי לחדש את הסנכרון בענן.';
+
+  @override
   String get textReaderNextDailyTask => 'המשימה הבאה';
 
   @override
@@ -1001,6 +1018,26 @@ class AppLocalizationsHe extends AppLocalizations {
   String get profilePickerTutoredChildren => 'ילדים מוּדרכים';
 
   @override
+  String get tutoredChildrenViewInvitations => 'צפייה בהזמנות';
+
+  @override
+  String tutoredChildrenPendingInvitations(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count הזמנות הדרכה ממתינות',
+      one: 'הזמנת הדרכה אחת ממתינה',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get tutoredChildrenStatusTutoring => 'מדריך';
+
+  @override
+  String get tutoredChildrenRoleBadge => 'מדריך';
+
+  @override
   String get tutorModeIndicator => 'מצב מדריך';
 
   @override
@@ -1125,10 +1162,10 @@ class AppLocalizationsHe extends AppLocalizations {
   String get parentSettingsTitle => 'הגדרות הורה';
 
   @override
-  String get manageTutors => 'ניהול מורים';
+  String get manageTutors => 'ניהול מדריכים';
 
   @override
-  String get manageTutorsSubtitle => 'הזמנה או הסרה של מורים לילד זה';
+  String get manageTutorsSubtitle => 'הזמנה או הסרה של מדריכים לילד זה';
 
   @override
   String get manageTracksForChildSubtitle =>
@@ -2616,10 +2653,10 @@ class AppLocalizationsHe extends AppLocalizations {
   @override
   String notificationReminderBody(int taskCount, int curriculumCount) {
     String _temp0 = intl.Intl.pluralLogic(
-      curriculumCount,
+      taskCount,
       locale: localeName,
-      other: '$curriculumCount תוכניות לימוד',
-      one: 'תוכנית לימוד אחת',
+      other: '$taskCount משימות',
+      one: 'משימה אחת',
     );
     String _temp1 = intl.Intl.pluralLogic(
       curriculumCount,
@@ -2627,14 +2664,7 @@ class AppLocalizationsHe extends AppLocalizations {
       other: '$curriculumCount תוכניות לימוד',
       one: 'תוכנית לימוד אחת',
     );
-    String _temp2 = intl.Intl.pluralLogic(
-      taskCount,
-      locale: localeName,
-      other: 'יש לכם $taskCount משימות ב$_temp0 היום',
-      one: 'יש לכם משימה אחת ב$_temp1 היום',
-      zero: 'אין משימות להיום — שמרו על הרצף!',
-    );
-    return '$_temp2';
+    return 'יש לכם $_temp0 ב$_temp1 היום';
   }
 
   @override
@@ -3157,4 +3187,541 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get parentPointsAdjustAppliedSnackbar => 'היתרה עודכנה.';
+
+  @override
+  String get profileTypeChild => 'ילד';
+
+  @override
+  String get profileTypeAdult => 'מבוגר';
+
+  @override
+  String get childMode => 'מצב ילדים';
+
+  @override
+  String get adultMode => 'מצב מבוגרים';
+
+  @override
+  String get statusActive => 'פעיל';
+
+  @override
+  String get statusPending => 'ממתין';
+
+  @override
+  String get actionTryAgain => 'נסו שוב';
+
+  @override
+  String get actionGoToDashboard => 'מעבר ללוח';
+
+  @override
+  String get emptyLoginTutorEntry => 'אני מדריך';
+
+  @override
+  String get switchAccount => 'החלפת חשבון';
+
+  @override
+  String get emptyLoginTutorComingSoon =>
+      'גישת מדריך תהיה זמינה בקרוב. בקשו מההורה לשתף אתכם בקישור הזמנה.';
+
+  @override
+  String get tutorWelcomeBannerTitle => 'ברוכים הבאים, מדריך!';
+
+  @override
+  String get tutorWelcomeBannerBody =>
+      'בקשו מההורה לשתף אתכם בקישור הזמנה, ואז הקישו למטה כדי לאשר אותה.';
+
+  @override
+  String get switcherSheetProfiles => 'פרופילים';
+
+  @override
+  String get switcherSheetAccounts => 'חשבונות';
+
+  @override
+  String get switcherSheetAddAccount => 'הוספת חשבון';
+
+  @override
+  String get acceptInviteAppBarTitle => 'אישור הזמנת מדריך';
+
+  @override
+  String get acceptInviteAccepting => 'מאשר הזמנה…';
+
+  @override
+  String get acceptInviteHeading => 'אישור הזמנת מדריך';
+
+  @override
+  String get acceptInviteBody =>
+      'הוזמנתם להדריך ילד. באישור ההזמנה תקבלו גישה לצפייה ולניהול של פרופיל הלמידה שלו.';
+
+  @override
+  String get acceptInvitePermissionViewData =>
+      'צפייה בכל נתוני הלמידה וההתקדמות';
+
+  @override
+  String get acceptInvitePermissionConfigure =>
+      'הגדרת מסלולים, נקודות ופרסים (אם הותר)';
+
+  @override
+  String get acceptInvitePermissionBulkMark => 'ביצוע תיקוני סימון מרוכזים';
+
+  @override
+  String get acceptInvitePermissionNoLive =>
+      'לא ניתן לסמן השלמות חיות (רצף / פרסים)';
+
+  @override
+  String get acceptInviteAccept => 'אישור הזמנה';
+
+  @override
+  String get acceptInviteDecline => 'דחייה';
+
+  @override
+  String get acceptInviteSuccessHeading => 'ההזמנה אושרה!';
+
+  @override
+  String get acceptInviteSuccessBody =>
+      'כעת יש לכם גישת מדריך לפרופיל הלמידה של הילד. פתחו את בורר הפרופילים כדי לעבור לפרופיל המודרך.';
+
+  @override
+  String get acceptInviteErrorHeading => 'לא ניתן לאשר את ההזמנה';
+
+  @override
+  String get acceptInviteGenericError => 'לא ניתן לאשר את ההזמנה. נסו שוב.';
+
+  @override
+  String get unexpectedError => 'אירעה שגיאה בלתי צפויה.';
+
+  @override
+  String get declineInviteAppBarTitle => 'דחיית הזמנה';
+
+  @override
+  String get declineInviteConfirmHeading => 'לדחות את הזמנת המדריך?';
+
+  @override
+  String get declineInviteConfirmBody =>
+      'אתם עומדים לדחות את הזמנת המדריך. ההורה יקבל הודעה שדחיתם. לא תהיה לכם גישה לפרופיל הלמידה של הילד.';
+
+  @override
+  String get declineInviteConfirm => 'דחיית הזמנה';
+
+  @override
+  String get declineInviteInProgress => 'דוחה הזמנה…';
+
+  @override
+  String get declineInviteSuccessHeading => 'ההזמנה נדחתה';
+
+  @override
+  String get declineInviteSuccessBody =>
+      'דחיתם את הזמנת המדריך. ההורה קיבל הודעה.';
+
+  @override
+  String get declineInviteErrorHeading => 'לא ניתן לדחות את ההזמנה';
+
+  @override
+  String get declineInviteGenericError => 'לא ניתן לדחות את ההזמנה. נסו שוב.';
+
+  @override
+  String get inviteTutorAppBarTitle => 'הזמנת מדריך';
+
+  @override
+  String get inviteTutorHeading => 'הזמנת מדריך';
+
+  @override
+  String get inviteTutorBody =>
+      'הזינו את כתובת האימייל של המדריך. הוא יקבל קישור הזמנה לאישור גישה לפרופיל הלמידה של הילד.';
+
+  @override
+  String get inviteTutorEmailLabel => 'כתובת האימייל של המדריך';
+
+  @override
+  String get inviteTutorEmailHint => 'tutor@example.com';
+
+  @override
+  String get inviteTutorInvalidEmail => 'הזינו כתובת אימייל תקינה.';
+
+  @override
+  String get inviteTutorSending => 'שולח…';
+
+  @override
+  String get inviteTutorSend => 'שליחת הזמנה';
+
+  @override
+  String inviteTutorSentSnackbar(String email) {
+    return 'ההזמנה נשלחה אל $email!';
+  }
+
+  @override
+  String get inviteTutorLinkCopied => 'הקישור הועתק!';
+
+  @override
+  String get inviteTutorShareLinkHeading => 'קישור לשיתוף (מסירה חלופית)';
+
+  @override
+  String get inviteTutorShareLinkBody =>
+      'אם האימייל לא התקבל, שתפו את הקישור הזה ישירות עם המדריך.';
+
+  @override
+  String get inviteTutorCopyLinkTooltip => 'העתקת קישור';
+
+  @override
+  String get inviteTutorCopyShareLink => 'העתקת קישור השיתוף';
+
+  @override
+  String get manageGrantsAppBarTitle => 'ההדרכות שלי';
+
+  @override
+  String manageGrantsActiveSection(int count) {
+    return 'פעילות ($count)';
+  }
+
+  @override
+  String manageGrantsPendingSection(int count) {
+    return 'הזמנות ממתינות ($count)';
+  }
+
+  @override
+  String get manageGrantsEmptyHeading => 'אין קשרי הדרכה';
+
+  @override
+  String get manageGrantsEmptyBody =>
+      'כשהורה יזמין אתכם להדריך את ילדו, ההרשאה תופיע כאן.';
+
+  @override
+  String get manageGrantsResignTitle => 'להתפטר מההדרכה?';
+
+  @override
+  String manageGrantsResignBody(String child, String parent) {
+    return 'תאבדו מיד את הגישה לפרופיל של הילד. ההורה יקבל הודעה.\n\nילד: $child\nהורה: $parent';
+  }
+
+  @override
+  String get manageGrantsResign => 'התפטרות';
+
+  @override
+  String manageGrantsResignError(String error) {
+    return 'לא ניתן להתפטר: $error';
+  }
+
+  @override
+  String get tutorFallbackName => 'המדריך שלכם';
+
+  @override
+  String get manageTutorsEmptyHeading => 'אין עדיין פרופילי ילדים';
+
+  @override
+  String get manageTutorsEmptyBody =>
+      'הוסיפו פרופיל ילד כדי להתחיל להזמין מדריכים.';
+
+  @override
+  String manageTutorsLoadError(String error) {
+    return 'לא ניתן לטעון מדריכים: $error';
+  }
+
+  @override
+  String get manageTutorsNoTutors => 'לא הוזמנו מדריכים.';
+
+  @override
+  String manageTutorsActiveSection(int count) {
+    return 'פעילים ($count)';
+  }
+
+  @override
+  String manageTutorsPendingSection(int count) {
+    return 'ממתינים ($count)';
+  }
+
+  @override
+  String get manageTutorsInviteButton => 'הזמנת מדריך';
+
+  @override
+  String get manageTutorsRevokeTitle => 'לבטל גישת מדריך?';
+
+  @override
+  String manageTutorsRevokeBody(String email) {
+    return '$email יאבד מיד את הגישה לפרופיל של הילד.';
+  }
+
+  @override
+  String get manageTutorsRevoke => 'ביטול גישה';
+
+  @override
+  String manageTutorsRevokeError(String error) {
+    return 'לא ניתן לבטל את הגישה: $error';
+  }
+
+  @override
+  String get manageTutorsRescindTitle => 'לבטל את ההזמנה?';
+
+  @override
+  String manageTutorsRescindBody(String email) {
+    return 'ההזמנה הממתינה אל $email תבוטל.';
+  }
+
+  @override
+  String get manageTutorsRescind => 'ביטול הזמנה';
+
+  @override
+  String manageTutorsRescindError(String error) {
+    return 'לא ניתן לבטל את ההזמנה: $error';
+  }
+
+  @override
+  String get manageTutorsViewAuditLog => 'צפייה ביומן הפעולות';
+
+  @override
+  String get tutorFallbackParent => 'הורה';
+
+  @override
+  String get auditLogTitle => 'יומן פעולות';
+
+  @override
+  String get auditLogClearFilters => 'ניקוי סינונים';
+
+  @override
+  String get auditLogFilterFromDate => 'סינון מתאריך';
+
+  @override
+  String get auditLogFilterToDate => 'סינון עד תאריך';
+
+  @override
+  String get auditLogFilterFrom => 'מתאריך';
+
+  @override
+  String get auditLogFilterTo => 'עד תאריך';
+
+  @override
+  String get auditLogEmptyFiltered => 'אין רשומות התואמות לסינון';
+
+  @override
+  String get auditLogEmpty => 'אין רשומות ביומן';
+
+  @override
+  String get auditLogEmptyFilteredBody =>
+      'נקו את הסינונים כדי לראות את כל הרשומות.';
+
+  @override
+  String get auditLogEmptyBody => 'פעולות המדריך יופיעו כאן ככל שיתבצעו.';
+
+  @override
+  String get auditLogChipConfig => 'הגדרות';
+
+  @override
+  String get auditLogChipBulkPrior => 'סימון מרוכז';
+
+  @override
+  String get auditLogChipReset => 'איפוס';
+
+  @override
+  String get auditLogChipBookmark => 'סימנייה';
+
+  @override
+  String get auditLogChipProfile => 'פרופיל';
+
+  @override
+  String get auditLogChipGoal => 'יעד';
+
+  @override
+  String get auditLogChipStage => 'שלב';
+
+  @override
+  String get auditLogChipReward => 'פרס';
+
+  @override
+  String get auditLogChipStudyDay => 'יום לימוד';
+
+  @override
+  String get auditLogActionConfigChanged => 'הגדרות שונו';
+
+  @override
+  String get auditLogActionBulkPrior => 'סימון מרוכז';
+
+  @override
+  String get auditLogActionReset => 'איפוס';
+
+  @override
+  String get auditLogActionBookmark => 'סימנייה';
+
+  @override
+  String get auditLogActionProfileEdited => 'פרופיל נערך';
+
+  @override
+  String get auditLogActionGoalChanged => 'יעד שונה';
+
+  @override
+  String get auditLogActionStageChanged => 'שלב שונה';
+
+  @override
+  String get auditLogActionRewardChanged => 'פרס שונה';
+
+  @override
+  String get auditLogActionStudyDay => 'יום לימוד';
+
+  @override
+  String get auditLogBefore => 'לפני: ';
+
+  @override
+  String get auditLogAfter => 'אחרי: ';
+
+  @override
+  String get tutorPinAppBarTitle => 'קוד מדריך';
+
+  @override
+  String get tutorPinEntryHeading => 'הזינו את קוד המדריך';
+
+  @override
+  String get tutorPinEntryBody =>
+      'הזינו את קוד המדריך בן 4 הספרות כדי לגשת לפרופיל זה.';
+
+  @override
+  String get tutorPinForgot => 'שכחתם את קוד המדריך?';
+
+  @override
+  String get tutorPinIncorrect => 'קוד שגוי. נסו שוב.';
+
+  @override
+  String tutorPinLockedOut(int minutes) {
+    return 'יותר מדי ניסיונות. ננעל למשך $minutes דקות.';
+  }
+
+  @override
+  String tutorPinErrorPrefix(String error) {
+    return 'שגיאה: $error';
+  }
+
+  @override
+  String get tutorPinSetupAppBarTitle => 'הגדרת קוד מדריך';
+
+  @override
+  String get tutorPinSetupConfirmHeading => 'אישור קוד המדריך';
+
+  @override
+  String get tutorPinSetupCreateHeading => 'יצירת קוד מדריך';
+
+  @override
+  String get tutorPinSetupConfirmBody =>
+      'הזינו שוב את אותו קוד בן 4 ספרות לאישור.';
+
+  @override
+  String get tutorPinSetupCreateBody =>
+      'קוד המדריך מגן על הגישה לכל פרופיל ילד שאתם מדריכים. הזינו קוד בן 4 ספרות.';
+
+  @override
+  String get tutorPinSetupConfirmLabel => 'אישור קוד';
+
+  @override
+  String get tutorPinSetupEnterNewLabel => 'הזנת קוד חדש';
+
+  @override
+  String get tutorPinSetupMismatch => 'הקודים אינם תואמים. נסו שוב.';
+
+  @override
+  String get tutorPinSetupSaveError => 'לא ניתן לשמור את הקוד. נסו שוב.';
+
+  @override
+  String get tutorPinSetupLater => 'הגדרה מאוחר יותר';
+
+  @override
+  String get tutorPinResetAppBarTitle => 'איפוס קוד מדריך';
+
+  @override
+  String get tutorPinResetHeading => 'איפוס קוד המדריך';
+
+  @override
+  String get tutorPinResetSendingTo => 'נשלח קישור לאיפוס אל:';
+
+  @override
+  String get tutorPinResetReturnHint =>
+      'לאחר לחיצה על הקישור, חזרו לכאן כדי ליצור קוד חדש.';
+
+  @override
+  String get tutorPinResetNoEmail =>
+      'לא נמצאה כתובת אימייל לחשבונכם. התחברו עם חשבון ענן כדי להשתמש באיפוס הקוד.';
+
+  @override
+  String get tutorPinResetSendFailed => 'שליחת אימייל האיפוס נכשלה. נסו שוב.';
+
+  @override
+  String get tutorPinResetFallbackEmail => 'כתובת האימייל של חשבונכם';
+
+  @override
+  String get tutorPinResetSendButton => 'שליחת אימייל איפוס';
+
+  @override
+  String get tutorPinResetCheckEmailHeading => 'בדקו את האימייל';
+
+  @override
+  String tutorPinResetCheckEmailBody(String email) {
+    return 'שלחנו קישור לאיפוס אל $email. לחצו על הקישור וחזרו לכאן כדי להגדיר קוד חדש.';
+  }
+
+  @override
+  String get tutorPinResetSetNew => 'הגדרת קוד חדש';
+
+  @override
+  String get settingsAppPermissions => 'הרשאות אפליקציה';
+
+  @override
+  String get settingsAppPermissionsSubtitle => 'התראות וגישה למיקום';
+
+  @override
+  String get settingsSendDiagnosticLogs => 'שליחת יומני אבחון';
+
+  @override
+  String get settingsSendDiagnosticLogsSubtitle =>
+      'שדרו את 10 הדקות האחרונות של הפעילות אל Firebase';
+
+  @override
+  String get settingsPronunciation => 'הגייה';
+
+  @override
+  String get settingsPronunciationSubtitle =>
+      'בראשית (אשכנזי) או בְּרֵשִית (ספרדי)';
+
+  @override
+  String get settingsPronunciationAshkenazi => 'אשכנזי';
+
+  @override
+  String get settingsPronunciationSephardi => 'ספרדי';
+
+  @override
+  String get settingsNikud => 'ניקוד';
+
+  @override
+  String get settingsNikudSubtitle => 'הצגה או הסתרה של ניקוד עברי בעת הלימוד.';
+
+  @override
+  String get settingsNikudWithout => 'ללא ניקוד';
+
+  @override
+  String get settingsNikudWith => 'עם ניקוד';
+
+  @override
+  String get deviceNotificationsTitle => 'התראות מכשיר';
+
+  @override
+  String get deviceNotificationsChecking => 'בודק הרשאה…';
+
+  @override
+  String get deviceNotificationsAllowed => 'התראות מאושרות במכשיר זה';
+
+  @override
+  String get deviceNotificationsBlocked =>
+      'התראות חסומות — הקישו כדי לפתוח הגדרות';
+
+  @override
+  String get deviceNotificationsDisableHint =>
+      'כדי להשבית התראות, עברו להגדרות > אפליקציות > Learning Tracker.';
+
+  @override
+  String get deviceNotificationsBlockedHint =>
+      'התראות חסומות. הפעילו אותן בהגדרות > אפליקציות > Learning Tracker > התראות.';
+
+  @override
+  String get notificationReminderGenericBody =>
+      'הגיע הזמן ללמוד! פתחו את האפליקציה כדי לראות את המשימות שלכם.';
+
+  @override
+  String get notificationStreakTitle => 'הרצף בסכנה!';
+
+  @override
+  String notificationStreakBody(int currentStreak) {
+    return 'רצף $currentStreak הימים שלכם בסכנה!';
+  }
 }

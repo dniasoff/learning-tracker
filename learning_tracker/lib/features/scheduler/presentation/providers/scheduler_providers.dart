@@ -210,16 +210,15 @@ Future<PaceStatus?> paceStatus(
 
   final profileId = ref.watch(activeProfileIdProvider);
 
-  // Get personal-track completions only
+  // Rule-7 (no track types): all tracks are implicitly personal now, so the
+  // `trackType == personal` filter was a no-op that could wrongly drop rows.
+  // Use every completion for the rolling-average daily counts.
   final allCompletions = await db.completionDao
       .getCompletionsByCurriculumAndProfile(curriculumId.storageKey, profileId);
-  final personalCompletions = allCompletions
-      .where((c) => c.trackType == TrackType.personal.storageKey)
-      .toList();
 
   // Build daily completion counts for rolling average
   final dailyCounts = <DateTime, int>{};
-  for (final c in personalCompletions) {
+  for (final c in allCompletions) {
     final date = DateTime.utc(
       c.completedAt.year,
       c.completedAt.month,
@@ -232,7 +231,7 @@ Future<PaceStatus?> paceStatus(
     return PaceCalculator.calculateForPaceGoal(
       targetPacePerDay: pacePerDay,
       totalItems: totalItems,
-      completedItems: personalCompletions.length,
+      completedItems: allCompletions.length,
       dailyCompletionCounts: dailyCounts,
       today: now,
     );
@@ -244,7 +243,7 @@ Future<PaceStatus?> paceStatus(
     goalStartDate: goalStartDate,
     goalDeadline: goalDeadline,
     totalItems: totalItems,
-    completedItems: personalCompletions.length,
+    completedItems: allCompletions.length,
     dailyCompletionCounts: dailyCounts,
     today: now,
   );

@@ -68,12 +68,29 @@ part 'user_database.g.dart';
 /// - Added points_balance, points_ledger, reward_redemptions tables for the
 ///   stored debitable points balance and the redeem→fulfil loop.
 ///
-/// Schema v26 (WS9.enum):
-/// - Added CHECK constraint on learner_profiles.mode: only 'adult' | 'child'
+/// Schema v26 (WS9.enum / WS9.flows):
+/// - Added a CHECK constraint on learner_profiles.mode: only 'adult' | 'child'
 ///   are valid values. Enforced at DB level; the old free-text column accepted
-///   any string. No data migration needed (all existing rows use 'adult' or
-///   'child'). SQLite does not support adding a CHECK constraint via ALTER
-///   TABLE, so we recreate the table in-place for upgraded DBs.
+///   any string.
+/// - Dropped the vestigial accounts.userMode column (mode belongs to
+///   learner_profiles.mode, not to an account).
+///   SQLite cannot add a CHECK constraint or drop a column via ALTER TABLE,
+///   so both changes use the SQLite-recommended table-rebuild recipe:
+///   create a new-shape table, copy ALL existing rows via INSERT…SELECT
+///   (preserving ids so child FKs stay valid), drop the old table, rename.
+///   FK enforcement is disabled for the duration of the rebuild and a
+///   `PRAGMA foreign_key_check` is run afterward to guarantee no orphans.
+///   13+ child tables FK-reference learner_profiles(id) ON DELETE CASCADE —
+///   the previous deleteTable()+createTable() approach destroyed those rows
+///   (cascade does not fire while foreign_keys is OFF during onUpgrade),
+///   so it has been replaced with this row-preserving rebuild.
+///
+/// Schema v27 (WS9 Wave-B points-sync prep — additive, no data loss):
+/// - Added a nullable `ulid` text column to points_ledger (deterministic
+///   doc id for append-only cloud sync).
+/// - Added a nullable `ulid` text column to reward_redemptions (its
+///   `updated_at` LWW column already existed). Columns only — the Wave-B
+///   sync agent wires the DAO/sync and backfills these going forward.
 ///
 /// This database uses standard Drift migrations and holds all user-generated
 /// content: profiles, progress, configuration, streaks, and sync state.
@@ -138,7 +155,7 @@ class UserDatabase extends _$UserDatabase {
   UserDatabase(super.e);
 
   @override
-  int get schemaVersion => 26;
+  int get schemaVersion => 27;
 
   // drift_dev cannot express WHERE in a Dart-defined view's `as()` body
   // (cascade `..where()` confuses the generator).  The auto-generated SQL for
@@ -165,7 +182,9 @@ class UserDatabase extends _$UserDatabase {
       },
       // W3.19: fresh-install schema only — no upgrade path needed (pre-launch).
       // WS7 (v25): added points_balance, points_ledger, reward_redemptions.
-      // WS9 (v26): added CHECK constraint on learner_profiles.mode.
+      // WS9 (v26): CHECK on learner_profiles.mode + drop accounts.userMode
+      //            (row-preserving rebuilds).
+      // WS9 (v27): additive ulid columns for Wave-B points sync.
       onUpgrade: (Migrator m, int from, int to) async {
         if (from < 25) {
           await m.createTable(pointsBalance);
@@ -173,14 +192,55 @@ class UserDatabase extends _$UserDatabase {
           await m.createTable(rewardRedemptions);
         }
         if (from < 26) {
-          // WS9.enum: rebuild learner_profiles to add the CHECK constraint on
-          // the mode column (SQLite cannot add CHECK via ALTER TABLE).
-          await m.deleteTable('learner_profiles');
-          await m.createTable(learnerProfiles);
-          // WS9.flows: rebuild accounts to drop the vestigial user_mode column.
-          // Mode belongs to learner_profiles.mode, not to an account.
-          await m.deleteTable('accounts');
-          await m.createTable(accounts);
+          // WS9 (v26): rebuild learner_profiles + accounts WITHOUT data loss.
+          //
+          // SQLite cannot add a CHECK constraint or drop a column via ALTER
+          // TABLE, so we use the table-rebuild recipe. Crucially we PRESERVE
+          // all existing rows (ids included) — 13+ child tables FK-reference
+          // learner_profiles(id) ON DELETE CASCADE, and the old
+          // deleteTable()+createTable() approach destroyed those child rows
+          // (cascade does not fire because PRAGMA foreign_keys is OFF during
+          // onUpgrade) and reset AUTOINCREMENT, orphaning every child row.
+          //
+          // foreign_keys MUST be OFF for the rename step (it is already off
+          // inside the onUpgrade transaction, but we assert it explicitly so
+          // child FKs are not transiently violated mid-rebuild). We re-check
+          // integrity with PRAGMA foreign_key_check afterward and only then
+          // restore enforcement (beforeOpen also re-enables it per-connection).
+          await customStatement('PRAGMA foreign_keys = OFF');
+
+          // (a) learner_profiles → add CHECK (mode IN ('adult','child')).
+          //     createNewTable: false copies from the existing table; we keep
+          //     every column 1:1 (mode is unchanged data-wise, only the
+          //     constraint is new), preserving ids so child FKs stay valid.
+          await m.alterTable(
+            TableMigration(learnerProfiles),
+          );
+
+          // (b) accounts → drop the vestigial user_mode column. The new
+          //     `accounts` table definition has no userMode; copying only the
+          //     surviving columns drops it while keeping all rows + ids.
+          await m.alterTable(
+            TableMigration(accounts),
+          );
+
+          // Integrity gate: no child row may be orphaned by the rebuilds.
+          final orphans = await customSelect(
+            'PRAGMA foreign_key_check',
+          ).get();
+          assert(
+            orphans.isEmpty,
+            'v26 migration orphaned ${orphans.length} row(s): '
+            '${orphans.map((r) => r.data).toList()}',
+          );
+
+          await customStatement('PRAGMA foreign_keys = ON');
+        }
+        if (from < 27) {
+          // WS9 Wave-B prep: additive nullable columns for points cloud sync.
+          // Safe on existing rows (NULL default); Wave-B backfills/populates.
+          await m.addColumn(pointsLedger, pointsLedger.ulid);
+          await m.addColumn(rewardRedemptions, rewardRedemptions.ulid);
         }
       },
     );

@@ -6,6 +6,7 @@
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
@@ -18,6 +19,7 @@ import 'package:learning_tracker/features/onboarding/presentation/providers/onbo
 import 'package:learning_tracker/features/onboarding/presentation/screens/empty_login_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart';
 import 'package:learning_tracker/features/onboarding/presentation/steps/onboarding_profile_creation_step.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -32,10 +34,7 @@ class _StubNotificationGateway extends Mock implements NotificationGateway {
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-Widget _wrapWithProviders({
-  required Widget child,
-  StackRouter? router,
-}) {
+Widget _wrapWithProviders({required Widget child, StackRouter? router}) {
   final mockRouter = router ?? _MockStackRouter();
   return ProviderScope(
     overrides: [
@@ -55,6 +54,14 @@ Widget _wrapWithProviders({
       notificationServiceProvider.overrideWithValue(_StubNotificationGateway()),
     ],
     child: MaterialApp(
+      locale: const Locale('en'),
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
       home: StackRouterScope(
         controller: mockRouter,
         stateHash: 0,
@@ -91,16 +98,25 @@ void main() {
               ),
             ],
             child: MaterialApp(
+              locale: const Locale('en'),
+              localizationsDelegates: const [
+                AppLocalizations.delegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              supportedLocales: AppLocalizations.supportedLocales,
               home: Scaffold(
                 body: OnboardingProfileCreationStep(
-                  onCreated: ({
-                    required profile,
-                    required isChildMode,
-                    required useHebrewCalendar,
-                    required useHebrewTerms,
-                    required showNikud,
-                    required transliterationVariant,
-                  }) {},
+                  onCreated:
+                      ({
+                        required profile,
+                        required isChildMode,
+                        required useHebrewCalendar,
+                        required useHebrewTerms,
+                        required showNikud,
+                        required transliterationVariant,
+                      }) {},
                   onSkipProfileCreation: () => skipCalled = true,
                 ),
               ),
@@ -140,16 +156,25 @@ void main() {
               ),
             ],
             child: MaterialApp(
+              locale: const Locale('en'),
+              localizationsDelegates: const [
+                AppLocalizations.delegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              supportedLocales: AppLocalizations.supportedLocales,
               home: Scaffold(
                 body: OnboardingProfileCreationStep(
-                  onCreated: ({
-                    required profile,
-                    required isChildMode,
-                    required useHebrewCalendar,
-                    required useHebrewTerms,
-                    required showNikud,
-                    required transliterationVariant,
-                  }) {},
+                  onCreated:
+                      ({
+                        required profile,
+                        required isChildMode,
+                        required useHebrewCalendar,
+                        required useHebrewTerms,
+                        required showNikud,
+                        required transliterationVariant,
+                      }) {},
                   // no onSkipProfileCreation — no button rendered
                 ),
               ),
@@ -163,35 +188,31 @@ void main() {
       },
     );
 
-    testWidgets(
-      'OnboardingScreen profile-creation phase has Skip wired',
-      (tester) async {
-        final mockRouter = _MockStackRouter();
-        when(() => mockRouter.replaceAll(any())).thenAnswer((_) async {});
-        when(() => mockRouter.maybePop()).thenAnswer((_) async => true);
+    testWidgets('OnboardingScreen profile-creation phase has Skip wired', (
+      tester,
+    ) async {
+      final mockRouter = _MockStackRouter();
+      when(() => mockRouter.replaceAll(any())).thenAnswer((_) async {});
+      when(() => mockRouter.maybePop()).thenAnswer((_) async => true);
 
-        await tester.pumpWidget(
-          _wrapWithProviders(child: const OnboardingScreen(), router: mockRouter),
-        );
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 500));
+      await tester.pumpWidget(
+        _wrapWithProviders(child: const OnboardingScreen(), router: mockRouter),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 500));
 
-        // At the profile-creation phase, the Skip button must be present
-        expect(find.text('Skip for now'), findsOneWidget);
-      },
-    );
+      // At the profile-creation phase, the Skip button must be present
+      expect(find.text('Skip for now'), findsOneWidget);
+    });
   });
 
   // ── WS2.relax ────────────────────────────────────────────────────────────────
 
   group('WS2.relax — 0-profile + hasSkippedOnboarding flag', () {
-    test(
-      'kOnboardingSkipped SharedPrefs key is "onboarding_skipped"',
-      () {
-        // Verify the constant value matches what sign_in_controller reads
-        expect(kOnboardingSkipped, 'onboarding_skipped');
-      },
-    );
+    test('kOnboardingSkipped SharedPrefs key is "onboarding_skipped"', () {
+      // Verify the constant value matches what sign_in_controller reads
+      expect(kOnboardingSkipped, 'onboarding_skipped');
+    });
 
     test(
       'OnboardingResumeStore.markComplete(skipped:true) sets kOnboardingSkipped=true',
@@ -231,16 +252,14 @@ void main() {
       });
     });
 
-    testWidgets('EmptyLoginScreen renders SkippedOnboardingCtaBanner',
-        (tester) async {
+    testWidgets('EmptyLoginScreen renders SkippedOnboardingCtaBanner', (
+      tester,
+    ) async {
       final mockRouter = _MockStackRouter();
       when(() => mockRouter.replaceAll(any())).thenAnswer((_) async {});
 
       await tester.pumpWidget(
-        _wrapWithProviders(
-          child: const EmptyLoginScreen(),
-          router: mockRouter,
-        ),
+        _wrapWithProviders(child: const EmptyLoginScreen(), router: mockRouter),
       );
       await tester.pump();
       await tester.pumpAndSettle();
@@ -249,50 +268,40 @@ void main() {
       expect(find.byType(SkippedOnboardingCtaBanner), findsOneWidget);
     });
 
-    testWidgets(
-      'EmptyLoginScreen renders tutor entry button',
-      (tester) async {
-        final mockRouter = _MockStackRouter();
-        when(() => mockRouter.replaceAll(any())).thenAnswer((_) async {});
+    testWidgets('EmptyLoginScreen renders tutor entry button', (tester) async {
+      final mockRouter = _MockStackRouter();
+      when(() => mockRouter.replaceAll(any())).thenAnswer((_) async {});
 
-        await tester.pumpWidget(
-          _wrapWithProviders(
-            child: const EmptyLoginScreen(),
-            router: mockRouter,
-          ),
-        );
-        await tester.pump();
-        await tester.pumpAndSettle();
+      await tester.pumpWidget(
+        _wrapWithProviders(child: const EmptyLoginScreen(), router: mockRouter),
+      );
+      await tester.pump();
+      await tester.pumpAndSettle();
 
-        // WS3 stub tutor entry point
-        expect(find.byKey(const Key('empty_login_tutor_entry')), findsOneWidget);
-        expect(find.text("I'm a tutor"), findsOneWidget);
-      },
-    );
+      // WS3 stub tutor entry point
+      expect(find.byKey(const Key('empty_login_tutor_entry')), findsOneWidget);
+      expect(find.text("I'm a tutor"), findsOneWidget);
+    });
 
-    testWidgets(
-      'EmptyLoginScreen renders device notification toggle stub',
-      (tester) async {
-        final mockRouter = _MockStackRouter();
-        when(() => mockRouter.replaceAll(any())).thenAnswer((_) async {});
+    testWidgets('EmptyLoginScreen renders device notification toggle stub', (
+      tester,
+    ) async {
+      final mockRouter = _MockStackRouter();
+      when(() => mockRouter.replaceAll(any())).thenAnswer((_) async {});
 
-        await tester.pumpWidget(
-          _wrapWithProviders(
-            child: const EmptyLoginScreen(),
-            router: mockRouter,
-          ),
-        );
-        await tester.pump();
-        await tester.pumpAndSettle();
+      await tester.pumpWidget(
+        _wrapWithProviders(child: const EmptyLoginScreen(), router: mockRouter),
+      );
+      await tester.pump();
+      await tester.pumpAndSettle();
 
-        // WS5: DeviceNotificationToggle is rendered with key 'device_notification_toggle'
-        expect(
-          find.byKey(const Key('device_notification_toggle')),
-          findsOneWidget,
-        );
-        expect(find.text('Device notifications'), findsOneWidget);
-      },
-    );
+      // WS5: DeviceNotificationToggle is rendered with key 'device_notification_toggle'
+      expect(
+        find.byKey(const Key('device_notification_toggle')),
+        findsOneWidget,
+      );
+      expect(find.text('Device notifications'), findsOneWidget);
+    });
 
     testWidgets(
       'EmptyLoginScreen CTA banner shows "Add a profile" call-to-action',

@@ -17,7 +17,9 @@ import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/pin_entry_widget.dart';
 import 'package:learning_tracker/features/tutoring/domain/services/tutor_pin_service.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_pin_providers.dart';
+import 'package:learning_tracker/features/tutoring/presentation/screens/tutor_pin_reset_screen.dart';
 import 'package:learning_tracker/features/tutoring/presentation/screens/tutor_pin_setup_screen.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Full-screen PIN gate that a tutor must pass before accessing a tutored
 /// child's profile.
@@ -58,15 +60,15 @@ class _TutorPinEntryGateState extends ConsumerState<TutorPinEntryGate> {
         rawPin: pin,
       );
       if (!mounted) return;
+      final l10n = AppLocalizations.of(context)!;
       switch (result) {
         case TutorPinSuccess():
           widget.onPinVerified();
         case TutorPinIncorrect():
-          setState(() => _errorMessage = 'Incorrect PIN. Please try again.');
+          setState(() => _errorMessage = l10n.tutorPinIncorrect);
         case TutorPinLockedOut(:final remainingMinutes):
           setState(
-            () => _errorMessage =
-                'Too many attempts. Locked for $remainingMinutes minute(s).',
+            () => _errorMessage = l10n.tutorPinLockedOut(remainingMinutes),
           );
         case TutorPinValidationError(:final message):
           setState(() => _errorMessage = message);
@@ -84,7 +86,11 @@ class _TutorPinEntryGateState extends ConsumerState<TutorPinEntryGate> {
     return pinIsSetAsync.when(
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (e, _) => Scaffold(body: Center(child: Text('Error: $e'))),
+      error: (e, _) => Scaffold(
+        body: Center(
+          child: Text(AppLocalizations.of(context)!.tutorPinErrorPrefix('$e')),
+        ),
+      ),
       data: (pinIsSet) {
         if (!pinIsSet || _showSetupScreen) {
           return TutorPinSetupScreen(
@@ -103,6 +109,7 @@ class _TutorPinEntryGateState extends ConsumerState<TutorPinEntryGate> {
 
   Widget _buildPinEntry(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: AppTheme.brandCream,
@@ -113,7 +120,7 @@ class _TutorPinEntryGateState extends ConsumerState<TutorPinEntryGate> {
           icon: const Icon(Icons.close_rounded),
           onPressed: widget.onCancel,
         ),
-        title: const Text('Tutor PIN'),
+        title: Text(l10n.tutorPinAppBarTitle),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -133,7 +140,7 @@ class _TutorPinEntryGateState extends ConsumerState<TutorPinEntryGate> {
               ),
               const SizedBox(height: 20),
               Text(
-                'Enter your Tutor PIN',
+                l10n.tutorPinEntryHeading,
                 textAlign: TextAlign.center,
                 style: theme.textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w800,
@@ -142,7 +149,7 @@ class _TutorPinEntryGateState extends ConsumerState<TutorPinEntryGate> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Enter your 4-digit Tutor PIN to access this profile.',
+                l10n.tutorPinEntryBody,
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyLarge?.copyWith(
                   color: AppTheme.brandInkMuted,
@@ -158,19 +165,21 @@ class _TutorPinEntryGateState extends ConsumerState<TutorPinEntryGate> {
                           child: Center(child: CircularProgressIndicator()),
                         )
                       : PinEntryWidget(
-                          title: 'Tutor PIN',
+                          title: l10n.tutorPinAppBarTitle,
                           errorMessage: _errorMessage,
                           onPinComplete: _onPinComplete,
                         ),
                 ),
               ),
               const SizedBox(height: 16),
-              // Reset PIN affordance (W6.6)
+              // Reset PIN affordance (W6.6). L1: routes to the real
+              // TutorPinResetScreen (sends a Firebase reset email + clears the
+              // local PIN) instead of a fake "email sent" snackbar.
               TextButton(
-                onPressed: () => _showResetDialog(context),
-                child: const Text(
-                  'Forgot your Tutor PIN?',
-                  style: TextStyle(color: AppTheme.brandInkMuted),
+                onPressed: _openResetFlow,
+                child: Text(
+                  l10n.tutorPinForgot,
+                  style: const TextStyle(color: AppTheme.brandInkMuted),
                 ),
               ),
             ],
@@ -180,34 +189,23 @@ class _TutorPinEntryGateState extends ConsumerState<TutorPinEntryGate> {
     );
   }
 
-  void _showResetDialog(BuildContext context) {
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Reset Tutor PIN'),
-        content: const Text(
-          'A PIN reset link will be sent to your account email address. '
-          'Check your inbox and follow the instructions to set a new PIN.',
+  /// L1: open the real Tutor PIN reset flow. On completion, the PIN has been
+  /// cleared and tutorPinIsSetProvider invalidated, so re-entering the gate
+  /// shows the setup screen for a new PIN.
+  void _openResetFlow() {
+    Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => TutorPinResetScreen(
+          profileId: widget.profileId,
+          onResetComplete: () {
+            // Pop the reset screen and re-evaluate the gate: the PIN is now
+            // cleared, so the gate routes to setup for a fresh PIN.
+            Navigator.of(context).pop();
+            if (mounted) {
+              setState(() => _showSetupScreen = true);
+            }
+          },
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () {
-              Navigator.of(ctx).pop();
-              // W6.6: email-based reset is handled by TutorPinResetScreen.
-              // For now, show a confirmation snackbar.
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('PIN reset email sent. Check your inbox.'),
-                ),
-              );
-            },
-            child: const Text('Send reset email'),
-          ),
-        ],
       ),
     );
   }

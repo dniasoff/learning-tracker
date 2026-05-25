@@ -289,6 +289,22 @@ abstract class FirestoreGateway {
     required Map<String, dynamic> data,
   });
 
+  // ── WS9 Wave-B (C#2) — points spend economy ────────────────────────────────
+
+  /// Push one append-only points-ledger event to
+  /// `points_ledger/{ulid}` (deduplicated on the ULID doc-id).
+  Future<void> pushPointsLedgerEntry({
+    required int profileId,
+    required Map<String, dynamic> data,
+  });
+
+  /// Push one reward-redemption state-machine doc to
+  /// `reward_redemptions/{ulid}` (LWW on `updated_at`).
+  Future<void> pushRewardRedemption({
+    required int profileId,
+    required Map<String, dynamic> data,
+  });
+
   // ── Tutor audit log reads (W6.13) ─────────────────────────────────────────
 
   /// Fetch raw audit log entries from `tutor_grants/{grantId}/audit_log/`,

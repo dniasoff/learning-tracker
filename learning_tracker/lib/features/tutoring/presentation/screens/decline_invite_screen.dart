@@ -27,6 +27,7 @@ import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_agg
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_grant_providers.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// A full-page screen for declining a pending tutor invite.
 ///
@@ -108,9 +109,10 @@ class _DeclineInviteScreenState extends ConsumerState<DeclineInviteScreen> {
       switch (result) {
         case TutorGrantSuccess():
           setState(() => _step = _DeclineStep.success);
-          // WS3.3g: fire-and-forget notification — parent is notified of decline.
-          // Parent email not available from the grant doc (UID only), so we pass
-          // empty string; the logging implementation absorbs silently.
+          // WS3.3g / M1: fire-and-forget DEC-23 notification — parent is
+          // notified of the decline. The parent email is not readable from the
+          // grant doc (UID only), so we route by parentUid; the gateway falls
+          // back to a uid-addressed recipient so the notification is not dropped.
           final tutorEmail =
               ref.read(authRepositoryProvider).currentUser?.email ??
               grant.tutorEmail;
@@ -118,7 +120,8 @@ class _DeclineInviteScreenState extends ConsumerState<DeclineInviteScreen> {
             ref
                 .read(tutorNotificationGatewayProvider)
                 .notifyParentOfDecline(
-                  parentEmail: '', // Parent email not on grant doc
+                  parentEmail: '',
+                  parentUid: grant.parentUid,
                   tutorEmail: tutorEmail,
                   childName: grant.childProfileId,
                 ),
@@ -138,7 +141,9 @@ class _DeclineInviteScreenState extends ConsumerState<DeclineInviteScreen> {
       if (mounted) {
         setState(() {
           _step = _DeclineStep.error;
-          _errorMessage = 'Unable to decline invite. Please try again.';
+          _errorMessage = AppLocalizations.of(
+            context,
+          )!.declineInviteGenericError;
         });
       }
     }
@@ -153,7 +158,7 @@ class _DeclineInviteScreenState extends ConsumerState<DeclineInviteScreen> {
       appBar: AppBar(
         backgroundColor: AppTheme.brandCream,
         elevation: 0,
-        title: const Text('Decline Invite'),
+        title: Text(AppLocalizations.of(context)!.declineInviteAppBarTitle),
       ),
       body: SafeArea(
         child: Padding(
@@ -174,6 +179,7 @@ class _DeclineInviteScreenState extends ConsumerState<DeclineInviteScreen> {
   }
 
   Widget _buildConfirm(ThemeData theme) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -189,7 +195,7 @@ class _DeclineInviteScreenState extends ConsumerState<DeclineInviteScreen> {
         ),
         const SizedBox(height: 20),
         Text(
-          'Decline tutor invite?',
+          l10n.declineInviteConfirmHeading,
           textAlign: TextAlign.center,
           style: theme.textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.w800,
@@ -198,9 +204,7 @@ class _DeclineInviteScreenState extends ConsumerState<DeclineInviteScreen> {
         ),
         const SizedBox(height: 8),
         Text(
-          'You are about to decline this tutor invite. '
-          'The parent will be notified that you declined. '
-          'You will not have access to this child\'s learning profile.',
+          l10n.declineInviteConfirmBody,
           textAlign: TextAlign.center,
           style: theme.textTheme.bodyLarge?.copyWith(
             color: AppTheme.brandInkMuted,
@@ -215,7 +219,7 @@ class _DeclineInviteScreenState extends ConsumerState<DeclineInviteScreen> {
             padding: const EdgeInsets.symmetric(vertical: 14),
             shape: const StadiumBorder(),
           ),
-          child: const Text('Decline invite'),
+          child: Text(l10n.declineInviteConfirm),
         ),
         const SizedBox(height: 12),
         OutlinedButton(
@@ -225,26 +229,28 @@ class _DeclineInviteScreenState extends ConsumerState<DeclineInviteScreen> {
             padding: const EdgeInsets.symmetric(vertical: 14),
             shape: const StadiumBorder(),
           ),
-          child: const Text('Cancel'),
+          child: Text(l10n.actionCancel),
         ),
       ],
     );
   }
 
   Widget _buildDeclining() {
-    return const Center(
+    final l10n = AppLocalizations.of(context)!;
+    return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          CircularProgressIndicator(),
-          SizedBox(height: 16),
-          Text('Declining invite…'),
+          const CircularProgressIndicator(),
+          const SizedBox(height: 16),
+          Text(l10n.declineInviteInProgress),
         ],
       ),
     );
   }
 
   Widget _buildSuccess(ThemeData theme) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -260,7 +266,7 @@ class _DeclineInviteScreenState extends ConsumerState<DeclineInviteScreen> {
         ),
         const SizedBox(height: 20),
         Text(
-          'Invite declined',
+          l10n.declineInviteSuccessHeading,
           textAlign: TextAlign.center,
           style: theme.textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.w800,
@@ -269,8 +275,7 @@ class _DeclineInviteScreenState extends ConsumerState<DeclineInviteScreen> {
         ),
         const SizedBox(height: 8),
         Text(
-          'You have declined this tutor invite. '
-          'The parent has been notified.',
+          l10n.declineInviteSuccessBody,
           textAlign: TextAlign.center,
           style: theme.textTheme.bodyLarge?.copyWith(
             color: AppTheme.brandInkMuted,
@@ -285,13 +290,14 @@ class _DeclineInviteScreenState extends ConsumerState<DeclineInviteScreen> {
             padding: const EdgeInsets.symmetric(vertical: 14),
             shape: const StadiumBorder(),
           ),
-          child: const Text('Go to dashboard'),
+          child: Text(l10n.actionGoToDashboard),
         ),
       ],
     );
   }
 
   Widget _buildError(ThemeData theme) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -307,7 +313,7 @@ class _DeclineInviteScreenState extends ConsumerState<DeclineInviteScreen> {
         ),
         const SizedBox(height: 20),
         Text(
-          'Could not decline invite',
+          l10n.declineInviteErrorHeading,
           textAlign: TextAlign.center,
           style: theme.textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.w800,
@@ -316,7 +322,7 @@ class _DeclineInviteScreenState extends ConsumerState<DeclineInviteScreen> {
         ),
         const SizedBox(height: 8),
         Text(
-          _errorMessage ?? 'An unexpected error occurred.',
+          _errorMessage ?? l10n.unexpectedError,
           textAlign: TextAlign.center,
           style: theme.textTheme.bodyLarge?.copyWith(
             color: AppTheme.brandInkMuted,
@@ -326,7 +332,7 @@ class _DeclineInviteScreenState extends ConsumerState<DeclineInviteScreen> {
         const SizedBox(height: 32),
         OutlinedButton(
           onPressed: () => setState(() => _step = _DeclineStep.confirm),
-          child: const Text('Try again'),
+          child: Text(l10n.actionTryAgain),
         ),
       ],
     );

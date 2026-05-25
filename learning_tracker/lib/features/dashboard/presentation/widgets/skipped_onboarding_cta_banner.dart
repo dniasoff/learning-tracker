@@ -15,6 +15,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -80,6 +81,7 @@ class _CtaBannerBody extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Center(
       child: Padding(
@@ -100,7 +102,7 @@ class _CtaBannerBody extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             Text(
-              joinedToTutor ? 'Welcome, tutor!' : "You're all set!",
+              joinedToTutor ? l10n.tutorWelcomeBannerTitle : "You're all set!",
               textAlign: TextAlign.center,
               style: theme.textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.w800,
@@ -110,8 +112,7 @@ class _CtaBannerBody extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               joinedToTutor
-                  ? 'Ask the parent to share an invite link with you, '
-                        'then tap below to accept it.'
+                  ? l10n.tutorWelcomeBannerBody
                   : 'Set up your first learning track when you are ready, '
                         'or accept a tutor invite if someone shared one with you.',
               textAlign: TextAlign.center,

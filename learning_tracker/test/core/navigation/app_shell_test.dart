@@ -35,11 +35,15 @@ class MockAuthRepository extends Mock implements AuthRepository {}
 
 class MockPinService extends Mock implements PinService {}
 
-AppRouter _createAuthenticatedRouter() {
+Future<AppRouter> _createAuthenticatedRouter() async {
   final mockPinService = MockPinService();
   when(() => mockPinService.hasParentPin()).thenAnswer((_) async => false);
 
   final testDb = createTestDatabase();
+  // ProfileGuard now validates that the selected profile id actually exists in
+  // the current DB before short-circuiting (R1o-C2), so the guard DB must hold
+  // a profile whose id matches getSelectedProfileId() → 1.
+  await seedProfileWithIds(testDb, profileId: 1, accountId: 1);
   final restoreGuard = RestoreGuard(
     getDatabase: () => testDb,
     hasCloudAccount: () => false,
@@ -67,7 +71,7 @@ AppRouter _createAuthenticatedRouter() {
   );
 }
 
-AppRouter _createUnauthenticatedRouter() {
+Future<AppRouter> _createUnauthenticatedRouter() async {
   final mockPinService = MockPinService();
   when(() => mockPinService.hasParentPin()).thenAnswer((_) async => false);
 
@@ -188,7 +192,7 @@ void main() {
     testWidgets(
       'renders exactly 4 tabs: Dashboard, Learn, Progress, Settings',
       (tester) async {
-        final router = _createAuthenticatedRouter();
+        final router = await _createAuthenticatedRouter();
 
         await tester.pumpWidget(
           ProviderScope(
@@ -231,7 +235,7 @@ void main() {
     );
 
     testWidgets('tapping Learn tab navigates to learn route', (tester) async {
-      final router = _createAuthenticatedRouter();
+      final router = await _createAuthenticatedRouter();
 
       await tester.pumpWidget(
         ProviderScope(
@@ -274,7 +278,7 @@ void main() {
     testWidgets('tapping Progress tab navigates to progress route', (
       tester,
     ) async {
-      final router = _createAuthenticatedRouter();
+      final router = await _createAuthenticatedRouter();
 
       await tester.pumpWidget(
         ProviderScope(
@@ -314,7 +318,7 @@ void main() {
     testWidgets('tapping Settings tab navigates to settings route', (
       tester,
     ) async {
-      final router = _createAuthenticatedRouter();
+      final router = await _createAuthenticatedRouter();
       final mockAuthForProvider = MockAuthRepository();
       when(() => mockAuthForProvider.currentUser).thenReturn(null);
 
@@ -377,7 +381,7 @@ void main() {
     testWidgets('content browsing route accepts curriculumId parameter', (
       tester,
     ) async {
-      final router = _createAuthenticatedRouter();
+      final router = await _createAuthenticatedRouter();
 
       await tester.pumpWidget(
         ProviderScope(
@@ -420,7 +424,7 @@ void main() {
       tester,
     ) async {
       SharedPreferences.setMockInitialValues({}); // no onboarding_complete
-      final router = _createUnauthenticatedRouter();
+      final router = await _createUnauthenticatedRouter();
 
       // Suppress layout-overflow errors and Drift multiple-database warnings.
       final originalOnError = FlutterError.onError;
@@ -452,7 +456,7 @@ void main() {
     testWidgets('authenticated user sees dashboard with bottom navigation', (
       tester,
     ) async {
-      final router = _createAuthenticatedRouter();
+      final router = await _createAuthenticatedRouter();
 
       await tester.pumpWidget(
         ProviderScope(

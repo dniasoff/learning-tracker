@@ -145,4 +145,22 @@ abstract class PushPipeline {
     required String entityKey,
     required Map<String, dynamic> payload,
   });
+
+  // WS9 Wave-B (C#2) — points spend economy ─────────────────────────────────
+
+  /// Push one append-only points-ledger event to
+  /// `points_ledger/{ulid}` (deduplicated on the ULID doc-id).
+  Future<void> pushPointsLedgerEntry({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  });
+
+  /// Push one reward-redemption state-machine doc to
+  /// `reward_redemptions/{ulid}` (LWW on `updated_at`).
+  Future<void> pushRewardRedemption({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  });
 }

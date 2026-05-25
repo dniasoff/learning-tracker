@@ -24,6 +24,7 @@ import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_grant_providers.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Screen where a parent invites a tutor for a specific child profile.
 ///
@@ -58,7 +59,11 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
   Future<void> _sendInvite() async {
     final email = _emailController.text.trim();
     if (!_emailValid) {
-      setState(() => _errorMessage = 'Please enter a valid email address.');
+      setState(
+        () => _errorMessage = AppLocalizations.of(
+          context,
+        )!.inviteTutorInvalidEmail,
+      );
       return;
     }
     setState(() {
@@ -81,7 +86,9 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
           setState(() => _shareLink = link);
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
-              content: Text('Invite sent to $email!'),
+              content: Text(
+                AppLocalizations.of(context)!.inviteTutorSentSnackbar(email),
+              ),
               backgroundColor: Colors.green.shade700,
             ),
           );
@@ -105,7 +112,9 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
     await Clipboard.setData(ClipboardData(text: _shareLink!));
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Link copied to clipboard!')),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.inviteTutorLinkCopied),
+        ),
       );
     }
   }
@@ -113,13 +122,14 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: AppTheme.brandCream,
       appBar: AppBar(
         backgroundColor: AppTheme.brandCream,
         elevation: 0,
-        title: const Text('Invite a Tutor'),
+        title: Text(l10n.inviteTutorAppBarTitle),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -139,7 +149,7 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
               ),
               const SizedBox(height: 20),
               Text(
-                'Invite a Tutor',
+                l10n.inviteTutorHeading,
                 textAlign: TextAlign.center,
                 style: theme.textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w800,
@@ -148,8 +158,7 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
               ),
               const SizedBox(height: 8),
               Text(
-                'Enter the tutor\'s email address. They will receive an invite '
-                'link to accept access to this child\'s learning profile.',
+                l10n.inviteTutorBody,
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyLarge?.copyWith(
                   color: AppTheme.brandInkMuted,
@@ -165,8 +174,8 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
                 textInputAction: TextInputAction.done,
                 onChanged: (_) => setState(() {}),
                 decoration: InputDecoration(
-                  labelText: "Tutor's email address",
-                  hintText: 'tutor@example.com',
+                  labelText: l10n.inviteTutorEmailLabel,
+                  hintText: l10n.inviteTutorEmailHint,
                   filled: true,
                   fillColor: Colors.white,
                   prefixIcon: const Icon(Icons.email_rounded),
@@ -201,7 +210,9 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
                         ),
                       )
                     : const Icon(Icons.send_rounded),
-                label: Text(_isLoading ? 'Sending…' : 'Send invite'),
+                label: Text(
+                  _isLoading ? l10n.inviteTutorSending : l10n.inviteTutorSend,
+                ),
                 style: FilledButton.styleFrom(
                   backgroundColor: AppTheme.brandBlue,
                   padding: const EdgeInsets.symmetric(vertical: 14),
@@ -215,7 +226,7 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
                 const Divider(),
                 const SizedBox(height: 16),
                 Text(
-                  'Share link (backup delivery)',
+                  l10n.inviteTutorShareLinkHeading,
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                     color: AppTheme.brandInk,
@@ -223,8 +234,7 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'If the email is not received, share this link directly with '
-                  'the tutor.',
+                  l10n.inviteTutorShareLinkBody,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: AppTheme.brandInkMuted,
                   ),
@@ -254,7 +264,7 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
                       ),
                       IconButton(
                         icon: const Icon(Icons.copy_rounded),
-                        tooltip: 'Copy link',
+                        tooltip: l10n.inviteTutorCopyLinkTooltip,
                         onPressed: _copyLink,
                         color: AppTheme.brandBlue,
                       ),
@@ -264,7 +274,7 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
                 const SizedBox(height: 12),
                 OutlinedButton.icon(
                   icon: const Icon(Icons.copy_rounded),
-                  label: const Text('Copy share link'),
+                  label: Text(l10n.inviteTutorCopyShareLink),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppTheme.brandBlueDeep,
                     side: const BorderSide(color: AppTheme.brandBlue),

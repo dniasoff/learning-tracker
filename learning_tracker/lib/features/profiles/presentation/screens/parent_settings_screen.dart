@@ -60,7 +60,9 @@ class ParentSettingsScreen extends ConsumerWidget {
     // Ownership gate helpers — whether each category tile should be shown.
     // Owners always see every tile; tutors see only what they're permitted.
     final canEditTracks = !isTutoredContext || tutorPerms.canEditStages;
-    final canEditPoints = !isTutoredContext || tutorPerms.canEditGoals;
+    // H5: point configuration + parent_points_adjust gate on the dedicated
+    // canEditPoints permission, NOT canEditGoals (a different concept).
+    final canEditPoints = !isTutoredContext || tutorPerms.canEditPoints;
     final canEditRewards = !isTutoredContext || tutorPerms.canEditRewards;
     // WS3.3h: canBulkPriorCompletion = true by default (G3/DEC-33) — tutors
     // always see the bulk-mark tile unless the parent explicitly disabled it.
@@ -136,7 +138,7 @@ class ParentSettingsScreen extends ConsumerWidget {
                             ),
                           ),
                         ],
-                        // WS3.3d: canEditGoals gates "Point Configuration" for tutors.
+                        // WS3.3d: canEditPoints gates "Point Configuration" for tutors.
                         if (canEditPoints) ...[
                           if (canEditTracks) _rowDivider(),
                           _ManageRow(

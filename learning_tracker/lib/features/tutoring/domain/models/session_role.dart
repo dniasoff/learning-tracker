@@ -39,6 +39,7 @@ final class TutoredProfileSelection extends ProfileSelection {
     required this.ownerUid,
     required this.grantId,
     required this.permissions,
+    this.tutorOwnProfileId = 0,
   });
 
   /// UID of the profile owner (parent).
@@ -49,6 +50,14 @@ final class TutoredProfileSelection extends ProfileSelection {
 
   /// The permissions granted to this tutor by the parent.
   final TutorPermissions permissions;
+
+  /// C1: the tutor's OWN local learner-profile ID — the namespace under
+  /// which the Tutor PIN is stored/verified (`profile_{tutorOwnProfileId}_
+  /// tutor_pin_hash`). The Tutor PIN is per-tutor (one PIN across all
+  /// talmidim), so the PIN scope keys on this id, NOT on [profileId] (the
+  /// talmid's id). The entry gate and the route guard MUST agree on this
+  /// single namespace. Falls back to `0` for a profile-less tutor.
+  final int tutorOwnProfileId;
 }
 
 // ── SessionRole ─────────────────────────────────────────────────────────────
@@ -100,6 +109,7 @@ class ResolvedSession {
     canEditStages: true,
     canEditRewards: true,
     canEditStudyDays: true,
+    canEditPoints: true,
   );
 
   factory ResolvedSession.forOwner({

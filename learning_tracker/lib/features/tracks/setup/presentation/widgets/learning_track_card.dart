@@ -196,20 +196,6 @@ class LearningTrackCard extends ConsumerWidget {
   }
 }
 
-IconData trackTypeIconData(String trackType) {
-  return switch (trackType) {
-    'personal' => Icons.menu_book_rounded,
-    'school' => Icons.auto_awesome_rounded,
-    'advanced' => Icons.verified_rounded,
-    _ => Icons.menu_book_rounded,
-  };
-}
-
-Color trackAccentForType(String trackType) {
-  return switch (trackType) {
-    'personal' => AppColors.blueMedium,
-    'school' => const Color(0xFFBC8105),
-    'advanced' => const Color(0xFF0EAE81),
-    _ => AppTheme.brandBlue,
-  };
-}
+// Rule-7 (no track types): the dead `trackTypeIconData` / `trackAccentForType`
+// helpers — which switched on `'personal'`/`'school'`/`'advanced'` and were
+// never called — were removed. All tracks are implicitly personal now.

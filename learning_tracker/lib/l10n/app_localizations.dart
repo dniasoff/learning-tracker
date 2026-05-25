@@ -1163,6 +1163,30 @@ abstract class AppLocalizations {
   /// **'Mark complete'**
   String get markComplete;
 
+  /// No description provided for @markCompleteTutorUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Not available (tutor mode)'**
+  String get markCompleteTutorUnavailable;
+
+  /// No description provided for @markCompleteCompletedStage.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed ({stageName})'**
+  String markCompleteCompletedStage(String stageName);
+
+  /// No description provided for @unableToLoadCompletionContext.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load completion context: {error}'**
+  String unableToLoadCompletionContext(String error);
+
+  /// No description provided for @accountOfflineSignInToSync.
+  ///
+  /// In en, this message translates to:
+  /// **'Working offline for this account. Sign in to resume cloud sync.'**
+  String get accountOfflineSignInToSync;
+
   /// No description provided for @textReaderNextDailyTask.
   ///
   /// In en, this message translates to:
@@ -1882,6 +1906,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'TUTORED CHILDREN'**
   String get profilePickerTutoredChildren;
+
+  /// No description provided for @tutoredChildrenViewInvitations.
+  ///
+  /// In en, this message translates to:
+  /// **'View invitations'**
+  String get tutoredChildrenViewInvitations;
+
+  /// No description provided for @tutoredChildrenPendingInvitations.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{{count} pending tutor invitation} other{{count} pending tutor invitations}}'**
+  String tutoredChildrenPendingInvitations(int count);
+
+  /// No description provided for @tutoredChildrenStatusTutoring.
+  ///
+  /// In en, this message translates to:
+  /// **'Tutoring'**
+  String get tutoredChildrenStatusTutoring;
+
+  /// No description provided for @tutoredChildrenRoleBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'Tutor'**
+  String get tutoredChildrenRoleBadge;
 
   /// No description provided for @tutorModeIndicator.
   ///
@@ -4730,7 +4778,7 @@ abstract class AppLocalizations {
   /// No description provided for @notificationReminderBody.
   ///
   /// In en, this message translates to:
-  /// **'{taskCount,plural, =0{No tasks today — stay on track!} =1{You have 1 task across {curriculumCount,plural, =1{1 curriculum} other{{curriculumCount} curricula}} today} other{You have {taskCount} tasks across {curriculumCount,plural, =1{1 curriculum} other{{curriculumCount} curricula}} today}}'**
+  /// **'You have {taskCount, plural, =1{1 task} other{{taskCount} tasks}} across {curriculumCount, plural, =1{1 curriculum} other{{curriculumCount} curricula}} today'**
   String notificationReminderBody(int taskCount, int curriculumCount);
 
   /// No description provided for @startingPositionTargetDate.
@@ -5614,6 +5662,966 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Balance updated.'**
   String get parentPointsAdjustAppliedSnackbar;
+
+  /// No description provided for @profileTypeChild.
+  ///
+  /// In en, this message translates to:
+  /// **'Child'**
+  String get profileTypeChild;
+
+  /// No description provided for @profileTypeAdult.
+  ///
+  /// In en, this message translates to:
+  /// **'Adult'**
+  String get profileTypeAdult;
+
+  /// No description provided for @childMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Child mode'**
+  String get childMode;
+
+  /// No description provided for @adultMode.
+  ///
+  /// In en, this message translates to:
+  /// **'Adult mode'**
+  String get adultMode;
+
+  /// No description provided for @statusActive.
+  ///
+  /// In en, this message translates to:
+  /// **'Active'**
+  String get statusActive;
+
+  /// No description provided for @statusPending.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending'**
+  String get statusPending;
+
+  /// No description provided for @actionTryAgain.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again'**
+  String get actionTryAgain;
+
+  /// No description provided for @actionGoToDashboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to dashboard'**
+  String get actionGoToDashboard;
+
+  /// No description provided for @emptyLoginTutorEntry.
+  ///
+  /// In en, this message translates to:
+  /// **'I\'m a tutor'**
+  String get emptyLoginTutorEntry;
+
+  /// No description provided for @switchAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Switch account'**
+  String get switchAccount;
+
+  /// No description provided for @emptyLoginTutorComingSoon.
+  ///
+  /// In en, this message translates to:
+  /// **'Tutor access coming soon. Ask the parent to share an invite link with you.'**
+  String get emptyLoginTutorComingSoon;
+
+  /// No description provided for @tutorWelcomeBannerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome, tutor!'**
+  String get tutorWelcomeBannerTitle;
+
+  /// No description provided for @tutorWelcomeBannerBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Ask the parent to share an invite link with you, then tap below to accept it.'**
+  String get tutorWelcomeBannerBody;
+
+  /// No description provided for @switcherSheetProfiles.
+  ///
+  /// In en, this message translates to:
+  /// **'Profiles'**
+  String get switcherSheetProfiles;
+
+  /// No description provided for @switcherSheetAccounts.
+  ///
+  /// In en, this message translates to:
+  /// **'Accounts'**
+  String get switcherSheetAccounts;
+
+  /// No description provided for @switcherSheetAddAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Add account'**
+  String get switcherSheetAddAccount;
+
+  /// No description provided for @acceptInviteAppBarTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept Tutor Invite'**
+  String get acceptInviteAppBarTitle;
+
+  /// No description provided for @acceptInviteAccepting.
+  ///
+  /// In en, this message translates to:
+  /// **'Accepting invite…'**
+  String get acceptInviteAccepting;
+
+  /// No description provided for @acceptInviteHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept tutor invite'**
+  String get acceptInviteHeading;
+
+  /// No description provided for @acceptInviteBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You have been invited to tutor a child. By accepting, you will have access to view and manage their learning profile.'**
+  String get acceptInviteBody;
+
+  /// No description provided for @acceptInvitePermissionViewData.
+  ///
+  /// In en, this message translates to:
+  /// **'View all learning data and progress'**
+  String get acceptInvitePermissionViewData;
+
+  /// No description provided for @acceptInvitePermissionConfigure.
+  ///
+  /// In en, this message translates to:
+  /// **'Configure tracks, points, and rewards (if permitted)'**
+  String get acceptInvitePermissionConfigure;
+
+  /// No description provided for @acceptInvitePermissionBulkMark.
+  ///
+  /// In en, this message translates to:
+  /// **'Perform bulk-mark corrections'**
+  String get acceptInvitePermissionBulkMark;
+
+  /// No description provided for @acceptInvitePermissionNoLive.
+  ///
+  /// In en, this message translates to:
+  /// **'Cannot mark live completions (streak / rewards)'**
+  String get acceptInvitePermissionNoLive;
+
+  /// No description provided for @acceptInviteAccept.
+  ///
+  /// In en, this message translates to:
+  /// **'Accept invite'**
+  String get acceptInviteAccept;
+
+  /// No description provided for @acceptInviteDecline.
+  ///
+  /// In en, this message translates to:
+  /// **'Decline'**
+  String get acceptInviteDecline;
+
+  /// No description provided for @acceptInviteSuccessHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite accepted!'**
+  String get acceptInviteSuccessHeading;
+
+  /// No description provided for @acceptInviteSuccessBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You now have tutor access to this child\'s learning profile. Open the Profile Picker to switch to the tutored profile.'**
+  String get acceptInviteSuccessBody;
+
+  /// No description provided for @acceptInviteErrorHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not accept invite'**
+  String get acceptInviteErrorHeading;
+
+  /// No description provided for @acceptInviteGenericError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to accept invite. Please try again.'**
+  String get acceptInviteGenericError;
+
+  /// No description provided for @unexpectedError.
+  ///
+  /// In en, this message translates to:
+  /// **'An unexpected error occurred.'**
+  String get unexpectedError;
+
+  /// No description provided for @declineInviteAppBarTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Decline Invite'**
+  String get declineInviteAppBarTitle;
+
+  /// No description provided for @declineInviteConfirmHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Decline tutor invite?'**
+  String get declineInviteConfirmHeading;
+
+  /// No description provided for @declineInviteConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You are about to decline this tutor invite. The parent will be notified that you declined. You will not have access to this child\'s learning profile.'**
+  String get declineInviteConfirmBody;
+
+  /// No description provided for @declineInviteConfirm.
+  ///
+  /// In en, this message translates to:
+  /// **'Decline invite'**
+  String get declineInviteConfirm;
+
+  /// No description provided for @declineInviteInProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'Declining invite…'**
+  String get declineInviteInProgress;
+
+  /// No description provided for @declineInviteSuccessHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite declined'**
+  String get declineInviteSuccessHeading;
+
+  /// No description provided for @declineInviteSuccessBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You have declined this tutor invite. The parent has been notified.'**
+  String get declineInviteSuccessBody;
+
+  /// No description provided for @declineInviteErrorHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not decline invite'**
+  String get declineInviteErrorHeading;
+
+  /// No description provided for @declineInviteGenericError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to decline invite. Please try again.'**
+  String get declineInviteGenericError;
+
+  /// No description provided for @inviteTutorAppBarTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite a Tutor'**
+  String get inviteTutorAppBarTitle;
+
+  /// No description provided for @inviteTutorHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite a Tutor'**
+  String get inviteTutorHeading;
+
+  /// No description provided for @inviteTutorBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the tutor\'s email address. They will receive an invite link to accept access to this child\'s learning profile.'**
+  String get inviteTutorBody;
+
+  /// No description provided for @inviteTutorEmailLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Tutor\'s email address'**
+  String get inviteTutorEmailLabel;
+
+  /// No description provided for @inviteTutorEmailHint.
+  ///
+  /// In en, this message translates to:
+  /// **'tutor@example.com'**
+  String get inviteTutorEmailHint;
+
+  /// No description provided for @inviteTutorInvalidEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a valid email address.'**
+  String get inviteTutorInvalidEmail;
+
+  /// No description provided for @inviteTutorSending.
+  ///
+  /// In en, this message translates to:
+  /// **'Sending…'**
+  String get inviteTutorSending;
+
+  /// No description provided for @inviteTutorSend.
+  ///
+  /// In en, this message translates to:
+  /// **'Send invite'**
+  String get inviteTutorSend;
+
+  /// No description provided for @inviteTutorSentSnackbar.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite sent to {email}!'**
+  String inviteTutorSentSnackbar(String email);
+
+  /// No description provided for @inviteTutorLinkCopied.
+  ///
+  /// In en, this message translates to:
+  /// **'Link copied to clipboard!'**
+  String get inviteTutorLinkCopied;
+
+  /// No description provided for @inviteTutorShareLinkHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Share link (backup delivery)'**
+  String get inviteTutorShareLinkHeading;
+
+  /// No description provided for @inviteTutorShareLinkBody.
+  ///
+  /// In en, this message translates to:
+  /// **'If the email is not received, share this link directly with the tutor.'**
+  String get inviteTutorShareLinkBody;
+
+  /// No description provided for @inviteTutorCopyLinkTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy link'**
+  String get inviteTutorCopyLinkTooltip;
+
+  /// No description provided for @inviteTutorCopyShareLink.
+  ///
+  /// In en, this message translates to:
+  /// **'Copy share link'**
+  String get inviteTutorCopyShareLink;
+
+  /// No description provided for @manageGrantsAppBarTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'My Tutoring Grants'**
+  String get manageGrantsAppBarTitle;
+
+  /// No description provided for @manageGrantsActiveSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Active ({count})'**
+  String manageGrantsActiveSection(int count);
+
+  /// No description provided for @manageGrantsPendingSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending invites ({count})'**
+  String manageGrantsPendingSection(int count);
+
+  /// No description provided for @manageGrantsEmptyHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'No tutoring relationships'**
+  String get manageGrantsEmptyHeading;
+
+  /// No description provided for @manageGrantsEmptyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'When a parent invites you to tutor their child, the grant will appear here.'**
+  String get manageGrantsEmptyBody;
+
+  /// No description provided for @manageGrantsResignTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Resign from tutoring?'**
+  String get manageGrantsResignTitle;
+
+  /// No description provided for @manageGrantsResignBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You will immediately lose access to this child\'s profile. The parent will be notified.\n\nChild: {child}\nParent: {parent}'**
+  String manageGrantsResignBody(String child, String parent);
+
+  /// No description provided for @manageGrantsResign.
+  ///
+  /// In en, this message translates to:
+  /// **'Resign'**
+  String get manageGrantsResign;
+
+  /// No description provided for @manageGrantsResignError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not resign: {error}'**
+  String manageGrantsResignError(String error);
+
+  /// No description provided for @tutorFallbackName.
+  ///
+  /// In en, this message translates to:
+  /// **'Your tutor'**
+  String get tutorFallbackName;
+
+  /// No description provided for @manageTutorsEmptyHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'No children profiles yet'**
+  String get manageTutorsEmptyHeading;
+
+  /// No description provided for @manageTutorsEmptyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a child profile to start inviting tutors.'**
+  String get manageTutorsEmptyBody;
+
+  /// No description provided for @manageTutorsLoadError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load tutors: {error}'**
+  String manageTutorsLoadError(String error);
+
+  /// No description provided for @manageTutorsNoTutors.
+  ///
+  /// In en, this message translates to:
+  /// **'No tutors invited.'**
+  String get manageTutorsNoTutors;
+
+  /// No description provided for @manageTutorsActiveSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Active ({count})'**
+  String manageTutorsActiveSection(int count);
+
+  /// No description provided for @manageTutorsPendingSection.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending ({count})'**
+  String manageTutorsPendingSection(int count);
+
+  /// No description provided for @manageTutorsInviteButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Invite a tutor'**
+  String get manageTutorsInviteButton;
+
+  /// No description provided for @manageTutorsRevokeTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Revoke tutor access?'**
+  String get manageTutorsRevokeTitle;
+
+  /// No description provided for @manageTutorsRevokeBody.
+  ///
+  /// In en, this message translates to:
+  /// **'{email} will immediately lose access to this child\'s profile.'**
+  String manageTutorsRevokeBody(String email);
+
+  /// No description provided for @manageTutorsRevoke.
+  ///
+  /// In en, this message translates to:
+  /// **'Revoke'**
+  String get manageTutorsRevoke;
+
+  /// No description provided for @manageTutorsRevokeError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not revoke: {error}'**
+  String manageTutorsRevokeError(String error);
+
+  /// No description provided for @manageTutorsRescindTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Rescind invitation?'**
+  String get manageTutorsRescindTitle;
+
+  /// No description provided for @manageTutorsRescindBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The pending invite to {email} will be cancelled.'**
+  String manageTutorsRescindBody(String email);
+
+  /// No description provided for @manageTutorsRescind.
+  ///
+  /// In en, this message translates to:
+  /// **'Rescind'**
+  String get manageTutorsRescind;
+
+  /// No description provided for @manageTutorsRescindError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not rescind: {error}'**
+  String manageTutorsRescindError(String error);
+
+  /// No description provided for @manageTutorsViewAuditLog.
+  ///
+  /// In en, this message translates to:
+  /// **'View audit log'**
+  String get manageTutorsViewAuditLog;
+
+  /// No description provided for @tutorFallbackParent.
+  ///
+  /// In en, this message translates to:
+  /// **'Parent'**
+  String get tutorFallbackParent;
+
+  /// No description provided for @auditLogTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Audit Log'**
+  String get auditLogTitle;
+
+  /// No description provided for @auditLogClearFilters.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear filters'**
+  String get auditLogClearFilters;
+
+  /// No description provided for @auditLogFilterFromDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter from date'**
+  String get auditLogFilterFromDate;
+
+  /// No description provided for @auditLogFilterToDate.
+  ///
+  /// In en, this message translates to:
+  /// **'Filter to date'**
+  String get auditLogFilterToDate;
+
+  /// No description provided for @auditLogFilterFrom.
+  ///
+  /// In en, this message translates to:
+  /// **'From'**
+  String get auditLogFilterFrom;
+
+  /// No description provided for @auditLogFilterTo.
+  ///
+  /// In en, this message translates to:
+  /// **'To'**
+  String get auditLogFilterTo;
+
+  /// No description provided for @auditLogEmptyFiltered.
+  ///
+  /// In en, this message translates to:
+  /// **'No entries match the filters'**
+  String get auditLogEmptyFiltered;
+
+  /// No description provided for @auditLogEmpty.
+  ///
+  /// In en, this message translates to:
+  /// **'No audit entries'**
+  String get auditLogEmpty;
+
+  /// No description provided for @auditLogEmptyFilteredBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear filters to see all entries.'**
+  String get auditLogEmptyFilteredBody;
+
+  /// No description provided for @auditLogEmptyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Tutor actions will appear here as they occur.'**
+  String get auditLogEmptyBody;
+
+  /// No description provided for @auditLogChipConfig.
+  ///
+  /// In en, this message translates to:
+  /// **'Config'**
+  String get auditLogChipConfig;
+
+  /// No description provided for @auditLogChipBulkPrior.
+  ///
+  /// In en, this message translates to:
+  /// **'Bulk Prior'**
+  String get auditLogChipBulkPrior;
+
+  /// No description provided for @auditLogChipReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset'**
+  String get auditLogChipReset;
+
+  /// No description provided for @auditLogChipBookmark.
+  ///
+  /// In en, this message translates to:
+  /// **'Bookmark'**
+  String get auditLogChipBookmark;
+
+  /// No description provided for @auditLogChipProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile'**
+  String get auditLogChipProfile;
+
+  /// No description provided for @auditLogChipGoal.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal'**
+  String get auditLogChipGoal;
+
+  /// No description provided for @auditLogChipStage.
+  ///
+  /// In en, this message translates to:
+  /// **'Stage'**
+  String get auditLogChipStage;
+
+  /// No description provided for @auditLogChipReward.
+  ///
+  /// In en, this message translates to:
+  /// **'Reward'**
+  String get auditLogChipReward;
+
+  /// No description provided for @auditLogChipStudyDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Study Day'**
+  String get auditLogChipStudyDay;
+
+  /// No description provided for @auditLogActionConfigChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Config changed'**
+  String get auditLogActionConfigChanged;
+
+  /// No description provided for @auditLogActionBulkPrior.
+  ///
+  /// In en, this message translates to:
+  /// **'Bulk prior'**
+  String get auditLogActionBulkPrior;
+
+  /// No description provided for @auditLogActionReset.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset'**
+  String get auditLogActionReset;
+
+  /// No description provided for @auditLogActionBookmark.
+  ///
+  /// In en, this message translates to:
+  /// **'Bookmark'**
+  String get auditLogActionBookmark;
+
+  /// No description provided for @auditLogActionProfileEdited.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile edited'**
+  String get auditLogActionProfileEdited;
+
+  /// No description provided for @auditLogActionGoalChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal changed'**
+  String get auditLogActionGoalChanged;
+
+  /// No description provided for @auditLogActionStageChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Stage changed'**
+  String get auditLogActionStageChanged;
+
+  /// No description provided for @auditLogActionRewardChanged.
+  ///
+  /// In en, this message translates to:
+  /// **'Reward changed'**
+  String get auditLogActionRewardChanged;
+
+  /// No description provided for @auditLogActionStudyDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Study day'**
+  String get auditLogActionStudyDay;
+
+  /// No description provided for @auditLogBefore.
+  ///
+  /// In en, this message translates to:
+  /// **'before: '**
+  String get auditLogBefore;
+
+  /// No description provided for @auditLogAfter.
+  ///
+  /// In en, this message translates to:
+  /// **'after: '**
+  String get auditLogAfter;
+
+  /// No description provided for @tutorPinAppBarTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Tutor PIN'**
+  String get tutorPinAppBarTitle;
+
+  /// No description provided for @tutorPinEntryHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your Tutor PIN'**
+  String get tutorPinEntryHeading;
+
+  /// No description provided for @tutorPinEntryBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your 4-digit Tutor PIN to access this profile.'**
+  String get tutorPinEntryBody;
+
+  /// No description provided for @tutorPinForgot.
+  ///
+  /// In en, this message translates to:
+  /// **'Forgot your Tutor PIN?'**
+  String get tutorPinForgot;
+
+  /// No description provided for @tutorPinIncorrect.
+  ///
+  /// In en, this message translates to:
+  /// **'Incorrect PIN. Please try again.'**
+  String get tutorPinIncorrect;
+
+  /// No description provided for @tutorPinLockedOut.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many attempts. Locked for {minutes} minute(s).'**
+  String tutorPinLockedOut(int minutes);
+
+  /// No description provided for @tutorPinErrorPrefix.
+  ///
+  /// In en, this message translates to:
+  /// **'Error: {error}'**
+  String tutorPinErrorPrefix(String error);
+
+  /// No description provided for @tutorPinSetupAppBarTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Set Tutor PIN'**
+  String get tutorPinSetupAppBarTitle;
+
+  /// No description provided for @tutorPinSetupConfirmHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm your Tutor PIN'**
+  String get tutorPinSetupConfirmHeading;
+
+  /// No description provided for @tutorPinSetupCreateHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Create your Tutor PIN'**
+  String get tutorPinSetupCreateHeading;
+
+  /// No description provided for @tutorPinSetupConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Re-enter the same 4-digit PIN to confirm.'**
+  String get tutorPinSetupConfirmBody;
+
+  /// No description provided for @tutorPinSetupCreateBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Tutor PIN protects access to every child profile you tutor. Enter a 4-digit PIN.'**
+  String get tutorPinSetupCreateBody;
+
+  /// No description provided for @tutorPinSetupConfirmLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm PIN'**
+  String get tutorPinSetupConfirmLabel;
+
+  /// No description provided for @tutorPinSetupEnterNewLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter New PIN'**
+  String get tutorPinSetupEnterNewLabel;
+
+  /// No description provided for @tutorPinSetupMismatch.
+  ///
+  /// In en, this message translates to:
+  /// **'PINs do not match. Please try again.'**
+  String get tutorPinSetupMismatch;
+
+  /// No description provided for @tutorPinSetupSaveError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to save PIN. Please try again.'**
+  String get tutorPinSetupSaveError;
+
+  /// No description provided for @tutorPinSetupLater.
+  ///
+  /// In en, this message translates to:
+  /// **'Set up later'**
+  String get tutorPinSetupLater;
+
+  /// No description provided for @tutorPinResetAppBarTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset Tutor PIN'**
+  String get tutorPinResetAppBarTitle;
+
+  /// No description provided for @tutorPinResetHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset your Tutor PIN'**
+  String get tutorPinResetHeading;
+
+  /// No description provided for @tutorPinResetSendingTo.
+  ///
+  /// In en, this message translates to:
+  /// **'We will send a reset link to:'**
+  String get tutorPinResetSendingTo;
+
+  /// No description provided for @tutorPinResetReturnHint.
+  ///
+  /// In en, this message translates to:
+  /// **'After following the link, return here to create a new PIN.'**
+  String get tutorPinResetReturnHint;
+
+  /// No description provided for @tutorPinResetNoEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'No email address found for your account. Please sign in with a cloud account to use PIN reset.'**
+  String get tutorPinResetNoEmail;
+
+  /// No description provided for @tutorPinResetSendFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to send reset email. Please try again.'**
+  String get tutorPinResetSendFailed;
+
+  /// No description provided for @tutorPinResetFallbackEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'your account email'**
+  String get tutorPinResetFallbackEmail;
+
+  /// No description provided for @tutorPinResetSendButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Send reset email'**
+  String get tutorPinResetSendButton;
+
+  /// No description provided for @tutorPinResetCheckEmailHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'Check your email'**
+  String get tutorPinResetCheckEmailHeading;
+
+  /// No description provided for @tutorPinResetCheckEmailBody.
+  ///
+  /// In en, this message translates to:
+  /// **'We sent a reset link to {email}. Follow the link, then return here to set a new PIN.'**
+  String tutorPinResetCheckEmailBody(String email);
+
+  /// No description provided for @tutorPinResetSetNew.
+  ///
+  /// In en, this message translates to:
+  /// **'Set new PIN'**
+  String get tutorPinResetSetNew;
+
+  /// No description provided for @settingsAppPermissions.
+  ///
+  /// In en, this message translates to:
+  /// **'App Permissions'**
+  String get settingsAppPermissions;
+
+  /// No description provided for @settingsAppPermissionsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications and location access'**
+  String get settingsAppPermissionsSubtitle;
+
+  /// No description provided for @settingsSendDiagnosticLogs.
+  ///
+  /// In en, this message translates to:
+  /// **'Send Diagnostic Logs'**
+  String get settingsSendDiagnosticLogs;
+
+  /// No description provided for @settingsSendDiagnosticLogsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Stream last 10 min of activity to Firebase'**
+  String get settingsSendDiagnosticLogsSubtitle;
+
+  /// No description provided for @settingsPronunciation.
+  ///
+  /// In en, this message translates to:
+  /// **'Pronunciation'**
+  String get settingsPronunciation;
+
+  /// No description provided for @settingsPronunciationSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Bereishis (Ashkenazi) or Bereshit (Sephardi)'**
+  String get settingsPronunciationSubtitle;
+
+  /// No description provided for @settingsPronunciationAshkenazi.
+  ///
+  /// In en, this message translates to:
+  /// **'Ashkenazi'**
+  String get settingsPronunciationAshkenazi;
+
+  /// No description provided for @settingsPronunciationSephardi.
+  ///
+  /// In en, this message translates to:
+  /// **'Sephardi'**
+  String get settingsPronunciationSephardi;
+
+  /// No description provided for @settingsNikud.
+  ///
+  /// In en, this message translates to:
+  /// **'Nikud'**
+  String get settingsNikud;
+
+  /// No description provided for @settingsNikudSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Show or hide Hebrew vowel marks when learning.'**
+  String get settingsNikudSubtitle;
+
+  /// No description provided for @settingsNikudWithout.
+  ///
+  /// In en, this message translates to:
+  /// **'Without nikud'**
+  String get settingsNikudWithout;
+
+  /// No description provided for @settingsNikudWith.
+  ///
+  /// In en, this message translates to:
+  /// **'With nikud'**
+  String get settingsNikudWith;
+
+  /// No description provided for @deviceNotificationsTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Device notifications'**
+  String get deviceNotificationsTitle;
+
+  /// No description provided for @deviceNotificationsChecking.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking permission…'**
+  String get deviceNotificationsChecking;
+
+  /// No description provided for @deviceNotificationsAllowed.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications allowed on this device'**
+  String get deviceNotificationsAllowed;
+
+  /// No description provided for @deviceNotificationsBlocked.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications blocked — tap to open Settings'**
+  String get deviceNotificationsBlocked;
+
+  /// No description provided for @deviceNotificationsDisableHint.
+  ///
+  /// In en, this message translates to:
+  /// **'To disable notifications, go to Settings > Apps > Learning Tracker.'**
+  String get deviceNotificationsDisableHint;
+
+  /// No description provided for @deviceNotificationsBlockedHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications blocked. Enable them in Settings > Apps > Learning Tracker > Notifications.'**
+  String get deviceNotificationsBlockedHint;
+
+  /// No description provided for @notificationReminderGenericBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Time to learn! Open the app to see your tasks.'**
+  String get notificationReminderGenericBody;
+
+  /// No description provided for @notificationStreakTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Streak at Risk!'**
+  String get notificationStreakTitle;
+
+  /// No description provided for @notificationStreakBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your {currentStreak}-day streak is at risk!'**
+  String notificationStreakBody(int currentStreak);
 }
 
 class _AppLocalizationsDelegate

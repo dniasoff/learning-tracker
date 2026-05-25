@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/features/notifications/presentation/providers/notification_providers.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Device-level OS notification toggle (WS5.two-layers / DEC-27).
 ///
@@ -65,9 +66,9 @@ class _DeviceNotificationToggleState
       // Cannot programmatically disable OS notifications — show a hint.
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text(
-              'To disable notifications, go to Settings > Apps > Learning Tracker.',
+              AppLocalizations.of(context)!.deviceNotificationsDisableHint,
             ),
           ),
         );
@@ -82,10 +83,9 @@ class _DeviceNotificationToggleState
       setState(() => _hasPermission = granted);
       if (!granted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text(
-              'Notifications blocked. Enable them in Settings > Apps > '
-              'Learning Tracker > Notifications.',
+              AppLocalizations.of(context)!.deviceNotificationsBlockedHint,
             ),
           ),
         );
@@ -96,6 +96,7 @@ class _DeviceNotificationToggleState
   @override
   Widget build(BuildContext context) {
     final permitted = _hasPermission;
+    final l10n = AppLocalizations.of(context)!;
 
     return Card(
       key: const Key('device_notification_toggle'),
@@ -103,16 +104,16 @@ class _DeviceNotificationToggleState
       color: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: SwitchListTile(
-        title: const Text(
-          'Device notifications',
-          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+        title: Text(
+          l10n.deviceNotificationsTitle,
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
         ),
         subtitle: Text(
           permitted == null
-              ? 'Checking permission…'
+              ? l10n.deviceNotificationsChecking
               : permitted
-              ? 'Notifications allowed on this device'
-              : 'Notifications blocked — tap to open Settings',
+              ? l10n.deviceNotificationsAllowed
+              : l10n.deviceNotificationsBlocked,
           style: const TextStyle(fontSize: 13, color: Color(0xFF7A8293)),
         ),
         value: permitted ?? true,

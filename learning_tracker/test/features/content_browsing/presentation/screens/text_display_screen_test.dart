@@ -202,7 +202,7 @@ void main() {
       await tester.pumpAndSettle();
 
       // Verify mark completion and optional next-task navigation
-      expect(find.text('Mark Complete'), findsOneWidget);
+      expect(find.text('Mark complete'), findsOneWidget);
       expect(find.text('Next daily task'), findsOneWidget);
     });
 

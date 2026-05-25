@@ -211,6 +211,28 @@ class PullPipeline {
     pageSize: pageSize,
   );
 
+  // WS9 Wave-B (C#2) — points spend economy pulls ──────────────────────────
+
+  Future<void> pullPointsLedger({
+    required int profileId,
+    int pageSize = defaultPageSize,
+  }) => _pullCollection(
+    profileId: profileId,
+    collection: 'points_ledger',
+    kind: EntityKind.pointsLedger,
+    pageSize: pageSize,
+  );
+
+  Future<void> pullRewardRedemptions({
+    required int profileId,
+    int pageSize = defaultPageSize,
+  }) => _pullCollection(
+    profileId: profileId,
+    collection: 'reward_redemptions',
+    kind: EntityKind.rewardRedemption,
+    pageSize: pageSize,
+  );
+
   Future<void> _pullDocument({
     required int profileId,
     required String collection,

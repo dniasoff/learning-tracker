@@ -88,11 +88,16 @@ class SettingsScreen extends ConsumerWidget {
                 icon: Icons.security_rounded,
                 iconColor: const Color(0xFF1E7B5A),
                 iconBackground: const Color(0xFFDDF3EB),
-                title: 'App Permissions',
-                subtitle: 'Notifications and location access',
+                title: l10n.settingsAppPermissions,
+                subtitle: l10n.settingsAppPermissionsSubtitle,
                 onTap: () => context.pushRoute(PermissionPromptRoute()),
               ),
             ),
+            const SizedBox(height: 16),
+            // DEC-26: Sacred Time / location is DEVICE-scoped, so its card lives
+            // under the DEVICE section (it was previously mis-placed under
+            // PROFILE).
+            const SacredTimeSettingsCard(),
             const SizedBox(height: 24),
             // ── PROFILE section (D2/WS4.settings) ─────────────────────────────
             // Profile-scoped settings: per-learner preferences, tracks,
@@ -166,8 +171,6 @@ class SettingsScreen extends ConsumerWidget {
                 onTap: () => context.pushRoute(const NotificationsRoute()),
               ),
             ),
-            const SizedBox(height: 16),
-            const SacredTimeSettingsCard(),
             if (!isChildProfile) ...[
               const SizedBox(height: 16),
               const BackupSyncSection(),
@@ -238,8 +241,8 @@ class SettingsScreen extends ConsumerWidget {
                 icon: Icons.bug_report_outlined,
                 iconColor: AppTheme.brandInkMuted,
                 iconBackground: const Color(0xFFF0F1F5),
-                title: 'Send Diagnostic Logs',
-                subtitle: 'Stream last 10 min of activity to Firebase',
+                title: l10n.settingsSendDiagnosticLogs,
+                subtitle: l10n.settingsSendDiagnosticLogsSubtitle,
                 trailing: const SizedBox.shrink(),
                 onTap: () => sendLogsToFirebase(
                   context: context,
@@ -409,14 +412,21 @@ class _TransliterationVariantTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final variant = ref.watch(currentTransliterationVariantProvider);
     return PreferenceSegmentedTile<TransliterationVariant>(
       icon: Icons.record_voice_over_rounded,
-      title: 'Pronunciation',
-      subtitle: 'Bereishis (Ashkenazi) or Bereshit (Sephardi)',
-      options: const [
-        (value: TransliterationVariant.ashkenazi, label: 'Ashkenazi'),
-        (value: TransliterationVariant.sephardi, label: 'Sephardi'),
+      title: l10n.settingsPronunciation,
+      subtitle: l10n.settingsPronunciationSubtitle,
+      options: [
+        (
+          value: TransliterationVariant.ashkenazi,
+          label: l10n.settingsPronunciationAshkenazi,
+        ),
+        (
+          value: TransliterationVariant.sephardi,
+          label: l10n.settingsPronunciationSephardi,
+        ),
       ],
       value: variant,
       onChanged: (v) =>
@@ -433,14 +443,15 @@ class _NikudTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final showNikud = ref.watch(showNikudProvider);
     return PreferenceSegmentedTile<bool>(
       icon: Icons.text_fields_rounded,
-      title: 'Nikud',
-      subtitle: 'Show or hide Hebrew vowel marks when learning.',
-      options: const [
-        (value: false, label: 'Without nikud'),
-        (value: true, label: 'With nikud'),
+      title: l10n.settingsNikud,
+      subtitle: l10n.settingsNikudSubtitle,
+      options: [
+        (value: false, label: l10n.settingsNikudWithout),
+        (value: true, label: l10n.settingsNikudWith),
       ],
       value: showNikud,
       onChanged: (v) => ref.read(showNikudProvider.notifier).set(v),

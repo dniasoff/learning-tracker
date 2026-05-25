@@ -86,6 +86,9 @@ class FirestoreListenerSource implements ListenerSource {
     'learning_ledger': 'created_at',
     'learning_order': 'updated_at',
     'profile_programs': 'updated_at',
+    // WS9 Wave-B (C#2) — points spend economy:
+    'points_ledger': 'created_at',
+    'reward_redemptions': 'updated_at',
   };
 
   @override
@@ -162,6 +165,11 @@ class FirestoreListenerSource implements ListenerSource {
       // merger now consumes pulled rows and reconciles them with the
       // Drift table.
       'study_day_configs': coll('study_day_configs'),
+      // WS9 Wave-B (C#2) — points spend economy. Real-time listeners so a
+      // child earning on device A, or a parent fulfilling/declining on their
+      // device, propagates without waiting for the next pull-on-launch.
+      'points_ledger': coll('points_ledger'),
+      'reward_redemptions': coll('reward_redemptions'),
     };
   }
 }

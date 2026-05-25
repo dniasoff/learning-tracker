@@ -12,7 +12,9 @@ import 'package:learning_tracker/core/sync/merge/learning_ledger_merger.dart';
 import 'package:learning_tracker/core/sync/merge/learning_order_merger.dart';
 import 'package:learning_tracker/core/sync/merge/merge_router.dart';
 import 'package:learning_tracker/core/sync/merge/notification_settings_merger.dart';
+import 'package:learning_tracker/core/sync/merge/points_ledger_merger.dart';
 import 'package:learning_tracker/core/sync/merge/profile_program_merger.dart';
+import 'package:learning_tracker/core/sync/merge/reward_redemption_merger.dart';
 import 'package:learning_tracker/core/sync/merge/settings_merger.dart';
 import 'package:learning_tracker/core/sync/merge/stage_definition_merger.dart';
 import 'package:learning_tracker/core/sync/merge/streak_event_merger.dart';
@@ -88,6 +90,11 @@ final mergeRouterProvider = Provider<MergeRouter>((ref) {
       // DriftMergeStore because StudyDayConfigs has a composite PK with a
       // foreign-key to curriculum_tracks (no compatible store helpers yet).
       EntityKind.studyDayConfig: StudyDayConfigMerger(database),
+      // WS9 Wave-B (C#2) — points spend economy. Both bypass DriftMergeStore
+      // and talk to PointsBalanceDao directly (append-only ledger + LWW
+      // redemption state-machine + local balance re-derivation).
+      EntityKind.pointsLedger: PointsLedgerMerger(database),
+      EntityKind.rewardRedemption: RewardRedemptionMerger(database),
     },
   );
 });

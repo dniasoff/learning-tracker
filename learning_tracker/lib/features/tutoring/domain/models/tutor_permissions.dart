@@ -27,6 +27,7 @@ class TutorPermissions {
     this.canEditStages = false,
     this.canEditRewards = false,
     this.canEditStudyDays = false,
+    this.canEditPoints = false,
   }) : canMarkLiveCompletion = false;
 
   // Intentionally not in constructor — always false.
@@ -57,6 +58,11 @@ class TutorPermissions {
   /// Tutor can change the learner's scheduled study days.
   final bool canEditStudyDays;
 
+  /// H5: Tutor can configure point settings and apply manual point
+  /// adjustments (`parent_points_adjust`). Distinct from [canEditGoals]
+  /// (learning goals) and [canEditRewards] (reward catalogue).
+  final bool canEditPoints;
+
   /// Default permissions for a newly accepted grant.
   ///
   /// Read-only (progress, content) + bulk prior completions enabled.
@@ -77,6 +83,7 @@ class TutorPermissions {
     bool? canEditStages,
     bool? canEditRewards,
     bool? canEditStudyDays,
+    bool? canEditPoints,
   }) => TutorPermissions(
     canViewProgress: canViewProgress ?? this.canViewProgress,
     canViewContent: canViewContent ?? this.canViewContent,
@@ -87,6 +94,7 @@ class TutorPermissions {
     canEditStages: canEditStages ?? this.canEditStages,
     canEditRewards: canEditRewards ?? this.canEditRewards,
     canEditStudyDays: canEditStudyDays ?? this.canEditStudyDays,
+    canEditPoints: canEditPoints ?? this.canEditPoints,
   );
 
   /// Serialise to the nested Firestore map stored in tutor_grants/{grantId}.
@@ -102,6 +110,7 @@ class TutorPermissions {
     'can_edit_stages': canEditStages,
     'can_edit_rewards': canEditRewards,
     'can_edit_study_days': canEditStudyDays,
+    'can_edit_points': canEditPoints,
   };
 
   factory TutorPermissions.fromFirestore(Map<String, dynamic> data) =>
@@ -115,6 +124,7 @@ class TutorPermissions {
         canEditStages: data['can_edit_stages'] as bool? ?? false,
         canEditRewards: data['can_edit_rewards'] as bool? ?? false,
         canEditStudyDays: data['can_edit_study_days'] as bool? ?? false,
+        canEditPoints: data['can_edit_points'] as bool? ?? false,
       );
 
   @override
@@ -128,7 +138,8 @@ class TutorPermissions {
           other.canEditGoals == canEditGoals &&
           other.canEditStages == canEditStages &&
           other.canEditRewards == canEditRewards &&
-          other.canEditStudyDays == canEditStudyDays;
+          other.canEditStudyDays == canEditStudyDays &&
+          other.canEditPoints == canEditPoints;
 
   @override
   int get hashCode => Object.hash(
@@ -140,6 +151,7 @@ class TutorPermissions {
     canEditStages,
     canEditRewards,
     canEditStudyDays,
+    canEditPoints,
   );
 
   @override
@@ -153,5 +165,6 @@ class TutorPermissions {
       'editStages=$canEditStages, '
       'editRewards=$canEditRewards, '
       'editStudyDays=$canEditStudyDays, '
+      'editPoints=$canEditPoints, '
       'markLive=false[invariant])';
 }

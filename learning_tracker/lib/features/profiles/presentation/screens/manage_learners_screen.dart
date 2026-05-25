@@ -83,8 +83,8 @@ class _ProfileListTile extends ConsumerWidget {
         title: Text(profile.displayName),
         subtitle: Text(
           profile.profileMode == ProfileMode.child
-              ? 'Child mode'
-              : 'Adult mode',
+              ? AppLocalizations.of(context)!.childMode
+              : AppLocalizations.of(context)!.adultMode,
         ),
         trailing: PopupMenuButton<String>(
           onSelected: (value) async {

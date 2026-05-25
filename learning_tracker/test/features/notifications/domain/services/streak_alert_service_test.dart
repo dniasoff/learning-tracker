@@ -69,16 +69,17 @@ void main() {
       streakClock: FakeLocalDayClock(testDay),
     );
 
-    // Stub notification service methods
+    // Stub notification service methods (per-profile, H2 fix).
     when(
-      () => mockNotificationGateway.scheduleStreakAlert(
+      () => mockNotificationGateway.scheduleStreakAlertForProfile(
+        profileId: any(named: 'profileId'),
         hour: any(named: 'hour'),
         minute: any(named: 'minute'),
         body: any(named: 'body'),
       ),
     ).thenAnswer((_) async {});
     when(
-      () => mockNotificationGateway.cancelStreakAlert(),
+      () => mockNotificationGateway.cancelStreakAlertForProfile(any()),
     ).thenAnswer((_) async {});
   });
 
@@ -94,13 +95,16 @@ void main() {
       await service.evaluate(hour: 21, minute: 0);
 
       verify(
-        () => mockNotificationGateway.scheduleStreakAlert(
+        () => mockNotificationGateway.scheduleStreakAlertForProfile(
+          profileId: 0,
           hour: 21,
           minute: 0,
           body: 'Your 5-day streak is at risk!',
         ),
       ).called(1);
-      verifyNever(() => mockNotificationGateway.cancelStreakAlert());
+      verifyNever(
+        () => mockNotificationGateway.cancelStreakAlertForProfile(any()),
+      );
     });
 
     test('alert does NOT fire when completions exist today', () async {
@@ -123,9 +127,12 @@ void main() {
 
       await service.evaluate(hour: 21, minute: 0);
 
-      verify(() => mockNotificationGateway.cancelStreakAlert()).called(1);
+      verify(
+        () => mockNotificationGateway.cancelStreakAlertForProfile(0),
+      ).called(1);
       verifyNever(
-        () => mockNotificationGateway.scheduleStreakAlert(
+        () => mockNotificationGateway.scheduleStreakAlertForProfile(
+          profileId: any(named: 'profileId'),
           hour: any(named: 'hour'),
           minute: any(named: 'minute'),
           body: any(named: 'body'),
@@ -147,9 +154,12 @@ void main() {
 
       await service.evaluate(hour: 21, minute: 0);
 
-      verify(() => mockNotificationGateway.cancelStreakAlert()).called(1);
+      verify(
+        () => mockNotificationGateway.cancelStreakAlertForProfile(0),
+      ).called(1);
       verifyNever(
-        () => mockNotificationGateway.scheduleStreakAlert(
+        () => mockNotificationGateway.scheduleStreakAlertForProfile(
+          profileId: any(named: 'profileId'),
           hour: any(named: 'hour'),
           minute: any(named: 'minute'),
           body: any(named: 'body'),
@@ -160,9 +170,12 @@ void main() {
     test('alert does NOT fire when no streak record exists', () async {
       await service.evaluate(hour: 21, minute: 0);
 
-      verify(() => mockNotificationGateway.cancelStreakAlert()).called(1);
+      verify(
+        () => mockNotificationGateway.cancelStreakAlertForProfile(0),
+      ).called(1);
       verifyNever(
-        () => mockNotificationGateway.scheduleStreakAlert(
+        () => mockNotificationGateway.scheduleStreakAlertForProfile(
+          profileId: any(named: 'profileId'),
           hour: any(named: 'hour'),
           minute: any(named: 'minute'),
           body: any(named: 'body'),
@@ -182,14 +195,17 @@ void main() {
     test('onCompletionRecorded cancels the alert', () async {
       await service.onCompletionRecorded();
 
-      verify(() => mockNotificationGateway.cancelStreakAlert()).called(1);
+      verify(
+        () => mockNotificationGateway.cancelStreakAlertForProfile(0),
+      ).called(1);
     });
 
     test('scheduleAlert schedules with correct parameters', () async {
       await service.scheduleAlert(hour: 21, minute: 0, currentStreak: 7);
 
       verify(
-        () => mockNotificationGateway.scheduleStreakAlert(
+        () => mockNotificationGateway.scheduleStreakAlertForProfile(
+          profileId: 0,
           hour: 21,
           minute: 0,
           body: 'Your 7-day streak is at risk!',

@@ -336,6 +336,7 @@ class NotificationGateway {
     required int hour,
     required int minute,
     required String body,
+    String title = 'Streak at Risk!',
   }) async {
     final scheduledTime = _nextInstanceOfTime(hour, minute);
 
@@ -350,7 +351,7 @@ class NotificationGateway {
 
     await _plugin.zonedSchedule(
       id: streakAlertId,
-      title: 'Streak at Risk!',
+      title: title,
       body: body,
       scheduledDate: scheduledTime,
       notificationDetails: notificationDetails,
@@ -363,6 +364,47 @@ class NotificationGateway {
   /// Cancel the streak protection alert.
   Future<void> cancelStreakAlert() async {
     await _plugin.cancel(id: streakAlertId);
+  }
+
+  /// Schedule a daily streak protection alert for [profileId] at
+  /// [hour]:[minute].
+  ///
+  /// Uses the per-profile streak-alert ID block (`profileId*1000 + 1`) and a
+  /// `streak_protection:<profileId>` payload so the tap handler can switch to
+  /// the correct profile. Mirrors [scheduleDailyReminderForProfile].
+  Future<void> scheduleStreakAlertForProfile({
+    required int profileId,
+    required int hour,
+    required int minute,
+    required String body,
+    String title = 'Streak at Risk!',
+  }) async {
+    final scheduledTime = _nextInstanceOfTime(hour, minute);
+
+    const androidDetails = AndroidNotificationDetails(
+      _streakChannelId,
+      _streakChannelName,
+      channelDescription: _streakChannelDescription,
+      importance: Importance.high,
+      priority: Priority.high,
+    );
+    const notificationDetails = NotificationDetails(android: androidDetails);
+
+    await _plugin.zonedSchedule(
+      id: streakAlertIdForProfile(profileId),
+      title: title,
+      body: body,
+      scheduledDate: scheduledTime,
+      notificationDetails: notificationDetails,
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      matchDateTimeComponents: DateTimeComponents.time,
+      payload: '$streakAlertPayload:$profileId',
+    );
+  }
+
+  /// Cancel the streak protection alert for [profileId].
+  Future<void> cancelStreakAlertForProfile(int profileId) async {
+    await _plugin.cancel(id: streakAlertIdForProfile(profileId));
   }
 
   /// Get the next instance of the given time (today or tomorrow).

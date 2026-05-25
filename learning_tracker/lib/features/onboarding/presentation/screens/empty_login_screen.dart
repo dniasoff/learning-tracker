@@ -14,10 +14,13 @@ import 'dart:async';
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/skipped_onboarding_cta_banner.dart';
 import 'package:learning_tracker/features/notifications/presentation/widgets/device_notification_toggle.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
 class EmptyLoginScreen extends ConsumerWidget {
@@ -25,15 +28,34 @@ class EmptyLoginScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Learning Tracker'),
+        title: Text(l10n.learningTracker),
         actions: [
+          // R1o-H2: account-switch affordance. A 0-profile account previously
+          // had no way back to the user's other accounts from this surface.
+          // Reuse the canonical multi-account switch surface (AccountPicker),
+          // count-gated so it only appears when another account exists.
+          FutureBuilder<List<DeviceAccount>>(
+            future: ref.read(deviceRegistryProvider).getAllAccounts(),
+            builder: (context, snapshot) {
+              final accountCount = snapshot.data?.length ?? 0;
+              if (accountCount < 2) return const SizedBox.shrink();
+              return IconButton(
+                icon: const Icon(Icons.switch_account_outlined),
+                tooltip: l10n.switchAccount,
+                onPressed: () =>
+                    unawaited(context.router.push(const AccountPickerRoute())),
+              );
+            },
+          ),
           // Device settings entry
           IconButton(
             icon: const Icon(Icons.settings_outlined),
-            tooltip: 'Settings',
-            onPressed: () => unawaited(context.router.push(const SettingsRoute())),
+            tooltip: l10n.settings,
+            onPressed: () =>
+                unawaited(context.router.push(const SettingsRoute())),
           ),
         ],
       ),
@@ -67,7 +89,7 @@ class EmptyLoginScreen extends ConsumerWidget {
                 OutlinedButton.icon(
                   key: const Key('empty_login_tutor_entry'),
                   icon: const Icon(Icons.school_outlined),
-                  label: const Text("I'm a tutor"),
+                  label: Text(l10n.emptyLoginTutorEntry),
                   style: OutlinedButton.styleFrom(
                     foregroundColor: AppTheme.brandBlueDeep,
                     side: const BorderSide(color: AppTheme.brandBlue),
@@ -79,12 +101,7 @@ class EmptyLoginScreen extends ConsumerWidget {
                     // invitation-acceptance flow (ManageGrantsRoute /
                     // AcceptInviteRoute). For now, show a message.
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          'Tutor access coming soon. Ask the parent to share '
-                          'an invite link with you.',
-                        ),
-                      ),
+                      SnackBar(content: Text(l10n.emptyLoginTutorComingSoon)),
                     );
                   },
                 ),

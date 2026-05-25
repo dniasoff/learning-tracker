@@ -654,7 +654,7 @@ final class ReminderSyncEffectProvider
 }
 
 String _$reminderSyncEffectHash() =>
-    r'50201b14a76144729ef0df5c3478767786dae121';
+    r'74c20ce4af6e9d060878ef7d56b588f7d4feb32b';
 
 /// Provides the [StreakAlertService] instance.
 
@@ -768,7 +768,7 @@ final class AllProfilesReminderBootstrapProvider
 }
 
 String _$allProfilesReminderBootstrapHash() =>
-    r'546cb2e284327b1903594212a4d1f24bd0e343d3';
+    r'a9f1959523cb6d503d4b64ea7b09163e69f0e1f3';
 
 /// Watches streak alert settings and evaluates whether to schedule or cancel
 /// the streak protection alert.

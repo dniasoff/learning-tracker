@@ -19,6 +19,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_pin_providers.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 enum _ResetStep { confirm, emailSent }
 
@@ -59,9 +60,8 @@ class _TutorPinResetScreenState extends ConsumerState<TutorPinResetScreen> {
     final email = _currentEmail;
     if (email == null || email.isEmpty) {
       setState(
-        () => _errorMessage =
-            'No email address found for your account. '
-            'Please sign in with a cloud account to use PIN reset.',
+        () =>
+            _errorMessage = AppLocalizations.of(context)!.tutorPinResetNoEmail,
       );
       return;
     }
@@ -85,7 +85,9 @@ class _TutorPinResetScreenState extends ConsumerState<TutorPinResetScreen> {
     } catch (e) {
       if (mounted) {
         setState(
-          () => _errorMessage = 'Failed to send reset email. Please try again.',
+          () => _errorMessage = AppLocalizations.of(
+            context,
+          )!.tutorPinResetSendFailed,
         );
       }
     } finally {
@@ -96,14 +98,15 @@ class _TutorPinResetScreenState extends ConsumerState<TutorPinResetScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final email = _currentEmail ?? 'your account email';
+    final l10n = AppLocalizations.of(context)!;
+    final email = _currentEmail ?? l10n.tutorPinResetFallbackEmail;
 
     return Scaffold(
       backgroundColor: AppTheme.brandCream,
       appBar: AppBar(
         backgroundColor: AppTheme.brandCream,
         elevation: 0,
-        title: const Text('Reset Tutor PIN'),
+        title: Text(l10n.tutorPinResetAppBarTitle),
       ),
       body: SafeArea(
         child: Padding(
@@ -118,6 +121,7 @@ class _TutorPinResetScreenState extends ConsumerState<TutorPinResetScreen> {
   }
 
   Widget _buildConfirmStep(ThemeData theme, String email) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -133,7 +137,7 @@ class _TutorPinResetScreenState extends ConsumerState<TutorPinResetScreen> {
         ),
         const SizedBox(height: 20),
         Text(
-          'Reset your Tutor PIN',
+          l10n.tutorPinResetHeading,
           textAlign: TextAlign.center,
           style: theme.textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.w800,
@@ -142,7 +146,7 @@ class _TutorPinResetScreenState extends ConsumerState<TutorPinResetScreen> {
         ),
         const SizedBox(height: 8),
         Text(
-          'We will send a reset link to:',
+          l10n.tutorPinResetSendingTo,
           textAlign: TextAlign.center,
           style: theme.textTheme.bodyLarge?.copyWith(
             color: AppTheme.brandInkMuted,
@@ -159,7 +163,7 @@ class _TutorPinResetScreenState extends ConsumerState<TutorPinResetScreen> {
         ),
         const SizedBox(height: 8),
         Text(
-          'After following the link, return here to create a new PIN.',
+          l10n.tutorPinResetReturnHint,
           textAlign: TextAlign.center,
           style: theme.textTheme.bodyMedium?.copyWith(
             color: AppTheme.brandInkMuted,
@@ -191,13 +195,14 @@ class _TutorPinResetScreenState extends ConsumerState<TutorPinResetScreen> {
                     color: Colors.white,
                   ),
                 )
-              : const Text('Send reset email'),
+              : Text(l10n.tutorPinResetSendButton),
         ),
       ],
     );
   }
 
   Widget _buildEmailSentStep(ThemeData theme, String email) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -213,7 +218,7 @@ class _TutorPinResetScreenState extends ConsumerState<TutorPinResetScreen> {
         ),
         const SizedBox(height: 20),
         Text(
-          'Check your email',
+          l10n.tutorPinResetCheckEmailHeading,
           textAlign: TextAlign.center,
           style: theme.textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.w800,
@@ -222,8 +227,7 @@ class _TutorPinResetScreenState extends ConsumerState<TutorPinResetScreen> {
         ),
         const SizedBox(height: 8),
         Text(
-          'We sent a reset link to $email. '
-          'Follow the link, then return here to set a new PIN.',
+          l10n.tutorPinResetCheckEmailBody(email),
           textAlign: TextAlign.center,
           style: theme.textTheme.bodyLarge?.copyWith(
             color: AppTheme.brandInkMuted,
@@ -237,7 +241,7 @@ class _TutorPinResetScreenState extends ConsumerState<TutorPinResetScreen> {
             padding: const EdgeInsets.symmetric(vertical: 14),
             shape: const StadiumBorder(),
           ),
-          child: const Text('Set new PIN'),
+          child: Text(l10n.tutorPinResetSetNew),
         ),
       ],
     );

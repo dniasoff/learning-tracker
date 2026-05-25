@@ -20,6 +20,7 @@ import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/pin_entry_widget.dart';
 import 'package:learning_tracker/features/tutoring/domain/services/tutor_pin_service.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_pin_providers.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 enum _TutorPinSetupStep { enterPin, confirmPin }
 
@@ -68,7 +69,7 @@ class _TutorPinSetupScreenState extends ConsumerState<TutorPinSetupScreen> {
   Future<void> _onConfirmPinEntered(String pin) async {
     if (pin != _firstPin) {
       setState(() {
-        _errorMessage = 'PINs do not match. Please try again.';
+        _errorMessage = AppLocalizations.of(context)!.tutorPinSetupMismatch;
         _step = _TutorPinSetupStep.enterPin;
         _firstPin = null;
       });
@@ -96,7 +97,9 @@ class _TutorPinSetupScreenState extends ConsumerState<TutorPinSetupScreen> {
         case TutorPinLockedOut():
           // Not expected during setup — treat as generic error.
           setState(() {
-            _errorMessage = 'Unable to save PIN. Please try again.';
+            _errorMessage = AppLocalizations.of(
+              context,
+            )!.tutorPinSetupSaveError;
             _step = _TutorPinSetupStep.enterPin;
             _firstPin = null;
           });
@@ -109,6 +112,7 @@ class _TutorPinSetupScreenState extends ConsumerState<TutorPinSetupScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final isConfirmStep = _step == _TutorPinSetupStep.confirmPin;
 
     return Scaffold(
@@ -116,7 +120,7 @@ class _TutorPinSetupScreenState extends ConsumerState<TutorPinSetupScreen> {
       appBar: AppBar(
         backgroundColor: AppTheme.brandCream,
         elevation: 0,
-        title: const Text('Set Tutor PIN'),
+        title: Text(l10n.tutorPinSetupAppBarTitle),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -138,8 +142,8 @@ class _TutorPinSetupScreenState extends ConsumerState<TutorPinSetupScreen> {
               const SizedBox(height: 20),
               Text(
                 isConfirmStep
-                    ? 'Confirm your Tutor PIN'
-                    : 'Create your Tutor PIN',
+                    ? l10n.tutorPinSetupConfirmHeading
+                    : l10n.tutorPinSetupCreateHeading,
                 textAlign: TextAlign.center,
                 style: theme.textTheme.headlineSmall?.copyWith(
                   fontWeight: FontWeight.w800,
@@ -149,9 +153,8 @@ class _TutorPinSetupScreenState extends ConsumerState<TutorPinSetupScreen> {
               const SizedBox(height: 8),
               Text(
                 isConfirmStep
-                    ? 'Re-enter the same 4-digit PIN to confirm.'
-                    : 'Your Tutor PIN protects access to every child profile '
-                          'you tutor. Enter a 4-digit PIN.',
+                    ? l10n.tutorPinSetupConfirmBody
+                    : l10n.tutorPinSetupCreateBody,
                 textAlign: TextAlign.center,
                 style: theme.textTheme.bodyLarge?.copyWith(
                   color: AppTheme.brandInkMuted,
@@ -172,8 +175,8 @@ class _TutorPinSetupScreenState extends ConsumerState<TutorPinSetupScreen> {
                       else
                         PinEntryWidget(
                           title: isConfirmStep
-                              ? 'Confirm PIN'
-                              : 'Enter New PIN',
+                              ? l10n.tutorPinSetupConfirmLabel
+                              : l10n.tutorPinSetupEnterNewLabel,
                           errorMessage: _errorMessage,
                           onPinComplete: isConfirmStep
                               ? _onConfirmPinEntered
@@ -187,9 +190,9 @@ class _TutorPinSetupScreenState extends ConsumerState<TutorPinSetupScreen> {
                 const SizedBox(height: 16),
                 TextButton(
                   onPressed: widget.onSkip,
-                  child: const Text(
-                    'Set up later',
-                    style: TextStyle(color: AppTheme.brandInkMuted),
+                  child: Text(
+                    l10n.tutorPinSetupLater,
+                    style: const TextStyle(color: AppTheme.brandInkMuted),
                   ),
                 ),
               ],

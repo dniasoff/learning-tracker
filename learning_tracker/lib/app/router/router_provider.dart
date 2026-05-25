@@ -16,6 +16,8 @@ import 'package:learning_tracker/features/profiles/presentation/providers/parent
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/parent_pin_keypad_dialog.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_pin_providers.dart';
+import 'package:learning_tracker/features/tutoring/presentation/screens/tutor_pin_entry_dialog.dart';
 
 /// Riverpod provider that creates and owns the [AppRouter] singleton.
 ///
@@ -51,9 +53,27 @@ final routerProvider = Provider<AppRouter>((ref) {
     ),
     pinGuard: PinGuard(
       pinService: pinSvc,
+      // C2: dispatch the prompt on the resolved PinScope. Tutor-scoped routes
+      // verify against the Tutor PIN service (keyed on the tutor's OWN profile
+      // id); parent-scoped routes use the existing parent-PIN dialog.
       promptForPin: () async {
         final context = navigatorKey.currentContext;
         if (context == null) return false;
+
+        // Tutor scope takes precedence when a talmid context is active.
+        final tutoredSelection = ref.read(
+          activeTutoredProfileSelectionProvider,
+        );
+        if (tutoredSelection != null) {
+          final tutorOwnId = tutoredSelection.tutorOwnProfileId;
+          final tutorPinSvc = ref.read(tutorPinServiceProvider);
+          return showTutorPinVerificationDialog(
+            context,
+            tutorOwnProfileId: tutorOwnId,
+            tutorPinService: tutorPinSvc,
+          );
+        }
+
         final profileId = ref.read(selectedProfileIdProvider);
         if (profileId == null) return false;
         return showParentPinVerificationDialog(
@@ -63,17 +83,19 @@ final routerProvider = Provider<AppRouter>((ref) {
           analytics: ref.read(analyticsServiceProvider),
         );
       },
-      // WS3.3c: resolve PinScope from the active profile selection.
+      // WS3.3c / C1: resolve PinScope from the active profile selection.
       // OwnProfileSelection  → PinScope.parent(profileId) for parent-mode routes.
-      // TutoredProfileSelection → PinScope.tutor(profileId) for talmid-view routes.
+      // TutoredProfileSelection → PinScope.tutor(tutorOwnProfileId) for
+      //   talmid-view routes. The Tutor PIN is per-tutor (one PIN across all
+      //   talmidim) so the scope keys on the tutor's OWN profile id — the same
+      //   namespace the entry gate uses — NOT on the talmid's profileId.
       getScope: () {
         // Check if there is an active tutored-profile context first.
         final tutoredSelection = ref.read(
           activeTutoredProfileSelectionProvider,
         );
         if (tutoredSelection != null) {
-          final profileId = int.tryParse(tutoredSelection.profileId);
-          if (profileId != null) return PinScope.tutor(profileId);
+          return PinScope.tutor(tutoredSelection.tutorOwnProfileId);
         }
         // Fall back to parent-mode scope for own-profile routes.
         final profileId = ref.read(selectedProfileIdProvider);

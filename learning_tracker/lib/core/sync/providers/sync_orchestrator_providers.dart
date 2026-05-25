@@ -81,6 +81,11 @@ final syncOrchestratorProvider = Provider<SyncOrchestrator?>((ref) {
     profileId: profileId,
     clock: clock,
   );
+  // WS9 Wave-B (C#2): register the points-sync sink at the sync-orchestrator
+  // composition root so every PointsBalanceDao mutation (credit on completion,
+  // redemption debit/refund, parent adjust) is pushed to the outbox regardless
+  // of which UI path triggered it.
+  database.pointsBalanceDao.syncSink = uploadFacade;
   final uploadService = LocalDataUploadService(
     facade: uploadFacade,
     database: database,

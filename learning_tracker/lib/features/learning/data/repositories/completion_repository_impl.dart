@@ -16,6 +16,7 @@ import 'package:learning_tracker/features/learning/data/completion_writer.dart';
 import 'package:learning_tracker/features/learning/data/repositories/bookmark_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_command.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/domain/entities/mark_completion_result.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/bookmark_repository.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
@@ -33,7 +34,6 @@ class CompletionRepositoryImpl implements CompletionRepository {
   final ContentRepository _contentRepository;
   final BookmarkRepository? _bookmarkRepository;
   final CompletionDetectionService? _completionDetectionService;
-  final RewardMilestoneService? _rewardMilestoneService;
   final int _activeProfileId;
   final CompletionWriter _completionWriter;
   final StageDefinitionRepository? _stageRepository;
@@ -45,7 +45,6 @@ class CompletionRepositoryImpl implements CompletionRepository {
     OutboxSyncWriteFacade? outboxFacade,
     BookmarkRepository? bookmarkRepository,
     CompletionDetectionService? completionDetectionService,
-    RewardMilestoneService? rewardMilestoneService,
     int activeProfileId = 0,
     CompletionWriter? completionWriter,
     StageDefinitionRepository? stageRepository,
@@ -55,7 +54,6 @@ class CompletionRepositoryImpl implements CompletionRepository {
        _contentRepository = contentRepository,
        _bookmarkRepository = bookmarkRepository,
        _completionDetectionService = completionDetectionService,
-       _rewardMilestoneService = rewardMilestoneService,
        _activeProfileId = activeProfileId,
        _completionWriter = completionWriter ?? CompletionWriter(database),
        _stageRepository = stageRepository;
@@ -197,7 +195,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
         );
       }
 
-      // B1: milestone unlocks are engagement-tier — skip for bulkInTrack /
+      // B1: gamification credit is engagement-tier — skip for bulkInTrack /
       // lifetimeOnly sources (awardGamificationPoints = false).
       if (isChildProfile && awardGamificationPoints) {
         // WS7.balance: credit the stored debitable balance for every point
@@ -211,15 +209,10 @@ class CompletionRepositoryImpl implements CompletionRepository {
           );
         }
 
-        final trackUnlocks =
-            await _rewardMilestoneService?.evaluateUnlocksForTrack(
-              completion.trackId,
-            ) ??
-            const <RewardUnlockRecord>[];
-        final globalUnlocks =
-            await _rewardMilestoneService?.evaluateUnlocksForGlobal() ??
-            const <RewardUnlockRecord>[];
-        newMilestoneUnlocks = [...trackUnlocks, ...globalUnlocks];
+        // R4o-C1 / DEC-32: the auto-unlock achievement ladder was replaced by
+        // the spend economy — rewards are priced spend-items, not cumulative
+        // auto-unlocks. No unlock evaluation runs on completion any more.
+        newMilestoneUnlocks = const <RewardUnlockRecord>[];
         unawaited(_syncEngine?.pushGamificationSettingsSnapshot());
       }
     }
@@ -286,26 +279,13 @@ class CompletionRepositoryImpl implements CompletionRepository {
       );
     }
 
+    // R4o-C1 / DEC-32: the auto-unlock achievement ladder was replaced by the
+    // spend economy. No unlock evaluation runs on the bulk path any more; we
+    // still push the gamification snapshot so reward config stays in sync.
     if (isChildProfile &&
         completions.isNotEmpty &&
         request.awardGamificationPoints) {
-      final RewardMilestoneService? rewardSvc;
-      if (request.profileId != null && request.profileId != _activeProfileId) {
-        rewardSvc = RewardMilestoneService(
-          _database,
-          profileId: effectiveProfileId,
-        );
-      } else {
-        rewardSvc = _rewardMilestoneService;
-      }
-      if (rewardSvc != null) {
-        final affectedTrackIds = completions.map((c) => c.trackId).toSet();
-        for (final trackId in affectedTrackIds) {
-          await rewardSvc.evaluateUnlocksForTrack(trackId);
-        }
-        await rewardSvc.evaluateUnlocksForGlobal();
-        await _syncEngine?.pushGamificationSettingsSnapshot();
-      }
+      await _syncEngine?.pushGamificationSettingsSnapshot();
     }
 
     // F1 (W7-A): dispatch siyum detection after the bulk insert. The slow
@@ -318,6 +298,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
         sefariaRefs: completions.map((c) => c.sefariaRef).toList(),
         trackType: request.trackType,
         profileId: effectiveProfileId,
+        source: _bulkSourceFor(request),
       );
     }
 
@@ -419,6 +400,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
         sefariaRefs: ordered.map((c) => c.sefariaRef).toList(),
         trackType: request.trackType,
         profileId: effectiveProfileId,
+        source: _bulkSourceFor(request),
       );
     }
 
@@ -441,6 +423,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
     required List<String> sefariaRefs,
     required String trackType,
     required int profileId,
+    CompletionSource source = CompletionSource.live,
   }) async {
     final svc = _completionDetectionService;
     if (svc == null) return;
@@ -475,8 +458,19 @@ class CompletionRepositoryImpl implements CompletionRepository {
         trackType: trackType,
         profileId: profileId,
         markedBy: profileId,
+        source: source,
       );
     }
+  }
+
+  /// Derive the [CompletionSource] for a bulk request from its engagement /
+  /// achievement gates (B1 three-tier policy). A bulk-in-track mark suppresses
+  /// engagement but credits achievement → [CompletionSource.bulkInTrack]; a
+  /// lifetime-only import credits neither → [CompletionSource.lifetimeOnly].
+  static CompletionSource _bulkSourceFor(BulkCompletionRequest request) {
+    if (request.awardGamificationPoints) return CompletionSource.live;
+    if (request.creditsAchievement) return CompletionSource.bulkInTrack;
+    return CompletionSource.lifetimeOnly;
   }
 
   /// Internal method used by the slow [bulkMarkComplete] path only.

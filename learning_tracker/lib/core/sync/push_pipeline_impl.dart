@@ -219,6 +219,28 @@ class OutboxPushPipeline implements PushPipeline {
     () => _gateway.pushStudyDayConfig(profileId: profileId, data: payload),
   );
 
+  // WS9 Wave-B (C#2) — points spend economy ─────────────────────────────────
+
+  @override
+  Future<void> pushPointsLedgerEntry({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) => _run(
+    OutboxEntityKind.pointsLedgerEntry,
+    () => _gateway.pushPointsLedgerEntry(profileId: profileId, data: payload),
+  );
+
+  @override
+  Future<void> pushRewardRedemption({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) => _run(
+    OutboxEntityKind.rewardRedemption,
+    () => _gateway.pushRewardRedemption(profileId: profileId, data: payload),
+  );
+
   /// Serialize calls per [kind]: wait on any prior in-flight future, then
   /// run [action]. The slot is cleared after the action completes so
   /// failures don't deadlock the chain.

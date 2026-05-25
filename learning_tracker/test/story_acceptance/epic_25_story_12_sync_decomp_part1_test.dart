@@ -412,6 +412,16 @@ class _RecordingGateway implements FirestoreGateway {
     required int profileId,
     required Map<String, dynamic> data,
   }) async {}
+  @override
+  Future<void> pushPointsLedgerEntry({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
+  @override
+  Future<void> pushRewardRedemption({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
 
   // W6.13: fetchAuditLogEntries added to FirestoreGateway interface.
   @override
@@ -596,6 +606,16 @@ class _PagingGateway implements FirestoreGateway {
   }) async {}
   @override
   Future<void> pushStudyDayConfig({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
+  @override
+  Future<void> pushPointsLedgerEntry({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
+  @override
+  Future<void> pushRewardRedemption({
     required int profileId,
     required Map<String, dynamic> data,
   }) async {}

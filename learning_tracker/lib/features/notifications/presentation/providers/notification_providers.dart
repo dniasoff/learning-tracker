@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/analytics/analytics_provider.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/notifications/data/services/sacred_window_repository.dart';
@@ -19,6 +20,7 @@ import 'package:learning_tracker/features/sacred_time/presentation/providers/sac
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -259,6 +261,61 @@ Future<void> _persistNotificationSettingsToCloud(
   }();
   if (outboxFacade == null) return;
 
+  // M2 fix: build a stable signature of the current settings (excluding the
+  // timestamp). Only bump updated_at + enqueue a push when this signature
+  // differs from the last value we pushed. Pushing unconditionally on every
+  // launch/switch advanced updated_at even when nothing changed, letting a
+  // stale local win LWW over a newer remote.
+  final reminderEnabled =
+      prefs.getBool(
+        NotificationPreferencesRepository.reminderEnabledKey(profileId),
+      ) ??
+      true;
+  final reminderHour =
+      prefs.getInt(
+        NotificationPreferencesRepository.reminderHourKey(profileId),
+      ) ??
+      defaultReminderHour;
+  final reminderMinute =
+      prefs.getInt(
+        NotificationPreferencesRepository.reminderMinuteKey(profileId),
+      ) ??
+      defaultReminderMinute;
+  final streakEnabled =
+      prefs.getBool(
+        NotificationPreferencesRepository.streakAlertEnabledKey(profileId),
+      ) ??
+      true;
+  final streakHour =
+      prefs.getInt(
+        NotificationPreferencesRepository.streakAlertHourKey(profileId),
+      ) ??
+      defaultStreakAlertHour;
+  final streakMinute =
+      prefs.getInt(
+        NotificationPreferencesRepository.streakAlertMinuteKey(profileId),
+      ) ??
+      defaultStreakAlertMinute;
+  final rewardEnabled =
+      prefs.getBool(
+        NotificationPreferencesRepository.rewardNotificationEnabledKey(
+          profileId,
+        ),
+      ) ??
+      true;
+
+  final signature =
+      'r:$reminderEnabled:$reminderHour:$reminderMinute|'
+      's:$streakEnabled:$streakHour:$streakMinute|'
+      'w:$rewardEnabled';
+  final lastPushed = prefs.getString(
+    NotificationPreferencesRepository.lastPushedSettingsHashKey(profileId),
+  );
+  if (lastPushed == signature) {
+    // Nothing changed since the last push — do not bump updated_at or enqueue.
+    return;
+  }
+
   final updatedAtMs = DateTimeFactory.nowUtc().millisecondsSinceEpoch;
   await prefs.setInt(
     NotificationPreferencesRepository.notificationSettingsUpdatedAtMsKey(
@@ -266,52 +323,24 @@ Future<void> _persistNotificationSettingsToCloud(
     ),
     updatedAtMs,
   );
+  await prefs.setString(
+    NotificationPreferencesRepository.lastPushedSettingsHashKey(profileId),
+    signature,
+  );
 
   await outboxFacade.enqueueNotificationSettings({
     'schema_version': 1,
     'daily_reminder': {
-      'enabled':
-          prefs.getBool(
-            NotificationPreferencesRepository.reminderEnabledKey(profileId),
-          ) ??
-          true,
-      'hour':
-          prefs.getInt(
-            NotificationPreferencesRepository.reminderHourKey(profileId),
-          ) ??
-          defaultReminderHour,
-      'minute':
-          prefs.getInt(
-            NotificationPreferencesRepository.reminderMinuteKey(profileId),
-          ) ??
-          defaultReminderMinute,
+      'enabled': reminderEnabled,
+      'hour': reminderHour,
+      'minute': reminderMinute,
     },
     'streak_alert': {
-      'enabled':
-          prefs.getBool(
-            NotificationPreferencesRepository.streakAlertEnabledKey(profileId),
-          ) ??
-          true,
-      'hour':
-          prefs.getInt(
-            NotificationPreferencesRepository.streakAlertHourKey(profileId),
-          ) ??
-          defaultStreakAlertHour,
-      'minute':
-          prefs.getInt(
-            NotificationPreferencesRepository.streakAlertMinuteKey(profileId),
-          ) ??
-          defaultStreakAlertMinute,
+      'enabled': streakEnabled,
+      'hour': streakHour,
+      'minute': streakMinute,
     },
-    'reward_notifications': {
-      'enabled':
-          prefs.getBool(
-            NotificationPreferencesRepository.rewardNotificationEnabledKey(
-              profileId,
-            ),
-          ) ??
-          true,
-    },
+    'reward_notifications': {'enabled': rewardEnabled},
     'updated_at': DateTime.fromMillisecondsSinceEpoch(
       updatedAtMs,
       isUtc: true,
@@ -390,18 +419,46 @@ final notificationSettingsCloudSyncEffectProvider = FutureProvider<void>((
 /// even if no UI is watching this provider at the moment.
 @Riverpod(keepAlive: true)
 Future<void> reminderSyncEffect(Ref ref) async {
-  final enabled = ref.watch(reminderEnabledProvider);
-  final time = ref.watch(reminderTimeProvider);
+  // Watch the notifiers so any preference change re-runs this effect, but read
+  // the authoritative values from SharedPreferences below.
+  ref.watch(reminderEnabledProvider);
+  ref.watch(reminderTimeProvider);
   final scheduler = ref.watch(notificationSchedulerProvider);
   final sacredTimeActive = ref.watch(isSacredTimeActiveProvider);
+  final profileId = ref.watch(activeProfileIdProvider);
+
+  // M3 fix: the pref notifiers return defaults (enabled=true, 19:00)
+  // synchronously, then async-load the real values. Watching them schedules
+  // with DEFAULTS first, briefly scheduling reminders for a profile that has
+  // them disabled. Read the real persisted values directly so we never act on
+  // the transient default state.
+  final prefs = await SharedPreferences.getInstance();
+  final enabled =
+      prefs.getBool(
+        NotificationPreferencesRepository.reminderEnabledKey(profileId),
+      ) ??
+      true;
+  final time = TimeOfDay(
+    hour:
+        prefs.getInt(
+          NotificationPreferencesRepository.reminderHourKey(profileId),
+        ) ??
+        defaultReminderHour,
+    minute:
+        prefs.getInt(
+          NotificationPreferencesRepository.reminderMinuteKey(profileId),
+        ) ??
+        defaultReminderMinute,
+  );
 
   if (!enabled) {
-    await scheduler.cancel();
+    // H1 fix: cancel under the active profile's per-profile ID block.
+    await scheduler.cancelForProfile(profileId);
     return;
   }
   if (sacredTimeActive) {
     // Story 27.14 (DNI-390): fire suppression event when sacred time blocks.
-    await scheduler.cancelForSacredTime();
+    await scheduler.cancelForProfileSacredTime(profileId);
     return;
   }
 
@@ -425,7 +482,7 @@ Future<void> reminderSyncEffect(Ref ref) async {
   // D2 fix: when there are no tasks today, cancel any existing reminder
   // rather than scheduling "0 tasks today".
   if (taskCount == 0) {
-    await scheduler.cancel();
+    await scheduler.cancelForProfile(profileId);
     return;
   }
 
@@ -433,19 +490,19 @@ Future<void> reminderSyncEffect(Ref ref) async {
   final location = ref.read(sacredLocationProvider);
   final inIsrael = ref.read(inIsraelProvider);
 
-  // Build locale-aware notification body.
-  // NOTE: We build a plain-English body here since locale context is not
-  // available in providers. For fully locale-aware bodies, callers that have
-  // BuildContext should use AppLocalizations and call scheduler.scheduleReminder
-  // directly with a pre-resolved body string (UX-DR7).
-  final body =
-      'You have $taskCount '
-      'task${taskCount == 1 ? '' : 's'} across '
-      '$curriculumCount curricul${curriculumCount == 1 ? 'um' : 'a'} today';
+  // Build locale-aware notification body (UX-DR7). The active UI locale is
+  // resolved from the locale provider and looked up via lookupAppLocalizations,
+  // so the background-scheduled body matches the user's chosen language.
+  final l10n = lookupAppLocalizations(ref.read(currentAppLocaleProvider));
+  final body = l10n.notificationReminderBody(taskCount, curriculumCount);
 
-  await scheduler.scheduleReminder(
+  // H1 fix: schedule under the active profile's per-profile batch ID block so
+  // there is exactly ONE daily-reminder scheme for every profile (the
+  // bootstrap below skips the active profile, deferring to this reactive path).
+  await scheduler.scheduleReminderForProfile(
+    profileId: profileId,
     time: time,
-    title: 'Learning Reminder',
+    title: l10n.notificationReminderTitle,
     body: body,
     location: location,
     inIsrael: inIsrael,
@@ -494,50 +551,129 @@ StreakAlertService streakAlertService(Ref ref) {
 /// profile.
 @Riverpod(keepAlive: true)
 Future<void> allProfilesReminderBootstrap(Ref ref) async {
-  // Load all profiles for this account.
-  final profiles = await ref.watch(profileListProvider.future);
+  // (H3) Watch the reactive profile stream so a profile add/delete re-runs the
+  // reconcile without a cold restart.
+  final profiles = await ref.watch(profileListStreamProvider.future);
   final gateway = ref.read(notificationServiceProvider);
+  final scheduler = ref.read(notificationSchedulerProvider);
+  final db = ref.read(userDatabaseProvider);
+  final analytics = ref.read(analyticsServiceProvider);
   final sacredTimeActive = ref.watch(isSacredTimeActiveProvider);
+  final activeProfileId = ref.watch(activeProfileIdProvider);
 
-  if (sacredTimeActive) {
-    // Do not schedule while Sacred Time is active.
-    return;
-  }
+  // L2: resolve Sacred Location so per-profile reminders get the SAME per-fire
+  // Sacred-Time suppression the active path uses (not just a one-time global
+  // check).
+  final location = ref.read(sacredLocationProvider);
+  final inIsrael = ref.read(inIsraelProvider);
+
+  // Locale-aware notification copy (UX-DR7) resolved from the active UI locale.
+  final l10n = lookupAppLocalizations(ref.read(currentAppLocaleProvider));
 
   final prefs = await SharedPreferences.getInstance();
+
+  final presentIds = profiles.map((p) => p.id).toSet();
+
+  // (H3) Reconcile against the previously-scheduled set: cancel reminders +
+  // streak alerts for any profile that has since been removed, so a deleted
+  // profile's repeating reminder no longer fires (and no longer tries to switch
+  // into a nonexistent profile when tapped).
+  final previousIds =
+      (prefs.getString(
+                NotificationPreferencesRepository.scheduledProfileIdsKey,
+              ) ??
+              '')
+          .split(',')
+          .map((s) => int.tryParse(s.trim()))
+          .whereType<int>()
+          .toSet();
+
+  for (final removedId in previousIds.difference(presentIds)) {
+    await scheduler.cancelForProfile(removedId);
+    await gateway.cancelStreakAlertForProfile(removedId);
+  }
 
   for (final profile in profiles) {
     final profileId = profile.id;
 
-    final enabled =
+    // (H1) The active profile's daily reminder is owned by
+    // [reminderSyncEffect], which schedules under the same per-profile batch ID
+    // block. Skipping it here prevents the active profile receiving two
+    // competing daily reminders. Streak alerts for the active profile are owned
+    // by [streakAlertSyncEffect]; only inactive profiles need bootstrapping.
+    if (profileId == activeProfileId) continue;
+
+    // --- Daily reminder (inactive profile) ---
+    final reminderEnabled =
         prefs.getBool(
           NotificationPreferencesRepository.reminderEnabledKey(profileId),
         ) ??
         true;
-    if (!enabled) {
-      await gateway.cancelDailyReminderForProfile(profileId);
-      continue;
+    if (!reminderEnabled || sacredTimeActive) {
+      await scheduler.cancelForProfile(profileId);
+    } else {
+      final hour =
+          prefs.getInt(
+            NotificationPreferencesRepository.reminderHourKey(profileId),
+          ) ??
+          defaultReminderHour;
+      final minute =
+          prefs.getInt(
+            NotificationPreferencesRepository.reminderMinuteKey(profileId),
+          ) ??
+          defaultReminderMinute;
+
+      // L2: route through the scheduler's batch path so each fire-time is
+      // filtered against the Sacred-Time window, identical to the active path.
+      await scheduler.scheduleReminderForProfile(
+        profileId: profileId,
+        time: TimeOfDay(hour: hour, minute: minute),
+        title: l10n.notificationReminderTitle,
+        body: l10n.notificationReminderGenericBody,
+        location: location,
+        inIsrael: inIsrael,
+      );
     }
 
-    final hour =
-        prefs.getInt(
-          NotificationPreferencesRepository.reminderHourKey(profileId),
+    // --- Streak alert (inactive profile, H2) ---
+    final streakEnabled =
+        prefs.getBool(
+          NotificationPreferencesRepository.streakAlertEnabledKey(profileId),
         ) ??
-        defaultReminderHour;
-    final minute =
-        prefs.getInt(
-          NotificationPreferencesRepository.reminderMinuteKey(profileId),
-        ) ??
-        defaultReminderMinute;
-
-    await gateway.scheduleDailyReminderForProfile(
+        true;
+    final streakService = StreakAlertService(
+      db: db,
+      notificationService: gateway,
       profileId: profileId,
-      hour: hour,
-      minute: minute,
-      title: 'Learning Reminder',
-      body: 'Time to learn! Open the app to see your tasks.',
+      analytics: analytics,
     );
+    if (!streakEnabled || sacredTimeActive) {
+      await streakService.cancelAlert();
+    } else {
+      final streakHour =
+          prefs.getInt(
+            NotificationPreferencesRepository.streakAlertHourKey(profileId),
+          ) ??
+          defaultStreakAlertHour;
+      final streakMinute =
+          prefs.getInt(
+            NotificationPreferencesRepository.streakAlertMinuteKey(profileId),
+          ) ??
+          defaultStreakAlertMinute;
+      await streakService.evaluate(
+        hour: streakHour,
+        minute: streakMinute,
+        title: l10n.notificationStreakTitle,
+        localizedBody: l10n.notificationStreakBody,
+      );
+    }
   }
+
+  // Record the full present set for the next reconcile (H3).
+  await prefs.setString(
+    NotificationPreferencesRepository.scheduledProfileIdsKey,
+    presentIds.join(','),
+  );
 }
 
 /// Watches streak alert settings and evaluates whether to schedule or cancel
@@ -570,5 +706,11 @@ Future<void> streakAlertSyncEffect(Ref ref) async {
     return;
   }
 
-  await service.evaluate(hour: time.hour, minute: time.minute);
+  final l10n = lookupAppLocalizations(ref.read(currentAppLocaleProvider));
+  await service.evaluate(
+    hour: time.hour,
+    minute: time.minute,
+    title: l10n.notificationStreakTitle,
+    localizedBody: l10n.notificationStreakBody,
+  );
 }

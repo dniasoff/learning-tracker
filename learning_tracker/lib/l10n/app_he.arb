@@ -298,6 +298,20 @@
   },
   "viewProgress": "הצג התקדמות",
   "markComplete": "סמן כהושלם",
+  "markCompleteTutorUnavailable": "לא זמין (מצב מדריך)",
+  "markCompleteCompletedStage": "הושלם ({stageName})",
+  "@markCompleteCompletedStage": {
+    "placeholders": {
+      "stageName": {"type": "String"}
+    }
+  },
+  "unableToLoadCompletionContext": "לא ניתן לטעון את נתוני ההשלמה: {error}",
+  "@unableToLoadCompletionContext": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "accountOfflineSignInToSync": "עובד במצב לא מקוון עבור חשבון זה. התחבר כדי לחדש את הסנכרון בענן.",
   "textReaderNextDailyTask": "המשימה הבאה",
   "noProjection": "אין תחזית",
   "today": "היום",
@@ -492,6 +506,15 @@
   "profilePickerYourProfiles": "הפרופילים שלך",
   "profilePickerTalmidProfiles": "פרופילי תלמידים",
   "profilePickerTutoredChildren": "ילדים מוּדרכים",
+  "tutoredChildrenViewInvitations": "צפייה בהזמנות",
+  "tutoredChildrenPendingInvitations": "{count, plural, =1{הזמנת הדרכה אחת ממתינה} other{{count} הזמנות הדרכה ממתינות}}",
+  "@tutoredChildrenPendingInvitations": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "tutoredChildrenStatusTutoring": "מדריך",
+  "tutoredChildrenRoleBadge": "מדריך",
   "tutorModeIndicator": "מצב מדריך",
   "viewingChildBanner": "צופה ב-{name}",
   "viewingChildBannerExit": "יציאה",
@@ -540,8 +563,8 @@
   "syncTitle": "סנכרון",
   "syncScreenBody": "מצב הסנכרון וההגדרות יופיעו כאן.",
   "parentSettingsTitle": "הגדרות הורה",
-  "manageTutors": "ניהול מורים",
-  "manageTutorsSubtitle": "הזמנה או הסרה של מורים לילד זה",
+  "manageTutors": "ניהול מדריכים",
+  "manageTutorsSubtitle": "הזמנה או הסרה של מדריכים לילד זה",
   "manageTracksForChildSubtitle": "הוספה, עריכה או ארכיון של מסלולי הילד",
   "pointConfiguration": "הגדרת נקודות",
   "pointConfigurationSubtitle": "כמה נקודות שווה כל פעילות",
@@ -1803,5 +1826,270 @@
   "parentPointsAdjustAmountHint": "כמות",
   "parentPointsAdjustNoteHint": "סיבה (אופציונלי)",
   "parentPointsAdjustConfirm": "החל",
-  "parentPointsAdjustAppliedSnackbar": "היתרה עודכנה."
+  "parentPointsAdjustAppliedSnackbar": "היתרה עודכנה.",
+
+  "profileTypeChild": "ילד",
+  "profileTypeAdult": "מבוגר",
+  "childMode": "מצב ילדים",
+  "adultMode": "מצב מבוגרים",
+  "statusActive": "פעיל",
+  "statusPending": "ממתין",
+  "actionTryAgain": "נסו שוב",
+  "actionGoToDashboard": "מעבר ללוח",
+
+  "emptyLoginTutorEntry": "אני מדריך",
+  "switchAccount": "החלפת חשבון",
+  "emptyLoginTutorComingSoon": "גישת מדריך תהיה זמינה בקרוב. בקשו מההורה לשתף אתכם בקישור הזמנה.",
+
+  "tutorWelcomeBannerTitle": "ברוכים הבאים, מדריך!",
+  "tutorWelcomeBannerBody": "בקשו מההורה לשתף אתכם בקישור הזמנה, ואז הקישו למטה כדי לאשר אותה.",
+
+  "switcherSheetProfiles": "פרופילים",
+  "switcherSheetAccounts": "חשבונות",
+  "switcherSheetAddAccount": "הוספת חשבון",
+
+  "acceptInviteAppBarTitle": "אישור הזמנת מדריך",
+  "acceptInviteAccepting": "מאשר הזמנה…",
+  "acceptInviteHeading": "אישור הזמנת מדריך",
+  "acceptInviteBody": "הוזמנתם להדריך ילד. באישור ההזמנה תקבלו גישה לצפייה ולניהול של פרופיל הלמידה שלו.",
+  "acceptInvitePermissionViewData": "צפייה בכל נתוני הלמידה וההתקדמות",
+  "acceptInvitePermissionConfigure": "הגדרת מסלולים, נקודות ופרסים (אם הותר)",
+  "acceptInvitePermissionBulkMark": "ביצוע תיקוני סימון מרוכזים",
+  "acceptInvitePermissionNoLive": "לא ניתן לסמן השלמות חיות (רצף / פרסים)",
+  "acceptInviteAccept": "אישור הזמנה",
+  "acceptInviteDecline": "דחייה",
+  "acceptInviteSuccessHeading": "ההזמנה אושרה!",
+  "acceptInviteSuccessBody": "כעת יש לכם גישת מדריך לפרופיל הלמידה של הילד. פתחו את בורר הפרופילים כדי לעבור לפרופיל המודרך.",
+  "acceptInviteErrorHeading": "לא ניתן לאשר את ההזמנה",
+  "acceptInviteGenericError": "לא ניתן לאשר את ההזמנה. נסו שוב.",
+  "unexpectedError": "אירעה שגיאה בלתי צפויה.",
+
+  "declineInviteAppBarTitle": "דחיית הזמנה",
+  "declineInviteConfirmHeading": "לדחות את הזמנת המדריך?",
+  "declineInviteConfirmBody": "אתם עומדים לדחות את הזמנת המדריך. ההורה יקבל הודעה שדחיתם. לא תהיה לכם גישה לפרופיל הלמידה של הילד.",
+  "declineInviteConfirm": "דחיית הזמנה",
+  "declineInviteInProgress": "דוחה הזמנה…",
+  "declineInviteSuccessHeading": "ההזמנה נדחתה",
+  "declineInviteSuccessBody": "דחיתם את הזמנת המדריך. ההורה קיבל הודעה.",
+  "declineInviteErrorHeading": "לא ניתן לדחות את ההזמנה",
+  "declineInviteGenericError": "לא ניתן לדחות את ההזמנה. נסו שוב.",
+
+  "inviteTutorAppBarTitle": "הזמנת מדריך",
+  "inviteTutorHeading": "הזמנת מדריך",
+  "inviteTutorBody": "הזינו את כתובת האימייל של המדריך. הוא יקבל קישור הזמנה לאישור גישה לפרופיל הלמידה של הילד.",
+  "inviteTutorEmailLabel": "כתובת האימייל של המדריך",
+  "inviteTutorEmailHint": "tutor@example.com",
+  "inviteTutorInvalidEmail": "הזינו כתובת אימייל תקינה.",
+  "inviteTutorSending": "שולח…",
+  "inviteTutorSend": "שליחת הזמנה",
+  "inviteTutorSentSnackbar": "ההזמנה נשלחה אל {email}!",
+  "@inviteTutorSentSnackbar": {
+    "placeholders": {
+      "email": { "type": "String" }
+    }
+  },
+  "inviteTutorLinkCopied": "הקישור הועתק!",
+  "inviteTutorShareLinkHeading": "קישור לשיתוף (מסירה חלופית)",
+  "inviteTutorShareLinkBody": "אם האימייל לא התקבל, שתפו את הקישור הזה ישירות עם המדריך.",
+  "inviteTutorCopyLinkTooltip": "העתקת קישור",
+  "inviteTutorCopyShareLink": "העתקת קישור השיתוף",
+
+  "manageGrantsAppBarTitle": "ההדרכות שלי",
+  "manageGrantsActiveSection": "פעילות ({count})",
+  "@manageGrantsActiveSection": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "manageGrantsPendingSection": "הזמנות ממתינות ({count})",
+  "@manageGrantsPendingSection": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "manageGrantsEmptyHeading": "אין קשרי הדרכה",
+  "manageGrantsEmptyBody": "כשהורה יזמין אתכם להדריך את ילדו, ההרשאה תופיע כאן.",
+  "manageGrantsResignTitle": "להתפטר מההדרכה?",
+  "manageGrantsResignBody": "תאבדו מיד את הגישה לפרופיל של הילד. ההורה יקבל הודעה.\n\nילד: {child}\nהורה: {parent}",
+  "@manageGrantsResignBody": {
+    "placeholders": {
+      "child": { "type": "String" },
+      "parent": { "type": "String" }
+    }
+  },
+  "manageGrantsResign": "התפטרות",
+  "manageGrantsResignError": "לא ניתן להתפטר: {error}",
+  "@manageGrantsResignError": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "tutorFallbackName": "המדריך שלכם",
+
+  "manageTutorsEmptyHeading": "אין עדיין פרופילי ילדים",
+  "manageTutorsEmptyBody": "הוסיפו פרופיל ילד כדי להתחיל להזמין מדריכים.",
+  "manageTutorsLoadError": "לא ניתן לטעון מדריכים: {error}",
+  "@manageTutorsLoadError": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "manageTutorsNoTutors": "לא הוזמנו מדריכים.",
+  "manageTutorsActiveSection": "פעילים ({count})",
+  "@manageTutorsActiveSection": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "manageTutorsPendingSection": "ממתינים ({count})",
+  "@manageTutorsPendingSection": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "manageTutorsInviteButton": "הזמנת מדריך",
+  "manageTutorsRevokeTitle": "לבטל גישת מדריך?",
+  "manageTutorsRevokeBody": "{email} יאבד מיד את הגישה לפרופיל של הילד.",
+  "@manageTutorsRevokeBody": {
+    "placeholders": {
+      "email": { "type": "String" }
+    }
+  },
+  "manageTutorsRevoke": "ביטול גישה",
+  "manageTutorsRevokeError": "לא ניתן לבטל את הגישה: {error}",
+  "@manageTutorsRevokeError": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "manageTutorsRescindTitle": "לבטל את ההזמנה?",
+  "manageTutorsRescindBody": "ההזמנה הממתינה אל {email} תבוטל.",
+  "@manageTutorsRescindBody": {
+    "placeholders": {
+      "email": { "type": "String" }
+    }
+  },
+  "manageTutorsRescind": "ביטול הזמנה",
+  "manageTutorsRescindError": "לא ניתן לבטל את ההזמנה: {error}",
+  "@manageTutorsRescindError": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "manageTutorsViewAuditLog": "צפייה ביומן הפעולות",
+  "tutorFallbackParent": "הורה",
+
+  "auditLogTitle": "יומן פעולות",
+  "auditLogClearFilters": "ניקוי סינונים",
+  "auditLogFilterFromDate": "סינון מתאריך",
+  "auditLogFilterToDate": "סינון עד תאריך",
+  "auditLogFilterFrom": "מתאריך",
+  "auditLogFilterTo": "עד תאריך",
+  "auditLogEmptyFiltered": "אין רשומות התואמות לסינון",
+  "auditLogEmpty": "אין רשומות ביומן",
+  "auditLogEmptyFilteredBody": "נקו את הסינונים כדי לראות את כל הרשומות.",
+  "auditLogEmptyBody": "פעולות המדריך יופיעו כאן ככל שיתבצעו.",
+  "auditLogChipConfig": "הגדרות",
+  "auditLogChipBulkPrior": "סימון מרוכז",
+  "auditLogChipReset": "איפוס",
+  "auditLogChipBookmark": "סימנייה",
+  "auditLogChipProfile": "פרופיל",
+  "auditLogChipGoal": "יעד",
+  "auditLogChipStage": "שלב",
+  "auditLogChipReward": "פרס",
+  "auditLogChipStudyDay": "יום לימוד",
+  "auditLogActionConfigChanged": "הגדרות שונו",
+  "auditLogActionBulkPrior": "סימון מרוכז",
+  "auditLogActionReset": "איפוס",
+  "auditLogActionBookmark": "סימנייה",
+  "auditLogActionProfileEdited": "פרופיל נערך",
+  "auditLogActionGoalChanged": "יעד שונה",
+  "auditLogActionStageChanged": "שלב שונה",
+  "auditLogActionRewardChanged": "פרס שונה",
+  "auditLogActionStudyDay": "יום לימוד",
+  "auditLogBefore": "לפני: ",
+  "auditLogAfter": "אחרי: ",
+
+  "tutorPinAppBarTitle": "קוד מדריך",
+  "tutorPinEntryHeading": "הזינו את קוד המדריך",
+  "tutorPinEntryBody": "הזינו את קוד המדריך בן 4 הספרות כדי לגשת לפרופיל זה.",
+  "tutorPinForgot": "שכחתם את קוד המדריך?",
+  "tutorPinIncorrect": "קוד שגוי. נסו שוב.",
+  "tutorPinLockedOut": "יותר מדי ניסיונות. ננעל למשך {minutes} דקות.",
+  "@tutorPinLockedOut": {
+    "placeholders": {
+      "minutes": { "type": "int" }
+    }
+  },
+  "tutorPinErrorPrefix": "שגיאה: {error}",
+  "@tutorPinErrorPrefix": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+
+  "tutorPinSetupAppBarTitle": "הגדרת קוד מדריך",
+  "tutorPinSetupConfirmHeading": "אישור קוד המדריך",
+  "tutorPinSetupCreateHeading": "יצירת קוד מדריך",
+  "tutorPinSetupConfirmBody": "הזינו שוב את אותו קוד בן 4 ספרות לאישור.",
+  "tutorPinSetupCreateBody": "קוד המדריך מגן על הגישה לכל פרופיל ילד שאתם מדריכים. הזינו קוד בן 4 ספרות.",
+  "tutorPinSetupConfirmLabel": "אישור קוד",
+  "tutorPinSetupEnterNewLabel": "הזנת קוד חדש",
+  "tutorPinSetupMismatch": "הקודים אינם תואמים. נסו שוב.",
+  "tutorPinSetupSaveError": "לא ניתן לשמור את הקוד. נסו שוב.",
+  "tutorPinSetupLater": "הגדרה מאוחר יותר",
+
+  "tutorPinResetAppBarTitle": "איפוס קוד מדריך",
+  "tutorPinResetHeading": "איפוס קוד המדריך",
+  "tutorPinResetSendingTo": "נשלח קישור לאיפוס אל:",
+  "tutorPinResetReturnHint": "לאחר לחיצה על הקישור, חזרו לכאן כדי ליצור קוד חדש.",
+  "tutorPinResetNoEmail": "לא נמצאה כתובת אימייל לחשבונכם. התחברו עם חשבון ענן כדי להשתמש באיפוס הקוד.",
+  "tutorPinResetSendFailed": "שליחת אימייל האיפוס נכשלה. נסו שוב.",
+  "tutorPinResetFallbackEmail": "כתובת האימייל של חשבונכם",
+  "tutorPinResetSendButton": "שליחת אימייל איפוס",
+  "tutorPinResetCheckEmailHeading": "בדקו את האימייל",
+  "tutorPinResetCheckEmailBody": "שלחנו קישור לאיפוס אל {email}. לחצו על הקישור וחזרו לכאן כדי להגדיר קוד חדש.",
+  "@tutorPinResetCheckEmailBody": {
+    "placeholders": {
+      "email": { "type": "String" }
+    }
+  },
+  "tutorPinResetSetNew": "הגדרת קוד חדש",
+
+  "settingsAppPermissions": "הרשאות אפליקציה",
+  "settingsAppPermissionsSubtitle": "התראות וגישה למיקום",
+  "settingsSendDiagnosticLogs": "שליחת יומני אבחון",
+  "settingsSendDiagnosticLogsSubtitle": "שדרו את 10 הדקות האחרונות של הפעילות אל Firebase",
+  "settingsPronunciation": "הגייה",
+  "settingsPronunciationSubtitle": "בראשית (אשכנזי) או בְּרֵשִית (ספרדי)",
+  "settingsPronunciationAshkenazi": "אשכנזי",
+  "settingsPronunciationSephardi": "ספרדי",
+  "settingsNikud": "ניקוד",
+  "settingsNikudSubtitle": "הצגה או הסתרה של ניקוד עברי בעת הלימוד.",
+  "settingsNikudWithout": "ללא ניקוד",
+  "settingsNikudWith": "עם ניקוד",
+
+  "deviceNotificationsTitle": "התראות מכשיר",
+  "deviceNotificationsChecking": "בודק הרשאה…",
+  "deviceNotificationsAllowed": "התראות מאושרות במכשיר זה",
+  "deviceNotificationsBlocked": "התראות חסומות — הקישו כדי לפתוח הגדרות",
+  "deviceNotificationsDisableHint": "כדי להשבית התראות, עברו להגדרות > אפליקציות > Learning Tracker.",
+  "deviceNotificationsBlockedHint": "התראות חסומות. הפעילו אותן בהגדרות > אפליקציות > Learning Tracker > התראות.",
+
+  "notificationReminderTitle": "תזכורת לימוד",
+  "notificationReminderBody": "יש לכם {taskCount, plural, =1{משימה אחת} other{{taskCount} משימות}} ב{curriculumCount, plural, =1{תוכנית לימוד אחת} other{{curriculumCount} תוכניות לימוד}} היום",
+  "@notificationReminderBody": {
+    "placeholders": {
+      "taskCount": { "type": "int" },
+      "curriculumCount": { "type": "int" }
+    }
+  },
+  "notificationReminderGenericBody": "הגיע הזמן ללמוד! פתחו את האפליקציה כדי לראות את המשימות שלכם.",
+  "notificationStreakTitle": "הרצף בסכנה!",
+  "notificationStreakBody": "רצף {currentStreak} הימים שלכם בסכנה!",
+  "@notificationStreakBody": {
+    "placeholders": {
+      "currentStreak": { "type": "int" }
+    }
+  }
 }

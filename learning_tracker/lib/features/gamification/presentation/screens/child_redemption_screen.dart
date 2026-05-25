@@ -17,6 +17,7 @@ import 'package:learning_tracker/features/gamification/domain/models/reward_mile
 import 'package:learning_tracker/features/gamification/domain/reward_milestone_icons.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -76,10 +77,8 @@ class ChildRedemptionScreen extends ConsumerWidget {
           // Reward list
           Expanded(
             child: rewardsAsync.when(
-              loading: () =>
-                  const Center(child: CircularProgressIndicator()),
-              error: (e, _) =>
-                  Center(child: Text(e.toString())),
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(child: Text(e.toString())),
               data: (rewards) {
                 if (rewards.isEmpty) {
                   return Center(
@@ -105,12 +104,8 @@ class ChildRedemptionScreen extends ConsumerWidget {
                     balance: balance,
                     l10n: l10n,
                     theme: theme,
-                    onRedeem: () => _confirmRedeem(
-                      context,
-                      ref,
-                      rewards[i],
-                      l10n,
-                    ),
+                    onRedeem: () =>
+                        _confirmRedeem(context, ref, rewards[i], l10n),
                   ),
                 );
               },
@@ -149,6 +144,10 @@ class ChildRedemptionScreen extends ConsumerWidget {
 
     final db = ref.read(userDatabaseProvider);
     final profileId = ref.read(activeProfileIdProvider);
+    // WS9 Wave-B (C#2): touch the outbox facade provider so the points-sync
+    // sink is registered on the DAO before the redemption is written, ensuring
+    // the redemption + debit ledger entry are pushed to Firestore.
+    ref.read(outboxSyncWriteFacadeProvider);
 
     final redemption = await db.pointsBalanceDao.createRedemption(
       profileId: profileId,

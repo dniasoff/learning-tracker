@@ -21,11 +21,35 @@ class FirestoreGatewayImpl implements FirestoreGateway {
   FirestoreGatewayImpl({
     required FirebaseFirestore firestore,
     required AuthRepository authRepository,
+    String? Function()? activeAccountUid,
   }) : _firestore = firestore,
-       _authRepository = authRepository;
+       _authRepository = authRepository,
+       _activeAccountUid = activeAccountUid;
 
   final FirebaseFirestore _firestore;
   final AuthRepository _authRepository;
+
+  /// Resolves the UID of the *active account record* (the on-screen account
+  /// the local DB/UI are scoped to), independent of [FirebaseAuth.currentUser].
+  ///
+  /// C#1 safety floor: there is exactly ONE FirebaseAuth slot, so after an
+  /// in-app account switch `currentUser` may still point at the PREVIOUS cloud
+  /// account. Every per-user/per-profile Firestore path is addressed from the
+  /// active-account UID, NOT from `currentUser`, so a stale `currentUser` can
+  /// never address (and corrupt) the wrong account's cloud space — at worst the
+  /// Firestore security rules deny the operation (UID ≠ auth.uid) rather than
+  /// silently writing into account A while the UI thinks it is account B.
+  ///
+  /// This is built from the locally-stored active-account record and therefore
+  /// needs no network round-trip — reads/writes stay offline-safe. Falls back
+  /// to `currentUser` only when no active-account UID is injected (e.g. legacy
+  /// tests) so behaviour is unchanged where the resolver is absent.
+  final String? Function()? _activeAccountUid;
+
+  /// The UID every path is keyed off. Prefers the active-account record; only
+  /// falls back to the FirebaseAuth session when no resolver was injected.
+  String? get _addressedUid =>
+      _activeAccountUid?.call() ?? _authRepository.currentUser?.uid;
 
   // ── push ──────────────────────────────────────────────────────────────────
 
@@ -576,7 +600,7 @@ class FirestoreGatewayImpl implements FirestoreGateway {
 
   @override
   Future<void> pushAccountProfile({required Map<String, dynamic> data}) async {
-    final uid = _authRepository.currentUser?.uid;
+    final uid = _addressedUid;
     if (uid == null) throw _notAuthenticated;
     await _firestore
         .collection('users')
@@ -730,7 +754,7 @@ class FirestoreGatewayImpl implements FirestoreGateway {
   Stream<ListenerSnapshot> listenToTutorGrants({
     int limit = kListenerPageSize,
   }) {
-    final uid = _authRepository.currentUser?.uid;
+    final uid = _addressedUid;
     if (uid == null) return const Stream.empty();
 
     // The `tutor_grants` collection lives at the root level and the security
@@ -804,7 +828,7 @@ class FirestoreGatewayImpl implements FirestoreGateway {
   Stream<ListenerSnapshot> listenToLearnerProfiles({
     int limit = kListenerPageSize,
   }) {
-    final uid = _authRepository.currentUser?.uid;
+    final uid = _addressedUid;
     if (uid == null) return const Stream.empty();
     // The `learner_profiles` collection lives at the account level
     // (users/{uid}/learner_profiles) — it is the PARENT of the per-profile
@@ -853,7 +877,7 @@ class FirestoreGatewayImpl implements FirestoreGateway {
 
   @override
   Future<List<Map<String, dynamic>>> fetchLearnerProfiles() async {
-    final uid = _authRepository.currentUser?.uid;
+    final uid = _addressedUid;
     if (uid == null) return [];
     final snap = await _firestore
         .collection('users')
@@ -928,6 +952,43 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     }, SetOptions(merge: true));
   }
 
+  // ── WS9 Wave-B (C#2) — points spend economy ────────────────────────────────
+
+  @override
+  Future<void> pushPointsLedgerEntry({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {
+    // Append-only: use the ULID from the payload as doc-id so retrying the
+    // same outbox row always hits the same document (INSERT OR IGNORE
+    // semantics via merge:true).
+    final collection = _collection(profileId, 'points_ledger');
+    if (collection == null) throw _notAuthenticated;
+    final ulid = data['ulid'] as String?;
+    final ref = ulid != null ? collection.doc(ulid) : collection.doc();
+    await ref.set({
+      ..._stripInternalKeys(data),
+      'synced_at': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  @override
+  Future<void> pushRewardRedemption({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {
+    // LWW state-machine doc keyed by the stable ULID. `updated_at` is the LWW
+    // field; the merger applies the latest-by-updated_at status.
+    final collection = _collection(profileId, 'reward_redemptions');
+    if (collection == null) throw _notAuthenticated;
+    final ulid = data['ulid'] as String?;
+    final ref = ulid != null ? collection.doc(ulid) : collection.doc();
+    await ref.set({
+      ..._stripInternalKeys(data),
+      'synced_at': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
   // ── helpers ───────────────────────────────────────────────────────────────
 
   /// Converts Firestore-specific types to plain Dart values so the merge
@@ -953,7 +1014,7 @@ class FirestoreGatewayImpl implements FirestoreGateway {
   /// is constructed; both the public [_learnerProfileDoc] use site and the
   /// per-profile [_collection] subcollections derive from it (H12).
   DocumentReference<Map<String, dynamic>>? _learnerProfileDoc(int profileId) {
-    final uid = _authRepository.currentUser?.uid;
+    final uid = _addressedUid;
     if (uid == null) return null;
     return _firestore
         .collection('users')

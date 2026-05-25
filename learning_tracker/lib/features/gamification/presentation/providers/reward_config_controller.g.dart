@@ -57,7 +57,7 @@ final class RewardConfigControllerProvider
 }
 
 String _$rewardConfigControllerHash() =>
-    r'03fde3c6b62d8f60c490d88aa00fd4e58b1a59be';
+    r'9d32e2856726e8b370d0d672118985663b4c3012';
 
 /// Notifier that owns all mutable form state for [RewardConfigurationScreen].
 ///

@@ -236,6 +236,16 @@ class _ChannelCountingGateway implements FirestoreGateway {
     required int profileId,
     required Map<String, dynamic> data,
   }) async {}
+  @override
+  Future<void> pushPointsLedgerEntry({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
+  @override
+  Future<void> pushRewardRedemption({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
 
   // W6.13: fetchAuditLogEntries added to FirestoreGateway interface.
   @override

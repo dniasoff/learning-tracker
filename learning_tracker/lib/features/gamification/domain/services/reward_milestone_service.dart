@@ -253,79 +253,25 @@ class RewardMilestoneService {
     return getTrackPointsTotal(trackId);
   }
 
-  /// Unlock any enabled milestones crossed by the track's current points.
+  /// DEC-32: the auto-unlock achievement ladder was REPLACED by the spend
+  /// economy. Rewards are now purely priced spend-items (redeem for
+  /// [RewardMilestone.pointsCost]); there is no cumulative-threshold auto-unlock
+  /// crossing the debitable balance. This method is retained as a no-op so the
+  /// (now removed) live-wiring contract is preserved for any straggler caller;
+  /// it never writes an unlock record.
+  ///
+  /// R4o-C1: previously this read the DEBITABLE balance and auto-unlocked
+  /// milestones whose [RewardMilestone.thresholdPoints] (simultaneously the
+  /// redeem price) was crossed — incoherent once the balance dropped on spend.
+  /// Retained as a no-op (returns no unlock records) so the spend economy is
+  /// the single source of reward semantics.
   Future<List<RewardUnlockRecord>> evaluateUnlocksForTrack(int trackId) async {
-    if (!await trackCountsTowardRewardPoints(trackId)) {
-      return const [];
-    }
-    final trackPoints = await getTrackPointsTotalForRewards(trackId);
-    final milestones = await getMilestonesForTrack(trackId);
-    if (milestones.isEmpty) return const [];
-
-    final unlocks = await getAllUnlocks();
-    final unlockedIds = unlocks.map((u) => u.milestoneId).toSet();
-    final now = DateTimeFactory.nowUtc();
-
-    final newlyUnlocked = <RewardUnlockRecord>[];
-    for (final milestone in milestones) {
-      if (!milestone.isEnabled) continue;
-      if (trackPoints < milestone.thresholdPoints) continue;
-      if (unlockedIds.contains(milestone.id)) continue;
-
-      newlyUnlocked.add(
-        RewardUnlockRecord(
-          milestoneId: milestone.id,
-          profileId: profileId,
-          trackId: trackId,
-          title: milestone.title,
-          thresholdPoints: milestone.thresholdPoints,
-          pointsAtUnlock: trackPoints,
-          unlockedAt: now,
-        ),
-      );
-    }
-
-    if (newlyUnlocked.isNotEmpty) {
-      await _writeUnlocks([...unlocks, ...newlyUnlocked], updatedAt: now);
-    }
-    return newlyUnlocked;
+    return const [];
   }
 
-  /// Unlock enabled global milestones when [getGlobalPointsForRewards] crosses
-  /// thresholds. [RewardUnlockRecord.trackId] is [RewardMilestone.kGlobalTrackSentinel].
+  /// DEC-32 no-op — see [evaluateUnlocksForTrack].
   Future<List<RewardUnlockRecord>> evaluateUnlocksForGlobal() async {
-    final globalPoints = await getGlobalPointsForRewards();
-    final milestones = await getGlobalMilestones();
-    if (milestones.isEmpty) return const [];
-
-    final unlocks = await getAllUnlocks();
-    final unlockedIds = unlocks.map((u) => u.milestoneId).toSet();
-    final now = DateTimeFactory.nowUtc();
-    const sentinel = RewardMilestone.kGlobalTrackSentinel;
-
-    final newlyUnlocked = <RewardUnlockRecord>[];
-    for (final milestone in milestones) {
-      if (!milestone.isEnabled) continue;
-      if (globalPoints < milestone.thresholdPoints) continue;
-      if (unlockedIds.contains(milestone.id)) continue;
-
-      newlyUnlocked.add(
-        RewardUnlockRecord(
-          milestoneId: milestone.id,
-          profileId: profileId,
-          trackId: sentinel,
-          title: milestone.title,
-          thresholdPoints: milestone.thresholdPoints,
-          pointsAtUnlock: globalPoints,
-          unlockedAt: now,
-        ),
-      );
-    }
-
-    if (newlyUnlocked.isNotEmpty) {
-      await _writeUnlocks([...unlocks, ...newlyUnlocked], updatedAt: now);
-    }
-    return newlyUnlocked;
+    return const [];
   }
 
   Future<Map<String, dynamic>> exportCloudPayload() async {

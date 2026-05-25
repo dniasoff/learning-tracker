@@ -40,7 +40,16 @@ class StreakAlertService {
   final StreakStateProvider _streakProvider;
 
   /// Evaluate streak state and schedule or cancel the alert accordingly.
-  Future<void> evaluate({required int hour, required int minute}) async {
+  ///
+  /// [title] and [localizedBody] are optional locale-resolved strings (UX-DR7).
+  /// [localizedBody] is a function of the current streak length; when omitted,
+  /// the service falls back to the English [buildBody]/"Streak at Risk!" copy.
+  Future<void> evaluate({
+    required int hour,
+    required int minute,
+    String? title,
+    String Function(int currentStreak)? localizedBody,
+  }) async {
     final streakState = await _streakProvider.read(profileId: _profileId);
 
     if (streakState.currentStreak == 0) {
@@ -57,6 +66,8 @@ class StreakAlertService {
       hour: hour,
       minute: minute,
       currentStreak: streakState.currentStreak,
+      title: title,
+      localizedBody: localizedBody,
     );
   }
 
@@ -64,13 +75,20 @@ class StreakAlertService {
     required int hour,
     required int minute,
     required int currentStreak,
+    String? title,
+    String Function(int currentStreak)? localizedBody,
   }) async {
-    final body = buildBody(currentStreak);
+    final body = localizedBody?.call(currentStreak) ?? buildBody(currentStreak);
 
-    await _notificationService.scheduleStreakAlert(
+    // H2 fix: schedule under this profile's per-profile streak-alert ID block
+    // (profileId*1000 + 1) so each profile keeps an independent alert and a
+    // profile switch no longer overwrites the single legacy id=1 schedule.
+    await _notificationService.scheduleStreakAlertForProfile(
+      profileId: _profileId,
       hour: hour,
       minute: minute,
       body: body,
+      title: title ?? 'Streak at Risk!',
     );
     // Story 27.14 (DNI-390): fire analytics event when streak alert fires.
     unawaited(
@@ -79,7 +97,8 @@ class StreakAlertService {
   }
 
   Future<void> cancelAlert() async {
-    await _notificationService.cancelStreakAlert();
+    // H2 fix: cancel the per-profile streak-alert id (profileId*1000 + 1).
+    await _notificationService.cancelStreakAlertForProfile(_profileId);
   }
 
   Future<void> onCompletionRecorded() async {

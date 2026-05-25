@@ -230,14 +230,21 @@ class SignInController extends Notifier<SignInState> {
           .profileDao
           .getProfilesByAccount(_ref.read(currentAccountIdProvider));
       final firstSignInNeedsSetup = profiles.isEmpty;
-      if (firstSignInNeedsSetup) {
+      // R1o-H3: a user who previously skipped profile creation must land on the
+      // empty-login surface, not be looped back into the onboarding wizard.
+      final hasSkipped = prefs.getBool(kOnboardingSkipped) ?? false;
+      if (firstSignInNeedsSetup && !hasSkipped) {
         await prefs.remove(kOnboardingComplete);
       } else {
         await prefs.setBool(kOnboardingComplete, true);
       }
       _ref.read(selectedProfileIdProvider.notifier).clear();
       if (firstSignInNeedsSetup) {
-        unawaited(router.replaceAll([const OnboardingRoute()]));
+        unawaited(
+          router.replaceAll([
+            if (hasSkipped) const EmptyLoginRoute() else const OnboardingRoute(),
+          ]),
+        );
       } else {
         unawaited(router.replaceAll([const ProfilePickerRoute()]));
       }
@@ -574,13 +581,23 @@ class SignInController extends Notifier<SignInState> {
             .profileDao
             .getProfilesByAccount(_ref.read(currentAccountIdProvider));
         final firstSignInNeedsSetup = profiles.isEmpty;
-        if (firstSignInNeedsSetup) {
+        // R1o-H3: respect a prior onboarding-skip so a skipped local user lands
+        // on the empty-login surface instead of being trapped in onboarding.
+        final hasSkipped = prefs.getBool(kOnboardingSkipped) ?? false;
+        if (firstSignInNeedsSetup && !hasSkipped) {
           await prefs.remove(kOnboardingComplete);
         } else {
           await prefs.setBool(kOnboardingComplete, true);
         }
         if (firstSignInNeedsSetup) {
-          unawaited(router.replaceAll([const OnboardingRoute()]));
+          unawaited(
+            router.replaceAll([
+              if (hasSkipped)
+                const EmptyLoginRoute()
+              else
+                const OnboardingRoute(),
+            ]),
+          );
         } else {
           unawaited(router.replaceAll([const ProfilePickerRoute()]));
         }

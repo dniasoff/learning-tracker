@@ -14,10 +14,7 @@ typedef PushUserProfile =
 
 /// Gateway-based Firestore push implementation for display-name updates.
 PushUserProfile createFirestorePushFromGateway(FirestoreGateway? gateway) {
-  return ({
-    required String firebaseUid,
-    required String displayName,
-  }) async {
+  return ({required String firebaseUid, required String displayName}) async {
     if (gateway == null) return;
     await gateway.pushAccountUserProfile(
       uid: firebaseUid,
@@ -54,9 +51,6 @@ class UserProfileService {
       updatedAt: now,
     );
 
-    await _pushUserProfile(
-      firebaseUid: firebaseUid,
-      displayName: displayName,
-    );
+    await _pushUserProfile(firebaseUid: firebaseUid, displayName: displayName);
   }
 }

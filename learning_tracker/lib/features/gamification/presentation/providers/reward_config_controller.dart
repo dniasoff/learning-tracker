@@ -55,17 +55,19 @@ class RewardConfigController extends _$RewardConfigController {
 
   // ── Init ──────────────────────────────────────────────────────────────────
 
-  /// Loads active tracks from the DB and seeds the initial form state.
+  /// Seeds the initial form state.
+  ///
+  /// R4o-H2 / DEC-32: per-track rewards were removed from the spend economy —
+  /// every reward is now a single global priced spend-item redeemed against the
+  /// one debitable balance. The per-track vs Total split is gone, so the form
+  /// is always global and no track list is loaded.
   Future<void> bootstrap() async {
     state = state.copyWith(loading: true, error: null);
     try {
-      final db = ref.read(userDatabaseProvider);
-      final profileId = ref.read(activeProfileIdProvider);
-      final tracks = await db.trackDao.getActiveTracksForProfile(profileId);
       state = state.copyWith(
-        tracks: tracks,
-        selectedTrackId: tracks.isNotEmpty ? tracks.first.id : null,
-        isGlobalReward: tracks.isEmpty,
+        tracks: const [],
+        selectedTrackId: null,
+        isGlobalReward: true,
         loading: false,
         error: null,
       );

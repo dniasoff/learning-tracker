@@ -21,6 +21,23 @@ abstract class NotificationPreferencesRepository {
   static const String _notificationSettingsUpdatedAtMsBase =
       'notification_settings_updated_at_ms';
 
+  /// Account-wide (not per-profile) key recording which profile ids currently
+  /// have notification schedules, so the bootstrap can cancel reminders for
+  /// profiles that were deleted between launches (H3). Stored as a
+  /// comma-separated list of ids.
+  static const String scheduledProfileIdsKey =
+      'notification_scheduled_profile_ids';
+
+  /// Account-wide key recording the last notification-settings payload that was
+  /// actually pushed to the cloud (M2). Used to skip no-op pushes that would
+  /// otherwise bump `updated_at` on every launch/switch and risk losing a newer
+  /// remote under LWW. Keyed per-profile.
+  static const String _lastPushedSettingsHashBase =
+      'notification_settings_last_pushed_hash';
+
+  static String lastPushedSettingsHashKey(int profileId) =>
+      keyForProfile(_lastPushedSettingsHashBase, profileId);
+
   // ---------------------------------------------------------------------------
   // Per-profile key namespacing (WS5.key-prefs)
   //

@@ -1,6 +1,7 @@
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart'
     as domain_stage;
@@ -96,6 +97,7 @@ class CompletionDetectionService {
     int? trackId,
     required int profileId,
     required int markedBy,
+    CompletionSource source = CompletionSource.live,
   }) async {
     final curriculum = CurriculumId.values.firstWhere(
       (c) => c.storageKey == curriculumId,
@@ -123,6 +125,7 @@ class CompletionDetectionService {
         trackId: trackId,
         profileId: profileId,
         markedBy: markedBy,
+        source: source,
       );
     }
 
@@ -142,6 +145,7 @@ class CompletionDetectionService {
       trackId: trackId,
       profileId: profileId,
       markedBy: markedBy,
+      source: source,
     );
   }
 
@@ -156,6 +160,7 @@ class CompletionDetectionService {
     int? trackId,
     required int profileId,
     required int markedBy,
+    CompletionSource source = CompletionSource.live,
   }) async {
     // Get all leaf items for this unit
     final allItems = await _contentRepository.filterByLevel(
@@ -249,6 +254,7 @@ class CompletionDetectionService {
       trackId: trackId,
       markedBy: markedBy,
       isManual: false,
+      source: source,
     );
   }
 }

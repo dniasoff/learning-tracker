@@ -3,7 +3,6 @@ import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
-import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
 import 'package:learning_tracker/features/learning/data/repositories/completion_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
 import 'package:learning_tracker/features/learning/domain/services/completion_detection_service.dart';
@@ -67,10 +66,6 @@ CompletionRepository completionRepository(Ref ref) {
 
   final profileId = ref.watch(activeProfileIdProvider);
   final ledgerRepository = ref.watch(learningLedgerRepositoryProvider);
-  final rewardMilestoneService = RewardMilestoneService(
-    database,
-    profileId: profileId,
-  );
 
   final stageRepository = ref.watch(globalStageRepositoryProvider);
 
@@ -92,7 +87,6 @@ CompletionRepository completionRepository(Ref ref) {
     contentRepository: contentRepository,
     bookmarkRepository: bookmarkRepository,
     completionDetectionService: detectionService,
-    rewardMilestoneService: rewardMilestoneService,
     activeProfileId: profileId,
     completionWriter: ref.watch(completionWriterProvider),
     stageRepository: stageRepository,

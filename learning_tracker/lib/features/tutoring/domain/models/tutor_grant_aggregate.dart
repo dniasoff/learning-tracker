@@ -129,6 +129,28 @@ class TutorGrant {
   String get tutorEmail => doc.tutorEmail;
   String? get tutorUid => doc.tutorUid;
 
+  /// M3: denormalised child display name (from the server), or null.
+  String? get childName => doc.childName;
+
+  /// M3: denormalised parent display name (from the server), or null.
+  String? get parentName => doc.parentName;
+
+  /// M3: best human-readable child label — the denormalised [childName] when
+  /// present, otherwise a friendly generic label (never the raw Firestore id).
+  String get childDisplayLabel {
+    final name = doc.childName?.trim();
+    if (name != null && name.isNotEmpty) return name;
+    return 'Talmid';
+  }
+
+  /// M3: best human-readable parent label — the denormalised [parentName] when
+  /// present, otherwise a friendly generic label (never the raw UID).
+  String get parentDisplayLabel {
+    final name = doc.parentName?.trim();
+    if (name != null && name.isNotEmpty) return name;
+    return 'Parent account';
+  }
+
   // ── Business guards ───────────────────────────────────────────────────────
 
   /// True when the parent can rescind this invite (only while pending).

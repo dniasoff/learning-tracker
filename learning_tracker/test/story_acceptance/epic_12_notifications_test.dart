@@ -168,13 +168,16 @@ void main() {
       );
 
       when(
-        () => mockService.scheduleStreakAlert(
+        () => mockService.scheduleStreakAlertForProfile(
+          profileId: any(named: 'profileId'),
           hour: any(named: 'hour'),
           minute: any(named: 'minute'),
           body: any(named: 'body'),
         ),
       ).thenAnswer((_) async {});
-      when(() => mockService.cancelStreakAlert()).thenAnswer((_) async {});
+      when(
+        () => mockService.cancelStreakAlertForProfile(any()),
+      ).thenAnswer((_) async {});
     });
 
     tearDown(() async {
@@ -187,7 +190,8 @@ void main() {
       await alertService.evaluate(hour: 21, minute: 0);
 
       verify(
-        () => mockService.scheduleStreakAlert(
+        () => mockService.scheduleStreakAlertForProfile(
+          profileId: 1,
           hour: 21,
           minute: 0,
           body: 'Your 5-day streak is at risk!',
@@ -213,9 +217,10 @@ void main() {
 
       await alertService.evaluate(hour: 21, minute: 0);
 
-      verify(() => mockService.cancelStreakAlert()).called(1);
+      verify(() => mockService.cancelStreakAlertForProfile(1)).called(1);
       verifyNever(
-        () => mockService.scheduleStreakAlert(
+        () => mockService.scheduleStreakAlertForProfile(
+          profileId: any(named: 'profileId'),
           hour: any(named: 'hour'),
           minute: any(named: 'minute'),
           body: any(named: 'body'),
@@ -237,7 +242,7 @@ void main() {
 
       await alertService.evaluate(hour: 21, minute: 0);
 
-      verify(() => mockService.cancelStreakAlert()).called(1);
+      verify(() => mockService.cancelStreakAlertForProfile(1)).called(1);
     });
 
     test('alert body includes correct streak count', () {
@@ -258,7 +263,8 @@ void main() {
       await alertService.evaluate(hour: 21, minute: 0);
 
       verify(
-        () => mockService.scheduleStreakAlert(
+        () => mockService.scheduleStreakAlertForProfile(
+          profileId: 1,
           hour: 21,
           minute: 0,
           body: 'Your 5-day streak is at risk!',
@@ -290,13 +296,16 @@ void main() {
         when(() => mockService.cancelBatchReminders()).thenAnswer((_) async {});
         when(() => mockService.cancelDailyReminder()).thenAnswer((_) async {});
         when(
-          () => mockService.scheduleStreakAlert(
+          () => mockService.scheduleStreakAlertForProfile(
+            profileId: any(named: 'profileId'),
             hour: any(named: 'hour'),
             minute: any(named: 'minute'),
             body: any(named: 'body'),
           ),
         ).thenAnswer((_) async {});
-        when(() => mockService.cancelStreakAlert()).thenAnswer((_) async {});
+        when(
+          () => mockService.cancelStreakAlertForProfile(any()),
+        ).thenAnswer((_) async {});
       });
 
       // Unit: Disabling daily reminder cancels scheduled notification

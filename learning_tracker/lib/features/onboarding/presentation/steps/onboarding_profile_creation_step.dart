@@ -9,6 +9,7 @@ import 'package:learning_tracker/features/content_browsing/presentation/provider
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Callback type for when profile creation is complete.
 typedef ProfileCreatedCallback =
@@ -524,7 +525,7 @@ class _OnboardingProfileCreationStepState
               TextButton(
                 onPressed: widget.onSkipProfileCreation,
                 child: Text(
-                  'Skip for now',
+                  AppLocalizations.of(context)!.actionSkipForNow,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: AppTheme.brandInkMuted,
                   ),

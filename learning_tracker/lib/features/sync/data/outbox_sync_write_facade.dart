@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/daos/outbox_dao.dart';
+import 'package:learning_tracker/core/database/daos/points_balance_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/preferences/profile_scoped_preference_keys.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
@@ -29,7 +30,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 ///
 /// This replaces the [SyncEngine] as the canonical [SyncWriteFacade] for
 /// all outbox-enrolled entity kinds (W2.31).
-class OutboxSyncWriteFacade implements SyncWriteFacade {
+class OutboxSyncWriteFacade implements SyncWriteFacade, PointsSyncSink {
   OutboxSyncWriteFacade({
     required OutboxDao outboxDao,
     required UserDatabase database,
@@ -385,4 +386,27 @@ class OutboxSyncWriteFacade implements SyncWriteFacade {
   @override
   Future<void> pushStudyDayConfig(Map<String, dynamic> payload) =>
       enqueueStudyDayConfig(payload);
+
+  // ── WS9 Wave-B (C#2) — points spend economy (PointsSyncSink) ────────────────
+
+  @override
+  Future<void> enqueuePointsLedgerEntry(
+    Map<String, dynamic> payload,
+  ) => _enqueue(
+    OutboxEntityKind.pointsLedgerEntry,
+    // ULID is the deterministic Firestore doc-id; use it as the local
+    // outbox dedup key so repeated enqueues of the same ledger row collapse.
+    payload['ulid']?.toString() ??
+        DateTimeFactory.nowUtc().millisecondsSinceEpoch.toString(),
+    payload,
+  );
+
+  @override
+  Future<void> enqueueRewardRedemption(Map<String, dynamic> payload) =>
+      _enqueue(
+        OutboxEntityKind.rewardRedemption,
+        payload['ulid']?.toString() ??
+            DateTimeFactory.nowUtc().millisecondsSinceEpoch.toString(),
+        payload,
+      );
 }

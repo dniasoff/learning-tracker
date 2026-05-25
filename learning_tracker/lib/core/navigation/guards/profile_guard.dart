@@ -32,20 +32,38 @@ class ProfileGuard extends AutoRouteGuard {
     NavigationResolver resolver,
     StackRouter router,
   ) async {
-    // If a profile is already selected, proceed
-    if (_getSelectedProfileId() != null) {
-      _log.debug(
-        event: 'profile_guard_already_selected',
-        fields: {'profileId': _getSelectedProfileId()},
-      );
-      resolver.next();
-      return;
-    }
-
-    // Check how many profiles exist
+    // Check how many profiles exist (we need this list both to validate an
+    // already-selected id and to auto-select / redirect when nothing is
+    // selected). Per-account autoincrement IDs collide across DBs, so a
+    // selected id from a previous account can point at a *different* profile
+    // (or nothing) in the now-active DB. Always validate against the current
+    // DB before short-circuiting on a non-null selection (R1o-C2).
     final profiles = await _getDatabase().profileDao.getProfilesByAccount(
       _getAccountId(),
     );
+
+    // If a profile is already selected, only proceed when that id actually
+    // exists in the current account's DB. A stale id that survived an account
+    // switch (selectedProfileIdProvider is keepAlive) would otherwise short-
+    // circuit the guard and surface the wrong profile.
+    final selectedId = _getSelectedProfileId();
+    if (selectedId != null) {
+      final exists = profiles.any((p) => p.id == selectedId);
+      if (exists) {
+        _log.debug(
+          event: 'profile_guard_already_selected',
+          fields: {'profileId': selectedId},
+        );
+        resolver.next();
+        return;
+      }
+      // Stale selection — fall through to re-resolve (auto-select single,
+      // or redirect to the picker).
+      _log.info(
+        event: 'profile_guard_stale_selection_revalidating',
+        fields: {'staleProfileId': selectedId, 'profileCount': profiles.length},
+      );
+    }
 
     _log.info(
       event: 'profile_guard_profiles_fetched',

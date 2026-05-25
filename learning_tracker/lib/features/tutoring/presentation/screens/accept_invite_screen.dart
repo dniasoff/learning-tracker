@@ -29,11 +29,13 @@ import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_grant_providers.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_pin_providers.dart';
 import 'package:learning_tracker/features/tutoring/presentation/screens/tutor_pin_setup_screen.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Screen that handles the "accept tutor invite" deep-link.
 ///
@@ -98,6 +100,11 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
       return;
     }
 
+    // C4: resolve the tutor's OWN local profile id — the namespace under which
+    // the Tutor PIN is stored/verified (matches C1). Falls back to 0 for a
+    // profile-less tutor; TutorPinSetupScreen handles the unset-PIN path.
+    _tutorProfileId = ref.read(selectedProfileIdProvider) ?? 0;
+
     // WS3.3b: Load the real grant from the incoming grants provider.
     // The token IS the grantId — look it up in the already-loaded list.
     // Falls back to a minimal grant object if not yet in the cached list
@@ -131,16 +138,16 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
       if (!mounted) return;
       switch (result) {
         case TutorGrantSuccess():
-          // Check whether the tutor has set a PIN yet.
-          final profileId = _tutorProfileId;
-          if (profileId != null) {
-            final pinService = ref.read(tutorPinServiceProvider);
-            final hasPin = await pinService.hasTutorPin(profileId);
-            if (!mounted) return;
-            if (!hasPin) {
-              setState(() => _step = _AcceptStep.pinSetup);
-              return;
-            }
+          // C4: check whether the tutor has provisioned a Tutor PIN yet, keyed
+          // on their OWN profile id (resolved in _initialize). If not, route to
+          // Tutor PIN setup before completing.
+          final profileId = _tutorProfileId ?? 0;
+          final pinService = ref.read(tutorPinServiceProvider);
+          final hasPin = await pinService.hasTutorPin(profileId);
+          if (!mounted) return;
+          if (!hasPin) {
+            setState(() => _step = _AcceptStep.pinSetup);
+            return;
           }
           setState(() => _step = _AcceptStep.success);
         case TutorGrantFailure(:final message):
@@ -158,7 +165,9 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
       if (mounted) {
         setState(() {
           _step = _AcceptStep.error;
-          _errorMessage = 'Unable to accept invite. Please try again.';
+          _errorMessage = AppLocalizations.of(
+            context,
+          )!.acceptInviteGenericError;
         });
       }
     }
@@ -183,16 +192,33 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
     return TutorGrant.fromDoc(doc);
   }
 
+  /// C3: navigate to the decline flow. Uses the loaded grant when available so
+  /// DeclineInviteScreen can fire the DEC-23 notification with real grant data;
+  /// otherwise passes the raw token (the screen builds a stub + the Cloud
+  /// Function validates server-side).
+  Future<void> _openDecline(BuildContext context) async {
+    final grant = _loadedGrant;
+    await context.router.push(
+      DeclineInviteRoute(
+        grant: grant,
+        token: grant == null ? widget.token : null,
+        onDeclined: () =>
+            unawaited(context.router.replaceAll([const AppShellRoute()])),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: AppTheme.brandCream,
       appBar: AppBar(
         backgroundColor: AppTheme.brandCream,
         elevation: 0,
-        title: const Text('Accept Tutor Invite'),
+        title: Text(l10n.acceptInviteAppBarTitle),
       ),
       body: SafeArea(child: _buildBody(theme)),
     );
@@ -210,19 +236,21 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
   }
 
   Widget _buildAccepting() {
-    return const Center(
+    final l10n = AppLocalizations.of(context)!;
+    return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          CircularProgressIndicator(),
-          SizedBox(height: 16),
-          Text('Accepting invite…'),
+          const CircularProgressIndicator(),
+          const SizedBox(height: 16),
+          Text(l10n.acceptInviteAccepting),
         ],
       ),
     );
   }
 
   Widget _buildReadyToAccept(ThemeData theme) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -240,7 +268,7 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
           ),
           const SizedBox(height: 20),
           Text(
-            'Accept tutor invite',
+            l10n.acceptInviteHeading,
             textAlign: TextAlign.center,
             style: theme.textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.w800,
@@ -249,9 +277,7 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'You have been invited to tutor a child. '
-            'By accepting, you will have access to view and manage '
-            'their learning profile.',
+            l10n.acceptInviteBody,
             textAlign: TextAlign.center,
             style: theme.textTheme.bodyLarge?.copyWith(
               color: AppTheme.brandInkMuted,
@@ -259,25 +285,25 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
             ),
           ),
           const SizedBox(height: 16),
-          const _PermissionRow(
+          _PermissionRow(
             icon: Icons.check_circle_rounded,
-            text: 'View all learning data and progress',
+            text: l10n.acceptInvitePermissionViewData,
           ),
           // WS3.3h: corrected copy — reflects actual default permission set.
           // Default grant allows bulk-mark + optional track/point/reward editing
           // (canBulkPriorCompletion: true per G3/DEC-33; edit flags set by parent).
-          const _PermissionRow(
+          _PermissionRow(
             icon: Icons.check_circle_rounded,
-            text: 'Configure tracks, points, and rewards (if permitted)',
+            text: l10n.acceptInvitePermissionConfigure,
           ),
-          const _PermissionRow(
+          _PermissionRow(
             icon: Icons.check_circle_rounded,
-            text: 'Perform bulk-mark corrections',
+            text: l10n.acceptInvitePermissionBulkMark,
           ),
           _PermissionRow(
             icon: Icons.cancel_rounded,
             color: Colors.red.shade600,
-            text: 'Cannot mark live completions (streak / rewards)',
+            text: l10n.acceptInvitePermissionNoLive,
           ),
           const Spacer(),
           FilledButton(
@@ -286,14 +312,18 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: const StadiumBorder(),
             ),
-            child: const Text('Accept invite'),
+            child: Text(l10n.acceptInviteAccept),
           ),
           const SizedBox(height: 10),
           TextButton(
-            onPressed: () => context.router.pop(),
-            child: const Text(
-              'Decline',
-              style: TextStyle(color: AppTheme.brandInkMuted),
+            // C3: route to the real decline flow — DeclineInviteScreen calls
+            // DeclineTutorInviteUseCase (changes server state) and fires the
+            // DEC-23 parent-notification path. Pass the loaded grant when
+            // available; otherwise fall back to the raw token.
+            onPressed: () => unawaited(_openDecline(context)),
+            child: Text(
+              l10n.acceptInviteDecline,
+              style: const TextStyle(color: AppTheme.brandInkMuted),
             ),
           ),
         ],
@@ -309,6 +339,7 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
   }
 
   Widget _buildSuccess(ThemeData theme) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -326,7 +357,7 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
           ),
           const SizedBox(height: 20),
           Text(
-            'Invite accepted!',
+            l10n.acceptInviteSuccessHeading,
             textAlign: TextAlign.center,
             style: theme.textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.w800,
@@ -335,8 +366,7 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            'You now have tutor access to this child\'s learning profile. '
-            'Open the Profile Picker to switch to the tutored profile.',
+            l10n.acceptInviteSuccessBody,
             textAlign: TextAlign.center,
             style: theme.textTheme.bodyLarge?.copyWith(
               color: AppTheme.brandInkMuted,
@@ -351,7 +381,7 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
               padding: const EdgeInsets.symmetric(vertical: 14),
               shape: const StadiumBorder(),
             ),
-            child: const Text('Go to dashboard'),
+            child: Text(l10n.actionGoToDashboard),
           ),
         ],
       ),
@@ -359,6 +389,7 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
   }
 
   Widget _buildError(ThemeData theme) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.all(24),
       child: Column(
@@ -376,7 +407,7 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
           ),
           const SizedBox(height: 20),
           Text(
-            'Could not accept invite',
+            l10n.acceptInviteErrorHeading,
             textAlign: TextAlign.center,
             style: theme.textTheme.headlineSmall?.copyWith(
               fontWeight: FontWeight.w800,
@@ -385,7 +416,7 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            _errorMessage ?? 'An unexpected error occurred.',
+            _errorMessage ?? l10n.unexpectedError,
             textAlign: TextAlign.center,
             style: theme.textTheme.bodyLarge?.copyWith(
               color: AppTheme.brandInkMuted,
@@ -395,7 +426,7 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
           const SizedBox(height: 32),
           OutlinedButton(
             onPressed: () => setState(() => _step = _AcceptStep.readyToAccept),
-            child: const Text('Try again'),
+            child: Text(l10n.actionTryAgain),
           ),
         ],
       ),

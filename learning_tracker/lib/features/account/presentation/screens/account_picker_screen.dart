@@ -18,6 +18,8 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_pr
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart'
     show kOnboardingComplete;
+import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart'
+    show selectedProfileIdProvider;
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -451,6 +453,11 @@ class _AccountTile extends ConsumerWidget {
     // Re-assert onboarding-complete so AuthGuard lets AppShellRoute through.
     await prefs.setBool(kOnboardingComplete, true);
 
+    // R1o-C2: clear any stale selected profile id from the previous account.
+    // Per-account autoincrement IDs collide; a leaked id would short-circuit
+    // ProfileGuard onto the wrong profile in this account's DB.
+    ref.read(selectedProfileIdProvider.notifier).clear();
+
     ref.read(authStateProvider.notifier).setCloudBornSession(profile: profile);
 
     if (context.mounted) {
@@ -478,6 +485,8 @@ class _AccountTile extends ConsumerWidget {
     );
     await session.setActiveAccount(account.accountId);
     await prefs.setBool(kOnboardingComplete, true);
+    // R1o-C2: clear any stale selected profile id from the previous account.
+    ref.read(selectedProfileIdProvider.notifier).clear();
     // DEC-34: do NOT call signOut() — switching accounts must never terminate
     // other accounts' sessions. The Drift DB swap above isolates the data;
     // the AuthState update below makes this account the active on-screen context.

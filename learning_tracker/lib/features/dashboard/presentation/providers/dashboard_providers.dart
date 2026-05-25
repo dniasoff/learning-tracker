@@ -3,7 +3,6 @@ import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
@@ -397,15 +396,14 @@ Future<PaceStatus?> dashboardPaceStatus(
   // the goal the user just set, not whichever row the DB returns first).
   final goal = goals.reduce((a, b) => a.createdAt.isAfter(b.createdAt) ? a : b);
 
-  // Get personal-track completions for daily counts.
+  // Rule-7 (no track types): all tracks are implicitly personal now, so the
+  // `trackType == personal` filter was a no-op that could wrongly drop rows.
+  // Use every completion for the daily counts.
   final allCompletions = await db.completionDao
       .getCompletionsByCurriculumAndProfile(curriculum.storageKey, profileId);
-  final personalCompletions = allCompletions
-      .where((c) => c.trackType == TrackType.personal.storageKey)
-      .toList();
 
   final dailyCounts = ComputePaceStatusUseCase.buildDailyCounts(
-    personalCompletions.map((c) => c.completedAt),
+    allCompletions.map((c) => c.completedAt),
   );
 
   // Real total-item count from the scoped content tree (DNI-345).
@@ -451,7 +449,7 @@ Future<PaceStatus?> dashboardPaceStatus(
   return useCase.execute(
     PaceStatusInput(
       paceTarget: paceTarget,
-      completedItems: personalCompletions.length,
+      completedItems: allCompletions.length,
       dailyCompletionCounts: dailyCounts,
       totalItems: totalItems,
       today: now,

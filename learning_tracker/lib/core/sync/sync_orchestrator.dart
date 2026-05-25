@@ -730,6 +730,17 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
           'study_day_configs',
           () => pullPipeline.pullStudyDayConfigs(profileId: _profileId),
         );
+        // WS9 Wave-B (C#2) — points spend economy. Pull the ledger BEFORE
+        // redemptions so the balance re-derivation reflects every merged delta;
+        // redemption status is reconciled independently.
+        await step(
+          'points_ledger',
+          () => pullPipeline.pullPointsLedger(profileId: _profileId),
+        );
+        await step(
+          'reward_redemptions',
+          () => pullPipeline.pullRewardRedemptions(profileId: _profileId),
+        );
       }).timeout(
         _overallTimeout,
         onTimeout: () => throw TimeoutException(
@@ -1110,6 +1121,9 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
     'preferences/gamification_settings' => EntityKind.gamificationSettings,
     'preferences/ui_preferences' => EntityKind.uiPreferences,
     'tutor_grants' => EntityKind.tutorGrant,
+    // WS9 Wave-B (C#2) — points spend economy.
+    'points_ledger' => EntityKind.pointsLedger,
+    'reward_redemptions' => EntityKind.rewardRedemption,
     _ => null,
   };
 
@@ -1186,6 +1200,15 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
       'learner_profiles': () => log(
         'learner_profiles',
         () => pipeline().pullLearnerProfiles(profileId: _profileId),
+      ),
+      // WS9 Wave-B (C#2) — points spend economy recovery pulls.
+      'points_ledger': () => log(
+        'points_ledger',
+        () => pipeline().pullPointsLedger(profileId: _profileId),
+      ),
+      'reward_redemptions': () => log(
+        'reward_redemptions',
+        () => pipeline().pullRewardRedemptions(profileId: _profileId),
       ),
       // tutor_grants has no PullPipeline method (server-driven, no local DB
       // row). At-limit there would only fire if the user has > 500 active

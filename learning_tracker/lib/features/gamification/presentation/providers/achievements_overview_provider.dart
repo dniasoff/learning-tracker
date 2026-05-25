@@ -99,13 +99,12 @@ final achievementsOverviewProvider =
         }
       }
 
-      for (final track in rewardTracks) {
-        await service.evaluateUnlocksForTrack(track.id);
-      }
-      await service.evaluateUnlocksForGlobal();
-
-      final unlocks = await service.getAllUnlocks();
-      final unlockedIds = unlocks.map((u) => u.milestoneId).toSet();
+      // R4o-C1 / DEC-32: the auto-unlock achievement ladder was replaced by the
+      // spend economy. Rewards are priced spend-items, NOT cumulative
+      // auto-unlocks crossing the debitable balance, so no unlock evaluation
+      // runs here. Any historical unlock records are ignored — every reward is
+      // shown as a redeemable priced item.
+      final unlockedIds = <String>{};
 
       final rows = <AchievementRowVm>[];
       final filterOptions = <AchievementTrackFilterVm>[];

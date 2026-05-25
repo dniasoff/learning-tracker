@@ -212,21 +212,20 @@ Future<PaceCalculator?> curriculumPaceStatus(
     scopedItemCountProvider(curriculumEnum).future,
   );
 
-  // Get personal-track completions.
+  // Rule-7 (no track types): all tracks are implicitly personal now, so the
+  // `trackType == personal` filter was a no-op that could wrongly drop rows.
+  // Use every completion for the pace calculation.
   final allCompletions = await db.completionDao
       .getCompletionsByCurriculumAndProfile(curriculumId, profileId);
-  final personalCompletions = allCompletions
-      .where((c) => c.trackType == TrackType.personal.storageKey)
-      .toList();
 
   // Split completions into bulk baseline (before trackStartDate) and live
   // (on or after trackStartDate). Bulk entries have sentinel date 2000-01-01
   // which is always before any real trackStartDate.
-  final bulkBaseline = personalCompletions.where((c) {
+  final bulkBaseline = allCompletions.where((c) {
     final local = DateUtils.extractLocalDate(c.completedAt);
     return local.isBefore(trackStartDate);
   }).length;
-  final liveProgress = personalCompletions.where((c) {
+  final liveProgress = allCompletions.where((c) {
     final local = DateUtils.extractLocalDate(c.completedAt);
     return !local.isBefore(trackStartDate);
   }).length;
@@ -235,7 +234,7 @@ Future<PaceCalculator?> curriculumPaceStatus(
   // trackStartDate slipping through). This should always fire zero; if it
   // fires, the date filter regressed.
   if (liveProgress > 0) {
-    final leaked = personalCompletions.where((c) {
+    final leaked = allCompletions.where((c) {
       final local = DateUtils.extractLocalDate(c.completedAt);
       return !local.isBefore(trackStartDate) &&
           c.completedAt.isBefore(DateTime(2001));

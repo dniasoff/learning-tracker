@@ -76,6 +76,7 @@ class LearningLedgerRepositoryImpl implements LearningLedgerRepository {
     int? trackId,
     required int markedBy,
     required bool isManual,
+    CompletionSource source = CompletionSource.live,
   }) async {
     _assertManualMarkPermission(markedBy: markedBy, isManual: isManual);
 
@@ -87,6 +88,11 @@ class LearningLedgerRepositoryImpl implements LearningLedgerRepository {
     final completionNumber = existingCount + 1;
 
     final now = DateTimeFactory.nowUtc();
+    // Rule 4 / DEC-19: non-live sources (bulkInTrack / lifetimeOnly) write the
+    // sentinel date so a siyum ledger row produced by a bulk-in-track mark is
+    // not dated today (which would inflate streak / recent-activity reads).
+    // Mirrors recordCompletionsBatch.
+    final completedAt = source.creditsEngagement ? now : _kSentinelDate;
 
     final id = await _database.learningLedgerDao.insertEntry(
       LearningLedgerCompanion.insert(
@@ -99,7 +105,7 @@ class LearningLedgerRepositoryImpl implements LearningLedgerRepository {
         unitDisplayNameEn: unitDisplayNameEn,
         trackType: trackType,
         trackId: drift.Value(trackId),
-        completedAt: now,
+        completedAt: completedAt,
         completionNumber: completionNumber,
         markedBy: markedBy,
         isManual: drift.Value(isManual),

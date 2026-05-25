@@ -17,6 +17,7 @@ import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_audit_log_entry.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/audit_log_providers.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
 class TutorAuditLogScreen extends ConsumerStatefulWidget {
@@ -80,7 +81,7 @@ class _TutorAuditLogScreenState extends ConsumerState<TutorAuditLogScreen> {
       initialDate: _filterFrom ?? DateTimeFactory.nowLocal(),
       firstDate: DateTime(2020),
       lastDate: _filterTo ?? DateTimeFactory.nowLocal(),
-      helpText: 'Filter from date',
+      helpText: AppLocalizations.of(context)!.auditLogFilterFromDate,
     );
     if (picked != null) setState(() => _filterFrom = picked);
   }
@@ -91,7 +92,7 @@ class _TutorAuditLogScreenState extends ConsumerState<TutorAuditLogScreen> {
       initialDate: _filterTo ?? DateTimeFactory.nowLocal(),
       firstDate: _filterFrom ?? DateTime(2020),
       lastDate: DateTimeFactory.nowLocal(),
-      helpText: 'Filter to date',
+      helpText: AppLocalizations.of(context)!.auditLogFilterToDate,
     );
     if (picked != null) setState(() => _filterTo = picked);
   }
@@ -111,13 +112,14 @@ class _TutorAuditLogScreenState extends ConsumerState<TutorAuditLogScreen> {
   Widget build(BuildContext context) {
     final entriesAsync = ref.watch(tutorAuditLogProvider(widget.grantId));
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Audit Log', style: TextStyle(fontSize: 16)),
+            Text(l10n.auditLogTitle, style: const TextStyle(fontSize: 16)),
             Text(
               widget.tutorEmail,
               style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w400),
@@ -131,7 +133,7 @@ class _TutorAuditLogScreenState extends ConsumerState<TutorAuditLogScreen> {
           if (_hasActiveFilters)
             IconButton(
               icon: const Icon(Icons.filter_alt_off_rounded),
-              tooltip: 'Clear filters',
+              tooltip: l10n.auditLogClearFilters,
               onPressed: _clearFilters,
             ),
         ],
@@ -202,6 +204,7 @@ class _FilterBar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
@@ -214,7 +217,7 @@ class _FilterBar extends StatelessWidget {
               padding: const EdgeInsetsDirectional.only(end: 6),
               child: FilterChip(
                 label: Text(
-                  _actionLabel(action),
+                  _actionLabel(l10n, action),
                   style: const TextStyle(fontSize: 12),
                 ),
                 selected: selectedAction == action,
@@ -243,7 +246,7 @@ class _FilterBar extends StatelessWidget {
             label: Text(
               filterFrom != null
                   ? '${filterFrom!.day}/${filterFrom!.month}/${filterFrom!.year}'
-                  : 'From',
+                  : l10n.auditLogFilterFrom,
               style: const TextStyle(fontSize: 12),
             ),
             onPressed: onPickFrom,
@@ -257,7 +260,7 @@ class _FilterBar extends StatelessWidget {
             label: Text(
               filterTo != null
                   ? '${filterTo!.day}/${filterTo!.month}/${filterTo!.year}'
-                  : 'To',
+                  : l10n.auditLogFilterTo,
               style: const TextStyle(fontSize: 12),
             ),
             onPressed: onPickTo,
@@ -270,17 +273,18 @@ class _FilterBar extends StatelessWidget {
     );
   }
 
-  String _actionLabel(TutorAuditAction action) => switch (action) {
-    TutorAuditAction.configChanged => 'Config',
-    TutorAuditAction.completionBulkPrior => 'Bulk Prior',
-    TutorAuditAction.completionReset => 'Reset',
-    TutorAuditAction.bookmarkAdvanced => 'Bookmark',
-    TutorAuditAction.profileEdited => 'Profile',
-    TutorAuditAction.goalChanged => 'Goal',
-    TutorAuditAction.stageChanged => 'Stage',
-    TutorAuditAction.rewardChanged => 'Reward',
-    TutorAuditAction.studyDayChanged => 'Study Day',
-  };
+  String _actionLabel(AppLocalizations l10n, TutorAuditAction action) =>
+      switch (action) {
+        TutorAuditAction.configChanged => l10n.auditLogChipConfig,
+        TutorAuditAction.completionBulkPrior => l10n.auditLogChipBulkPrior,
+        TutorAuditAction.completionReset => l10n.auditLogChipReset,
+        TutorAuditAction.bookmarkAdvanced => l10n.auditLogChipBookmark,
+        TutorAuditAction.profileEdited => l10n.auditLogChipProfile,
+        TutorAuditAction.goalChanged => l10n.auditLogChipGoal,
+        TutorAuditAction.stageChanged => l10n.auditLogChipStage,
+        TutorAuditAction.rewardChanged => l10n.auditLogChipReward,
+        TutorAuditAction.studyDayChanged => l10n.auditLogChipStudyDay,
+      };
 }
 
 // ── Empty state ───────────────────────────────────────────────────────────────
@@ -293,6 +297,7 @@ class _EmptyLogView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -306,7 +311,7 @@ class _EmptyLogView extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              hasFilters ? 'No entries match the filters' : 'No audit entries',
+              hasFilters ? l10n.auditLogEmptyFiltered : l10n.auditLogEmpty,
               style: theme.textTheme.titleMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -314,8 +319,8 @@ class _EmptyLogView extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               hasFilters
-                  ? 'Clear filters to see all entries.'
-                  : 'Tutor actions will appear here as they occur.',
+                  ? l10n.auditLogEmptyFilteredBody
+                  : l10n.auditLogEmptyBody,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.outline,
               ),
@@ -338,6 +343,7 @@ class _AuditEntryTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final actionColor = _actionColor(entry.action);
 
     return Padding(
@@ -377,7 +383,7 @@ class _AuditEntryTile extends StatelessWidget {
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
-                        _actionLabel(entry.action),
+                        _actionLabel(l10n, entry.action),
                         style: theme.textTheme.labelSmall?.copyWith(
                           color: actionColor,
                           fontWeight: FontWeight.w700,
@@ -458,17 +464,18 @@ class _AuditEntryTile extends StatelessWidget {
     TutorAuditAction.studyDayChanged => Icons.calendar_month_rounded,
   };
 
-  String _actionLabel(TutorAuditAction action) => switch (action) {
-    TutorAuditAction.configChanged => 'Config changed',
-    TutorAuditAction.completionBulkPrior => 'Bulk prior',
-    TutorAuditAction.completionReset => 'Reset',
-    TutorAuditAction.bookmarkAdvanced => 'Bookmark',
-    TutorAuditAction.profileEdited => 'Profile edited',
-    TutorAuditAction.goalChanged => 'Goal changed',
-    TutorAuditAction.stageChanged => 'Stage changed',
-    TutorAuditAction.rewardChanged => 'Reward changed',
-    TutorAuditAction.studyDayChanged => 'Study day',
-  };
+  String _actionLabel(AppLocalizations l10n, TutorAuditAction action) =>
+      switch (action) {
+        TutorAuditAction.configChanged => l10n.auditLogActionConfigChanged,
+        TutorAuditAction.completionBulkPrior => l10n.auditLogActionBulkPrior,
+        TutorAuditAction.completionReset => l10n.auditLogActionReset,
+        TutorAuditAction.bookmarkAdvanced => l10n.auditLogActionBookmark,
+        TutorAuditAction.profileEdited => l10n.auditLogActionProfileEdited,
+        TutorAuditAction.goalChanged => l10n.auditLogActionGoalChanged,
+        TutorAuditAction.stageChanged => l10n.auditLogActionStageChanged,
+        TutorAuditAction.rewardChanged => l10n.auditLogActionRewardChanged,
+        TutorAuditAction.studyDayChanged => l10n.auditLogActionStudyDay,
+      };
 
   String _formatTimestamp(DateTime dt) {
     final now = DateTimeFactory.nowLocal();
@@ -496,6 +503,7 @@ class _BeforeAfterRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final style = theme.textTheme.bodySmall?.copyWith(
       fontFamily: 'monospace',
       fontSize: 11,
@@ -508,7 +516,7 @@ class _BeforeAfterRow extends StatelessWidget {
             TextSpan(
               children: [
                 TextSpan(
-                  text: 'before: ',
+                  text: l10n.auditLogBefore,
                   style: style?.copyWith(
                     color: theme.colorScheme.error,
                     fontWeight: FontWeight.w700,
@@ -526,7 +534,7 @@ class _BeforeAfterRow extends StatelessWidget {
             TextSpan(
               children: [
                 TextSpan(
-                  text: 'after: ',
+                  text: l10n.auditLogAfter,
                   style: style?.copyWith(
                     color: Colors.green.shade700,
                     fontWeight: FontWeight.w700,

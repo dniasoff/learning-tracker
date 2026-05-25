@@ -11620,6 +11620,15 @@ class $PointsLedgerTable extends PointsLedger
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _ulidMeta = const VerificationMeta('ulid');
+  @override
+  late final GeneratedColumn<String> ulid = GeneratedColumn<String>(
+    'ulid',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -11629,6 +11638,7 @@ class $PointsLedgerTable extends PointsLedger
     note,
     redemptionId,
     createdAt,
+    ulid,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -11692,6 +11702,12 @@ class $PointsLedgerTable extends PointsLedger
     } else if (isInserting) {
       context.missing(_createdAtMeta);
     }
+    if (data.containsKey('ulid')) {
+      context.handle(
+        _ulidMeta,
+        ulid.isAcceptableOrUnknown(data['ulid']!, _ulidMeta),
+      );
+    }
     return context;
   }
 
@@ -11729,6 +11745,10 @@ class $PointsLedgerTable extends PointsLedger
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at'],
       )!,
+      ulid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}ulid'],
+      ),
     );
   }
 
@@ -11759,6 +11779,12 @@ class PointsLedgerData extends DataClass
   /// Optional FK to [RewardRedemptions.id] for redemption-related entries.
   final int? redemptionId;
   final DateTime createdAt;
+
+  /// Stable, lexicographically-sortable, cross-device id for append-only
+  /// cloud sync (schema v27, WS9 Wave-B). Nullable on existing rows; the
+  /// Wave-B sync agent backfills + populates this going forward, and uses it
+  /// as the deterministic Firestore document id for ledger entries.
+  final String? ulid;
   const PointsLedgerData({
     required this.id,
     required this.profileId,
@@ -11767,6 +11793,7 @@ class PointsLedgerData extends DataClass
     this.note,
     this.redemptionId,
     required this.createdAt,
+    this.ulid,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -11782,6 +11809,9 @@ class PointsLedgerData extends DataClass
       map['redemption_id'] = Variable<int>(redemptionId);
     }
     map['created_at'] = Variable<DateTime>(createdAt);
+    if (!nullToAbsent || ulid != null) {
+      map['ulid'] = Variable<String>(ulid);
+    }
     return map;
   }
 
@@ -11796,6 +11826,7 @@ class PointsLedgerData extends DataClass
           ? const Value.absent()
           : Value(redemptionId),
       createdAt: Value(createdAt),
+      ulid: ulid == null && nullToAbsent ? const Value.absent() : Value(ulid),
     );
   }
 
@@ -11812,6 +11843,7 @@ class PointsLedgerData extends DataClass
       note: serializer.fromJson<String?>(json['note']),
       redemptionId: serializer.fromJson<int?>(json['redemptionId']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
+      ulid: serializer.fromJson<String?>(json['ulid']),
     );
   }
   @override
@@ -11825,6 +11857,7 @@ class PointsLedgerData extends DataClass
       'note': serializer.toJson<String?>(note),
       'redemptionId': serializer.toJson<int?>(redemptionId),
       'createdAt': serializer.toJson<DateTime>(createdAt),
+      'ulid': serializer.toJson<String?>(ulid),
     };
   }
 
@@ -11836,6 +11869,7 @@ class PointsLedgerData extends DataClass
     Value<String?> note = const Value.absent(),
     Value<int?> redemptionId = const Value.absent(),
     DateTime? createdAt,
+    Value<String?> ulid = const Value.absent(),
   }) => PointsLedgerData(
     id: id ?? this.id,
     profileId: profileId ?? this.profileId,
@@ -11844,6 +11878,7 @@ class PointsLedgerData extends DataClass
     note: note.present ? note.value : this.note,
     redemptionId: redemptionId.present ? redemptionId.value : this.redemptionId,
     createdAt: createdAt ?? this.createdAt,
+    ulid: ulid.present ? ulid.value : this.ulid,
   );
   PointsLedgerData copyWithCompanion(PointsLedgerCompanion data) {
     return PointsLedgerData(
@@ -11856,6 +11891,7 @@ class PointsLedgerData extends DataClass
           ? data.redemptionId.value
           : this.redemptionId,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
+      ulid: data.ulid.present ? data.ulid.value : this.ulid,
     );
   }
 
@@ -11868,7 +11904,8 @@ class PointsLedgerData extends DataClass
           ..write('delta: $delta, ')
           ..write('note: $note, ')
           ..write('redemptionId: $redemptionId, ')
-          ..write('createdAt: $createdAt')
+          ..write('createdAt: $createdAt, ')
+          ..write('ulid: $ulid')
           ..write(')'))
         .toString();
   }
@@ -11882,6 +11919,7 @@ class PointsLedgerData extends DataClass
     note,
     redemptionId,
     createdAt,
+    ulid,
   );
   @override
   bool operator ==(Object other) =>
@@ -11893,7 +11931,8 @@ class PointsLedgerData extends DataClass
           other.delta == this.delta &&
           other.note == this.note &&
           other.redemptionId == this.redemptionId &&
-          other.createdAt == this.createdAt);
+          other.createdAt == this.createdAt &&
+          other.ulid == this.ulid);
 }
 
 class PointsLedgerCompanion extends UpdateCompanion<PointsLedgerData> {
@@ -11904,6 +11943,7 @@ class PointsLedgerCompanion extends UpdateCompanion<PointsLedgerData> {
   final Value<String?> note;
   final Value<int?> redemptionId;
   final Value<DateTime> createdAt;
+  final Value<String?> ulid;
   const PointsLedgerCompanion({
     this.id = const Value.absent(),
     this.profileId = const Value.absent(),
@@ -11912,6 +11952,7 @@ class PointsLedgerCompanion extends UpdateCompanion<PointsLedgerData> {
     this.note = const Value.absent(),
     this.redemptionId = const Value.absent(),
     this.createdAt = const Value.absent(),
+    this.ulid = const Value.absent(),
   });
   PointsLedgerCompanion.insert({
     this.id = const Value.absent(),
@@ -11921,6 +11962,7 @@ class PointsLedgerCompanion extends UpdateCompanion<PointsLedgerData> {
     this.note = const Value.absent(),
     this.redemptionId = const Value.absent(),
     required DateTime createdAt,
+    this.ulid = const Value.absent(),
   }) : profileId = Value(profileId),
        entryKind = Value(entryKind),
        delta = Value(delta),
@@ -11933,6 +11975,7 @@ class PointsLedgerCompanion extends UpdateCompanion<PointsLedgerData> {
     Expression<String>? note,
     Expression<int>? redemptionId,
     Expression<DateTime>? createdAt,
+    Expression<String>? ulid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -11942,6 +11985,7 @@ class PointsLedgerCompanion extends UpdateCompanion<PointsLedgerData> {
       if (note != null) 'note': note,
       if (redemptionId != null) 'redemption_id': redemptionId,
       if (createdAt != null) 'created_at': createdAt,
+      if (ulid != null) 'ulid': ulid,
     });
   }
 
@@ -11953,6 +11997,7 @@ class PointsLedgerCompanion extends UpdateCompanion<PointsLedgerData> {
     Value<String?>? note,
     Value<int?>? redemptionId,
     Value<DateTime>? createdAt,
+    Value<String?>? ulid,
   }) {
     return PointsLedgerCompanion(
       id: id ?? this.id,
@@ -11962,6 +12007,7 @@ class PointsLedgerCompanion extends UpdateCompanion<PointsLedgerData> {
       note: note ?? this.note,
       redemptionId: redemptionId ?? this.redemptionId,
       createdAt: createdAt ?? this.createdAt,
+      ulid: ulid ?? this.ulid,
     );
   }
 
@@ -11989,6 +12035,9 @@ class PointsLedgerCompanion extends UpdateCompanion<PointsLedgerData> {
     if (createdAt.present) {
       map['created_at'] = Variable<DateTime>(createdAt.value);
     }
+    if (ulid.present) {
+      map['ulid'] = Variable<String>(ulid.value);
+    }
     return map;
   }
 
@@ -12001,7 +12050,8 @@ class PointsLedgerCompanion extends UpdateCompanion<PointsLedgerData> {
           ..write('delta: $delta, ')
           ..write('note: $note, ')
           ..write('redemptionId: $redemptionId, ')
-          ..write('createdAt: $createdAt')
+          ..write('createdAt: $createdAt, ')
+          ..write('ulid: $ulid')
           ..write(')'))
         .toString();
   }
@@ -12106,6 +12156,15 @@ class $RewardRedemptionsTable extends RewardRedemptions
     type: DriftSqlType.dateTime,
     requiredDuringInsert: true,
   );
+  static const VerificationMeta _ulidMeta = const VerificationMeta('ulid');
+  @override
+  late final GeneratedColumn<String> ulid = GeneratedColumn<String>(
+    'ulid',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -12116,6 +12175,7 @@ class $RewardRedemptionsTable extends RewardRedemptions
     status,
     createdAt,
     updatedAt,
+    ulid,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -12187,6 +12247,12 @@ class $RewardRedemptionsTable extends RewardRedemptions
     } else if (isInserting) {
       context.missing(_updatedAtMeta);
     }
+    if (data.containsKey('ulid')) {
+      context.handle(
+        _ulidMeta,
+        ulid.isAcceptableOrUnknown(data['ulid']!, _ulidMeta),
+      );
+    }
     return context;
   }
 
@@ -12228,6 +12294,10 @@ class $RewardRedemptionsTable extends RewardRedemptions
         DriftSqlType.dateTime,
         data['${effectivePrefix}updated_at'],
       )!,
+      ulid: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}ulid'],
+      ),
     );
   }
 
@@ -12256,7 +12326,16 @@ class RewardRedemption extends DataClass
   /// `pending_fulfilment` | `fulfilled` | `declined`
   final String status;
   final DateTime createdAt;
+
+  /// Last-write-wins timestamp for cloud sync (already present pre-v27; used
+  /// as the LWW field by the Wave-B sync agent).
   final DateTime updatedAt;
+
+  /// Stable, lexicographically-sortable, cross-device id for cloud sync
+  /// (schema v27, WS9 Wave-B). Nullable on existing rows; the Wave-B sync
+  /// agent backfills + populates this and uses it as the deterministic
+  /// Firestore document id for redemptions.
+  final String? ulid;
   const RewardRedemption({
     required this.id,
     required this.profileId,
@@ -12266,6 +12345,7 @@ class RewardRedemption extends DataClass
     required this.status,
     required this.createdAt,
     required this.updatedAt,
+    this.ulid,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -12278,6 +12358,9 @@ class RewardRedemption extends DataClass
     map['status'] = Variable<String>(status);
     map['created_at'] = Variable<DateTime>(createdAt);
     map['updated_at'] = Variable<DateTime>(updatedAt);
+    if (!nullToAbsent || ulid != null) {
+      map['ulid'] = Variable<String>(ulid);
+    }
     return map;
   }
 
@@ -12291,6 +12374,7 @@ class RewardRedemption extends DataClass
       status: Value(status),
       createdAt: Value(createdAt),
       updatedAt: Value(updatedAt),
+      ulid: ulid == null && nullToAbsent ? const Value.absent() : Value(ulid),
     );
   }
 
@@ -12308,6 +12392,7 @@ class RewardRedemption extends DataClass
       status: serializer.fromJson<String>(json['status']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       updatedAt: serializer.fromJson<DateTime>(json['updatedAt']),
+      ulid: serializer.fromJson<String?>(json['ulid']),
     );
   }
   @override
@@ -12322,6 +12407,7 @@ class RewardRedemption extends DataClass
       'status': serializer.toJson<String>(status),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'updatedAt': serializer.toJson<DateTime>(updatedAt),
+      'ulid': serializer.toJson<String?>(ulid),
     };
   }
 
@@ -12334,6 +12420,7 @@ class RewardRedemption extends DataClass
     String? status,
     DateTime? createdAt,
     DateTime? updatedAt,
+    Value<String?> ulid = const Value.absent(),
   }) => RewardRedemption(
     id: id ?? this.id,
     profileId: profileId ?? this.profileId,
@@ -12343,6 +12430,7 @@ class RewardRedemption extends DataClass
     status: status ?? this.status,
     createdAt: createdAt ?? this.createdAt,
     updatedAt: updatedAt ?? this.updatedAt,
+    ulid: ulid.present ? ulid.value : this.ulid,
   );
   RewardRedemption copyWithCompanion(RewardRedemptionsCompanion data) {
     return RewardRedemption(
@@ -12358,6 +12446,7 @@ class RewardRedemption extends DataClass
       status: data.status.present ? data.status.value : this.status,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       updatedAt: data.updatedAt.present ? data.updatedAt.value : this.updatedAt,
+      ulid: data.ulid.present ? data.ulid.value : this.ulid,
     );
   }
 
@@ -12371,7 +12460,8 @@ class RewardRedemption extends DataClass
           ..write('pointsCost: $pointsCost, ')
           ..write('status: $status, ')
           ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('ulid: $ulid')
           ..write(')'))
         .toString();
   }
@@ -12386,6 +12476,7 @@ class RewardRedemption extends DataClass
     status,
     createdAt,
     updatedAt,
+    ulid,
   );
   @override
   bool operator ==(Object other) =>
@@ -12398,7 +12489,8 @@ class RewardRedemption extends DataClass
           other.pointsCost == this.pointsCost &&
           other.status == this.status &&
           other.createdAt == this.createdAt &&
-          other.updatedAt == this.updatedAt);
+          other.updatedAt == this.updatedAt &&
+          other.ulid == this.ulid);
 }
 
 class RewardRedemptionsCompanion extends UpdateCompanion<RewardRedemption> {
@@ -12410,6 +12502,7 @@ class RewardRedemptionsCompanion extends UpdateCompanion<RewardRedemption> {
   final Value<String> status;
   final Value<DateTime> createdAt;
   final Value<DateTime> updatedAt;
+  final Value<String?> ulid;
   const RewardRedemptionsCompanion({
     this.id = const Value.absent(),
     this.profileId = const Value.absent(),
@@ -12419,6 +12512,7 @@ class RewardRedemptionsCompanion extends UpdateCompanion<RewardRedemption> {
     this.status = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.updatedAt = const Value.absent(),
+    this.ulid = const Value.absent(),
   });
   RewardRedemptionsCompanion.insert({
     this.id = const Value.absent(),
@@ -12429,6 +12523,7 @@ class RewardRedemptionsCompanion extends UpdateCompanion<RewardRedemption> {
     this.status = const Value.absent(),
     required DateTime createdAt,
     required DateTime updatedAt,
+    this.ulid = const Value.absent(),
   }) : profileId = Value(profileId),
        rewardTitle = Value(rewardTitle),
        pointsCost = Value(pointsCost),
@@ -12443,6 +12538,7 @@ class RewardRedemptionsCompanion extends UpdateCompanion<RewardRedemption> {
     Expression<String>? status,
     Expression<DateTime>? createdAt,
     Expression<DateTime>? updatedAt,
+    Expression<String>? ulid,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -12453,6 +12549,7 @@ class RewardRedemptionsCompanion extends UpdateCompanion<RewardRedemption> {
       if (status != null) 'status': status,
       if (createdAt != null) 'created_at': createdAt,
       if (updatedAt != null) 'updated_at': updatedAt,
+      if (ulid != null) 'ulid': ulid,
     });
   }
 
@@ -12465,6 +12562,7 @@ class RewardRedemptionsCompanion extends UpdateCompanion<RewardRedemption> {
     Value<String>? status,
     Value<DateTime>? createdAt,
     Value<DateTime>? updatedAt,
+    Value<String?>? ulid,
   }) {
     return RewardRedemptionsCompanion(
       id: id ?? this.id,
@@ -12475,6 +12573,7 @@ class RewardRedemptionsCompanion extends UpdateCompanion<RewardRedemption> {
       status: status ?? this.status,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
+      ulid: ulid ?? this.ulid,
     );
   }
 
@@ -12505,6 +12604,9 @@ class RewardRedemptionsCompanion extends UpdateCompanion<RewardRedemption> {
     if (updatedAt.present) {
       map['updated_at'] = Variable<DateTime>(updatedAt.value);
     }
+    if (ulid.present) {
+      map['ulid'] = Variable<String>(ulid.value);
+    }
     return map;
   }
 
@@ -12518,7 +12620,8 @@ class RewardRedemptionsCompanion extends UpdateCompanion<RewardRedemption> {
           ..write('pointsCost: $pointsCost, ')
           ..write('status: $status, ')
           ..write('createdAt: $createdAt, ')
-          ..write('updatedAt: $updatedAt')
+          ..write('updatedAt: $updatedAt, ')
+          ..write('ulid: $ulid')
           ..write(')'))
         .toString();
   }
@@ -22864,6 +22967,7 @@ typedef $$PointsLedgerTableCreateCompanionBuilder =
       Value<String?> note,
       Value<int?> redemptionId,
       required DateTime createdAt,
+      Value<String?> ulid,
     });
 typedef $$PointsLedgerTableUpdateCompanionBuilder =
     PointsLedgerCompanion Function({
@@ -22874,6 +22978,7 @@ typedef $$PointsLedgerTableUpdateCompanionBuilder =
       Value<String?> note,
       Value<int?> redemptionId,
       Value<DateTime> createdAt,
+      Value<String?> ulid,
     });
 
 final class $$PointsLedgerTableReferences
@@ -22940,6 +23045,11 @@ class $$PointsLedgerTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get ulid => $composableBuilder(
+    column: $table.ulid,
+    builder: (column) => ColumnFilters(column),
+  );
+
   $$LearnerProfilesTableFilterComposer get profileId {
     final $$LearnerProfilesTableFilterComposer composer = $composerBuilder(
       composer: this,
@@ -23003,6 +23113,11 @@ class $$PointsLedgerTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get ulid => $composableBuilder(
+    column: $table.ulid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$LearnerProfilesTableOrderingComposer get profileId {
     final $$LearnerProfilesTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -23055,6 +23170,9 @@ class $$PointsLedgerTableAnnotationComposer
 
   GeneratedColumn<DateTime> get createdAt =>
       $composableBuilder(column: $table.createdAt, builder: (column) => column);
+
+  GeneratedColumn<String> get ulid =>
+      $composableBuilder(column: $table.ulid, builder: (column) => column);
 
   $$LearnerProfilesTableAnnotationComposer get profileId {
     final $$LearnerProfilesTableAnnotationComposer composer = $composerBuilder(
@@ -23115,6 +23233,7 @@ class $$PointsLedgerTableTableManager
                 Value<String?> note = const Value.absent(),
                 Value<int?> redemptionId = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
+                Value<String?> ulid = const Value.absent(),
               }) => PointsLedgerCompanion(
                 id: id,
                 profileId: profileId,
@@ -23123,6 +23242,7 @@ class $$PointsLedgerTableTableManager
                 note: note,
                 redemptionId: redemptionId,
                 createdAt: createdAt,
+                ulid: ulid,
               ),
           createCompanionCallback:
               ({
@@ -23133,6 +23253,7 @@ class $$PointsLedgerTableTableManager
                 Value<String?> note = const Value.absent(),
                 Value<int?> redemptionId = const Value.absent(),
                 required DateTime createdAt,
+                Value<String?> ulid = const Value.absent(),
               }) => PointsLedgerCompanion.insert(
                 id: id,
                 profileId: profileId,
@@ -23141,6 +23262,7 @@ class $$PointsLedgerTableTableManager
                 note: note,
                 redemptionId: redemptionId,
                 createdAt: createdAt,
+                ulid: ulid,
               ),
           withReferenceMapper: (p0) => p0
               .map(
@@ -23219,6 +23341,7 @@ typedef $$RewardRedemptionsTableCreateCompanionBuilder =
       Value<String> status,
       required DateTime createdAt,
       required DateTime updatedAt,
+      Value<String?> ulid,
     });
 typedef $$RewardRedemptionsTableUpdateCompanionBuilder =
     RewardRedemptionsCompanion Function({
@@ -23230,6 +23353,7 @@ typedef $$RewardRedemptionsTableUpdateCompanionBuilder =
       Value<String> status,
       Value<DateTime> createdAt,
       Value<DateTime> updatedAt,
+      Value<String?> ulid,
     });
 
 final class $$RewardRedemptionsTableReferences
@@ -23312,6 +23436,11 @@ class $$RewardRedemptionsTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<String> get ulid => $composableBuilder(
+    column: $table.ulid,
+    builder: (column) => ColumnFilters(column),
+  );
+
   $$LearnerProfilesTableFilterComposer get profileId {
     final $$LearnerProfilesTableFilterComposer composer = $composerBuilder(
       composer: this,
@@ -23380,6 +23509,11 @@ class $$RewardRedemptionsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get ulid => $composableBuilder(
+    column: $table.ulid,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$LearnerProfilesTableOrderingComposer get profileId {
     final $$LearnerProfilesTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -23437,6 +23571,9 @@ class $$RewardRedemptionsTableAnnotationComposer
 
   GeneratedColumn<DateTime> get updatedAt =>
       $composableBuilder(column: $table.updatedAt, builder: (column) => column);
+
+  GeneratedColumn<String> get ulid =>
+      $composableBuilder(column: $table.ulid, builder: (column) => column);
 
   $$LearnerProfilesTableAnnotationComposer get profileId {
     final $$LearnerProfilesTableAnnotationComposer composer = $composerBuilder(
@@ -23503,6 +23640,7 @@ class $$RewardRedemptionsTableTableManager
                 Value<String> status = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<DateTime> updatedAt = const Value.absent(),
+                Value<String?> ulid = const Value.absent(),
               }) => RewardRedemptionsCompanion(
                 id: id,
                 profileId: profileId,
@@ -23512,6 +23650,7 @@ class $$RewardRedemptionsTableTableManager
                 status: status,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                ulid: ulid,
               ),
           createCompanionCallback:
               ({
@@ -23523,6 +23662,7 @@ class $$RewardRedemptionsTableTableManager
                 Value<String> status = const Value.absent(),
                 required DateTime createdAt,
                 required DateTime updatedAt,
+                Value<String?> ulid = const Value.absent(),
               }) => RewardRedemptionsCompanion.insert(
                 id: id,
                 profileId: profileId,
@@ -23532,6 +23672,7 @@ class $$RewardRedemptionsTableTableManager
                 status: status,
                 createdAt: createdAt,
                 updatedAt: updatedAt,
+                ulid: ulid,
               ),
           withReferenceMapper: (p0) => p0
               .map(

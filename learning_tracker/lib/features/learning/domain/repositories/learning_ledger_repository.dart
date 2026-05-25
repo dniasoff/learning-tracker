@@ -15,6 +15,12 @@ abstract class LearningLedgerRepository {
   ///
   /// Throws [ChildSelfMarkException] if a child profile attempts to self-mark
   /// without an active parent PIN session for this profile.
+  ///
+  /// [source] controls whether the sentinel date (DateTime.utc(2000, 1, 1)) is
+  /// written instead of the real timestamp. Non-live sources (bulkInTrack /
+  /// lifetimeOnly) write the sentinel so a siyum triggered by a bulk mark does
+  /// not surface as today's recent activity or inflate streak/points-per-day
+  /// reads (Rule 4 / DEC-19). Defaults to [CompletionSource.live].
   Future<LearningLedgerData> recordCompletion({
     required String curriculumId,
     required String entryScope,
@@ -25,6 +31,7 @@ abstract class LearningLedgerRepository {
     int? trackId,
     required int markedBy,
     required bool isManual,
+    CompletionSource source = CompletionSource.live,
   });
 
   /// Batch-insert manual ledger rows (e.g. lifetime marking UI).

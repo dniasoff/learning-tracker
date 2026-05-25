@@ -66,6 +66,59 @@ class NotificationScheduler {
     );
   }
 
+  /// Schedule (or reschedule) the daily reminder for [profileId] as a rolling
+  /// 14-day batch of pre-filtered one-shots, using that profile's per-profile
+  /// batch ID block (`profileId*1000 + 10..23`).
+  ///
+  /// (H1 fix) This is the single canonical daily-reminder scheme for ALL
+  /// profiles — active and inactive alike — so no profile ever ends up with
+  /// two competing schedules in different ID spaces. Each fire-time is filtered
+  /// against Sacred Time windows exactly like [scheduleReminder] (L2 fix).
+  Future<void> scheduleReminderForProfile({
+    required int profileId,
+    required TimeOfDay time,
+    required String title,
+    required String body,
+    SacredLocation? location,
+    bool inIsrael = false,
+  }) async {
+    final fireTimes = buildFireTimesForTest(
+      time: time,
+      location: location,
+      inIsrael: inIsrael,
+      fromDay: null,
+    );
+
+    await service.scheduleBatchRemindersForProfile(
+      profileId: profileId,
+      fireTimes: fireTimes,
+      title: title,
+      body: body,
+    );
+
+    unawaited(
+      _analytics.logNotificationFired(notificationType: 'daily_reminder'),
+    );
+  }
+
+  /// Cancel the daily reminder for [profileId] (per-profile batch + legacy
+  /// single-shot id within the profile's block).
+  Future<void> cancelForProfile(int profileId) async {
+    await service.cancelDailyReminderForProfile(profileId);
+    await service.cancelBatchRemindersForProfile(profileId);
+  }
+
+  /// Cancel due to sacred time for [profileId] — fire suppression event.
+  Future<void> cancelForProfileSacredTime(int profileId) async {
+    await service.cancelDailyReminderForProfile(profileId);
+    await service.cancelBatchRemindersForProfile(profileId);
+    unawaited(
+      _analytics.logNotificationSuppressedSacredTime(
+        notificationType: 'daily_reminder',
+      ),
+    );
+  }
+
   /// Legacy schedule method — kept for backwards compatibility with existing
   /// providers and tests. Delegates to [scheduleReminder] with a generic body
   /// that does NOT support locale.

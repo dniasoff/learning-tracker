@@ -10,6 +10,8 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/account/domain/services/session_persistence_service.dart';
+import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
+    show authRepositoryProvider;
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
 import 'package:learning_tracker/features/account/presentation/widgets/offline_top_banner.dart';
@@ -18,8 +20,7 @@ import 'package:learning_tracker/features/profiles/domain/models/profile_model.d
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_lock_overlay.dart';
-import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
-import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -38,28 +39,36 @@ class AppShellScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // W6.15: Detect if the current user is actively tutoring any profile.
-    // We use the incoming grants list as a lightweight signal — if any active
-    // grants exist for the current user as tutor, we show the indicator.
-    // A fuller implementation (post data-layer) will track the selected session.
-    final grantsAsync = ref.watch(incomingTutorGrantsProvider);
-    final hasActiveTutoredProfiles =
-        grantsAsync.asData?.value.any((g) => g.grantState is ActiveGrant) ??
-        false;
+    // R3o-C2 / R2o-H2: drive the tutor indicator from the ACTIVE tutored
+    // selection (the tutor has actually entered a talmid's context after the
+    // PIN gate), NOT from mere grant existence. A parent who merely *holds*
+    // tutor grants but is using their own/child profile is not "in tutor mode".
+    final activeTutoredSelection = ref.watch(
+      activeTutoredProfileSelectionProvider,
+    );
+    final hasActiveTutoredProfiles = activeTutoredSelection != null;
 
-    // WS4.banner (DEC-25/D3): Detect when a parent is viewing a child's profile.
-    // Show the "Viewing [child]" banner whenever the active profile is a child
-    // AND we are NOT in tutor mode (tutor mode has its own indicator bar).
-    // The banner is absent in tutor mode because the tutor bar already provides
-    // the context signal; only one context banner is shown at a time.
     final activeProfileId = ref.watch(activeProfileIdProvider);
     final profilesAsync = ref.watch(profileListStreamProvider);
     final profiles = profilesAsync.asData?.value ?? <ProfileModel>[];
-    final activeProfile =
-        profiles.where((p) => p.id == activeProfileId).firstOrNull;
+    final activeProfile = profiles
+        .where((p) => p.id == activeProfileId)
+        .firstOrNull;
+
+    // R3o-C1: the "Viewing [child]" banner must show ONLY when an ADULT has
+    // switched into a CHILD's profile — never for a standalone child using
+    // their own profile. The "adult is viewing a child" signal is derived
+    // from: the active profile is a child AND this account owns at least one
+    // adult profile (a parent+child account). A standalone-child account has
+    // no adult profile, so the banner is correctly suppressed there.
+    final hasAdultProfile = profiles.any(
+      (p) => p.profileMode == ProfileMode.adult,
+    );
+    final adultIsViewingChild =
+        activeProfile?.profileMode == ProfileMode.child && hasAdultProfile;
+    // Tutor mode has its own indicator bar; only one context banner shows.
     final isViewingChildProfile =
-        !hasActiveTutoredProfiles &&
-        activeProfile?.profileMode == ProfileMode.child;
+        !hasActiveTutoredProfiles && adultIsViewingChild;
     final viewingChildName = isViewingChildProfile
         ? (activeProfile?.displayName ?? '')
         : null;
@@ -111,8 +120,7 @@ class AppShellScreen extends ConsumerWidget {
                   // WS1.consolidate: tutor bar is a context indicator only —
                   // the switch affordance is removed; use the bottom-nav avatar
                   // switcher to change profiles.
-                  if (hasActiveTutoredProfiles)
-                    const _TutorModeIndicatorBar(),
+                  if (hasActiveTutoredProfiles) const _TutorModeIndicatorBar(),
                   // WS4.banner (DEC-25): "Viewing [child]" banner for the
                   // parent/child-mode path. Only shown when a child profile is
                   // active and no tutor bar is already displayed.
@@ -121,16 +129,23 @@ class AppShellScreen extends ConsumerWidget {
                       childName: viewingChildName,
                       profiles: profiles,
                       onExit: () {
-                        // Switch to the first adult profile if one exists,
-                        // otherwise open the switcher sheet (handled inside
-                        // _ChildViewBanner via the onExit callback).
-                        final adultProfile = profiles.firstWhere(
-                          (p) => p.profileMode == ProfileMode.adult,
-                          orElse: () => profiles.first,
-                        );
-                        ref
-                            .read(selectedProfileIdProvider.notifier)
-                            .select(adultProfile.id);
+                        // R3o-M1: Exit must deterministically return to the
+                        // ADULT/parent context — never to another child. The
+                        // banner only renders when an adult profile exists, so
+                        // an adult is always present; select it. If somehow no
+                        // adult exists, clear the selection and let the
+                        // ProfileGuard route to the picker (open the switcher)
+                        // rather than silently re-entering another child.
+                        final adultProfile = profiles
+                            .where((p) => p.profileMode == ProfileMode.adult)
+                            .firstOrNull;
+                        if (adultProfile != null) {
+                          ref
+                              .read(selectedProfileIdProvider.notifier)
+                              .select(adultProfile.id);
+                        } else {
+                          ref.read(selectedProfileIdProvider.notifier).clear();
+                        }
                         innerContext.router.replaceAll([const AppShellRoute()]);
                       },
                     ),
@@ -283,11 +298,7 @@ class _ChildViewBanner extends ConsumerWidget {
       padding: const EdgeInsets.symmetric(horizontal: 12),
       child: Row(
         children: [
-          const Icon(
-            Icons.child_care_rounded,
-            size: 13,
-            color: Colors.white,
-          ),
+          const Icon(Icons.child_care_rounded, size: 13, color: Colors.white),
           const SizedBox(width: 6),
           Expanded(
             child: Text(
@@ -382,7 +393,9 @@ class _ProfileSwitcherButton extends ConsumerWidget {
     final profilesAsync = ref.watch(profileListStreamProvider);
     final profiles = profilesAsync.asData?.value ?? [];
     final activeProfileId = ref.watch(activeProfileIdProvider);
-    final activeProfile = profiles.where((p) => p.id == activeProfileId).firstOrNull;
+    final activeProfile = profiles
+        .where((p) => p.id == activeProfileId)
+        .firstOrNull;
 
     // We need the registry account count. Use a FutureBuilder-style approach
     // by watching the registry directly via a provider.
@@ -436,7 +449,8 @@ class _ProfileSwitcherButtonInnerState
     if (!hasSomethingToSwitch) return const SizedBox.shrink();
 
     final activeProfile = widget.activeProfile;
-    final initial = activeProfile != null && activeProfile.displayName.isNotEmpty
+    final initial =
+        activeProfile != null && activeProfile.displayName.isNotEmpty
         ? activeProfile.displayName[0].toUpperCase()
         : '?';
 
@@ -495,15 +509,23 @@ class _ProfileSwitcherButtonInnerState
   Future<void> _switchAccount(DeviceAccount account) async {
     Navigator.of(context).pop(); // close sheet
 
+    // R1o-C2: A stale selectedProfileId (the provider is keepAlive) would leak
+    // across the switch. Per-account autoincrement profile IDs collide, so the
+    // old id could short-circuit ProfileGuard onto the wrong profile in the new
+    // DB. Clear it BEFORE the DB swap so the guard re-resolves cleanly.
+    ref.read(selectedProfileIdProvider.notifier).clear();
+
     // Swap the Drift DB to the target account (DEC-34: no signOut()).
-    ref.read(accountDbFileNameProvider.notifier).setFileName(account.dbFileName);
+    ref
+        .read(accountDbFileNameProvider.notifier)
+        .setFileName(account.dbFileName);
     ref.invalidate(userDatabaseProvider);
 
     final dao = ref.read(userDatabaseProvider).userProfileDao;
 
-    // Look up the first profile in the target account's DB.
+    // Look up profiles in the target account's DB.
     final profiles = await dao.getAllUserProfiles();
-    if (profiles.isEmpty || !mounted) return;
+    if (!mounted) return;
 
     final prefs = await SharedPreferences.getInstance();
     final session = SessionPersistenceService(
@@ -513,15 +535,62 @@ class _ProfileSwitcherButtonInnerState
     await session.setActiveAccount(account.accountId);
     await prefs.setBool(kOnboardingComplete, true);
 
-    // Set auth state from the first profile in this account's DB.
-    final profile = profiles.first;
-    if (profile.tier == 'cloudBorn') {
-      ref.read(authStateProvider.notifier).setCloudBornSession(profile: profile);
-    } else {
-      ref.read(authStateProvider.notifier).setLocalBornSession(profile: profile);
+    // R1o-L2: use the typed account-tier accessor (DeviceAccount carries a
+    // typed enum) rather than inspecting a profile.tier string.
+    final isCloud = account.accountTier.isCloud;
+
+    // C#1: there is ONE FirebaseAuth slot, so we cannot keep every cloud
+    // account "authenticated simultaneously". When switching INTO a cloud
+    // account, Firebase's currentUser may still point at the PREVIOUS cloud
+    // account. The FirestoreGateway now addresses paths from the active-account
+    // record's UID (the safety floor), so a stale currentUser can no longer
+    // corrupt the wrong space — Firestore rules deny instead. Here we surface
+    // the reality: if currentUser doesn't match the target UID, sync is paused
+    // until the user re-authenticates. The local DB + outbox stay fully usable;
+    // we never force a sign-out (local-born accounts are unaffected entirely).
+    if (isCloud) {
+      final fbUid = ref.read(authRepositoryProvider).currentUser?.uid;
+      final sessionMatches = fbUid != null && fbUid == account.firebaseUid;
+      if (!sessionMatches && mounted) {
+        // Non-blocking "sign in to sync" affordance — local data is available
+        // immediately; cloud sync resumes once the user re-authenticates.
+        final l10n = AppLocalizations.of(context)!;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(l10n.accountOfflineSignInToSync),
+            action: SnackBarAction(
+              label: l10n.signInCta,
+              onPressed: () =>
+                  unawaited(context.router.push(const SignInRoute())),
+            ),
+          ),
+        );
+      }
     }
 
-    if (mounted) {
+    if (isCloud) {
+      // Reuse the same activation shape as the picker: a real profile row is
+      // not required to set the cloud session — the active-account record is
+      // the source of truth for the addressed UID.
+      if (profiles.isNotEmpty) {
+        ref
+            .read(authStateProvider.notifier)
+            .setCloudBornSession(profile: profiles.first);
+      }
+    } else if (profiles.isNotEmpty) {
+      ref
+          .read(authStateProvider.notifier)
+          .setLocalBornSession(profile: profiles.first);
+    }
+
+    if (!mounted) return;
+
+    // R1o-H1: a 0-profile target account must complete the switch cleanly and
+    // route to the empty-login surface — NOT bail on a swapped-but-unactivated
+    // DB (which left the app in a stuck half-state).
+    if (profiles.isEmpty) {
+      unawaited(context.router.replaceAll([const EmptyLoginRoute()]));
+    } else {
       unawaited(context.router.replaceAll([const AppShellRoute()]));
     }
 
@@ -552,6 +621,7 @@ class _SwitcherSheet extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final showProfiles = profiles.length >= 2;
     final showAccounts = accounts.length >= 2;
 
@@ -584,7 +654,7 @@ class _SwitcherSheet extends StatelessWidget {
               // Profiles section (count-gate: ≥2 profiles)
               if (showProfiles) ...[
                 Text(
-                  'Profiles',
+                  l10n.switcherSheetProfiles,
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: AppTheme.brandInkMuted,
                     fontWeight: FontWeight.w700,
@@ -604,7 +674,7 @@ class _SwitcherSheet extends StatelessWidget {
               // Accounts section (count-gate: ≥2 accounts)
               if (showAccounts) ...[
                 Text(
-                  'Accounts',
+                  l10n.switcherSheetAccounts,
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: AppTheme.brandInkMuted,
                     fontWeight: FontWeight.w700,
@@ -638,9 +708,9 @@ class _SwitcherSheet extends StatelessWidget {
                     size: 20,
                   ),
                 ),
-                title: const Text(
-                  'Add account',
-                  style: TextStyle(
+                title: Text(
+                  l10n.switcherSheetAddAccount,
+                  style: const TextStyle(
                     fontWeight: FontWeight.w600,
                     color: AppTheme.brandBlueDeep,
                   ),
@@ -690,11 +760,16 @@ class _SwitcherProfileTile extends StatelessWidget {
         style: const TextStyle(fontWeight: FontWeight.w600),
       ),
       subtitle: Text(
-        profile.profileMode.name,
+        profile.profileMode == ProfileMode.child
+            ? AppLocalizations.of(context)!.profileTypeChild
+            : AppLocalizations.of(context)!.profileTypeAdult,
         style: const TextStyle(color: AppTheme.brandInkMuted, fontSize: 12),
       ),
       trailing: isActive
-          ? const Icon(Icons.check_circle_rounded, color: AppTheme.brandBlueBright)
+          ? const Icon(
+              Icons.check_circle_rounded,
+              color: AppTheme.brandBlueBright,
+            )
           : null,
       onTap: isActive ? null : onTap,
       contentPadding: EdgeInsets.zero,
@@ -703,10 +778,7 @@ class _SwitcherProfileTile extends StatelessWidget {
 }
 
 class _SwitcherAccountTile extends StatelessWidget {
-  const _SwitcherAccountTile({
-    required this.account,
-    required this.onTap,
-  });
+  const _SwitcherAccountTile({required this.account, required this.onTap});
 
   final DeviceAccount account;
   final VoidCallback onTap;

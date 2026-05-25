@@ -331,10 +331,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               // WS2.skip: wire skip at the profile-creation phase so the user
               // can bypass profile creation entirely and land on the
               // empty-login surface.
-              onSkipProfileCreation:
-                  () => unawaited(
-                    _navigateToDashboardSkipped(joinedToTutor: false),
-                  ),
+              onSkipProfileCreation: () =>
+                  unawaited(_navigateToDashboardSkipped(joinedToTutor: false)),
             ),
             _ScreenPhase.parentPinSetup => OnboardingParentPinStep(
               profileId: _createdProfileId ?? 0,

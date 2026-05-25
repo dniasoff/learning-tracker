@@ -360,7 +360,8 @@ void main() {
       final notifSvc = _MockNotificationGateway();
 
       when(
-        () => notifSvc.scheduleStreakAlert(
+        () => notifSvc.scheduleStreakAlertForProfile(
+          profileId: any(named: 'profileId'),
           hour: any(named: 'hour'),
           minute: any(named: 'minute'),
           body: any(named: 'body'),

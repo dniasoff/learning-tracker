@@ -4,9 +4,6 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
@@ -16,7 +13,6 @@ import 'package:learning_tracker/features/gamification/presentation/widgets/avat
 import 'package:learning_tracker/features/gamification/presentation/widgets/manage_rewards_list.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/reward_config_header.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/reward_form.dart';
-import 'package:learning_tracker/features/gamification/presentation/widgets/reward_type_segmented.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 const Color _kNavy = Color(0xFF00218D);
@@ -87,14 +83,6 @@ class _RewardConfigurationScreenState
       _lastSyncedPoints = form.pointsText;
       _pointsController.text = form.pointsText;
     }
-  }
-
-  String _trackTitle(CurriculumTrack track) {
-    final c = CurriculumId.values
-        .where((x) => x.storageKey == track.curriculumId)
-        .firstOrNull;
-    if (c == null) return track.curriculumId;
-    return curriculumLabelText(ref, curriculum: c);
   }
 
   Future<void> _openManageRewardsSheet(AppLocalizations l10n) async {
@@ -348,67 +336,11 @@ class _RewardConfigurationScreenState
                           ),
                         ),
                       ),
-                      const SizedBox(height: 18),
-                      Text(
-                        l10n.rewardConfigRewardTypeLabel,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: _kMutedLabel,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      RewardTypeSegmented(
-                        perTrackLabel: l10n.rewardConfigPerTrackTab,
-                        totalLabel: l10n.rewardConfigTotalPointsTab,
-                        perTrackEnabled: form.tracks.isNotEmpty,
-                        isGlobal: form.usesGlobalLadder,
-                        onChanged: notifier.setGlobalReward,
-                      ),
-                      if (!form.usesGlobalLadder) ...[
-                        const SizedBox(height: 18),
-                        Text(
-                          l10n.rewardConfigChooseTrackLabel,
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(
-                                color: _kMutedLabel,
-                                fontWeight: FontWeight.w600,
-                              ),
-                        ),
-                        const SizedBox(height: 8),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 4),
-                          decoration: BoxDecoration(
-                            color: _kFieldFill,
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<int>(
-                              // ignore: deprecated_member_use
-                              value: form.selectedTrackId,
-                              isExpanded: true,
-                              borderRadius: BorderRadius.circular(12),
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                              ),
-                              icon: const Icon(
-                                Icons.keyboard_arrow_down_rounded,
-                                color: _kNavy,
-                              ),
-                              items: [
-                                for (final t in form.tracks)
-                                  DropdownMenuItem(
-                                    value: t.id,
-                                    child: Text(_trackTitle(t)),
-                                  ),
-                              ],
-                              onChanged: (id) {
-                                if (id == null) return;
-                                notifier.setSelectedTrack(id);
-                              },
-                            ),
-                          ),
-                        ),
-                      ],
+                      // R4o-H2 / DEC-32: the Per-track vs Total reward-type
+                      // split was removed — every reward is a single global
+                      // priced spend-item against the one debitable balance, so
+                      // the type segmented control and per-track dropdown are
+                      // gone.
                       const SizedBox(height: 18),
                       TextField(
                         controller: _pointsController,

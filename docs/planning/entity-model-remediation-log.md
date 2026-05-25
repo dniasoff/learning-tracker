@@ -125,6 +125,24 @@
 - detail: WS9 Sonnet agent dispatched for model/code hygiene. Tasks: unify UserMode vs ProfileMode enum + column constraint; remove transitional shims (auth_state_provider.dart:105-130); collapse duplicate add-profile flows + drop vestigial Account-level userMode 'adult'; decide dedupeByEmail under DEC-34 multi-session. Depends on WS1 auth model now settled. P4 gate: enums unified, shims gone, dups collapsed, dedupeByEmail decision documented.
 - next: Sit in receive-mode awaiting WS9 P4 report. When reported, verify diffs, then proceed to verification phase (V1 CI → V2 adversarial review → V3 fix → V4 CI → V5 task-truth → V6 smoke).
 
+## [2026-05-24 17:00] TASK-DONE — WS9 complete
+
+- stream: WS9
+- detail: WS9 (commit 416ac245, 113 files, +504/-742). WS9.enum: user_mode.dart deleted; ProfileMode canonical; CHECK(mode IN ('adult','child')) constraint on learner_profiles; schema v26. WS9.shims: promoteToCloud renamed to setCloudBornSessionFromFirebaseUser (5 callers updated); demoteToLocal deleted (zero callers outside shim). WS9.flows: accounts.userMode column dropped; AuthUser.userMode removed; UserProfileService.setUserMode/getUserMode removed; WS1.consolidate confirmed complete. WS9.dedupe: KEEP — documented at device_registry_database.dart:142-147 that it handles same-email-different-Firebase-UID duplicates (DEC-34 compatible, not conflicting). dart analyze clean, 5914 tests.
+- next: P4 gate.
+
+## [2026-05-24 17:15] SYNC-GATE P4 — PASSED
+
+- stream: Orchestrator
+- detail: WS9 diff verified. (1) user_mode.dart DELETED; 18 remaining "UserMode" references are local variable names + doc comments — not the deleted enum type ✅; (2) auth_state_provider.dart:113 has WS9.shims renamed comment, promoteToCloud/demoteToLocal shim labels gone ✅; (3) device_registry_database.dart:142-155 has DEC-34 rationale + dedupeByEmail kept ✅; (4) CI 5914 tests ✅. All 9 WS tasks completed and verified. Tasks #9 (WS9) and #13 (P4) marked completed.
+- next: Verification phase — V1 CI + V2 adversarial review squad dispatched in parallel.
+
+## [2026-05-24 17:16] DISPATCH — Verification phase (V1 CI + V2 adversarial review)
+
+- stream: Orchestrator
+- detail: V1 CI running (make ci from learning_tracker/). V2 adversarial review squad dispatched in parallel: 5 scoped reviewers (R1: account/login/switching WS1+WS2, R2: tutor mode end-to-end WS3, R3: notifications/location/settings WS4+WS5+WS6, R4: rewards/credit WS7+WS8, R5: hygiene/rules WS9+product-rules). Each returns CRITICAL/HIGH/MEDIUM/LOW findings with file:line.
+- next: Collect V1 CI result + all 5 review reports. Fix CRITICAL/HIGH. Re-run CI. Then V5 task-truth + V6 smoke.
+
 ## [2026-05-24 13:05] START — WS8 begins
 
 - stream: WS8
@@ -220,6 +238,269 @@
   WS9.dedupe — Decision: KEEP dedupeByEmail. Under DEC-34, distinct accounts (distinct emails) all stay authenticated simultaneously. dedupeByEmail targets same-email/same-user duplicates (Firebase re-mints new UID after account deletion + re-signup) — not different users. Updated code comment with DEC-34 rationale.
   All 5914 tests pass. dart analyze --fatal-infos: no issues.
 - next: Commit, update tracker, send P4 gate report to Orchestrator.
+
+## [2026-05-24 19:00] RESULT — V1 CI pass
+
+- stream: Orchestrator
+- detail: `make ci` from `learning_tracker/` completed exit-code 0. 5914 tests passed, 125 skipped, 0 failed. dart analyze: no issues. Format: clean.
+- next: Await R1–R5 review reports. Dispatch V3 fix-all once all 5 complete.
+
+## [2026-05-24 19:01] RESULT — R1 review (WS1+WS2 — Account/Login/Switching) COMPLETE
+
+- stream: R1
+- severity-summary: 1 CRITICAL, 5 HIGH, 7 MEDIUM, 4 LOW
+- CRITICAL:
+  - R1-C1: `_switchAccount` in `app_shell.dart:506` silently returns when target account has 0 profiles — DB already swapped, authState not updated; empty-login (DEC-6 tutor) account permanently unreachable from switcher.
+- HIGH:
+  - R1-H1: `isViewingChildProfile` fires for ANY child profile including child's own login — child sees amber "Viewing [child]" banner with Exit button. `app_shell.dart:60–62`.
+  - R1-H2: `_switchAccount` uses `getAllUserProfiles()` unordered scan; `profiles.first` may not be right profile; raw tier string comparison `profile.tier == 'cloudBorn'` fragile to schema drift. `app_shell.dart:505–522`.
+  - R1-H3: `_tryLocalFallbackSignIn` calls `signOut()` at `sign_in_controller.dart:227` — DEC-34 violation on local-born fallback path.
+  - R1-H4: `signInWithEmail` calls `signOut()` at `sign_in_controller.dart:570` — DEC-34 violation on offline local-born sign-in path.
+  - R1-H5: `AuthStateNotifier._init()` calls `signOut()` at `auth_state_provider.dart:62` for unverified email accounts — silent cross-account session clobber on every cold launch.
+  - R1-H6: `EmptyLoginScreen` pushes `SettingsRoute` (`empty_login_screen.dart:36`) — child route of `AppShellRoute` guarded by `profileGuard`; will crash or fail from non-shell context; `activeProfileIdProvider` is null.
+- MEDIUM (7): kOnboardingSkipped duplicate constant; skip may set flag when profile exists; one-shot account load in switcher not refreshed; "Add account" always shown in sheet; `profileMode.name` raw enum in UI; hardcoded 'Child mode'/'Adult mode' in manage_learners_screen; EmptyLoginScreen tutor snackbar + switcher headers hardcoded English.
+- LOW (4): DeviceNotificationToggle English snackbars; 'Welcome, tutor!' not l10n; count-gate doc ambiguity (no bug); 'Skip for now' not l10n.
+- next: Await R2–R5. Then dispatch V3 fix-agents for all CRITICAL/HIGH.
+
+## [2026-05-25 00:30] RESULT — Sonnet review squad (R1–R5) COMPLETE — superseded by Opus re-run
+
+- stream: Orchestrator
+- detail: All 5 Sonnet reviewers returned. Top findings retained for cross-check against Opus re-run:
+  - R1 (WS1+WS2): C1 _switchAccount aborts on 0-profile target (app_shell.dart:506); H _isViewing child banner fires for child's own login (:60-62); 3× signOut() DEC-34 violations (sign_in_controller.dart:227,570; auth_state_provider.dart:62); EmptyLoginScreen pushes guarded SettingsRoute (:36).
+  - R2 (WS3): C _tutorProfileId never assigned in accept_invite (dead PIN setup); C profile-less tutor PIN scoped to sentinel id 0 (shared namespace); H ManageGrantsRoute no pinGuard; H canEditPoints gated on canEditGoals; H inline Decline pops w/o notify; H decline/resign notify with parentEmail:''.
+  - R3 (WS4+5+6): C1 _ChildViewBanner suppressed for any tutor-grant holder on own child (:60-62); C2 reminder ID-space collision legacy block vs per-profile; C3 streak alerts never scheduled for inactive profiles; H SacredTime card under PROFILE not DEVICE (:170).
+  - R4 (WS7+8): C getTrackPointsTotal still SUM-derived not stored balance (reward_milestone_service.dart:222); H curriculumBreakdownProvider stale derived sum; H ParentPendingRedemptions single-profile scope; H debitRedemption not atomic; M single-item recordCompletion ignores sentinel.
+  - R5 (WS9+cross): H all 9 tutor screens zero l10n; H EmptyLoginScreen zero l10n; M migration v26 misleading comment + orphaned child-table rows + drop-order FK assumption; LOW TrackType/trackType refs still alive (Rule 7).
+- next: User directed re-run of adversarial review with OPUS model. Dispatching R1–R5 (opus) in parallel. Will reconcile Opus findings with Sonnet findings before V3 fix-all.
+
+## [2026-05-25 00:32] DISPATCH — V2 review squad RE-RUN (Opus, R1–R5)
+
+- stream: Orchestrator
+- detail: Per user instruction, re-dispatching all 5 reviewers with model: "opus" (same scopes/focus as Sonnet run). Finding-only, no fixes.
+- next: Await 5 Opus reports. Reconcile with Sonnet findings. Dispatch V3 fix-all per merged CRITICAL/HIGH set.
+
+## [2026-05-25 00:48] RESULT — R2 Opus (WS3 Tutor) COMPLETE
+
+- stream: R2-opus
+- severity-summary: 4 CRITICAL, 5 HIGH, 4 MEDIUM, 3 LOW. Deeper than Sonnet on the PIN boundary.
+- CRITICAL:
+  - R2o-C1: Tutor PIN namespace mismatch — gate keys PIN on tutor's OWN profile id (tutored_children_section.dart:272), but guard resolves PinScope.tutor(TALMID id) (router_provider.dart:75) → pin_guard.dart:113 checks hasTutorPin(talmidId). Different namespaces → tutor bounced to PARENT pin setup (pin_guard.dart:92).
+  - R2o-C2: promptForPin always verifies PARENT pin — closure (router_provider.dart:53-65) unconditionally calls showParentPinVerificationDialog with parent pinService+selectedProfileIdProvider, ignoring resolved scope. _hasPin is scope-aware; promptForPin is not. Tutor-scoped edit routes (Manage Tracks/Point Config/Reward Config, app_router.dart:235,240,260) challenge for parent PIN.
+  - R2o-C3: Decline from accept screen is a bare pop() (accept_invite_screen.dart:293) — no DeclineTutorInviteUseCase, no DEC-23 parent notify; DeclineInviteRoute defined but never navigated (app_router.dart:319-323).
+  - R2o-C4: Accept flow never sets up Tutor PIN — _tutorProfileId never assigned (accept_invite_screen.dart:74, read-only :135,:306), always null → PIN check dead, pinSetup step unreachable / would pass profileId:0.
+- HIGH:
+  - R2o-H1: activeTutoredProfileSelection (keepAlive) never cleared on back-nav; .exit() only in onSessionLocked (router_provider.dart:96) which never fires (ManageGrantsRoute has no pinGuard). Selection leaks → _isTutorSession stays true on tutor's own profile. Re-creates DEC-21 bug.
+  - R2o-H2: _TutorModeIndicatorBar NOT migrated — still keys on incomingTutorGrantsProvider grant existence (app_shell.dart:46-48), not active selection. Bar + banner-suppression fire on own profile. WS3.3e fixed _isTutorSession but left the visible bar on buggy signal.
+  - R2o-H3: ManageGrantsRoute carries only authGuard (app_router.dart:300-304); PIN enforced only by widget gate that deep-link / _ViewInvitationsRow.onTap (tutored_children_section.dart:169) bypasses. DEC-13-tutor not satisfied.
+  - R2o-H4: Offline-first violated — all tutor reads hit listTutorGrants callable (firestore_tutor_grant_repository.dart:146-166), return [] on error; zero Drift cache in features/tutoring/. Offline shows empty, no message. Rule 6.
+  - R2o-H5: Point Configuration gated on canEditGoals (parent_settings_screen.dart:63,140) — conflation; parent_points_adjust under same gate (a goals-tutor can adjust balance); canEditStudyDays never consulted.
+- MEDIUM: M1 decline/resign notify parentEmail:'' dropped (decline_invite_screen.dart:121; manage_grants_screen.dart:207); M2 all 9 tutor screens hardcoded English (Rule 1); M3 talmid rows show raw profile id/uid; M4 profile-less tutor PIN sentinel 0 shared namespace.
+- LOW: L1 fake PIN-reset snackbar; L2 stub-grant accept mis-fire offline; L3 empty TutoredProfileSelection in text_display_screen.dart:766.
+- correct: _isTutorSession migration right; canMarkLiveCompletion hard-false; revoke notify correctly addressed; Manage Tutors owner-only; dup provider removal clean; no Rule 2 violations in WS3.
+- next: Await R1/R3/R4/R5 Opus. Reconcile, then V3.
+
+## [2026-05-25 00:55] RESULT — R1 Opus (WS1+WS2) COMPLETE — corrects Sonnet on signOut()
+
+- stream: R1-opus
+- severity-summary: 2 CRITICAL, 3 HIGH, 4 MEDIUM, 4 LOW.
+- RECONCILIATION: Opus CLEARS Sonnet R1's 3 signOut() DEC-34 findings (sign_in_controller.dart:227,570; auth_state_provider.dart:62) — verified those are legitimate sign-out / verification-failure rollback / upgrade-collision rollback paths, NOT switch paths. _switchAccount and _activateLocalAccountFromLocalData correctly avoid signOut(). Treat Sonnet R1-H3/H4/H5 as FALSE POSITIVES.
+- CRITICAL:
+  - R1o-C1: cloud→cloud switch leaves Firebase currentUser on wrong account. _switchAccount (app_shell.dart:495-530) swaps Drift DB + setCloudBornSession(profiles.first) but never re-auths Firebase. Single currentUser slot → sync push/pull writes B's data into A's UID space. DEC-34 "all accounts stay Firebase-authed simultaneously" not achievable with one Firebase instance. CORE WS1 GAP.
+  - R1o-C2: stale selectedProfileId leaks across switch. _switchAccount never clears selectedProfileIdProvider (keepAlive, profile_providers.dart:36-48). ProfileGuard.onNavigation (profile_guard.dart:35-43) short-circuits when id != null, never validates id exists in new DB. Per-account autoincrement id spaces collide → opens WRONG profile silently.
+- HIGH:
+  - R1o-H1: switcher can't reach 0-profile accounts; switching INTO one no-ops on already-swapped DB (app_shell.dart:505-506 returns after DB swap). [matches Sonnet R1-C1]
+  - R1o-H2: EmptyLoginScreen has no switcher / no exit to other accounts — stranded if other accounts exist on device.
+  - R1o-H3: kOnboardingSkipped→EmptyLogin routing only in cloud path (_navigateAfterSignIn, sign_in_controller.dart:462-468); local-born (signInWithEmail :576-586) + local-fallback (:232-243) still replaceAll([OnboardingRoute]) on empty profiles — skipped local users loop back into onboarding.
+- MEDIUM: M1 switcher sheet hardcoded English (app_shell.dart:587,607,642; profilesLabel ARB exists); M2 profileMode.name raw in UI (:693, Rule 3); M3 EmptyLoginScreen hardcoded English (:30,36,69,84; learningTracker ARB exists); M4 'Skip for now' hardcoded + frozen by test empty_login_ws2_test.dart:114 (actionSkipForNow ARB exists).
+- LOW: L1 dup kOnboardingSkipped constant; L2 _switchAccount string tier vs typed accountTier (:518); L3 mixed nav context closing sheet; L4 TrackManagementHubRoute reachable from 0-profile empty-login.
+- verified-OK: DEC-34 no-signOut on switch paths; DEC-30 count-gate correct; EmptyLoginRoute reachable; offline-first OK on these surfaces; old switch entry points removed.
+- next: Await R3/R4/R5 Opus.
+
+## [2026-05-25 01:02] RESULT — R3 Opus (WS4+5+6) COMPLETE — corroborates Sonnet
+
+- stream: R3-opus
+- severity-summary: 2 CRITICAL, 4 HIGH, 3 MEDIUM, 2 LOW. Confirms Sonnet R3 banner + reminder findings.
+- CRITICAL:
+  - R3o-C1: "Viewing [child]" banner fires for a child on their OWN profile (app_shell.dart:60-65) — condition is purely profileMode==child, no "entered-via-adult" signal. Exit (:127-134) tries to switch to an adult they may not own. [== Sonnet R3-C1 / R1-H1]
+  - R3o-C2: banner suppressed for parent who also holds tutor grants; amber tutoring bar shown instead. hasActiveTutoredProfiles from incomingTutorGrantsProvider (app_shell.dart:45-62). [== Sonnet R3-C1 second half; ties to R2o-H2]
+- HIGH:
+  - R3o-H1: active profile gets TWO daily reminders — reminderSyncEffect batch IDs 10-23 ("You have N tasks") + allProfilesReminderBootstrap ID activeId*1000 ("Time to learn!"). No de-dup. (notification_providers.dart:446-452 vs 533-539). [== Sonnet R3-C2]
+  - R3o-H2: streak alerts NOT per-profile — scheduleStreakAlert hardcodes id=streakAlertId=1 (notification_gateway.dart:351); no scheduleStreakAlertForProfile; inactive profiles get none, single ID overwritten on switch. [== Sonnet R3-C3]
+  - R3o-H3: deleted profile's reminder keeps firing — bootstrap never cancelDailyReminderForProfile on delete; tapping switches into nonexistent profile (notification_initializer.dart:66-70). NEW vs Sonnet.
+  - R3o-H4: hardcoded English across WS4/WS5 UI (settings_screen.dart:91,241,416,440; device_notification_toggle.dart:71,89,107; switcher sheet; notification bodies). Rule 1.
+- MEDIUM: M1 banner Exit lands on another child / first-adult-not-origin (app_shell.dart:127-130); M2 notification settings push bumps updated_at every launch/switch — LWW risk (notification_providers.dart:262-268); M3 transient default-state reschedule on switch (disabled profile briefly scheduled).
+- LOW: L1 legacy ID block 0 shared with profile-0 batch (latent); L2 inactive-profile reminders skip per-fire Sacred-Time suppression (notification_gateway.dart:257-285).
+- clean: WS6/DEC-26 location fully removed from push+merge, device-global, no LWW clobber; D2 tab-0 confirm is only portal entry; NotificationSettingsMerger per-profile keys clean. SacredTime card under PROFILE section (settings_screen.dart:170) = borderline-M visual misfile but data layer correct. [Sonnet R3-H3 rated this HIGH; Opus rates borderline-MEDIUM]
+- next: Await R4/R5 Opus.
+
+## [2026-05-25 01:10] RESULT — R4 Opus (WS7+8) COMPLETE — finds major sync miss
+
+- stream: R4-opus
+- severity-summary: 2 CRITICAL, 2 HIGH, 3 MEDIUM, 3 LOW.
+- CRITICAL:
+  - R4o-C1: old auto-unlock achievement ladder NOT removed (DEC-32) and now reads the DEBITABLE balance. evaluateUnlocksForGlobal (reward_milestone_service.dart:296-329) → getGlobalPointsForRewards() → getBalance(); wired live on every completion (completion_repository_impl.dart:214-222,304-306) + achievements screen. thresholdPoints simultaneously = redeem price AND cumulative unlock threshold — one value can't be both. [sharper than Sonnet R4-C which flagged getTrackPointsTotal:222 SUM-derived — BOTH point to milestone-service incoherence]
+  - R4o-C2: NEW — points_balance/points_ledger/reward_redemptions have ZERO sync wiring (absent from core/sync + features/sync). Authoritative balance is device-local. Child earns on device A → 0 on device B; redemption request never reaches parent's device → redeem→fulfil loop (DEC-18) broken in normal 2-device setup; parentAdjust never propagates. Multi-device regression. SONNET MISSED THIS.
+- HIGH:
+  - R4o-H1: single-item recordCompletion never writes sentinel (learning_ledger_repository_impl.dart:89,102 always nowUtc); sentinel only on batch (:124-144). Used by siyum detection for bulkInTrack → siyum row dated today. MITIGATION: learning_ledger.completedAt only used for orderBy (learning_ledger_dao.dart), NOT date-windowed streak/recent reads — so no streak leak today. Still contradicts WS8 intent. [Sonnet rated MEDIUM; Opus HIGH]
+  - R4o-H2: per-track rewards incoherent — reward config still offers Per-track vs Total tabs (reward_configuration_screen.dart:361-367) but redemption prices ALL rewards against single global balance (child_redemption_screen.dart:35-50). Per-track "50" becomes redeemable for 50 global.
+- MEDIUM: M1 "Next reward" progress bar regresses against debitable balance (child_points_rewards_tab_card.dart:45-52); M2 parentAdjust deduct non-atomic read-modify-write (points_balance_dao.dart:99-120) — isolated to adjust-deduct, redeem/credit/refund ARE atomic; M3 no backfill of points_balance on v25 migration (acceptable pre-launch).
+- LOW: L1 dead non-atomic debitRedemption/refundRedemption (points_balance_dao.dart:60-94) — trap, remove or make txn; L2 redeem affordability from stale snapshot (txn guard holds); L3 per-track UI symptom of H2.
+- RECONCILIATION vs Sonnet R4: Opus CLEARS Sonnet R4-H "ParentPendingRedemptions single-profile scope" — verified correct (switch-into-each-child satisfies DEC-18). Opus downgrades Sonnet R4-H "debitRedemption not atomic" to LOW (dead method). Sonnet R4-H "curriculumBreakdownProvider stale" folds into R4o-C1 milestone-service family.
+- verified-OK: lifetime routes guarded [auth,childMode,pin]; lifetime screen uses batch→sentinel; dashboardGlobalPoints/getGlobalTotal read stored balance, adults 0 (Rule 3); creditCompletion only live child marks, bulk-prior writes 0; adjust/pending PIN-gated child-scoped; redemption reads all Drift (offline modulo C2).
+- next: Await R5 Opus (last one).
+
+## [2026-05-25 01:18] RESULT — R5 Opus (WS9 + cross-cutting) COMPLETE — escalates v26 migration to CRITICAL
+
+- stream: R5-opus
+- severity-summary: 1 CRITICAL, 3 HIGH, 2 MEDIUM, 3 LOW.
+- CRITICAL:
+  - R5o-C1: v26 migration orphans all child-table rows. deleteTable+createTable for learner_profiles + accounts (user_database.dart:175-184); 13+ child tables FK-ref learner_profiles(id) onDelete:cascade but FKs are OFF during onUpgrade (PRAGMA foreign_keys=ON in beforeOpen runs after, no-op in txn) → DROP doesn't cascade → recreated learner_profiles empty w/ AUTOINCREMENT reset to 1 → child rows orphaned, new profiles collide with stale orphan IDs. Comment (lines 71-76) "No data migration needed / recreate in-place" materially inaccurate (it's a DROP). Pre-launch mitigates users but corrupts dev/QA v25 DBs. Fix: column-preserving rebuild (TableMigration / disableForeignKeys + manual copy). [Sonnet R5 rated this MEDIUM ×3; Opus consolidates to CRITICAL]
+- HIGH:
+  - R5o-H1: no migration test for v25→v26 (snapshots stop at v22; migration_test.dart no >=26 / deleteTable / CHECK coverage). The riskiest migration is untested.
+  - R5o-H2: Rule 1 — all 9 tutor screens hardcode English, zero AppLocalizations (accept_invite_screen.dart:195,219,289,354,398; invite_tutor_screen.dart:84,108,122,267; manage_tutors_screen.dart:39,210,314,350,445). ARB keys exist for some but unused. [== Sonnet R5-H, R2o-M2]
+  - R5o-H3: Rule 1 — empty_login_screen.dart hardcodes English (:30 'Learning Tracker', :70 "I'm a tutor"). [== R1o-M3]
+- MEDIUM: M1 Hebrew-terms drift — tutorModeIndicator="מצב מדריך" (madrich) vs manageTutors="ניהול מורים" (morim); pick canonical per docs/hebrew-terms.md. M2 Rule 7 — live TrackType.personal filters (dashboard_providers.dart:404; scheduler_providers.dart:217). [== Sonnet R5-LOW, escalated]
+- LOW: L1 dead trackType helper 'school'/'advanced' (learning_track_card.dart:199-213, never called); L2 completion_events.track_type column + completions_view still select it; L3 ProfileMode.fromStorageKey throws on unknown key (no defensive fallback).
+- verified-OK: UserMode fully eliminated, analyze clean; CHECK constraint applied (learner_profiles.dart:22); accounts.userMode dropped; shim removal complete (promoteToCloud/demoteToLocal 0 callers); dedupeByEmail KEEP justified; Rule 2 (no "Gregorian"); Rule 3 (points gated child, no raw profileMode.name); Rule 4 (sentinel on batch); Rule 6; Rule 8; redemption screens DO use AppLocalizations.
+
+## [2026-05-25 01:20] MILESTONE — All 5 Opus reviewers complete; consolidated finding set
+
+- stream: Orchestrator
+- detail: Merged Opus set (authoritative; Sonnet false-positives dropped). CRITICALs (8):
+  1. R1o-C1 cloud→cloud switch wrong Firebase currentUser (sync data corruption) — app_shell.dart:495-530
+  2. R1o-C2 stale selectedProfileId leaks across switch → wrong profile shown — app_shell.dart:495-530 + profile_guard.dart:35-43
+  3. R2o-C1 tutor PIN namespace mismatch gate(ownId) vs guard(talmidId) — tutored_children_section.dart:272 + router_provider.dart:75 + pin_guard.dart:113
+  4. R2o-C2 promptForPin always verifies PARENT pin for tutor scope — router_provider.dart:53-65
+  5. R2o-C3 decline is bare pop(), no DEC-23 notify, DeclineInviteRoute unreachable — accept_invite_screen.dart:293
+  6. R2o-C4 accept never sets up Tutor PIN (_tutorProfileId never assigned) — accept_invite_screen.dart:74
+  7. (banner) R3o-C1+C2 / R1o-H1 — "Viewing [child]" banner over-fires (child's own login) AND under-fires (parent w/ tutor grants); indicator bar R2o-H2 on wrong signal — app_shell.dart:45-65,114
+  8. R4o-C1 old auto-unlock ladder reads debitable balance (DEC-32 not done) — reward_milestone_service.dart:296-329
+  9. R4o-C2 points_balance/ledger/redemptions NOT synced — multi-device regression — core/sync (absent)
+  10. R5o-C1 v26 migration orphans child tables — user_database.dart:175-184
+- HIGH (merged, deduped): R1o-H1 switcher can't reach 0-profile acct (==Sonnet R1-C1); R1o-H2 EmptyLogin no exit-to-account; R1o-H3 skip→empty-login only on cloud path; R2o-H1 tutored selection never cleared on back-nav (re-creates DEC-21); R2o-H3 ManageGrantsRoute no pinGuard; R2o-H4 tutor reads no Drift cache (offline); R2o-H5 point-config gated on canEditGoals; R3o-H1 double daily reminder; R3o-H2 streak alerts not per-profile; R3o-H3 deleted-profile reminder keeps firing; R3o-H4 hardcoded EN WS4/5; R4o-H1 single-item recordCompletion no sentinel; R4o-H2 per-track rewards incoherent in single-balance; R5o-H1 no v25→v26 migration test; R5o-H2 9 tutor screens hardcoded EN; R5o-H3 empty_login hardcoded EN.
+- decision: Dispatch V3 fix-all. Group by area to avoid file collisions: F1=auth/switch (R1o-C1,C2 + H1,H2,H3 + switcher l10n/profileMode.name), F2=tutor PIN+lifecycle (R2o-C1,C2,C3,C4 + H1,H3,H5), F3=banner+indicator (R3o-C1,C2 + R2o-H2 + M1), F4=notifications (R3o-H1,H2,H3 + M2,M3 + L2), F5=rewards/credit (R4o-C1,C2 + H1,H2 + M1,M2), F6=migration (R5o-C1 + H1), F7=l10n sweep tutor+empty-login+settings (R5o-H2,H3 + R3o-H4 + Hebrew-terms M1) + Rule7 trackType cleanup. F2/F3/F7 touch overlapping tutor + app_shell files — sequence to avoid cl, or single owner per file.
+- next: Dispatch V3 fix agents (Sonnet) by area, sequencing app_shell.dart (F1+F3 share it) and tutor files (F2+F7 share them) under single owners. Then V4 CI rerun.
+
+## [2026-05-25 01:35] RESEARCH — Design-critical analysis (auth switch + points sync) COMPLETE
+
+- stream: Orchestrator (Opus research agent a38749dcd2a82d22c)
+- C#1 (auth switch) CONFIRMED severe: single Firebase app (firebase_bootstrap.dart:14, no secondary apps). ALL Firestore paths derive UID from FirebaseAuth.currentUser (firestore_gateway_impl.dart:955-963,1008-1017; never from active-account record). After cloud-A→cloud-B switch with currentUser=A, every outbox push + listener reads/writes A's cloud space while UI/DB think B → B's data pushed into A's Firestore, A's docs merged into B's DB. DEC-34 "all cloud accounts authed simultaneously" architecturally false (currentUser is one slot).
+  - REC: option (b) safety floor + (c) reality. Source addressed UID from active-account record (DeviceAccount.firebaseUid, already stored) injected into FirestoreGatewayImpl → stale currentUser can't address wrong space (Firestore rules then DENY not corrupt). Accept effective cloud sync requires currentUser==active account: silent re-auth when online; offline = queue locally + "sign in to sync" badge (infra exists account_picker_screen.dart:241,373-377). Keep no-forced-logout UX + local-account multi-session; DROP literal "all cloud authed simultaneously". Effort medium (1 gateway, ~12 call sites + provider wiring).
+- C#2 (points sync) CONFIRMED: points_balance/points_ledger/reward_redemptions absent from MergeRouter (merge_router.dart:29-54), no codec/OutboxEntityKind/PushPipeline/gateway push/listener. balance is ALREADY a denormalised sum of ledger deltas (points_balance.dart:11-12; _applyDeltaInTransaction:280-317) — i.e. already derived.
+  - REC: option (a). Sync points_ledger append-only (add ULID col — mirror learning_ledger_merger INSERT-OR-IGNORE); DERIVE balance locally on merge (do NOT sync mutable balance — avoids counter LWW lost-update). Sync reward_redemptions as LWW state-machine docs (add ULID + updated_at; pending→fulfilled/declined terminal). Closes DEC-18 2-device loop: child redemption+debit ledger sync up → parent pulls, fulfil/decline writes status (+refund ledger on decline) → child pulls, re-derives. Wiring path per table: facade enqueue → OutboxEntityKind → PushPipeline + FirestoreGateway push (users/{uid}/learner_profiles/{pid}/<coll>, ULID doc-id) → listener register → EntityKind + MergeRouter case + codec + EntityMerger. Schema bump (safe pre-launch). FIX C#1 FIRST so points inherit correct UID addressing.
+- decision: user chose Opus fixes + plan-first for these 2. Presenting plan + mechanical-fix partition for sign-off before any dispatch.
+- next: On approval — sequence: (1) C#1 auth UID-source guard, (2) C#2 points sync, in parallel with mechanical Opus fix agents on non-overlapping files. Then V4 CI rerun.
+
+## [2026-05-25 01:45] DISPATCH — V3 fix-all Wave A (4 Opus agents, parallel, disjoint files)
+
+- stream: Orchestrator
+- detail: User approved both design-critical approaches + Opus fixes. Two-wave structure (Wave B depends on Wave A schema+gateway; l10n sweep must follow logic fixes). All Wave-A agents instructed: NO l10n/ARB edits (dedicated FIX-L10N agent in Wave B owns all string localization + ARB). File ownership disjoint to allow parallel on dev (no worktrees per repo policy). Only FIX-SCHEMA touches schemaVersion.
+  - FIX-SWITCH (a515b37762cdd8620, task#17): owns app_shell.dart + firestore_gateway_impl.dart(+provider) + account_picker + sign_in_controller + auth_state_provider + profile_guard + profile_providers + empty_login_screen. Fixes R1o-C1 (UID from active-account record + online re-auth/offline-queue badge), R1o-C2 (clear selectedProfileId + guard validates id), R1o-H1 (0-profile switch), R1o-H2 (empty-login account exit), R1o-H3 (skip-routing local paths), R3o-C1/C2 + R2o-H2 (banner adult-viewing-child signal + indicator on activeTutoredProfileSelectionProvider), R3o-M1 (exit target), R1o-L2 (typed tier).
+  - FIX-TUTOR (a2abc492e79adb9c6, task#18): owns features/tutoring/** + router_provider + pin_guard + tutored_children_section + parent_settings_screen + text_display(_isTutorSession) + app_router tutor routes. Fixes R2o-C1 (PIN namespace gate↔guard agree on tutor-own id), C2 (promptForPin scope dispatch + gate primes scope), C3 (decline wiring+notify), C4 (accept sets PIN), H1 (clear selection on back-nav), H3 (talmid route pin guard / gate every entry), H5 (canEditPoints not canEditGoals + canEditStudyDays), M1 (decline/resign real parent email), M3 (resolve names), L1/L3.
+  - FIX-NOTIF (a307d27690669dafc, task#19): owns features/notifications/** + streak_alert_service. Fixes R3o-H1 (dedup double reminder→canonical per-profile scheme), H2 (per-profile streak alerts + bootstrap), H3 (cancel deleted-profile schedules + reconcile), M2 (gate push on actual change), M3 (wait for loaded prefs), L2 (sacred-time per-fire).
+  - FIX-SCHEMA (a5a7837f896a6e10f, task#20): owns user_database.dart + points table defs + migration tests. Fixes R5o-C1 (data-preserving v26 rebuild + accurate comment), H1 (v25→v26→v27 migration test w/ FK-integrity + preservation asserts), + v27 additive ULID cols on points_ledger + reward_redemptions(+updated_at) for Wave-B sync. Sole owner of schemaVersion.
+- next: Await 4 Wave-A returns. Run V4 CI (make ci). If green, dispatch Wave B: FIX-REWARDS (ladder removal + per-track + sentinel + atomic adjust + points sync wiring + Rule-7 cleanup; depends on FIX-SCHEMA cols + FIX-SWITCH gateway) and FIX-L10N (tutor/empty-login/settings/notif/switcher strings + ARB en+he + Hebrew-terms drift + profileMode.name label + fix empty_login_ws2_test 'Skip for now' assertion). Then V4 CI again, V5 task-truth, V6 smoke.
+
+## [2026-05-25 01:58] TASK-DONE — FIX-SCHEMA (Wave A, task#20)
+
+- stream: FIX-SCHEMA (a5a7837f896a6e10f)
+- detail: R5o-C1 FIXED — v26 migration rewritten row-preserving via Drift TableMigration/alterTable (PRAGMA foreign_keys OFF for rebuild, ids preserved, learner_profiles gains CHECK(mode IN adult/child), accounts drops user_mode; foreign_key_check assert empty; FK ON restored; accurate comment). R5o-H1 FIXED — new test/migration/v25_to_v27_test.dart (7/7): seeds v25 DB w/ account+3 profiles(non-contiguous ids)+child rows across completion_events/goals/streak_events/points_balance/points_ledger/reward_redemptions, opens live UserDatabase to trigger onUpgrade(25→27), asserts preservation+FK integrity+CHECK enforced+ulid cols present. v27 ADDED: schemaVersion 26→27; nullable ulid TEXT on points_ledger + reward_redemptions (reward_redemptions.updated_at already existed) via addColumn; build_runner regenerated user_database.g.dart (ulid → String?). Analyze clean for owned files. Full migration suite + points_balance_dao_test green.
+- next: Wave-B FIX-REWARDS can wire DAO/sync to populate ulid. Await FIX-SWITCH/FIX-TUTOR/FIX-NOTIF.
+
+## [2026-05-25 02:08] TASK-DONE — FIX-NOTIF (Wave A, task#19)
+
+- stream: FIX-NOTIF (a307d27690669dafc)
+- detail: H1 FIXED — active profile now schedules via per-profile batch block (scheduleReminderForProfile); allProfilesReminderBootstrap SKIPS active profile → exactly one daily reminder/profile, one canonical profileId*1000 scheme, no orphaned legacy profile-0 schedules. H2 FIXED — scheduleStreakAlertForProfile (id profileId*1000+1) + cancelStreakAlertForProfile; bootstrap schedules streak alerts for all inactive profiles (per-profile StreakAlertService, respects streakAlertEnabledKey). H3 FIXED — bootstrap watches profileListStreamProvider (reactive), persists scheduledProfileIdsKey, reconciles: cancels reminder+streak for absent ids. M2 FIXED — _persistNotificationSettingsToCloud diffs stable signature vs lastPushedSettingsHashKey(profileId), early-return if unchanged (no updated_at bump). M3 FIXED — reminderSyncEffect reads authoritative SharedPrefs per-profile values before scheduling (not synchronous defaults). L2 FIXED — inactive reminders route through scheduleReminderForProfile → same buildFireTimesForTest per-fire sacred-time filtering. New keys: scheduledProfileIdsKey (account-wide), lastPushedSettingsHashKey(profileId). Updated 4 test files mocking NotificationGateway/StreakAlertService for new interface methods (incl. overdue_notifications_test.dart hand-written gateway). build_runner OK; analyze clean; 100 notif/streak/analytics tests pass. No ARB/l10n edits.
+- next: Await FIX-SWITCH, FIX-TUTOR.
+
+## [2026-05-25 02:20] TASK-DONE — FIX-TUTOR (Wave A, task#18)
+
+- stream: FIX-TUTOR (a2abc492e79adb9c6)
+- detail: C1 FIXED — added tutorOwnProfileId to TutoredProfileSelection (session_role.dart:43); gate stores it (tutored_children_section.dart:287); router_provider getScope resolves PinScope.tutor(tutorOwnProfileId) not talmidId → gate+guard one namespace. C2 FIXED — promptForPin dispatches on scope: tutor → new showTutorPinVerificationDialog (tutor_pin_entry_dialog.dart) vs tutorOwnId; both gate entries prime scope via markScopeAuthenticated. C3 FIXED — inline Decline routes to DeclineInviteRoute → DeclineTutorInviteUseCase + DEC-23 notify. C4 FIXED — _tutorProfileId assigned in _initialize; post-accept PIN check reachable, routes to setup w/ correct id. H1 FIXED — ManageGrantsScreen → ConsumerStatefulWidget w/ PopScope calling activeTutoredProfileSelectionProvider.exit() on pop. H3 FIXED — gate enforced on every in-app entry (_TutoredChildRow + _ViewInvitationsRow); deliberately NOT route-level pinGuard (no selection → getScope falls back to parent, would wrongly prompt parent PIN). H5 FIXED — added canEditPoints to TutorPermissions (+owner perms); parent_settings:63 gates point config + adjust on canEditPoints. M1 FIXED — TutorNotificationGateway optional parentUid + _recipient routes to uid:{parentUid}; decline/resign pass grant.parentUid (uid-addressed not dropped). M3 FIXED — TutorGrantDoc childName/parentName + childDisplayLabel/parentDisplayLabel friendly fallbacks (no raw id leak). L1 FIXED — real TutorPinResetScreen nav. L3 FIXED — text_display reads real activeTutoredProfileSelectionProvider. analyze clean; 120 tutoring + PIN/settings/multi-profile tests pass. No ARB/l10n.
+- carry-forward: (1) canEditStudyDays now serialized but consumer is scheduler study-day screen (/study-days/:curriculumId, authGuard only) — OUTSIDE tutor ownership; wire in Wave B cleanup. (2) M3 needs listTutorGrants Cloud Function to denormalize child_name/parent_name (server, out of repo scope) — generic labels meanwhile. (3) M1 email transport still LoggingTransactionalEmailService (infra not provisioned) — uid recipient now routable/logged.
+- next: Await FIX-SWITCH (last Wave-A agent), then V4 CI gate.
+
+## [2026-05-25 02:24] TASK-DONE — FIX-SWITCH (Wave A, task#17) + V4 CI dispatched
+
+- stream: FIX-SWITCH (a515b37762cdd8620)
+- detail: C#1 FIXED — firestore_gateway_impl.dart takes optional activeAccountUid resolver; new _addressedUid getter prefers active-account UID, falls back to currentUser only if no resolver; replaced 5 currentUser?.uid path-building sites (pushAccountProfile, listenToTutorGrants, listenToLearnerProfiles, fetchLearnerProfiles, _learnerProfileDoc). Wired in outbox_providers.dart:31 → authStateProvider.currentUser?.firebaseUid (offline-safe, local session). _switchAccount documents one-FirebaseAuth-slot constraint; on cloud switch w/ mismatched currentUser surfaces non-blocking "sign in to sync" SnackBar+action, local DB/outbox stay usable, no forced sign-out. R1o-C2 FIXED — _switchAccount + both account_picker activation paths clear selectedProfileIdProvider; profile_guard fetches list + validates selected id exists in current DB before short-circuit (stale → re-resolve/picker). R1o-H1 FIXED — 0-profile switch completes + routes EmptyLoginRoute (no half-state). R1o-H2 FIXED — count-gated switch-account app-bar action on empty_login (pushes AccountPickerRoute, shown when ≥2 accounts). R1o-H3 FIXED — kOnboardingSkipped→EmptyLoginRoute applied to signInWithEmail + _tryLocalFallbackSignIn. R3o-C1/C2 + R2o-H2 + R3o-M1 FIXED — hasActiveTutoredProfiles from activeTutoredProfileSelectionProvider; banner shows only when active=child AND account owns adult (adult-viewing-child; standalone child never sees it) AND not tutor mode; Exit → adult profile or clear→picker, never another child. R1o-L2 FIXED — account.accountTier.isCloud typed. Test: ProfileGuard hardening broke app_shell_test (unseeded guard DB hardcoding getSelectedProfileId→1); fixed via seedProfileWithIds helper + seeding id 1 (7 async call sites). No build_runner needed (no new annotated providers). analyze clean for owned files; make audit 18/18.
+- ALL 4 WAVE-A AGENTS COMPLETE. Cross-agent analyzer observations (router_provider unused import, overdue_notifications_test missing methods) should now resolve (FIX-TUTOR + FIX-NOTIF finished those).
+- V4 CI (make ci) dispatched in background (bffvx1hy1) to validate integrated tree.
+- next: On CI green → dispatch Wave B (FIX-REWARDS + FIX-L10N). On red → fix-forward per failure.
+
+## [2026-05-25 02:42] GATE+DISPATCH — V4 CI(Wave A) GREEN; Wave B dispatched
+
+- stream: Orchestrator
+- detail: V4 CI after Wave A = exit 0, 5921 tests pass (was 5914; +migration tests), 125 skip, 0 fail. Four parallel agents merged cleanly. Wave B dispatched (2 Opus agents, disjoint files):
+  - FIX-REWARDS (a423f4c888568125d, task#21): owns gamification/rewards + completion/ledger repos + sync wiring (core/sync, outbox facade, gateway push methods, listener supervisor) + dashboard/scheduler providers + learning_track_card + completion_events view + scheduler study-day screen. Fixes C#2 (points_ledger append-only sync w/ v27 ulid doc-id, DERIVE balance locally, reward_redemptions LWW; mirror learning_ledger), R4o-C1 (remove auto-unlock ladder DEC-32), H1 (single-item sentinel), H2 (per-track coherence → all global priced), M1 (next-reward card), M2 (atomic adjust-deduct), L1 (dead DAO methods), Rule-7 cleanup, + canEditStudyDays consumer gating (carry-forward). MUST NOT change schemaVersion (v27 cols exist) or edit ARB.
+  - FIX-L10N (ac5bc2776de7d5220, task#22): owns ARB en+he exclusively + UI-string-only edits in 9 tutor screens, empty_login, settings_screen (+move SacredTimeSettingsCard PROFILE→DEVICE), notification copy, app_shell switcher strings + profileMode.name→label, manage_learners, skipped_onboarding_cta_banner, onboarding 'Skip for now'. Fixes R5o-H2/H3 + R3o-H4 + R1o-M1/M2/M3 + Hebrew-terms drift (canonical tutor term). Updates breaking find.text tests. EXCLUDES gamification/dashboard/scheduler/sync (FIX-REWARDS owns).
+- next: Await both Wave-B returns. Run V4 CI again (integrated). On green → V5 task-truth + V6 smoke.
+
+## [2026-05-25 03:08] TASK-DONE — FIX-L10N (Wave B, task#22)
+
+- stream: FIX-L10N (ac5bc2776de7d5220)
+- detail: ~150 keys added to BOTH app_en.arb + app_he.arb in lockstep (1461 en / 1455 he; 6-gap pre-existing meta). Canonical Hebrew tutor term = מדריך/מדריכים (madrich); fixed drift (manageTutors/Subtitle מורים→מדריכים). Localized all 10 tutor screens, empty_login, settings_screen, device_notification_toggle, notification titles/bodies (parameterized ICU plurals notificationReminderBody/notificationStreakBody), app_shell switcher headers + profileMode subtitle→profileTypeChild/Adult, manage_learners child/adult labels, skipped_onboarding_cta_banner, onboarding 'Skip for now'→actionSkipForNow. Notification locale: lookupAppLocalizations(currentAppLocaleProvider) in provider layer, threaded localized title/body into scheduler/gateway (added optional params, English fallback, no scheduling-logic change). DEC-26 structural: moved SacredTimeSettingsCard PROFILE→DEVICE section. Tests updated: empty_login_ws2_test, onboarding_screen_test (added l10n delegates + Locale en), settings_screen_test (scrollUntilVisible after card move), ws3_3h_corrections_test (asserts ARB copy). flutter gen-l10n clean; analyze no issues; format applied; 401+ feature tests + onboarding/notif/settings epics pass.
+- next: Await FIX-REWARDS (points sync, last agent), then integrated V4 CI.
+
+## [2026-05-25 03:30] TASK-DONE — FIX-REWARDS (Wave B, task#21) + integration fix
+
+- stream: FIX-REWARDS (a423f4c888568125d) + Orchestrator integration patch
+- detail: C#2 FIXED — full points sync mirroring learning_ledger: PointsBalanceDao populates ulid on ledger insert + redemption create, pushes via new PointsSyncSink (registered sync_orchestrator_providers.dart:78 + sync_providers.dart); new outbox kinds points_ledger_entry/reward_redemption (outbox_processor enum+drain+dispatch), PushPipeline methods, gateway writes to users/{uid}/learner_profiles/{pid}/points_ledger/{ulid} + .../reward_redemptions/{ulid}; pull: EntityKind.pointsLedger/rewardRedemption, MergeRouter cases, 2 codecs, 2 mergers (points_ledger_merger INSERT-OR-IGNORE-by-ulid + reDeriveBalanceFromLedger; reward_redemption_merger LWW by updated_at), listeners+orderFields in firestore_listener_source, pull steps in sync_orchestrator. points_balance NEVER synced (re-derived). firestore.rules added (append-only ledger, LWW redemptions). Convergence+re-derivation proven test/core/sync/merge/points_sync_merger_test.dart. R4o-C1 FIXED — evaluateUnlocks* now no-ops returning []; live-wiring removed from completion_repository_impl + achievements_overview_provider; dead _rewardMilestoneService field/param/wiring dropped. R4o-H1 FIXED — CompletionSource threaded through recordCompletion + checkAndRecordCompletions; non-live → sentinel 2000-01-01; _bulkSourceFor derives source. R4o-H2 FIXED — reward config always-global (kGlobalTrackSentinel); per-track UI removed. R4o-M1 FIXED — dashboard card shows Current Balance + Redeem CTA (no regressing progress bar). R4o-M2 FIXED — parentAdjust deduct atomic (single txn). R4o-L1 FIXED — dead debitRedemption/refundRedemption removed. Rule-7 FIXED — dead trackType helpers deleted (learning_track_card), live TrackType.personal filters removed (dashboard_providers, scheduler_providers); completion_events.track_type column stays (in unique index, schema-owned). canEditStudyDays FIXED — study_day_config_screen watches activeTutorPermissionsProvider (via barrel), disables toggles when tutored-context lacks perm. Doc-id: ledger ULID idempotent append; redemptions ULID + LWW updated_at; ledger refs redemption by stable redemption_ulid. No ARB edits. 513 sync+gamification+learning+DAO tests pass.
+- INTEGRATION FIX (Orchestrator): integrated make ci surfaced 2 analyzer errors — _RecordingNotificationGateway fake in test/scheduler/overdue_notifications_test.dart missing optional `String title` param FIX-L10N added to scheduleStreakAlert/scheduleStreakAlertForProfile (notification_gateway.dart:335,375). Added matching optional param (title='Streak at Risk!') to both fake overrides. Trivial signature alignment, fully determined by error.
+- next: Re-run integrated make ci (bcrej0tuj). On green → V5 task-truth + V6 smoke.
+
+## [2026-05-25 03:40] GATE — V4 CI (integrated, post Wave A+B) GREEN
+
+- stream: Orchestrator
+- detail: make ci exit 0. dart analyze: No issues found. 5926 tests pass, 125 skip, 0 fail. All 6 fix agents (FIX-SWITCH/TUTOR/NOTIF/SCHEMA/REWARDS/L10N) + 1 orchestrator integration patch (overdue_notifications_test fake gateway title param) merged clean. V3 fix-all + V4 CI-rerun CLOSED.
+- next: V5 task-truth verification (2 read-only Opus verifiers dispatched: V5a switch/tutor/notif reachability a36d477bbce740439; V5b rewards/sync/migration/Rule7 reachability a60bbf5068492e6a4). Then V6 smoke.
+
+## [2026-05-25 03:41] DISPATCH — V5 task-truth (2 read-only Opus verifiers)
+
+- stream: Orchestrator
+- detail: V5a (a36d477bbce740439): verifies 12 items + locale — account-switch UID-source/clear-profile/0-profile-route/banner-signal, tutor PIN namespace+scope+gate-every-entry+decline/accept+canEditPoints+selection-clear, notif single-reminder/per-profile-streak/deleted-cancel, 9 tutor + empty-login l10n. V5b (a60bbf5068492e6a4): verifies 11 items + offline — points sync full path wired (DAO sink registered, listener registered, codec+merger in router), balance re-derived not synced, redemptions LWW convergence test real, firestore.rules, ladder removed from live path, single-item sentinel, per-track neutralized, atomic adjust, next-reward card, v26 data-preserving migration + test asserts, Rule-7 no branching. Both READ-ONLY (report VERIFIED/WEAK/FAILED w/ file:line + entry point); adversarial re stranded-wiring.
+- next: Collect V5a+V5b. Demote any FAILED→re-fix; WEAK→judge. Then V6 smoke (charter flows EN+HE).
+
+## [2026-05-25 03:52] RESULT — V5a task-truth (switch/tutor/notif) COMPLETE
+
+- stream: V5a (a36d477bbce740439)
+- detail: ALL 12 reachability items VERIFIED + locale VERIFIED.
+  1 UID-source verified (firestore_gateway_impl _addressedUid :51-52, all 7 path builders, injected outbox_providers.dart:34). 2 clear selectedProfileId (app_shell.dart:516) + ProfileGuard validates id (profile_guard.dart:50-66). 3 0-profile→EmptyLoginRoute (app_shell.dart:592) + empty_login switch affordance (:40-52). 4 indicator bar + banner on activeTutoredProfileSelectionProvider (app_shell.dart:46-49,64-71); standalone-child suppresses banner. 5 tutor PIN namespace = tutorOwnProfileId both gate (tutored_children_section.dart:182,301) + guard (router_provider.dart:97-99); promptForPin scope dispatch (:67-79). 6 gate on both entries (talmid row :289 + view-invitations :174), selection set only in onPinVerified. 7 decline → declineTutorInviteUseCase + notifyParentOfDecline (decline_invite_screen.dart:105-128); accept assigns _tutorProfileId (:106) + PIN setup reachable. 8 canEditPoints distinct field (tutor_permissions.dart:64), gates point config (parent_settings_screen.dart:65,142). 9 ManageGrantsScreen PopScope → exit() (:39-54). 10 active profile excluded from bootstrap (notification_providers.dart:604). 11 scheduleStreakAlertForProfile (:375) per inactive profile (:644-668). 12 reconcile cancels reminder+streak for removed ids (:591-594).
+- RESIDUALS (minor, do not affect reachability):
+  - V5a-R1: tutored_children_section.dart still hardcodes EN — 'View invitations'(:155), pending-count subtitle(:161), 'Tutoring'(:256), 'Tutor'(:279). User-visible; outside FIX-L10N "9 screens" scope (lives in features/profiles). Rule-1 gap.
+  - V5a-R2: stale comment parent_settings_screen.dart:141 says canEditGoals but code uses canEditPoints (cosmetic).
+- next: await V5b, then batch-fix residuals + any V5b WEAK/FAILED, re-run ci, then V6.
+
+## [2026-05-25 04:00] RESULT — V5b task-truth (rewards/sync/migration/Rule7) COMPLETE — NO FAILED
+
+- stream: V5b (a60bbf5068492e6a4)
+- detail: ALL items VERIFIED, zero FAILED. Points sync genuinely wired end-to-end incl. the commonly-stranded sink registration:
+  1 points_ledger: ulid on insert (points_balance_dao.dart:479,183), DAO _pushLedgerEntry/_pushRedemption → syncSink.enqueue (:487-527), SINK REGISTERED sync_orchestrator_providers.dart:88 + sync_providers.dart:116 (OutboxSyncWriteFacade implements PointsSyncSink), outbox kinds (outbox_processor.dart:44-45,468-479) → push_pipeline_impl:224-242 → gateway write users/{uid}/learner_profiles/{pid}/points_ledger/{ulid} (firestore_gateway_impl:965), listener (firestore_listener_source:171) + pull pipeline (:216) + full-pull (sync_orchestrator:737) + realtime (:1125) + recovery (:1205), merger in router (merge_router_provider:96, merge_router:47). 2 points_balance NOT synced, reDeriveBalanceFromLedger (points_ledger_merger:71, clamp@0). 3 reward_redemptions LWW by updated_at (:384 overwrite-if-newer); convergence test points_sync_merger_test.dart non-trivial (stale-pull rejection + decline-refund re-derive to 30 across 2 merges), 5 tests pass. 4 firestore.rules:274,284. 5 ladder no-ops (reward_milestone_service:268-275), zero live callers, completion_repository_impl:212-215 sets []. 6 sentinel single-item (learning_ledger_repository_impl:95,128), source threaded. 7 per-track neutralized (reward_config_controller:67-73,86; UI removed). 8 parentAdjust atomic single-txn (:97-119); debitRedemption/refundRedemption removed. 9 next-reward bar removed (child_points_rewards_tab_card:25-28,125-129). 10 schemaVersion 27, v26 TableMigration+foreign_key_check gate (:216-237), v25_to_v27_test 7 pass. 11 dashboard/scheduler/track-card trackType cleaned. offline: reads Drift-first, push queued via outbox non-blocking, syncSink null for local-born.
+- WEAK residuals (none user-reachable breakage): (a) PointsLedgerCodec+RewardRedemptionCodec dead (mergers parse inline) — delete; (b) progress_providers.dart:219 no-op trackType==personal branch — remove. Also dead RewardTypeSegmented widget (harmless), dashboardChildNextReward still computes but not rendered (harmless).
+- ACTION: dispatched V5 cleanup agent (af938505c2610f48d, task#23): localize tutored_children_section 4 strings (V5a-R1, canonical madrich ARB en+he), fix stale comment (V5a-R2), delete 2 dead codecs (V5b-a), remove no-op trackType branch (V5b-b), make ci green.
+- V5 VERDICT: all sampled done-tasks confirmed user-reachable → upgrade done→verified. No demotions.
+- next: V5 cleanup return → ci green → V6 charter-flow smoke (EN+HE).
+
+## [2026-05-25 04:12] TASK-DONE — V5 cleanup (task#23) + V5 CLOSED
+
+- stream: V5 cleanup (af938505c2610f48d)
+- detail: V5a-R1 FIXED — tutored_children_section.dart localized: 4 ARB keys en+he (tutoredChildrenViewInvitations, tutoredChildrenPendingInvitations [ICU plural on count], tutoredChildrenStatusTutoring, tutoredChildrenRoleBadge); Hebrew canonical מדריך; flutter gen-l10n. V5a-R2 FIXED — parent_settings_screen.dart:141 comment canEditGoals→canEditPoints. V5b-a FIXED — deleted dead points_ledger_codec.dart + reward_redemption_codec.dart (grep proved zero refs; were untracked). V5b-b FIXED — removed no-op trackType==personal filter progress_providers.dart:218 (bulkBaseline/liveProgress/F5-telemetry now use allCompletions; TrackType import retained for trackBreakdown). make ci GREEN: 5926 pass, 125 skip, analyze+format clean. No test changes needed.
+- V5 task-truth COMPLETE: all done-tasks → verified, 0 demotions, all residuals closed.
+- next: V6 final smoke dispatched (a8db00c4d03312c64): trace charter flow #1 (tutor e2e) + #2 (relationship mgmt) + switcher/reminder/rewards-spend cross-cutting + EN/HE locale + offline; GO/NO-GO verdict.
+
+## [2026-05-25 04:25] RESULT — V6 final smoke COMPLETE — GO verdict
+
+- stream: V6 (a8db00c4d03312c64)
+- detail: ALL 12 charter journey steps CONNECTED end-to-end (each hop cited file:line), NO BROKEN.
+  Flow#1 tutor: 1 Manage Tutors tile owner-only (parent_settings:240,255) 2 invite→inviteTutorUseCase→CF (invite_tutor:75; repo:36) 3 accept→CF + PIN setup w/ tutorOwnId (accept_invite:130-146,335,106) 4 PIN gate on path, selection set only in onPinVerified (tutored_children:291,322,327-329) 5 child view + perm-gated edits + live-mark blocked on active selection + domain guard (text_display:754-755,885; mark_live_completion_use_case:55-63) + bulk sentinel skips streak/recent (bulk_prior_completion_service:258,250; streak_restorer:36; completion_dao:138) 6 all 3 removal paths notify real recipient (revoke manage_tutors:304; resign manage_grants:235; decline decline_invite:122; _recipient never empty) 7 back-nav clears selection (manage_grants:51-55 PopScope). Flow#2: 8 section iff ≥1 active OR pending (tutored_children:54-56) 9 add+remove+notify (manage_tutors:213,293,341,304). Cross: 10 switcher count-gate+no-signout+active-account UID+0-profile→empty-login+way-back (app_shell:447,518,542-570,592; empty_login:48) 11 inactive reminder fires+tap-switch+scheduler, deleted cancelled (notifications_bootstrap:42,29-31; notification_providers:596-604,591-594) 12 rewards spend atomic/never-neg + child→parent + cross-device sync (child_redemption:152; points_balance_dao:172,90-91; fulfil:98/decline-refund:117; RewardRedemptionMerger LWW + ledger re-derive). Test coverage: WS3.3a-h acceptance + epic_12/21/25/27 + points_sync_merger + mark_live_completion + points_balance_dao.
+- NON-BLOCKING residuals (Rule-1 fast-follow): text_display_screen.dart:938-941 live-mark button labels ('Not available (tutor mode)','Mark Complete','Completed'), :717 'OK', :812 error string NOT localized (tooltip at :880 IS); app_shell.dart:559-563 offline-switch SnackBar ('Working offline…','Sign in') hardcoded. Cosmetic: decline/resign email carries raw childProfileId not display name (+ email transport is logging-only stub). Architectural-accepted: tutor relationship surface (invite/accept/decline/revoke/resign + grant LISTS) inherently online via Cloud Functions; offline returns [] gracefully (not crash) but tutor can't enter talmid offline — consistent w/ Admin-SDK server-side grant design.
+- VERDICT: GO for shipping. No BROKEN items.
+
+## [2026-05-25 04:26] COMPLETE — Entity-Model Remediation finished
+
+- stream: Orchestrator
+- detail: Full plan executed: WS1-9 (4 waves) + P1-P4 gates + V1 CI + V2 review (Sonnet then user-directed Opus re-run) + V3 Opus fix-all (2 design criticals planned+approved, 6 fix agents 2 waves + integration patch) + V4 integrated CI green (5926) + V5 task-truth (2 verifiers, all VERIFIED 0 demotions, residuals cleaned) + V6 smoke GO. make ci green throughout. All audit CRITICAL/HIGH closed. Remaining: minor Rule-1 fast-follow (2 files' journey-path strings) + cosmetic email display-name + architectural online-tutor-surface note. NOT yet committed (awaiting user direction on commit + fast-follow).
+- next: Report GO to user; offer to close the 2 Rule-1 fast-follow l10n gaps; await commit direction.
 
 ## [2026-05-24 12:00] START — WS3 begins
 

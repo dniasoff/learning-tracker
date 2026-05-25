@@ -107,27 +107,32 @@ void main() {
   group('SettingsScreen Widget Tests', () {
     // WS4.settings (D2): Settings are grouped by scope (Device / Profile).
     // The old TRACKS/LEARNING feature-grouped headers are replaced.
-    testWidgets('renders Device and Profile scope section headers (WS4.settings)', (tester) async {
-      await tester.pumpWidget(
-        createTestWidget(initialActive: [CurriculumId.mishnayos]),
-      );
-      await pumpUntilSettled(tester);
+    testWidgets(
+      'renders Device and Profile scope section headers (WS4.settings)',
+      (tester) async {
+        await tester.pumpWidget(
+          createTestWidget(initialActive: [CurriculumId.mishnayos]),
+        );
+        await pumpUntilSettled(tester);
 
-      // DEVICE section (App Permissions) must be visible at top.
-      expect(find.text('DEVICE'), findsOneWidget);
-      // PROFILE section (per-learner settings) must be visible.
-      expect(find.text('PROFILE'), findsOneWidget);
-      // Old feature-based headers must be gone.
-      expect(find.text('TRACKS'), findsNothing);
-      expect(find.text('LEARNING'), findsNothing);
+        // DEVICE section (App Permissions) must be visible at top.
+        expect(find.text('DEVICE'), findsOneWidget);
+        // PROFILE section (per-learner settings) must be visible.
+        expect(find.text('PROFILE'), findsOneWidget);
+        // Old feature-based headers must be gone.
+        expect(find.text('TRACKS'), findsNothing);
+        expect(find.text('LEARNING'), findsNothing);
 
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump(Duration.zero);
-    });
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(Duration.zero);
+      },
+    );
 
     // WS4.login-sect (DEC-26): No empty Login scope group is rendered.
     // The Login section is omitted entirely (debug toggle not yet built).
-    testWidgets('does not render an empty Login section (WS4.login-sect)', (tester) async {
+    testWidgets('does not render an empty Login section (WS4.login-sect)', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         createTestWidget(initialActive: [CurriculumId.mishnayos]),
       );
@@ -152,6 +157,13 @@ void main() {
       );
       await pumpUntilSettled(tester);
 
+      // DEC-26: the Sacred Time card now sits under the DEVICE section, so the
+      // Manage Tracks tile renders lower in the lazy ListView — scroll to it.
+      await tester.scrollUntilVisible(
+        find.text('Manage Tracks'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.text('Manage Tracks'), findsOneWidget);
       expect(find.text('Create and edit your learning tracks'), findsOneWidget);
 
@@ -165,6 +177,11 @@ void main() {
       );
       await pumpUntilSettled(tester);
 
+      await tester.scrollUntilVisible(
+        find.text('Manage Tracks'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
       expect(find.text('Manage Tracks'), findsOneWidget);
       expect(find.text('Calendar Preference'), findsOneWidget);
 

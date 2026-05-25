@@ -55,6 +55,12 @@ class PointsLedger extends Table {
   IntColumn get redemptionId => integer().nullable()();
 
   DateTimeColumn get createdAt => dateTime()();
+
+  /// Stable, lexicographically-sortable, cross-device id for append-only
+  /// cloud sync (schema v27, WS9 Wave-B). Nullable on existing rows; the
+  /// Wave-B sync agent backfills + populates this going forward, and uses it
+  /// as the deterministic Firestore document id for ledger entries.
+  TextColumn get ulid => text().nullable()();
 }
 
 /// Tracks reward redemption requests (WS7.redeem).
@@ -84,5 +90,14 @@ class RewardRedemptions extends Table {
       text().withDefault(const Constant<String>('pending_fulfilment'))();
 
   DateTimeColumn get createdAt => dateTime()();
+
+  /// Last-write-wins timestamp for cloud sync (already present pre-v27; used
+  /// as the LWW field by the Wave-B sync agent).
   DateTimeColumn get updatedAt => dateTime()();
+
+  /// Stable, lexicographically-sortable, cross-device id for cloud sync
+  /// (schema v27, WS9 Wave-B). Nullable on existing rows; the Wave-B sync
+  /// agent backfills + populates this and uses it as the deterministic
+  /// Firestore document id for redemptions.
+  TextColumn get ulid => text().nullable()();
 }

@@ -260,23 +260,26 @@ void main() {
       expect(unlocks, isEmpty);
     });
 
-    test('unlocks milestone when points exceed threshold', () async {
-      final trackId = await insertTrack(curriculumId: 'mishnayos');
-      await insertGoal(trackId);
-      await insertCompletion(trackId: trackId, points: 50);
+    test(
+      'DEC-32: no-op — auto-unlock ladder removed, rewards are priced items',
+      () async {
+        final trackId = await insertTrack(curriculumId: 'mishnayos');
+        await insertGoal(trackId);
+        await insertCompletion(trackId: trackId, points: 50);
 
-      await service.upsertMilestone(
-        trackId: trackId,
-        title: 'Bronze',
-        thresholdPoints: 30,
-        milestoneId: 'bronze-1',
-      );
+        await service.upsertMilestone(
+          trackId: trackId,
+          title: 'Bronze',
+          thresholdPoints: 30,
+          milestoneId: 'bronze-1',
+        );
 
-      final unlocks = await service.evaluateUnlocksForTrack(trackId);
-      expect(unlocks, hasLength(1));
-      expect(unlocks.first.milestoneId, 'bronze-1');
-      expect(unlocks.first.pointsAtUnlock, 50);
-    });
+        // The auto-unlock ladder was replaced by the spend economy; crossing a
+        // threshold no longer auto-unlocks (R4o-C1).
+        final unlocks = await service.evaluateUnlocksForTrack(trackId);
+        expect(unlocks, isEmpty);
+      },
+    );
 
     test('does not unlock milestone when points are below threshold', () async {
       final trackId = await insertTrack(curriculumId: 'mishnayos');
@@ -294,7 +297,7 @@ void main() {
       expect(unlocks, isEmpty);
     });
 
-    test('does not re-unlock an already-unlocked milestone', () async {
+    test('DEC-32: repeated evaluation is always a no-op', () async {
       final trackId = await insertTrack(curriculumId: 'mishnayos');
       await insertGoal(trackId);
       await insertCompletion(trackId: trackId, points: 50);
@@ -306,11 +309,9 @@ void main() {
         milestoneId: 'silver-1',
       );
 
-      // First evaluation unlocks it.
+      // Auto-unlock ladder removed — both evaluations are empty no-ops.
       final first = await service.evaluateUnlocksForTrack(trackId);
-      expect(first, hasLength(1));
-
-      // Second evaluation — already unlocked, nothing new.
+      expect(first, isEmpty);
       final second = await service.evaluateUnlocksForTrack(trackId);
       expect(second, isEmpty);
     });
@@ -335,50 +336,42 @@ void main() {
 
   // ── evaluateUnlocksForGlobal ──────────────────────────────────────────────
 
-  group(
-    'RewardMilestoneService.evaluateUnlocksForGlobal (with milestones)',
-    () {
-      test(
-        'unlocks global milestone when global points exceed threshold',
-        () async {
-          // Credit balance directly (WS7.balance: getGlobalPointsForRewards reads
-          // the stored balance, not raw completion SUM).
-          await db.pointsBalanceDao.creditCompletion(profileId, 200);
+  group('RewardMilestoneService.evaluateUnlocksForGlobal (with milestones)', () {
+    test(
+      'DEC-32: global evaluation is a no-op (auto-unlock ladder removed)',
+      () async {
+        // Credit balance directly (WS7.balance: getGlobalPointsForRewards reads
+        // the stored balance, not raw completion SUM).
+        await db.pointsBalanceDao.creditCompletion(profileId, 200);
 
-          await service.upsertMilestone(
-            trackId: RewardMilestone.kGlobalTrackSentinel,
-            title: 'Global Bronze',
-            thresholdPoints: 100,
-            milestoneId: 'global-bronze',
-          );
+        await service.upsertMilestone(
+          trackId: RewardMilestone.kGlobalTrackSentinel,
+          title: 'Global Bronze',
+          thresholdPoints: 100,
+          milestoneId: 'global-bronze',
+        );
 
-          final unlocks = await service.evaluateUnlocksForGlobal();
-          expect(unlocks, hasLength(1));
-          expect(unlocks.first.milestoneId, 'global-bronze');
-          expect(unlocks.first.trackId, RewardMilestone.kGlobalTrackSentinel);
-        },
+        // Rewards are priced spend-items now; crossing a threshold against
+        // the debitable balance no longer auto-unlocks (R4o-C1).
+        final unlocks = await service.evaluateUnlocksForGlobal();
+        expect(unlocks, isEmpty);
+      },
+    );
+
+    test('DEC-32: repeated global evaluation is always a no-op', () async {
+      await db.pointsBalanceDao.creditCompletion(profileId, 200);
+
+      await service.upsertMilestone(
+        trackId: RewardMilestone.kGlobalTrackSentinel,
+        title: 'Global Bronze',
+        thresholdPoints: 100,
+        milestoneId: 'global-bronze',
       );
 
-      test(
-        'does not re-unlock global milestone on second evaluation',
-        () async {
-          // Credit balance directly (WS7.balance).
-          await db.pointsBalanceDao.creditCompletion(profileId, 200);
-
-          await service.upsertMilestone(
-            trackId: RewardMilestone.kGlobalTrackSentinel,
-            title: 'Global Bronze',
-            thresholdPoints: 100,
-            milestoneId: 'global-bronze',
-          );
-
-          await service.evaluateUnlocksForGlobal();
-          final second = await service.evaluateUnlocksForGlobal();
-          expect(second, isEmpty);
-        },
-      );
-    },
-  );
+      expect(await service.evaluateUnlocksForGlobal(), isEmpty);
+      expect(await service.evaluateUnlocksForGlobal(), isEmpty);
+    });
+  });
 
   // ── getAllUnlocks (with stored data) ──────────────────────────────────────
 

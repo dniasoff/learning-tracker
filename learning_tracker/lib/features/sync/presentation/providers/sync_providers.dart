@@ -100,7 +100,7 @@ final outboxSyncWriteFacadeProvider = Provider<OutboxSyncWriteFacade?>((ref) {
   final profileId = ref.watch(activeProfileIdProvider);
   final clock = ref.watch(localDayClockProvider);
 
-  return OutboxSyncWriteFacade(
+  final facade = OutboxSyncWriteFacade(
     outboxDao: database.outboxDao,
     database: database,
     profileId: profileId,
@@ -109,4 +109,10 @@ final outboxSyncWriteFacadeProvider = Provider<OutboxSyncWriteFacade?>((ref) {
         ref.read(outboxProcessorProvider)?.drain(profileId) ??
         Future<int>.value(0),
   );
+  // WS9 Wave-B (C#2): register this facade as the points-sync sink so every
+  // ledger insert + redemption mutation made via PointsBalanceDao is pushed
+  // to the outbox. The DAO lives in core/ and cannot import the facade, so the
+  // wiring happens here at the features-layer composition root.
+  database.pointsBalanceDao.syncSink = facade;
+  return facade;
 });

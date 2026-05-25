@@ -21,39 +21,15 @@ class ChildPointsRewardsTabCard extends StatelessWidget {
   final AppLocalizations l10n;
   final ThemeData theme;
   final NumberFormat numberFormat;
+
+  /// Retained for API compatibility with the dashboard body call-site. The
+  /// spend economy (DEC-32) no longer renders a cumulative "next reward"
+  /// progress bar (R4o-M1), so this value is no longer displayed.
   final AsyncValue<DashboardChildNextReward?> nextRewardAsync;
   final VoidCallback onOpenRewards;
 
-  static const int _defaultThreshold = 1500;
-
   @override
   Widget build(BuildContext context) {
-    return nextRewardAsync.when(
-      loading: () => _buildCard(context, next: null, isLoading: true),
-      error: (_, __) => _buildCard(context, next: null, isLoading: false),
-      data: (next) => _buildCard(context, next: next, isLoading: false),
-    );
-  }
-
-  Widget _buildCard(
-    BuildContext context, {
-    required DashboardChildNextReward? next,
-    required bool isLoading,
-  }) {
-    final hasReward = next != null;
-    final showRewardSection = isLoading || hasReward;
-    final threshold = next?.threshold ?? _defaultThreshold;
-    final progressPoints = next?.trackPoints ?? totalPoints;
-    final pct = threshold > 0
-        ? (progressPoints / threshold).clamp(0.0, 1.0)
-        : 0.0;
-    final ptsRemaining = threshold > 0
-        ? (threshold - progressPoints).clamp(0, 1 << 30)
-        : 0;
-    final rewardTitle = (next != null && next.title.trim().isNotEmpty)
-        ? next.title.trim()
-        : '';
-
     return DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(28),
@@ -146,58 +122,11 @@ class ChildPointsRewardsTabCard extends StatelessWidget {
                       ),
                     ],
                   ),
-                  if (showRewardSection) ...[
-                    const SizedBox(height: 20),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Expanded(
-                          child: Text(
-                            hasReward
-                                ? l10n.dashboardNextRewardWithName(rewardTitle)
-                                : l10n.nextReward,
-                            style: theme.textTheme.titleSmall?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w700,
-                              height: 1.25,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        if (isLoading)
-                          SizedBox(
-                            width: 22,
-                            height: 22,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white.withValues(alpha: 0.9),
-                            ),
-                          )
-                        else
-                          Text(
-                            l10n.dashboardPtsToGo(
-                              numberFormat.format(ptsRemaining),
-                            ),
-                            style: theme.textTheme.labelLarge?.copyWith(
-                              color: Colors.white.withValues(alpha: 0.82),
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 10),
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(999),
-                      child: LinearProgressIndicator(
-                        value: isLoading ? null : pct,
-                        minHeight: 8,
-                        backgroundColor: kChildRewardsProgressTrack.withValues(
-                          alpha: 0.85,
-                        ),
-                        color: kChildRewardsProgressFill,
-                      ),
-                    ),
-                  ],
+                  // R4o-M1 / DEC-32: the cumulative "X pts to go" progress bar
+                  // was removed — it regressed visibly when the child redeemed
+                  // because it ran against the DEBITABLE balance. The card now
+                  // shows the current balance + a "Redeem Prizes" CTA, matching
+                  // the spend economy.
                   const SizedBox(height: 18),
                   Center(
                     child: FilledButton(

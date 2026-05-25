@@ -21,7 +21,18 @@ final firestoreGatewayProvider = Provider<FirestoreGatewayImpl?>((ref) {
   final firestore = ref.watch(firebaseFirestoreProvider);
   final auth = ref.watch(authRepositoryProvider);
 
-  return FirestoreGatewayImpl(firestore: firestore, authRepository: auth);
+  // C#1 safety floor: address all Firestore paths from the ACTIVE account
+  // record's UID (the cloud-born profile row currently mounted), not from
+  // FirebaseAuth.currentUser. There is one FirebaseAuth slot, so after an
+  // in-app account switch currentUser can lag behind the active account; this
+  // resolver guarantees the gateway can never write into the wrong cloud space
+  // (Firestore rules deny on UID mismatch rather than corrupting data). The
+  // value comes from the locally-stored session, so it stays offline-safe.
+  return FirestoreGatewayImpl(
+    firestore: firestore,
+    authRepository: auth,
+    activeAccountUid: () => ref.read(authStateProvider).currentUser?.firebaseUid,
+  );
 });
 
 /// Provider for [OutboxPushPipeline].

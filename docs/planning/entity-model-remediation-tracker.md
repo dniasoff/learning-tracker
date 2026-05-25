@@ -104,18 +104,18 @@
 
 ## Sync points
 
-- [ ] P1               (sync, pending)   Wave 1 gate: WS1 switcher verified (profile+account, count-gated, no logout) AND WS2 empty-login reachable — both verified before WS3 starts
-- [ ] P2               (sync, pending)   Wave 2 gate: Charter flow #1 + #2 pass end-to-end; all WS3 sub-tasks verified
-- [ ] P3               (sync, pending)   Wave 3 gate: Banner+settings-by-scope; per-profile reminders fire when inactive; rewards spend loop works; sentinel/route-guard in place
-- [x] P4               (sync, done)   Wave 4 gate: enums unified, shims gone, dups collapsed, dedupeByEmail decision documented; make ci green (5914 tests)
+- [V] P1               (sync, verified)  Wave 1 gate: switcher count-gated, no-logout switch (corrected to active-account UID source); empty-login reachable + has account-exit. V5a-verified.
+- [V] P2               (sync, verified)  Wave 2 gate: tutor end-to-end — PIN namespace unified, scope-aware promptForPin, gate on every entry, decline/accept lifecycle, canEditPoints. V5a-verified.
+- [V] P3               (sync, verified)  Wave 3 gate: banner adult-viewing-child signal; settings device/profile scope (+SacredTime→DEVICE); per-profile reminders+streak fire when inactive, deleted-profile reconcile; rewards spend loop + points sync; sentinel/route-guard. V5a/V5b-verified.
+- [V] P4               (sync, verified)  Wave 4 gate: enums unified, shims gone, dups collapsed, dedupeByEmail documented; v26 migration now data-preserving (v27). make ci green (5926 tests).
 
 ---
 
 ## Verification phase
 
-- [ ] V1.ci            (verify, pending)  Run `make ci` from learning_tracker/; must be green
-- [ ] V2.review        (verify, pending)  Adversarial review squad: R1 (account/login/switching), R2 (tutor end-to-end), R3 (notif/location/settings), R4 (rewards/credit), R5 (hygiene/rules); return severity-classified findings
-- [ ] V3.fix           (verify, pending)  Fix-all pass: one fix-agent per CRITICAL/HIGH; batch MEDIUM; log LOW as optional
-- [ ] V4.ci-rerun      (verify, pending)  Re-run CI post-fixes; loop until green
-- [ ] V5.task-truth    (verify, pending)  ⚠️ CRITICAL — Sample every done task; confirm artifact exists AND is user-reachable; upgrade done→verified or demote done→pending; loop until all verified
-- [ ] V6.smoke         (verify, pending)  Final smoke: charter flow #1 (tutor) + charter flow #2 (relationship mgmt) + switcher + per-profile reminder + rewards spend; each spot screen EN+HE; offline-first holds
+- [V] V1.ci            (verify, done)     make ci green (5914 baseline → 5926 post-fix).
+- [V] V2.review        (verify, done)     Adversarial review run on Sonnet THEN re-run on Opus (user-directed). Opus deeper: found cloud-switch corruption + points-not-synced (Sonnet missed) + sharper tutor-PIN diagnosis; cleared 3 Sonnet signOut false-positives. 8 CRITICAL merged.
+- [V] V3.fix           (verify, done)     Opus fix-all (user-directed model). 2 design criticals planned+approved first (auth UID-source, points ledger-sync+derive). 6 fix agents (2 waves) + 1 integration patch. All CRITICAL/HIGH closed.
+- [V] V4.ci-rerun      (verify, done)     Integrated make ci green: 5926 tests, analyze clean.
+- [V] V5.task-truth    (verify, done)     2 Opus verifiers: ALL items VERIFIED, 0 FAILED, no demotions. Points-sync wired incl. sink registration. Residuals cleaned (l10n gap + dead codecs + no-op branch). make ci green 5926.
+- [V] V6.smoke         (verify, done)     GO verdict. All 12 charter steps CONNECTED end-to-end, no BROKEN. Non-blocking fast-follow: 2 files' journey-path strings (text_display_screen, app_shell offline SnackBar) not localized; cosmetic email display-name; tutor relationship surface inherently online (graceful degrade).

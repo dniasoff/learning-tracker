@@ -605,6 +605,23 @@ class AppLocalizationsEn extends AppLocalizations {
   String get markComplete => 'Mark complete';
 
   @override
+  String get markCompleteTutorUnavailable => 'Not available (tutor mode)';
+
+  @override
+  String markCompleteCompletedStage(String stageName) {
+    return 'Completed ($stageName)';
+  }
+
+  @override
+  String unableToLoadCompletionContext(String error) {
+    return 'Unable to load completion context: $error';
+  }
+
+  @override
+  String get accountOfflineSignInToSync =>
+      'Working offline for this account. Sign in to resume cloud sync.';
+
+  @override
   String get textReaderNextDailyTask => 'Next daily task';
 
   @override
@@ -1010,6 +1027,26 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get profilePickerTutoredChildren => 'TUTORED CHILDREN';
+
+  @override
+  String get tutoredChildrenViewInvitations => 'View invitations';
+
+  @override
+  String tutoredChildrenPendingInvitations(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count pending tutor invitations',
+      one: '$count pending tutor invitation',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get tutoredChildrenStatusTutoring => 'Tutoring';
+
+  @override
+  String get tutoredChildrenRoleBadge => 'Tutor';
 
   @override
   String get tutorModeIndicator => 'Tutor mode';
@@ -2646,10 +2683,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String notificationReminderBody(int taskCount, int curriculumCount) {
     String _temp0 = intl.Intl.pluralLogic(
-      curriculumCount,
+      taskCount,
       locale: localeName,
-      other: '$curriculumCount curricula',
-      one: '1 curriculum',
+      other: '$taskCount tasks',
+      one: '1 task',
     );
     String _temp1 = intl.Intl.pluralLogic(
       curriculumCount,
@@ -2657,14 +2694,7 @@ class AppLocalizationsEn extends AppLocalizations {
       other: '$curriculumCount curricula',
       one: '1 curriculum',
     );
-    String _temp2 = intl.Intl.pluralLogic(
-      taskCount,
-      locale: localeName,
-      other: 'You have $taskCount tasks across $_temp0 today',
-      one: 'You have 1 task across $_temp1 today',
-      zero: 'No tasks today — stay on track!',
-    );
-    return '$_temp2';
+    return 'You have $_temp0 across $_temp1 today';
   }
 
   @override
@@ -3189,4 +3219,547 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get parentPointsAdjustAppliedSnackbar => 'Balance updated.';
+
+  @override
+  String get profileTypeChild => 'Child';
+
+  @override
+  String get profileTypeAdult => 'Adult';
+
+  @override
+  String get childMode => 'Child mode';
+
+  @override
+  String get adultMode => 'Adult mode';
+
+  @override
+  String get statusActive => 'Active';
+
+  @override
+  String get statusPending => 'Pending';
+
+  @override
+  String get actionTryAgain => 'Try again';
+
+  @override
+  String get actionGoToDashboard => 'Go to dashboard';
+
+  @override
+  String get emptyLoginTutorEntry => 'I\'m a tutor';
+
+  @override
+  String get switchAccount => 'Switch account';
+
+  @override
+  String get emptyLoginTutorComingSoon =>
+      'Tutor access coming soon. Ask the parent to share an invite link with you.';
+
+  @override
+  String get tutorWelcomeBannerTitle => 'Welcome, tutor!';
+
+  @override
+  String get tutorWelcomeBannerBody =>
+      'Ask the parent to share an invite link with you, then tap below to accept it.';
+
+  @override
+  String get switcherSheetProfiles => 'Profiles';
+
+  @override
+  String get switcherSheetAccounts => 'Accounts';
+
+  @override
+  String get switcherSheetAddAccount => 'Add account';
+
+  @override
+  String get acceptInviteAppBarTitle => 'Accept Tutor Invite';
+
+  @override
+  String get acceptInviteAccepting => 'Accepting invite…';
+
+  @override
+  String get acceptInviteHeading => 'Accept tutor invite';
+
+  @override
+  String get acceptInviteBody =>
+      'You have been invited to tutor a child. By accepting, you will have access to view and manage their learning profile.';
+
+  @override
+  String get acceptInvitePermissionViewData =>
+      'View all learning data and progress';
+
+  @override
+  String get acceptInvitePermissionConfigure =>
+      'Configure tracks, points, and rewards (if permitted)';
+
+  @override
+  String get acceptInvitePermissionBulkMark => 'Perform bulk-mark corrections';
+
+  @override
+  String get acceptInvitePermissionNoLive =>
+      'Cannot mark live completions (streak / rewards)';
+
+  @override
+  String get acceptInviteAccept => 'Accept invite';
+
+  @override
+  String get acceptInviteDecline => 'Decline';
+
+  @override
+  String get acceptInviteSuccessHeading => 'Invite accepted!';
+
+  @override
+  String get acceptInviteSuccessBody =>
+      'You now have tutor access to this child\'s learning profile. Open the Profile Picker to switch to the tutored profile.';
+
+  @override
+  String get acceptInviteErrorHeading => 'Could not accept invite';
+
+  @override
+  String get acceptInviteGenericError =>
+      'Unable to accept invite. Please try again.';
+
+  @override
+  String get unexpectedError => 'An unexpected error occurred.';
+
+  @override
+  String get declineInviteAppBarTitle => 'Decline Invite';
+
+  @override
+  String get declineInviteConfirmHeading => 'Decline tutor invite?';
+
+  @override
+  String get declineInviteConfirmBody =>
+      'You are about to decline this tutor invite. The parent will be notified that you declined. You will not have access to this child\'s learning profile.';
+
+  @override
+  String get declineInviteConfirm => 'Decline invite';
+
+  @override
+  String get declineInviteInProgress => 'Declining invite…';
+
+  @override
+  String get declineInviteSuccessHeading => 'Invite declined';
+
+  @override
+  String get declineInviteSuccessBody =>
+      'You have declined this tutor invite. The parent has been notified.';
+
+  @override
+  String get declineInviteErrorHeading => 'Could not decline invite';
+
+  @override
+  String get declineInviteGenericError =>
+      'Unable to decline invite. Please try again.';
+
+  @override
+  String get inviteTutorAppBarTitle => 'Invite a Tutor';
+
+  @override
+  String get inviteTutorHeading => 'Invite a Tutor';
+
+  @override
+  String get inviteTutorBody =>
+      'Enter the tutor\'s email address. They will receive an invite link to accept access to this child\'s learning profile.';
+
+  @override
+  String get inviteTutorEmailLabel => 'Tutor\'s email address';
+
+  @override
+  String get inviteTutorEmailHint => 'tutor@example.com';
+
+  @override
+  String get inviteTutorInvalidEmail => 'Please enter a valid email address.';
+
+  @override
+  String get inviteTutorSending => 'Sending…';
+
+  @override
+  String get inviteTutorSend => 'Send invite';
+
+  @override
+  String inviteTutorSentSnackbar(String email) {
+    return 'Invite sent to $email!';
+  }
+
+  @override
+  String get inviteTutorLinkCopied => 'Link copied to clipboard!';
+
+  @override
+  String get inviteTutorShareLinkHeading => 'Share link (backup delivery)';
+
+  @override
+  String get inviteTutorShareLinkBody =>
+      'If the email is not received, share this link directly with the tutor.';
+
+  @override
+  String get inviteTutorCopyLinkTooltip => 'Copy link';
+
+  @override
+  String get inviteTutorCopyShareLink => 'Copy share link';
+
+  @override
+  String get manageGrantsAppBarTitle => 'My Tutoring Grants';
+
+  @override
+  String manageGrantsActiveSection(int count) {
+    return 'Active ($count)';
+  }
+
+  @override
+  String manageGrantsPendingSection(int count) {
+    return 'Pending invites ($count)';
+  }
+
+  @override
+  String get manageGrantsEmptyHeading => 'No tutoring relationships';
+
+  @override
+  String get manageGrantsEmptyBody =>
+      'When a parent invites you to tutor their child, the grant will appear here.';
+
+  @override
+  String get manageGrantsResignTitle => 'Resign from tutoring?';
+
+  @override
+  String manageGrantsResignBody(String child, String parent) {
+    return 'You will immediately lose access to this child\'s profile. The parent will be notified.\n\nChild: $child\nParent: $parent';
+  }
+
+  @override
+  String get manageGrantsResign => 'Resign';
+
+  @override
+  String manageGrantsResignError(String error) {
+    return 'Could not resign: $error';
+  }
+
+  @override
+  String get tutorFallbackName => 'Your tutor';
+
+  @override
+  String get manageTutorsEmptyHeading => 'No children profiles yet';
+
+  @override
+  String get manageTutorsEmptyBody =>
+      'Add a child profile to start inviting tutors.';
+
+  @override
+  String manageTutorsLoadError(String error) {
+    return 'Could not load tutors: $error';
+  }
+
+  @override
+  String get manageTutorsNoTutors => 'No tutors invited.';
+
+  @override
+  String manageTutorsActiveSection(int count) {
+    return 'Active ($count)';
+  }
+
+  @override
+  String manageTutorsPendingSection(int count) {
+    return 'Pending ($count)';
+  }
+
+  @override
+  String get manageTutorsInviteButton => 'Invite a tutor';
+
+  @override
+  String get manageTutorsRevokeTitle => 'Revoke tutor access?';
+
+  @override
+  String manageTutorsRevokeBody(String email) {
+    return '$email will immediately lose access to this child\'s profile.';
+  }
+
+  @override
+  String get manageTutorsRevoke => 'Revoke';
+
+  @override
+  String manageTutorsRevokeError(String error) {
+    return 'Could not revoke: $error';
+  }
+
+  @override
+  String get manageTutorsRescindTitle => 'Rescind invitation?';
+
+  @override
+  String manageTutorsRescindBody(String email) {
+    return 'The pending invite to $email will be cancelled.';
+  }
+
+  @override
+  String get manageTutorsRescind => 'Rescind';
+
+  @override
+  String manageTutorsRescindError(String error) {
+    return 'Could not rescind: $error';
+  }
+
+  @override
+  String get manageTutorsViewAuditLog => 'View audit log';
+
+  @override
+  String get tutorFallbackParent => 'Parent';
+
+  @override
+  String get auditLogTitle => 'Audit Log';
+
+  @override
+  String get auditLogClearFilters => 'Clear filters';
+
+  @override
+  String get auditLogFilterFromDate => 'Filter from date';
+
+  @override
+  String get auditLogFilterToDate => 'Filter to date';
+
+  @override
+  String get auditLogFilterFrom => 'From';
+
+  @override
+  String get auditLogFilterTo => 'To';
+
+  @override
+  String get auditLogEmptyFiltered => 'No entries match the filters';
+
+  @override
+  String get auditLogEmpty => 'No audit entries';
+
+  @override
+  String get auditLogEmptyFilteredBody => 'Clear filters to see all entries.';
+
+  @override
+  String get auditLogEmptyBody =>
+      'Tutor actions will appear here as they occur.';
+
+  @override
+  String get auditLogChipConfig => 'Config';
+
+  @override
+  String get auditLogChipBulkPrior => 'Bulk Prior';
+
+  @override
+  String get auditLogChipReset => 'Reset';
+
+  @override
+  String get auditLogChipBookmark => 'Bookmark';
+
+  @override
+  String get auditLogChipProfile => 'Profile';
+
+  @override
+  String get auditLogChipGoal => 'Goal';
+
+  @override
+  String get auditLogChipStage => 'Stage';
+
+  @override
+  String get auditLogChipReward => 'Reward';
+
+  @override
+  String get auditLogChipStudyDay => 'Study Day';
+
+  @override
+  String get auditLogActionConfigChanged => 'Config changed';
+
+  @override
+  String get auditLogActionBulkPrior => 'Bulk prior';
+
+  @override
+  String get auditLogActionReset => 'Reset';
+
+  @override
+  String get auditLogActionBookmark => 'Bookmark';
+
+  @override
+  String get auditLogActionProfileEdited => 'Profile edited';
+
+  @override
+  String get auditLogActionGoalChanged => 'Goal changed';
+
+  @override
+  String get auditLogActionStageChanged => 'Stage changed';
+
+  @override
+  String get auditLogActionRewardChanged => 'Reward changed';
+
+  @override
+  String get auditLogActionStudyDay => 'Study day';
+
+  @override
+  String get auditLogBefore => 'before: ';
+
+  @override
+  String get auditLogAfter => 'after: ';
+
+  @override
+  String get tutorPinAppBarTitle => 'Tutor PIN';
+
+  @override
+  String get tutorPinEntryHeading => 'Enter your Tutor PIN';
+
+  @override
+  String get tutorPinEntryBody =>
+      'Enter your 4-digit Tutor PIN to access this profile.';
+
+  @override
+  String get tutorPinForgot => 'Forgot your Tutor PIN?';
+
+  @override
+  String get tutorPinIncorrect => 'Incorrect PIN. Please try again.';
+
+  @override
+  String tutorPinLockedOut(int minutes) {
+    return 'Too many attempts. Locked for $minutes minute(s).';
+  }
+
+  @override
+  String tutorPinErrorPrefix(String error) {
+    return 'Error: $error';
+  }
+
+  @override
+  String get tutorPinSetupAppBarTitle => 'Set Tutor PIN';
+
+  @override
+  String get tutorPinSetupConfirmHeading => 'Confirm your Tutor PIN';
+
+  @override
+  String get tutorPinSetupCreateHeading => 'Create your Tutor PIN';
+
+  @override
+  String get tutorPinSetupConfirmBody =>
+      'Re-enter the same 4-digit PIN to confirm.';
+
+  @override
+  String get tutorPinSetupCreateBody =>
+      'Your Tutor PIN protects access to every child profile you tutor. Enter a 4-digit PIN.';
+
+  @override
+  String get tutorPinSetupConfirmLabel => 'Confirm PIN';
+
+  @override
+  String get tutorPinSetupEnterNewLabel => 'Enter New PIN';
+
+  @override
+  String get tutorPinSetupMismatch => 'PINs do not match. Please try again.';
+
+  @override
+  String get tutorPinSetupSaveError => 'Unable to save PIN. Please try again.';
+
+  @override
+  String get tutorPinSetupLater => 'Set up later';
+
+  @override
+  String get tutorPinResetAppBarTitle => 'Reset Tutor PIN';
+
+  @override
+  String get tutorPinResetHeading => 'Reset your Tutor PIN';
+
+  @override
+  String get tutorPinResetSendingTo => 'We will send a reset link to:';
+
+  @override
+  String get tutorPinResetReturnHint =>
+      'After following the link, return here to create a new PIN.';
+
+  @override
+  String get tutorPinResetNoEmail =>
+      'No email address found for your account. Please sign in with a cloud account to use PIN reset.';
+
+  @override
+  String get tutorPinResetSendFailed =>
+      'Failed to send reset email. Please try again.';
+
+  @override
+  String get tutorPinResetFallbackEmail => 'your account email';
+
+  @override
+  String get tutorPinResetSendButton => 'Send reset email';
+
+  @override
+  String get tutorPinResetCheckEmailHeading => 'Check your email';
+
+  @override
+  String tutorPinResetCheckEmailBody(String email) {
+    return 'We sent a reset link to $email. Follow the link, then return here to set a new PIN.';
+  }
+
+  @override
+  String get tutorPinResetSetNew => 'Set new PIN';
+
+  @override
+  String get settingsAppPermissions => 'App Permissions';
+
+  @override
+  String get settingsAppPermissionsSubtitle =>
+      'Notifications and location access';
+
+  @override
+  String get settingsSendDiagnosticLogs => 'Send Diagnostic Logs';
+
+  @override
+  String get settingsSendDiagnosticLogsSubtitle =>
+      'Stream last 10 min of activity to Firebase';
+
+  @override
+  String get settingsPronunciation => 'Pronunciation';
+
+  @override
+  String get settingsPronunciationSubtitle =>
+      'Bereishis (Ashkenazi) or Bereshit (Sephardi)';
+
+  @override
+  String get settingsPronunciationAshkenazi => 'Ashkenazi';
+
+  @override
+  String get settingsPronunciationSephardi => 'Sephardi';
+
+  @override
+  String get settingsNikud => 'Nikud';
+
+  @override
+  String get settingsNikudSubtitle =>
+      'Show or hide Hebrew vowel marks when learning.';
+
+  @override
+  String get settingsNikudWithout => 'Without nikud';
+
+  @override
+  String get settingsNikudWith => 'With nikud';
+
+  @override
+  String get deviceNotificationsTitle => 'Device notifications';
+
+  @override
+  String get deviceNotificationsChecking => 'Checking permission…';
+
+  @override
+  String get deviceNotificationsAllowed =>
+      'Notifications allowed on this device';
+
+  @override
+  String get deviceNotificationsBlocked =>
+      'Notifications blocked — tap to open Settings';
+
+  @override
+  String get deviceNotificationsDisableHint =>
+      'To disable notifications, go to Settings > Apps > Learning Tracker.';
+
+  @override
+  String get deviceNotificationsBlockedHint =>
+      'Notifications blocked. Enable them in Settings > Apps > Learning Tracker > Notifications.';
+
+  @override
+  String get notificationReminderGenericBody =>
+      'Time to learn! Open the app to see your tasks.';
+
+  @override
+  String get notificationStreakTitle => 'Streak at Risk!';
+
+  @override
+  String notificationStreakBody(int currentStreak) {
+    return 'Your $currentStreak-day streak is at risk!';
+  }
 }

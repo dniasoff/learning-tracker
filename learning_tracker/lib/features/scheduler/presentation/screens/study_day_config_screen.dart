@@ -13,6 +13,7 @@ import 'package:learning_tracker/features/scheduler/domain/models/day_type.dart'
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/study_day_config_providers.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
+import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Day labels in display order: Sunday first (ISO weekday 7), then Mon(1)..Sat(6).
@@ -44,6 +45,12 @@ class StudyDayConfigScreen extends ConsumerWidget {
       _curriculumTrackHasChazaraProvider(curriculumId),
     );
     final trackHasChazara = trackChazaraAsync.asData?.value ?? false;
+
+    // WS3.3d carry-forward: when a tutor has entered a talmid's context, gate
+    // study-day editing behind `canEditStudyDays`. Owners (non-tutored context)
+    // always edit. Mirrors the gating in parent_settings_screen.
+    final tutorPerms = ref.watch(activeTutorPermissionsProvider);
+    final canEdit = tutorPerms == null || tutorPerms.canEditStudyDays;
 
     return Scaffold(
       appBar: AppBar(
@@ -128,11 +135,13 @@ class StudyDayConfigScreen extends ConsumerWidget {
                     return _DayToggleTile(
                       dayLabel: _dayLabels[dow]!,
                       isStudy: isStudy,
-                      onToggle: () => _toggleDay(
-                        ref,
-                        dow,
-                        isStudy ? DayType.review : DayType.study,
-                      ),
+                      onToggle: canEdit
+                          ? () => _toggleDay(
+                              ref,
+                              dow,
+                              isStudy ? DayType.review : DayType.study,
+                            )
+                          : null,
                     );
                   }),
                   const SizedBox(height: 24),
@@ -239,7 +248,10 @@ class _DayToggleTile extends StatelessWidget {
 
   final String dayLabel;
   final bool isStudy;
-  final VoidCallback onToggle;
+
+  /// When `null`, the tile is read-only — a tutor without the
+  /// `canEditStudyDays` permission cannot change the day type.
+  final VoidCallback? onToggle;
 
   @override
   Widget build(BuildContext context) {

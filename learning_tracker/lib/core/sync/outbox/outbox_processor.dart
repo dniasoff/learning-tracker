@@ -39,6 +39,10 @@ class OutboxEntityKind {
 
   // Phase 1 — study-day config enrolment in the sync pipeline.
   static const studyDayConfig = 'study_day_config';
+
+  // WS9 Wave-B (C#2) — points spend economy sync.
+  static const pointsLedgerEntry = 'points_ledger_entry';
+  static const rewardRedemption = 'reward_redemption';
 }
 
 /// Drains pending outbox rows for a given profile, dispatching each mutation
@@ -318,6 +322,9 @@ class OutboxProcessor {
     // Phase 1 — study-day config enrolment (placed late: it is a config-style
     // entity, drained after time-sensitive entities and other preferences).
     OutboxEntityKind.studyDayConfig,
+    // WS9 Wave-B (C#2) — points spend economy.
+    OutboxEntityKind.pointsLedgerEntry,
+    OutboxEntityKind.rewardRedemption,
   ];
 
   /// Compute the earliest time at which the [attempts]-th row may be retried.
@@ -454,6 +461,18 @@ class OutboxProcessor {
         );
       case OutboxEntityKind.studyDayConfig:
         return _pipeline.pushStudyDayConfig(
+          profileId: profileId,
+          entityKey: entityKey,
+          payload: payload,
+        );
+      case OutboxEntityKind.pointsLedgerEntry:
+        return _pipeline.pushPointsLedgerEntry(
+          profileId: profileId,
+          entityKey: entityKey,
+          payload: payload,
+        );
+      case OutboxEntityKind.rewardRedemption:
+        return _pipeline.pushRewardRedemption(
           profileId: profileId,
           entityKey: entityKey,
           payload: payload,

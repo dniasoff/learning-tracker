@@ -122,10 +122,23 @@ class _RecordingNotificationGateway implements NotificationGateway {
     required int hour,
     required int minute,
     required String body,
+    String title = 'Streak at Risk!',
   }) async {}
 
   @override
   Future<void> cancelStreakAlert() async {}
+
+  @override
+  Future<void> scheduleStreakAlertForProfile({
+    required int profileId,
+    required int hour,
+    required int minute,
+    required String body,
+    String title = 'Streak at Risk!',
+  }) async {}
+
+  @override
+  Future<void> cancelStreakAlertForProfile(int profileId) async {}
 }
 
 // ---------------------------------------------------------------------------

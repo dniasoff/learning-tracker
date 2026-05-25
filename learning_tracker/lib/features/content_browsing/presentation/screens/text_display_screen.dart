@@ -714,7 +714,7 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
               actions: [
                 TextButton(
                   onPressed: () => Navigator.of(ctx).pop(),
-                  child: const Text('OK'),
+                  child: Text(l10n.actionOk),
                 ),
               ],
             );
@@ -761,15 +761,21 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
   // profile/grant details are not required for the domain guard.
   ResolvedSession _sessionForCurrentUser(WidgetRef ref, bool isTutor) {
     if (isTutor) {
-      // Minimal TutoredProfileSelection — grant ID and permissions are not
-      // inspected by MarkLiveCompletionUseCase (it checks isTutorSession only).
+      // L3: use the real active tutored selection (carries the talmid's
+      // profile, grant id, and the parent-configured permissions) instead of
+      // an empty placeholder. Falls back to a minimal selection only if the
+      // provider is somehow null while isTutor is true (should not happen,
+      // since isTutor is derived from the same provider).
+      final selection = ref.read(activeTutoredProfileSelectionProvider);
       return ResolvedSession.forTutor(
-        selection: const TutoredProfileSelection(
-          profileId: '',
-          ownerUid: '',
-          grantId: '',
-          permissions: TutorPermissions(),
-        ),
+        selection:
+            selection ??
+            const TutoredProfileSelection(
+              profileId: '',
+              ownerUid: '',
+              grantId: '',
+              permissions: TutorPermissions(),
+            ),
       );
     }
     return ResolvedSession.forOwner(
@@ -803,7 +809,9 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              'Unable to load completion context: $e',
+              AppLocalizations.of(context)!.unableToLoadCompletionContext(
+                e.toString(),
+              ),
               style: const TextStyle(
                 fontSize: 13,
                 color: AppTheme.brandInkMuted,
@@ -929,10 +937,14 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
                         const SizedBox(width: 10),
                         Text(
                           isTutor
-                              ? 'Not available (tutor mode)'
+                              ? l10n.markCompleteTutorUnavailable
                               : isDone
-                              ? 'Completed (${domainTermLabels(ref).resolveStoredStageName(task.stageName)})'
-                              : 'Mark Complete',
+                              ? l10n.markCompleteCompletedStage(
+                                  domainTermLabels(
+                                    ref,
+                                  ).resolveStoredStageName(task.stageName),
+                                )
+                              : l10n.markComplete,
                           style: const TextStyle(
                             fontSize: 31 / 2,
                             fontWeight: FontWeight.w700,

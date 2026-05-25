@@ -3,7 +3,9 @@ import 'dart:async';
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/app/router/router_provider.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/navigation/pin_scope.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
@@ -94,14 +96,15 @@ class TutoredChildrenSection extends ConsumerWidget {
 
 /// Tappable row that navigates to the tutor's incoming grants screen so they
 /// can accept or decline pending invitations.
-class _ViewInvitationsRow extends StatelessWidget {
+class _ViewInvitationsRow extends ConsumerWidget {
   const _ViewInvitationsRow({required this.pendingCount});
 
   final int pendingCount;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     return Card(
       margin: EdgeInsets.zero,
       elevation: 1,
@@ -150,13 +153,13 @@ class _ViewInvitationsRow extends StatelessWidget {
           ),
         ),
         title: Text(
-          'View invitations',
+          l10n.tutoredChildrenViewInvitations,
           style: theme.textTheme.bodyMedium?.copyWith(
             fontWeight: FontWeight.w600,
           ),
         ),
         subtitle: Text(
-          '$pendingCount pending tutor invitation${pendingCount > 1 ? 's' : ''}',
+          l10n.tutoredChildrenPendingInvitations(pendingCount),
           style: theme.textTheme.bodySmall?.copyWith(
             color: Colors.orange.shade700,
             fontWeight: FontWeight.w600,
@@ -166,7 +169,36 @@ class _ViewInvitationsRow extends StatelessWidget {
           Icons.chevron_right_rounded,
           color: Color(0xFFC2C9D3),
         ),
-        onTap: () => unawaited(context.pushRoute(const ManageGrantsRoute())),
+        // H3: enforce the Tutor PIN gate before showing the grants screen,
+        // regardless of entry path (this row, deep links, etc). The gate keys
+        // the PIN on the tutor's OWN profile id (C1).
+        onTap: () => _openInvitations(context, ref),
+      ),
+    );
+  }
+
+  /// H3: present the [TutorPinEntryGate] before navigating to the grants
+  /// screen so pending-invitation data is never shown without the Tutor PIN.
+  void _openInvitations(BuildContext context, WidgetRef ref) {
+    final tutorOwnProfileId = ref.read(selectedProfileIdProvider) ?? 0;
+    unawaited(
+      Navigator.of(context).push<void>(
+        MaterialPageRoute<void>(
+          fullscreenDialog: true,
+          builder: (_) => TutorPinEntryGate(
+            profileId: tutorOwnProfileId,
+            onPinVerified: () {
+              // Prime the tutor scope so the route guard does not re-prompt.
+              ref
+                  .read(routerProvider)
+                  .pinGuard
+                  .markScopeAuthenticated(PinScope.tutor(tutorOwnProfileId));
+              Navigator.of(context).pop();
+              unawaited(context.pushRoute(const ManageGrantsRoute()));
+            },
+            onCancel: () => Navigator.of(context).pop(),
+          ),
+        ),
       ),
     );
   }
@@ -189,12 +221,11 @@ class _TutoredChildRow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
-    // WS3.3c: child display name — the grant doc carries a childProfileId
-    // (Firestore string). Until the Cloud Function denormalises a childName
-    // field onto the grant doc, show the profile ID as a compact fallback.
-    // This is better than the previous "Child:{id}" placeholder.
-    final childLabel = grant.childProfileId;
+    // M3: show the denormalised child name when the server provides it,
+    // otherwise a friendly generic label — never the raw Firestore profile id.
+    final childLabel = grant.childDisplayLabel;
 
     return Card(
       margin: EdgeInsets.zero,
@@ -224,7 +255,7 @@ class _TutoredChildRow extends ConsumerWidget {
           overflow: TextOverflow.ellipsis,
         ),
         subtitle: Text(
-          'Tutoring',
+          l10n.tutoredChildrenStatusTutoring,
           style: theme.textTheme.bodySmall?.copyWith(
             color: Colors.green.shade600,
             fontWeight: FontWeight.w600,
@@ -247,7 +278,7 @@ class _TutoredChildRow extends ConsumerWidget {
               ),
               const SizedBox(width: 4),
               Text(
-                'Tutor',
+                l10n.tutoredChildrenRoleBadge,
                 style: theme.textTheme.labelSmall?.copyWith(
                   color: Colors.green.shade700,
                   fontWeight: FontWeight.w700,
@@ -272,12 +303,16 @@ class _TutoredChildRow extends ConsumerWidget {
     final tutorOwnProfileId = ref.read(selectedProfileIdProvider) ?? 0;
 
     // Build the TutoredProfileSelection from the active grant.
+    // C1: carry the tutor's OWN profile id so the route guard resolves
+    // PinScope.tutor(tutorOwnProfileId) — the SAME namespace this gate keys
+    // the PIN on — for any subsequent guarded routes.
     final activeState = grant.grantState as ActiveGrant;
     final selection = TutoredProfileSelection(
       profileId: grant.childProfileId,
       ownerUid: grant.parentUid,
       grantId: grant.grantId,
       permissions: activeState.permissions,
+      tutorOwnProfileId: tutorOwnProfileId,
     );
 
     unawaited(
@@ -292,6 +327,12 @@ class _TutoredChildRow extends ConsumerWidget {
               ref
                   .read(activeTutoredProfileSelectionProvider.notifier)
                   .enter(selection);
+              // C2: prime the tutor scope as authenticated so the first
+              // tutor-scoped edit route after the gate does not re-prompt.
+              ref
+                  .read(routerProvider)
+                  .pinGuard
+                  .markScopeAuthenticated(PinScope.tutor(tutorOwnProfileId));
               // Pop the gate and navigate to the talmid's view.
               Navigator.of(context).pop();
               unawaited(context.pushRoute(const ManageGrantsRoute()));

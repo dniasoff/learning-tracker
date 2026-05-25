@@ -24,6 +24,7 @@ import 'package:learning_tracker/features/profiles/domain/models/profile_model.d
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
 class ManageTutorsScreen extends ConsumerWidget {
@@ -36,7 +37,7 @@ class ManageTutorsScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Manage Tutors'),
+        title: Text(AppLocalizations.of(context)!.manageTutors),
         backgroundColor: AppTheme.brandBlue,
         foregroundColor: Colors.white,
         elevation: 0,
@@ -66,6 +67,7 @@ class _EmptyProfilesView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(32),
@@ -79,14 +81,14 @@ class _EmptyProfilesView extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'No children profiles yet',
+              l10n.manageTutorsEmptyHeading,
               style: theme.textTheme.titleMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Add a child profile to start inviting tutors.',
+              l10n.manageTutorsEmptyBody,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.outline,
               ),
@@ -125,6 +127,7 @@ class _ChildGrantsSection extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final grantsAsync = ref.watch(
       outgoingTutorGrantsProvider(profile.id.toString()),
     );
@@ -150,7 +153,7 @@ class _ChildGrantsSection extends ConsumerWidget {
           error: (e, _) => Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Text(
-              'Could not load tutors: $e',
+              l10n.manageTutorsLoadError(e.toString()),
               style: TextStyle(color: theme.colorScheme.error),
             ),
           ),
@@ -159,7 +162,7 @@ class _ChildGrantsSection extends ConsumerWidget {
               return Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
                 child: Text(
-                  'No tutors invited.',
+                  l10n.manageTutorsNoTutors,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: theme.colorScheme.outline,
                   ),
@@ -177,7 +180,9 @@ class _ChildGrantsSection extends ConsumerWidget {
             return Column(
               children: [
                 if (active.isNotEmpty) ...[
-                  _SectionDivider(label: 'Active (${active.length})'),
+                  _SectionDivider(
+                    label: l10n.manageTutorsActiveSection(active.length),
+                  ),
                   for (final grant in active)
                     _TutorGrantRow.active(
                       grant: grant,
@@ -186,7 +191,9 @@ class _ChildGrantsSection extends ConsumerWidget {
                     ),
                 ],
                 if (pending.isNotEmpty) ...[
-                  _SectionDivider(label: 'Pending (${pending.length})'),
+                  _SectionDivider(
+                    label: l10n.manageTutorsPendingSection(pending.length),
+                  ),
                   for (final grant in pending)
                     _TutorGrantRow.pending(
                       grant: grant,
@@ -207,7 +214,7 @@ class _ChildGrantsSection extends ConsumerWidget {
               InviteTutorRoute(childProfileId: profile.id.toString()),
             ),
             icon: const Icon(Icons.person_add_rounded, size: 18),
-            label: const Text('Invite a tutor'),
+            label: Text(l10n.manageTutorsInviteButton),
             style: OutlinedButton.styleFrom(
               foregroundColor: AppTheme.brandBlue,
               side: BorderSide(
@@ -271,13 +278,12 @@ class _TutorGrantRowState extends ConsumerState<_TutorGrantRow> {
 
   Future<void> _revoke() async {
     if (_acting) return;
+    final l10n = AppLocalizations.of(context)!;
     final confirmed = await _showConfirmation(
       context,
-      title: 'Revoke tutor access?',
-      message:
-          '${widget.grant.tutorEmail} will immediately lose access to '
-          'this child\'s profile.',
-      confirmLabel: 'Revoke',
+      title: l10n.manageTutorsRevokeTitle,
+      message: l10n.manageTutorsRevokeBody(widget.grant.tutorEmail),
+      confirmLabel: l10n.manageTutorsRevoke,
       isDestructive: true,
     );
     if (!confirmed || !mounted) return;
@@ -291,7 +297,7 @@ class _TutorGrantRowState extends ConsumerState<_TutorGrantRow> {
         // Parent name from current auth user; falls back to 'Parent' if unavailable.
         final parentName =
             ref.read(authRepositoryProvider).currentUser?.displayName ??
-            'Parent';
+            l10n.tutorFallbackParent;
         unawaited(
           ref
               .read(tutorNotificationGatewayProvider)
@@ -309,9 +315,9 @@ class _TutorGrantRowState extends ConsumerState<_TutorGrantRow> {
         stackTrace: st,
       );
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Could not revoke: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.manageTutorsRevokeError(e.toString()))),
+        );
       }
     } finally {
       if (mounted) setState(() => _acting = false);
@@ -320,12 +326,12 @@ class _TutorGrantRowState extends ConsumerState<_TutorGrantRow> {
 
   Future<void> _rescind() async {
     if (_acting) return;
+    final l10n = AppLocalizations.of(context)!;
     final confirmed = await _showConfirmation(
       context,
-      title: 'Rescind invitation?',
-      message:
-          'The pending invite to ${widget.grant.tutorEmail} will be cancelled.',
-      confirmLabel: 'Rescind',
+      title: l10n.manageTutorsRescindTitle,
+      message: l10n.manageTutorsRescindBody(widget.grant.tutorEmail),
+      confirmLabel: l10n.manageTutorsRescind,
       isDestructive: false,
     );
     if (!confirmed || !mounted) return;
@@ -345,9 +351,9 @@ class _TutorGrantRowState extends ConsumerState<_TutorGrantRow> {
         stackTrace: st,
       );
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Could not rescind: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.manageTutorsRescindError(e.toString()))),
+        );
       }
     } finally {
       if (mounted) setState(() => _acting = false);
@@ -366,12 +372,15 @@ class _TutorGrantRowState extends ConsumerState<_TutorGrantRow> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final grantState = widget.grant.grantState;
 
     final statusColor = grantState is ActiveGrant
         ? Colors.green.shade600
         : Colors.orange.shade700;
-    final statusLabel = grantState is ActiveGrant ? 'Active' : 'Pending';
+    final statusLabel = grantState is ActiveGrant
+        ? l10n.statusActive
+        : l10n.statusPending;
 
     return ListTile(
       leading: CircleAvatar(
@@ -400,7 +409,7 @@ class _TutorGrantRowState extends ConsumerState<_TutorGrantRow> {
           if (widget.isActive)
             IconButton(
               icon: const Icon(Icons.history_rounded),
-              tooltip: 'View audit log',
+              tooltip: l10n.manageTutorsViewAuditLog,
               onPressed: _openAuditLog,
               color: AppTheme.brandBlue,
               iconSize: 20,
@@ -420,7 +429,11 @@ class _TutorGrantRowState extends ConsumerState<_TutorGrantRow> {
                     : theme.colorScheme.onSurfaceVariant,
                 padding: const EdgeInsets.symmetric(horizontal: 8),
               ),
-              child: Text(widget.isActive ? 'Revoke' : 'Rescind'),
+              child: Text(
+                widget.isActive
+                    ? l10n.manageTutorsRevoke
+                    : l10n.manageTutorsRescind,
+              ),
             ),
         ],
       ),
@@ -442,7 +455,7 @@ class _TutorGrantRowState extends ConsumerState<_TutorGrantRow> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(ctx)!.actionCancel),
           ),
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(true),

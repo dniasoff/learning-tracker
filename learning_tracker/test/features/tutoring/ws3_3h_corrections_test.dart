@@ -25,6 +25,9 @@ void main() {
     late String parentSettingsSrc;
     late String acceptInviteSrc;
     late String manageTutorsProvidersSrc;
+    // The accept-invite permission copy was localized (Rule 1): the user-facing
+    // strings now live in the ARB, not as literals in the screen source.
+    late String acceptInviteArbEn;
 
     setUpAll(() {
       parentSettingsSrc = File(
@@ -38,42 +41,50 @@ void main() {
       manageTutorsProvidersSrc = File(
         'lib/features/tutoring/presentation/providers/manage_tutors_providers.dart',
       ).readAsStringSync();
+
+      acceptInviteArbEn = File('lib/l10n/app_en.arb').readAsStringSync();
     });
 
     // ── AC1: canBulkPriorCompletion: true (G3/DEC-33) ────────────────────────
 
-    test('AC1: TutorPermissions default canBulkPriorCompletion is true (G3)',
-        () {
-      const perms = TutorPermissions();
-      expect(
-        perms.canBulkPriorCompletion,
-        isTrue,
-        reason:
-            'canBulkPriorCompletion must default to true per G3/DEC-33 — '
-            'tutors get full parent toolset including bulk-mark',
-      );
-    });
+    test(
+      'AC1: TutorPermissions default canBulkPriorCompletion is true (G3)',
+      () {
+        const perms = TutorPermissions();
+        expect(
+          perms.canBulkPriorCompletion,
+          isTrue,
+          reason:
+              'canBulkPriorCompletion must default to true per G3/DEC-33 — '
+              'tutors get full parent toolset including bulk-mark',
+        );
+      },
+    );
 
     test('AC1: canMarkLiveCompletion is always false (hard invariant)', () {
       const perms = TutorPermissions(canBulkPriorCompletion: true);
       expect(
         perms.canMarkLiveCompletion,
         isFalse,
-        reason: 'canMarkLiveCompletion must always be false — '
+        reason:
+            'canMarkLiveCompletion must always be false — '
             'tutors cannot mark live completions (cloud function enforces this)',
       );
     });
 
-    test('AC1: TutorPermissions.readOnly() disables canBulkPriorCompletion', () {
-      final perms = TutorPermissions.readOnly();
-      expect(
-        perms.canBulkPriorCompletion,
-        isFalse,
-        reason:
-            'readOnly() factory must disable canBulkPriorCompletion — '
-            'a truly read-only grant can neither edit nor bulk-mark',
-      );
-    });
+    test(
+      'AC1: TutorPermissions.readOnly() disables canBulkPriorCompletion',
+      () {
+        final perms = TutorPermissions.readOnly();
+        expect(
+          perms.canBulkPriorCompletion,
+          isFalse,
+          reason:
+              'readOnly() factory must disable canBulkPriorCompletion — '
+              'a truly read-only grant can neither edit nor bulk-mark',
+        );
+      },
+    );
 
     // ── AC2: bulk-mark tile gated on canBulkPriorCompletion ──────────────────
 
@@ -89,20 +100,23 @@ void main() {
     });
 
     test(
-        'AC2: canBulkMark is derived from canBulkPriorCompletion permission',
-        () {
-      expect(
-        parentSettingsSrc,
-        contains('canBulkPriorCompletion'),
-        reason:
-            'canBulkMark computation must reference canBulkPriorCompletion '
-            'from TutorPermissions',
-      );
-    });
+      'AC2: canBulkMark is derived from canBulkPriorCompletion permission',
+      () {
+        expect(
+          parentSettingsSrc,
+          contains('canBulkPriorCompletion'),
+          reason:
+              'canBulkMark computation must reference canBulkPriorCompletion '
+              'from TutorPermissions',
+        );
+      },
+    );
 
     test('AC2: "Add What You Learned" tile is inside canBulkMark guard', () {
       final canBulkMarkIdx = parentSettingsSrc.indexOf('if (canBulkMark)');
-      final addWhatYouLearnedIdx = parentSettingsSrc.indexOf('addWhatYouLearned');
+      final addWhatYouLearnedIdx = parentSettingsSrc.indexOf(
+        'addWhatYouLearned',
+      );
       expect(canBulkMarkIdx, isNot(-1), reason: 'canBulkMark guard must exist');
       expect(
         addWhatYouLearnedIdx > canBulkMarkIdx,
@@ -115,44 +129,52 @@ void main() {
 
     // ── AC3: accept-invite copy corrected ────────────────────────────────────
 
-    test('AC3: accept_invite_screen no longer says "curricula" (too broad)', () {
+    test('AC3: accept-invite copy no longer says "curricula" (too broad)', () {
+      // Checked across both the screen source and the localized ARB copy.
       expect(
         acceptInviteSrc,
         isNot(contains('Configure curricula, goals, and study days')),
         reason:
-            'accept_invite_screen.dart must not say "Configure curricula, '
-            'goals, and study days" — those are optional permissions off by '
-            'default, not part of the baseline editable set (WS3.3h)',
+            'accept_invite_screen must not say "Configure curricula, goals, '
+            'and study days" — those are optional permissions off by default, '
+            'not part of the baseline editable set (WS3.3h)',
+      );
+      expect(
+        acceptInviteArbEn,
+        isNot(contains('Configure curricula, goals, and study days')),
       );
     });
 
     test(
-        'AC3: accept_invite_screen says "tracks, points, and rewards" (correct)',
-        () {
-      expect(
-        acceptInviteSrc,
-        contains('tracks, points, and rewards'),
-        reason:
-            'accept_invite_screen.dart must say "tracks, points, and rewards" '
-            '— the actual default editable set (canEditStages + canEditGoals + '
-            'canEditRewards, parent-configurable) (WS3.3h DEC-33)',
-      );
-    });
+      'AC3: accept-invite copy says "tracks, points, and rewards" (correct)',
+      () {
+        // The copy was localized (Rule 1) — assert the English ARB value.
+        expect(
+          acceptInviteArbEn,
+          contains('tracks, points, and rewards'),
+          reason:
+              'acceptInvitePermissionConfigure (app_en.arb) must say "tracks, '
+              'points, and rewards" — the actual default editable set '
+              '(canEditStages + canEditGoals + canEditRewards, parent-'
+              'configurable) (WS3.3h DEC-33)',
+        );
+      },
+    );
 
     test('AC3: Perform bulk-mark corrections copy remains', () {
       expect(
-        acceptInviteSrc,
+        acceptInviteArbEn,
         contains('Perform bulk-mark corrections'),
         reason:
-            'accept_invite_screen.dart must still mention bulk-mark corrections '
-            '(canBulkPriorCompletion: true by default per G3/DEC-33)',
+            'acceptInvitePermissionBulkMark (app_en.arb) must still mention '
+            'bulk-mark corrections (canBulkPriorCompletion: true by default '
+            'per G3/DEC-33)',
       );
     });
 
     // ── AC4: Duplicate tutorGrantRepositoryProvider removed ──────────────────
 
-    test(
-        'AC4: manage_tutors_providers.dart does not declare its own '
+    test('AC4: manage_tutors_providers.dart does not declare its own '
         'tutorGrantRepositoryProvider', () {
       // The old manual declaration:
       //   final tutorGrantRepositoryProvider = Provider<TutorGrantRepository>(...);
@@ -160,7 +182,9 @@ void main() {
       expect(
         manageTutorsProvidersSrc,
         isNot(
-          contains('final tutorGrantRepositoryProvider = Provider<TutorGrantRepository>'),
+          contains(
+            'final tutorGrantRepositoryProvider = Provider<TutorGrantRepository>',
+          ),
         ),
         reason:
             'manage_tutors_providers.dart must not declare its own '
@@ -169,8 +193,7 @@ void main() {
       );
     });
 
-    test(
-        'AC4: manage_tutors_providers.dart imports tutor_grant_providers.dart '
+    test('AC4: manage_tutors_providers.dart imports tutor_grant_providers.dart '
         '(canonical repo provider)', () {
       expect(
         manageTutorsProvidersSrc,

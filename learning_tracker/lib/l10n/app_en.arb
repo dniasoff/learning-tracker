@@ -298,6 +298,20 @@
   },
   "viewProgress": "View progress",
   "markComplete": "Mark complete",
+  "markCompleteTutorUnavailable": "Not available (tutor mode)",
+  "markCompleteCompletedStage": "Completed ({stageName})",
+  "@markCompleteCompletedStage": {
+    "placeholders": {
+      "stageName": {"type": "String"}
+    }
+  },
+  "unableToLoadCompletionContext": "Unable to load completion context: {error}",
+  "@unableToLoadCompletionContext": {
+    "placeholders": {
+      "error": {"type": "String"}
+    }
+  },
+  "accountOfflineSignInToSync": "Working offline for this account. Sign in to resume cloud sync.",
   "textReaderNextDailyTask": "Next daily task",
   "noProjection": "No projection",
   "today": "TODAY",
@@ -497,6 +511,15 @@
   "profilePickerYourProfiles": "YOUR PROFILES",
   "profilePickerTalmidProfiles": "TALMID PROFILES",
   "profilePickerTutoredChildren": "TUTORED CHILDREN",
+  "tutoredChildrenViewInvitations": "View invitations",
+  "tutoredChildrenPendingInvitations": "{count, plural, =1{{count} pending tutor invitation} other{{count} pending tutor invitations}}",
+  "@tutoredChildrenPendingInvitations": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "tutoredChildrenStatusTutoring": "Tutoring",
+  "tutoredChildrenRoleBadge": "Tutor",
   "tutorModeIndicator": "Tutor mode",
   "viewingChildBanner": "Viewing {name}",
   "@viewingChildBanner": {
@@ -1818,5 +1841,270 @@
   "parentPointsAdjustAmountHint": "Amount",
   "parentPointsAdjustNoteHint": "Reason (optional)",
   "parentPointsAdjustConfirm": "Apply",
-  "parentPointsAdjustAppliedSnackbar": "Balance updated."
+  "parentPointsAdjustAppliedSnackbar": "Balance updated.",
+
+  "profileTypeChild": "Child",
+  "profileTypeAdult": "Adult",
+  "childMode": "Child mode",
+  "adultMode": "Adult mode",
+  "statusActive": "Active",
+  "statusPending": "Pending",
+  "actionTryAgain": "Try again",
+  "actionGoToDashboard": "Go to dashboard",
+
+  "emptyLoginTutorEntry": "I'm a tutor",
+  "switchAccount": "Switch account",
+  "emptyLoginTutorComingSoon": "Tutor access coming soon. Ask the parent to share an invite link with you.",
+
+  "tutorWelcomeBannerTitle": "Welcome, tutor!",
+  "tutorWelcomeBannerBody": "Ask the parent to share an invite link with you, then tap below to accept it.",
+
+  "switcherSheetProfiles": "Profiles",
+  "switcherSheetAccounts": "Accounts",
+  "switcherSheetAddAccount": "Add account",
+
+  "acceptInviteAppBarTitle": "Accept Tutor Invite",
+  "acceptInviteAccepting": "Accepting invite…",
+  "acceptInviteHeading": "Accept tutor invite",
+  "acceptInviteBody": "You have been invited to tutor a child. By accepting, you will have access to view and manage their learning profile.",
+  "acceptInvitePermissionViewData": "View all learning data and progress",
+  "acceptInvitePermissionConfigure": "Configure tracks, points, and rewards (if permitted)",
+  "acceptInvitePermissionBulkMark": "Perform bulk-mark corrections",
+  "acceptInvitePermissionNoLive": "Cannot mark live completions (streak / rewards)",
+  "acceptInviteAccept": "Accept invite",
+  "acceptInviteDecline": "Decline",
+  "acceptInviteSuccessHeading": "Invite accepted!",
+  "acceptInviteSuccessBody": "You now have tutor access to this child's learning profile. Open the Profile Picker to switch to the tutored profile.",
+  "acceptInviteErrorHeading": "Could not accept invite",
+  "acceptInviteGenericError": "Unable to accept invite. Please try again.",
+  "unexpectedError": "An unexpected error occurred.",
+
+  "declineInviteAppBarTitle": "Decline Invite",
+  "declineInviteConfirmHeading": "Decline tutor invite?",
+  "declineInviteConfirmBody": "You are about to decline this tutor invite. The parent will be notified that you declined. You will not have access to this child's learning profile.",
+  "declineInviteConfirm": "Decline invite",
+  "declineInviteInProgress": "Declining invite…",
+  "declineInviteSuccessHeading": "Invite declined",
+  "declineInviteSuccessBody": "You have declined this tutor invite. The parent has been notified.",
+  "declineInviteErrorHeading": "Could not decline invite",
+  "declineInviteGenericError": "Unable to decline invite. Please try again.",
+
+  "inviteTutorAppBarTitle": "Invite a Tutor",
+  "inviteTutorHeading": "Invite a Tutor",
+  "inviteTutorBody": "Enter the tutor's email address. They will receive an invite link to accept access to this child's learning profile.",
+  "inviteTutorEmailLabel": "Tutor's email address",
+  "inviteTutorEmailHint": "tutor@example.com",
+  "inviteTutorInvalidEmail": "Please enter a valid email address.",
+  "inviteTutorSending": "Sending…",
+  "inviteTutorSend": "Send invite",
+  "inviteTutorSentSnackbar": "Invite sent to {email}!",
+  "@inviteTutorSentSnackbar": {
+    "placeholders": {
+      "email": { "type": "String" }
+    }
+  },
+  "inviteTutorLinkCopied": "Link copied to clipboard!",
+  "inviteTutorShareLinkHeading": "Share link (backup delivery)",
+  "inviteTutorShareLinkBody": "If the email is not received, share this link directly with the tutor.",
+  "inviteTutorCopyLinkTooltip": "Copy link",
+  "inviteTutorCopyShareLink": "Copy share link",
+
+  "manageGrantsAppBarTitle": "My Tutoring Grants",
+  "manageGrantsActiveSection": "Active ({count})",
+  "@manageGrantsActiveSection": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "manageGrantsPendingSection": "Pending invites ({count})",
+  "@manageGrantsPendingSection": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "manageGrantsEmptyHeading": "No tutoring relationships",
+  "manageGrantsEmptyBody": "When a parent invites you to tutor their child, the grant will appear here.",
+  "manageGrantsResignTitle": "Resign from tutoring?",
+  "manageGrantsResignBody": "You will immediately lose access to this child's profile. The parent will be notified.\n\nChild: {child}\nParent: {parent}",
+  "@manageGrantsResignBody": {
+    "placeholders": {
+      "child": { "type": "String" },
+      "parent": { "type": "String" }
+    }
+  },
+  "manageGrantsResign": "Resign",
+  "manageGrantsResignError": "Could not resign: {error}",
+  "@manageGrantsResignError": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "tutorFallbackName": "Your tutor",
+
+  "manageTutorsEmptyHeading": "No children profiles yet",
+  "manageTutorsEmptyBody": "Add a child profile to start inviting tutors.",
+  "manageTutorsLoadError": "Could not load tutors: {error}",
+  "@manageTutorsLoadError": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "manageTutorsNoTutors": "No tutors invited.",
+  "manageTutorsActiveSection": "Active ({count})",
+  "@manageTutorsActiveSection": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "manageTutorsPendingSection": "Pending ({count})",
+  "@manageTutorsPendingSection": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "manageTutorsInviteButton": "Invite a tutor",
+  "manageTutorsRevokeTitle": "Revoke tutor access?",
+  "manageTutorsRevokeBody": "{email} will immediately lose access to this child's profile.",
+  "@manageTutorsRevokeBody": {
+    "placeholders": {
+      "email": { "type": "String" }
+    }
+  },
+  "manageTutorsRevoke": "Revoke",
+  "manageTutorsRevokeError": "Could not revoke: {error}",
+  "@manageTutorsRevokeError": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "manageTutorsRescindTitle": "Rescind invitation?",
+  "manageTutorsRescindBody": "The pending invite to {email} will be cancelled.",
+  "@manageTutorsRescindBody": {
+    "placeholders": {
+      "email": { "type": "String" }
+    }
+  },
+  "manageTutorsRescind": "Rescind",
+  "manageTutorsRescindError": "Could not rescind: {error}",
+  "@manageTutorsRescindError": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "manageTutorsViewAuditLog": "View audit log",
+  "tutorFallbackParent": "Parent",
+
+  "auditLogTitle": "Audit Log",
+  "auditLogClearFilters": "Clear filters",
+  "auditLogFilterFromDate": "Filter from date",
+  "auditLogFilterToDate": "Filter to date",
+  "auditLogFilterFrom": "From",
+  "auditLogFilterTo": "To",
+  "auditLogEmptyFiltered": "No entries match the filters",
+  "auditLogEmpty": "No audit entries",
+  "auditLogEmptyFilteredBody": "Clear filters to see all entries.",
+  "auditLogEmptyBody": "Tutor actions will appear here as they occur.",
+  "auditLogChipConfig": "Config",
+  "auditLogChipBulkPrior": "Bulk Prior",
+  "auditLogChipReset": "Reset",
+  "auditLogChipBookmark": "Bookmark",
+  "auditLogChipProfile": "Profile",
+  "auditLogChipGoal": "Goal",
+  "auditLogChipStage": "Stage",
+  "auditLogChipReward": "Reward",
+  "auditLogChipStudyDay": "Study Day",
+  "auditLogActionConfigChanged": "Config changed",
+  "auditLogActionBulkPrior": "Bulk prior",
+  "auditLogActionReset": "Reset",
+  "auditLogActionBookmark": "Bookmark",
+  "auditLogActionProfileEdited": "Profile edited",
+  "auditLogActionGoalChanged": "Goal changed",
+  "auditLogActionStageChanged": "Stage changed",
+  "auditLogActionRewardChanged": "Reward changed",
+  "auditLogActionStudyDay": "Study day",
+  "auditLogBefore": "before: ",
+  "auditLogAfter": "after: ",
+
+  "tutorPinAppBarTitle": "Tutor PIN",
+  "tutorPinEntryHeading": "Enter your Tutor PIN",
+  "tutorPinEntryBody": "Enter your 4-digit Tutor PIN to access this profile.",
+  "tutorPinForgot": "Forgot your Tutor PIN?",
+  "tutorPinIncorrect": "Incorrect PIN. Please try again.",
+  "tutorPinLockedOut": "Too many attempts. Locked for {minutes} minute(s).",
+  "@tutorPinLockedOut": {
+    "placeholders": {
+      "minutes": { "type": "int" }
+    }
+  },
+  "tutorPinErrorPrefix": "Error: {error}",
+  "@tutorPinErrorPrefix": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+
+  "tutorPinSetupAppBarTitle": "Set Tutor PIN",
+  "tutorPinSetupConfirmHeading": "Confirm your Tutor PIN",
+  "tutorPinSetupCreateHeading": "Create your Tutor PIN",
+  "tutorPinSetupConfirmBody": "Re-enter the same 4-digit PIN to confirm.",
+  "tutorPinSetupCreateBody": "Your Tutor PIN protects access to every child profile you tutor. Enter a 4-digit PIN.",
+  "tutorPinSetupConfirmLabel": "Confirm PIN",
+  "tutorPinSetupEnterNewLabel": "Enter New PIN",
+  "tutorPinSetupMismatch": "PINs do not match. Please try again.",
+  "tutorPinSetupSaveError": "Unable to save PIN. Please try again.",
+  "tutorPinSetupLater": "Set up later",
+
+  "tutorPinResetAppBarTitle": "Reset Tutor PIN",
+  "tutorPinResetHeading": "Reset your Tutor PIN",
+  "tutorPinResetSendingTo": "We will send a reset link to:",
+  "tutorPinResetReturnHint": "After following the link, return here to create a new PIN.",
+  "tutorPinResetNoEmail": "No email address found for your account. Please sign in with a cloud account to use PIN reset.",
+  "tutorPinResetSendFailed": "Failed to send reset email. Please try again.",
+  "tutorPinResetFallbackEmail": "your account email",
+  "tutorPinResetSendButton": "Send reset email",
+  "tutorPinResetCheckEmailHeading": "Check your email",
+  "tutorPinResetCheckEmailBody": "We sent a reset link to {email}. Follow the link, then return here to set a new PIN.",
+  "@tutorPinResetCheckEmailBody": {
+    "placeholders": {
+      "email": { "type": "String" }
+    }
+  },
+  "tutorPinResetSetNew": "Set new PIN",
+
+  "settingsAppPermissions": "App Permissions",
+  "settingsAppPermissionsSubtitle": "Notifications and location access",
+  "settingsSendDiagnosticLogs": "Send Diagnostic Logs",
+  "settingsSendDiagnosticLogsSubtitle": "Stream last 10 min of activity to Firebase",
+  "settingsPronunciation": "Pronunciation",
+  "settingsPronunciationSubtitle": "Bereishis (Ashkenazi) or Bereshit (Sephardi)",
+  "settingsPronunciationAshkenazi": "Ashkenazi",
+  "settingsPronunciationSephardi": "Sephardi",
+  "settingsNikud": "Nikud",
+  "settingsNikudSubtitle": "Show or hide Hebrew vowel marks when learning.",
+  "settingsNikudWithout": "Without nikud",
+  "settingsNikudWith": "With nikud",
+
+  "deviceNotificationsTitle": "Device notifications",
+  "deviceNotificationsChecking": "Checking permission…",
+  "deviceNotificationsAllowed": "Notifications allowed on this device",
+  "deviceNotificationsBlocked": "Notifications blocked — tap to open Settings",
+  "deviceNotificationsDisableHint": "To disable notifications, go to Settings > Apps > Learning Tracker.",
+  "deviceNotificationsBlockedHint": "Notifications blocked. Enable them in Settings > Apps > Learning Tracker > Notifications.",
+
+  "notificationReminderTitle": "Learning Reminder",
+  "notificationReminderBody": "You have {taskCount, plural, =1{1 task} other{{taskCount} tasks}} across {curriculumCount, plural, =1{1 curriculum} other{{curriculumCount} curricula}} today",
+  "@notificationReminderBody": {
+    "placeholders": {
+      "taskCount": { "type": "int" },
+      "curriculumCount": { "type": "int" }
+    }
+  },
+  "notificationReminderGenericBody": "Time to learn! Open the app to see your tasks.",
+  "notificationStreakTitle": "Streak at Risk!",
+  "notificationStreakBody": "Your {currentStreak}-day streak is at risk!",
+  "@notificationStreakBody": {
+    "placeholders": {
+      "currentStreak": { "type": "int" }
+    }
+  }
 }

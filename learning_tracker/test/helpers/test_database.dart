@@ -57,6 +57,45 @@ Future<void> seedProfile(UserDatabase db) async {
       );
 }
 
+/// Seeds an account + learner profile with explicit [accountId] and
+/// [profileId] into [db].
+///
+/// Used by navigation/guard tests that hard-code `getSelectedProfileId()` /
+/// `getAccountId()` to a specific id — the ProfileGuard validates the selected
+/// id exists in the current DB (R1o-C2), so the seeded profile must carry the
+/// matching id.
+Future<void> seedProfileWithIds(
+  UserDatabase db, {
+  required int accountId,
+  required int profileId,
+  String mode = 'adult',
+}) async {
+  await db
+      .into(db.accounts)
+      .insert(
+        AccountsCompanion(
+          id: Value(accountId),
+          email: Value('test$accountId@example.com'),
+          tier: const Value('localBorn'),
+          displayName: const Value('Test User'),
+          createdAt: Value(DateTimeFactory.nowUtc()),
+          updatedAt: Value(DateTimeFactory.nowUtc()),
+        ),
+      );
+  await db
+      .into(db.learnerProfiles)
+      .insert(
+        LearnerProfilesCompanion(
+          id: Value(profileId),
+          accountId: Value(accountId),
+          displayName: const Value('Test User'),
+          mode: Value(mode),
+          createdAt: Value(DateTimeFactory.nowUtc()),
+          updatedAt: Value(DateTimeFactory.nowUtc()),
+        ),
+      );
+}
+
 /// Seeds a minimal account (no profile) into [db] and returns the account id.
 ///
 /// Use when tests need an account row for FK purposes but manage their own

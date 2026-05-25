@@ -38,20 +38,37 @@ class TutorNotificationGateway {
 
   // ── W6.25 notification entry points ────────────────────────────────────────
 
+  /// M1: build a deliverable recipient address.
+  ///
+  /// The tutor-side flows (decline / resign) only have the parent's UID on the
+  /// grant doc — the parent's email is not readable cross-uid client-side. When
+  /// no email is available we route by UID (`uid:{parentUid}`) so the
+  /// notification still identifies a real recipient and the server-side mail
+  /// pipeline (or the logging fallback) can resolve the address from the UID,
+  /// rather than dropping the notification on an empty string.
+  static String _recipient({required String email, required String uid}) {
+    if (email.trim().isNotEmpty) return email.trim();
+    if (uid.trim().isNotEmpty) return 'uid:${uid.trim()}';
+    return '';
+  }
+
   /// Notify the parent that a tutor declined their invite.
   ///
   /// Call this after [DeclineTutorInviteUseCase] succeeds.
   ///
-  /// [parentEmail] — the parent's email address (from Firebase Auth).
+  /// [parentEmail] — the parent's email address (empty when unavailable).
+  /// [parentUid]   — the parent's UID (from [TutorGrantDoc.parentUid]); used to
+  ///                 route the notification by UID when [parentEmail] is empty.
   /// [tutorEmail]  — the tutor who declined (from [TutorGrantDoc.tutorEmail]).
   /// [childName]   — display name of the child profile (for the email body).
   Future<void> notifyParentOfDecline({
     required String parentEmail,
     required String tutorEmail,
     required String childName,
+    String parentUid = '',
   }) => _email.send(
     TutorDeclinedEmail(
-      toAddress: parentEmail,
+      toAddress: _recipient(email: parentEmail, uid: parentUid),
       tutorEmail: tutorEmail,
       childName: childName,
     ),
@@ -61,7 +78,9 @@ class TutorNotificationGateway {
   ///
   /// Call this after [ResignTutorGrantUseCase] succeeds.
   ///
-  /// [parentEmail] — the parent's email address (from Firebase Auth).
+  /// [parentEmail] — the parent's email address (empty when unavailable).
+  /// [parentUid]   — the parent's UID (from [TutorGrantDoc.parentUid]); used to
+  ///                 route the notification by UID when [parentEmail] is empty.
   /// [tutorName]   — display name of the tutor (from Firebase Auth
   ///                 [User.displayName], falls back to [tutorEmail] if null).
   /// [childName]   — display name of the child profile.
@@ -69,9 +88,10 @@ class TutorNotificationGateway {
     required String parentEmail,
     required String tutorName,
     required String childName,
+    String parentUid = '',
   }) => _email.send(
     TutorResignedEmail(
-      toAddress: parentEmail,
+      toAddress: _recipient(email: parentEmail, uid: parentUid),
       tutorName: tutorName,
       childName: childName,
     ),

@@ -116,6 +116,9 @@ String? _channelToKind(String channel) => switch (channel) {
   'preferences/gamification_settings' => EntityKind.gamificationSettings,
   'preferences/ui_preferences' => EntityKind.uiPreferences,
   'tutor_grants' => EntityKind.tutorGrant,
+  // WS9 Wave-B (C#2) — points spend economy.
+  'points_ledger' => EntityKind.pointsLedger,
+  'reward_redemptions' => EntityKind.rewardRedemption,
   _ => null,
 };
 

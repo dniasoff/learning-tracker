@@ -81,6 +81,8 @@ class TutorGrantDoc {
     this.declinedAt,
     this.revokedAt,
     this.expiresAt,
+    this.childName,
+    this.parentName,
   });
 
   /// Matches the Firestore document ID.
@@ -113,6 +115,16 @@ class TutorGrantDoc {
   final DateTime? expiresAt;
 
   final DateTime updatedAt;
+
+  /// M3: denormalised child display name, written onto the grant doc by the
+  /// `listTutorGrants` Cloud Function. The tutor cannot read the parent's
+  /// profile cross-uid, so this is the only source of a human child name.
+  /// Null when the server has not (yet) denormalised it.
+  final String? childName;
+
+  /// M3: denormalised parent display name (or account email), written onto the
+  /// grant doc by the server. Null when not available.
+  final String? parentName;
 
   /// Deterministic doc ID from the three key identifiers.
   ///
@@ -187,6 +199,8 @@ class TutorGrantDoc {
       revokedAt: parseTs(data['revoked_at']),
       expiresAt: parseTs(data['expires_at']),
       updatedAt: DateTime.parse(data['updated_at'] as String).toLocal(),
+      childName: data['child_name'] as String?,
+      parentName: data['parent_name'] as String?,
     );
   }
 

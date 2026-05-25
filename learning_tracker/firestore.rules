@@ -267,6 +267,26 @@ service cloud.firestore {
           allow delete: if false;
         }
 
+        // points_ledger — append-only points spend-economy ledger entries
+        // (WS9 Wave-B / C#2). Doc-id: ULID from the payload (idempotent
+        // retries). Create+update allowed (idempotent merge:true re-push of
+        // the same doc on outbox retry); never deleted.
+        match /points_ledger/{entryId} {
+          allow read: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
+          allow create, update: if isOwner(uid);
+          allow delete: if false;
+        }
+
+        // reward_redemptions — LWW redemption state-machine docs
+        // (WS9 Wave-B / C#2). Doc-id: ULID from the payload. pending_fulfilment
+        // → fulfilled / declined; the parent fulfils/declines so updates are
+        // permitted. Never deleted.
+        match /reward_redemptions/{redemptionId} {
+          allow read: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
+          allow create, update: if isOwner(uid);
+          allow delete: if false;
+        }
+
         // ── Snapshot collections ───────────────────────────────────────────
         // Hold current-state documents. Owner-gated reads/writes; deletes
         // denied except where the app explicitly removes an assignment.

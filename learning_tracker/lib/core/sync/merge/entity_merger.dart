@@ -32,6 +32,10 @@ class EntityKind {
   // Phase 1 — study-day config enrolment in the sync pipeline.
   static const studyDayConfig = 'study_day_config';
 
+  // WS9 Wave-B (C#2) — points spend economy.
+  static const pointsLedger = 'points_ledger';
+  static const rewardRedemption = 'reward_redemption';
+
   /// Deterministic enumeration order for tests and diagnostics.
   static const List<String> all = [
     completion,
@@ -50,6 +54,8 @@ class EntityKind {
     uiPreferences,
     tutorGrant,
     studyDayConfig,
+    pointsLedger,
+    rewardRedemption,
   ];
 }
 

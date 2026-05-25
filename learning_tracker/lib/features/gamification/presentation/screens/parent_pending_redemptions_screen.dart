@@ -17,6 +17,7 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/features/gamification/domain/reward_milestone_icons.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
@@ -25,10 +26,10 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 // riverpod_generator choking on the Drift-generated [RewardRedemption] type.
 final pendingRedemptionsProvider =
     FutureProvider.autoDispose<List<RewardRedemption>>((ref) async {
-  final db = ref.watch(userDatabaseProvider);
-  final profileId = ref.watch(activeProfileIdProvider);
-  return db.pointsBalanceDao.getPendingRedemptions(profileId);
-});
+      final db = ref.watch(userDatabaseProvider);
+      final profileId = ref.watch(activeProfileIdProvider);
+      return db.pointsBalanceDao.getPendingRedemptions(profileId);
+    });
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
 
@@ -91,6 +92,9 @@ class ParentPendingRedemptionsScreen extends ConsumerWidget {
     AppLocalizations l10n,
   ) async {
     final db = ref.read(userDatabaseProvider);
+    // WS9 Wave-B (C#2): ensure the points-sync sink is registered so the
+    // status change is pushed to the child's device.
+    ref.read(outboxSyncWriteFacadeProvider);
     await db.pointsBalanceDao.fulfilRedemption(redemption.id);
     ref.invalidate(pendingRedemptionsProvider);
     if (context.mounted) {
@@ -107,6 +111,9 @@ class ParentPendingRedemptionsScreen extends ConsumerWidget {
     AppLocalizations l10n,
   ) async {
     final db = ref.read(userDatabaseProvider);
+    // WS9 Wave-B (C#2): ensure the points-sync sink is registered so the
+    // decline + refund ledger entry are pushed to the child's device.
+    ref.read(outboxSyncWriteFacadeProvider);
     await db.pointsBalanceDao.declineRedemption(redemption.id);
     ref.invalidate(pendingRedemptionsProvider);
     if (context.mounted) {

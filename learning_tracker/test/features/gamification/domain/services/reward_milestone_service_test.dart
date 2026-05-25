@@ -771,7 +771,7 @@ void main() {
       expect(unlocks, isEmpty);
     });
 
-    test('unlocks a milestone when points cross the threshold', () async {
+    test('DEC-32: crossing a threshold is a no-op (ladder removed)', () async {
       final trackId = await insertTrackWithGoal();
       await service.upsertMilestone(
         trackId: trackId,
@@ -781,12 +781,12 @@ void main() {
       );
       await insertCompletion(trackId: trackId, points: 150);
 
+      // Rewards are priced spend-items now; no auto-unlock on threshold (R4o-C1).
       final unlocks = await service.evaluateUnlocksForTrack(trackId);
-      expect(unlocks, hasLength(1));
-      expect(unlocks.first.title, 'Bronze');
+      expect(unlocks, isEmpty);
     });
 
-    test('does not re-unlock already unlocked milestones', () async {
+    test('DEC-32: repeated evaluation stays a no-op', () async {
       final trackId = await insertTrackWithGoal();
       await service.upsertMilestone(
         trackId: trackId,
@@ -796,13 +796,8 @@ void main() {
       );
       await insertCompletion(trackId: trackId, points: 200);
 
-      // First evaluation unlocks it.
-      final first = await service.evaluateUnlocksForTrack(trackId);
-      expect(first, hasLength(1));
-
-      // Second evaluation should yield nothing new.
-      final second = await service.evaluateUnlocksForTrack(trackId);
-      expect(second, isEmpty);
+      expect(await service.evaluateUnlocksForTrack(trackId), isEmpty);
+      expect(await service.evaluateUnlocksForTrack(trackId), isEmpty);
     });
 
     test('does not unlock disabled milestones', () async {
@@ -842,7 +837,7 @@ void main() {
     });
 
     test(
-      'unlocks global milestone when balance crosses threshold (WS7.balance)',
+      'DEC-32: crossing the global threshold is a no-op (ladder removed)',
       () async {
         await service.upsertMilestone(
           trackId: RewardMilestone.kGlobalTrackSentinel,
@@ -851,13 +846,13 @@ void main() {
           milestoneId: 'g1',
         );
 
-        // WS7.balance: credit the stored balance directly (as
-        // PointsBalanceDao.creditCompletion would do on live completion).
+        // WS7.balance: credit the stored balance directly.
         await db.pointsBalanceDao.creditCompletion(profileId, 600);
 
+        // The auto-unlock ladder against the debitable balance was removed
+        // (R4o-C1); the reward is a priced spend-item, not an auto-unlock.
         final unlocks = await service.evaluateUnlocksForGlobal();
-        expect(unlocks, hasLength(1));
-        expect(unlocks.first.title, 'Global 500');
+        expect(unlocks, isEmpty);
       },
     );
 
@@ -892,33 +887,32 @@ void main() {
       expect(await service.getAllUnlocks(), isEmpty);
     });
 
-    test('returns unlocks sorted by unlockedAt descending', () async {
-      final trackId = await insertTrackWithGoal();
-      await service.upsertMilestone(
-        trackId: trackId,
-        title: 'A',
-        thresholdPoints: 50,
-        milestoneId: 'a1',
-      );
-      await service.upsertMilestone(
-        trackId: trackId,
-        title: 'B',
-        thresholdPoints: 100,
-        milestoneId: 'b1',
-      );
-      await insertCompletion(trackId: trackId, points: 200);
+    test(
+      'DEC-32: no unlocks are written by evaluation (ladder removed)',
+      () async {
+        final trackId = await insertTrackWithGoal();
+        await service.upsertMilestone(
+          trackId: trackId,
+          title: 'A',
+          thresholdPoints: 50,
+          milestoneId: 'a1',
+        );
+        await service.upsertMilestone(
+          trackId: trackId,
+          title: 'B',
+          thresholdPoints: 100,
+          milestoneId: 'b1',
+        );
+        await insertCompletion(trackId: trackId, points: 200);
 
-      await service.evaluateUnlocksForTrack(trackId);
+        await service.evaluateUnlocksForTrack(trackId);
 
-      final unlocks = await service.getAllUnlocks();
-      expect(unlocks, hasLength(2));
-      // Descending by unlockedAt — the last added should be first.
-      expect(
-        unlocks.first.unlockedAt.isAfter(unlocks.last.unlockedAt) ||
-            unlocks.first.unlockedAt == unlocks.last.unlockedAt,
-        isTrue,
-      );
-    });
+        // The auto-unlock ladder was removed; evaluation never writes unlock
+        // records. (getAllUnlocks's stored-record sort is covered by the
+        // extended test which stores records directly.)
+        expect(await service.getAllUnlocks(), isEmpty);
+      },
+    );
   });
 
   // ─── stripStockTemplateMilestones ────────────────────────────────────────
