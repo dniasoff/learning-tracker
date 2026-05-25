@@ -20,5 +20,11 @@
   },
   "devDependencies": {
     "typescript": "^6.0.2"
+  },
+  "overrides": {
+    "protobufjs": "^7.6.1",
+    "fast-xml-parser": "^5.8.0",
+    "qs": "^6.15.2",
+    "@tootallnate/once": "^2.0.1"
   }
 }
