@@ -5,6 +5,7 @@ import 'dart:math' as math;
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/database/daos/outbox_dao.dart';
 import 'package:learning_tracker/core/logging/log_events.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/sync/outbox/push_pipeline.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
@@ -275,6 +276,19 @@ class OutboxProcessor {
         failedError = e;
       }
 
+      // Surface push failures in Send Diagnostic Logs (previously a denied
+      // push was silent — only recorded in the on-device outbox.last_error,
+      // requiring a DB pull to diagnose).
+      if (failedError != null) {
+        AppLogger.instance.warning(
+          event: 'sync_outbox_push_failed',
+          fields: {
+            'kind': OutboxEntityKind.completion,
+            'error': failedError.toString(),
+          },
+        );
+      }
+
       final committedKeys = committed.toSet();
       for (final key in orderedKeys) {
         final ids = rowIdsByKey[key]!;
@@ -332,6 +346,15 @@ class OutboxProcessor {
           await _dao.deleteRow(row.id);
           successCount++;
         } catch (e) {
+          AppLogger.instance.warning(
+            event: 'sync_outbox_push_failed',
+            fields: {
+              'kind': kind,
+              'entity_key': row.entityKey,
+              'attempts': row.attempts + 1,
+              'error': e.toString(),
+            },
+          );
           await _dao.markAttempted(row.id, error: e.toString());
           // Continue draining other rows — don't abort the whole batch on
           // a single failure.

@@ -214,7 +214,11 @@ service cloud.firestore {
           // SECURITY: isOwner(uid) ensures request.auth.uid == uid.
           // A tutor (different uid) is rejected here. This is the primary
           // defence — no tutor can write a live completion from the client.
-          allow create: if isOwner(uid)
+          // create+update: the push uses set(merge:true) on a natural-key
+          // doc-id, so an outbox retry after a committed-but-unacked push is an
+          // UPDATE — allow the owner's idempotent re-push with the SAME
+          // validation. A tutor (different uid) is still rejected by isOwner.
+          allow create, update: if isOwner(uid)
             && (
               ('points' in request.resource.data)
                 ? (request.resource.data.points is number
@@ -226,7 +230,6 @@ service cloud.firestore {
               !('completed_at' in request.resource.data)
                 || request.resource.data.completed_at <= request.time
             );
-          allow update: if false;
           allow delete: if false;
         }
 
@@ -235,12 +238,14 @@ service cloud.firestore {
         // Replaces the previous streak/data snapshot document.
         match /streak_events/{streakEventId} {
           allow read: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
-          allow create: if isOwner(uid)
-            && (
-              !('created_at' in request.resource.data)
-                || request.resource.data.created_at <= request.time
-            );
-          allow update: if false;
+          // The push writes created_at as an ISO STRING (not a Firestore
+          // timestamp), so a `created_at <= request.time` guard compared a
+          // string to request.time and was rejected at the type level —
+          // permission-denied on every streak create. Match the other
+          // append-only event collections (learning_ledger / points_ledger):
+          // owner-only create, plus update for the idempotent merge:true
+          // re-push of the same ULID doc on outbox retry. Doc-id is the ULID.
+          allow create, update: if isOwner(uid);
           allow delete: if false;
         }
 
@@ -248,8 +253,11 @@ service cloud.firestore {
         // Doc-id: ULID from the payload (W3.36 — idempotent retries).
         match /learning_ledger/{entryId} {
           allow read: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
-          allow create: if isOwner(uid);
-          allow update: if false;
+          // ULID doc-id + set(merge:true): an outbox retry of an already-
+          // committed entry is an UPDATE, so `update: false` would strand it
+          // (permission-denied). Allow the owner's idempotent re-push, matching
+          // points_ledger. Append-only is enforced by the deterministic doc-id.
+          allow create, update: if isOwner(uid);
           allow delete: if false;
         }
 
