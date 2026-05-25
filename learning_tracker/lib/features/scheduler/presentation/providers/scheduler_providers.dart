@@ -591,7 +591,20 @@ Future<List<DailyTask>> _buildProjectionTasks({
               // treated as "after" same-day schedule entries (00:00 UTC), and
               // those entries get silently amnestied even though the user
               // still owes that day's work.
-              final progAmnestyCutoff = _amnestyDayCutoffUtc(progLastReorderAt);
+              final rawAmnestyCutoff = _amnestyDayCutoffUtc(progLastReorderAt);
+              // Back-date fix: a freshly-enrolled program track has
+              // lastReorderAt == creation day (today) while its anchor
+              // (trackingStartDate) is in the past. The raw cutoff would then
+              // amnesty the ENTIRE intended back-date window — every
+              // back-dated daf scheduled before today gets silently stripped,
+              // so a track started "4 days behind" shows no overdue. Programs
+              // are calendar-anchored (never user-reordered), so clamp the
+              // cutoff to the anchor: overdue on/after trackingStartDate is
+              // never amnestied, while a genuine re-anchor (anchor == today)
+              // still yields no spurious overdue.
+              final progAmnestyCutoff = rawAmnestyCutoff.isAfter(anchor)
+                  ? anchor
+                  : rawAmnestyCutoff;
               final progScheduleIndex = <String, DateTime>{
                 for (final unit in schedule) unit.sefariaRef: unit.date,
               };

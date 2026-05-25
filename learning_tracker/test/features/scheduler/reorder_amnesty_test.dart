@@ -245,6 +245,69 @@ void main() {
       },
     );
 
+    test(
+      'program back-date: lastReorderAt=today must NOT amnesty the back-date '
+      'window (cutoff clamped to anchor)',
+      () {
+        // Field repro: a program track added "4 days behind" has
+        // tracking_start_date = today-4 but lastReorderAt = creation day
+        // (today). The naive amnesty cutoff (= lastReorderAt day = today)
+        // strips every back-dated daf (scheduled today-4..today-1) → no
+        // overdue shows. The fix clamps the program amnesty cutoff to the
+        // anchor so the intended back-date window survives.
+        final today = DateTime.utc(2026, 5, 25);
+        final anchor = today.subtract(const Duration(days: 4)); // 2026-05-21
+        final refs = ['D21', 'D22', 'D23', 'D24', 'D25'];
+        final schedule = _buildSchedule(anchor: anchor, orderedRefs: refs);
+
+        final projection = project(
+          schedule: schedule,
+          completions: const {},
+          today: today,
+        );
+        expect(projection.overdue, containsAll(['D21', 'D22', 'D23', 'D24']));
+        expect(projection.dueToday, contains('D25'));
+
+        // Freshly-created track: lastReorderAt == creation day (today).
+        final lastReorderAt = today;
+        DateTime dayCutoff(DateTime d) {
+          final l = d.toLocal();
+          return DateTime.utc(l.year, l.month, l.day);
+        }
+
+        final rawCutoff = dayCutoff(lastReorderAt);
+        // The fix: clamp the program cutoff to the anchor.
+        final clampedCutoff = rawCutoff.isAfter(anchor) ? anchor : rawCutoff;
+
+        final scheduleIndex = <String, DateTime>{
+          for (final u in schedule) u.sefariaRef: u.date,
+        };
+        final amnestied = projection.overdue.where((ref) {
+          final sd = scheduleIndex[ref];
+          return sd != null && sd.isBefore(clampedCutoff);
+        }).toSet();
+        expect(
+          amnestied,
+          isEmpty,
+          reason:
+              'Back-dated program overdue must survive: clamping the amnesty '
+              'cutoff to the anchor means nothing in [anchor, today] is '
+              'stripped.',
+        );
+
+        // Contrast: the UNCLAMPED cutoff (the pre-fix bug) strips all 4.
+        final buggyAmnestied = projection.overdue.where((ref) {
+          final sd = scheduleIndex[ref];
+          return sd != null && sd.isBefore(rawCutoff);
+        }).toSet();
+        expect(
+          buggyAmnestied,
+          equals({'D21', 'D22', 'D23', 'D24'}),
+          reason: 'Documents the pre-fix behaviour the clamp prevents.',
+        );
+      },
+    );
+
     test('saveOrder stamps lastReorderAt on the active track', () async {
       // Arrange: activate a track for profile 1
       final activatedAt = DateTime.utc(2026, 1, 1);
