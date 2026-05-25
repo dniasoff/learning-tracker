@@ -255,6 +255,73 @@ void main() {
       expect(localRow!.dayType, 'review');
     });
 
+    test(
+      'remote row whose track is absent locally is skipped (no FK throw)',
+      () async {
+        // trackId 999999 does not exist in curriculum_tracks. Inserting it
+        // would throw a FK-constraint violation that fails the whole channel
+        // merge; the merger must skip it instead.
+        final merger = StudyDayConfigMerger(db);
+        await merger.merge(
+          profileId: profileId,
+          rows: [
+            {
+              'profile_id': profileId,
+              'curriculum_id': 'mishnayos',
+              'track_id': 999999,
+              'day_of_week': 3,
+              'day_type': 'review',
+              'updated_at': '2026-05-21T10:00:00.000Z',
+            },
+          ],
+        );
+
+        final rows =
+            await (db.select(db.studyDayConfigs)
+                  ..where((t) => t.trackId.equals(999999)))
+                .get();
+        expect(rows, isEmpty, reason: 'row with missing track FK is skipped');
+      },
+    );
+
+    test(
+      'a valid row still merges when batched with a missing-track row',
+      () async {
+        final merger = StudyDayConfigMerger(db);
+        await merger.merge(
+          profileId: profileId,
+          rows: [
+            {
+              'profile_id': profileId,
+              'curriculum_id': 'mishnayos',
+              'track_id': 999999, // missing track — must be skipped
+              'day_of_week': 3,
+              'day_type': 'review',
+              'updated_at': '2026-05-21T10:00:00.000Z',
+            },
+            {
+              'profile_id': profileId,
+              'curriculum_id': 'mishnayos',
+              'track_id': trackId, // valid — must still merge
+              'day_of_week': 5,
+              'day_type': 'review',
+              'updated_at': '2026-05-21T10:00:00.000Z',
+            },
+          ],
+        );
+
+        final valid =
+            await (db.select(db.studyDayConfigs)
+                  ..where((t) => t.dayOfWeek.equals(5)))
+                .getSingleOrNull();
+        expect(
+          valid,
+          isNotNull,
+          reason: 'one bad row must not block the rest of the batch',
+        );
+      },
+    );
+
     test('malformed remote row is silently skipped', () async {
       final merger = StudyDayConfigMerger(db);
       await merger.merge(

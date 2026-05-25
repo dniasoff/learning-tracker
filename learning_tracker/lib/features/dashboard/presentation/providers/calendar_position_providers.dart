@@ -20,6 +20,13 @@ Future<CalendarPosition> programCalendarPosition(Ref ref, int trackId) async {
   final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   final calendarService = ref.watch(calendarProgramServiceProvider);
+  // All ref reads MUST happen synchronously before the first await: this
+  // provider is rebuilt rapidly on the dashboard, and a `ref.read`/`ref.watch`
+  // after an async gap throws "Cannot use Ref after dispose" when the previous
+  // build is still pending. Capture every dependency up-front.
+  final programRepository = ref.read(learningProgramRepositoryProvider);
+  final clockUtc = ref.watch(clockProvider);
+  final stageRepository = ref.watch(globalStageRepositoryProvider);
 
   // 1. Look up the track
   final track = await (db.select(
@@ -34,9 +41,7 @@ Future<CalendarPosition> programCalendarPosition(Ref ref, int trackId) async {
     throw StateError('Track $trackId has no program enrollment');
   }
 
-  final program = ref
-      .read(learningProgramRepositoryProvider)
-      .getProgramById(enrollment.programId);
+  final program = programRepository.getProgramById(enrollment.programId);
   if (program == null) {
     throw StateError('Program ${enrollment.programId} not found');
   }
@@ -58,7 +63,6 @@ Future<CalendarPosition> programCalendarPosition(Ref ref, int trackId) async {
 
   // 3–4. Use the same local calendar day as the scheduler / add-track flow
   // (clock is UTC per P5; calendar_cycles keys are local YYYY-MM-DD).
-  final clockUtc = ref.watch(clockProvider);
   final todayLocal = DateUtils.extractLocalDate(clockUtc);
   final startLocal = enrollment.trackingStartDate != null
       ? (enrollment.trackingStartDate!.isBefore(DateTime.utc(2020, 1, 1))
@@ -85,7 +89,6 @@ Future<CalendarPosition> programCalendarPosition(Ref ref, int trackId) async {
   final totalDays = cycleEntries.isNotEmpty ? cycleEntries.length : 1;
 
   // 5. Count unique first-stage completions (learn-stage progress).
-  final stageRepository = ref.watch(globalStageRepositoryProvider);
   final stages = await stageRepository.getStagesByTrack(trackId);
   final firstStage = stages.isEmpty
       ? null

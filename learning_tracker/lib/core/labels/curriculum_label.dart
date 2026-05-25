@@ -369,6 +369,16 @@ enum CurriculumLabelMode { breadcrumb, leaf, parent }
 String _curriculumLabel(CurriculumId curriculum, bool useHebrew) =>
     useHebrew ? curriculum.displayNameHe : curriculum.displayNameEn;
 
+/// Ref-free variant: resolves the curriculum label from an already-read
+/// `useHebrewTerms` flag. Use inside async provider bodies where the
+/// Hebrew-terms value must be captured BEFORE an `await` (calling
+/// [curriculumLabelTextFromRef] after an async gap risks "Cannot use Ref
+/// after dispose"). Pass `ref.watch(useHebrewTermsProvider)` captured up-front.
+String curriculumLabelFor(
+  CurriculumId curriculum, {
+  required bool useHebrewTerms,
+}) => _curriculumLabel(curriculum, useHebrewTerms);
+
 /// Pure-string variant of [CurriculumLabel.curriculum] for AppBar titles,
 /// dialog messages, sort keys, semantics labels — places that need a `String`
 /// rather than a widget. Watches [useHebrewTermsProvider]. Use this from

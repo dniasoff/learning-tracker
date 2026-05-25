@@ -67,17 +67,9 @@ class OnboardingIntentStep extends StatelessWidget {
               onTap: () => onChosen(OnboardingIntent.trackMyLearning),
             ),
             const SizedBox(height: 14),
-            _IntentCard(
-              icon: Icons.people_alt_rounded,
-              iconBgColor: const Color(0xFFE8E0FF),
-              iconColor: const Color(0xFF6B3FA0),
-              title: 'Join to tutor someone',
-              subtitle:
-                  'A parent will send you an invite link to access their '
-                  "child's learning profile.",
-              onTap: () => onChosen(OnboardingIntent.joiningToTutor),
-            ),
-            const SizedBox(height: 14),
+            // "Join to tutor someone" intentionally omitted here — tutor access
+            // is reached via an invite link / the empty-login tutor entry, not
+            // the first-run intent chooser.
             _IntentCard(
               icon: Icons.skip_next_rounded,
               iconBgColor: const Color(0xFFEAF5EA),

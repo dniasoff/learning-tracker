@@ -17,6 +17,7 @@ import 'package:learning_tracker/core/enums/curriculum_overlap_registry.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
@@ -292,6 +293,12 @@ final trackDualProgressMetricsProvider = FutureProvider.autoDispose
 
       final db = ref.watch(userDatabaseProvider);
       final repo = ref.watch(contentRepositoryProvider);
+      // Capture every ref-backed dependency synchronously, before any await:
+      // this autoDispose provider is rebuilt rapidly on the dashboard and a
+      // `ref.read`/`ref.watch` after an async gap throws "Cannot use Ref after
+      // dispose", failing the whole metric list.
+      final progressSvc = ref.read(trackProgressServiceProvider);
+      final useHebrewTerms = ref.watch(useHebrewTermsProvider);
       final tracks = await db.trackDao.getAllForProfile(profileId);
 
       final metrics = <TrackDualProgressMetric>[];
@@ -322,7 +329,6 @@ final trackDualProgressMetricsProvider = FutureProvider.autoDispose
         // since: track.activatedAt preserves the time-gated "this cycle" semantics.
         // requireAllStages: false matches the old distinct-refs-only count.
         // trackAchievement excludes lifetimeOnly rows (correct per B1 policy).
-        final progressSvc = ref.read(trackProgressServiceProvider);
         final currentCyclePct = await progressSvc.completionPercent(
           trackId: track.id,
           profileId: profileId,
@@ -368,9 +374,9 @@ final trackDualProgressMetricsProvider = FutureProvider.autoDispose
           }
         }
 
-        final localizedCurriculum = curriculumLabelTextFromRef(
-          ref,
-          curriculum: curriculum,
+        final localizedCurriculum = curriculumLabelFor(
+          curriculum,
+          useHebrewTerms: useHebrewTerms,
         );
         metrics.add(
           TrackDualProgressMetric(

@@ -328,6 +328,16 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
         exception: e,
         stackTrace: st,
       );
+    } finally {
+      // Recompute the sync-status badge after every drain so the pending count
+      // reflects the now-current outbox depth. Without this, a periodic drain
+      // empties the outbox but leaves the status stuck at its last value (e.g.
+      // "1 change pending") until an unrelated connectivity change forces a
+      // recompute. A failed push (e.g. Firestore unreachable while the
+      // connectivity checker reports online) likewise resolves to a truthful
+      // pending/offline state instead of a perpetual "syncing". No-op during an
+      // active pull (the pull owns the syncing→synced window).
+      await _recomputeOutboxStatus();
     }
   }
 
