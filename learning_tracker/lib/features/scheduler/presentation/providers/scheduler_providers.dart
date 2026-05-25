@@ -1145,6 +1145,25 @@ Future<List<DailyTask>> _applyProgramCalendarOverrides({
 
     if (entries.isEmpty) continue;
 
+    // Diagnostic (back-date overdue investigation): surface the persisted
+    // anchor + the resolved schedule so a "starting N days behind is ignored"
+    // report is answerable from Send Diagnostic Logs. entries.length-1 is the
+    // expected overdue count; if it's 0 the anchor wasn't back-dated (offset
+    // not persisted) or the calendar range returned only today.
+    AppLogger.instance.info(
+      event: 'program_calendar_override',
+      fields: {
+        'curriculum': curriculum.storageKey,
+        'trackId': trackId,
+        'tracking_start_date':
+            enrollment.trackingStartDate?.toIso8601String() ?? 'null',
+        'tracking_start_ref': enrollment.trackingStartRef ?? 'null',
+        'configured_start': configuredStartDate.toIso8601String(),
+        'today': todayDate.toIso8601String(),
+        'entries': entries.length,
+      },
+    );
+
     for (var i = 0; i < entries.length; i++) {
       final entry = entries[i];
       final refsForEntry = resolvedOrFallbackProgramRefs(

@@ -130,7 +130,10 @@ class ActiveTrackCard extends ConsumerWidget {
       }
     }
     final todayUnitRef = todayProgramTask?.contentItemSefariaRef;
-    final todayUnitValue = (todayUnitRef == null || todayUnitRef == focusRef)
+    // Always surface today's unit when the track is a program — even when
+    // caught up (focus pill == today). The user explicitly wants today's
+    // daf/mishnayos labelled and visible, not hidden behind "NEXT TASK".
+    final todayUnitValue = todayUnitRef == null
         ? null
         : _trimSederFromBreadcrumb(
             ref
