@@ -55,6 +55,20 @@ class _TrackManagementHubScreenState
         elevation: 0,
         centerTitle: false,
         automaticallyImplyLeading: false,
+        // Explicit back control: the hub previously had no leading affordance,
+        // stranding the user in track setup with no way back to learning.
+        // Pop to the caller when possible; otherwise go to the Learning view.
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          tooltip: MaterialLocalizations.of(context).backButtonTooltip,
+          onPressed: () {
+            if (context.router.canPop()) {
+              context.router.maybePop();
+            } else {
+              context.router.navigate(const LearningRoute());
+            }
+          },
+        ),
         title: Text(
           AppLocalizations.of(context)!.manageTracks,
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(

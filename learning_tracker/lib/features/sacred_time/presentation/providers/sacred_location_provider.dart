@@ -1,3 +1,4 @@
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/sacred_time/data/services/location_service.dart';
 import 'package:learning_tracker/features/sacred_time/data/services/sacred_time_preferences.dart';
@@ -30,17 +31,40 @@ class SacredLocationNotifier extends _$SacredLocationNotifier {
   /// Whether the user can flip in-Israel — false until we have any location at
   /// all, since auto-detect derives the default from country.
   Future<LocationFetchResult> detect() async {
+    // Instrumented so a "couldn't get location" report is diagnosable from
+    // Send Diagnostic Logs: the outcome (service off / permission / timeout /
+    // success) is otherwise only shown as a transient snackbar and never logged.
+    AppLogger.instance.info(event: 'sacred_location_detect_started');
     final result = await ref.read(locationServiceProvider).detectCurrent();
-    if (result is LocationFetchSuccess) {
-      final prefs = await SharedPreferences.getInstance();
-      await SacredTimePreferences.writeLocation(prefs, result.location);
-      await SacredTimePreferences.writeInIsrael(
-        prefs,
-        result.location.countryCode == 'IL',
-      );
-      state = result.location;
-      ref.invalidate(inIsraelProvider);
-      await _pushSnapshot();
+    switch (result) {
+      case LocationFetchSuccess():
+        AppLogger.instance.info(
+          event: 'sacred_location_detect_success',
+          fields: {'country': result.location.countryCode ?? 'unknown'},
+        );
+        final prefs = await SharedPreferences.getInstance();
+        await SacredTimePreferences.writeLocation(prefs, result.location);
+        await SacredTimePreferences.writeInIsrael(
+          prefs,
+          result.location.countryCode == 'IL',
+        );
+        state = result.location;
+        ref.invalidate(inIsraelProvider);
+        await _pushSnapshot();
+      case LocationFetchServiceDisabled():
+        AppLogger.instance.warning(
+          event: 'sacred_location_detect_service_disabled',
+        );
+      case LocationFetchPermissionDenied():
+        AppLogger.instance.warning(
+          event: 'sacred_location_detect_permission_denied',
+          fields: {'permanently': result.permanentlyDenied},
+        );
+      case LocationFetchError():
+        AppLogger.instance.warning(
+          event: 'sacred_location_detect_error',
+          fields: {'message': result.message},
+        );
     }
     return result;
   }

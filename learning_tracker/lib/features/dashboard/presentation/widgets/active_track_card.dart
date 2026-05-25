@@ -115,6 +115,30 @@ class ActiveTrackCard extends ConsumerWidget {
             ref.watch(renderedDisplayForRefProvider(focusRef)).asData?.value ??
                 focusRef,
           );
+    // #6 — surface today's program unit distinctly. The focus pill above shows
+    // the oldest OVERDUE unit when the user is behind, so today's daf/mishnayos
+    // would otherwise be hidden. This dedicated "Today" pill always exposes it,
+    // rendered through the same Hebrew-terms-aware renderer. Suppressed when it
+    // would merely duplicate the focus pill (i.e. caught up → focus == today).
+    DailyTask? todayProgramTask;
+    if (hasProgramEnrollment) {
+      for (final t in curriculumTasks) {
+        if (t.priority == DailyTaskPriority.todayProgram) {
+          todayProgramTask = t;
+          break;
+        }
+      }
+    }
+    final todayUnitRef = todayProgramTask?.contentItemSefariaRef;
+    final todayUnitValue = (todayUnitRef == null || todayUnitRef == focusRef)
+        ? null
+        : _trimSederFromBreadcrumb(
+            ref
+                    .watch(renderedDisplayForRefProvider(todayUnitRef))
+                    .asData
+                    ?.value ??
+                todayUnitRef,
+          );
     return Card(
       elevation: 5,
       shadowColor: Colors.black26,
@@ -193,6 +217,10 @@ class ActiveTrackCard extends ConsumerWidget {
               ),
               const SizedBox(height: 10),
               ActiveTrackFocusPill(label: focusLabel, value: focusValue),
+              if (todayUnitValue != null) ...[
+                const SizedBox(height: 8),
+                ActiveTrackFocusPill(label: l10n.today, value: todayUnitValue),
+              ],
               const SizedBox(height: 10),
               // Gate the chazara stat column on per-track stage count (Rule 8).
               // trackHasChazaraProvider returns false while loading, which
