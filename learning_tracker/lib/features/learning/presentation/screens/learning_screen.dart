@@ -337,12 +337,20 @@ class _LearnTaskCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final curriculumColor = AppTheme.getCurriculumColor(task.curriculumId);
-    final taskTitle =
+    final rendered =
         ref
             .watch(renderedDisplayForRefProvider(task.contentItemSefariaRef))
             .asData
             ?.value ??
         task.contentItemSefariaRef.replaceAll('_', ' ');
+    // Drop the leading seder segment (e.g. "קודשים › ") so the title doesn't
+    // overflow — the curriculum chip below already shows that context. Keeps
+    // the rest of the breadcrumb (e.g. "חולין › דף כה › עמוד א").
+    const breadcrumbSep = ' › ';
+    final sepIdx = rendered.indexOf(breadcrumbSep);
+    final taskTitle = sepIdx == -1
+        ? rendered
+        : rendered.substring(sepIdx + breadcrumbSep.length);
     final isOverdue = task.isOverdue;
     final stageLabel = domainTermLabels(
       ref,
@@ -436,7 +444,7 @@ class _LearnTaskCard extends ConsumerWidget {
                     const SizedBox(height: 4),
                     Text(
                       taskTitle,
-                      maxLines: 1,
+                      maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
