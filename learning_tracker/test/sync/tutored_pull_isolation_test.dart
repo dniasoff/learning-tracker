@@ -12,8 +12,11 @@ import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
+import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
+import 'package:learning_tracker/core/sync/outbox/push_pipeline.dart';
 import 'package:learning_tracker/core/sync/pull_pipeline.dart';
 import 'package:learning_tracker/core/sync/tutored_pull_service.dart';
+import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 
 import '../helpers/test_database.dart';
@@ -38,7 +41,10 @@ class _RecordingDispatcher implements MergeDispatcher {
   }
 }
 
-/// Gateway that returns one completion row for the child's namespace.
+/// Gateway that returns one page per collection and then signals empty (done).
+///
+/// Respects [cursor]: once a cursor is set (i.e. second call for the same
+/// collection) it returns an empty page so the pagination loop terminates.
 class _ChildDataGateway implements FirestoreGateway {
   /// Tracks which (parentUid, remoteProfileId, collection) combos were fetched.
   final childFetched = <String>[];
@@ -52,6 +58,8 @@ class _ChildDataGateway implements FirestoreGateway {
     Map<String, dynamic>? cursor,
   }) async {
     childFetched.add('$parentUid/$remoteProfileId/$collection');
+    // Second call (cursor set) — signal end of collection so the loop exits.
+    if (cursor != null) return const FirestorePage(rows: []);
     if (collection == 'completions') {
       return FirestorePage(rows: [
         {
@@ -61,6 +69,15 @@ class _ChildDataGateway implements FirestoreGateway {
           'track_type': 'daily',
           'curriculum_id': 'test',
           'completed_at': DateTimeFactory.nowUtc().toIso8601String(),
+          'updated_at': DateTimeFactory.nowUtc().toIso8601String(),
+        },
+      ]);
+    }
+    if (collection == 'settings') {
+      return FirestorePage(rows: [
+        {
+          'firestore_id': 'settings_1',
+          'curriculum_id': 'test',
           'updated_at': DateTimeFactory.nowUtc().toIso8601String(),
         },
       ]);
@@ -232,6 +249,50 @@ class _ChildDataGateway implements FirestoreGateway {
   Future<void> pushRewardRedemption({required int profileId, required Map<String, dynamic> data}) async {}
 }
 
+/// No-op [PushPipeline] used in drain guard test — must never be called.
+class _NoPushPipeline implements PushPipeline {
+  @override
+  Future<void> pushCompletion({required int profileId, required String entityKey, required Map<String, dynamic> payload}) async => throw StateError('push must not be called for tutored profile');
+  @override
+  Future<List<String>> pushCompletionsBatch({required int profileId, required List<({String entityKey, Map<String, dynamic> payload})> entries}) async => throw StateError('push must not be called for tutored profile');
+  @override
+  Future<void> pushStreak({required int profileId, required String entityKey, required Map<String, dynamic> payload}) async => throw StateError('push must not be called');
+  @override
+  Future<void> pushSettings({required int profileId, required String entityKey, required Map<String, dynamic> payload}) async => throw StateError('push must not be called');
+  @override
+  Future<void> pushTrack({required int profileId, required String entityKey, required Map<String, dynamic> payload}) async => throw StateError('push must not be called');
+  @override
+  Future<void> pushLearningOrder({required int profileId, required String entityKey, required Map<String, dynamic> payload}) async => throw StateError('push must not be called');
+  @override
+  Future<void> pushBookmark({required int profileId, required String entityKey, required Map<String, dynamic> payload}) async => throw StateError('push must not be called');
+  @override
+  Future<void> pushStageDefinition({required int profileId, required String entityKey, required Map<String, dynamic> payload}) async => throw StateError('push must not be called');
+  @override
+  Future<void> pushGoal({required int profileId, required String entityKey, required Map<String, dynamic> payload}) async => throw StateError('push must not be called');
+  @override
+  Future<void> deleteGoal({required int profileId, required String entityKey, required Map<String, dynamic> payload}) async => throw StateError('push must not be called');
+  @override
+  Future<void> pushLearnerProfile({required int profileId, required String entityKey, required Map<String, dynamic> payload}) async => throw StateError('push must not be called');
+  @override
+  Future<void> deleteLearnerProfile({required int profileId, required String entityKey, required Map<String, dynamic> payload}) async => throw StateError('push must not be called');
+  @override
+  Future<void> pushGamificationSettings({required int profileId, required String entityKey, required Map<String, dynamic> payload}) async => throw StateError('push must not be called');
+  @override
+  Future<void> pushNotificationSettings({required int profileId, required String entityKey, required Map<String, dynamic> payload}) async => throw StateError('push must not be called');
+  @override
+  Future<void> pushUiPreferences({required int profileId, required String entityKey, required Map<String, dynamic> payload}) async => throw StateError('push must not be called');
+  @override
+  Future<void> pushProfileProgram({required int profileId, required String entityKey, required Map<String, dynamic> payload}) async => throw StateError('push must not be called');
+  @override
+  Future<void> pushLearningLedgerEntry({required int profileId, required String entityKey, required Map<String, dynamic> payload}) async => throw StateError('push must not be called');
+  @override
+  Future<void> pushStudyDayConfig({required int profileId, required String entityKey, required Map<String, dynamic> payload}) async => throw StateError('push must not be called');
+  @override
+  Future<void> pushPointsLedgerEntry({required int profileId, required String entityKey, required Map<String, dynamic> payload}) async => throw StateError('push must not be called');
+  @override
+  Future<void> pushRewardRedemption({required int profileId, required String entityKey, required Map<String, dynamic> payload}) async => throw StateError('push must not be called');
+}
+
 // ---------------------------------------------------------------------------
 // Helpers
 // ---------------------------------------------------------------------------
@@ -315,11 +376,29 @@ void main() {
           );
         }
 
-        // Verify: parent-namespace was queried (child path was used).
+        // Verify: parent-namespace was queried for both completions and settings.
         expect(
           gateway.childFetched,
           contains('parent-uid-123/remote-child-42/completions'),
         );
+        expect(
+          gateway.childFetched,
+          contains('parent-uid-123/remote-child-42/settings'),
+        );
+
+        // Verify: settings rows were dispatched under the synthetic local id.
+        final settingsDispatch = dispatcher.dispatched.where(
+          (d) => d.kind == 'settings',
+        );
+        expect(settingsDispatch, isNotEmpty,
+            reason: 'settings subcollection must be fetched and dispatched');
+        for (final d in settingsDispatch) {
+          expect(
+            d.profileId,
+            localId,
+            reason: 'Settings merger must receive synthetic local id',
+          );
+        }
       },
     );
 
@@ -417,8 +496,7 @@ void main() {
         );
 
         // The isProfileTutored guard must return true for this profile.
-        final guardFires =
-            await db.profileDao.isProfileTutored(tutoredId);
+        final guardFires = await db.profileDao.isProfileTutored(tutoredId);
         expect(guardFires, isTrue,
             reason: 'Guard must block drain for tutored profiles');
 
@@ -428,6 +506,22 @@ void main() {
         final ownGuard = await db.profileDao.isProfileTutored(ownProfile.id);
         expect(ownGuard, isFalse,
             reason: 'Guard must allow drain for own profiles');
+
+        // Calling drain() with the guard wired must return 0 (skipped) and
+        // must NOT call any push method on the pipeline — _NoPushPipeline
+        // throws StateError if any push is attempted.
+        final processor = OutboxProcessor(
+          outboxDao: db.outboxDao,
+          pipeline: _NoPushPipeline(),
+          clock: FakeLocalDayClock(DateTime.now()),
+          isTutoredProfile: db.profileDao.isProfileTutored,
+        );
+        final drained = await processor.drain(tutoredId);
+        expect(drained, 0, reason: 'drain must skip tutored profiles');
+
+        // Outbox row remains (the guard short-circuits before consuming rows).
+        final remaining = await db.outboxDao.depth(tutoredId);
+        expect(remaining, 1, reason: 'outbox row must not be consumed');
       },
     );
 

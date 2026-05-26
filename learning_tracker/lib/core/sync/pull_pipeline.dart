@@ -250,6 +250,7 @@ class PullPipeline {
     final collections = <(String collection, String kind)>[
       ('completions', EntityKind.completion),
       ('bookmarks', EntityKind.bookmark),
+      ('settings', EntityKind.settings),
       ('curriculum_tracks', EntityKind.trackConfig),
       ('goals', EntityKind.goal),
       ('learning_ledger', EntityKind.learningLedger),
