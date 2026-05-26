@@ -17,6 +17,7 @@ import 'package:learning_tracker/core/sync/firestore_gateway_impl.dart';
 import 'package:learning_tracker/core/sync/merge/merge_router.dart';
 import 'package:learning_tracker/core/sync/providers/firestore_instance_provider.dart';
 import 'package:learning_tracker/core/sync/providers/merge_router_provider.dart';
+import 'package:learning_tracker/core/sync/tutored_mirror_wipe_service.dart';
 import 'package:learning_tracker/core/sync/tutored_pull_service.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
@@ -67,6 +68,7 @@ TutoredPullService _build({
   required UserDatabase database,
   required MergeRouter mergeRouter,
   required String parentUid,
+  TutoredMirrorWipeService? wipeService,
 }) {
   if (!authState.isCloudBorn) {
     throw StateError(
@@ -85,5 +87,34 @@ TutoredPullService _build({
     gateway: parentGateway,
     dispatcher: mergeRouter,
     profileDao: database.profileDao,
+    wipeService: wipeService,
+  );
+}
+
+/// Build a [TutoredMirrorWipeService] for the current account.
+///
+/// [onWipe] is called after each mirror deletion (per grantId) — inject a
+/// callback that clears `resolvedTutoredLocalProfileIdProvider` and calls
+/// `ActiveTutoredProfileSelection.exit()` when the wiped grant is active.
+TutoredMirrorWipeService buildTutoredMirrorWipeService({
+  required Ref ref,
+  void Function(String grantId)? onWipe,
+}) {
+  final db = ref.read(userDatabaseProvider);
+  return TutoredMirrorWipeService(
+    profileDao: db.profileDao,
+    onWipe: onWipe,
+  );
+}
+
+/// Variant that accepts a [WidgetRef].
+TutoredMirrorWipeService buildTutoredMirrorWipeServiceFromWidget({
+  required WidgetRef ref,
+  void Function(String grantId)? onWipe,
+}) {
+  final db = ref.read(userDatabaseProvider);
+  return TutoredMirrorWipeService(
+    profileDao: db.profileDao,
+    onWipe: onWipe,
   );
 }

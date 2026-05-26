@@ -10,6 +10,7 @@ import 'package:learning_tracker/core/navigation/router_provider.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/network_providers.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
+import 'package:learning_tracker/core/sync/tutored_mirror_wipe_service.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
@@ -18,7 +19,8 @@ import 'package:learning_tracker/features/account/domain/services/session_persis
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart'
+    show currentAccountIdProvider, selectedProfileIdProvider;
 import 'package:learning_tracker/features/settings/presentation/providers/account_management_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/delete_account_dialog.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/reauthenticate_dialog.dart';
@@ -152,6 +154,14 @@ Future<void> showSignOutConfirmation(
   if (confirmed != true || !context.mounted) return;
 
   try {
+    // T5.lifecycle — wipe tutored mirrors before clearing auth state so we
+    // still have the accountId and the DB handle.
+    final accountId = ref.read(currentAccountIdProvider);
+    final db = ref.read(userDatabaseProvider);
+    await TutoredMirrorWipeService(
+      profileDao: db.profileDao,
+    ).wipeAllMirrors(accountId);
+
     final service = ref.read(accountManagementServiceProvider);
     await service.signOut();
     // Hard sign-out: clear Firebase session so the user must re-authenticate

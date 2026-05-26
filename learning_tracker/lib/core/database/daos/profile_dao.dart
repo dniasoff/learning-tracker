@@ -150,4 +150,27 @@ class ProfileDao extends DatabaseAccessor<UserDatabase> with _$ProfileDaoMixin {
       ),
     );
   }
+
+  // ── Mirror wipe helpers (T5.lifecycle) ──────────────────────────────────
+
+  /// Delete the tutored-mirror profile row for [grantId].
+  ///
+  /// The FK `ON DELETE CASCADE` on every child table (completions,
+  /// streak_events, learning_ledger, bookmarks, goals, etc.) means a single
+  /// row delete here purges all mirrored data. Returns the number of rows
+  /// deleted (0 or 1).
+  Future<int> deleteTutoredMirrorByGrantId(String grantId) =>
+      (delete(learnerProfiles)
+            ..where((t) => t.isTutored.equals(true) & t.tutorGrantId.equals(grantId)))
+          .go();
+
+  /// Delete ALL tutored-mirror rows for the current account (used on sign-out).
+  ///
+  /// Returns the number of deleted rows (≥ 0).
+  Future<int> deleteAllTutoredMirrors(int accountId) =>
+      (delete(learnerProfiles)
+            ..where(
+              (t) => t.accountId.equals(accountId) & t.isTutored.equals(true),
+            ))
+          .go();
 }

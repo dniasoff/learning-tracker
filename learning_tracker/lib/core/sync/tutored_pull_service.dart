@@ -13,6 +13,7 @@ import 'package:learning_tracker/core/database/daos/profile_dao.dart';
 import 'package:learning_tracker/core/sync/exceptions/firestore_permission_denied_exception.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/sync/pull_pipeline.dart';
+import 'package:learning_tracker/core/sync/tutored_mirror_wipe_service.dart';
 
 /// Result of a tutored pull attempt.
 enum TutoredPullResult {
@@ -34,6 +35,10 @@ enum TutoredPullResult {
 /// parent's Firestore namespace.  The resulting rows are stored under the
 /// synthetic local id so the existing UI providers render the talmid unchanged.
 ///
+/// On [TutoredPullResult.permissionDenied] the grant has been revoked —
+/// [wipeService] (if supplied) is called to purge the stale mirror so it
+/// does not persist until next launch.
+///
 /// Intentionally thin — holds NO Riverpod state; callers supply the resolved
 /// gateway + dispatcher so tests can substitute fakes.
 class TutoredPullService {
@@ -41,13 +46,16 @@ class TutoredPullService {
     required FirestoreGateway gateway,
     required MergeDispatcher dispatcher,
     required ProfileDao profileDao,
+    TutoredMirrorWipeService? wipeService,
   }) : _gateway = gateway,
        _dispatcher = dispatcher,
-       _profileDao = profileDao;
+       _profileDao = profileDao,
+       _wipeService = wipeService;
 
   final FirestoreGateway _gateway;
   final MergeDispatcher _dispatcher;
   final ProfileDao _profileDao;
+  final TutoredMirrorWipeService? _wipeService;
 
   /// Upsert the synthetic local profile and pull all child collections.
   ///
@@ -89,6 +97,9 @@ class TutoredPullService {
         localProfileId: localId,
       );
     } on FirestorePermissionDeniedException {
+      // Grant was revoked — tutor_active_access deleted by Cloud Function.
+      // Purge the stale mirror so it does not persist until next launch.
+      await _wipeService?.wipeMirrorForGrant(grantId);
       return (
         localProfileId: localId,
         result: TutoredPullResult.permissionDenied,
