@@ -40,7 +40,10 @@ Build to D1–D6: read-only local mirror · snapshot-on-entry + manual refresh �
 
 ---
 
-## Wave 3 — bundled edits + lifecycle (S4 + S5 lifecycle) → gate P3
+## Wave 3 — RE-SCOPED 2026-05-26 (see log [18:30]): FULL parent-equivalent (supersedes D4)
+> Daniel rejected the read-only/child-mode build at P2 and chose "all features functional." Wave 3 now = **S3-rework** (tutor → child's parent/adult view, `isTutorElevated`, parent-admin surfaces still hidden) + **S4 expanded** (CFs for tracks/points/rewards/goals/study-days/stages/profile + bulk-prior, permission-gated + audited) + **S5 lifecycle** (mirror wipe on revoke/resign/sign-out). Open flag: rewards/points-config may be local-only (not pulled) — S4 verifying before building those two CFs. Live-mark always barred; learn view-only.
+
+### (original) Wave 3 — bundled edits + lifecycle (S4 + S5 lifecycle) → gate P3
 
 ### S4 — Bundled edits (CF write paths)
 - [ ] T4.cf-track — Cloud Function (Admin SDK): permitted **track-config** edits write under `users/{parentUid}/…` with grant + permission verification (`hasActiveTutorAccess` + grant `permissions`)
