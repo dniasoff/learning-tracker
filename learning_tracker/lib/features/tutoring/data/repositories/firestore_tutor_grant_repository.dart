@@ -31,6 +31,8 @@ class FirestoreTutorGrantRepository implements TutorGrantRepository {
     required String tutorEmail,
     required String childProfileId,
     required TutorPermissions permissions,
+    String? childName,
+    String? parentName,
   }) async {
     try {
       final callable = _functions.httpsCallable('inviteTutor');
@@ -38,6 +40,9 @@ class FirestoreTutorGrantRepository implements TutorGrantRepository {
         'tutorEmail': tutorEmail,
         'childProfileId': childProfileId,
         'permissions': permissions.toFirestore(),
+        if (childName != null && childName.isNotEmpty) 'childName': childName,
+        if (parentName != null && parentName.isNotEmpty)
+          'parentName': parentName,
       });
       return const TutorGrantSuccess();
     } on FirebaseFunctionsException catch (e) {
@@ -151,13 +156,7 @@ class FirestoreTutorGrantRepository implements TutorGrantRepository {
       );
       // ignore: avoid_dynamic_calls
       final data = result.data;
-      final grantsRaw =
-          (data as Map<String, dynamic>?)?['grants'] as List<dynamic>? ??
-          const [];
-      return grantsRaw
-          .map((e) => _parseGrant(e as Map<String, dynamic>))
-          .whereType<TutorGrant>()
-          .toList();
+      return _grantsFromCallableData(data);
     } on FirebaseFunctionsException {
       return const [];
     } catch (_) {
@@ -176,13 +175,23 @@ class FirestoreTutorGrantRepository implements TutorGrantRepository {
       );
       // ignore: avoid_dynamic_calls
       final data = result.data;
-      final grantsRaw =
-          (data as Map<String, dynamic>?)?['grants'] as List<dynamic>? ??
-          const [];
-      return grantsRaw
-          .map((e) => _parseGrant(e as Map<String, dynamic>))
-          .whereType<TutorGrant>()
-          .toList();
+      return _grantsFromCallableData(data);
+    } on FirebaseFunctionsException {
+      return const [];
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  @override
+  Future<List<TutorGrant>> listPendingInvitesForMe() async {
+    try {
+      final callable = _functions.httpsCallable('listTutorGrants');
+      final result = await callable.call<Map<String, dynamic>>(
+        <String, dynamic>{'mode': 'pending_for_me'},
+      );
+      // ignore: avoid_dynamic_calls
+      return _grantsFromCallableData(result.data);
     } on FirebaseFunctionsException {
       return const [];
     } catch (_) {
@@ -191,6 +200,22 @@ class FirestoreTutorGrantRepository implements TutorGrantRepository {
   }
 
   // ── Private helpers ──────────────────────────────────────────────────────────
+
+  /// Extracts and parses the grants list from a callable's response.
+  ///
+  /// On Android the cloud_functions plugin decodes nested objects as
+  /// `Map<Object?, Object?>` / `List<Object?>`, so a direct
+  /// `e as Map<String, dynamic>` throws and (being swallowed by the caller's
+  /// catch) silently drops every grant. We convert defensively instead.
+  List<TutorGrant> _grantsFromCallableData(dynamic data) {
+    final raw = data is Map ? data['grants'] : null;
+    if (raw is! List) return const [];
+    return raw
+        .whereType<Map<Object?, Object?>>()
+        .map((e) => _parseGrant(Map<String, dynamic>.from(e)))
+        .whereType<TutorGrant>()
+        .toList();
+  }
 
   TutorGrant? _parseGrant(Map<String, dynamic> data) {
     try {

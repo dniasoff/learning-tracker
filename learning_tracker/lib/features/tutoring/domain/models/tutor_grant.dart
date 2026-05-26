@@ -167,9 +167,32 @@ class TutorGrantDoc {
   };
 
   factory TutorGrantDoc.fromFirestore(Map<String, dynamic> data) {
+    // Parse a timestamp that may arrive in any of three wire formats:
+    //   1. ISO-8601 string — from the app's own toFirestore() writes.
+    //   2. {_seconds,_nanoseconds} / {seconds,nanoseconds} map — how the
+    //      callable protocol (listTutorGrants) serialises an Admin SDK
+    //      Timestamp. This is the case that previously dropped every grant.
+    //   3. A Firestore SDK Timestamp instance (direct reads) exposing toDate().
     DateTime? parseTs(dynamic v) {
       if (v == null) return null;
       if (v is String) return DateTime.parse(v).toLocal();
+      if (v is num) {
+        return DateTime.fromMillisecondsSinceEpoch(
+          v.round(),
+          isUtc: true,
+        ).toLocal();
+      }
+      if (v is Map) {
+        final seconds = v['_seconds'] ?? v['seconds'];
+        final nanos = v['_nanoseconds'] ?? v['nanoseconds'] ?? 0;
+        if (seconds is num && nanos is num) {
+          return DateTime.fromMillisecondsSinceEpoch(
+            (seconds * 1000 + nanos / 1e6).round(),
+            isUtc: true,
+          ).toLocal();
+        }
+        return null;
+      }
       // Firestore Timestamp from the SDK has a toDate() method.
       // Cast through dynamic to avoid importing firebase packages outside core/.
       try {
@@ -193,12 +216,12 @@ class TutorGrantDoc {
       tutorUid: data['tutor_uid'] as String?,
       state: TutorGrantState.fromJson(data['state'] as String),
       inviteToken: data['invite_token'] as String?,
-      invitedAt: DateTime.parse(data['invited_at'] as String).toLocal(),
+      invitedAt: parseTs(data['invited_at']) ?? DateTime.now(),
       acceptedAt: parseTs(data['accepted_at']),
       declinedAt: parseTs(data['declined_at']),
       revokedAt: parseTs(data['revoked_at']),
       expiresAt: parseTs(data['expires_at']),
-      updatedAt: DateTime.parse(data['updated_at'] as String).toLocal(),
+      updatedAt: parseTs(data['updated_at']) ?? DateTime.now(),
       childName: data['child_name'] as String?,
       parentName: data['parent_name'] as String?,
     );

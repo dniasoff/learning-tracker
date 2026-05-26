@@ -28,10 +28,15 @@ import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissio
 /// implementation handles the HTTP/callable layer.
 abstract interface class TutorGrantRepository {
   /// Send a tutor invite to [tutorEmail] for [childProfileId].
+  ///
+  /// [childName]/[parentName] are snapshotted onto the grant so the tutor sees
+  /// human-readable names rather than a raw profile id / generic label.
   Future<TutorGrantResult> inviteTutor({
     required String tutorEmail,
     required String childProfileId,
     required TutorPermissions permissions,
+    String? childName,
+    String? parentName,
   });
 
   /// Accept the invite for [grantId].
@@ -54,6 +59,11 @@ abstract interface class TutorGrantRepository {
 
   /// List all grants issued by the caller (as parent) for [childProfileId].
   Future<List<TutorGrant>> listOutgoingGrants({required String childProfileId});
+
+  /// List PENDING invites addressed to the caller's email (tutor_uid is still
+  /// null until acceptance). Lets a freshly signed-in tutor discover and
+  /// accept invitations in-app without the emailed deep link.
+  Future<List<TutorGrant>> listPendingInvitesForMe();
 }
 
 // ── Result type ─────────────────────────────────────────────────────────────
@@ -91,6 +101,8 @@ class InviteTutorUseCase {
     required String tutorEmail,
     required String childProfileId,
     TutorPermissions? permissions,
+    String? childName,
+    String? parentName,
   }) async {
     final email = tutorEmail.trim().toLowerCase();
     if (email.isEmpty || !email.contains('@')) {
@@ -102,6 +114,8 @@ class InviteTutorUseCase {
       tutorEmail: email,
       childProfileId: childProfileId,
       permissions: permissions ?? TutorPermissions.defaults(),
+      childName: childName,
+      parentName: parentName,
     );
     // W7.11: fire tutor_invite_sent on success.
     if (result is TutorGrantSuccess) {

@@ -14,6 +14,7 @@ import 'dart:async';
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
@@ -36,10 +37,10 @@ class ManageTutorsScreen extends ConsumerWidget {
     final theme = Theme.of(context);
 
     return Scaffold(
+      backgroundColor: AppTheme.brandCream,
       appBar: AppBar(
         title: Text(AppLocalizations.of(context)!.manageTutors),
-        backgroundColor: AppTheme.brandBlue,
-        foregroundColor: Colors.white,
+        backgroundColor: AppTheme.brandCream,
         elevation: 0,
       ),
       body: profilesAsync.when(
@@ -49,11 +50,16 @@ class ManageTutorsScreen extends ConsumerWidget {
           stackTrace: st,
           onRetry: () => ref.refresh(profileListProvider),
         ),
-        data: (profiles) {
-          if (profiles.isEmpty) {
+        data: (allProfiles) {
+          // Tutors are granted access to a specific CHILD only — an adult
+          // profile is never tutored, so it must not appear here.
+          final children = allProfiles
+              .where((p) => p.profileMode == ProfileMode.child)
+              .toList();
+          if (children.isEmpty) {
             return _EmptyProfilesView(theme: theme);
           }
-          return _PerChildGrantsList(profiles: profiles);
+          return _PerChildGrantsList(profiles: children);
         },
       ),
     );
@@ -178,6 +184,7 @@ class _ChildGrantsSection extends ConsumerWidget {
                 .toList();
 
             return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 if (active.isNotEmpty) ...[
                   _SectionDivider(

@@ -115,6 +115,7 @@ class _TutorAuditLogScreenState extends ConsumerState<TutorAuditLogScreen> {
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
+      backgroundColor: AppTheme.brandCream,
       appBar: AppBar(
         title: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -126,8 +127,7 @@ class _TutorAuditLogScreenState extends ConsumerState<TutorAuditLogScreen> {
             ),
           ],
         ),
-        backgroundColor: AppTheme.brandBlue,
-        foregroundColor: Colors.white,
+        backgroundColor: AppTheme.brandCream,
         elevation: 0,
         actions: [
           if (_hasActiveFilters)

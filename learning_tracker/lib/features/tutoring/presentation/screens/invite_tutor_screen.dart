@@ -20,9 +20,12 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/text_input_formatters.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_grant_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -72,10 +75,25 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
       _shareLink = null;
     });
     try {
+      // Snapshot human-readable names onto the grant so the tutor sees the
+      // child's name (and inviting parent) instead of a raw id / generic label.
+      final profiles = ref.read(profileListProvider).asData?.value ?? const [];
+      final childIdInt = int.tryParse(widget.childProfileId);
+      final childName = profiles
+          .where((p) => p.id == childIdInt)
+          .map((p) => p.displayName)
+          .firstOrNull;
+      final parentName = profiles
+          .where((p) => p.profileMode == ProfileMode.adult)
+          .map((p) => p.displayName)
+          .firstOrNull;
+
       final useCase = ref.read(inviteTutorUseCaseProvider);
       final result = await useCase(
         tutorEmail: email,
         childProfileId: widget.childProfileId,
+        childName: childName,
+        parentName: parentName,
       );
       if (!mounted) return;
       switch (result) {
@@ -84,6 +102,10 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
           // the Cloud Function will generate a real invite URL in production.
           final link = _buildShareLink(grantId ?? 'pending');
           setState(() => _shareLink = link);
+          // Refresh the (non-autoDispose, cached) outgoing-grants list so the
+          // new pending invite shows up immediately on Manage Tutors instead
+          // of serving the stale empty result fetched before this invite.
+          ref.invalidate(outgoingTutorGrantsProvider(widget.childProfileId));
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(

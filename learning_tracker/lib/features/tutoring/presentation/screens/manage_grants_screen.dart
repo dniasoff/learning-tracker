@@ -54,10 +54,10 @@ class _ManageGrantsScreenState extends ConsumerState<ManageGrantsScreen> {
         if (didPop) _clearTutoredSelection();
       },
       child: Scaffold(
+        backgroundColor: AppTheme.brandCream,
         appBar: AppBar(
           title: Text(l10n.manageGrantsAppBarTitle),
-          backgroundColor: AppTheme.brandBlue,
-          foregroundColor: Colors.white,
+          backgroundColor: AppTheme.brandCream,
           elevation: 0,
         ),
         body: grantsAsync.when(

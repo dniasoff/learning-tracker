@@ -68,3 +68,12 @@ Future<List<TutorGrant>> incomingTutorGrants(Ref ref) {
   final repo = ref.watch(tutorGrantRepositoryProvider);
   return repo.listIncomingGrants();
 }
+
+/// Lists PENDING invites addressed to the current user's email so a tutor can
+/// discover + accept them in-app — without the emailed deep link and without
+/// being forced to create a learner profile first.
+@riverpod
+Future<List<TutorGrant>> pendingTutorInvites(Ref ref) {
+  final repo = ref.watch(tutorGrantRepositoryProvider);
+  return repo.listPendingInvitesForMe();
+}

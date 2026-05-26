@@ -23,4 +23,20 @@ class LearnerProfiles extends Table {
   IntColumn get avatarIndex => integer().withDefault(const Constant<int>(0))();
   DateTimeColumn get createdAt => dateTime()();
   DateTimeColumn get updatedAt => dateTime()();
+
+  /// Tutor "talmid view" mirror (schema v28). When true, this is NOT one of
+  /// the account's own learners — it is a read-only local mirror of a child
+  /// that lives in another user's (the parent's) account, pulled in because
+  /// this device's user is an active tutor for that child. Mirror rows must
+  /// never be pushed up this account's own outbox.
+  BoolColumn get isTutored =>
+      boolean().withDefault(const Constant<bool>(false))();
+
+  /// For a tutored mirror: the parent (owner) account's Firebase UID, the
+  /// child's profile id within that account, and the tutor grant id. Used to
+  /// resolve the source namespace for the pull and to route permitted edits
+  /// back to the parent's namespace via Cloud Functions. Null for own profiles.
+  TextColumn get tutorParentUid => text().nullable()();
+  TextColumn get tutorRemoteProfileId => text().nullable()();
+  TextColumn get tutorGrantId => text().nullable()();
 }

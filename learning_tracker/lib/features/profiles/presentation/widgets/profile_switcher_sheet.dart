@@ -8,6 +8,7 @@ import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/add_profile_dialog.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/profile_edit_delete_actions.dart';
@@ -136,10 +137,17 @@ class ProfileSwitcherSheet extends ConsumerWidget {
   }
 
   /// Switches the active profile using the canonical mechanism: close the
-  /// sheet, select the profile id, then reload the shell. Switching INTO a
-  /// child profile puts the parent in parent-mode for that child.
+  /// sheet, select the profile id, then reload the shell. Selecting a child
+  /// drops straight into that child's LEARNING view — parent mode is a
+  /// separate PIN-gated elevation, so we clear any existing elevation here to
+  /// guarantee the freshly-selected profile starts unelevated (no banner).
   void _switchProfile(BuildContext context, WidgetRef ref, int profileId) {
     Navigator.of(context).pop();
+    // Drop any parent-mode elevation so the freshly-selected profile starts
+    // in plain learning view (no banner). The PIN guard's per-(scope,profile)
+    // cache re-prompts on the new profile automatically since the scope id
+    // changes; we only need to clear the reactive flag the banner watches.
+    ref.read(parentPinAuthenticatedProfileIdProvider.notifier).clear();
     ref.read(selectedProfileIdProvider.notifier).select(profileId);
     unawaited(context.router.replaceAll([const AppShellRoute()]));
   }

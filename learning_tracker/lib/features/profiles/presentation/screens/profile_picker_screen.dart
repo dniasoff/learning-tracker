@@ -17,7 +17,13 @@ import 'package:learning_tracker/features/profiles/presentation/providers/profil
 import 'package:learning_tracker/features/profiles/presentation/widgets/add_profile_dialog.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/my_children_section.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/tutored_children_section.dart';
+import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart';
+// Only pendingTutorInvitesProvider is needed here; incomingTutorGrantsProvider
+// is intentionally taken from manage_tutors_providers (a same-named provider
+// also exists in tutor_grant_providers) to avoid an ambiguous import.
+import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_grant_providers.dart'
+    show pendingTutorInvitesProvider;
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 export 'package:learning_tracker/features/profiles/presentation/widgets/add_profile_mode_pick_card.dart'
@@ -120,6 +126,11 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
               ),
             ),
             const SizedBox(height: 20),
+            // Pending tutor invitations addressed to this account's email.
+            // Surfacing them here means a freshly signed-in tutor accepts in
+            // app (no emailed deep link) and is not dead-ended into creating a
+            // learner profile they don't want.
+            _buildPendingInvites(context),
             // Own profiles — adults + children co-mingled.
             OwnProfilesSection(
               profiles: profiles,
@@ -136,6 +147,34 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
         ),
       ),
     );
+  }
+
+  // ── Pending tutor invitations ────────────────────────────────────────────
+
+  Widget _buildPendingInvites(BuildContext context) {
+    final pendingAsync = ref.watch(pendingTutorInvitesProvider);
+    final pending = pendingAsync.asData?.value ?? const <TutorGrant>[];
+    if (pending.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        for (final grant in pending) ...[
+          _PendingInviteCard(
+            onAccept: () => unawaited(_acceptPendingInvite(grant)),
+          ),
+          const SizedBox(height: 16),
+        ],
+      ],
+    );
+  }
+
+  Future<void> _acceptPendingInvite(TutorGrant grant) async {
+    // Reuse the existing accept flow (handles confirmation + Tutor PIN setup).
+    await context.router.push(AcceptInviteRoute(token: grant.grantId));
+    if (!mounted) return;
+    // Refresh so the accepted child surfaces and the invite drops off.
+    ref.invalidate(pendingTutorInvitesProvider);
+    ref.invalidate(incomingTutorGrantsProvider);
   }
 
   // ── Select Profile ─────────────────────────────────────────────────────────
@@ -363,5 +402,74 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
       ref.read(selectedProfileIdProvider.notifier).clear();
     }
     ref.invalidate(profileListProvider);
+  }
+}
+
+/// Card shown on the profile picker when a pending tutor invitation is
+/// addressed to this account. Tapping Accept hands off to the existing
+/// accept-invite flow (which also handles Tutor PIN setup).
+class _PendingInviteCard extends StatelessWidget {
+  const _PendingInviteCard({required this.onAccept});
+
+  final VoidCallback onAccept;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: AppTheme.brandCreamCard,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: AppTheme.brandBlueBright.withValues(alpha: 0.35),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              const CircleAvatar(
+                radius: 22,
+                backgroundColor: AppTheme.brandBlueSoft,
+                child: Icon(Icons.school_rounded, color: AppTheme.brandBlue),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Text(
+                  l10n.acceptInviteHeading,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.brandBlueDeep,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            l10n.acceptInviteBody,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: AppTheme.brandInkMuted,
+              height: 1.35,
+            ),
+          ),
+          const SizedBox(height: 16),
+          FilledButton(
+            onPressed: onAccept,
+            style: FilledButton.styleFrom(
+              backgroundColor: AppTheme.brandBlue,
+              minimumSize: const Size(double.infinity, 48),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(26),
+              ),
+            ),
+            child: Text(l10n.acceptInviteAccept),
+          ),
+        ],
+      ),
+    );
   }
 }

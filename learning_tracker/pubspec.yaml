@@ -105,6 +105,7 @@ dependencies:
   google_fonts: ^8.1.0
   confetti: ^0.8.0
   cloud_functions: ^6.2.0
+  firebase_app_check: ^0.4.4+1
 
 dev_dependencies:
   flutter_test:

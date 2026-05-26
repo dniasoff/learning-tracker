@@ -1,5 +1,7 @@
+import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
+import 'package:flutter/foundation.dart' show kDebugMode;
 import 'package:learning_tracker/core/logging/crashlytics_service.dart';
 import 'package:learning_tracker/firebase_options.dart';
 
@@ -14,6 +16,23 @@ Future<CrashlyticsService> bootstrapFirebase() async {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     );
+    // Activate App Check before any Firestore/Functions/Storage use so the
+    // SDK attaches attestation tokens to every request. Debug builds (incl.
+    // sideloaded `flutter run`) use the debug provider, whose token must be
+    // registered in the console; release builds attest via Play Integrity /
+    // App Attest. Non-fatal: a failure must not block local-first startup.
+    try {
+      await FirebaseAppCheck.instance.activate(
+        providerAndroid: kDebugMode
+            ? const AndroidDebugProvider()
+            : const AndroidPlayIntegrityProvider(),
+        providerApple: kDebugMode
+            ? const AppleDebugProvider()
+            : const AppleAppAttestProvider(),
+      );
+    } catch (_) {
+      // App Check unavailable — continue; sync may be rejected if enforced.
+    }
     // Wire Crashlytics immediately after Firebase init, before any other
     // init that can throw (Story 24.4).
     final fbCrashlytics = FirebaseCrashlytics.instance;

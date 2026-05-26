@@ -6,6 +6,13 @@ import { onCall, HttpsError } from "firebase-functions/v2/https";
 admin.initializeApp();
 const db = admin.firestore();
 
+// Shared callable options. enforceAppCheck rejects any call that does not carry
+// a valid App Check token, so only our genuine app builds (Play Integrity in
+// release, the registered debug token in development) can invoke these
+// functions. The client attaches tokens automatically once App Check is
+// activated at startup (see firebase_bootstrap.dart).
+const CALL_OPTS = { enforceAppCheck: true } as const;
+
 // ── Shared helpers ────────────────────────────────────────────────────────────
 
 /** Encode an email for use in a Firestore doc ID (mirrors Dart TutorGrantDoc.buildGrantId). */
@@ -114,7 +121,7 @@ export const onUserDeleted = auth.user().onDelete(async (user) => {
  * Expects: { profileId: number }
  * Returns: { success: true }
  */
-export const deleteLearnerProfile = onCall(async (request) => {
+export const deleteLearnerProfile = onCall(CALL_OPTS, async (request) => {
   const uid = request.auth?.uid;
   if (!uid) {
     throw new HttpsError("unauthenticated", "Must be signed in");
@@ -148,7 +155,7 @@ export const deleteLearnerProfile = onCall(async (request) => {
  * Expects: { profileId: number, curriculumId: string }
  * Returns: { success: true }
  */
-export const deleteCurriculumTrack = onCall(async (request) => {
+export const deleteCurriculumTrack = onCall(CALL_OPTS, async (request) => {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "Must be signed in");
 
@@ -182,7 +189,7 @@ export const deleteCurriculumTrack = onCall(async (request) => {
  * Expects: {} (identity comes from request.auth.uid)
  * Returns: { success: true }
  */
-export const deleteAccountData = onCall(async (request) => {
+export const deleteAccountData = onCall(CALL_OPTS, async (request) => {
   const uid = request.auth?.uid;
   if (!uid) throw new HttpsError("unauthenticated", "Must be signed in");
 
@@ -329,7 +336,7 @@ interface CompletionPayload {
   points: number;
 }
 
-export const tutorBulkPriorCompletions = onCall(async (request) => {
+export const tutorBulkPriorCompletions = onCall(CALL_OPTS, async (request) => {
   // ── 1. Authentication check ────────────────────────────────────────────
   const callerUid = request.auth?.uid;
   if (!callerUid) {
@@ -548,13 +555,14 @@ export const tutorBulkPriorCompletions = onCall(async (request) => {
 //
 // Returns: { success: true, grantId: string }
 
-export const inviteTutor = onCall(async (request) => {
+export const inviteTutor = onCall(CALL_OPTS, async (request) => {
   const callerUid = request.auth?.uid;
   if (!callerUid) {
     throw new HttpsError("unauthenticated", "Must be signed in");
   }
 
-  const { tutorEmail, childProfileId, permissions } = request.data ?? {};
+  const { tutorEmail, childProfileId, permissions, childName, parentName } =
+    request.data ?? {};
 
   if (typeof tutorEmail !== "string" || !tutorEmail.includes("@")) {
     throw new HttpsError("invalid-argument", "tutorEmail must be a valid email address");
@@ -562,6 +570,20 @@ export const inviteTutor = onCall(async (request) => {
   if (typeof childProfileId !== "string" || !childProfileId) {
     throw new HttpsError("invalid-argument", "childProfileId must be a non-empty string");
   }
+
+  // Snapshot human-readable names at invite time so the tutor sees the child's
+  // name (and inviting parent) instead of a raw profile id / generic label.
+  const sanitizeName = (v: unknown): string | null =>
+    typeof v === "string" && v.trim() ? v.trim().slice(0, 100) : null;
+  const childNameSnapshot = sanitizeName(childName);
+  const parentNameSnapshot = sanitizeName(parentName);
+
+  // NOTE: we intentionally do NOT verify a Firestore learner_profiles doc
+  // exists for childProfileId. Profiles are offline-first (Drift-local) and a
+  // child may have no synced cloud doc yet, so such a check wrongly blocks a
+  // legitimate invite. It is also unnecessary for isolation: parent_uid is
+  // hard-set to the caller below, so the grant always lands in the caller's
+  // own namespace and cannot reference another user's data.
 
   const normalEmail = tutorEmail.trim().toLowerCase();
   const encodedEmail = encodeEmailForDocId(normalEmail);
@@ -592,6 +614,8 @@ export const inviteTutor = onCall(async (request) => {
     state: "pending",
     invite_token: inviteToken,
     permissions: permissions ?? defaultPermissions,
+    child_name: childNameSnapshot,
+    parent_name: parentNameSnapshot,
     invited_at: now,
     updated_at: now,
     expires_at: admin.firestore.Timestamp.fromDate(expiresAt),
@@ -621,7 +645,7 @@ export const inviteTutor = onCall(async (request) => {
 // Expects: { grantId: string }
 // Returns: { success: true, grantId: string }
 
-export const acceptTutorInvite = onCall(async (request) => {
+export const acceptTutorInvite = onCall(CALL_OPTS, async (request) => {
   const callerUid = request.auth?.uid;
   if (!callerUid) {
     throw new HttpsError("unauthenticated", "Must be signed in");
@@ -730,7 +754,7 @@ export const acceptTutorInvite = onCall(async (request) => {
 // Expects: { grantId: string }
 // Returns: { success: true }
 
-export const declineTutorInvite = onCall(async (request) => {
+export const declineTutorInvite = onCall(CALL_OPTS, async (request) => {
   const callerUid = request.auth?.uid;
   if (!callerUid) {
     throw new HttpsError("unauthenticated", "Must be signed in");
@@ -787,7 +811,7 @@ export const declineTutorInvite = onCall(async (request) => {
 // Expects: { grantId: string }
 // Returns: { success: true }
 
-export const rescindTutorInvite = onCall(async (request) => {
+export const rescindTutorInvite = onCall(CALL_OPTS, async (request) => {
   const callerUid = request.auth?.uid;
   if (!callerUid) {
     throw new HttpsError("unauthenticated", "Must be signed in");
@@ -835,7 +859,7 @@ export const rescindTutorInvite = onCall(async (request) => {
 // Expects: { grantId: string }
 // Returns: { success: true }
 
-export const revokeTutorGrant = onCall(async (request) => {
+export const revokeTutorGrant = onCall(CALL_OPTS, async (request) => {
   const callerUid = request.auth?.uid;
   if (!callerUid) {
     throw new HttpsError("unauthenticated", "Must be signed in");
@@ -891,7 +915,7 @@ export const revokeTutorGrant = onCall(async (request) => {
 // Expects: { grantId: string }
 // Returns: { success: true }
 
-export const resignTutorGrant = onCall(async (request) => {
+export const resignTutorGrant = onCall(CALL_OPTS, async (request) => {
   const callerUid = request.auth?.uid;
   if (!callerUid) {
     throw new HttpsError("unauthenticated", "Must be signed in");
@@ -948,15 +972,18 @@ export const resignTutorGrant = onCall(async (request) => {
 // Expects: { mode: 'incoming' | 'outgoing', childProfileId?: string }
 // Returns: { grants: TutorGrantDoc[] }
 
-export const listTutorGrants = onCall(async (request) => {
+export const listTutorGrants = onCall(CALL_OPTS, async (request) => {
   const callerUid = request.auth?.uid;
   if (!callerUid) {
     throw new HttpsError("unauthenticated", "Must be signed in");
   }
 
   const { mode, childProfileId } = request.data ?? {};
-  if (mode !== "incoming" && mode !== "outgoing") {
-    throw new HttpsError("invalid-argument", "mode must be 'incoming' or 'outgoing'");
+  if (mode !== "incoming" && mode !== "outgoing" && mode !== "pending_for_me") {
+    throw new HttpsError(
+      "invalid-argument",
+      "mode must be 'incoming', 'outgoing', or 'pending_for_me'"
+    );
   }
 
   let query: admin.firestore.Query;
@@ -965,6 +992,18 @@ export const listTutorGrants = onCall(async (request) => {
       .collection("tutor_grants")
       .where("tutor_uid", "==", callerUid)
       .where("state", "in", ["pending", "active"]);
+  } else if (mode === "pending_for_me") {
+    // Pending invites are addressed by EMAIL (tutor_uid is null until accepted),
+    // so a freshly signed-in tutor can discover invitations in-app and accept
+    // without needing the emailed deep link. Match the caller's verified email.
+    const callerEmail = (request.auth?.token?.email ?? "").toLowerCase();
+    if (!callerEmail) {
+      return { grants: [] };
+    }
+    query = db
+      .collection("tutor_grants")
+      .where("tutor_email", "==", callerEmail)
+      .where("state", "==", "pending");
   } else {
     if (typeof childProfileId !== "string" || !childProfileId) {
       throw new HttpsError("invalid-argument", "childProfileId required for outgoing mode");
@@ -976,7 +1015,24 @@ export const listTutorGrants = onCall(async (request) => {
   }
 
   const snap = await query.get();
-  const grants = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  // Serialise Firestore Timestamps to ISO-8601 strings so the wire format is
+  // deterministic. The raw callable encoding of an Admin Timestamp is a
+  // {_seconds,_nanoseconds} map, which the client parser used to choke on —
+  // emit plain strings (matching the client's own toFirestore format).
+  const TS_FIELDS = [
+    "invited_at", "accepted_at", "declined_at",
+    "revoked_at", "expires_at", "updated_at",
+  ];
+  const grants = snap.docs.map((d) => {
+    const out: Record<string, unknown> = { id: d.id, ...d.data() };
+    for (const k of TS_FIELDS) {
+      const v = out[k];
+      if (v instanceof admin.firestore.Timestamp) {
+        out[k] = v.toDate().toISOString();
+      }
+    }
+    return out;
+  });
   return { grants };
 });
 
