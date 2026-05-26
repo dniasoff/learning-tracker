@@ -980,6 +980,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get parentModeSubtitle => 'Switch to admin (PIN-guarded)';
 
   @override
+  String get parentModeActiveSubtitle => 'Manage tracks, rewards & tutors';
+
+  @override
   String get parentPin => 'Parent PIN';
 
   @override
@@ -1050,6 +1053,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tutorModeIndicator => 'Tutor mode';
+
+  @override
+  String get tutorModeExit => 'Exit';
+
+  @override
+  String get tutoredEntryPermissionDenied =>
+      'Access denied — the grant may have been revoked.';
+
+  @override
+  String get tutoredEntryError =>
+      'Could not load talmid data. Please try again.';
 
   @override
   String viewingChildBanner(String name) {

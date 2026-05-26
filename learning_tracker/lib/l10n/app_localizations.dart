@@ -1811,6 +1811,12 @@ abstract class AppLocalizations {
   /// **'Switch to admin (PIN-guarded)'**
   String get parentModeSubtitle;
 
+  /// No description provided for @parentModeActiveSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage tracks, rewards & tutors'**
+  String get parentModeActiveSubtitle;
+
   /// No description provided for @parentPin.
   ///
   /// In en, this message translates to:
@@ -1936,6 +1942,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Tutor mode'**
   String get tutorModeIndicator;
+
+  /// No description provided for @tutorModeExit.
+  ///
+  /// In en, this message translates to:
+  /// **'Exit'**
+  String get tutorModeExit;
+
+  /// No description provided for @tutoredEntryPermissionDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Access denied — the grant may have been revoked.'**
+  String get tutoredEntryPermissionDenied;
+
+  /// No description provided for @tutoredEntryError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load talmid data. Please try again.'**
+  String get tutoredEntryError;
 
   /// No description provided for @viewingChildBanner.
   ///

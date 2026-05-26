@@ -4,8 +4,11 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/router_provider.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/navigation/pin_scope.dart';
+import 'package:learning_tracker/core/sync/providers/tutored_pull_providers.dart';
+import 'package:learning_tracker/core/sync/tutored_pull_service.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
@@ -293,8 +296,9 @@ class _TutoredChildRow extends ConsumerWidget {
     );
   }
 
-  /// Push the [TutorPinEntryGate] modally. On PIN success, set the active
-  /// tutored-profile context and navigate to the talmid's view.
+  /// Push the [TutorPinEntryGate] modally. On PIN success, run the tutored
+  /// pull, install the resolved local profile id, then land in the talmid
+  /// dashboard (T2.entry-pull + T2.nav).
   void _enterTalmidView(BuildContext context, WidgetRef ref) {
     // The tutor's own local profile ID is required to key the PIN hash.
     // If the tutor has no own profile (profile-less tutor per DEC-6/DEC-21),
@@ -333,14 +337,95 @@ class _TutoredChildRow extends ConsumerWidget {
                   .read(routerProvider)
                   .pinGuard
                   .markScopeAuthenticated(PinScope.tutor(tutorOwnProfileId));
-              // Pop the gate and navigate to the talmid's view.
+              // Pop the gate, then fire the pull + navigate (T2.entry-pull).
               Navigator.of(context).pop();
-              unawaited(context.pushRoute(const ManageGrantsRoute()));
+              unawaited(
+                _fireEntryPullAndNavigate(context, ref, selection),
+              );
             },
             onCancel: () => Navigator.of(context).pop(),
           ),
         ),
       ),
     );
+  }
+
+  /// T2.entry-pull — run the tutored pull after the PIN gate passes, install
+  /// the resolved synthetic local profile id, then replace the stack with the
+  /// talmid's AppShell (T2.nav).  On failure, clears the selection and shows
+  /// an error snackbar so the user lands back at the picker, never crashes.
+  Future<void> _fireEntryPullAndNavigate(
+    BuildContext context,
+    WidgetRef ref,
+    TutoredProfileSelection selection,
+  ) async {
+    final accountId = ref.read(currentAccountIdProvider);
+
+    try {
+      final svc = buildTutoredPullServiceFromWidget(
+        ref: ref,
+        parentUid: selection.ownerUid,
+      );
+      final result = await svc.pull(
+        accountId: accountId,
+        parentUid: selection.ownerUid,
+        remoteProfileId: selection.profileId,
+        grantId: selection.grantId,
+        // Grant carries the child display label; fall back to profile id.
+        childDisplayName: grant.childDisplayLabel,
+        // Tutor grants target child profiles (product rule: tutor = adult with
+        // read access to a child's data). Default to 'child'.
+        childMode: 'child',
+      );
+
+      switch (result.result) {
+        case TutoredPullResult.success:
+          ref
+              .read(resolvedTutoredLocalProfileIdProvider.notifier)
+              .resolve(result.localProfileId);
+          if (context.mounted) {
+            unawaited(context.router.replaceAll([const AppShellRoute()]));
+          }
+        case TutoredPullResult.permissionDenied:
+          AppLogger.instance.warning(
+            event: 'tutored_pull_permission_denied',
+            fields: {'grantId': selection.grantId},
+          );
+          ref.read(activeTutoredProfileSelectionProvider.notifier).exit();
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  AppLocalizations.of(context)?.tutoredEntryPermissionDenied ??
+                      'Access denied — the grant may have been revoked.',
+                ),
+              ),
+            );
+          }
+        case TutoredPullResult.error:
+          AppLogger.instance.warning(
+            event: 'tutored_pull_error',
+            fields: {'grantId': selection.grantId},
+          );
+          ref.read(activeTutoredProfileSelectionProvider.notifier).exit();
+          if (context.mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  AppLocalizations.of(context)?.tutoredEntryError ??
+                      'Could not load talmid data. Please try again.',
+                ),
+              ),
+            );
+          }
+      }
+    } on StateError catch (e) {
+      // buildTutoredPullServiceFromWidget throws StateError for non-cloud accounts.
+      AppLogger.instance.warning(
+        event: 'tutored_pull_aborted',
+        fields: {'error': e.toString()},
+      );
+      ref.read(activeTutoredProfileSelectionProvider.notifier).exit();
+    }
   }
 }

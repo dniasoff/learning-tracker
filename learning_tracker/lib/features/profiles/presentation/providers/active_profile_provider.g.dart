@@ -10,9 +10,10 @@ part of 'active_profile_provider.dart';
 // ignore_for_file: type=lint, type=warning
 /// Holds the active profile ID for the current session.
 ///
-/// Derives from [selectedProfileIdProvider] so that profile selection
-/// in the ProfileGuard, ProfilePicker, and onboarding all flow through
-/// to every data provider that watches this value.
+/// Single chokepoint (§4.2): when a tutored selection is active and the
+/// synthetic mirror has been populated ([resolvedTutoredLocalProfileIdProvider]
+/// is non-null), returns the mirror's local id so the entire UI renders the
+/// talmid.  Otherwise delegates to [selectedProfileIdProvider] (own profile).
 ///
 /// `keepAlive` ensures the state survives route changes.
 /// Default value 0 represents the legacy/default profile.
@@ -22,9 +23,10 @@ final activeProfileIdProvider = ActiveProfileIdProvider._();
 
 /// Holds the active profile ID for the current session.
 ///
-/// Derives from [selectedProfileIdProvider] so that profile selection
-/// in the ProfileGuard, ProfilePicker, and onboarding all flow through
-/// to every data provider that watches this value.
+/// Single chokepoint (§4.2): when a tutored selection is active and the
+/// synthetic mirror has been populated ([resolvedTutoredLocalProfileIdProvider]
+/// is non-null), returns the mirror's local id so the entire UI renders the
+/// talmid.  Otherwise delegates to [selectedProfileIdProvider] (own profile).
 ///
 /// `keepAlive` ensures the state survives route changes.
 /// Default value 0 represents the legacy/default profile.
@@ -32,9 +34,10 @@ final class ActiveProfileIdProvider
     extends $NotifierProvider<ActiveProfileId, int> {
   /// Holds the active profile ID for the current session.
   ///
-  /// Derives from [selectedProfileIdProvider] so that profile selection
-  /// in the ProfileGuard, ProfilePicker, and onboarding all flow through
-  /// to every data provider that watches this value.
+  /// Single chokepoint (§4.2): when a tutored selection is active and the
+  /// synthetic mirror has been populated ([resolvedTutoredLocalProfileIdProvider]
+  /// is non-null), returns the mirror's local id so the entire UI renders the
+  /// talmid.  Otherwise delegates to [selectedProfileIdProvider] (own profile).
   ///
   /// `keepAlive` ensures the state survives route changes.
   /// Default value 0 represents the legacy/default profile.
@@ -65,13 +68,14 @@ final class ActiveProfileIdProvider
   }
 }
 
-String _$activeProfileIdHash() => r'ec2a0e8a8ae4a73c76255c022cabed165d1dc87d';
+String _$activeProfileIdHash() => r'49a4f4b10a5f18e4a94fc8ad925448de982f8c66';
 
 /// Holds the active profile ID for the current session.
 ///
-/// Derives from [selectedProfileIdProvider] so that profile selection
-/// in the ProfileGuard, ProfilePicker, and onboarding all flow through
-/// to every data provider that watches this value.
+/// Single chokepoint (§4.2): when a tutored selection is active and the
+/// synthetic mirror has been populated ([resolvedTutoredLocalProfileIdProvider]
+/// is non-null), returns the mirror's local id so the entire UI renders the
+/// talmid.  Otherwise delegates to [selectedProfileIdProvider] (own profile).
 ///
 /// `keepAlive` ensures the state survives route changes.
 /// Default value 0 represents the legacy/default profile.

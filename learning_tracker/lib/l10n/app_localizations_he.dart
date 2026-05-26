@@ -970,6 +970,9 @@ class AppLocalizationsHe extends AppLocalizations {
   String get parentModeSubtitle => 'מעבר למנהל (מוגן בקוד)';
 
   @override
+  String get parentModeActiveSubtitle => 'ניהול מסלולים, פרסים ומורים';
+
+  @override
   String get parentPin => 'קוד הורה';
 
   @override
@@ -1039,6 +1042,17 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get tutorModeIndicator => 'מצב מדריך';
+
+  @override
+  String get tutorModeExit => 'יציאה';
+
+  @override
+  String get tutoredEntryPermissionDenied =>
+      'הגישה נדחתה — ייתכן שההרשאה בוטלה.';
+
+  @override
+  String get tutoredEntryError =>
+      'לא ניתן לטעון את נתוני התלמיד. אנא נסה שנית.';
 
   @override
   String viewingChildBanner(String name) {
