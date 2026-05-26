@@ -626,10 +626,8 @@ class $LearnerProfilesTable extends LearnerProfiles
     false,
     type: DriftSqlType.bool,
     requiredDuringInsert: false,
-    defaultConstraints: GeneratedColumn.constraintIsAlways(
-      'CHECK ("is_tutored" IN (0, 1))',
-    ),
-    defaultValue: const Constant<bool>(false),
+    $customConstraints: 'NOT NULL DEFAULT 0 CHECK ("is_tutored" IN (0, 1))',
+    defaultValue: const CustomExpression('0'),
   );
   static const VerificationMeta _tutorParentUidMeta = const VerificationMeta(
     'tutorParentUid',

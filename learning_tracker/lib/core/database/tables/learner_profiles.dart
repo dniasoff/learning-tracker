@@ -16,6 +16,7 @@ class LearnerProfiles extends Table {
   IntColumn get accountId =>
       integer().references(Accounts, #id, onDelete: KeyAction.cascade)();
   TextColumn get displayName => text()();
+
   /// Profile mode — exactly 'adult' or 'child'. Enforced by CHECK constraint
   /// (schema v26, WS9.enum). Read via [ProfileMode.fromStorageKey].
   TextColumn get mode =>
@@ -29,8 +30,12 @@ class LearnerProfiles extends Table {
   /// that lives in another user's (the parent's) account, pulled in because
   /// this device's user is an active tutor for that child. Mirror rows must
   /// never be pushed up this account's own outbox.
-  BoolColumn get isTutored =>
-      boolean().withDefault(const Constant<bool>(false))();
+  // customConstraint embeds DEFAULT 0 in the SQL so that ADD COLUMN (migration
+  // from < 28) fills existing rows with 0 rather than NULL, satisfying the
+  // CHECK (is_tutored IN (0, 1)) constraint on old rows.
+  BoolColumn get isTutored => boolean().customConstraint(
+    'NOT NULL DEFAULT 0 CHECK ("is_tutored" IN (0, 1))',
+  )();
 
   /// For a tutored mirror: the parent (owner) account's Firebase UID, the
   /// child's profile id within that account, and the tutor grant id. Used to

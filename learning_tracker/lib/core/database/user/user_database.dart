@@ -213,21 +213,30 @@ class UserDatabase extends _$UserDatabase {
           //     createNewTable: false copies from the existing table; we keep
           //     every column 1:1 (mode is unchanged data-wise, only the
           //     constraint is new), preserving ids so child FKs stay valid.
+          //
+          //     columnTransformer provides literal defaults for v28 mirror
+          //     columns (isTutored, tutor*) that did not exist in the v25/v26
+          //     table, so the INSERT…SELECT never reads a non-existent column.
           await m.alterTable(
-            TableMigration(learnerProfiles),
+            TableMigration(
+              learnerProfiles,
+              columnTransformer: {
+                learnerProfiles.isTutored: const CustomExpression('0'),
+                learnerProfiles.tutorParentUid: const CustomExpression('NULL'),
+                learnerProfiles.tutorRemoteProfileId:
+                    const CustomExpression('NULL'),
+                learnerProfiles.tutorGrantId: const CustomExpression('NULL'),
+              },
+            ),
           );
 
           // (b) accounts → drop the vestigial user_mode column. The new
           //     `accounts` table definition has no userMode; copying only the
           //     surviving columns drops it while keeping all rows + ids.
-          await m.alterTable(
-            TableMigration(accounts),
-          );
+          await m.alterTable(TableMigration(accounts));
 
           // Integrity gate: no child row may be orphaned by the rebuilds.
-          final orphans = await customSelect(
-            'PRAGMA foreign_key_check',
-          ).get();
+          final orphans = await customSelect('PRAGMA foreign_key_check').get();
           assert(
             orphans.isEmpty,
             'v26 migration orphaned ${orphans.length} row(s): '
@@ -242,9 +251,11 @@ class UserDatabase extends _$UserDatabase {
           await m.addColumn(pointsLedger, pointsLedger.ulid);
           await m.addColumn(rewardRedemptions, rewardRedemptions.ulid);
         }
-        if (from < 28) {
-          // Tutor "talmid view" mirror columns on learner_profiles. Additive +
-          // nullable/defaulted, safe on existing rows.
+        if (from == 27) {
+          // Tutor "talmid view" mirror columns on learner_profiles (v28).
+          // Only runs when upgrading FROM exactly v27, because migrations from
+          // v25/v26 already include these columns via the v26 alterTable rebuild
+          // (which copies the current schema, including v28 columns).
           await m.addColumn(learnerProfiles, learnerProfiles.isTutored);
           await m.addColumn(learnerProfiles, learnerProfiles.tutorParentUid);
           await m.addColumn(
