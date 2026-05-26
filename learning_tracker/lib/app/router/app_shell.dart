@@ -2,12 +2,14 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
+import 'package:learning_tracker/app/router/router_provider.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
 import 'package:learning_tracker/features/account/presentation/widgets/offline_top_banner.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_lock_overlay.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
@@ -44,20 +46,21 @@ class AppShellScreen extends ConsumerWidget {
         .where((p) => p.id == activeProfileId)
         .firstOrNull;
 
-    // R3o-C1: the "Viewing [child]" banner must show ONLY when an ADULT has
-    // switched into a CHILD's profile — never for a standalone child using
-    // their own profile. The "adult is viewing a child" signal is derived
-    // from: the active profile is a child AND this account owns at least one
-    // adult profile (a parent+child account). A standalone-child account has
-    // no adult profile, so the banner is correctly suppressed there.
-    final hasAdultProfile = profiles.any(
-      (p) => p.profileMode == ProfileMode.adult,
+    // Parent mode is an ELEVATION, not a side-effect of selecting a child.
+    // The "Parent mode — viewing [child]" banner shows ONLY when the parent
+    // PIN has actually been entered this session for the currently-active
+    // child profile. Merely selecting a child drops you into that child's
+    // learning view with no banner and no PIN; managing the child requires
+    // entering parent mode (PIN once), which sets the elevation flag below.
+    final parentAuthedProfileId = ref.watch(
+      parentPinAuthenticatedProfileIdProvider,
     );
-    final adultIsViewingChild =
-        activeProfile?.profileMode == ProfileMode.child && hasAdultProfile;
+    final parentModeActive =
+        parentAuthedProfileId != null &&
+        parentAuthedProfileId == activeProfileId &&
+        activeProfile?.profileMode == ProfileMode.child;
     // Tutor mode has its own indicator bar; only one context banner shows.
-    final isViewingChildProfile =
-        !hasActiveTutoredProfiles && adultIsViewingChild;
+    final isViewingChildProfile = !hasActiveTutoredProfiles && parentModeActive;
     final viewingChildName = isViewingChildProfile
         ? (activeProfile?.displayName ?? '')
         : null;
@@ -118,23 +121,14 @@ class AppShellScreen extends ConsumerWidget {
                       childName: viewingChildName,
                       profiles: profiles,
                       onExit: () {
-                        // R3o-M1: Exit must deterministically return to the
-                        // ADULT/parent context — never to another child. The
-                        // banner only renders when an adult profile exists, so
-                        // an adult is always present; select it. If somehow no
-                        // adult exists, clear the selection and let the
-                        // ProfileGuard route to the picker (open the switcher)
-                        // rather than silently re-entering another child.
-                        final adultProfile = profiles
-                            .where((p) => p.profileMode == ProfileMode.adult)
-                            .firstOrNull;
-                        if (adultProfile != null) {
-                          ref
-                              .read(selectedProfileIdProvider.notifier)
-                              .select(adultProfile.id);
-                        } else {
-                          ref.read(selectedProfileIdProvider.notifier).clear();
-                        }
+                        // Exiting parent mode drops the elevation only — the
+                        // CHILD profile stays active and we land back in the
+                        // child's learning view. Locking the PIN guard clears
+                        // the parent-auth flag (via onSessionLocked), so the
+                        // banner disappears and the next parent-gated action
+                        // re-prompts. We do NOT switch to the adult profile;
+                        // the adult's own profile is reached via the switcher.
+                        ref.read(routerProvider).pinGuard.lock();
                         innerContext.router.replaceAll([const AppShellRoute()]);
                       },
                     ),
@@ -344,34 +338,79 @@ class _ChildViewBanner extends ConsumerWidget {
   }
 }
 
-// W6.15: Tutor mode indicator bar.
+// W6.15 / T3.readonly-state: Tutor mode indicator bar.
 //
-// A narrow banner shown below the offline-sync strip when the user has
-// active tutor grants. It is a context indicator only — the switch
-// affordance was removed in WS1.consolidate. Use the bottom-nav avatar
-// switcher (DEC-11) to change profiles.
-class _TutorModeIndicatorBar extends StatelessWidget {
+// A narrow banner shown below the offline-sync strip when the user has entered
+// a tutored profile context. Shows the talmid's name and a one-tap Exit button.
+// Tapping Exit clears the active tutored context and navigates back to the
+// AppShell (which resolves to the tutor's own profile).
+class _TutorModeIndicatorBar extends ConsumerWidget {
   const _TutorModeIndicatorBar();
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     return Container(
       height: 24,
       color: _tutorAccentColor,
       padding: const EdgeInsets.symmetric(horizontal: 12),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           const Icon(Icons.school_rounded, size: 13, color: Colors.white),
           const SizedBox(width: 6),
-          Text(
-            l10n.tutorModeIndicator,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 11,
-              fontWeight: FontWeight.w700,
-              letterSpacing: 0.4,
+          Expanded(
+            child: Text(
+              l10n.tutorModeIndicator,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.4,
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          Material(
+            type: MaterialType.transparency,
+            child: InkWell(
+              onTap: () {
+                ref
+                    .read(activeTutoredProfileSelectionProvider.notifier)
+                    .exit();
+                context.router.replaceAll([const AppShellRoute()]);
+              },
+              borderRadius: BorderRadius.circular(4),
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 8,
+                  vertical: 2,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.logout_rounded,
+                      size: 12,
+                      color: Colors.white,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      l10n.tutorModeExit,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.4,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             ),
           ),
         ],

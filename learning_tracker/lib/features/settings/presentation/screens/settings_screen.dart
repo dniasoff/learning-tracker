@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
-import 'package:learning_tracker/core/navigation/router_provider.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/talker_provider.dart';
 import 'package:learning_tracker/core/sync/providers/outbox_providers.dart';
@@ -19,6 +18,7 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_st
 import 'package:learning_tracker/features/content_browsing/presentation/providers/text_display_providers.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/parent_pin_keypad_dialog.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_settings_card.dart';
@@ -30,6 +30,7 @@ import 'package:learning_tracker/features/settings/presentation/widgets/backup_s
 import 'package:learning_tracker/features/settings/presentation/widgets/change_password_dialog.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/reauthenticate_dialog.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/user_profile_header_card.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -51,6 +52,18 @@ class SettingsScreen extends ConsumerWidget {
         .firstOrNull;
     final isChildProfile = activeProfile?.profileMode == ProfileMode.child;
     final isAdultProfile = activeProfile?.profileMode == ProfileMode.adult;
+    // T3.gating: in a tutored session all write-path controls are hidden.
+    final isTutoredSession =
+        ref.watch(activeTutoredProfileSelectionProvider) != null;
+    // Elevated parent managing this child: account-level actions (e.g. adding
+    // another login) belong to the adult and must be reachable here too, not
+    // only from the adult's own profile.
+    final parentAuthedProfileId = ref.watch(
+      parentPinAuthenticatedProfileIdProvider,
+    );
+    final inParentMode =
+        parentAuthedProfileId != null &&
+        parentAuthedProfileId == activeProfileId;
     final hasPasswordProvider =
         user != null && user.providers.contains('password');
     final showDeleteAccountTile =
@@ -64,7 +77,9 @@ class SettingsScreen extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
           children: [
-            if (!isChildProfile) ...[
+            // T3.gating: hide the profile header (edit/switch affordance) in
+            // tutored sessions — the tutor cannot switch profiles from here.
+            if (!isChildProfile && !isTutoredSession) ...[
               // Tapping the profile header (name/avatar) opens the canonical
               // profile switcher/manager sheet (switch / add / edit / delete).
               // This is the single switch affordance; the old bottom-nav avatar
@@ -104,7 +119,10 @@ class SettingsScreen extends ConsumerWidget {
             // notifications (reminder schedules), and parental controls.
             _SectionHeader(title: l10n.sectionProfile),
             const SizedBox(height: 10),
-            if (!isChildProfile) ...[
+            // T3.gating: Manage Tracks / Manage Profiles are write-path controls
+            // — hidden in a tutored session (Wave 3 / S4 will add gated write
+            // paths for permitted tutor edits).
+            if (!isChildProfile && !isTutoredSession) ...[
               _SurfaceCard(
                 child: Column(
                   children: [
@@ -142,7 +160,8 @@ class SettingsScreen extends ConsumerWidget {
                   _TransliterationVariantTileSection(theme: theme),
                   _tileDivider(theme),
                   _NikudTile(theme: theme),
-                  if (!isChildProfile) ...[
+                  // T3.gating: bulk lifetime marking is a write-path control.
+                  if (!isChildProfile && !isTutoredSession) ...[
                     _tileDivider(theme),
                     PreferenceListTile.withIcon(
                       icon: Icons.menu_book_rounded,
@@ -171,22 +190,31 @@ class SettingsScreen extends ConsumerWidget {
                 onTap: () => context.pushRoute(const NotificationsRoute()),
               ),
             ),
-            if (!isChildProfile) ...[
+            // T3.gating: backup/sync controls are write-path in tutored sessions.
+            if (!isChildProfile && !isTutoredSession) ...[
               const SizedBox(height: 16),
               const BackupSyncSection(),
             ],
             const SizedBox(height: 24),
-            _ParentalControlsSection(
-              user: user,
-              isChildProfile: isChildProfile,
-            ),
-            if (!isChildProfile || hasPasswordProvider) ...[
+            // T3.gating: parental controls and account management are hidden in
+            // tutored sessions — the tutor is viewing the child's context only.
+            if (!isTutoredSession) ...[
+              _ParentalControlsSection(
+                user: user,
+                isChildProfile: isChildProfile,
+              ),
+            ],
+            if (!isTutoredSession &&
+                (!isChildProfile || hasPasswordProvider || inParentMode)) ...[
               _SectionHeader(title: l10n.sectionAccount),
               const SizedBox(height: 10),
               // Always-available entry to add another login on this device.
               // Previously "Add account" lived only in the count-gated profile
               // switcher, so a single-account user had no way to reach it.
-              if (!isChildProfile) ...[
+              // Also shown to an elevated parent managing a child, so a second
+              // login (e.g. a tutor's account) can be added without first
+              // switching to the adult profile.
+              if (!isChildProfile || inParentMode) ...[
                 _SurfaceCard(
                   child: PreferenceListTile.withIcon(
                     icon: Icons.person_add_alt_1_rounded,
@@ -583,6 +611,18 @@ class _ParentalControlsSectionState
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
 
+    // When the parent is already elevated for this profile, the tile is no
+    // longer an "enter parent mode" gate — it's the entry to the admin
+    // controls. Reflect that: drop the lock + "switch to admin" framing and
+    // show it as an open door into tracks/rewards/tutors.
+    final activeProfileId = ref.watch(activeProfileIdProvider);
+    final parentAuthedProfileId = ref.watch(
+      parentPinAuthenticatedProfileIdProvider,
+    );
+    final inParentMode =
+        parentAuthedProfileId != null &&
+        parentAuthedProfileId == activeProfileId;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -594,14 +634,21 @@ class _ParentalControlsSectionState
             iconColor: AppTheme.brandCoralDeep,
             iconBackground: const Color(0xFFF8E3E7),
             title: l10n.parentMode,
-            subtitle: l10n.parentModeSubtitle,
+            subtitle: inParentMode
+                ? l10n.parentModeActiveSubtitle
+                : l10n.parentModeSubtitle,
             trailing: Icon(
-              _hasPin ? Icons.lock : Icons.lock_open,
+              inParentMode
+                  ? Icons.chevron_right_rounded
+                  : (_hasPin ? Icons.lock : Icons.lock_open),
               color: theme.colorScheme.onSurfaceVariant,
               size: 18,
             ),
             onTap: () async {
-              ref.read(routerProvider).pinGuard.lock();
+              // Opens the admin controls. The PIN guard on ParentSettingsRoute
+              // prompts for the PIN only if not already elevated this session
+              // (no forced re-lock — once in parent mode you stay in it until
+              // you explicitly Exit parent mode).
               await context.pushRoute(const ParentSettingsRoute());
               if (mounted) await _load();
             },

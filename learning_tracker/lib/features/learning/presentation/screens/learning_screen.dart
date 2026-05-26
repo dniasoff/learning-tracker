@@ -16,6 +16,7 @@ import 'package:learning_tracker/features/dashboard/presentation/providers/dashb
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
@@ -37,6 +38,9 @@ class LearningScreen extends ConsumerWidget {
     final isChildMode =
         ref.watch(selectedProfileProvider).asData?.value?.profileMode ==
         ProfileMode.child;
+    // T3.gating: suppress write-path CTAs in a tutored session.
+    final isTutoredSession =
+        ref.watch(activeTutoredProfileSelectionProvider) != null;
     final currentStreak = streakAsync.asData?.value.currentStreak ?? 0;
     final maxStreak = streakAsync.asData?.value.maxStreak ?? 0;
 
@@ -55,21 +59,22 @@ class LearningScreen extends ConsumerWidget {
             ),
             data: (activeCurricula) {
               if (activeCurricula.isEmpty) {
+                final canAddTrack = !isChildMode && !isTutoredSession;
                 return EmptyState(
                   message: l10n.noActiveTracks,
-                  subtitle: isChildMode
-                      ? l10n.askGrownUpToAddTrack
-                      : l10n.addTrackToStart,
+                  subtitle: canAddTrack
+                      ? l10n.addTrackToStart
+                      : l10n.askGrownUpToAddTrack,
                   icon: Icons.menu_book_outlined,
-                  action: isChildMode
-                      ? null
-                      : FilledButton.icon(
+                  action: canAddTrack
+                      ? FilledButton.icon(
                           onPressed: () => context.router.push(
                             TrackManagementHubRoute(startAdding: true),
                           ),
                           icon: const Icon(Icons.add),
                           label: Text(l10n.addTrack),
-                        ),
+                        )
+                      : null,
                 );
               }
 

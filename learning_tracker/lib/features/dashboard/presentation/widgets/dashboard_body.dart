@@ -34,6 +34,7 @@ import 'package:learning_tracker/features/progress/presentation/providers/lifeti
 import 'package:learning_tracker/features/progress/progress.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 class DashboardBody extends ConsumerWidget {
@@ -163,16 +164,19 @@ class DashboardBody extends ConsumerWidget {
       final isChildMode =
           ref.watch(selectedProfileProvider).asData?.value?.profileMode ==
           ProfileMode.child;
+      // T3.gating: suppress the "Add track" CTA in a tutored session.
+      final isTutoredSession =
+          ref.watch(activeTutoredProfileSelectionProvider) != null;
       // W6.3: if user skipped track setup during onboarding, show CTA banner
       // instead of the generic empty-dashboard prompt.
       final skipState = ref.watch(onboardingSkipStateProvider).asData?.value;
-      if (skipState != null && skipState.skipped && !isChildMode) {
+      if (skipState != null && skipState.skipped && !isChildMode && !isTutoredSession) {
         return const SkippedOnboardingCtaBanner();
       }
       return EmptyDashboard(
         name: name,
         greeting: _greeting(l10n),
-        isChildMode: isChildMode,
+        isChildMode: isChildMode || isTutoredSession,
       );
     }
 
