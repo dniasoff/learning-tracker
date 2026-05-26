@@ -88,7 +88,6 @@ void main() {
       final field = db.managers.accounts.computedField((a) => a.passwordHash);
       expect(await db.managers.accounts.withFields([field]).get(), isNotEmpty);
     });
-
   });
 
   // ── learnerProfiles — remaining annotation fields ─────────────────────────

@@ -23,7 +23,11 @@ void main() {
   group('StreakWidget', () {
     testWidgets('displays current streak count and max streak', (tester) async {
       await tester.pumpWidget(
-        buildWidget(currentStreak: 5, maxStreak: 10, userMode: ProfileMode.child),
+        buildWidget(
+          currentStreak: 5,
+          maxStreak: 10,
+          userMode: ProfileMode.child,
+        ),
       );
 
       expect(find.text('5 day streak!'), findsOneWidget);
@@ -32,7 +36,11 @@ void main() {
 
     testWidgets('shows animated variant in child mode', (tester) async {
       await tester.pumpWidget(
-        buildWidget(currentStreak: 3, maxStreak: 7, userMode: ProfileMode.child),
+        buildWidget(
+          currentStreak: 3,
+          maxStreak: 7,
+          userMode: ProfileMode.child,
+        ),
       );
 
       // Child mode uses Card with larger fire icon and bold text
@@ -44,7 +52,11 @@ void main() {
 
     testWidgets('shows subtle variant in adult mode', (tester) async {
       await tester.pumpWidget(
-        buildWidget(currentStreak: 3, maxStreak: 7, userMode: ProfileMode.adult),
+        buildWidget(
+          currentStreak: 3,
+          maxStreak: 7,
+          userMode: ProfileMode.adult,
+        ),
       );
 
       // Adult mode — no Card, just simple text

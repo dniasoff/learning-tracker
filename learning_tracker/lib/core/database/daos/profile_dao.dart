@@ -94,15 +94,15 @@ class ProfileDao extends DatabaseAccessor<UserDatabase> with _$ProfileDaoMixin {
     required String parentUid,
     required String remoteChildProfileId,
     required String grantId,
-  }) => (select(learnerProfiles)
-        ..where(
-          (t) =>
-              t.isTutored.equals(true) &
-              t.tutorParentUid.equals(parentUid) &
-              t.tutorRemoteProfileId.equals(remoteChildProfileId) &
-              t.tutorGrantId.equals(grantId),
-        ))
-      .getSingleOrNull();
+  }) =>
+      (select(learnerProfiles)..where(
+            (t) =>
+                t.isTutored.equals(true) &
+                t.tutorParentUid.equals(parentUid) &
+                t.tutorRemoteProfileId.equals(remoteChildProfileId) &
+                t.tutorGrantId.equals(grantId),
+          ))
+          .getSingleOrNull();
 
   /// Upsert the synthetic local profile for a tutored child.
   ///
@@ -126,14 +126,15 @@ class ProfileDao extends DatabaseAccessor<UserDatabase> with _$ProfileDaoMixin {
     );
     if (existing != null) {
       // Refresh display name / mode in case they changed since last entry.
-      await (update(learnerProfiles)..where((t) => t.id.equals(existing.id)))
-          .write(
-            LearnerProfilesCompanion(
-              displayName: Value(displayName),
-              mode: Value(mode),
-              updatedAt: Value(now),
-            ),
-          );
+      await (update(
+        learnerProfiles,
+      )..where((t) => t.id.equals(existing.id))).write(
+        LearnerProfilesCompanion(
+          displayName: Value(displayName),
+          mode: Value(mode),
+          updatedAt: Value(now),
+        ),
+      );
       return existing.id;
     }
     return into(learnerProfiles).insert(
@@ -160,17 +161,17 @@ class ProfileDao extends DatabaseAccessor<UserDatabase> with _$ProfileDaoMixin {
   /// row delete here purges all mirrored data. Returns the number of rows
   /// deleted (0 or 1).
   Future<int> deleteTutoredMirrorByGrantId(String grantId) =>
-      (delete(learnerProfiles)
-            ..where((t) => t.isTutored.equals(true) & t.tutorGrantId.equals(grantId)))
+      (delete(learnerProfiles)..where(
+            (t) => t.isTutored.equals(true) & t.tutorGrantId.equals(grantId),
+          ))
           .go();
 
   /// Delete ALL tutored-mirror rows for the current account (used on sign-out).
   ///
   /// Returns the number of deleted rows (≥ 0).
   Future<int> deleteAllTutoredMirrors(int accountId) =>
-      (delete(learnerProfiles)
-            ..where(
-              (t) => t.accountId.equals(accountId) & t.isTutored.equals(true),
-            ))
+      (delete(learnerProfiles)..where(
+            (t) => t.accountId.equals(accountId) & t.isTutored.equals(true),
+          ))
           .go();
 }

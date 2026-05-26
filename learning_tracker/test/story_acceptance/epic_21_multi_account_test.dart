@@ -934,11 +934,19 @@ void main() {
             expect(allAccounts, hasLength(2));
 
             final alice = await registry.findById('acc-alice');
-            expect(alice, isNotNull, reason: 'Alice must remain in registry after switch');
+            expect(
+              alice,
+              isNotNull,
+              reason: 'Alice must remain in registry after switch',
+            );
             expect(alice!.email, 'alice@test.local');
 
             final bob = await registry.findById('acc-bob');
-            expect(bob, isNotNull, reason: 'Bob must be the new active account');
+            expect(
+              bob,
+              isNotNull,
+              reason: 'Bob must be the new active account',
+            );
             expect(bob!.email, 'bob@test.local');
 
             // Active account pointer updated to Bob.
@@ -981,7 +989,11 @@ void main() {
             for (final id in ['acc-1', 'acc-2', 'acc-3', 'acc-1']) {
               await sessionService.setActiveAccount(id);
               final count = (await registry.getAllAccounts()).length;
-              expect(count, 3, reason: 'All 3 accounts must survive switch to $id');
+              expect(
+                count,
+                3,
+                reason: 'All 3 accounts must survive switch to $id',
+              );
             }
 
             await registry.close();

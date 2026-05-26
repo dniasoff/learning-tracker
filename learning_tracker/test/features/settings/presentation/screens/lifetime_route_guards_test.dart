@@ -31,9 +31,7 @@ void main() {
 
     setUpAll(() {
       final root = repoRoot();
-      final f = File(
-        '$root/learning_tracker/lib/app/router/app_router.dart',
-      );
+      final f = File('$root/learning_tracker/lib/app/router/app_router.dart');
       routerSource = f.readAsStringSync();
     });
 
@@ -41,9 +39,7 @@ void main() {
     // block that starts at the [page] reference and reading its [guards:] line.
     List<String> guardsForRoute(String pageRef) {
       final pattern = RegExp(
-        r'page:\s*' +
-            RegExp.escape(pageRef) +
-            r'[^)]*?guards:\s*\[([^\]]*)\]',
+        r'page:\s*' + RegExp.escape(pageRef) + r'[^)]*?guards:\s*\[([^\]]*)\]',
         dotAll: true,
       );
       final match = pattern.firstMatch(routerSource);
@@ -101,19 +97,16 @@ void main() {
       },
     );
 
-    test(
-      'LifetimeCurriculumMarkingRoute has exactly three guards',
-      () {
-        final guards = guardsForRoute('LifetimeCurriculumMarkingRoute.page');
-        expect(
-          guards,
-          hasLength(3),
-          reason:
-              'LifetimeCurriculumMarkingRoute must have exactly 3 guards: '
-              '[authGuard, childModeGuard, pinGuard]. '
-              'Found ${guards.length}: $guards',
-        );
-      },
-    );
+    test('LifetimeCurriculumMarkingRoute has exactly three guards', () {
+      final guards = guardsForRoute('LifetimeCurriculumMarkingRoute.page');
+      expect(
+        guards,
+        hasLength(3),
+        reason:
+            'LifetimeCurriculumMarkingRoute must have exactly 3 guards: '
+            '[authGuard, childModeGuard, pinGuard]. '
+            'Found ${guards.length}: $guards',
+      );
+    });
   });
 }

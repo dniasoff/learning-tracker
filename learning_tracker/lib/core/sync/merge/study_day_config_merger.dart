@@ -46,10 +46,9 @@ class StudyDayConfigMerger implements EntityMerger {
       // violation that fails the ENTIRE study_day_configs channel merge —
       // which in turn triggers a dashboard rebuild storm. Skip the row; the
       // next full pull re-merges it (LWW, idempotent) once the track exists.
-      final trackExists =
-          await (_db.select(_db.curriculumTracks)
-                ..where((t) => t.id.equals(decoded.trackId)))
-              .getSingleOrNull();
+      final trackExists = await (_db.select(
+        _db.curriculumTracks,
+      )..where((t) => t.id.equals(decoded.trackId))).getSingleOrNull();
       if (trackExists == null) continue;
 
       final localRow =

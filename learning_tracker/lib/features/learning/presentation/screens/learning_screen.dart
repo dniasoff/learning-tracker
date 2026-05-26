@@ -38,9 +38,11 @@ class LearningScreen extends ConsumerWidget {
     final isChildMode =
         ref.watch(selectedProfileProvider).asData?.value?.profileMode ==
         ProfileMode.child;
-    // T3.gating: suppress write-path CTAs in a tutored session.
-    final isTutoredSession =
-        ref.watch(activeTutoredProfileSelectionProvider) != null;
+    final activeTutoredSelection = ref.watch(
+      activeTutoredProfileSelectionProvider,
+    );
+    final isTutoredSession = activeTutoredSelection != null;
+    final tutorPerms = ref.watch(activeTutorPermissionsProvider);
     final currentStreak = streakAsync.asData?.value.currentStreak ?? 0;
     final maxStreak = streakAsync.asData?.value.maxStreak ?? 0;
 
@@ -59,7 +61,11 @@ class LearningScreen extends ConsumerWidget {
             ),
             data: (activeCurricula) {
               if (activeCurricula.isEmpty) {
-                final canAddTrack = !isChildMode && !isTutoredSession;
+                // Tutors can add tracks if canEditStages is permitted.
+                final tutorCanAddTrack =
+                    isTutoredSession && (tutorPerms?.canEditStages ?? false);
+                final canAddTrack =
+                    !isChildMode && (!isTutoredSession || tutorCanAddTrack);
                 return EmptyState(
                   message: l10n.noActiveTracks,
                   subtitle: canAddTrack

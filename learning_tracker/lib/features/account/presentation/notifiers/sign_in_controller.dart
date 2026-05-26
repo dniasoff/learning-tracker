@@ -242,7 +242,10 @@ class SignInController extends Notifier<SignInState> {
       if (firstSignInNeedsSetup) {
         unawaited(
           router.replaceAll([
-            if (hasSkipped) const EmptyLoginRoute() else const OnboardingRoute(),
+            if (hasSkipped)
+              const EmptyLoginRoute()
+            else
+              const OnboardingRoute(),
           ]),
         );
       } else {

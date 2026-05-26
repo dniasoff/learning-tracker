@@ -31,7 +31,8 @@ final firestoreGatewayProvider = Provider<FirestoreGatewayImpl?>((ref) {
   return FirestoreGatewayImpl(
     firestore: firestore,
     authRepository: auth,
-    activeAccountUid: () => ref.read(authStateProvider).currentUser?.firebaseUid,
+    activeAccountUid: () =>
+        ref.read(authStateProvider).currentUser?.firebaseUid,
   );
 });
 

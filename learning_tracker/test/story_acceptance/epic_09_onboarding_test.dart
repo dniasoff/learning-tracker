@@ -77,39 +77,33 @@ void main() {
       await db.close();
     });
 
-    test(
-      'onboarding creates learner profile with child mode',
-      () async {
-        // Mode is set on learner_profiles.mode at profile creation
-        final accountId = await db
-            .into(db.accounts)
-            .insert(
-              AccountsCompanion.insert(
-                email: 'child@test.local',
-                tier: 'localBorn',
-                displayName: 'Test User',
-                createdAt: DateTime.now(),
-                updatedAt: DateTime.now(),
-              ),
-            );
-        final profileId = await db
-            .into(db.learnerProfiles)
-            .insert(
-              LearnerProfilesCompanion.insert(
-                accountId: accountId,
-                displayName: 'Test User',
-                mode: ProfileMode.child.storageKey,
-                createdAt: DateTime.now(),
-                updatedAt: DateTime.now(),
-              ),
-            );
-        final profile = await db.profileDao.getProfileById(profileId);
-        expect(
-          ProfileMode.fromStorageKey(profile!.mode),
-          ProfileMode.child,
-        );
-      },
-    );
+    test('onboarding creates learner profile with child mode', () async {
+      // Mode is set on learner_profiles.mode at profile creation
+      final accountId = await db
+          .into(db.accounts)
+          .insert(
+            AccountsCompanion.insert(
+              email: 'child@test.local',
+              tier: 'localBorn',
+              displayName: 'Test User',
+              createdAt: DateTime.now(),
+              updatedAt: DateTime.now(),
+            ),
+          );
+      final profileId = await db
+          .into(db.learnerProfiles)
+          .insert(
+            LearnerProfilesCompanion.insert(
+              accountId: accountId,
+              displayName: 'Test User',
+              mode: ProfileMode.child.storageKey,
+              createdAt: DateTime.now(),
+              updatedAt: DateTime.now(),
+            ),
+          );
+      final profile = await db.profileDao.getProfileById(profileId);
+      expect(ProfileMode.fromStorageKey(profile!.mode), ProfileMode.child);
+    });
 
     test('onboarding creates learner profile with adult mode', () async {
       final accountId = await db
@@ -154,15 +148,13 @@ void main() {
     test('updateDisplayName writes to Firestore', () async {
       final profileService = UserProfileService(
         userProfileDao: db.userProfileDao,
-        pushUserProfile: ({
-          required String firebaseUid,
-          required String displayName,
-        }) async {
-          firestorePushes.add({
-            'firebaseUid': firebaseUid,
-            'displayName': displayName,
-          });
-        },
+        pushUserProfile:
+            ({required String firebaseUid, required String displayName}) async {
+              firestorePushes.add({
+                'firebaseUid': firebaseUid,
+                'displayName': displayName,
+              });
+            },
       );
 
       await profileService.updateDisplayName(

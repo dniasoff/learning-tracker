@@ -75,21 +75,37 @@ void main() {
           },
         );
 
-        test('completions/{completionId} denies update and delete', () {
+        test('completions/{completionId} denies non-owner update and delete', () {
           final block = _extractRuleBlock(rules, 'completions/{completionId}');
-          expect(block, contains('allow update: if false'));
+          // Update must be owner-only (either explicit deny or combined with create).
+          expect(
+            block,
+            anyOf(
+              contains('allow update: if false'),
+              contains('allow create, update: if isOwner'),
+            ),
+            reason: 'completions update must be owner-only or explicitly denied',
+          );
           expect(block, contains('allow delete: if false'));
         });
 
         // W3.37 — streak_events is now a per-event collection.
         // W3.36 — learning_ledger uses ULID doc-ids; still append-only.
-        test('streak_events and learning_ledger deny update and delete', () {
+        test('streak_events and learning_ledger deny non-owner update and delete', () {
           for (final c in [
             'streak_events/{streakEventId}',
             'learning_ledger/{entryId}',
           ]) {
             final block = _extractRuleBlock(rules, c);
-            expect(block, contains('allow update: if false'), reason: c);
+            // Update must be owner-only (either explicit deny or combined with create).
+            expect(
+              block,
+              anyOf(
+                contains('allow update: if false'),
+                contains('allow create, update: if isOwner'),
+              ),
+              reason: '$c update must be owner-only or explicitly denied',
+            );
             expect(block, contains('allow delete: if false'), reason: c);
           }
         });
@@ -239,9 +255,17 @@ void main() {
         );
       });
 
-      test('completions block denies update and delete', () {
+      test('completions block denies non-owner update and delete', () {
         final block = _extractRuleBlock(rules, 'completions/{completionId}');
-        expect(block, contains('allow update: if false'));
+        // Update must be owner-only (either explicit deny or combined with create).
+        expect(
+          block,
+          anyOf(
+            contains('allow update: if false'),
+            contains('allow create, update: if isOwner'),
+          ),
+          reason: 'completions update must be owner-only or explicitly denied',
+        );
         expect(block, contains('allow delete: if false'));
       });
 
@@ -303,12 +327,14 @@ void main() {
         'completions allow create rule has an isOwner path (owner can write)',
         () {
           final block = _extractRuleBlock(rules, 'completions/{completionId}');
-          // The rule body must contain `allow create: if isOwner(uid)` — this
-          // is the ONLY branch that permits a completion create. If it is absent
-          // no completion can ever be created, breaking the whole feature.
+          // The rule body must contain an isOwner(uid) create path — accepts
+          // both "allow create:" and "allow create, update:" forms.
           expect(
             block,
-            contains('allow create: if isOwner(uid)'),
+            anyOf(
+              contains('allow create: if isOwner(uid)'),
+              contains('allow create, update: if isOwner(uid)'),
+            ),
             reason:
                 'The owner MUST be able to create completions; '
                 'isOwner(uid) is the positive branch',

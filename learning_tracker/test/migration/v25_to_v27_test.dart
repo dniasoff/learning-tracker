@@ -261,9 +261,14 @@ void main() {
       await db.close();
     });
 
-    test('schemaVersion is 27 after migration', () async {
+    test('schemaVersion is current (≥27) after migration', () async {
       final row = await db.customSelect('PRAGMA user_version').getSingle();
-      expect(row.data.values.first, 27);
+      expect(
+        row.data.values.first,
+        greaterThanOrEqualTo(27),
+        reason: 'migration from v25 must reach at least v27; current target is '
+            '${row.data.values.first}',
+      );
     });
 
     test('all learner_profiles are preserved with ids intact', () async {
@@ -292,17 +297,16 @@ void main() {
 
       // Key fields survive.
       final balances = await db.select(db.pointsBalance).get();
-      expect(
-        {for (final b in balances) b.profileId: b.balance},
-        {2: 42, 5: 7},
-      );
+      expect({for (final b in balances) b.profileId: b.balance}, {2: 42, 5: 7});
       final ledger = await db.select(db.pointsLedger).get();
       expect(ledger.map((l) => l.delta).toList()..sort(), [7, 10, 32]);
     });
 
     test('no child row is orphaned (foreign_key_check is empty)', () async {
       // Enforcement is back ON after migration (beforeOpen + v26 step).
-      final violations = await db.customSelect('PRAGMA foreign_key_check').get();
+      final violations = await db
+          .customSelect('PRAGMA foreign_key_check')
+          .get();
       expect(
         violations,
         isEmpty,
@@ -313,9 +317,7 @@ void main() {
     });
 
     test('accounts.user_mode column is gone', () async {
-      final cols = await db
-          .customSelect("PRAGMA table_info('accounts')")
-          .get();
+      final cols = await db.customSelect("PRAGMA table_info('accounts')").get();
       final names = cols.map((r) => r.data['name'] as String).toList();
       expect(names, isNot(contains('user_mode')));
       expect(names, contains('email'));
@@ -334,27 +336,31 @@ void main() {
       );
     });
 
-    test('points_ledger + reward_redemptions gain a nullable ulid column', () async {
-      final ledgerCols = await db
-          .customSelect("PRAGMA table_info('points_ledger')")
-          .get();
-      expect(
-        ledgerCols.map((r) => r.data['name'] as String),
-        contains('ulid'),
-      );
+    test(
+      'points_ledger + reward_redemptions gain a nullable ulid column',
+      () async {
+        final ledgerCols = await db
+            .customSelect("PRAGMA table_info('points_ledger')")
+            .get();
+        expect(
+          ledgerCols.map((r) => r.data['name'] as String),
+          contains('ulid'),
+        );
 
-      final redemptionCols = await db
-          .customSelect("PRAGMA table_info('reward_redemptions')")
-          .get();
-      final redemptionNames =
-          redemptionCols.map((r) => r.data['name'] as String).toList();
-      expect(redemptionNames, contains('ulid'));
-      // LWW field for reward_redemptions must exist.
-      expect(redemptionNames, contains('updated_at'));
+        final redemptionCols = await db
+            .customSelect("PRAGMA table_info('reward_redemptions')")
+            .get();
+        final redemptionNames = redemptionCols
+            .map((r) => r.data['name'] as String)
+            .toList();
+        expect(redemptionNames, contains('ulid'));
+        // LWW field for reward_redemptions must exist.
+        expect(redemptionNames, contains('updated_at'));
 
-      // Existing rows have NULL ulid (additive, no backfill in this slice).
-      final existing = await db.select(db.pointsLedger).get();
-      expect(existing.every((l) => l.ulid == null), isTrue);
-    });
+        // Existing rows have NULL ulid (additive, no backfill in this slice).
+        final existing = await db.select(db.pointsLedger).get();
+        expect(existing.every((l) => l.ulid == null), isTrue);
+      },
+    );
   });
 }

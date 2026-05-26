@@ -9,7 +9,6 @@
 // invoke at entry time with the concrete parentUid.  The own-data gateway in
 // outbox_providers.dart is unchanged.
 
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
@@ -20,7 +19,6 @@ import 'package:learning_tracker/core/sync/providers/merge_router_provider.dart'
 import 'package:learning_tracker/core/sync/tutored_mirror_wipe_service.dart';
 import 'package:learning_tracker/core/sync/tutored_pull_service.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
-import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
@@ -40,11 +38,13 @@ TutoredPullService buildTutoredPullService({
   required String parentUid,
 }) => _build(
   authState: ref.read(authStateProvider),
-  firestore: ref.read(firebaseFirestoreProvider),
-  auth: ref.read(authRepositoryProvider),
+  gateway: FirestoreGatewayImpl(
+    firestore: ref.read(firebaseFirestoreProvider),
+    authRepository: ref.read(authRepositoryProvider),
+    activeAccountUid: () => parentUid,
+  ),
   database: ref.read(userDatabaseProvider),
   mergeRouter: ref.read(mergeRouterProvider),
-  parentUid: parentUid,
 );
 
 /// Variant that accepts a [WidgetRef] (from [ConsumerWidget] / [ConsumerState]
@@ -54,20 +54,20 @@ TutoredPullService buildTutoredPullServiceFromWidget({
   required String parentUid,
 }) => _build(
   authState: ref.read(authStateProvider),
-  firestore: ref.read(firebaseFirestoreProvider),
-  auth: ref.read(authRepositoryProvider),
+  gateway: FirestoreGatewayImpl(
+    firestore: ref.read(firebaseFirestoreProvider),
+    authRepository: ref.read(authRepositoryProvider),
+    activeAccountUid: () => parentUid,
+  ),
   database: ref.read(userDatabaseProvider),
   mergeRouter: ref.read(mergeRouterProvider),
-  parentUid: parentUid,
 );
 
 TutoredPullService _build({
   required AuthState authState,
-  required FirebaseFirestore firestore,
-  required AuthRepository auth,
+  required FirestoreGatewayImpl gateway,
   required UserDatabase database,
   required MergeRouter mergeRouter,
-  required String parentUid,
   TutoredMirrorWipeService? wipeService,
 }) {
   if (!authState.isCloudBorn) {
@@ -76,15 +76,8 @@ TutoredPullService _build({
     );
   }
 
-  // T1.gateway — parent-scoped gateway: reads at users/{parentUid}/…
-  final parentGateway = FirestoreGatewayImpl(
-    firestore: firestore,
-    authRepository: auth,
-    activeAccountUid: () => parentUid,
-  );
-
   return TutoredPullService(
-    gateway: parentGateway,
+    gateway: gateway,
     dispatcher: mergeRouter,
     profileDao: database.profileDao,
     wipeService: wipeService,
@@ -101,10 +94,7 @@ TutoredMirrorWipeService buildTutoredMirrorWipeService({
   void Function(String grantId)? onWipe,
 }) {
   final db = ref.read(userDatabaseProvider);
-  return TutoredMirrorWipeService(
-    profileDao: db.profileDao,
-    onWipe: onWipe,
-  );
+  return TutoredMirrorWipeService(profileDao: db.profileDao, onWipe: onWipe);
 }
 
 /// Variant that accepts a [WidgetRef].
@@ -113,8 +103,5 @@ TutoredMirrorWipeService buildTutoredMirrorWipeServiceFromWidget({
   void Function(String grantId)? onWipe,
 }) {
   final db = ref.read(userDatabaseProvider);
-  return TutoredMirrorWipeService(
-    profileDao: db.profileDao,
-    onWipe: onWipe,
-  );
+  return TutoredMirrorWipeService(profileDao: db.profileDao, onWipe: onWipe);
 }

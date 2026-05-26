@@ -52,9 +52,10 @@ class SettingsScreen extends ConsumerWidget {
         .firstOrNull;
     final isChildProfile = activeProfile?.profileMode == ProfileMode.child;
     final isAdultProfile = activeProfile?.profileMode == ProfileMode.adult;
-    // T3.gating: in a tutored session all write-path controls are hidden.
-    final isTutoredSession =
-        ref.watch(activeTutoredProfileSelectionProvider) != null;
+    final activeTutoredSelection = ref.watch(
+      activeTutoredProfileSelectionProvider,
+    );
+    final isTutoredSession = activeTutoredSelection != null;
     // Elevated parent managing this child: account-level actions (e.g. adding
     // another login) belong to the adult and must be reachable here too, not
     // only from the adult's own profile.
@@ -71,19 +72,20 @@ class SettingsScreen extends ConsumerWidget {
         isAdultProfile &&
         (user != null || authState.isLocalBorn);
 
+    // isTutorElevated: tutor in a talmid's context → parent-equivalent access
+    // for the child's LEARNING management (not account-admin surfaces).
+    final tutorPerms = ref.watch(activeTutorPermissionsProvider);
+    final isTutorElevated = isTutoredSession;
+
     return Scaffold(
       body: SafeArea(
         top: true,
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
           children: [
-            // T3.gating: hide the profile header (edit/switch affordance) in
-            // tutored sessions — the tutor cannot switch profiles from here.
-            if (!isChildProfile && !isTutoredSession) ...[
-              // Tapping the profile header (name/avatar) opens the canonical
-              // profile switcher/manager sheet (switch / add / edit / delete).
-              // This is the single switch affordance; the old bottom-nav avatar
-              // switcher was retired.
+            // Show profile header for own adult profiles AND for tutored
+            // sessions (tutor sees the talmid's profile in read-only context).
+            if (!isChildProfile || isTutorElevated) ...[
               UserProfileHeaderCard(
                 user: user,
                 activeProfile: activeProfile,
@@ -119,31 +121,37 @@ class SettingsScreen extends ConsumerWidget {
             // notifications (reminder schedules), and parental controls.
             _SectionHeader(title: l10n.sectionProfile),
             const SizedBox(height: 10),
-            // T3.gating: Manage Tracks / Manage Profiles are write-path controls
-            // — hidden in a tutored session (Wave 3 / S4 will add gated write
-            // paths for permitted tutor edits).
-            if (!isChildProfile && !isTutoredSession) ...[
+            // Own adult: Manage Tracks + Manage Profiles.
+            // Tutor elevated (talmid context): Manage Tracks gated by canEditStages;
+            //   Manage Profiles is owner-only (hidden for tutors).
+            if (!isChildProfile ||
+                (isTutorElevated && (tutorPerms?.canEditStages ?? false))) ...[
               _SurfaceCard(
                 child: Column(
                   children: [
-                    PreferenceListTile.withIcon(
-                      icon: Icons.route_rounded,
-                      iconColor: AppTheme.brandBlueBright,
-                      iconBackground: AppTheme.brandBlueSoft,
-                      title: l10n.manageTracks,
-                      subtitle: l10n.manageTracksDetail,
-                      onTap: () => context.pushRoute(TrackManagementHubRoute()),
-                    ),
-                    _tileDivider(theme),
-                    PreferenceListTile.withIcon(
-                      icon: Icons.people_alt_rounded,
-                      iconColor: AppTheme.brandBlueBright,
-                      iconBackground: AppTheme.brandBlueSoft,
-                      title: l10n.manageProfiles,
-                      subtitle: l10n.manageProfilesSubtitle,
-                      onTap: () =>
-                          context.pushRoute(const ManageLearnersRoute()),
-                    ),
+                    if (!isTutorElevated ||
+                        (tutorPerms?.canEditStages ?? false))
+                      PreferenceListTile.withIcon(
+                        icon: Icons.route_rounded,
+                        iconColor: AppTheme.brandBlueBright,
+                        iconBackground: AppTheme.brandBlueSoft,
+                        title: l10n.manageTracks,
+                        subtitle: l10n.manageTracksDetail,
+                        onTap: () =>
+                            context.pushRoute(TrackManagementHubRoute()),
+                      ),
+                    if (!isTutorElevated) ...[
+                      _tileDivider(theme),
+                      PreferenceListTile.withIcon(
+                        icon: Icons.people_alt_rounded,
+                        iconColor: AppTheme.brandBlueBright,
+                        iconBackground: AppTheme.brandBlueSoft,
+                        title: l10n.manageProfiles,
+                        subtitle: l10n.manageProfilesSubtitle,
+                        onTap: () =>
+                            context.pushRoute(const ManageLearnersRoute()),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -160,7 +168,7 @@ class SettingsScreen extends ConsumerWidget {
                   _TransliterationVariantTileSection(theme: theme),
                   _tileDivider(theme),
                   _NikudTile(theme: theme),
-                  // T3.gating: bulk lifetime marking is a write-path control.
+                  // Hidden for tutors: bulk lifetime marking goes through CF (S4).
                   if (!isChildProfile && !isTutoredSession) ...[
                     _tileDivider(theme),
                     PreferenceListTile.withIcon(

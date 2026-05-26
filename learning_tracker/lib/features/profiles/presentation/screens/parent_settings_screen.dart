@@ -370,7 +370,10 @@ Future<void> _showAdjustPointsDialog(
           children: [
             SegmentedButton<bool>(
               segments: [
-                ButtonSegment(value: true, label: Text(l10n.parentPointsAdjustAddLabel)),
+                ButtonSegment(
+                  value: true,
+                  label: Text(l10n.parentPointsAdjustAddLabel),
+                ),
                 ButtonSegment(
                   value: false,
                   label: Text(l10n.parentPointsAdjustDeductLabel),

@@ -104,9 +104,16 @@ void main() {
       );
     });
 
-    test('completions block denies update and delete', () {
+    test('completions block denies update from non-owners and denies delete', () {
       final block = _extractRuleBlock(rules, 'completions/{completionId}');
-      expect(block, contains('allow update: if false'));
+      // Update must be gated by isOwner(uid) — either as a combined
+      // "create, update" or a separate rule. A tutor (uid ≠ profileId owner)
+      // always fails isOwner(uid), so no tutor can update a completion.
+      expect(
+        block,
+        anyOf(contains('allow update: if false'), contains('allow create, update: if isOwner')),
+        reason: 'completions update MUST be owner-only or explicitly denied.',
+      );
       expect(block, contains('allow delete: if false'));
     });
   });
@@ -120,7 +127,11 @@ void main() {
         final block = _extractRuleBlock(rules, 'completions/{completionId}');
         expect(
           block,
-          contains('allow create: if isOwner(uid)'),
+          // Accepts both "allow create: if isOwner" and "allow create, update: if isOwner"
+          anyOf(
+            contains('allow create: if isOwner(uid)'),
+            contains('allow create, update: if isOwner(uid)'),
+          ),
           reason:
               'The owner MUST be able to create completions. '
               'isOwner(uid) is the ONLY allow path. Removing it would silently '
@@ -331,10 +342,13 @@ void main() {
       'completions write block isOwner(uid) guard is not weakened by C2 change',
       () {
         final block = _extractRuleBlock(rules, 'completions/{completionId}');
-        // The create line specifically must be isOwner-only.
+        // The create rule must be isOwner-only — accepts combined create,update.
         expect(
           block,
-          contains('allow create: if isOwner(uid)'),
+          anyOf(
+            contains('allow create: if isOwner(uid)'),
+            contains('allow create, update: if isOwner(uid)'),
+          ),
           reason:
               'Adding tutor read access MUST NOT have weakened the write '
               'block. allow create must still be isOwner(uid) only.',

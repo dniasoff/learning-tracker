@@ -276,10 +276,9 @@ void main() {
           ],
         );
 
-        final rows =
-            await (db.select(db.studyDayConfigs)
-                  ..where((t) => t.trackId.equals(999999)))
-                .get();
+        final rows = await (db.select(
+          db.studyDayConfigs,
+        )..where((t) => t.trackId.equals(999999))).get();
         expect(rows, isEmpty, reason: 'row with missing track FK is skipped');
       },
     );
@@ -310,10 +309,9 @@ void main() {
           ],
         );
 
-        final valid =
-            await (db.select(db.studyDayConfigs)
-                  ..where((t) => t.dayOfWeek.equals(5)))
-                .getSingleOrNull();
+        final valid = await (db.select(
+          db.studyDayConfigs,
+        )..where((t) => t.dayOfWeek.equals(5))).getSingleOrNull();
         expect(
           valid,
           isNotNull,

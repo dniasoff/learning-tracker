@@ -84,14 +84,17 @@ void main() {
       );
     });
 
-    test('AC4b: AcceptInviteScreen falls back to stub when grant not in list', () {
-      expect(
-        acceptInviteSrc,
-        contains('_loadedGrant ?? _buildStubGrant'),
-        reason:
-            'accept_invite_screen.dart must use real grant when available, '
-            'falling back to stub if grant not yet cached',
-      );
-    });
+    test(
+      'AC4b: AcceptInviteScreen falls back to stub when grant not in list',
+      () {
+        expect(
+          acceptInviteSrc,
+          contains('_loadedGrant ?? _buildStubGrant'),
+          reason:
+              'accept_invite_screen.dart must use real grant when available, '
+              'falling back to stub if grant not yet cached',
+        );
+      },
+    );
   });
 }

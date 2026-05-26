@@ -1070,8 +1070,11 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     required String collection,
     required String docId,
   }) async {
-    final ref = _childCollection(parentUid, remoteProfileId, collection)
-        .doc(docId);
+    final ref = _childCollection(
+      parentUid,
+      remoteProfileId,
+      collection,
+    ).doc(docId);
     final snap = await ref.get();
     if (!snap.exists) return null;
     final data = snap.data();

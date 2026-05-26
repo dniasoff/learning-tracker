@@ -108,9 +108,7 @@ class ProgressScreen extends ConsumerWidget {
                           ?.copyWith(fontWeight: FontWeight.w800),
                     ),
                     const SizedBox(height: 14),
-                    ProgressTierCounterRow(
-                      showPoints: userMode.isChild,
-                    ),
+                    ProgressTierCounterRow(showPoints: userMode.isChild),
                     const SizedBox(height: 18),
                     const _RecentActivityLensTile(),
                     const SizedBox(height: 10),

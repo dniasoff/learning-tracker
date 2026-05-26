@@ -221,9 +221,7 @@ void main() {
           );
 
       final learnerProfiles = await db.select(db.learnerProfiles).get();
-      final childProfile = learnerProfiles.firstWhere(
-        (p) => p.mode == 'child',
-      );
+      final childProfile = learnerProfiles.firstWhere((p) => p.mode == 'child');
       final mode = ProfileMode.fromStorageKey(childProfile.mode);
       expect(mode, ProfileMode.child);
     });

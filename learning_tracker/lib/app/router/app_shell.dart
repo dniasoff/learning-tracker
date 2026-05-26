@@ -375,17 +375,12 @@ class _TutorModeIndicatorBar extends ConsumerWidget {
             type: MaterialType.transparency,
             child: InkWell(
               onTap: () {
-                ref
-                    .read(activeTutoredProfileSelectionProvider.notifier)
-                    .exit();
+                ref.read(activeTutoredProfileSelectionProvider.notifier).exit();
                 context.router.replaceAll([const AppShellRoute()]);
               },
               borderRadius: BorderRadius.circular(4),
               child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 8,
-                  vertical: 2,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                 decoration: BoxDecoration(
                   color: Colors.white.withValues(alpha: 0.2),
                   borderRadius: BorderRadius.circular(4),

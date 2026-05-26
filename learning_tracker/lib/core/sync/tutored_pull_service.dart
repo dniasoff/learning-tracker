@@ -47,15 +47,18 @@ class TutoredPullService {
     required MergeDispatcher dispatcher,
     required ProfileDao profileDao,
     TutoredMirrorWipeService? wipeService,
+    DateTime Function()? clock,
   }) : _gateway = gateway,
        _dispatcher = dispatcher,
        _profileDao = profileDao,
-       _wipeService = wipeService;
+       _wipeService = wipeService,
+       _clock = clock ?? DateTime.now;
 
   final FirestoreGateway _gateway;
   final MergeDispatcher _dispatcher;
   final ProfileDao _profileDao;
   final TutoredMirrorWipeService? _wipeService;
+  final DateTime Function() _clock;
 
   /// Upsert the synthetic local profile and pull all child collections.
   ///
@@ -84,7 +87,7 @@ class TutoredPullService {
       grantId: grantId,
       displayName: childDisplayName,
       mode: childMode,
-      now: DateTime.now(),
+      now: _clock(),
     );
 
     // T1.pull-decouple — read parent namespace, merge under synthetic local id.

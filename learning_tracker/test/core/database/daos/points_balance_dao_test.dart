@@ -88,20 +88,23 @@ void main() {
       expect(await db.pointsBalanceDao.getBalance(1), 70);
     });
 
-    test('createRedemption returns null when balance is insufficient', () async {
-      await db.pointsBalanceDao.creditCompletion(1, 10);
+    test(
+      'createRedemption returns null when balance is insufficient',
+      () async {
+        await db.pointsBalanceDao.creditCompletion(1, 10);
 
-      final redemption = await db.pointsBalanceDao.createRedemption(
-        profileId: 1,
-        rewardTitle: 'Toy',
-        iconIndex: 1,
-        pointsCost: 50,
-      );
+        final redemption = await db.pointsBalanceDao.createRedemption(
+          profileId: 1,
+          rewardTitle: 'Toy',
+          iconIndex: 1,
+          pointsCost: 50,
+        );
 
-      expect(redemption, isNull);
-      // Balance unchanged.
-      expect(await db.pointsBalanceDao.getBalance(1), 10);
-    });
+        expect(redemption, isNull);
+        // Balance unchanged.
+        expect(await db.pointsBalanceDao.getBalance(1), 10);
+      },
+    );
 
     // ── fulfilRedemption ──────────────────────────────────────────────────────
 
@@ -124,26 +127,29 @@ void main() {
 
     // ── declineRedemption ─────────────────────────────────────────────────────
 
-    test('declineRedemption refunds points and sets status to declined', () async {
-      await db.pointsBalanceDao.creditCompletion(1, 100);
-      final redemption = await db.pointsBalanceDao.createRedemption(
-        profileId: 1,
-        rewardTitle: 'Book',
-        iconIndex: 3,
-        pointsCost: 50,
-      );
+    test(
+      'declineRedemption refunds points and sets status to declined',
+      () async {
+        await db.pointsBalanceDao.creditCompletion(1, 100);
+        final redemption = await db.pointsBalanceDao.createRedemption(
+          profileId: 1,
+          rewardTitle: 'Book',
+          iconIndex: 3,
+          pointsCost: 50,
+        );
 
-      // Balance after redeem should be 50.
-      expect(await db.pointsBalanceDao.getBalance(1), 50);
+        // Balance after redeem should be 50.
+        expect(await db.pointsBalanceDao.getBalance(1), 50);
 
-      await db.pointsBalanceDao.declineRedemption(redemption!.id);
+        await db.pointsBalanceDao.declineRedemption(redemption!.id);
 
-      // Balance refunded — back to 100.
-      expect(await db.pointsBalanceDao.getBalance(1), 100);
+        // Balance refunded — back to 100.
+        expect(await db.pointsBalanceDao.getBalance(1), 100);
 
-      final all = await db.pointsBalanceDao.getAllRedemptions(1);
-      expect(all.any((r) => r.status == 'declined'), isTrue);
-    });
+        final all = await db.pointsBalanceDao.getAllRedemptions(1);
+        expect(all.any((r) => r.status == 'declined'), isTrue);
+      },
+    );
 
     // ── getPendingRedemptions / watchPendingRedemptions ───────────────────────
 

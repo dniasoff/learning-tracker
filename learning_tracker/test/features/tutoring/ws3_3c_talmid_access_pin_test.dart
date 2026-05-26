@@ -46,15 +46,18 @@ void main() {
 
     // ── AC1: TutorPinEntryGate wired into talmid row ─────────────────────────
 
-    test('AC1: TutorPinEntryGate is referenced in tutored_children_section', () {
-      expect(
-        sectionSrc,
-        contains('TutorPinEntryGate'),
-        reason:
-            'TutorPinEntryGate must be instantiated in the talmid row '
-            '(WS3.3c — DEC-13-tutor: PIN required on every talmid view)',
-      );
-    });
+    test(
+      'AC1: TutorPinEntryGate is referenced in tutored_children_section',
+      () {
+        expect(
+          sectionSrc,
+          contains('TutorPinEntryGate'),
+          reason:
+              'TutorPinEntryGate must be instantiated in the talmid row '
+              '(WS3.3c — DEC-13-tutor: PIN required on every talmid view)',
+        );
+      },
+    );
 
     test('AC1: Talmid row onTap is non-null (_enterTalmidView)', () {
       expect(
@@ -77,25 +80,31 @@ void main() {
       );
     });
 
-    test('AC2: router_provider resolves PinScope.tutor() for tutored context', () {
-      expect(
-        routerProviderSrc,
-        contains('PinScope.tutor('),
-        reason:
-            'router_provider.dart must resolve PinScope.tutor(profileId) '
-            'when a TutoredProfileSelection is active',
-      );
-    });
+    test(
+      'AC2: router_provider resolves PinScope.tutor() for tutored context',
+      () {
+        expect(
+          routerProviderSrc,
+          contains('PinScope.tutor('),
+          reason:
+              'router_provider.dart must resolve PinScope.tutor(profileId) '
+              'when a TutoredProfileSelection is active',
+        );
+      },
+    );
 
-    test('AC2: router_provider falls back to PinScope.parent() for own profile', () {
-      expect(
-        routerProviderSrc,
-        contains('PinScope.parent('),
-        reason:
-            'router_provider.dart must fall back to PinScope.parent(profileId) '
-            'for own-profile routes',
-      );
-    });
+    test(
+      'AC2: router_provider falls back to PinScope.parent() for own profile',
+      () {
+        expect(
+          routerProviderSrc,
+          contains('PinScope.parent('),
+          reason:
+              'router_provider.dart must fall back to PinScope.parent(profileId) '
+              'for own-profile routes',
+        );
+      },
+    );
 
     // ── AC3: PinScope.tutor() exists (pre-existing sealed variant) ────────────
 
@@ -161,10 +170,13 @@ void main() {
       expect(scope.profileId, 42);
     });
 
-    test('AC4f: PinScope.parent and PinScope.tutor with same ID are not equal', () {
-      const parent = PinScope.parent(1);
-      const tutor = PinScope.tutor(1);
-      expect(parent, isNot(equals(tutor)));
-    });
+    test(
+      'AC4f: PinScope.parent and PinScope.tutor with same ID are not equal',
+      () {
+        const parent = PinScope.parent(1);
+        const tutor = PinScope.tutor(1);
+        expect(parent, isNot(equals(tutor)));
+      },
+    );
   });
 }

@@ -28,16 +28,18 @@ void main() {
 
     // ── AC1: Invite / add path ────────────────────────────────────────────────
 
-    test('AC1: manage_tutors_screen navigates to InviteTutorRoute (add tutor)',
-        () {
-      expect(
-        manageTutorsSrc,
-        contains('InviteTutorRoute'),
-        reason:
-            'manage_tutors_screen.dart must navigate to InviteTutorRoute so '
-            'parents can add/invite a new tutor (WS3.3f DEC-10)',
-      );
-    });
+    test(
+      'AC1: manage_tutors_screen navigates to InviteTutorRoute (add tutor)',
+      () {
+        expect(
+          manageTutorsSrc,
+          contains('InviteTutorRoute'),
+          reason:
+              'manage_tutors_screen.dart must navigate to InviteTutorRoute so '
+              'parents can add/invite a new tutor (WS3.3f DEC-10)',
+        );
+      },
+    );
 
     test('AC1: "Invite a tutor" affordance is present', () {
       expect(
@@ -51,16 +53,18 @@ void main() {
 
     // ── AC2: Revoke active grants ─────────────────────────────────────────────
 
-    test('AC2: manage_tutors_screen references revokeTutorGrantUseCaseProvider',
-        () {
-      expect(
-        manageTutorsSrc,
-        contains('revokeTutorGrantUseCaseProvider'),
-        reason:
-            'manage_tutors_screen.dart must use revokeTutorGrantUseCaseProvider '
-            'to remove active tutors (WS3.3f DEC-22)',
-      );
-    });
+    test(
+      'AC2: manage_tutors_screen references revokeTutorGrantUseCaseProvider',
+      () {
+        expect(
+          manageTutorsSrc,
+          contains('revokeTutorGrantUseCaseProvider'),
+          reason:
+              'manage_tutors_screen.dart must use revokeTutorGrantUseCaseProvider '
+              'to remove active tutors (WS3.3f DEC-22)',
+        );
+      },
+    );
 
     test('AC2: Revoke action is shown for active grants', () {
       expect(
@@ -75,16 +79,17 @@ void main() {
     // ── AC3: Rescind pending invites ──────────────────────────────────────────
 
     test(
-        'AC3: manage_tutors_screen references rescindTutorInviteUseCaseProvider',
-        () {
-      expect(
-        manageTutorsSrc,
-        contains('rescindTutorInviteUseCaseProvider'),
-        reason:
-            'manage_tutors_screen.dart must use rescindTutorInviteUseCaseProvider '
-            'to cancel pending invitations (WS3.3f DEC-10)',
-      );
-    });
+      'AC3: manage_tutors_screen references rescindTutorInviteUseCaseProvider',
+      () {
+        expect(
+          manageTutorsSrc,
+          contains('rescindTutorInviteUseCaseProvider'),
+          reason:
+              'manage_tutors_screen.dart must use rescindTutorInviteUseCaseProvider '
+              'to cancel pending invitations (WS3.3f DEC-10)',
+        );
+      },
+    );
 
     test('AC3: Rescind action is shown for pending invites', () {
       expect(

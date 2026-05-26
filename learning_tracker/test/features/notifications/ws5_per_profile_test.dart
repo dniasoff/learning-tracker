@@ -29,21 +29,25 @@ void main() {
       expect(idA, isNot(equals(idB)));
     });
 
-    test('streakAlertIdForProfile returns different IDs for different profiles',
-        () {
-      final idA = streakAlertIdForProfile(0);
-      final idB = streakAlertIdForProfile(1);
-      expect(idA, isNot(equals(idB)));
-    });
+    test(
+      'streakAlertIdForProfile returns different IDs for different profiles',
+      () {
+        final idA = streakAlertIdForProfile(0);
+        final idB = streakAlertIdForProfile(1);
+        expect(idA, isNot(equals(idB)));
+      },
+    );
 
-    test('batchBaseIdForProfile returns different bases for different profiles',
-        () {
-      final baseA = batchBaseIdForProfile(0);
-      final baseB = batchBaseIdForProfile(1);
-      expect(baseA, isNot(equals(baseB)));
-      // Batch base + 13 (last slot) must still be < next profile's base.
-      expect(baseA + 13, lessThan(baseB));
-    });
+    test(
+      'batchBaseIdForProfile returns different bases for different profiles',
+      () {
+        final baseA = batchBaseIdForProfile(0);
+        final baseB = batchBaseIdForProfile(1);
+        expect(baseA, isNot(equals(baseB)));
+        // Batch base + 13 (last slot) must still be < next profile's base.
+        expect(baseA + 13, lessThan(baseB));
+      },
+    );
 
     test('no overlap between profile 0 and profile 1 batch ID ranges', () {
       const batchSize = 14;

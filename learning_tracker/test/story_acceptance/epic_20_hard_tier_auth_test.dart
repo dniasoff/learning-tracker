@@ -148,11 +148,7 @@ void main() {
         expect(signedOut.isLocalBorn, isFalse);
 
         const signedInLocal = AuthState.signedIn(
-          user: AuthUser(
-            profileId: 1,
-            email: 'a@test.local',
-            displayName: 'A',
-          ),
+          user: AuthUser(profileId: 1, email: 'a@test.local', displayName: 'A'),
           tier: Tier.localBorn,
         );
         expect(signedInLocal.isSignedIn, isTrue);

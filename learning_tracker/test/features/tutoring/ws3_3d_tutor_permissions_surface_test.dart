@@ -36,51 +36,59 @@ void main() {
 
     // ── AC1: activeTutorPermissionsProvider declared ──────────────────────────
 
-    test('AC1: activeTutorPermissionsProvider is declared in the provider file',
-        () {
-      expect(
-        activeTutoredSrc,
-        contains('activeTutorPermissionsProvider'),
-        reason:
-            'activeTutorPermissionsProvider must be declared in '
-            'active_tutored_profile_provider.dart (WS3.3d DEC-9)',
-      );
-    });
+    test(
+      'AC1: activeTutorPermissionsProvider is declared in the provider file',
+      () {
+        expect(
+          activeTutoredSrc,
+          contains('activeTutorPermissionsProvider'),
+          reason:
+              'activeTutorPermissionsProvider must be declared in '
+              'active_tutored_profile_provider.dart (WS3.3d DEC-9)',
+        );
+      },
+    );
 
-    test('AC1: activeTutorPermissionsProvider reads activeTutoredProfileSelectionProvider',
-        () {
-      expect(
-        activeTutoredSrc,
-        contains('activeTutoredProfileSelectionProvider'),
-        reason:
-            'activeTutorPermissionsProvider must watch '
-            'activeTutoredProfileSelectionProvider to derive TutorPermissions',
-      );
-    });
+    test(
+      'AC1: activeTutorPermissionsProvider reads activeTutoredProfileSelectionProvider',
+      () {
+        expect(
+          activeTutoredSrc,
+          contains('activeTutoredProfileSelectionProvider'),
+          reason:
+              'activeTutorPermissionsProvider must watch '
+              'activeTutoredProfileSelectionProvider to derive TutorPermissions',
+        );
+      },
+    );
 
-    test('AC1: activeTutorPermissionsProvider returns TutorPermissions type',
-        () {
-      expect(
-        activeTutoredSrc,
-        contains('TutorPermissions'),
-        reason:
-            'activeTutorPermissionsProvider must return TutorPermissions? '
-            'to expose the active grant permissions to UI',
-      );
-    });
+    test(
+      'AC1: activeTutorPermissionsProvider returns TutorPermissions type',
+      () {
+        expect(
+          activeTutoredSrc,
+          contains('TutorPermissions'),
+          reason:
+              'activeTutorPermissionsProvider must return TutorPermissions? '
+              'to expose the active grant permissions to UI',
+        );
+      },
+    );
 
     // ── AC2: parent_settings_screen gates edit tiles ──────────────────────────
 
-    test('AC2: parent_settings_screen watches activeTutorPermissionsProvider',
-        () {
-      expect(
-        parentSettingsSrc,
-        contains('activeTutorPermissionsProvider'),
-        reason:
-            'parent_settings_screen.dart must watch activeTutorPermissionsProvider '
-            'to gate edit tiles in tutored mode (WS3.3d DEC-14)',
-      );
-    });
+    test(
+      'AC2: parent_settings_screen watches activeTutorPermissionsProvider',
+      () {
+        expect(
+          parentSettingsSrc,
+          contains('activeTutorPermissionsProvider'),
+          reason:
+              'parent_settings_screen.dart must watch activeTutorPermissionsProvider '
+              'to gate edit tiles in tutored mode (WS3.3d DEC-14)',
+        );
+      },
+    );
 
     test('AC2: Manage Tracks tile gated on canEditStages', () {
       expect(
@@ -149,10 +157,13 @@ void main() {
     test('AC3: sectionAccountSafety hidden in tutored context', () {
       final ownerIdx = parentSettingsSrc.indexOf('showOwnerOnlyTiles');
       final safetyIdx = parentSettingsSrc.indexOf('sectionAccountSafety');
-      expect(safetyIdx > ownerIdx, isTrue,
-          reason:
-              'sectionAccountSafety (sign out / delete account) must appear '
-              'inside the showOwnerOnlyTiles guard');
+      expect(
+        safetyIdx > ownerIdx,
+        isTrue,
+        reason:
+            'sectionAccountSafety (sign out / delete account) must appear '
+            'inside the showOwnerOnlyTiles guard',
+      );
     });
 
     // ── AC4: permissions_provider.dart deleted ────────────────────────────────

@@ -14,6 +14,9 @@ export 'package:learning_tracker/features/tutoring/domain/models/tutor_permissio
 export 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
 export 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 
+// ── Data services (S4 — tutor write-path CF proxy) ────────────────────────
+export 'package:learning_tracker/features/tutoring/data/services/tutor_write_service.dart';
+
 // ── Domain services (W4.30, W6.20-W6.22, W6.25) ──────────────────────────
 export 'package:learning_tracker/features/tutoring/domain/services/tutor_pin_service.dart';
 export 'package:learning_tracker/features/tutoring/domain/services/tutor_audit_log_writer.dart';

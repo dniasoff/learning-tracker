@@ -68,8 +68,7 @@ final activeTutorPermissionsProvider = Provider<TutorPermissions?>((ref) {
 ///
 /// `keepAlive: true` — must outlive route changes inside the talmid view.
 @Riverpod(keepAlive: true)
-class ResolvedTutoredLocalProfileId
-    extends _$ResolvedTutoredLocalProfileId {
+class ResolvedTutoredLocalProfileId extends _$ResolvedTutoredLocalProfileId {
   @override
   int? build() => null;
 

@@ -30,16 +30,14 @@ class _FakeMergeStore implements MergeStore {
     required String kind,
     required int profileId,
     required String naturalKey,
-  }) async =>
-      _timestamps[kind]?[profileId]?[naturalKey];
+  }) async => _timestamps[kind]?[profileId]?[naturalKey];
 
   @override
   Future<DateTime?> currentSyncedAt({
     required String kind,
     required int profileId,
     required String naturalKey,
-  }) async =>
-      _syncedAt[kind]?[profileId]?[naturalKey];
+  }) async => _syncedAt[kind]?[profileId]?[naturalKey];
 
   @override
   Future<void> persistUpdatedAt({
@@ -50,11 +48,13 @@ class _FakeMergeStore implements MergeStore {
     DateTime? syncedAt,
   }) async {
     _timestamps
-        .putIfAbsent(kind, () => {})
-        .putIfAbsent(profileId, () => {})[naturalKey] = updatedAt;
+            .putIfAbsent(kind, () => {})
+            .putIfAbsent(profileId, () => {})[naturalKey] =
+        updatedAt;
     _syncedAt
-        .putIfAbsent(kind, () => {})
-        .putIfAbsent(profileId, () => {})[naturalKey] = syncedAt;
+            .putIfAbsent(kind, () => {})
+            .putIfAbsent(profileId, () => {})[naturalKey] =
+        syncedAt;
   }
 
   @override
@@ -337,61 +337,64 @@ void main() {
         },
       );
 
-      test('LWW: newer remote row for same profile wins over older local', () async {
-        const profileId = 10;
+      test(
+        'LWW: newer remote row for same profile wins over older local',
+        () async {
+          const profileId = 10;
 
-        final oldTime = DateTime.utc(2026, 5, 24, 8);
-        final newTime = DateTime.utc(2026, 5, 24, 14);
+          final oldTime = DateTime.utc(2026, 5, 24, 8);
+          final newTime = DateTime.utc(2026, 5, 24, 14);
 
-        // First merge (old settings).
-        await merger.merge(
-          profileId: profileId,
-          rows: [
-            _buildRemoteRow(
-              reminderEnabled: true,
-              hour: 8,
-              minute: 0,
-              streakEnabled: false,
-              streakHour: 20,
-              streakMinute: 0,
-              rewardEnabled: false,
-              updatedAt: oldTime,
+          // First merge (old settings).
+          await merger.merge(
+            profileId: profileId,
+            rows: [
+              _buildRemoteRow(
+                reminderEnabled: true,
+                hour: 8,
+                minute: 0,
+                streakEnabled: false,
+                streakHour: 20,
+                streakMinute: 0,
+                rewardEnabled: false,
+                updatedAt: oldTime,
+              ),
+            ],
+          );
+
+          // Second merge (newer settings — should win).
+          await merger.merge(
+            profileId: profileId,
+            rows: [
+              _buildRemoteRow(
+                reminderEnabled: false,
+                hour: 22,
+                minute: 30,
+                streakEnabled: true,
+                streakHour: 21,
+                streakMinute: 0,
+                rewardEnabled: true,
+                updatedAt: newTime,
+              ),
+            ],
+          );
+
+          final prefs = await SharedPreferences.getInstance();
+          expect(
+            prefs.getBool(
+              NotificationPreferencesRepository.reminderEnabledKey(profileId),
             ),
-          ],
-        );
-
-        // Second merge (newer settings — should win).
-        await merger.merge(
-          profileId: profileId,
-          rows: [
-            _buildRemoteRow(
-              reminderEnabled: false,
-              hour: 22,
-              minute: 30,
-              streakEnabled: true,
-              streakHour: 21,
-              streakMinute: 0,
-              rewardEnabled: true,
-              updatedAt: newTime,
+            isFalse,
+            reason: 'Newer remote row must win',
+          );
+          expect(
+            prefs.getInt(
+              NotificationPreferencesRepository.reminderHourKey(profileId),
             ),
-          ],
-        );
-
-        final prefs = await SharedPreferences.getInstance();
-        expect(
-          prefs.getBool(
-            NotificationPreferencesRepository.reminderEnabledKey(profileId),
-          ),
-          isFalse,
-          reason: 'Newer remote row must win',
-        );
-        expect(
-          prefs.getInt(
-            NotificationPreferencesRepository.reminderHourKey(profileId),
-          ),
-          22,
-        );
-      });
+            22,
+          );
+        },
+      );
 
       test('LWW: older remote row does NOT overwrite newer local', () async {
         const profileId = 11;
@@ -401,8 +404,9 @@ void main() {
 
         // Simulate a local write by pre-seeding the MergeStore timestamp.
         store._timestamps
-            .putIfAbsent('notification_settings', () => {})
-            .putIfAbsent(profileId, () => {})['preferences'] = newerLocalTime;
+                .putIfAbsent('notification_settings', () => {})
+                .putIfAbsent(profileId, () => {})['preferences'] =
+            newerLocalTime;
 
         // Also seed the SharedPrefs with the "local" value.
         SharedPreferences.setMockInitialValues({

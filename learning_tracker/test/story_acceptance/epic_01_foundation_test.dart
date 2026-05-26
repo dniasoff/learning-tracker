@@ -241,7 +241,10 @@ void main() {
     // WS9.enum: UserMode deleted — ProfileMode is the canonical mode enum.
     test('ProfileMode has 2 values (child and adult)', () {
       expect(ProfileMode.values, hasLength(2));
-      expect(ProfileMode.values, containsAll([ProfileMode.child, ProfileMode.adult]));
+      expect(
+        ProfileMode.values,
+        containsAll([ProfileMode.child, ProfileMode.adult]),
+      );
     });
   });
 

@@ -790,6 +790,5 @@ void main() {
         isNotEmpty,
       );
     });
-
   });
 }

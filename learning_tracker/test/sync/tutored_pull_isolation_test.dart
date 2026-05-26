@@ -61,26 +61,30 @@ class _ChildDataGateway implements FirestoreGateway {
     // Second call (cursor set) — signal end of collection so the loop exits.
     if (cursor != null) return const FirestorePage(rows: []);
     if (collection == 'completions') {
-      return FirestorePage(rows: [
-        {
-          'firestore_id': 'comp_1',
-          'sefaria_ref': 'Berakhot.1.1',
-          'stage_id': 1,
-          'track_type': 'daily',
-          'curriculum_id': 'test',
-          'completed_at': DateTimeFactory.nowUtc().toIso8601String(),
-          'updated_at': DateTimeFactory.nowUtc().toIso8601String(),
-        },
-      ]);
+      return FirestorePage(
+        rows: [
+          {
+            'firestore_id': 'comp_1',
+            'sefaria_ref': 'Berakhot.1.1',
+            'stage_id': 1,
+            'track_type': 'daily',
+            'curriculum_id': 'test',
+            'completed_at': DateTimeFactory.nowUtc().toIso8601String(),
+            'updated_at': DateTimeFactory.nowUtc().toIso8601String(),
+          },
+        ],
+      );
     }
     if (collection == 'settings') {
-      return FirestorePage(rows: [
-        {
-          'firestore_id': 'settings_1',
-          'curriculum_id': 'test',
-          'updated_at': DateTimeFactory.nowUtc().toIso8601String(),
-        },
-      ]);
+      return FirestorePage(
+        rows: [
+          {
+            'firestore_id': 'settings_1',
+            'curriculum_id': 'test',
+            'updated_at': DateTimeFactory.nowUtc().toIso8601String(),
+          },
+        ],
+      );
     }
     return const FirestorePage(rows: []);
   }
@@ -113,7 +117,9 @@ class _ChildDataGateway implements FirestoreGateway {
 
   @override
   Future<List<Map<String, dynamic>>> fetchLearnerProfiles() async =>
-      throw StateError('fetchLearnerProfiles must not be called for tutored pull');
+      throw StateError(
+        'fetchLearnerProfiles must not be called for tutored pull',
+      );
 
   @override
   Future<List<Map<String, dynamic>>> fetchAll({
@@ -145,55 +151,97 @@ class _ChildDataGateway implements FirestoreGateway {
   }) async => const [];
 
   @override
-  Future<void> pushStreak({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushStreak({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
 
   @override
-  Future<void> pushSettings({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushSettings({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
 
   @override
-  Future<void> pushTrack({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushTrack({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
 
   @override
-  Future<void> pushLearningOrder({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushLearningOrder({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
 
   @override
-  Future<void> pushBookmark({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushBookmark({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
 
   @override
-  Future<void> pushNotificationSettings({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushNotificationSettings({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
 
   @override
-  Future<void> pushGamificationSettings({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushGamificationSettings({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
 
   @override
-  Future<void> pushLearnerProfile({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushLearnerProfile({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
 
   @override
   Future<void> deleteLearnerProfile(int profileId) async {}
 
   @override
-  Future<void> pushGoal({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushGoal({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
 
   @override
-  Future<void> deleteGoal({required int profileId, required String firestoreId}) async {}
+  Future<void> deleteGoal({
+    required int profileId,
+    required String firestoreId,
+  }) async {}
 
   @override
-  Future<void> pushUiPreferences({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushUiPreferences({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
 
   @override
   Future<void> pushAccountProfile({required Map<String, dynamic> data}) async {}
 
   @override
-  Future<void> pushCurriculumImportMetadata({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushCurriculumImportMetadata({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
 
   @override
   Future<void> deleteUserData(String uid) async {}
 
   @override
-  Future<void> pushDiagnosticLog({required String uid, required Map<String, dynamic> data}) async {}
+  Future<void> pushDiagnosticLog({
+    required String uid,
+    required Map<String, dynamic> data,
+  }) async {}
 
   @override
-  Future<void> pushAccountUserProfile({required String uid, required Map<String, dynamic> data}) async {}
+  Future<void> pushAccountUserProfile({
+    required String uid,
+    required Map<String, dynamic> data,
+  }) async {}
 
   @override
   Stream<ListenerSnapshot> listenToCollection({
@@ -219,7 +267,10 @@ class _ChildDataGateway implements FirestoreGateway {
   }) => const Stream.empty();
 
   @override
-  Future<void> pushLedgerEntry({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushLedgerEntry({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
 
   @override
   Future<void> pushLedgerEntriesBatch({
@@ -228,7 +279,10 @@ class _ChildDataGateway implements FirestoreGateway {
   }) async {}
 
   @override
-  Future<void> pushProfileProgram({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushProfileProgram({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
 
   @override
   Future<void> removeProfileProgramAssignment({
@@ -237,60 +291,151 @@ class _ChildDataGateway implements FirestoreGateway {
   }) async {}
 
   @override
-  Future<void> pushStageDefinition({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushStageDefinition({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
 
   @override
-  Future<void> pushStudyDayConfig({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushStudyDayConfig({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
 
   @override
-  Future<void> pushPointsLedgerEntry({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushPointsLedgerEntry({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
 
   @override
-  Future<void> pushRewardRedemption({required int profileId, required Map<String, dynamic> data}) async {}
+  Future<void> pushRewardRedemption({
+    required int profileId,
+    required Map<String, dynamic> data,
+  }) async {}
 }
 
 /// No-op [PushPipeline] used in drain guard test — must never be called.
 class _NoPushPipeline implements PushPipeline {
   @override
-  Future<void> pushCompletion({required int profileId, required String entityKey, required Map<String, dynamic> payload}) async => throw StateError('push must not be called for tutored profile');
+  Future<void> pushCompletion({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) async => throw StateError('push must not be called for tutored profile');
   @override
-  Future<List<String>> pushCompletionsBatch({required int profileId, required List<({String entityKey, Map<String, dynamic> payload})> entries}) async => throw StateError('push must not be called for tutored profile');
+  Future<List<String>> pushCompletionsBatch({
+    required int profileId,
+    required List<({String entityKey, Map<String, dynamic> payload})> entries,
+  }) async => throw StateError('push must not be called for tutored profile');
   @override
-  Future<void> pushStreak({required int profileId, required String entityKey, required Map<String, dynamic> payload}) async => throw StateError('push must not be called');
+  Future<void> pushStreak({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) async => throw StateError('push must not be called');
   @override
-  Future<void> pushSettings({required int profileId, required String entityKey, required Map<String, dynamic> payload}) async => throw StateError('push must not be called');
+  Future<void> pushSettings({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) async => throw StateError('push must not be called');
   @override
-  Future<void> pushTrack({required int profileId, required String entityKey, required Map<String, dynamic> payload}) async => throw StateError('push must not be called');
+  Future<void> pushTrack({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) async => throw StateError('push must not be called');
   @override
-  Future<void> pushLearningOrder({required int profileId, required String entityKey, required Map<String, dynamic> payload}) async => throw StateError('push must not be called');
+  Future<void> pushLearningOrder({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) async => throw StateError('push must not be called');
   @override
-  Future<void> pushBookmark({required int profileId, required String entityKey, required Map<String, dynamic> payload}) async => throw StateError('push must not be called');
+  Future<void> pushBookmark({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) async => throw StateError('push must not be called');
   @override
-  Future<void> pushStageDefinition({required int profileId, required String entityKey, required Map<String, dynamic> payload}) async => throw StateError('push must not be called');
+  Future<void> pushStageDefinition({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) async => throw StateError('push must not be called');
   @override
-  Future<void> pushGoal({required int profileId, required String entityKey, required Map<String, dynamic> payload}) async => throw StateError('push must not be called');
+  Future<void> pushGoal({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) async => throw StateError('push must not be called');
   @override
-  Future<void> deleteGoal({required int profileId, required String entityKey, required Map<String, dynamic> payload}) async => throw StateError('push must not be called');
+  Future<void> deleteGoal({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) async => throw StateError('push must not be called');
   @override
-  Future<void> pushLearnerProfile({required int profileId, required String entityKey, required Map<String, dynamic> payload}) async => throw StateError('push must not be called');
+  Future<void> pushLearnerProfile({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) async => throw StateError('push must not be called');
   @override
-  Future<void> deleteLearnerProfile({required int profileId, required String entityKey, required Map<String, dynamic> payload}) async => throw StateError('push must not be called');
+  Future<void> deleteLearnerProfile({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) async => throw StateError('push must not be called');
   @override
-  Future<void> pushGamificationSettings({required int profileId, required String entityKey, required Map<String, dynamic> payload}) async => throw StateError('push must not be called');
+  Future<void> pushGamificationSettings({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) async => throw StateError('push must not be called');
   @override
-  Future<void> pushNotificationSettings({required int profileId, required String entityKey, required Map<String, dynamic> payload}) async => throw StateError('push must not be called');
+  Future<void> pushNotificationSettings({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) async => throw StateError('push must not be called');
   @override
-  Future<void> pushUiPreferences({required int profileId, required String entityKey, required Map<String, dynamic> payload}) async => throw StateError('push must not be called');
+  Future<void> pushUiPreferences({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) async => throw StateError('push must not be called');
   @override
-  Future<void> pushProfileProgram({required int profileId, required String entityKey, required Map<String, dynamic> payload}) async => throw StateError('push must not be called');
+  Future<void> pushProfileProgram({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) async => throw StateError('push must not be called');
   @override
-  Future<void> pushLearningLedgerEntry({required int profileId, required String entityKey, required Map<String, dynamic> payload}) async => throw StateError('push must not be called');
+  Future<void> pushLearningLedgerEntry({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) async => throw StateError('push must not be called');
   @override
-  Future<void> pushStudyDayConfig({required int profileId, required String entityKey, required Map<String, dynamic> payload}) async => throw StateError('push must not be called');
+  Future<void> pushStudyDayConfig({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) async => throw StateError('push must not be called');
   @override
-  Future<void> pushPointsLedgerEntry({required int profileId, required String entityKey, required Map<String, dynamic> payload}) async => throw StateError('push must not be called');
+  Future<void> pushPointsLedgerEntry({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) async => throw StateError('push must not be called');
   @override
-  Future<void> pushRewardRedemption({required int profileId, required String entityKey, required Map<String, dynamic> payload}) async => throw StateError('push must not be called');
+  Future<void> pushRewardRedemption({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) async => throw StateError('push must not be called');
 }
 
 // ---------------------------------------------------------------------------
@@ -298,24 +443,28 @@ class _NoPushPipeline implements PushPipeline {
 // ---------------------------------------------------------------------------
 
 Future<int> _seedOwnAccount(UserDatabase db) async {
-  final accountId = await db.into(db.accounts).insert(
-    AccountsCompanion.insert(
-      email: 'tutor@example.com',
-      tier: 'localBorn',
-      displayName: 'Tutor',
-      createdAt: DateTimeFactory.nowUtc(),
-      updatedAt: DateTimeFactory.nowUtc(),
-    ),
-  );
-  await db.into(db.learnerProfiles).insert(
-    LearnerProfilesCompanion.insert(
-      accountId: accountId,
-      displayName: 'Tutor Profile',
-      mode: 'adult',
-      createdAt: DateTimeFactory.nowUtc(),
-      updatedAt: DateTimeFactory.nowUtc(),
-    ),
-  );
+  final accountId = await db
+      .into(db.accounts)
+      .insert(
+        AccountsCompanion.insert(
+          email: 'tutor@example.com',
+          tier: 'localBorn',
+          displayName: 'Tutor',
+          createdAt: DateTimeFactory.nowUtc(),
+          updatedAt: DateTimeFactory.nowUtc(),
+        ),
+      );
+  await db
+      .into(db.learnerProfiles)
+      .insert(
+        LearnerProfilesCompanion.insert(
+          accountId: accountId,
+          displayName: 'Tutor Profile',
+          mode: 'adult',
+          createdAt: DateTimeFactory.nowUtc(),
+          updatedAt: DateTimeFactory.nowUtc(),
+        ),
+      );
   return accountId;
 }
 
@@ -390,8 +539,11 @@ void main() {
         final settingsDispatch = dispatcher.dispatched.where(
           (d) => d.kind == 'settings',
         );
-        expect(settingsDispatch, isNotEmpty,
-            reason: 'settings subcollection must be fetched and dispatched');
+        expect(
+          settingsDispatch,
+          isNotEmpty,
+          reason: 'settings subcollection must be fetched and dispatched',
+        );
         for (final d in settingsDispatch) {
           expect(
             d.profileId,
@@ -402,40 +554,46 @@ void main() {
       },
     );
 
-    test('(a) re-entry with same triple reuses the same row — no duplicates', () async {
-      final accountId = await _seedOwnAccount(db);
-      final gateway = _ChildDataGateway();
-      final svc = TutoredPullService(
-        gateway: gateway,
-        dispatcher: _RecordingDispatcher(),
-        profileDao: db.profileDao,
-      );
+    test(
+      '(a) re-entry with same triple reuses the same row — no duplicates',
+      () async {
+        final accountId = await _seedOwnAccount(db);
+        final gateway = _ChildDataGateway();
+        final svc = TutoredPullService(
+          gateway: gateway,
+          dispatcher: _RecordingDispatcher(),
+          profileDao: db.profileDao,
+        );
 
-      final r1 = await svc.pull(
-        accountId: accountId,
-        parentUid: 'parent-uid-123',
-        remoteProfileId: 'remote-child-42',
-        grantId: 'grant-abc',
-        childDisplayName: 'Yitzchak',
-        childMode: 'child',
-      );
-      final r2 = await svc.pull(
-        accountId: accountId,
-        parentUid: 'parent-uid-123',
-        remoteProfileId: 'remote-child-42',
-        grantId: 'grant-abc',
-        childDisplayName: 'Yitzchak',
-        childMode: 'child',
-      );
+        final r1 = await svc.pull(
+          accountId: accountId,
+          parentUid: 'parent-uid-123',
+          remoteProfileId: 'remote-child-42',
+          grantId: 'grant-abc',
+          childDisplayName: 'Yitzchak',
+          childMode: 'child',
+        );
+        final r2 = await svc.pull(
+          accountId: accountId,
+          parentUid: 'parent-uid-123',
+          remoteProfileId: 'remote-child-42',
+          grantId: 'grant-abc',
+          childDisplayName: 'Yitzchak',
+          childMode: 'child',
+        );
 
-      expect(r1.localProfileId, r2.localProfileId,
-          reason: 'Same triple must return same local id');
+        expect(
+          r1.localProfileId,
+          r2.localProfileId,
+          reason: 'Same triple must return same local id',
+        );
 
-      // Only one tutored row with this triple.
-      final profiles = await db.profileDao.getProfilesByAccount(accountId);
-      final tutored = profiles.where((p) => p.isTutored).toList();
-      expect(tutored.length, 1, reason: 'No duplicate tutored rows');
-    });
+        // Only one tutored row with this triple.
+        final profiles = await db.profileDao.getProfilesByAccount(accountId);
+        final tutored = profiles.where((p) => p.isTutored).toList();
+        expect(tutored.length, 1, reason: 'No duplicate tutored rows');
+      },
+    );
 
     test('(b) nothing from the mirror enters the outbox', () async {
       final accountId = await _seedOwnAccount(db);
@@ -497,15 +655,21 @@ void main() {
 
         // The isProfileTutored guard must return true for this profile.
         final guardFires = await db.profileDao.isProfileTutored(tutoredId);
-        expect(guardFires, isTrue,
-            reason: 'Guard must block drain for tutored profiles');
+        expect(
+          guardFires,
+          isTrue,
+          reason: 'Guard must block drain for tutored profiles',
+        );
 
         // Own profile (not tutored) — guard returns false.
         final profiles = await db.profileDao.getProfilesByAccount(accountId);
         final ownProfile = profiles.firstWhere((p) => !p.isTutored);
         final ownGuard = await db.profileDao.isProfileTutored(ownProfile.id);
-        expect(ownGuard, isFalse,
-            reason: 'Guard must allow drain for own profiles');
+        expect(
+          ownGuard,
+          isFalse,
+          reason: 'Guard must allow drain for own profiles',
+        );
 
         // Calling drain() with the guard wired must return 0 (skipped) and
         // must NOT call any push method on the pipeline — _NoPushPipeline
@@ -525,45 +689,48 @@ void main() {
       },
     );
 
-    test("(c) tutor's own profiles and data are untouched after a pull", () async {
-      final accountId = await _seedOwnAccount(db);
+    test(
+      "(c) tutor's own profiles and data are untouched after a pull",
+      () async {
+        final accountId = await _seedOwnAccount(db);
 
-      // Capture the own profile id before pull.
-      final ownProfiles = await db.profileDao.getProfilesByAccount(accountId);
-      expect(ownProfiles.length, 1);
-      final ownProfile = ownProfiles.first;
-      expect(ownProfile.isTutored, isFalse);
+        // Capture the own profile id before pull.
+        final ownProfiles = await db.profileDao.getProfilesByAccount(accountId);
+        expect(ownProfiles.length, 1);
+        final ownProfile = ownProfiles.first;
+        expect(ownProfile.isTutored, isFalse);
 
-      final gateway = _ChildDataGateway();
-      final svc = TutoredPullService(
-        gateway: gateway,
-        dispatcher: _RecordingDispatcher(),
-        profileDao: db.profileDao,
-      );
+        final gateway = _ChildDataGateway();
+        final svc = TutoredPullService(
+          gateway: gateway,
+          dispatcher: _RecordingDispatcher(),
+          profileDao: db.profileDao,
+        );
 
-      await svc.pull(
-        accountId: accountId,
-        parentUid: 'parent-uid-123',
-        remoteProfileId: 'remote-child-42',
-        grantId: 'grant-abc',
-        childDisplayName: 'Yitzchak',
-        childMode: 'child',
-      );
+        await svc.pull(
+          accountId: accountId,
+          parentUid: 'parent-uid-123',
+          remoteProfileId: 'remote-child-42',
+          grantId: 'grant-abc',
+          childDisplayName: 'Yitzchak',
+          childMode: 'child',
+        );
 
-      // The tutor's own profile row is unchanged.
-      final ownAfter = await db.profileDao.getProfileById(ownProfile.id);
-      expect(ownAfter, isNotNull);
-      expect(ownAfter!.displayName, ownProfile.displayName);
-      expect(ownAfter.isTutored, isFalse);
+        // The tutor's own profile row is unchanged.
+        final ownAfter = await db.profileDao.getProfileById(ownProfile.id);
+        expect(ownAfter, isNotNull);
+        expect(ownAfter!.displayName, ownProfile.displayName);
+        expect(ownAfter.isTutored, isFalse);
 
-      // Only one own profile (the tutored mirror is a separate row).
-      final allProfiles = await db.profileDao.getProfilesByAccount(accountId);
-      final ownCount = allProfiles.where((p) => !p.isTutored).length;
-      expect(ownCount, 1, reason: 'Pull must not modify own profiles');
+        // Only one own profile (the tutored mirror is a separate row).
+        final allProfiles = await db.profileDao.getProfilesByAccount(accountId);
+        final ownCount = allProfiles.where((p) => !p.isTutored).length;
+        expect(ownCount, 1, reason: 'Pull must not modify own profiles');
 
-      // The tutored row is distinct.
-      final tutoredCount = allProfiles.where((p) => p.isTutored).length;
-      expect(tutoredCount, 1);
-    });
+        // The tutored row is distinct.
+        final tutoredCount = allProfiles.where((p) => p.isTutored).length;
+        expect(tutoredCount, 1);
+      },
+    );
   });
 }

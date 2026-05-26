@@ -28,13 +28,9 @@ void main() {
 
       appRouterSrc = File('lib/app/router/app_router.dart').readAsStringSync();
 
-      l10nEnSrc = File(
-        'lib/l10n/app_localizations_en.dart',
-      ).readAsStringSync();
+      l10nEnSrc = File('lib/l10n/app_localizations_en.dart').readAsStringSync();
 
-      l10nHeSrc = File(
-        'lib/l10n/app_localizations_he.dart',
-      ).readAsStringSync();
+      l10nHeSrc = File('lib/l10n/app_localizations_he.dart').readAsStringSync();
     });
 
     test('AC1: ParentSettingsScreen navigates to ManageTutorsRoute', () {

@@ -6,6 +6,7 @@
 
 import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/features/tutoring/data/repositories/firestore_tutor_grant_repository.dart';
+import 'package:learning_tracker/features/tutoring/data/services/tutor_write_service.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_grant_use_cases.dart';
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart';
@@ -76,4 +77,16 @@ Future<List<TutorGrant>> incomingTutorGrants(Ref ref) {
 Future<List<TutorGrant>> pendingTutorInvites(Ref ref) {
   final repo = ref.watch(tutorGrantRepositoryProvider);
   return repo.listPendingInvitesForMe();
+}
+
+// ── S4 — Tutor write-path service provider ────────────────────────────────────
+
+/// Provides the [TutorWriteService] that routes permitted tutor edits to the
+/// S4 Cloud Functions (Admin SDK write proxy to the parent's namespace).
+///
+/// Use when `activeTutoredProfileSelectionProvider != null` to route an edit
+/// through the CF instead of the local outbox.
+@riverpod
+TutorWriteService tutorWriteService(Ref ref) {
+  return TutorWriteService();
 }

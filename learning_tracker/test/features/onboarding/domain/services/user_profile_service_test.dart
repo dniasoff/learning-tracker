@@ -18,10 +18,7 @@ void main() {
     service = UserProfileService(
       userProfileDao: db.userProfileDao,
       pushUserProfile:
-          ({
-            required String firebaseUid,
-            required String displayName,
-          }) async {
+          ({required String firebaseUid, required String displayName}) async {
             firestorePushes.add({
               'firebaseUid': firebaseUid,
               'displayName': displayName,

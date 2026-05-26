@@ -32,7 +32,9 @@ void main() {
           child: const MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(body: PointsDisplayWidget(userMode: ProfileMode.child)),
+            home: Scaffold(
+              body: PointsDisplayWidget(userMode: ProfileMode.child),
+            ),
           ),
         ),
       );
@@ -57,7 +59,9 @@ void main() {
           child: const MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
-            home: Scaffold(body: PointsDisplayWidget(userMode: ProfileMode.adult)),
+            home: Scaffold(
+              body: PointsDisplayWidget(userMode: ProfileMode.adult),
+            ),
           ),
         ),
       );
@@ -74,7 +78,10 @@ void main() {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
-            body: PointsPopupWidget(pointsEarned: 10, userMode: ProfileMode.child),
+            body: PointsPopupWidget(
+              pointsEarned: 10,
+              userMode: ProfileMode.child,
+            ),
           ),
         ),
       );
@@ -87,7 +94,10 @@ void main() {
       await tester.pumpWidget(
         const MaterialApp(
           home: Scaffold(
-            body: PointsPopupWidget(pointsEarned: 10, userMode: ProfileMode.adult),
+            body: PointsPopupWidget(
+              pointsEarned: 10,
+              userMode: ProfileMode.adult,
+            ),
           ),
         ),
       );

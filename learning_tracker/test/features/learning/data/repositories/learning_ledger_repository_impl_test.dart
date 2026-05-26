@@ -340,49 +340,43 @@ void main() {
         },
       );
 
-      test(
-        'WS8 — explicit lifetimeOnly source writes sentinel date',
-        () async {
-          final repo = createRepo();
-          final entries = await repo.recordCompletionsBatch(
-            twoItems(),
-            source: CompletionSource.lifetimeOnly,
+      test('WS8 — explicit lifetimeOnly source writes sentinel date', () async {
+        final repo = createRepo();
+        final entries = await repo.recordCompletionsBatch(
+          twoItems(),
+          source: CompletionSource.lifetimeOnly,
+        );
+
+        expect(entries, hasLength(2));
+        for (final entry in entries) {
+          final stored = normaliseToUtc(entry.completedAt);
+          expect(stored.year, equals(2000));
+          expect(stored.month, equals(1));
+          expect(stored.day, equals(1));
+        }
+      });
+
+      test('WS8 — bulkInTrack source writes sentinel date', () async {
+        final repo = createRepo();
+        final entries = await repo.recordCompletionsBatch(
+          twoItems(),
+          source: CompletionSource.bulkInTrack,
+        );
+
+        expect(entries, hasLength(2));
+        for (final entry in entries) {
+          final stored = normaliseToUtc(entry.completedAt);
+          expect(
+            stored.year,
+            equals(2000),
+            reason:
+                'bulkInTrack also suppresses engagement — '
+                'sentinel must be written to avoid inflating recent activity',
           );
-
-          expect(entries, hasLength(2));
-          for (final entry in entries) {
-            final stored = normaliseToUtc(entry.completedAt);
-            expect(stored.year, equals(2000));
-            expect(stored.month, equals(1));
-            expect(stored.day, equals(1));
-          }
-        },
-      );
-
-      test(
-        'WS8 — bulkInTrack source writes sentinel date',
-        () async {
-          final repo = createRepo();
-          final entries = await repo.recordCompletionsBatch(
-            twoItems(),
-            source: CompletionSource.bulkInTrack,
-          );
-
-          expect(entries, hasLength(2));
-          for (final entry in entries) {
-            final stored = normaliseToUtc(entry.completedAt);
-            expect(
-              stored.year,
-              equals(2000),
-              reason:
-                  'bulkInTrack also suppresses engagement — '
-                  'sentinel must be written to avoid inflating recent activity',
-            );
-            expect(stored.month, equals(1));
-            expect(stored.day, equals(1));
-          }
-        },
-      );
+          expect(stored.month, equals(1));
+          expect(stored.day, equals(1));
+        }
+      });
 
       test(
         'WS8 — live source writes a real (non-sentinel) timestamp',

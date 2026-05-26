@@ -104,11 +104,7 @@ Future<AppRouter> _createUnauthenticatedRouter() async {
 }
 
 const _authOverride = AuthState.signedIn(
-  user: AuthUser(
-    profileId: 1,
-    email: 'test@test.com',
-    displayName: 'Test',
-  ),
+  user: AuthUser(profileId: 1, email: 'test@test.com', displayName: 'Test'),
   tier: Tier.localBorn,
 );
 

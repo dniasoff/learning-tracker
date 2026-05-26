@@ -339,9 +339,7 @@ class _TutoredChildRow extends ConsumerWidget {
                   .markScopeAuthenticated(PinScope.tutor(tutorOwnProfileId));
               // Pop the gate, then fire the pull + navigate (T2.entry-pull).
               Navigator.of(context).pop();
-              unawaited(
-                _fireEntryPullAndNavigate(context, ref, selection),
-              );
+              unawaited(_fireEntryPullAndNavigate(context, ref, selection));
             },
             onCancel: () => Navigator.of(context).pop(),
           ),

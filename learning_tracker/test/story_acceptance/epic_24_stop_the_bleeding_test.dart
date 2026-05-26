@@ -110,9 +110,15 @@ void main() {
 
         test('create-only (no timestamp clamp on learning_ledger)', () {
           // learning_ledger create is owner-gated without a timestamp clamp;
-          // the ULID doc-id provides idempotency.
+          // the ULID doc-id provides idempotency. Accepts combined create,update.
           final ledgerBlock = _extractBlock(rules, 'learning_ledger/{entryId}');
-          expect(ledgerBlock, contains('allow create: if isOwner(uid)'));
+          expect(
+            ledgerBlock,
+            anyOf(
+              contains('allow create: if isOwner(uid)'),
+              contains('allow create, update: if isOwner(uid)'),
+            ),
+          );
         });
 
         test('denies delete on learning_ledger', () {

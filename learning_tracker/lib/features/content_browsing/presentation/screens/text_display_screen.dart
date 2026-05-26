@@ -809,9 +809,9 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
           const SizedBox(width: 12),
           Expanded(
             child: Text(
-              AppLocalizations.of(context)!.unableToLoadCompletionContext(
-                e.toString(),
-              ),
+              AppLocalizations.of(
+                context,
+              )!.unableToLoadCompletionContext(e.toString()),
               style: const TextStyle(
                 fontSize: 13,
                 color: AppTheme.brandInkMuted,

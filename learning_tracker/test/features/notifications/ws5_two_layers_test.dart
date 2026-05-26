@@ -49,21 +49,26 @@ void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
 
   group('WS5.two-layers — DeviceNotificationToggle widget', () {
-    testWidgets('DeviceNotificationToggle renders with key device_notification_toggle',
-        (tester) async {
-      final mockGateway = MockNotificationGateway();
-      when(() => mockGateway.hasPermission()).thenAnswer((_) async => true);
+    testWidgets(
+      'DeviceNotificationToggle renders with key device_notification_toggle',
+      (tester) async {
+        final mockGateway = MockNotificationGateway();
+        when(() => mockGateway.hasPermission()).thenAnswer((_) async => true);
 
-      await tester.pumpWidget(
-        _buildWithProviders(
-          gatewayOverride: mockGateway,
-          child: const Scaffold(body: DeviceNotificationToggle()),
-        ),
-      );
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          _buildWithProviders(
+            gatewayOverride: mockGateway,
+            child: const Scaffold(body: DeviceNotificationToggle()),
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      expect(find.byKey(const Key('device_notification_toggle')), findsOneWidget);
-    });
+        expect(
+          find.byKey(const Key('device_notification_toggle')),
+          findsOneWidget,
+        );
+      },
+    );
 
     testWidgets('DeviceNotificationToggle is a SwitchListTile', (tester) async {
       final mockGateway = MockNotificationGateway();
@@ -83,39 +88,40 @@ void main() {
 
   group('WS5.two-layers — NotificationsScreen contains both layers', () {
     testWidgets(
-        'NotificationsScreen shows device toggle (layer 1) AND per-profile toggles (layer 2)',
-        (tester) async {
-      SharedPreferences.setMockInitialValues({});
-      final mockGateway = MockNotificationGateway();
-      when(() => mockGateway.hasPermission()).thenAnswer((_) async => true);
+      'NotificationsScreen shows device toggle (layer 1) AND per-profile toggles (layer 2)',
+      (tester) async {
+        SharedPreferences.setMockInitialValues({});
+        final mockGateway = MockNotificationGateway();
+        when(() => mockGateway.hasPermission()).thenAnswer((_) async => true);
 
-      await tester.pumpWidget(
-        _buildWithProviders(
-          gatewayOverride: mockGateway,
-          child: const NotificationsScreen(),
-        ),
-      );
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          _buildWithProviders(
+            gatewayOverride: mockGateway,
+            child: const NotificationsScreen(),
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      // Layer 1: device toggle.
-      expect(
-        find.byKey(const Key('device_notification_toggle')),
-        findsOneWidget,
-      );
+        // Layer 1: device toggle.
+        expect(
+          find.byKey(const Key('device_notification_toggle')),
+          findsOneWidget,
+        );
 
-      // Layer 2: per-profile toggles (daily reminder + streak alert).
-      expect(find.byKey(const Key('reminder_toggle')), findsOneWidget);
-      expect(find.byKey(const Key('streak_alert_toggle')), findsOneWidget);
+        // Layer 2: per-profile toggles (daily reminder + streak alert).
+        expect(find.byKey(const Key('reminder_toggle')), findsOneWidget);
+        expect(find.byKey(const Key('streak_alert_toggle')), findsOneWidget);
 
-      // The two layers are distinct widgets.
-      expect(
-        find.byKey(const Key('device_notification_toggle')),
-        findsOneWidget,
-      );
-      expect(find.byKey(const Key('reminder_toggle')), findsOneWidget);
+        // The two layers are distinct widgets.
+        expect(
+          find.byKey(const Key('device_notification_toggle')),
+          findsOneWidget,
+        );
+        expect(find.byKey(const Key('reminder_toggle')), findsOneWidget);
 
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump(Duration.zero);
-    });
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(Duration.zero);
+      },
+    );
   });
 }

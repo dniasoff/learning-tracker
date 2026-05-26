@@ -83,16 +83,18 @@ void main() {
 
     // ── AC2: Revoke fires notifyTutorOfRevocation ─────────────────────────────
 
-    test('AC2: manage_tutors_screen references tutorNotificationGatewayProvider',
-        () {
-      expect(
-        manageTutorsScreenSrc,
-        contains('tutorNotificationGatewayProvider'),
-        reason:
-            'manage_tutors_screen.dart (parent revoke flow) must read '
-            'tutorNotificationGatewayProvider to notify the tutor (DEC-23)',
-      );
-    });
+    test(
+      'AC2: manage_tutors_screen references tutorNotificationGatewayProvider',
+      () {
+        expect(
+          manageTutorsScreenSrc,
+          contains('tutorNotificationGatewayProvider'),
+          reason:
+              'manage_tutors_screen.dart (parent revoke flow) must read '
+              'tutorNotificationGatewayProvider to notify the tutor (DEC-23)',
+        );
+      },
+    );
 
     test('AC2: manage_tutors_screen calls notifyTutorOfRevocation', () {
       expect(
@@ -106,16 +108,18 @@ void main() {
 
     // ── AC3: Resign fires notifyParentOfResignation ───────────────────────────
 
-    test('AC3: manage_grants_screen references tutorNotificationGatewayProvider',
-        () {
-      expect(
-        manageGrantsScreenSrc,
-        contains('tutorNotificationGatewayProvider'),
-        reason:
-            'manage_grants_screen.dart (tutor resign flow) must read '
-            'tutorNotificationGatewayProvider to notify the parent (DEC-23)',
-      );
-    });
+    test(
+      'AC3: manage_grants_screen references tutorNotificationGatewayProvider',
+      () {
+        expect(
+          manageGrantsScreenSrc,
+          contains('tutorNotificationGatewayProvider'),
+          reason:
+              'manage_grants_screen.dart (tutor resign flow) must read '
+              'tutorNotificationGatewayProvider to notify the parent (DEC-23)',
+        );
+      },
+    );
 
     test('AC3: manage_grants_screen calls notifyParentOfResignation', () {
       expect(
@@ -129,16 +133,18 @@ void main() {
 
     // ── AC4: Decline fires notifyParentOfDecline ──────────────────────────────
 
-    test('AC4: decline_invite_screen references tutorNotificationGatewayProvider',
-        () {
-      expect(
-        declineInviteScreenSrc,
-        contains('tutorNotificationGatewayProvider'),
-        reason:
-            'decline_invite_screen.dart must read tutorNotificationGatewayProvider '
-            'to notify the parent on decline (DEC-23)',
-      );
-    });
+    test(
+      'AC4: decline_invite_screen references tutorNotificationGatewayProvider',
+      () {
+        expect(
+          declineInviteScreenSrc,
+          contains('tutorNotificationGatewayProvider'),
+          reason:
+              'decline_invite_screen.dart must read tutorNotificationGatewayProvider '
+              'to notify the parent on decline (DEC-23)',
+        );
+      },
+    );
 
     test('AC4: decline_invite_screen calls notifyParentOfDecline', () {
       expect(
@@ -152,57 +158,65 @@ void main() {
 
     // ── AC5: TutorNotificationGateway domain contract (source-scan) ──────────
 
-    test('AC5: notifyParentOfDecline method exists with correct parameters', () {
-      expect(
-        notificationServiceSrc,
-        contains('notifyParentOfDecline('),
-        reason: 'TutorNotificationGateway must have notifyParentOfDecline()',
-      );
-      expect(
-        notificationServiceSrc,
-        contains('required String parentEmail'),
-        reason: 'notifyParentOfDecline must accept parentEmail parameter',
-      );
-      expect(
-        notificationServiceSrc,
-        contains('required String tutorEmail'),
-        reason: 'notifyParentOfDecline must accept tutorEmail parameter',
-      );
-    });
+    test(
+      'AC5: notifyParentOfDecline method exists with correct parameters',
+      () {
+        expect(
+          notificationServiceSrc,
+          contains('notifyParentOfDecline('),
+          reason: 'TutorNotificationGateway must have notifyParentOfDecline()',
+        );
+        expect(
+          notificationServiceSrc,
+          contains('required String parentEmail'),
+          reason: 'notifyParentOfDecline must accept parentEmail parameter',
+        );
+        expect(
+          notificationServiceSrc,
+          contains('required String tutorEmail'),
+          reason: 'notifyParentOfDecline must accept tutorEmail parameter',
+        );
+      },
+    );
 
-    test('AC5: notifyParentOfResignation method exists with correct parameters',
-        () {
-      expect(
-        notificationServiceSrc,
-        contains('notifyParentOfResignation('),
-        reason:
-            'TutorNotificationGateway must have notifyParentOfResignation()',
-      );
-      expect(
-        notificationServiceSrc,
-        contains('required String tutorName'),
-        reason: 'notifyParentOfResignation must accept tutorName parameter',
-      );
-    });
+    test(
+      'AC5: notifyParentOfResignation method exists with correct parameters',
+      () {
+        expect(
+          notificationServiceSrc,
+          contains('notifyParentOfResignation('),
+          reason:
+              'TutorNotificationGateway must have notifyParentOfResignation()',
+        );
+        expect(
+          notificationServiceSrc,
+          contains('required String tutorName'),
+          reason: 'notifyParentOfResignation must accept tutorName parameter',
+        );
+      },
+    );
 
-    test('AC5: notifyTutorOfRevocation method exists with correct parameters',
-        () {
-      expect(
-        notificationServiceSrc,
-        contains('notifyTutorOfRevocation('),
-        reason: 'TutorNotificationGateway must have notifyTutorOfRevocation()',
-      );
-      expect(
-        notificationServiceSrc,
-        contains('required String tutorEmail'),
-        reason: 'notifyTutorOfRevocation must accept tutorEmail parameter',
-      );
-      expect(
-        notificationServiceSrc,
-        contains('required String parentName'),
-        reason: 'notifyTutorOfRevocation must accept parentName parameter',
-      );
-    });
+    test(
+      'AC5: notifyTutorOfRevocation method exists with correct parameters',
+      () {
+        expect(
+          notificationServiceSrc,
+          contains('notifyTutorOfRevocation('),
+          reason:
+              'TutorNotificationGateway must have notifyTutorOfRevocation()',
+        );
+        expect(
+          notificationServiceSrc,
+          contains('required String tutorEmail'),
+          reason: 'notifyTutorOfRevocation must accept tutorEmail parameter',
+        );
+        expect(
+          notificationServiceSrc,
+          contains('required String parentName'),
+          reason: 'notifyTutorOfRevocation must accept parentName parameter',
+        );
+      },
+    );
 
     test('AC5: fire-and-forget — all methods return Future<void>', () {
       // Verify return type is Future<void> (fire-and-forget contract).

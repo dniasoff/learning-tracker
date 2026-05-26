@@ -10,10 +10,8 @@ import 'package:learning_tracker/features/notifications/domain/repositories/noti
 void main() {
   group('WS5.key-prefs — NotificationPreferencesRepository key namespacing', () {
     test('two profileIds produce different reminderEnabled keys', () {
-      final keyA =
-          NotificationPreferencesRepository.reminderEnabledKey(1);
-      final keyB =
-          NotificationPreferencesRepository.reminderEnabledKey(2);
+      final keyA = NotificationPreferencesRepository.reminderEnabledKey(1);
+      final keyB = NotificationPreferencesRepository.reminderEnabledKey(2);
       expect(keyA, isNot(equals(keyB)));
       expect(keyA, contains('1'));
       expect(keyB, contains('2'));
@@ -32,10 +30,8 @@ void main() {
     });
 
     test('two profileIds produce different streakAlertEnabled keys', () {
-      final keyA =
-          NotificationPreferencesRepository.streakAlertEnabledKey(1);
-      final keyB =
-          NotificationPreferencesRepository.streakAlertEnabledKey(2);
+      final keyA = NotificationPreferencesRepository.streakAlertEnabledKey(1);
+      final keyB = NotificationPreferencesRepository.streakAlertEnabledKey(2);
       expect(keyA, isNot(equals(keyB)));
     });
 
@@ -46,10 +42,8 @@ void main() {
     });
 
     test('two profileIds produce different streakAlertMinute keys', () {
-      final keyA =
-          NotificationPreferencesRepository.streakAlertMinuteKey(5);
-      final keyB =
-          NotificationPreferencesRepository.streakAlertMinuteKey(6);
+      final keyA = NotificationPreferencesRepository.streakAlertMinuteKey(5);
+      final keyB = NotificationPreferencesRepository.streakAlertMinuteKey(6);
       expect(keyA, isNot(equals(keyB)));
     });
 
@@ -63,11 +57,13 @@ void main() {
 
     test('two profileIds produce different updatedAt keys', () {
       final keyA =
-          NotificationPreferencesRepository
-              .notificationSettingsUpdatedAtMsKey(1);
+          NotificationPreferencesRepository.notificationSettingsUpdatedAtMsKey(
+            1,
+          );
       final keyB =
-          NotificationPreferencesRepository
-              .notificationSettingsUpdatedAtMsKey(2);
+          NotificationPreferencesRepository.notificationSettingsUpdatedAtMsKey(
+            2,
+          );
       expect(keyA, isNot(equals(keyB)));
     });
 
@@ -83,10 +79,8 @@ void main() {
     });
 
     test('same profileId produces the same key (stability)', () {
-      final key1 =
-          NotificationPreferencesRepository.reminderEnabledKey(42);
-      final key2 =
-          NotificationPreferencesRepository.reminderEnabledKey(42);
+      final key1 = NotificationPreferencesRepository.reminderEnabledKey(42);
+      final key2 = NotificationPreferencesRepository.reminderEnabledKey(42);
       expect(key1, equals(key2));
     });
   });

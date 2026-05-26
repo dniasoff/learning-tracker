@@ -71,26 +71,29 @@ void main() {
       expect(mode, ProfileMode.adult);
     });
 
-    test('mode change from adult to child persists to learner_profiles', () async {
-      final profiles = await db.select(db.learnerProfiles).get();
-      final profile = profiles.first;
+    test(
+      'mode change from adult to child persists to learner_profiles',
+      () async {
+        final profiles = await db.select(db.learnerProfiles).get();
+        final profile = profiles.first;
 
-      // Update to child mode
-      await db.profileDao.updateProfile(
-        LearnerProfilesCompanion(
-          id: Value(profile.id),
-          accountId: Value(profile.accountId),
-          displayName: Value(profile.displayName),
-          mode: const Value('child'),
-          createdAt: Value(profile.createdAt),
-          updatedAt: Value(DateTime.utc(2026, 1, 2)),
-        ),
-      );
+        // Update to child mode
+        await db.profileDao.updateProfile(
+          LearnerProfilesCompanion(
+            id: Value(profile.id),
+            accountId: Value(profile.accountId),
+            displayName: Value(profile.displayName),
+            mode: const Value('child'),
+            createdAt: Value(profile.createdAt),
+            updatedAt: Value(DateTime.utc(2026, 1, 2)),
+          ),
+        );
 
-      final updated = await db.profileDao.getProfileById(profile.id);
-      expect(updated!.mode, 'child');
-      expect(ProfileMode.fromStorageKey(updated.mode), ProfileMode.child);
-    });
+        final updated = await db.profileDao.getProfileById(profile.id);
+        expect(updated!.mode, 'child');
+        expect(ProfileMode.fromStorageKey(updated.mode), ProfileMode.child);
+      },
+    );
 
     test('mode change from child to adult disables child gating', () async {
       final profiles = await db.select(db.learnerProfiles).get();

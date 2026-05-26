@@ -187,13 +187,12 @@ Future<bool> _confirmSwitchIntoChild(
 ) async {
   final l10n = AppLocalizations.of(context)!;
   final activeProfileId = ref.read(activeProfileIdProvider);
-  final profiles =
-      await ref.read(profileListStreamProvider.future).timeout(
-        const Duration(seconds: 1),
-        onTimeout: () => [],
-      );
-  final activeProfile =
-      profiles.where((p) => p.id == activeProfileId).firstOrNull;
+  final profiles = await ref
+      .read(profileListStreamProvider.future)
+      .timeout(const Duration(seconds: 1), onTimeout: () => []);
+  final activeProfile = profiles
+      .where((p) => p.id == activeProfileId)
+      .firstOrNull;
   final childName = activeProfile?.displayName ?? l10n.child;
 
   if (!context.mounted) return false;
