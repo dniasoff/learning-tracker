@@ -65,5 +65,8 @@ final outboxProcessorProvider = Provider<OutboxProcessor?>((ref) {
     pipeline: pipeline,
     clock: clock,
     analytics: analytics,
+    // T1.isolation — guard: never drain tutored-mirror profiles into the
+    // tutor's own Firestore namespace.
+    isTutoredProfile: database.profileDao.isProfileTutored,
   );
 });

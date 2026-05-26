@@ -83,17 +83,26 @@ class OutboxProcessor {
     // without real-time waits. Production uses the defaults.
     Duration pushTimeout = const Duration(seconds: 20),
     Duration drainStaleAfter = const Duration(seconds: 90),
+    // T1.isolation — optional async guard: returns true when [profileId]
+    // belongs to a tutored-mirror profile that must never be drained into
+    // the tutor's own Firestore namespace.  Defaults to always-false (no
+    // tutored profiles exist) when omitted.
+    Future<bool> Function(int profileId)? isTutoredProfile,
   }) : _dao = outboxDao,
        _pipeline = pipeline,
        _clock = clock,
        _analytics = analytics,
        _pushTimeout = pushTimeout,
-       _drainStaleAfter = drainStaleAfter;
+       _drainStaleAfter = drainStaleAfter,
+       _isTutoredProfile = isTutoredProfile;
 
   final OutboxDao _dao;
   final PushPipeline _pipeline;
   final LocalDayClock _clock;
   final AnalyticsService? _analytics;
+
+  // T1.isolation — tutored-profile guard injected at construction time.
+  final Future<bool> Function(int profileId)? _isTutoredProfile;
 
   /// Maximum number of push attempts before a row is dead-lettered.
   static const int _maxAttempts = 10;
@@ -198,6 +207,13 @@ class OutboxProcessor {
   }
 
   Future<int> _drainForProfile(int profileId) async {
+    // T1.isolation — never push tutored-mirror data into the tutor's own
+    // Firestore namespace.  The guard is called per-profile so the profile-0
+    // sweep in _doDrain() is also protected (profile 0 is never tutored, but
+    // the guard is O(1) so the defensive check is worth it).
+    final guard = _isTutoredProfile;
+    if (guard != null && await guard(profileId)) return 0;
+
     final now = _clock.nowUtc();
     var successCount = 0;
 

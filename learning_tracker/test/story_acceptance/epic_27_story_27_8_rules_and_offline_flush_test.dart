@@ -885,4 +885,22 @@ class _ToggleableFakeGateway implements FirestoreGateway {
     String? endTimestamp,
     String? actionFilter,
   }) async => const [];
+
+  // T1.gateway — parent-scoped child reads (stub).
+  @override
+  Future<FirestorePage> fetchChildPage({
+    required String parentUid,
+    required String remoteProfileId,
+    required String collection,
+    required int pageSize,
+    Map<String, dynamic>? cursor,
+  }) async => const FirestorePage(rows: []);
+
+  @override
+  Future<Map<String, dynamic>?> fetchChildDocument({
+    required String parentUid,
+    required String remoteProfileId,
+    required String collection,
+    required String docId,
+  }) async => null;
 }

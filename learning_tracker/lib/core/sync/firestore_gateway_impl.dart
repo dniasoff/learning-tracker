@@ -1023,6 +1023,62 @@ class FirestoreGatewayImpl implements FirestoreGateway {
         .doc(profileId.toString());
   }
 
+  // ── T1.gateway — parent-scoped child reads ────────────────────────────────
+
+  /// Path helper: subcollection reference in the parent's namespace.
+  ///
+  /// Path: `users/{parentUid}/learner_profiles/{remoteProfileId}/{name}`
+  CollectionReference<Map<String, dynamic>> _childCollection(
+    String parentUid,
+    String remoteProfileId,
+    String name,
+  ) => _firestore
+      .collection('users')
+      .doc(parentUid)
+      .collection('learner_profiles')
+      .doc(remoteProfileId)
+      .collection(name);
+
+  @override
+  Future<FirestorePage> fetchChildPage({
+    required String parentUid,
+    required String remoteProfileId,
+    required String collection,
+    required int pageSize,
+    Map<String, dynamic>? cursor,
+  }) async {
+    final ref = _childCollection(parentUid, remoteProfileId, collection);
+    var query = ref.orderBy(FieldPath.documentId).limit(pageSize);
+    if (cursor != null && cursor['firestore_id'] is String) {
+      query = query.startAfter([cursor['firestore_id']]);
+    }
+    final snapshot = await _guardPermission(
+      () => query.get(),
+      collection: collection,
+      operation: 'read',
+    );
+    final rows = snapshot.docs
+        .map((doc) => _normalizeRow({...doc.data(), 'firestore_id': doc.id}))
+        .toList(growable: false);
+    return FirestorePage(rows: rows);
+  }
+
+  @override
+  Future<Map<String, dynamic>?> fetchChildDocument({
+    required String parentUid,
+    required String remoteProfileId,
+    required String collection,
+    required String docId,
+  }) async {
+    final ref = _childCollection(parentUid, remoteProfileId, collection)
+        .doc(docId);
+    final snap = await ref.get();
+    if (!snap.exists) return null;
+    final data = snap.data();
+    if (data == null) return null;
+    return _normalizeRow({...data, 'firestore_id': snap.id});
+  }
+
   // ── Tutor audit log reads (W6.13) ─────────────────────────────────────────
 
   @override

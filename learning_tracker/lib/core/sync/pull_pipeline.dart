@@ -233,6 +233,115 @@ class PullPipeline {
     pageSize: pageSize,
   );
 
+  // ── T1.pull-decouple — tutored-profile pull (read parent namespace, merge under local id) ──
+
+  /// Pull all sub-collections for a tutored child.
+  ///
+  /// Reads from `users/{parentUid}/learner_profiles/{remoteProfileId}/<coll>`
+  /// (the parent's Firestore namespace) but dispatches every page to the
+  /// merger with [localProfileId] — the synthetic local row id created by
+  /// [ProfileDao.upsertTutoredProfile]. No merger logic changes needed.
+  Future<void> pullForTutoredProfile({
+    required String parentUid,
+    required String remoteProfileId,
+    required int localProfileId,
+    int pageSize = defaultPageSize,
+  }) async {
+    final collections = <(String collection, String kind)>[
+      ('completions', EntityKind.completion),
+      ('bookmarks', EntityKind.bookmark),
+      ('curriculum_tracks', EntityKind.trackConfig),
+      ('goals', EntityKind.goal),
+      ('learning_ledger', EntityKind.learningLedger),
+      ('stage_definitions', EntityKind.stageDefinition),
+      ('streak_events', EntityKind.streak),
+      ('study_day_configs', EntityKind.studyDayConfig),
+      ('profile_programs', EntityKind.profileProgram),
+      ('learning_order', EntityKind.learningOrder),
+      ('points_ledger', EntityKind.pointsLedger),
+      ('reward_redemptions', EntityKind.rewardRedemption),
+    ];
+
+    for (final (collection, kind) in collections) {
+      await _pullChildCollection(
+        parentUid: parentUid,
+        remoteProfileId: remoteProfileId,
+        localProfileId: localProfileId,
+        collection: collection,
+        kind: kind,
+        pageSize: pageSize,
+      );
+    }
+
+    // Preference documents — single-doc sub-collections.
+    for (final (docId, kind) in [
+      ('notification_settings', EntityKind.notificationSettings),
+      ('gamification_settings', EntityKind.gamificationSettings),
+      ('ui_preferences', EntityKind.uiPreferences),
+    ]) {
+      await _pullChildDocument(
+        parentUid: parentUid,
+        remoteProfileId: remoteProfileId,
+        localProfileId: localProfileId,
+        collection: 'preferences',
+        docId: docId,
+        kind: kind,
+      );
+    }
+  }
+
+  Future<void> _pullChildDocument({
+    required String parentUid,
+    required String remoteProfileId,
+    required int localProfileId,
+    required String collection,
+    required String docId,
+    required String kind,
+  }) async {
+    final doc = await _gateway.fetchChildDocument(
+      parentUid: parentUid,
+      remoteProfileId: remoteProfileId,
+      collection: collection,
+      docId: docId,
+    );
+    if (doc == null || doc.isEmpty) return;
+    await _dispatcher.dispatch(
+      profileId: localProfileId,
+      kind: kind,
+      rows: [doc],
+    );
+  }
+
+  Future<void> _pullChildCollection({
+    required String parentUid,
+    required String remoteProfileId,
+    required int localProfileId,
+    required String collection,
+    required String kind,
+    required int pageSize,
+  }) async {
+    Map<String, dynamic>? cursor;
+    while (true) {
+      final page = await _gateway.fetchChildPage(
+        parentUid: parentUid,
+        remoteProfileId: remoteProfileId,
+        collection: collection,
+        pageSize: pageSize,
+        cursor: cursor,
+      );
+      if (page.rows.isEmpty) return;
+      final outcome = await _dispatcher.dispatch(
+        profileId: localProfileId,
+        kind: kind,
+        rows: page.rows,
+      );
+      if (outcome == MergeOutcome.halt) return;
+      cursor = page.rows.last;
+    }
+  }
+
+  // ── Private helpers for own-account pulls ─────────────────────────────────
+
   Future<void> _pullDocument({
     required int profileId,
     required String collection,

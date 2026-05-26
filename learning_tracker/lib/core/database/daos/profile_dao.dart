@@ -70,4 +70,84 @@ class ProfileDao extends DatabaseAccessor<UserDatabase> with _$ProfileDaoMixin {
   Stream<List<LearnerProfile>> watchProfilesByAccount(int accountId) => (select(
     learnerProfiles,
   )..where((t) => t.accountId.equals(accountId))).watch();
+
+  // ── T1.isolation — outbox guard ─────────────────────────────────────────
+
+  /// Returns `true` when [profileId] belongs to a tutored-mirror row that
+  /// must NEVER push data into the tutor's own outbox.
+  ///
+  /// Fast path: queries a single row by PK.  Used by [OutboxProcessor] to
+  /// skip drain for tutored profiles, guaranteeing read-only mirror isolation.
+  Future<bool> isProfileTutored(int profileId) async {
+    final row = await (select(
+      learnerProfiles,
+    )..where((t) => t.id.equals(profileId))).getSingleOrNull();
+    return row?.isTutored ?? false;
+  }
+
+  // ── Tutored mirror helpers (T1.profile) ─────────────────────────────────
+
+  /// Return the existing tutored-mirror profile row for the given
+  /// (parentUid, remoteChildProfileId, grantId) triple, or null when none
+  /// exists yet.
+  Future<LearnerProfile?> getTutoredProfile({
+    required String parentUid,
+    required String remoteChildProfileId,
+    required String grantId,
+  }) => (select(learnerProfiles)
+        ..where(
+          (t) =>
+              t.isTutored.equals(true) &
+              t.tutorParentUid.equals(parentUid) &
+              t.tutorRemoteProfileId.equals(remoteChildProfileId) &
+              t.tutorGrantId.equals(grantId),
+        ))
+      .getSingleOrNull();
+
+  /// Upsert the synthetic local profile for a tutored child.
+  ///
+  /// Re-entry is idempotent: if a row with the same
+  /// (parentUid, remoteChildProfileId, grantId) already exists, the display
+  /// name and mode are refreshed and the same local id is returned — no
+  /// duplicate rows are ever created.
+  Future<int> upsertTutoredProfile({
+    required int accountId,
+    required String parentUid,
+    required String remoteChildProfileId,
+    required String grantId,
+    required String displayName,
+    required String mode,
+    required DateTime now,
+  }) async {
+    final existing = await getTutoredProfile(
+      parentUid: parentUid,
+      remoteChildProfileId: remoteChildProfileId,
+      grantId: grantId,
+    );
+    if (existing != null) {
+      // Refresh display name / mode in case they changed since last entry.
+      await (update(learnerProfiles)..where((t) => t.id.equals(existing.id)))
+          .write(
+            LearnerProfilesCompanion(
+              displayName: Value(displayName),
+              mode: Value(mode),
+              updatedAt: Value(now),
+            ),
+          );
+      return existing.id;
+    }
+    return into(learnerProfiles).insert(
+      LearnerProfilesCompanion.insert(
+        accountId: accountId,
+        displayName: displayName,
+        mode: mode,
+        createdAt: now,
+        updatedAt: now,
+        isTutored: const Value(true),
+        tutorParentUid: Value(parentUid),
+        tutorRemoteProfileId: Value(remoteChildProfileId),
+        tutorGrantId: Value(grantId),
+      ),
+    );
+  }
 }

@@ -266,6 +266,31 @@ abstract class FirestoreGateway {
     required String docId,
   });
 
+  // ── T1.gateway — parent-scoped child reads ────────────────────────────────
+
+  /// Fetch a paginated page of a child's subcollection at
+  /// `users/{parentUid}/learner_profiles/{remoteProfileId}/{collection}/`.
+  ///
+  /// Used by the tutored pull path, which reads from the *parent's* Firestore
+  /// namespace. The [remoteProfileId] is the child's string-form profile id
+  /// in the parent's account — distinct from the tutor's synthetic local id.
+  Future<FirestorePage> fetchChildPage({
+    required String parentUid,
+    required String remoteProfileId,
+    required String collection,
+    required int pageSize,
+    Map<String, dynamic>? cursor,
+  });
+
+  /// Fetch a single document from a child's preference subcollection at
+  /// `users/{parentUid}/learner_profiles/{remoteProfileId}/{collection}/{docId}`.
+  Future<Map<String, dynamic>?> fetchChildDocument({
+    required String parentUid,
+    required String remoteProfileId,
+    required String collection,
+    required String docId,
+  });
+
   // ── W2.29 additions — stage_definitions/ collection ──────────────────────
 
   /// Push a single stage definition document to the `stage_definitions/`
