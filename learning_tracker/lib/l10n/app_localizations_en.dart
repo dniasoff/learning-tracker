@@ -1004,6 +1004,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get selfLearnerBadge => 'SELF-LEARNER';
 
   @override
+  String get parentContextBadge => 'PARENT';
+
+  @override
+  String get tutorContextBadge => 'TUTOR';
+
+  @override
   String get noBackup => 'No Backup';
 
   @override

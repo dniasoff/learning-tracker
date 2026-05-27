@@ -120,6 +120,34 @@ Event types: `kickoff` · `verify` · `dispatch` · `sync` · `return` · `findi
 - **lesson (self):** never `make ci | tail` — the pipe masks make's exit; run `make ci 2>&1` to a file + read it, or `; echo EXIT=$?`.
 - next: S4 lint fix → re-run make ci.
 
+## [2026-05-26 19:50] verify · V1 `make ci` GREEN + green checkpoint committed
+- `make ci` re-run (real exit via `MAKE_CI_EXIT` marker, no pipe): **`+6006 ~125: All tests passed!` / MAKE_CI_EXIT=0**. analyze + format + all stories GREEN. The epic_27 concern did NOT materialize (full suite passes). **V1 satisfied** — verified independently, not S4's (twice-inaccurate) claim. Lesson logged: never `make ci | tail`.
+- Investigated the 61-file uncommitted breadth: NOT a format pass (`git diff -w` still shows all 61) — it's the legitimate RIPPLE of the new `FirestoreGateway` interface methods (every fake gateway in the suite needed the new stubs) + a real **foundation migration fix** (`isTutored` → `customConstraint('NOT NULL DEFAULT 0 CHECK(...)')` so the `from<28` ADD COLUMN backfills existing rows). All green.
+- **Committed the green checkpoint** (clean tree): `6ef7d185` fix(db) migration backfill (3 files); `2b598eda` feat(tutor) full parent-equivalent (58 files, +3196/-1341); `4b3fd391` docs.
+- **CAVEAT for V2:** commit `2b598eda` bundles broad test updates NOT line-by-line vetted — the adversarial review MUST check whether any test assertion was weakened to pass.
+- next: Daniel's on-device validation of the parent-equivalent flow (highest signal — caught the child-mode miss) → then V2 (R1 isolation incl. the NEW CF write surface, R2 pull, R3 permissions, R4 lifecycle) + V5 task-truth + V6 smoke. Holding V2 until after Daniel's device sign-off to review the validated state.
+
+## [2026-05-26 20:30] on-device FAILURE → fix round ("buggy beyond belief")
+- **Daniel validated on-device: the parent/tutor experience is badly broken.** The squad's green-CI work shipped buggy UX — the exact "tests ≠ feature correctness" gap. Bugs:
+  1. No profile switch / exit from the **Parent portal**.
+  2. Identity card: talmid "Tttt" shows the TUTOR's account email (dniasoff@gmail.com) + "SELF-LEARNER".
+  3. App stuck on **"local only"** ~a minute on open.
+  4. Parent mode shows **learner tabs** — should be parent tab ONLY.
+  5. **Persistent profile switcher at top — REPEATEDLY requested, dropped (trust issue).** Saved [[profile-switcher-at-top-persistent]].
+  6. **Rewards hang** in parent mode.
+- **ROOT CAUSE (switcher) diagnosed:** `ParentSettingsScreen` tap-to-switch REMOVED (DEC-11 → "bottom-nav avatar is canonical"), then `d50f2075` RETIRED the bottom-nav avatar ("tap profile name") — the parent portal's switch was NEVER re-added ⇒ no switch/exit there. Plus a two-nav duality (`ParentPortalBottomNav` Dashboard/Tracks/Rewards/Parent vs `app_shell` Dashboard/Learn/Progress/Settings + parent banner) = the inconsistency.
+- **DISPATCHED** (bar = Daniel's DEVICE, NOT CI; both to propose approach BEFORE deep build):
+  - `S3-readonly-gating` (task #12): persistent top switcher (every context) + parent-tab-only + identity card.
+  - `S4-cf-edits` (task #13): rewards-hang diagnosis + offline-first (reward_config_controller is clean → it's a watched provider / route guard / unreachable-cloud block); check whether same root as "local only".
+- **LESSON:** orchestration leaned on green CI + code review and MISSED UX/IA/requirement correctness (child-mode earlier, now switcher + nav). On-device validation is the only real bar here. Saved [[tutor-view-is-parent-not-child-mode]] + [[profile-switcher-at-top-persistent]] + the meta-rule (never drop Daniel's repeated requests).
+- next: S3 + S4 approach proposals → fixes → build to device → Daniel validates. No CI-green "done" declarations.
+
+## [2026-05-26 20:55] decision + relay · parent-mode nav = NO bottom nav
+- **Daniel (AskUserQuestion):** parent/tutor mode = NO bottom nav. Full management screen (`ParentSettingsScreen` rows); leave via the top switcher / "Exit parent mode". This cleanly kills the two-nav duality (ParentPortalBottomNav vs app-shell learner nav).
+- **S3 approach reviewed + corrected:** Fix 1 (switcher) = top role-indicator in EVERY mode (Learner/Adult/Parent/Tutor) → showProfileSwitcherSheet (not just the buried header card). Fix 3 (identity) = hide tutor email + self-learner badge in parent/tutored context, show child name + PARENT/TUTOR. Fix 2 (corrected): its condition was wrong (scoped to "no tutored selection" — but the learner-tabs bug WAS a tutored session) → must be `parentModeActive || isTutorElevated`; structure = NO bottom nav. Building 1+3 first, then 2.
+- **S3↔S4 coordination:** both touch `reward_configuration_screen.dart` (S3 removes ParentPortalBottomNav; S4 fixes the hang) — told both to sync.
+- next: S3 reports 1+3 → I build to Daniel's device → he validates; S4 reports hang + whether it shares the "local only" root; then fold Fix 2.
+
 ## [2026-05-26 17:35] coord · Wave 2 (S3 ↔ S2 dependency)
 - **detail:** S3 reported an assessment + asked whether S2's resolver had landed. Verified in the working tree (uncommitted): `active_profile_provider.dart:16-30` is now tutored-aware — returns the synthetic mirror id via a new `resolvedTutoredLocalProfileIdProvider` when a tutored selection is active (fallback 0 = loading while the pull runs), else `selectedProfileIdProvider`. Clean single chokepoint. Also confirmed: `text_display_screen.dart` ALREADY gates live-mark on `activeTutoredProfileSelectionProvider != null` (prior tutor-mode work) → primary live-mark path already barred.
 - **unblocked S3:** proceed with S2-independent work now (own `app_shell.dart` `_TutorModeIndicatorBar` + exit button; hide un-permitted edit controls; widget tests). T3.render builds against the resolver contract; full render-verify after S2 commits + entry-pull sets the resolved id. S2 owns build_runner; S3 coordinates directly.

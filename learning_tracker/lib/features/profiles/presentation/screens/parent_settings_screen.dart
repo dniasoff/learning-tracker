@@ -14,7 +14,6 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_pr
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
-import 'package:learning_tracker/features/profiles/presentation/widgets/parent_portal_bottom_nav.dart';
 import 'package:learning_tracker/features/settings/presentation/utils/account_actions.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/backup_sync_section.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/user_profile_header_card.dart';
@@ -98,19 +97,16 @@ class ParentSettingsScreen extends ConsumerWidget {
         ),
         centerTitle: true,
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-              children: [
-                // WS1.consolidate: the GestureDetector that routed to ProfilePicker
-                // has been removed — the always-on avatar switcher in the bottom nav
-                // is the canonical switch path (DEC-11).
+      body: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+          children: [
                 UserProfileHeaderCard(
                   user: user,
                   activeProfile: activeProfile,
                   surface: UserProfileHeaderSurface.parent,
+                  contextRole: isTutoredContext
+                      ? UserProfileContextRole.tutor
+                      : UserProfileContextRole.parent,
                 ),
                 const SizedBox(height: 16),
                 // WS3.3d: edit panel — only shown when at least one tile is visible.
@@ -316,21 +312,7 @@ class ParentSettingsScreen extends ConsumerWidget {
                     ),
                   ],
                 ],
-              ],
-            ),
-          ),
-          ParentPortalBottomNav(
-            selectedIndex: 3,
-            onSelect: (index) => unawaited(
-              navigateParentPortalTab(
-                context,
-                index,
-                currentTabIndex: 3,
-                ref: ref,
-              ),
-            ),
-          ),
-        ],
+          ],
       ),
     );
   }

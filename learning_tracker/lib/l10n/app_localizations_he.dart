@@ -994,6 +994,12 @@ class AppLocalizationsHe extends AppLocalizations {
   String get selfLearnerBadge => 'לומד עצמאי';
 
   @override
+  String get parentContextBadge => 'הורה';
+
+  @override
+  String get tutorContextBadge => 'מורה';
+
+  @override
   String get noBackup => 'אין גיבוי';
 
   @override

@@ -11,6 +11,7 @@ import 'package:learning_tracker/features/profiles/domain/models/profile_model.d
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/features/profiles/presentation/widgets/profile_switcher_sheet.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_lock_overlay.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -109,13 +110,12 @@ class AppShellScreen extends ConsumerWidget {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   OfflineTopBanner(visible: offlineBannerVisible),
-                  // WS1.consolidate: tutor bar is a context indicator only —
-                  // the switch affordance is removed; use the bottom-nav avatar
-                  // switcher to change profiles.
+                  // Tutor mode bar — tappable to open profile switcher.
                   if (hasActiveTutoredProfiles) const _TutorModeIndicatorBar(),
                   // WS4.banner (DEC-25): "Viewing [child]" banner for the
                   // parent/child-mode path. Only shown when a child profile is
                   // active and no tutor bar is already displayed.
+                  // Now tappable → profile switcher (Fix 1).
                   if (isViewingChildProfile && viewingChildName != null)
                     _ChildViewBanner(
                       childName: viewingChildName,
@@ -138,6 +138,11 @@ class AppShellScreen extends ConsumerWidget {
           );
         },
         bottomNavigationBuilder: (context, tabsRouter) {
+          // In parent mode or tutor mode: no bottom nav — navigation is via
+          // the ParentSettingsScreen rows (push) and the top switcher/exit bar.
+          if (parentModeActive || hasActiveTutoredProfiles) {
+            return const SizedBox.shrink();
+          }
           final l10n = AppLocalizations.of(context)!;
           final items = [
             (icon: Icons.space_dashboard_rounded, label: l10n.tabBarDashboard),
@@ -172,10 +177,6 @@ class AppShellScreen extends ConsumerWidget {
                           onTap: () => tabsRouter.setActiveIndex(index),
                         ),
                       ),
-                    // The bottom-nav avatar switcher was retired: tapping the
-                    // profile NAME/header in Settings is now the canonical
-                    // profile switcher/manager. Account switching lives under
-                    // Settings → ACCOUNT and the empty-login surface.
                   ],
                 ),
               ),
@@ -275,7 +276,9 @@ class _ChildViewBanner extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    return Container(
+    return GestureDetector(
+      onTap: () => showProfileSwitcherSheet(context),
+      child: Container(
       height: 28,
       color: _childViewAccentColor,
       padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -334,7 +337,8 @@ class _ChildViewBanner extends ConsumerWidget {
           ),
         ],
       ),
-    );
+    ),  // Container
+    );  // GestureDetector
   }
 }
 
@@ -350,65 +354,71 @@ class _TutorModeIndicatorBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    return Container(
-      height: 24,
-      color: _tutorAccentColor,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      child: Row(
-        children: [
-          const Icon(Icons.school_rounded, size: 13, color: Colors.white),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Text(
-              l10n.tutorModeIndicator,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.4,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          Material(
-            type: MaterialType.transparency,
-            child: InkWell(
-              onTap: () {
-                ref.read(activeTutoredProfileSelectionProvider.notifier).exit();
-                context.router.replaceAll([const AppShellRoute()]);
-              },
-              borderRadius: BorderRadius.circular(4),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(4),
+    return GestureDetector(
+      onTap: () => showProfileSwitcherSheet(context),
+      child: Container(
+        height: 24,
+        color: _tutorAccentColor,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        child: Row(
+          children: [
+            const Icon(Icons.school_rounded, size: 13, color: Colors.white),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                l10n.tutorModeIndicator,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.4,
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.logout_rounded,
-                      size: 12,
-                      color: Colors.white,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      l10n.tutorModeExit,
-                      style: const TextStyle(
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            Material(
+              type: MaterialType.transparency,
+              child: InkWell(
+                onTap: () {
+                  ref
+                      .read(activeTutoredProfileSelectionProvider.notifier)
+                      .exit();
+                  context.router.replaceAll([const AppShellRoute()]);
+                },
+                borderRadius: BorderRadius.circular(4),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.logout_rounded,
+                        size: 12,
                         color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.4,
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 4),
+                      Text(
+                        l10n.tutorModeExit,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.4,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

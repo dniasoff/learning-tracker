@@ -503,6 +503,8 @@
   "userFallbackDisplayName": "User",
   "proBadge": "PRO",
   "selfLearnerBadge": "SELF-LEARNER",
+  "parentContextBadge": "PARENT",
+  "tutorContextBadge": "TUTOR",
   "noBackup": "No Backup",
   "chooseLanguageTitle": "Choose Language",
   "preferredLanguageForContent": "Preferred language for content",

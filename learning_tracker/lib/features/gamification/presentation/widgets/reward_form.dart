@@ -13,7 +13,7 @@ class RewardForm {
     this.selectedTrackId,
     this.editingMilestoneId,
     this.tracks = const [],
-    this.loading = true,
+    this.loading = false,
     this.error,
   });
 

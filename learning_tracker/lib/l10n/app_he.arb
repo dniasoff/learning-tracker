@@ -498,6 +498,8 @@
   "userFallbackDisplayName": "משתמש",
   "proBadge": "PRO",
   "selfLearnerBadge": "לומד עצמאי",
+  "parentContextBadge": "הורה",
+  "tutorContextBadge": "מורה",
   "noBackup": "אין גיבוי",
   "chooseLanguageTitle": "בחירת שפה",
   "preferredLanguageForContent": "שפה מועדפת לתוכן",

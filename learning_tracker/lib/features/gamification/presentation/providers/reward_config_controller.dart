@@ -62,18 +62,13 @@ class RewardConfigController extends _$RewardConfigController {
   /// one debitable balance. The per-track vs Total split is gone, so the form
   /// is always global and no track list is loaded.
   Future<void> bootstrap() async {
-    state = state.copyWith(loading: true, error: null);
-    try {
-      state = state.copyWith(
-        tracks: const [],
-        selectedTrackId: null,
-        isGlobalReward: true,
-        loading: false,
-        error: null,
-      );
-    } catch (e) {
-      state = state.copyWith(loading: false, error: e.toString());
-    }
+    state = state.copyWith(
+      tracks: const [],
+      selectedTrackId: null,
+      isGlobalReward: true,
+      loading: false,
+      error: null,
+    );
   }
 
   // ── Field mutations ────────────────────────────────────────────────────────

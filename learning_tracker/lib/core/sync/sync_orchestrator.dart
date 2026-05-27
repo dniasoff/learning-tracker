@@ -637,18 +637,26 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
     }
 
     _logger?.info(event: 'sync_orchestrator_pull_on_launch_start');
-    // W7.9: fire analytics pull_started at the orchestrator entry boundary.
-    await _analytics?.logEvent(
-      LogEvents.sync.pullStarted,
-      parameters: {'triggered_from_resume': triggeredFromResume},
-    );
 
-    // P5: announce the pull on the shared status stream. The previous
-    // orchestrator delegated pulls to PullPipeline but never updated the
-    // engine's SyncStatus — `pull_on_launch_complete` fired in the logs while
-    // the UI sat on "Syncing…" forever. Emitting `syncing` here (and
-    // `synced` / `error` below) makes the Backup & Sync card track reality.
+    // P5: announce the pull immediately so the UI exits localOnly before any
+    // network or analytics work. Moving this before the analytics logEvent
+    // prevents a hung analytics call from leaving the status stuck at
+    // localOnly — analytics is fire-and-forget from the status perspective.
     _safeEmitStatus(SyncStatus.syncing(startedAt: DateTimeFactory.nowUtc()));
+
+    // W7.9: fire analytics pull_started. Wrapped in a short timeout so a
+    // flaky analytics service can't delay the pull itself (the status has
+    // already transitioned above).
+    try {
+      await _analytics
+          ?.logEvent(
+            LogEvents.sync.pullStarted,
+            parameters: {'triggered_from_resume': triggeredFromResume},
+          )
+          .timeout(const Duration(seconds: 3));
+    } catch (_) {
+      // Analytics is non-critical; swallow timeout or any other error.
+    }
 
     try {
       // Build the PullPipeline against the CURRENT gateway + MergeRouter so a

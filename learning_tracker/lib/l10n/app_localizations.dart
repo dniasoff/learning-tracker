@@ -1859,6 +1859,18 @@ abstract class AppLocalizations {
   /// **'SELF-LEARNER'**
   String get selfLearnerBadge;
 
+  /// No description provided for @parentContextBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'PARENT'**
+  String get parentContextBadge;
+
+  /// No description provided for @tutorContextBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'TUTOR'**
+  String get tutorContextBadge;
+
   /// No description provided for @noBackup.
   ///
   /// In en, this message translates to:

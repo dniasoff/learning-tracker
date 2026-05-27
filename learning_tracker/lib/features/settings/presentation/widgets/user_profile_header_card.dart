@@ -1,5 +1,7 @@
+import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
@@ -20,6 +22,15 @@ enum UserProfileHeaderSurface {
   parent,
 }
 
+/// The role context shown in the identity card badge.
+///
+/// [selfLearner] = own profile (shows SELF-LEARNER badge + account email).
+/// [parent]      = elevated parent viewing a child profile (shows PARENT badge,
+///                 hides account email).
+/// [tutor]       = tutor viewing a talmid's context (shows TUTOR badge, hides
+///                 account email).
+enum UserProfileContextRole { selfLearner, parent, tutor }
+
 /// Profile header (avatar, name, email, badges) used on Settings and on
 /// [ParentSettingsScreen] for the active child.
 class UserProfileHeaderCard extends ConsumerStatefulWidget {
@@ -28,11 +39,13 @@ class UserProfileHeaderCard extends ConsumerStatefulWidget {
     required this.user,
     this.activeProfile,
     this.surface = UserProfileHeaderSurface.settings,
+    this.contextRole = UserProfileContextRole.selfLearner,
   });
 
   final AppUser? user;
   final ProfileModel? activeProfile;
   final UserProfileHeaderSurface surface;
+  final UserProfileContextRole contextRole;
 
   @override
   ConsumerState<UserProfileHeaderCard> createState() =>
@@ -106,11 +119,33 @@ class _UserProfileHeaderCardState extends ConsumerState<UserProfileHeaderCard> {
         l10n.userFallbackDisplayName;
     final profileInitial = _profileInitial(displayName);
 
+    // Role-context badge: label + colour vary by who is viewing.
+    final (badgeLabel, badgeColor, badgeTextColor) = switch (widget.contextRole) {
+      UserProfileContextRole.parent => (
+        l10n.parentContextBadge,
+        const Color(0xFFE8F4FD),
+        const Color(0xFF1565C0),
+      ),
+      UserProfileContextRole.tutor => (
+        l10n.tutorContextBadge,
+        const Color(0xFFFFF3E0),
+        const Color(0xFFE65100),
+      ),
+      UserProfileContextRole.selfLearner => (
+        l10n.selfLearnerBadge,
+        theme.colorScheme.primary.withValues(alpha: 0.12),
+        theme.colorScheme.primary,
+      ),
+    };
+    // Hide the account email in parent/tutor context — it belongs to the
+    // tutor/parent's own account, not the child being viewed.
+    final showEmail =
+        widget.contextRole == UserProfileContextRole.selfLearner &&
+        user.email != null;
+
     return _wrapSurface(
       widget.surface,
-      onTap: widget.surface == UserProfileHeaderSurface.settings
-          ? () => showProfileSwitcherSheet(context)
-          : null,
+      onTap: () => showProfileSwitcherSheet(context),
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         child: Row(
@@ -161,15 +196,13 @@ class _UserProfileHeaderCardState extends ConsumerState<UserProfileHeaderCard> {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: theme.colorScheme.primary.withValues(
-                            alpha: 0.12,
-                          ),
+                          color: badgeColor,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
-                          l10n.selfLearnerBadge,
+                          badgeLabel,
                           style: TextStyle(
-                            color: theme.colorScheme.primary,
+                            color: badgeTextColor,
                             fontSize: 11,
                             fontWeight: FontWeight.w700,
                             letterSpacing: 0.5,
@@ -178,7 +211,7 @@ class _UserProfileHeaderCardState extends ConsumerState<UserProfileHeaderCard> {
                       ),
                     ],
                   ),
-                  if (user.email != null)
+                  if (showEmail) ...[
                     Text(
                       user.email!,
                       style: theme.textTheme.bodySmall?.copyWith(
@@ -186,6 +219,11 @@ class _UserProfileHeaderCardState extends ConsumerState<UserProfileHeaderCard> {
                         fontSize: 16,
                       ),
                     ),
+                    if (widget.surface == UserProfileHeaderSurface.settings) ...[
+                      const SizedBox(height: 6),
+                      _AccountSwitchRow(email: user.email!),
+                    ],
+                  ],
                   if (authState.isLocalBorn) ...[
                     const SizedBox(height: 4),
                     const _NoBackupInlineText(),
@@ -209,7 +247,7 @@ Widget _wrapSurface(
     case UserProfileHeaderSurface.settings:
       return _SettingsProfileSurface(onTap: onTap, child: child);
     case UserProfileHeaderSurface.parent:
-      return _ParentProfileSurface(child: child);
+      return _ParentProfileSurface(onTap: onTap, child: child);
   }
 }
 
@@ -252,9 +290,10 @@ class _SettingsProfileSurface extends StatelessWidget {
 }
 
 class _ParentProfileSurface extends StatelessWidget {
-  const _ParentProfileSurface({required this.child});
+  const _ParentProfileSurface({required this.child, this.onTap});
 
   final Widget child;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
@@ -270,7 +309,18 @@ class _ParentProfileSurface extends StatelessWidget {
           ),
         ],
       ),
-      child: ClipRRect(borderRadius: BorderRadius.circular(20), child: child),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: onTap == null
+            ? child
+            : Material(
+                type: MaterialType.transparency,
+                child: InkWell(
+                  onTap: onTap,
+                  child: child,
+                ),
+              ),
+      ),
     );
   }
 }
@@ -356,6 +406,42 @@ class _LocalBornProfileRow extends ConsumerWidget {
     );
 
     return inner;
+  }
+}
+
+class _AccountSwitchRow extends StatelessWidget {
+  const _AccountSwitchRow({required this.email});
+  final String email;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return InkWell(
+      onTap: () => context.pushRoute(const AccountPickerRoute()),
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.swap_horiz_rounded,
+              size: 14,
+              color: AppColors.inkMidGrey,
+            ),
+            const SizedBox(width: 4),
+            Text(
+              l10n.switchAccount,
+              style: const TextStyle(
+                color: AppColors.inkMidGrey,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 

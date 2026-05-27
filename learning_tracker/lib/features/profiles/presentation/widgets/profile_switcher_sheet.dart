@@ -12,6 +12,7 @@ import 'package:learning_tracker/features/profiles/presentation/providers/parent
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/add_profile_dialog.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/profile_edit_delete_actions.dart';
+import 'package:learning_tracker/features/profiles/presentation/widgets/tutored_children_section.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Opens the canonical profile switcher/manager bottom sheet.
@@ -94,6 +95,9 @@ class ProfileSwitcherSheet extends ConsumerWidget {
                             deleteProfileFlow(context, ref, profile),
                           ),
                         ),
+                      // Talmid profiles — self-gating: renders only when the
+                      // current user has ≥1 active or pending tutor grant.
+                      const TutoredChildrenSection(),
                     ],
                   ),
                 ),
