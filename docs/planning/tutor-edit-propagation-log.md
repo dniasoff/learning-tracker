@@ -37,6 +37,34 @@ Event types: `kickoff` · `verify` · `dispatch` · `sync` · `return` · `findi
 - **action:** `SendMessage` S1 → `HOLD — cleanup commit in flight; continue reading, no edits; await proceed`.
 - **next:** commit the 14-file polish on the working tree + this log + tracker; verify clean; release S1; dispatch S6.
 
+## [2026-05-28 10:25] return + verify · S1 P1 keystone — PASS with one HIGH advisory carried to S2
+- **scope:** sync/S1 · `S1-routing` reported P1 ready (commit `f1861516` — `feat(tutor): S1 — TutoredWriteRouter keystone`, 4 files, +707/-1, 14 tests).
+- **VERIFIED by orchestrator (read diff + code + tests, not self-report):**
+  - **Router DESIGN sound:** `TutoredWriteRouter` (`lib/features/tutoring/data/routers/tutored_write_router.dart`, +225) is a `SyncWriteFacade` decorator. When `selection != null`, intercepts entity writes (`pushGoal`/`deleteGoal`/`pushCurriculumTrack`/`pushStageDefinitions`/`pushStudyDayConfig`) → calls matching CF via `TutorWriteService` with `grantId + ownerUid + profileId + payload`. Delegate (outbox) NEVER called for intercepted kinds. CF failure → `TutorWriteException` (clean exception type so callers can surface a snackbar). Pass-through (delegate) for non-intercepted kinds (`pushGamificationSettingsSnapshot`, `pushUiPreferencesSnapshot`, `pushBookmark`, `pushSettings`, `pushLearningOrder`, `pushLearnerProfile`, `deleteLearnerProfile`) — those are S4's scope.
+  - **Provider WRAP sound:** `syncWriteFacadeProvider` in `sync_providers.dart:69+` now returns a `TutoredWriteRouter` wrapping `OutboxSyncWriteFacade` when `activeTutoredProfileSelectionProvider != null`; returns the bare outbox facade otherwise.
+  - **TESTS GENUINE + COMPREHENSIVE:** 14 unit tests in `test/features/tutoring/s1_tutored_write_router_test.dart` (+462). AC1 (tutored→CF + outbox depth 0) × 5 entity kinds; AC2 (non-tutored→outbox + CF not called) × 5 kinds; AC3 (5-call isolation: `totalEnqueueCount` stays 0; pass-through still reaches delegate); AC4 (CF failure → `TutorWriteException`) × 2. Real `TutorWriteService` + recording invoker + real `SyncWriteFacade` impl as delegate. No mocked assertions, no skipped cases.
+  - **Chokepoint coverage (the key correctness Q):** `_syncEngine` is typed as `SyncWriteFacade?` in `GoalRepositoryImpl` (`goal_repository_impl.dart:12,17,20`) + `CompletionRepositoryImpl` (`completion_repository_impl.dart:32,43,52`); BOTH providers inject from `syncWriteFacadeProvider` (`goalRepositoryProvider` at `onboarding_providers.dart:35`; `completionRepositoryProvider` at `completion_providers.dart:62`). ⇒ `goal_repository_impl:221,230` (`_syncEngine.pushGoal/deleteGoal`) AND `completion_repository_impl:216,288` (`_syncEngine?.pushGamificationSettingsSnapshot()`) DO flow through the wrapped router. **Both originally-named chokepoints covered.**
+- **HIGH ADVISORY (do NOT close P1 with this glossed — carry to S2):** a **THIRD path** exists — direct readers of `outboxSyncWriteFacadeProvider` BYPASS the wrap. The two providers are deliberately separate (comment at `sync_providers.dart:107-108`: "the instance and the one returned by `syncWriteFacadeProvider` are NOT shared on purpose"). Direct readers in S2/S3/S4 scope:
+  - `add_track_providers.dart:21` — track creation ⚠️ (S2 scope)
+  - `study_day_config_screen.dart:186` — study day config push ⚠️ (S2 scope)
+  - `edit_track_screen.dart:330` — track edit ⚠️ (S2 scope)
+  - `completion_providers.dart:81` — completion repo tee (legitimate; outbox-only by design — for own-data ledger writes)
+  - `learning_ledger_providers.dart:33`, `notification_providers.dart:256`, `bulk_mark_screen.dart`, child/parent redemption screens — gamification/ledger surfaces (S4 territory, watch in their wiring).
+  → **S2 MUST refactor the entity-push call sites (track / stages / study-day) to read `syncWriteFacadeProvider` (the wrapped router)** — the `SyncWriteFacade` interface has drop-in equivalents. Without this, a tutor adding/editing a track via these UIs would still write to the local outbox + the `isProfileTutored` guard would block sync ⇒ edit STRANDED (the exact failure mode that created this effort).
+- **MINOR (LOW, log only):** S1 reported "analyze clean (4 pre-existing onReorder infos unchanged)" — not independently verified at this gate (V1 will catch). Pattern note: talmid-view squad previously made repeated false analyze-clean claims — verify before believing.
+- **verdict:** **S1 PASS for the router-keystone scope as briefed.** Task #1 → `completed` (its scope is done). P1 NOT closed (still awaiting S6 + the HIGH advisory must land in the S2 briefing).
+- **next:** acknowledge S1 (it's idle); await S6 at P1; fold S1's HIGH advisory into S2's Wave-2 briefing.
+
+## [2026-05-28 10:16] dispatch · S6 — Profile-less tutor wizard fix
+- **scope:** S6 start.
+- **investigation:** `ProfileGuard.onNavigation` already routes `count==0` to `ProfilePickerRoute` (the picker, not a wizard). The picker shows `TutoredChildrenSection` which displays active grants. The actual gap was in `sign_in_controller.dart` post-login routing: the `finalProfileCount==0 && !cloudAccountHasProfiles` branch routed to `EmptyLoginRoute` (for skipped users) or `OnboardingRoute` (for new users) without checking grants.
+- **fix — 3 files:**
+  1. `sign_in_controller.dart` — added grant check before `EmptyLoginRoute`/`OnboardingRoute` branch: calls `tutorGrantRepositoryProvider.listIncomingGrants()` with 4s timeout; if ≥1 active grant → `ProfilePickerRoute`. Falls back to original behavior offline/error.
+  2. `empty_login_screen.dart` — wired "I'm a tutor" button to `ProfilePickerRoute` (was: snackbar stub).
+  3. `test/core/navigation/profile_guard_test.dart` — new file, 6 unit tests covering: tutored-session bypass (count==0 and count≥1), zero-own-profiles → picker (both genuine first-run and profile-less tutor scenarios), single-profile auto-select, valid-selection short-circuit.
+- **analyze:** 4 pre-existing onReorder infos only — no new issues.
+- **tests:** 6/6 pass (`flutter test test/core/navigation/profile_guard_test.dart`). Pre-existing `app_shell_test.dart` 2 failures confirmed pre-existing (same failure on baseline before my changes).
+
 ## [2026-05-28 10:08] commit · clean baseline before squad runs
 - **scope:** orchestration · honoured Daniel's `1st commit and ensure git is clean` instruction.
 - **commits on `dev`:**

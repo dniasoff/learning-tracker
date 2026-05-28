@@ -9,14 +9,15 @@ Plan: `tutor-edit-propagation-plan.md` · Log: `tutor-edit-propagation-log.md`.
 
 ## Streams
 
-### S1 — Routing foundation (keystone) — pending
-- [ ] `tutorWriteServiceProvider` integration (exists; verify resolution from the router)
-- [ ] **`TutoredWriteRouter`** mapping `(kind, serialized map, docId)` → matching CF call using `grantId/ownerUid/profileId` from `activeTutoredProfileSelectionProvider`
-- [ ] Wire `OutboxSyncWriteFacade` (push/delete entry points) to consult the router BEFORE enqueueing
-- [ ] Wire `SyncEngine`/`PushPipeline` push/delete paths to consult the router (the second chokepoint — `goal_repository_impl` calls `_syncEngine.pushGoal/deleteGoal` directly, etc.)
-- [ ] Non-tutored path unchanged (regression test: own-profile push still enqueues)
-- [ ] Unit test: tutored session → CF (fake `TutorCallableInvoker`); non-tutored → outbox
-- [ ] Outbox isolation hardening: tutored writes NEVER reach the outbox (R1 critical)
+### S1 — Routing foundation (keystone) — **done** (P1 PASS; HIGH advisory bundled to S2)
+- [x] `tutorWriteServiceProvider` integration (resolved via the router constructor)
+- [x] **`TutoredWriteRouter`** mapping `(kind, serialized map, docId)` → matching CF call using `grantId/ownerUid/profileId` from `activeTutoredProfileSelectionProvider` (commit `f1861516`)
+- [x] Wire `OutboxSyncWriteFacade` (push/delete entry points) to consult the router BEFORE enqueueing — via `syncWriteFacadeProvider` wrap
+- [x] Wire `SyncEngine`/`PushPipeline` push/delete paths to consult the router — `_syncEngine` typed as `SyncWriteFacade?`, injected from `syncWriteFacadeProvider` in both `goalRepositoryProvider` and `completionRepositoryProvider`
+- [x] Non-tutored path unchanged (regression test in AC2 × 5 entity kinds)
+- [x] Unit test: tutored session → CF; non-tutored → outbox (AC1 + AC2, 14 tests total)
+- [x] Outbox isolation hardening: tutored writes NEVER reach the outbox (AC3 totalEnqueueCount=0 across all intercepted kinds)
+- ⚠️ **HIGH advisory carried to S2:** direct readers of `outboxSyncWriteFacadeProvider` BYPASS the router wrap. Scope-relevant cases: `add_track_providers.dart:21`, `study_day_config_screen.dart:186`, `edit_track_screen.dart:330`. S2 must refactor these to read `syncWriteFacadeProvider`.
 
 ### S2 — Existing-entity wiring — pending
 - [ ] Route `pushTrack` / `deleteTrack` → `tutorUpsertTrack` / `tutorDeleteTrack` (`can_edit_stages`)
