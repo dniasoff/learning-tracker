@@ -19,13 +19,25 @@ Plan: `tutor-edit-propagation-plan.md` · Log: `tutor-edit-propagation-log.md`.
 - [x] Outbox isolation hardening: tutored writes NEVER reach the outbox (AC3 totalEnqueueCount=0 across all intercepted kinds)
 - ⚠️ **HIGH advisory carried to S2:** direct readers of `outboxSyncWriteFacadeProvider` BYPASS the router wrap. Scope-relevant cases: `add_track_providers.dart:21`, `study_day_config_screen.dart:186`, `edit_track_screen.dart:330`. S2 must refactor these to read `syncWriteFacadeProvider`.
 
-### S2 — Existing-entity wiring — pending
-- [ ] Route `pushTrack` / `deleteTrack` → `tutorUpsertTrack` / `tutorDeleteTrack` (`can_edit_stages`)
-- [ ] Route `pushStageDefinitions` → `tutorUpsertStageDefinition` (`can_edit_stages`)
-- [ ] Route `pushGoal` / `deleteGoal` → `tutorUpsertGoal` / `tutorDeleteGoal` (`can_edit_goals`) — **goal payload normalized to snake_case** (R2 critical)
-- [ ] Route `pushStudyDayConfig` / `deleteStudyDayConfig` → `tutorUpsertStudyDayConfig` / `tutorDeleteStudyDayConfig` (`can_edit_study_days`)
-- [ ] Verify serializer field names + doc-id conventions match merger expectations end-to-end (R2 parity check per entity)
-- [ ] On-device + live Firestore: tutor adds basic track → track + stages + goal + study-days appear in the parent's namespace
+### S2 — Existing-entity wiring — **done** (commit `9ccdcd61`; 1 persistent gap → fix-agent)
+- [x] Route `pushTrack` / `deleteTrack` → `tutorUpsertTrack` / `tutorDeleteTrack` (existed in S1; verified)
+- [x] Route `pushStageDefinitions` → `tutorUpsertStageDefinition` (existed; verified)
+- [x] Route `pushGoal` / `deleteGoal` → `tutorUpsertGoal` / `tutorDeleteGoal` (existed; **`GoalEntity.toFirestore` normalized to snake_case** — R2 critical fix landed)
+- [x] Route `pushStudyDayConfig` / `deleteStudyDayConfig` → `tutorUpsertStudyDayConfig` (existed; verified)
+- [x] Serializer field names + doc-id parity tests for all 5 kinds (7 tests in `s2_entity_parity_test.dart` + 290 lines in router test)
+- [x] Refactor `outboxSyncWriteFacadeProvider` direct readers: `study_day_config_screen.dart` (done) + `TrackCreationService`/`add_track_providers.dart` (done, facade split)
+- ⚠️ **GAP — fix-agent after S4:** `edit_track_screen.dart:330` left on `enqueueProfileProgram` (outbox-only helper). `tutorSetProfileProgram` CF remains unreachable until `pushProfileProgram` is added to `SyncWriteFacade` + routed.
+- 🔍 **R2-GOAL-TRACK-ID (V2 candidate):** `GoalEntity` has no `trackId` → merger skips rows. Pre-existing in own-device path too. Out of S2 scope; carry to V2 R2 review.
+- [ ] On-device + live Firestore — verified at integrated P2 (after S4 + fix-agent).
+
+### S3 — Parity CFs (program enrolment) — **done** (commit `dbc36599`; 2 of 3 CFs awaiting client paths)
+- [x] **NEW CF** `tutorUpsertBookmark` → `bookmarks/{curriculumId}_{trackType}` (can_edit_stages); REACHABLE via S3's new `pushBookmark` route ✅
+- [x] **NEW CF** `tutorSetProfileProgram` → `profile_program/{id}` (can_edit_stages); ⚠️ UNREACHABLE until fix-agent lands `pushProfileProgram` interface
+- [x] **NEW CF** `tutorUpsertCurriculumScope` → `curriculum_scopes/{id}` (can_edit_stages); ⚠️ UNREACHABLE — no client push path exists today (pre-existing gap); kept as future-proofing
+- [x] **`point_configs` propagation verified** via gamification snapshot (GamificationSettingsMerger reads `points_config` list); no dedicated CF needed
+- [x] Add `TutorWriteService.upsertBookmark` / `setProfileProgram` / `upsertCurriculumScope`
+- [x] CF tests + router unit tests (5 new bookmark tests + AC3 6-kind isolation)
+- [ ] Deploy CFs — HELD; will deploy once after S4 + fix-agent complete.
 
 ### S3 — Parity CFs (program enrolment) — pending
 - [ ] **NEW CF** `tutorUpsertBookmark` → `users/{uid}/learner_profiles/{pid}/bookmarks/{id}` (`can_edit_stages`)
