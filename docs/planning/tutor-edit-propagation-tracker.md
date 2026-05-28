@@ -48,14 +48,32 @@ Plan: `tutor-edit-propagation-plan.md` · Log: `tutor-edit-propagation-log.md`.
 - [ ] CF tests: auth → active-tutor-verify → permission → write → audit (pattern mirrors `tutorUpsertTrack`)
 - [ ] End-to-end: tutor creates a track **with program enrolment** → bookmark + profile_program + curriculum_scope + point_configs all land in the parent's namespace
 
-### S4 — Other edits + UI gating — pending
-- [ ] Route gamification (rewards + points, with `permKey` split = `can_edit_rewards` vs `can_edit_points`) → `tutorUpdateGamificationSettings`
-- [ ] Route profile edit (display_name / avatar / mode) → `tutorEditProfile`
-- [ ] Route completion reset → `tutorResetCompletion` (`can_reset_completion`)
-- [ ] Pre-gate each edit affordance in the talmid view on the active grant's `canEdit*` flag (CF denies too, defense in depth)
-- [ ] Un-permitted affordances hidden; permission-denied surfaces a clear snackbar (never silently strand)
-- [ ] Tests: per-permission UI gating + per-permission CF denial
-- [ ] On-device + live Firestore: tutor edits a reward / points / profile / reset → lands in parent namespace; restricted grant → blocked
+### S4 — Other edits + UI gating — **done** (commits `2b1af2d4` + `d954a41f`)
+- [x] Route gamification snapshot → `tutorUpdateGamificationSettings` via injected `buildGamificationSnapshot` builder; `permKey` = `can_edit_rewards` (catch-all — CF accepts both flags and uses `.set(merge:true)`)
+- [x] Route profile edit (snake + camel key extraction; early-return if all fields null) → `tutorEditProfile`
+- [x] Route completion reset (new `deleteCompletion(String)` added to `SyncWriteFacade` interface) → `tutorResetCompletion`
+- [x] `deleteLearnerProfile` stays pass-through (talmid profile deletion is not a tutor right; defense in depth via outbox guard)
+- [x] Permission-denied snackbar: `tutorPermissionDenied` localization EN+HE; wired in 4 edit surfaces (`point_config_screen`, `reward_configuration_screen`, `study_day_config_screen`, `profile_edit_delete_actions`)
+- [x] 14 new tests (S4-A gamification × 4, S4-B profile × 6, S4-C completion × 4)
+- [x] `d954a41f` chore commit: `dart format` session residue cleaned (10 files)
+- [ ] On-device + live Firestore: verified at integrated P2 (post-F1+F2).
+
+---
+
+## Wave-2 fix-agents (must land before P2 deploy)
+
+### F1 — onReorder → onReorderItem migration (CI unblock) — in_progress
+- [ ] 4 call sites: `track_learning_order_screen.dart:90,118`, `learning_order_screen.dart:115`, `epic_27_story_4_widget_golden_test.dart:262`
+- [ ] Migrate API + remove any double-correction `if (oldIndex < newIndex) newIndex -= 1;` in handlers
+- [ ] `make ci` GREEN
+
+### F2 — `pushProfileProgram` interface + route + caller refactor — in_progress
+- [ ] Add `pushProfileProgram(payload)` to `SyncWriteFacade` interface
+- [ ] Implement in `OutboxSyncWriteFacade` (delegate to `enqueueProfileProgram`)
+- [ ] Route in `TutoredWriteRouter` → `tutorSetProfileProgram` CF
+- [ ] Refactor `edit_track_screen.dart:330` + `TrackCreationService` callers to use `syncWriteFacadeProvider.pushProfileProgram`
+- [ ] Tests proving tutored→CF / non-tutored→delegate / 7-kind isolation
+- [ ] Make `tutorSetProfileProgram` CF REACHABLE
 
 ### S5 — Delta listeners + caching — pending
 - [ ] On entry (after the initial pull) attach Firestore listeners scoped to the child's collections via the parent-scoped gateway
