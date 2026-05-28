@@ -30,3 +30,18 @@ Event types: `kickoff` · `verify` · `dispatch` · `sync` · `return` · `findi
 ## [2026-05-28 09:58] decision · team
 - **detail:** Created Sonnet squad team `tutor-edit-squad` (`TeamCreate`). All streams spawn into it as named Sonnet teammates (`model: sonnet`, `subagent_type: general-purpose`, stable `name`). Orchestrator writes only this log + the tracker; all code work delegated. Permission mode inherited (so `firebase deploy --only functions` at the P2 gate naturally routes through human approval — Daniel stays in control of the live deploy [[firestore-rules-deploy]]).
 - **next:** Pre-populate tracker; create high-level tasks; dispatch Wave 1.
+
+## [2026-05-28 10:00] dispatch · S1 — then HELD
+- **scope:** dispatch · Spawned `S1-routing` (Sonnet, background, `tutor-edit-squad`, task #1 in_progress, owner=`S1-routing`). Briefing: build `TutoredWriteRouter`, wire BOTH facade chokepoints (`OutboxSyncWriteFacade` + `SyncEngine`/`PushPipeline` direct calls from repos), preserve non-tutored path, unit tests proving tutored→CF / non-tutored→outbox / outbox depth-0 hardening. Gate = P1.
+- **interrupt:** Daniel paused immediately after S1 dispatch with `1st commit and ensure git is clean`. **S6 dispatch held** (Wave 1 incomplete).
+- **action:** `SendMessage` S1 → `HOLD — cleanup commit in flight; continue reading, no edits; await proceed`.
+- **next:** commit the 14-file polish on the working tree + this log + tracker; verify clean; release S1; dispatch S6.
+
+## [2026-05-28 10:08] commit · clean baseline before squad runs
+- **scope:** orchestration · honoured Daniel's `1st commit and ensure git is clean` instruction.
+- **commits on `dev`:**
+  - `7e5f6eb5` `feat(tutor): own/mirror profile split + tutored guard bypass + switcher account row + talmid-entry loading` (14 files, +184/-83). Substantive changes: `profile_dao.dart` `getProfilesByAccount` / `countProfilesForAccount` / `watchProfilesByAccount` now exclude `isTutored==true` mirrors (own queries return own-only); `profile_guard.dart` short-circuits when `_isTutoredSession()` (resolver.next() through the talmid view path); `profile_switcher_sheet.dart` adds an ACCOUNT row at top with current email + `AccountPickerRoute`; `tutored_children_section.dart` shows a blocking progress dialog during the entry pull (dismissed on success / permission-denied / error); `tutored_pull_providers.dart`, `active_tutored_profile_provider.dart`, `manage_tutors_providers.dart`, `settings_screen.dart`, `user_profile_header_card.dart`, `app_shell.dart`, `router_provider.dart`, `gradle.properties`, `pubspec.lock`, `app_shell_test.dart` smaller follow-ons.
+  - `462e5a2d` `docs(tutor): edit-propagation plan + orchestration prompt, log, tracker` (4 files, +435).
+- **git status:** CLEAN at HEAD `462e5a2d`. `dart analyze` not re-run by the orchestrator (the changes are Daniel's prior-session polish, already analyze-clean per his pre-handoff state); squad will exercise it at their own commits + V1.
+- **S6 OVERLAP NOTE (carry to S6 briefing):** the polish already implements PART of S6's mechanism — own-profile queries correctly exclude mirrors, so a profile-less tutor's `countProfilesForAccount` returns 0 and `ProfileGuard` allows tutored sessions through. The remaining S6 gap is the **initial routing decision** when `count==0` + ≥1 active grant → must route to the picker (TALMID PROFILES visible), not the Create-Profile wizard.
+- **next:** SendMessage S1 → `proceed <SHA>`; dispatch S6 with the overlap note.
