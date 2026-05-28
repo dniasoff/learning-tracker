@@ -10,6 +10,7 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_st
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/sync/data/outbox_sync_write_facade.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
+import 'package:learning_tracker/features/tutoring/tutoring.dart';
 
 /// Provider for sync status stream.
 ///
@@ -58,6 +59,12 @@ final syncStatusProvider = Provider<SyncStatus>((ref) {
 /// [OutboxSyncWriteFacade] that enqueues mutations into the outbox table for
 /// async push.
 ///
+/// When a tutor session is active ([activeTutoredProfileSelectionProvider] !=
+/// null) the outbox facade is wrapped by a [TutoredWriteRouter] that intercepts
+/// entity writes and routes them to the matching TutorWriteService Cloud
+/// Function instead. The outbox [isProfileTutored] guard remains as the
+/// belt-and-suspenders safety net.
+///
 /// W2.35: [syncEngineProvider] deleted — this is the sole write-path provider.
 final syncWriteFacadeProvider = Provider<SyncWriteFacade?>((ref) {
   final authState = ref.watch(authStateProvider);
@@ -67,7 +74,7 @@ final syncWriteFacadeProvider = Provider<SyncWriteFacade?>((ref) {
   final profileId = ref.watch(activeProfileIdProvider);
   final clock = ref.watch(localDayClockProvider);
 
-  return OutboxSyncWriteFacade(
+  final outboxFacade = OutboxSyncWriteFacade(
     outboxDao: database.outboxDao,
     database: database,
     profileId: profileId,
@@ -79,6 +86,15 @@ final syncWriteFacadeProvider = Provider<SyncWriteFacade?>((ref) {
     onEnqueueDrain: () =>
         ref.read(outboxProcessorProvider)?.drain(profileId) ??
         Future<int>.value(0),
+  );
+
+  final tutoredSelection = ref.watch(activeTutoredProfileSelectionProvider);
+  if (tutoredSelection == null) return outboxFacade;
+
+  return TutoredWriteRouter(
+    delegate: outboxFacade,
+    writeService: ref.watch(tutorWriteServiceProvider),
+    selection: tutoredSelection,
   );
 });
 
