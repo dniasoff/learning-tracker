@@ -100,6 +100,7 @@ abstract class GoalEntity with _$GoalEntity {
     @Default(100.0) double targetPercent,
     DateTime? targetDate,
     @Default('') String description,
+    int? trackId,
 
     /// Whether the goal deadline uses Hebrew or Gregorian calendar.
     /// Values: 'hebrew' or 'gregorian' (default).
@@ -168,6 +169,7 @@ abstract class GoalEntity with _$GoalEntity {
   Map<String, dynamic> toFirestore() {
     return {
       'curriculum_id': curriculumId.storageKey,
+      if (trackId != null) 'track_id': trackId,
       'target_percent': targetPercent,
       'target_date': targetDate?.toIso8601String(),
       'description': description,

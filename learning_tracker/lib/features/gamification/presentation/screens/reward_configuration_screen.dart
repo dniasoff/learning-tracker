@@ -255,6 +255,8 @@ class _RewardConfigurationScreenState
     final l10n = AppLocalizations.of(context)!;
     final form = ref.watch(rewardConfigControllerProvider);
     final topInset = MediaQuery.paddingOf(context).top;
+    final tutorPerms = ref.watch(activeTutorPermissionsProvider);
+    final canEdit = tutorPerms == null || tutorPerms.canEditRewards;
 
     // Keep text controllers in sync with notifier state (e.g. after clear/apply).
     _syncControllersFromState(form);
@@ -432,7 +434,13 @@ class _RewardConfigurationScreenState
                         width: double.infinity,
                         height: 52,
                         child: FilledButton(
-                          onPressed: () => unawaited(_saveReward(l10n)),
+                          onPressed: canEdit
+                              ? () => unawaited(_saveReward(l10n))
+                              : () => ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(l10n.tutorPermissionDenied),
+                                    ),
+                                  ),
                           style: FilledButton.styleFrom(
                             backgroundColor: _kNavy,
                             foregroundColor: Colors.white,

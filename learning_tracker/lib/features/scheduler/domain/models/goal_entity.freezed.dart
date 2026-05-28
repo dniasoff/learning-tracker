@@ -14,7 +14,7 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$GoalEntity {
 
- int? get id; CurriculumId get curriculumId; double get targetPercent; DateTime? get targetDate; String get description;/// Whether the goal deadline uses Hebrew or Gregorian calendar.
+ int? get id; CurriculumId get curriculumId; double get targetPercent; DateTime? get targetDate; String get description; int? get trackId;/// Whether the goal deadline uses Hebrew or Gregorian calendar.
 /// Values: 'hebrew' or 'gregorian' (default).
  String get dateType;/// Goal mode: 'deadline' (default), 'pace', or 'none'.
  String get goalType;/// Pace value (e.g., 1, 5). Only used when [goalType] == 'pace'.
@@ -36,16 +36,16 @@ $GoalEntityCopyWith<GoalEntity> get copyWith => _$GoalEntityCopyWithImpl<GoalEnt
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is GoalEntity&&(identical(other.id, id) || other.id == id)&&(identical(other.curriculumId, curriculumId) || other.curriculumId == curriculumId)&&(identical(other.targetPercent, targetPercent) || other.targetPercent == targetPercent)&&(identical(other.targetDate, targetDate) || other.targetDate == targetDate)&&(identical(other.description, description) || other.description == description)&&(identical(other.dateType, dateType) || other.dateType == dateType)&&(identical(other.goalType, goalType) || other.goalType == goalType)&&(identical(other.paceValue, paceValue) || other.paceValue == paceValue)&&(identical(other.pacePeriod, pacePeriod) || other.pacePeriod == pacePeriod)&&(identical(other.paceGranularity, paceGranularity) || other.paceGranularity == paceGranularity)&&(identical(other.rawLearningUnit, rawLearningUnit) || other.rawLearningUnit == rawLearningUnit)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is GoalEntity&&(identical(other.id, id) || other.id == id)&&(identical(other.curriculumId, curriculumId) || other.curriculumId == curriculumId)&&(identical(other.targetPercent, targetPercent) || other.targetPercent == targetPercent)&&(identical(other.targetDate, targetDate) || other.targetDate == targetDate)&&(identical(other.description, description) || other.description == description)&&(identical(other.trackId, trackId) || other.trackId == trackId)&&(identical(other.dateType, dateType) || other.dateType == dateType)&&(identical(other.goalType, goalType) || other.goalType == goalType)&&(identical(other.paceValue, paceValue) || other.paceValue == paceValue)&&(identical(other.pacePeriod, pacePeriod) || other.pacePeriod == pacePeriod)&&(identical(other.paceGranularity, paceGranularity) || other.paceGranularity == paceGranularity)&&(identical(other.rawLearningUnit, rawLearningUnit) || other.rawLearningUnit == rawLearningUnit)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,curriculumId,targetPercent,targetDate,description,dateType,goalType,paceValue,pacePeriod,paceGranularity,rawLearningUnit,createdAt,updatedAt);
+int get hashCode => Object.hash(runtimeType,id,curriculumId,targetPercent,targetDate,description,trackId,dateType,goalType,paceValue,pacePeriod,paceGranularity,rawLearningUnit,createdAt,updatedAt);
 
 @override
 String toString() {
-  return 'GoalEntity(id: $id, curriculumId: $curriculumId, targetPercent: $targetPercent, targetDate: $targetDate, description: $description, dateType: $dateType, goalType: $goalType, paceValue: $paceValue, pacePeriod: $pacePeriod, paceGranularity: $paceGranularity, rawLearningUnit: $rawLearningUnit, createdAt: $createdAt, updatedAt: $updatedAt)';
+  return 'GoalEntity(id: $id, curriculumId: $curriculumId, targetPercent: $targetPercent, targetDate: $targetDate, description: $description, trackId: $trackId, dateType: $dateType, goalType: $goalType, paceValue: $paceValue, pacePeriod: $pacePeriod, paceGranularity: $paceGranularity, rawLearningUnit: $rawLearningUnit, createdAt: $createdAt, updatedAt: $updatedAt)';
 }
 
 
@@ -56,7 +56,7 @@ abstract mixin class $GoalEntityCopyWith<$Res>  {
   factory $GoalEntityCopyWith(GoalEntity value, $Res Function(GoalEntity) _then) = _$GoalEntityCopyWithImpl;
 @useResult
 $Res call({
- int? id, CurriculumId curriculumId, double targetPercent, DateTime? targetDate, String description, String dateType, String goalType, int? paceValue, String? pacePeriod, PaceGranularity? paceGranularity, String? rawLearningUnit, DateTime createdAt, DateTime updatedAt
+ int? id, CurriculumId curriculumId, double targetPercent, DateTime? targetDate, String description, int? trackId, String dateType, String goalType, int? paceValue, String? pacePeriod, PaceGranularity? paceGranularity, String? rawLearningUnit, DateTime createdAt, DateTime updatedAt
 });
 
 
@@ -73,14 +73,15 @@ class _$GoalEntityCopyWithImpl<$Res>
 
 /// Create a copy of GoalEntity
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = freezed,Object? curriculumId = null,Object? targetPercent = null,Object? targetDate = freezed,Object? description = null,Object? dateType = null,Object? goalType = null,Object? paceValue = freezed,Object? pacePeriod = freezed,Object? paceGranularity = freezed,Object? rawLearningUnit = freezed,Object? createdAt = null,Object? updatedAt = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = freezed,Object? curriculumId = null,Object? targetPercent = null,Object? targetDate = freezed,Object? description = null,Object? trackId = freezed,Object? dateType = null,Object? goalType = null,Object? paceValue = freezed,Object? pacePeriod = freezed,Object? paceGranularity = freezed,Object? rawLearningUnit = freezed,Object? createdAt = null,Object? updatedAt = null,}) {
   return _then(_self.copyWith(
 id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int?,curriculumId: null == curriculumId ? _self.curriculumId : curriculumId // ignore: cast_nullable_to_non_nullable
 as CurriculumId,targetPercent: null == targetPercent ? _self.targetPercent : targetPercent // ignore: cast_nullable_to_non_nullable
 as double,targetDate: freezed == targetDate ? _self.targetDate : targetDate // ignore: cast_nullable_to_non_nullable
 as DateTime?,description: null == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
-as String,dateType: null == dateType ? _self.dateType : dateType // ignore: cast_nullable_to_non_nullable
+as String,trackId: freezed == trackId ? _self.trackId : trackId // ignore: cast_nullable_to_non_nullable
+as int?,dateType: null == dateType ? _self.dateType : dateType // ignore: cast_nullable_to_non_nullable
 as String,goalType: null == goalType ? _self.goalType : goalType // ignore: cast_nullable_to_non_nullable
 as String,paceValue: freezed == paceValue ? _self.paceValue : paceValue // ignore: cast_nullable_to_non_nullable
 as int?,pacePeriod: freezed == pacePeriod ? _self.pacePeriod : pacePeriod // ignore: cast_nullable_to_non_nullable
@@ -173,10 +174,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int? id,  CurriculumId curriculumId,  double targetPercent,  DateTime? targetDate,  String description,  String dateType,  String goalType,  int? paceValue,  String? pacePeriod,  PaceGranularity? paceGranularity,  String? rawLearningUnit,  DateTime createdAt,  DateTime updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int? id,  CurriculumId curriculumId,  double targetPercent,  DateTime? targetDate,  String description,  int? trackId,  String dateType,  String goalType,  int? paceValue,  String? pacePeriod,  PaceGranularity? paceGranularity,  String? rawLearningUnit,  DateTime createdAt,  DateTime updatedAt)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _GoalEntity() when $default != null:
-return $default(_that.id,_that.curriculumId,_that.targetPercent,_that.targetDate,_that.description,_that.dateType,_that.goalType,_that.paceValue,_that.pacePeriod,_that.paceGranularity,_that.rawLearningUnit,_that.createdAt,_that.updatedAt);case _:
+return $default(_that.id,_that.curriculumId,_that.targetPercent,_that.targetDate,_that.description,_that.trackId,_that.dateType,_that.goalType,_that.paceValue,_that.pacePeriod,_that.paceGranularity,_that.rawLearningUnit,_that.createdAt,_that.updatedAt);case _:
   return orElse();
 
 }
@@ -194,10 +195,10 @@ return $default(_that.id,_that.curriculumId,_that.targetPercent,_that.targetDate
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int? id,  CurriculumId curriculumId,  double targetPercent,  DateTime? targetDate,  String description,  String dateType,  String goalType,  int? paceValue,  String? pacePeriod,  PaceGranularity? paceGranularity,  String? rawLearningUnit,  DateTime createdAt,  DateTime updatedAt)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int? id,  CurriculumId curriculumId,  double targetPercent,  DateTime? targetDate,  String description,  int? trackId,  String dateType,  String goalType,  int? paceValue,  String? pacePeriod,  PaceGranularity? paceGranularity,  String? rawLearningUnit,  DateTime createdAt,  DateTime updatedAt)  $default,) {final _that = this;
 switch (_that) {
 case _GoalEntity():
-return $default(_that.id,_that.curriculumId,_that.targetPercent,_that.targetDate,_that.description,_that.dateType,_that.goalType,_that.paceValue,_that.pacePeriod,_that.paceGranularity,_that.rawLearningUnit,_that.createdAt,_that.updatedAt);case _:
+return $default(_that.id,_that.curriculumId,_that.targetPercent,_that.targetDate,_that.description,_that.trackId,_that.dateType,_that.goalType,_that.paceValue,_that.pacePeriod,_that.paceGranularity,_that.rawLearningUnit,_that.createdAt,_that.updatedAt);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -214,10 +215,10 @@ return $default(_that.id,_that.curriculumId,_that.targetPercent,_that.targetDate
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int? id,  CurriculumId curriculumId,  double targetPercent,  DateTime? targetDate,  String description,  String dateType,  String goalType,  int? paceValue,  String? pacePeriod,  PaceGranularity? paceGranularity,  String? rawLearningUnit,  DateTime createdAt,  DateTime updatedAt)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int? id,  CurriculumId curriculumId,  double targetPercent,  DateTime? targetDate,  String description,  int? trackId,  String dateType,  String goalType,  int? paceValue,  String? pacePeriod,  PaceGranularity? paceGranularity,  String? rawLearningUnit,  DateTime createdAt,  DateTime updatedAt)?  $default,) {final _that = this;
 switch (_that) {
 case _GoalEntity() when $default != null:
-return $default(_that.id,_that.curriculumId,_that.targetPercent,_that.targetDate,_that.description,_that.dateType,_that.goalType,_that.paceValue,_that.pacePeriod,_that.paceGranularity,_that.rawLearningUnit,_that.createdAt,_that.updatedAt);case _:
+return $default(_that.id,_that.curriculumId,_that.targetPercent,_that.targetDate,_that.description,_that.trackId,_that.dateType,_that.goalType,_that.paceValue,_that.pacePeriod,_that.paceGranularity,_that.rawLearningUnit,_that.createdAt,_that.updatedAt);case _:
   return null;
 
 }
@@ -229,7 +230,7 @@ return $default(_that.id,_that.curriculumId,_that.targetPercent,_that.targetDate
 
 
 class _GoalEntity extends GoalEntity {
-  const _GoalEntity({this.id, required this.curriculumId, this.targetPercent = 100.0, this.targetDate, this.description = '', this.dateType = 'gregorian', this.goalType = 'deadline', this.paceValue, this.pacePeriod, this.paceGranularity, this.rawLearningUnit, required this.createdAt, required this.updatedAt}): super._();
+  const _GoalEntity({this.id, required this.curriculumId, this.targetPercent = 100.0, this.targetDate, this.description = '', this.trackId, this.dateType = 'gregorian', this.goalType = 'deadline', this.paceValue, this.pacePeriod, this.paceGranularity, this.rawLearningUnit, required this.createdAt, required this.updatedAt}): super._();
   
 
 @override final  int? id;
@@ -237,6 +238,7 @@ class _GoalEntity extends GoalEntity {
 @override@JsonKey() final  double targetPercent;
 @override final  DateTime? targetDate;
 @override@JsonKey() final  String description;
+@override final  int? trackId;
 /// Whether the goal deadline uses Hebrew or Gregorian calendar.
 /// Values: 'hebrew' or 'gregorian' (default).
 @override@JsonKey() final  String dateType;
@@ -267,16 +269,16 @@ _$GoalEntityCopyWith<_GoalEntity> get copyWith => __$GoalEntityCopyWithImpl<_Goa
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _GoalEntity&&(identical(other.id, id) || other.id == id)&&(identical(other.curriculumId, curriculumId) || other.curriculumId == curriculumId)&&(identical(other.targetPercent, targetPercent) || other.targetPercent == targetPercent)&&(identical(other.targetDate, targetDate) || other.targetDate == targetDate)&&(identical(other.description, description) || other.description == description)&&(identical(other.dateType, dateType) || other.dateType == dateType)&&(identical(other.goalType, goalType) || other.goalType == goalType)&&(identical(other.paceValue, paceValue) || other.paceValue == paceValue)&&(identical(other.pacePeriod, pacePeriod) || other.pacePeriod == pacePeriod)&&(identical(other.paceGranularity, paceGranularity) || other.paceGranularity == paceGranularity)&&(identical(other.rawLearningUnit, rawLearningUnit) || other.rawLearningUnit == rawLearningUnit)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _GoalEntity&&(identical(other.id, id) || other.id == id)&&(identical(other.curriculumId, curriculumId) || other.curriculumId == curriculumId)&&(identical(other.targetPercent, targetPercent) || other.targetPercent == targetPercent)&&(identical(other.targetDate, targetDate) || other.targetDate == targetDate)&&(identical(other.description, description) || other.description == description)&&(identical(other.trackId, trackId) || other.trackId == trackId)&&(identical(other.dateType, dateType) || other.dateType == dateType)&&(identical(other.goalType, goalType) || other.goalType == goalType)&&(identical(other.paceValue, paceValue) || other.paceValue == paceValue)&&(identical(other.pacePeriod, pacePeriod) || other.pacePeriod == pacePeriod)&&(identical(other.paceGranularity, paceGranularity) || other.paceGranularity == paceGranularity)&&(identical(other.rawLearningUnit, rawLearningUnit) || other.rawLearningUnit == rawLearningUnit)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.updatedAt, updatedAt) || other.updatedAt == updatedAt));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,id,curriculumId,targetPercent,targetDate,description,dateType,goalType,paceValue,pacePeriod,paceGranularity,rawLearningUnit,createdAt,updatedAt);
+int get hashCode => Object.hash(runtimeType,id,curriculumId,targetPercent,targetDate,description,trackId,dateType,goalType,paceValue,pacePeriod,paceGranularity,rawLearningUnit,createdAt,updatedAt);
 
 @override
 String toString() {
-  return 'GoalEntity(id: $id, curriculumId: $curriculumId, targetPercent: $targetPercent, targetDate: $targetDate, description: $description, dateType: $dateType, goalType: $goalType, paceValue: $paceValue, pacePeriod: $pacePeriod, paceGranularity: $paceGranularity, rawLearningUnit: $rawLearningUnit, createdAt: $createdAt, updatedAt: $updatedAt)';
+  return 'GoalEntity(id: $id, curriculumId: $curriculumId, targetPercent: $targetPercent, targetDate: $targetDate, description: $description, trackId: $trackId, dateType: $dateType, goalType: $goalType, paceValue: $paceValue, pacePeriod: $pacePeriod, paceGranularity: $paceGranularity, rawLearningUnit: $rawLearningUnit, createdAt: $createdAt, updatedAt: $updatedAt)';
 }
 
 
@@ -287,7 +289,7 @@ abstract mixin class _$GoalEntityCopyWith<$Res> implements $GoalEntityCopyWith<$
   factory _$GoalEntityCopyWith(_GoalEntity value, $Res Function(_GoalEntity) _then) = __$GoalEntityCopyWithImpl;
 @override @useResult
 $Res call({
- int? id, CurriculumId curriculumId, double targetPercent, DateTime? targetDate, String description, String dateType, String goalType, int? paceValue, String? pacePeriod, PaceGranularity? paceGranularity, String? rawLearningUnit, DateTime createdAt, DateTime updatedAt
+ int? id, CurriculumId curriculumId, double targetPercent, DateTime? targetDate, String description, int? trackId, String dateType, String goalType, int? paceValue, String? pacePeriod, PaceGranularity? paceGranularity, String? rawLearningUnit, DateTime createdAt, DateTime updatedAt
 });
 
 
@@ -304,14 +306,15 @@ class __$GoalEntityCopyWithImpl<$Res>
 
 /// Create a copy of GoalEntity
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = freezed,Object? curriculumId = null,Object? targetPercent = null,Object? targetDate = freezed,Object? description = null,Object? dateType = null,Object? goalType = null,Object? paceValue = freezed,Object? pacePeriod = freezed,Object? paceGranularity = freezed,Object? rawLearningUnit = freezed,Object? createdAt = null,Object? updatedAt = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = freezed,Object? curriculumId = null,Object? targetPercent = null,Object? targetDate = freezed,Object? description = null,Object? trackId = freezed,Object? dateType = null,Object? goalType = null,Object? paceValue = freezed,Object? pacePeriod = freezed,Object? paceGranularity = freezed,Object? rawLearningUnit = freezed,Object? createdAt = null,Object? updatedAt = null,}) {
   return _then(_GoalEntity(
 id: freezed == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as int?,curriculumId: null == curriculumId ? _self.curriculumId : curriculumId // ignore: cast_nullable_to_non_nullable
 as CurriculumId,targetPercent: null == targetPercent ? _self.targetPercent : targetPercent // ignore: cast_nullable_to_non_nullable
 as double,targetDate: freezed == targetDate ? _self.targetDate : targetDate // ignore: cast_nullable_to_non_nullable
 as DateTime?,description: null == description ? _self.description : description // ignore: cast_nullable_to_non_nullable
-as String,dateType: null == dateType ? _self.dateType : dateType // ignore: cast_nullable_to_non_nullable
+as String,trackId: freezed == trackId ? _self.trackId : trackId // ignore: cast_nullable_to_non_nullable
+as int?,dateType: null == dateType ? _self.dateType : dateType // ignore: cast_nullable_to_non_nullable
 as String,goalType: null == goalType ? _self.goalType : goalType // ignore: cast_nullable_to_non_nullable
 as String,paceValue: freezed == paceValue ? _self.paceValue : paceValue // ignore: cast_nullable_to_non_nullable
 as int?,pacePeriod: freezed == pacePeriod ? _self.pacePeriod : pacePeriod // ignore: cast_nullable_to_non_nullable

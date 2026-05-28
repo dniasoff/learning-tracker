@@ -400,6 +400,14 @@ service cloud.firestore {
           allow delete: if isOwner(uid);
         }
 
+        // curriculum_scopes — per-curriculum scope assignments.
+        // Tutor-readable via S5 delta listener; client writes are owner-only.
+        match /curriculum_scopes/{scopeId} {
+          allow read: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
+          allow create, update: if isOwner(uid);
+          allow delete: if isOwner(uid);
+        }
+
         // study_day_configs — per-curriculum, per-track day-of-week schedule
         // (Plan §F Phase 1 — closes the study-day sync gap). One doc per
         // (curriculum_id, day_of_week, track_id) triple; client-side LWW

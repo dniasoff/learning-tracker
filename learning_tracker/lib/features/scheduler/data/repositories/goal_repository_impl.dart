@@ -191,6 +191,7 @@ class GoalRepositoryImpl implements GoalRepository {
       curriculumId: CurriculumId.values.firstWhere(
         (c) => c.storageKey == goal.curriculumId,
       ),
+      trackId: goal.trackId,
       targetPercent: goal.targetPercent,
       targetDate: goal.targetDate?.toUtc(),
       description: goal.description,

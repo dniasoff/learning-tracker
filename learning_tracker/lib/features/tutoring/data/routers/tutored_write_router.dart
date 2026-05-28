@@ -185,11 +185,9 @@ class TutoredWriteRouter implements SyncWriteFacade {
     final curriculumId = bookmark['curriculum_id']?.toString() ?? '';
     final trackType = bookmark['track_type']?.toString() ?? '';
     // Mirror firestore_gateway_impl doc-id: {curriculum_id}_{track_type}.
-    // When track_type is absent (TrackCreationService omits it), fall back to
-    // curriculum_id alone so the CF write is still idempotent per curriculum.
-    final bookmarkId = trackType.isNotEmpty
-        ? '${curriculumId}_$trackType'
-        : curriculumId;
+    // When track_type is absent the gateway writes {curriculumId}_ (with the
+    // trailing underscore), so we match that to keep LWW on the same doc.
+    final bookmarkId = '${curriculumId}_$trackType';
     final result = await _writeService.upsertBookmark(
       grantId: sel.grantId,
       ownerUid: sel.ownerUid,
@@ -205,12 +203,13 @@ class TutoredWriteRouter implements SyncWriteFacade {
     final sel = _selection;
     if (sel == null) return _delegate.pushProfileProgram(payload);
 
-    final programId = payload['program_id']?.toString() ?? '';
+    // C1 fix: use curriculum_id as the doc-id (matches parent-side gateway).
+    final docId = payload['curriculum_id']?.toString() ?? '';
     final result = await _writeService.setProfileProgram(
       grantId: sel.grantId,
       ownerUid: sel.ownerUid,
       profileId: int.parse(sel.profileId),
-      programId: programId,
+      programId: docId,
       programData: payload,
     );
     _handleResult(result, 'tutorSetProfileProgram');
@@ -229,17 +228,44 @@ class TutoredWriteRouter implements SyncWriteFacade {
     if (builder == null) return _delegate.pushGamificationSettingsSnapshot();
 
     final settingsData = await builder();
-    // Use can_edit_rewards as the catch-all permKey (the CF accepts both
-    // can_edit_rewards and can_edit_points; it uses .set(merge:true) so the
-    // full snapshot covers reward_settings AND points_config).
-    final result = await _writeService.updateGamificationSettings(
-      grantId: sel.grantId,
-      ownerUid: sel.ownerUid,
-      profileId: int.parse(sel.profileId),
-      permKey: 'can_edit_rewards',
-      settingsData: settingsData,
-    );
-    _handleResult(result, 'tutorUpdateGamificationSettings');
+    final profileIdInt = int.parse(sel.profileId);
+
+    // R3-H2 fix: call CF twice — once per permission key — so a tutor with
+    // only can_edit_points or only can_edit_rewards is not locked out.
+    // The CF uses set(merge:true), so each write merges cleanly.
+    final rewardsSlice = <String, dynamic>{};
+    final pointsSlice = <String, dynamic>{};
+    for (final entry in settingsData.entries) {
+      if (entry.key == 'reward_settings') {
+        rewardsSlice[entry.key] = entry.value;
+      } else if (entry.key == 'points_config') {
+        pointsSlice[entry.key] = entry.value;
+      } else {
+        rewardsSlice[entry.key] = entry.value;
+        pointsSlice[entry.key] = entry.value;
+      }
+    }
+
+    if (rewardsSlice.isNotEmpty) {
+      final result = await _writeService.updateGamificationSettings(
+        grantId: sel.grantId,
+        ownerUid: sel.ownerUid,
+        profileId: profileIdInt,
+        permKey: 'can_edit_rewards',
+        settingsData: rewardsSlice,
+      );
+      _handleResult(result, 'tutorUpdateGamificationSettings[can_edit_rewards]');
+    }
+    if (pointsSlice.isNotEmpty) {
+      final result = await _writeService.updateGamificationSettings(
+        grantId: sel.grantId,
+        ownerUid: sel.ownerUid,
+        profileId: profileIdInt,
+        permKey: 'can_edit_points',
+        settingsData: pointsSlice,
+      );
+      _handleResult(result, 'tutorUpdateGamificationSettings[can_edit_points]');
+    }
   }
 
   @override

@@ -10,11 +10,8 @@
 //   2. Feed it through a tutored TutoredWriteRouter.
 //   3. Assert the CF invoker received the expected field names + doc-id.
 //
-// Finding (R2-GOAL-TRACK-ID): GoalEntity.toFirestore() does not include
-// track_id because GoalEntity has no trackId field. GoalMerger.merge()
-// skips any row missing track_id (naturalKey = trackId.toString()).
-// This is a pre-existing gap in the own-device outbox path as well;
-// tracked as a separate remediation item. The parity test documents it.
+// R2-H1 fix: GoalEntity now has a trackId field and toFirestore() emits
+// track_id when set. GoalMerger no longer silently skips all goal rows.
 
 @Tags(['s2', 'tutor_mode', 'parity', 'serialization'])
 library;
@@ -325,12 +322,9 @@ void main() {
   //   description, target_percent, target_date, date_type, goal_type,
   //   pace_value, pace_unit.
   //
-  // GoalEntity.toFirestore() now outputs snake_case to match these field names.
-  // NOTE: GoalEntity has no trackId field — the merger's track_id read will
-  //   return null and the merger will SKIP the row (naturalKey = trackId.toString
-  //   requires a non-null, non-zero trackId). This is a pre-existing gap in the
-  //   own-device outbox path as well. The parity test verifies all fields that
-  //   CAN be provided are snake_case and documents the track_id gap.
+  // GoalEntity.toFirestore() outputs snake_case to match these field names.
+  // R2-H1 fix: GoalEntity now has a trackId field; _toEntity passes goal.trackId
+  //   through so toFirestore() emits track_id and GoalMerger no longer skips rows.
 
   group(
     'Goal parity — tutorUpsertGoal payload uses snake_case matching GoalMerger',
@@ -454,19 +448,30 @@ void main() {
         expect(restored.updatedAt, original.updatedAt);
       });
 
-      // NOTE: R2-GOAL-TRACK-ID gap documented here.
-      // GoalMerger.merge() skips rows where track_id is null or 0:
-      //   final trackId = FirestoreCodec.parseInt(row['track_id']);
-      //   if (trackId == null || trackId == 0) continue;
-      // GoalEntity.toFirestore() does NOT include track_id because GoalEntity
-      // has no trackId field (it is not part of the domain entity). This means
-      // goals written by the tutored CF path (and also by the own-device outbox
-      // path via goal_repository_impl) will be silently skipped by the merger.
-      // Remediation: add track_id to GoalEntity or enrich the payload in
-      // goal_repository_impl._syncGoal before calling pushGoal. Tracked as a
-      // separate item; out of S2 scope.
+      // R2-H1 fix: GoalEntity now has trackId; toFirestore emits track_id when set.
       test(
-        'GoalEntity.toFirestore does not include track_id (documented gap)',
+        'GoalEntity.toFirestore includes track_id when trackId is set (H1 fix)',
+        () {
+          final now = DateTime.utc(2026, 5, 28);
+          final goal = GoalEntity(
+            curriculumId: CurriculumId.mishnayos,
+            trackId: 7,
+            createdAt: now,
+            updatedAt: now,
+          );
+
+          final data = goal.toFirestore();
+          expect(
+            data.containsKey('track_id'),
+            isTrue,
+            reason: 'GoalMerger reads track_id; omitting it caused silent data loss.',
+          );
+          expect(data['track_id'], 7);
+        },
+      );
+
+      test(
+        'GoalEntity.toFirestore omits track_id when trackId is null',
         () {
           final now = DateTime.utc(2026, 5, 28);
           final goal = GoalEntity(
@@ -479,9 +484,7 @@ void main() {
           expect(
             data.containsKey('track_id'),
             isFalse,
-            reason:
-                'GoalEntity has no trackId — GoalMerger will skip this row. '
-                'Tracked as R2-GOAL-TRACK-ID gap; remediation out of S2 scope.',
+            reason: 'track_id is omitted when not set (nullable field).',
           );
         },
       );

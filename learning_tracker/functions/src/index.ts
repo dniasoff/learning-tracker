@@ -603,6 +603,7 @@ export const inviteTutor = onCall(CALL_OPTS, async (request) => {
     can_edit_stages: false,
     can_edit_rewards: false,
     can_edit_study_days: false,
+    can_edit_points: false,
   };
 
   const grantData = {
@@ -1976,6 +1977,8 @@ export const tutorEditProfile = onCall(CALL_OPTS, async (request) => {
   );
 
   // Learner profile is at users/{ownerUid}/learner_profiles/{profileId} (the profilePath doc itself).
+  // H2 fix: read the full existing doc first, merge the edit fields on top, then
+  // write the complete doc so LearnerProfileCodec.decode() never sees a partial doc.
   const beforeSnap = await profilePath.get();
   const beforeValue = beforeSnap.exists ? beforeSnap.data() : null;
 
@@ -1984,7 +1987,8 @@ export const tutorEditProfile = onCall(CALL_OPTS, async (request) => {
   if (avatar !== undefined) updates["avatar"] = avatar;
   if (mode !== undefined) updates["mode"] = mode;
 
-  await profilePath.set(updates, { merge: true });
+  const fullDoc = beforeValue ? { ...beforeValue, ...updates } : updates;
+  await profilePath.set(fullDoc, { merge: false });
 
   await writeAuditLog(
     grantId, grant, callerUid,

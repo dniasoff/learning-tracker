@@ -29,6 +29,7 @@ import 'package:learning_tracker/features/tracks/setup/presentation/providers/af
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_edit_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/steps/step_chazara.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/steps/step_study_days.dart';
+import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 class EditTrackScreen extends ConsumerStatefulWidget {
@@ -231,18 +232,27 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
         }
       }
 
-      await service.editTrack(
-        trackId: widget.track.id,
-        goalId: goal.id,
-        profileId: profileId,
-        curriculum: curriculum,
-        label: newLabel,
-        studyDays: _isProgramTrack ? null : _editedStudyDays,
-        chazarahWizard: _isProgramTrack ? null : _pendingChazarah,
-        paceTarget: newPaceTarget,
-        paceGranularity: newPaceGranularity,
-        clearPaceTarget: clearPaceTarget,
-      );
+      try {
+        await service.editTrack(
+          trackId: widget.track.id,
+          goalId: goal.id,
+          profileId: profileId,
+          curriculum: curriculum,
+          label: newLabel,
+          studyDays: _isProgramTrack ? null : _editedStudyDays,
+          chazarahWizard: _isProgramTrack ? null : _pendingChazarah,
+          paceTarget: newPaceTarget,
+          paceGranularity: newPaceGranularity,
+          clearPaceTarget: clearPaceTarget,
+        );
+      } on TutorWriteException catch (e) {
+        if (mounted && e.code == 'permission-denied') {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(l10n.tutorPermissionDenied)),
+          );
+        }
+        return;
+      }
 
       await onTrackChanged(ref, profileId);
       if (mounted) Navigator.of(context).pop();
@@ -331,6 +341,7 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
         'program_id': enrollment.programId,
         'tracking_start_date': todayUtc.toIso8601String(),
         'tracking_start_ref': todayRef,
+        'updated_at': todayUtc.toIso8601String(),
       });
     } catch (e, st) {
       AppLogger.instance.warning(
@@ -353,6 +364,10 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
+    final tutorPerms = ref.watch(activeTutorPermissionsProvider);
+    final canEditGoals = tutorPerms == null || tutorPerms.canEditGoals;
+    final canEditStages = tutorPerms == null || tutorPerms.canEditStages;
+    final canSave = canEditGoals && canEditStages;
 
     if (_loading) {
       return Scaffold(
@@ -385,7 +400,11 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
             )
           else
             TextButton(
-              onPressed: _save,
+              onPressed: canSave
+                  ? _save
+                  : () => ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text(l10n.tutorPermissionDenied)),
+                      ),
               child: Text(
                 l10n.trackEditSaveButton,
                 style: const TextStyle(fontWeight: FontWeight.w700),

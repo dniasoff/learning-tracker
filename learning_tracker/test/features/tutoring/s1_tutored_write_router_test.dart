@@ -577,7 +577,9 @@ void main() {
 
         expect(record.callCount, 1);
         expect(record.lastCall!.fn, 'tutorUpsertBookmark');
-        expect(record.lastCall!.args['bookmarkId'], 'mishnayos');
+        // M2 fix: fallback uses {curriculumId}_ (trailing underscore) to match
+        // parent-side gateway which always appends _{trackType}.
+        expect(record.lastCall!.args['bookmarkId'], 'mishnayos_');
         expect(delegate.pushBookmarkCount, 0);
       },
     );
@@ -666,7 +668,8 @@ void main() {
         expect(record.lastCall!.args['grantId'], _grantId);
         expect(record.lastCall!.args['ownerUid'], _ownerUid);
         expect(record.lastCall!.args['profileId'], 42);
-        expect(record.lastCall!.args['programId'], 'prog_001');
+        // C1 fix: doc-id is curriculum_id (matches parent-side gateway).
+        expect(record.lastCall!.args['programId'], 'daf_yomi');
         expect(
           record.lastCall!.args['programData'],
           containsPair('curriculum_id', 'daf_yomi'),
@@ -742,7 +745,7 @@ void main() {
 
   group('S4-A — pushGamificationSettingsSnapshot routes to CF with builder', () {
     test(
-      'tutored + builder: calls tutorUpdateGamificationSettings with snapshot',
+      'tutored + builder: calls tutorUpdateGamificationSettings twice (once per permKey)',
       () async {
         final record = _FakeInvokerRecord();
         final delegate = _FakeDelegate();
@@ -758,15 +761,27 @@ void main() {
 
         await router.pushGamificationSettingsSnapshot();
 
-        expect(record.callCount, 1);
-        expect(record.lastCall!.fn, 'tutorUpdateGamificationSettings');
-        final args = record.lastCall!.args;
-        expect(args['grantId'], _grantId);
-        expect(args['ownerUid'], _ownerUid);
-        expect(args['profileId'], int.parse(_profileId));
-        expect(args['permKey'], 'can_edit_rewards');
+        // R3-H2 fix: two CF calls — one per permission key.
+        expect(record.callCount, 2);
+        expect(record.calls[0].fn, 'tutorUpdateGamificationSettings');
+        expect(record.calls[1].fn, 'tutorUpdateGamificationSettings');
+
+        final rewardsCall = record.calls.firstWhere(
+          (c) => c.args['permKey'] == 'can_edit_rewards',
+        );
+        final pointsCall = record.calls.firstWhere(
+          (c) => c.args['permKey'] == 'can_edit_points',
+        );
+
+        expect(rewardsCall.args['grantId'], _grantId);
+        expect(rewardsCall.args['ownerUid'], _ownerUid);
+        expect(rewardsCall.args['profileId'], int.parse(_profileId));
         expect(
-          (args['settingsData'] as Map<String, dynamic>)['reward_settings'],
+          (rewardsCall.args['settingsData'] as Map<String, dynamic>)['reward_settings'],
+          isA<List<dynamic>>(),
+        );
+        expect(
+          (pointsCall.args['settingsData'] as Map<String, dynamic>)['points_config'],
           isA<List<dynamic>>(),
         );
         expect(delegate.pushGamificationCount, 0);

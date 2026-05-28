@@ -337,6 +337,7 @@ class TrackCreationService {
       'program_id': programId,
       'tracking_start_date': trackingStartDate?.toIso8601String(),
       'tracking_start_ref': bookmarkRef,
+      'updated_at': DateTimeFactory.nowUtc().toIso8601String(),
     });
   }
 
