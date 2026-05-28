@@ -37,29 +37,42 @@ class _InvokerRecord {
 }
 
 class _NoopDelegate implements SyncWriteFacade {
-  @override Future<void> pushGoal(Map<String, dynamic> g) async {}
-  @override Future<void> deleteGoal(Map<String, dynamic> p) async {}
-  @override Future<void> pushCurriculumTrack(Map<String, dynamic> d) async {}
-  @override Future<void> pushStageDefinitions({
+  @override
+  Future<void> pushGoal(Map<String, dynamic> g) async {}
+  @override
+  Future<void> deleteGoal(Map<String, dynamic> p) async {}
+  @override
+  Future<void> pushCurriculumTrack(Map<String, dynamic> d) async {}
+  @override
+  Future<void> pushStageDefinitions({
     required int trackId,
     required String curriculumId,
     required List<Map<String, dynamic>> stages,
     required DateTime updatedAt,
   }) async {}
-  @override Future<void> pushStudyDayConfig(Map<String, dynamic> p) async {}
-  @override Future<void> pushBookmark(Map<String, dynamic> b) async {}
-  @override Future<void> pushSettings(Map<String, dynamic> s) async {}
-  @override Future<void> pushGamificationSettingsSnapshot() async {}
-  @override Future<void> pushUiPreferencesSnapshot() async {}
-  @override Future<void> pushLearningOrder({
+  @override
+  Future<void> pushStudyDayConfig(Map<String, dynamic> p) async {}
+  @override
+  Future<void> pushBookmark(Map<String, dynamic> b) async {}
+  @override
+  Future<void> pushSettings(Map<String, dynamic> s) async {}
+  @override
+  Future<void> pushGamificationSettingsSnapshot() async {}
+  @override
+  Future<void> pushUiPreferencesSnapshot() async {}
+  @override
+  Future<void> pushLearningOrder({
     required int profileId,
     required String curriculumId,
     required List<Map<String, dynamic>> items,
     required DateTime updatedAt,
   }) async {}
-  @override Future<void> pushLearnerProfile(Map<String, dynamic> p) async {}
-  @override Future<void> deleteLearnerProfile(int profileId) async {}
-  @override Future<void> deleteCompletion(String completionId) async {}
+  @override
+  Future<void> pushLearnerProfile(Map<String, dynamic> p) async {}
+  @override
+  Future<void> deleteLearnerProfile(int profileId) async {}
+  @override
+  Future<void> deleteCompletion(String completionId) async {}
 }
 
 const _sel = TutoredProfileSelection(
@@ -86,297 +99,422 @@ TutoredWriteRouter _router(_InvokerRecord record) => TutoredWriteRouter(
 );
 
 void main() {
-// ── Track parity ──────────────────────────────────────────────────────────────
-//
-// TrackConfigMerger reads via TrackCodec.decode:
-//   curriculum_id, state, activated_at, state_changed_at, pace_reset_date.
-// Router passes TrackData through unchanged; doc-id = curriculum_id.
+  // ── Track parity ──────────────────────────────────────────────────────────────
+  //
+  // TrackConfigMerger reads via TrackCodec.decode:
+  //   curriculum_id, state, activated_at, state_changed_at, pace_reset_date.
+  // Router passes TrackData through unchanged; doc-id = curriculum_id.
 
-group('Track parity — tutorUpsertTrack payload matches TrackCodec', () {
-  test('track payload has snake_case fields merger reads; docId = curriculum_id', () async {
-    final record = _InvokerRecord();
-    final router = _router(record);
+  group('Track parity — tutorUpsertTrack payload matches TrackCodec', () {
+    test(
+      'track payload has snake_case fields merger reads; docId = curriculum_id',
+      () async {
+        final record = _InvokerRecord();
+        final router = _router(record);
 
-    final now = DateTime.utc(2026, 5, 28, 10, 0, 0);
-    final payload = {
-      'curriculum_id': 'mishnayos',
-      'state': 'active',
-      'activated_at': now.toIso8601String(),
-      'state_changed_at': now.toIso8601String(),
-    };
+        final now = DateTime.utc(2026, 5, 28, 10, 0, 0);
+        final payload = {
+          'curriculum_id': 'mishnayos',
+          'state': 'active',
+          'activated_at': now.toIso8601String(),
+          'state_changed_at': now.toIso8601String(),
+        };
 
-    await router.pushCurriculumTrack(payload);
+        await router.pushCurriculumTrack(payload);
 
-    expect(record.calls, hasLength(1));
-    final call = record.calls.first;
-    expect(call.fn, 'tutorUpsertTrack');
-    final args = call.args;
+        expect(record.calls, hasLength(1));
+        final call = record.calls.first;
+        expect(call.fn, 'tutorUpsertTrack');
+        final args = call.args;
 
-    final trackData = args['trackData'] as Map<String, dynamic>;
-    expect(trackData['curriculum_id'], 'mishnayos',
-        reason: 'TrackCodec.decode reads curriculum_id');
-    expect(trackData['state'], 'active',
-        reason: 'TrackCodec.decode reads state');
-    expect(trackData['activated_at'], now.toIso8601String(),
-        reason: 'TrackCodec.decode reads activated_at');
-    expect(trackData['state_changed_at'], now.toIso8601String(),
-        reason: 'TrackCodec.decode reads state_changed_at (LWW timestamp)');
+        final trackData = args['trackData'] as Map<String, dynamic>;
+        expect(
+          trackData['curriculum_id'],
+          'mishnayos',
+          reason: 'TrackCodec.decode reads curriculum_id',
+        );
+        expect(
+          trackData['state'],
+          'active',
+          reason: 'TrackCodec.decode reads state',
+        );
+        expect(
+          trackData['activated_at'],
+          now.toIso8601String(),
+          reason: 'TrackCodec.decode reads activated_at',
+        );
+        expect(
+          trackData['state_changed_at'],
+          now.toIso8601String(),
+          reason: 'TrackCodec.decode reads state_changed_at (LWW timestamp)',
+        );
 
-    // Doc-id derived by the router from curriculum_id.
-    expect(args['trackId'], 'mishnayos',
-        reason: 'router uses curriculum_id as trackId, matching Firestore doc path');
-  });
-});
-
-// ── Stage parity ──────────────────────────────────────────────────────────────
-//
-// StageDefinitionMerger reads via StageDefinitionCodec.decode:
-//   curriculum_id, track_id, stage_order, stage_name, schedule, is_default,
-//   updated_at.
-// Router enriches each stage with track_id + curriculum_id + updated_at before
-// calling the CF; stageId = "{trackId}_{stageOrder}".
-
-group('Stage parity — tutorUpsertStageDefinition payload matches StageDefinitionCodec', () {
-  test('enriched stage payload has all codec fields; stageId = trackId_stageOrder', () async {
-    final record = _InvokerRecord();
-    final router = _router(record);
-
-    final now = DateTime.utc(2026, 5, 28, 10, 0, 0);
-    final stage = {
-      'stage_order': 1,
-      'stage_name': 'Learn',
-      'schedule': '{"type":"delay","delay_days":0}',
-      'is_default': true,
-    };
-
-    await router.pushStageDefinitions(
-      trackId: 7,
-      curriculumId: 'mishnayos',
-      stages: [stage],
-      updatedAt: now,
+        // Doc-id derived by the router from curriculum_id.
+        expect(
+          args['trackId'],
+          'mishnayos',
+          reason:
+              'router uses curriculum_id as trackId, matching Firestore doc path',
+        );
+      },
     );
-
-    expect(record.calls, hasLength(1));
-    final call = record.calls.first;
-    expect(call.fn, 'tutorUpsertStageDefinition');
-    final args = call.args;
-
-    final stageData = args['stageData'] as Map<String, dynamic>;
-    expect(stageData['curriculum_id'], 'mishnayos',
-        reason: 'StageDefinitionCodec reads curriculum_id');
-    expect(stageData['track_id'], 7,
-        reason: 'StageDefinitionCodec reads track_id');
-    expect(stageData['stage_order'], 1,
-        reason: 'StageDefinitionCodec reads stage_order');
-    expect(stageData['stage_name'], 'Learn',
-        reason: 'StageDefinitionCodec reads stage_name');
-    expect(stageData['schedule'], '{"type":"delay","delay_days":0}',
-        reason: 'StageDefinitionCodec reads schedule (JSON)');
-    expect(stageData['is_default'], true,
-        reason: 'StageDefinitionCodec reads is_default');
-    expect(stageData['updated_at'], now.toIso8601String(),
-        reason: 'StageDefinitionMerger uses updated_at as LWW timestamp');
-
-    // Doc-id.
-    expect(args['stageId'], '7_1',
-        reason: 'stageId = {trackId}_{stageOrder} matches plan doc-id convention');
-  });
-});
-
-// ── StudyDay parity ───────────────────────────────────────────────────────────
-//
-// StudyDayConfigMerger reads via StudyDayConfigCodec.decode:
-//   profile_id, curriculum_id, track_id, day_of_week, day_type, updated_at.
-// Doc-id = "{curriculum_id}_{day_of_week}_{track_id}".
-
-group('StudyDay parity — tutorUpsertStudyDayConfig payload matches StudyDayConfigCodec', () {
-  test('payload has all codec fields; configId = curriculum_day_track', () async {
-    final record = _InvokerRecord();
-    final router = _router(record);
-
-    final now = DateTime.utc(2026, 5, 28, 10, 0, 0);
-    final payload = {
-      'profile_id': 99,
-      'curriculum_id': 'mishnayos',
-      'track_id': 7,
-      'day_of_week': 1,
-      'day_type': 'study',
-      'updated_at': now.toIso8601String(),
-    };
-
-    await router.pushStudyDayConfig(payload);
-
-    expect(record.calls, hasLength(1));
-    final call = record.calls.first;
-    expect(call.fn, 'tutorUpsertStudyDayConfig');
-    final args = call.args;
-
-    final configData = args['configData'] as Map<String, dynamic>;
-    expect(configData['curriculum_id'], 'mishnayos',
-        reason: 'StudyDayConfigCodec reads curriculum_id');
-    expect(configData['track_id'], 7,
-        reason: 'StudyDayConfigCodec reads track_id');
-    expect(configData['day_of_week'], 1,
-        reason: 'StudyDayConfigCodec reads day_of_week');
-    expect(configData['day_type'], 'study',
-        reason: 'StudyDayConfigCodec reads day_type');
-    expect(configData['updated_at'], now.toIso8601String(),
-        reason: 'StudyDayConfigMerger uses updated_at as LWW timestamp');
-
-    // Doc-id.
-    expect(args['configId'], 'mishnayos_1_7',
-        reason: 'configId = {curriculum}_{dow}_{track} matches outbox doc-id convention');
-  });
-});
-
-// ── Goal parity ───────────────────────────────────────────────────────────────
-//
-// GoalMerger reads: curriculum_id, track_id, created_at, updated_at,
-//   description, target_percent, target_date, date_type, goal_type,
-//   pace_value, pace_unit.
-//
-// GoalEntity.toFirestore() now outputs snake_case to match these field names.
-// NOTE: GoalEntity has no trackId field — the merger's track_id read will
-//   return null and the merger will SKIP the row (naturalKey = trackId.toString
-//   requires a non-null, non-zero trackId). This is a pre-existing gap in the
-//   own-device outbox path as well. The parity test verifies all fields that
-//   CAN be provided are snake_case and documents the track_id gap.
-
-group('Goal parity — tutorUpsertGoal payload uses snake_case matching GoalMerger', () {
-  test('GoalEntity.toFirestore outputs snake_case for all merger-read fields', () {
-    final now = DateTime.utc(2026, 5, 28, 10, 0, 0);
-    final goal = GoalEntity(
-      curriculumId: CurriculumId.mishnayos,
-      targetPercent: 100.0,
-      targetDate: now,
-      description: 'Finish by Pesach',
-      dateType: 'gregorian',
-      goalType: 'deadline',
-      createdAt: now,
-      updatedAt: now,
-    );
-
-    final data = goal.toFirestore();
-
-    // All merger-required fields present in snake_case.
-    expect(data.containsKey('curriculum_id'), isTrue,
-        reason: 'GoalMerger reads curriculum_id (was camelCase — fixed by S2)');
-    expect(data.containsKey('target_percent'), isTrue,
-        reason: 'GoalMerger reads target_percent');
-    expect(data.containsKey('target_date'), isTrue,
-        reason: 'GoalMerger reads target_date');
-    expect(data.containsKey('description'), isTrue,
-        reason: 'GoalMerger reads description');
-    expect(data.containsKey('date_type'), isTrue,
-        reason: 'GoalMerger reads date_type');
-    expect(data.containsKey('goal_type'), isTrue,
-        reason: 'GoalMerger reads goal_type');
-    expect(data.containsKey('pace_value'), isTrue,
-        reason: 'GoalMerger reads pace_value');
-    expect(data.containsKey('pace_unit'), isTrue,
-        reason: 'GoalMerger reads pace_unit (was pacePeriod — fixed by S2)');
-    expect(data.containsKey('created_at'), isTrue,
-        reason: 'GoalMerger reads created_at');
-    expect(data.containsKey('updated_at'), isTrue,
-        reason: 'GoalMerger reads updated_at (LWW timestamp)');
-
-    // Values are correct.
-    expect(data['curriculum_id'], CurriculumId.mishnayos.storageKey);
-    expect(data['target_percent'], 100.0);
-    expect(data['description'], 'Finish by Pesach');
-    expect(data['goal_type'], 'deadline');
-    expect(data['updated_at'], now.toIso8601String());
-
-    // Verify no camelCase leakage.
-    expect(data.containsKey('curriculumId'), isFalse,
-        reason: 'camelCase curriculumId must not be present after snake_case fix');
-    expect(data.containsKey('targetPercent'), isFalse);
-    expect(data.containsKey('pacePeriod'), isFalse);
-    expect(data.containsKey('createdAt'), isFalse);
-    expect(data.containsKey('updatedAt'), isFalse);
   });
 
-  test('GoalEntity.fromFirestore round-trips through snake_case keys', () {
-    final now = DateTime.utc(2026, 5, 28, 10, 0, 0);
-    final original = GoalEntity(
-      curriculumId: CurriculumId.mishnayos,
-      targetPercent: 80.0,
-      description: 'Round-trip test',
-      dateType: 'hebrew',
-      goalType: 'pace',
-      paceValue: 2,
-      pacePeriod: 'per_week',
-      createdAt: now,
-      updatedAt: now,
-    );
+  // ── Stage parity ──────────────────────────────────────────────────────────────
+  //
+  // StageDefinitionMerger reads via StageDefinitionCodec.decode:
+  //   curriculum_id, track_id, stage_order, stage_name, schedule, is_default,
+  //   updated_at.
+  // Router enriches each stage with track_id + curriculum_id + updated_at before
+  // calling the CF; stageId = "{trackId}_{stageOrder}".
 
-    final data = original.toFirestore();
-    final restored = GoalEntity.fromFirestore(data);
+  group(
+    'Stage parity — tutorUpsertStageDefinition payload matches StageDefinitionCodec',
+    () {
+      test(
+        'enriched stage payload has all codec fields; stageId = trackId_stageOrder',
+        () async {
+          final record = _InvokerRecord();
+          final router = _router(record);
 
-    expect(restored.curriculumId, original.curriculumId);
-    expect(restored.targetPercent, original.targetPercent);
-    expect(restored.description, original.description);
-    expect(restored.dateType, original.dateType);
-    expect(restored.goalType, original.goalType);
-    expect(restored.paceValue, original.paceValue);
-    expect(restored.pacePeriod, original.pacePeriod);
-    expect(restored.createdAt, original.createdAt);
-    expect(restored.updatedAt, original.updatedAt);
-  });
+          final now = DateTime.utc(2026, 5, 28, 10, 0, 0);
+          final stage = {
+            'stage_order': 1,
+            'stage_name': 'Learn',
+            'schedule': '{"type":"delay","delay_days":0}',
+            'is_default': true,
+          };
 
-  // NOTE: R2-GOAL-TRACK-ID gap documented here.
-  // GoalMerger.merge() skips rows where track_id is null or 0:
-  //   final trackId = FirestoreCodec.parseInt(row['track_id']);
-  //   if (trackId == null || trackId == 0) continue;
-  // GoalEntity.toFirestore() does NOT include track_id because GoalEntity
-  // has no trackId field (it is not part of the domain entity). This means
-  // goals written by the tutored CF path (and also by the own-device outbox
-  // path via goal_repository_impl) will be silently skipped by the merger.
-  // Remediation: add track_id to GoalEntity or enrich the payload in
-  // goal_repository_impl._syncGoal before calling pushGoal. Tracked as a
-  // separate item; out of S2 scope.
-  test('GoalEntity.toFirestore does not include track_id (documented gap)', () {
-    final now = DateTime.utc(2026, 5, 28);
-    final goal = GoalEntity(
-      curriculumId: CurriculumId.mishnayos,
-      createdAt: now,
-      updatedAt: now,
-    );
+          await router.pushStageDefinitions(
+            trackId: 7,
+            curriculumId: 'mishnayos',
+            stages: [stage],
+            updatedAt: now,
+          );
 
-    final data = goal.toFirestore();
-    expect(data.containsKey('track_id'), isFalse,
-        reason:
-            'GoalEntity has no trackId — GoalMerger will skip this row. '
-            'Tracked as R2-GOAL-TRACK-ID gap; remediation out of S2 scope.');
-  });
+          expect(record.calls, hasLength(1));
+          final call = record.calls.first;
+          expect(call.fn, 'tutorUpsertStageDefinition');
+          final args = call.args;
 
-  test('router passes goal payload to CF with goalId from id key', () async {
-    final record = _InvokerRecord();
-    final router = _router(record);
+          final stageData = args['stageData'] as Map<String, dynamic>;
+          expect(
+            stageData['curriculum_id'],
+            'mishnayos',
+            reason: 'StageDefinitionCodec reads curriculum_id',
+          );
+          expect(
+            stageData['track_id'],
+            7,
+            reason: 'StageDefinitionCodec reads track_id',
+          );
+          expect(
+            stageData['stage_order'],
+            1,
+            reason: 'StageDefinitionCodec reads stage_order',
+          );
+          expect(
+            stageData['stage_name'],
+            'Learn',
+            reason: 'StageDefinitionCodec reads stage_name',
+          );
+          expect(
+            stageData['schedule'],
+            '{"type":"delay","delay_days":0}',
+            reason: 'StageDefinitionCodec reads schedule (JSON)',
+          );
+          expect(
+            stageData['is_default'],
+            true,
+            reason: 'StageDefinitionCodec reads is_default',
+          );
+          expect(
+            stageData['updated_at'],
+            now.toIso8601String(),
+            reason: 'StageDefinitionMerger uses updated_at as LWW timestamp',
+          );
 
-    final now = DateTime.utc(2026, 5, 28, 10, 0, 0);
-    final goal = GoalEntity(
-      curriculumId: CurriculumId.mishnayos,
-      targetPercent: 100.0,
-      description: 'Test',
-      goalType: 'deadline',
-      targetDate: now,
-      createdAt: now,
-      updatedAt: now,
-    );
-    final payload = goal.toFirestore();
-    payload['id'] = goal.firestoreId;
+          // Doc-id.
+          expect(
+            args['stageId'],
+            '7_1',
+            reason:
+                'stageId = {trackId}_{stageOrder} matches plan doc-id convention',
+          );
+        },
+      );
+    },
+  );
 
-    await router.pushGoal(payload);
+  // ── StudyDay parity ───────────────────────────────────────────────────────────
+  //
+  // StudyDayConfigMerger reads via StudyDayConfigCodec.decode:
+  //   profile_id, curriculum_id, track_id, day_of_week, day_type, updated_at.
+  // Doc-id = "{curriculum_id}_{day_of_week}_{track_id}".
 
-    expect(record.calls, hasLength(1));
-    final call = record.calls.first;
-    expect(call.fn, 'tutorUpsertGoal');
-    final args = call.args;
-    expect(args['goalId'], goal.firestoreId);
-    final goalData = args['goalData'] as Map<String, dynamic>;
-    expect(goalData['curriculum_id'], CurriculumId.mishnayos.storageKey);
-    expect(goalData['updated_at'], now.toIso8601String());
-  });
-});
+  group(
+    'StudyDay parity — tutorUpsertStudyDayConfig payload matches StudyDayConfigCodec',
+    () {
+      test(
+        'payload has all codec fields; configId = curriculum_day_track',
+        () async {
+          final record = _InvokerRecord();
+          final router = _router(record);
+
+          final now = DateTime.utc(2026, 5, 28, 10, 0, 0);
+          final payload = {
+            'profile_id': 99,
+            'curriculum_id': 'mishnayos',
+            'track_id': 7,
+            'day_of_week': 1,
+            'day_type': 'study',
+            'updated_at': now.toIso8601String(),
+          };
+
+          await router.pushStudyDayConfig(payload);
+
+          expect(record.calls, hasLength(1));
+          final call = record.calls.first;
+          expect(call.fn, 'tutorUpsertStudyDayConfig');
+          final args = call.args;
+
+          final configData = args['configData'] as Map<String, dynamic>;
+          expect(
+            configData['curriculum_id'],
+            'mishnayos',
+            reason: 'StudyDayConfigCodec reads curriculum_id',
+          );
+          expect(
+            configData['track_id'],
+            7,
+            reason: 'StudyDayConfigCodec reads track_id',
+          );
+          expect(
+            configData['day_of_week'],
+            1,
+            reason: 'StudyDayConfigCodec reads day_of_week',
+          );
+          expect(
+            configData['day_type'],
+            'study',
+            reason: 'StudyDayConfigCodec reads day_type',
+          );
+          expect(
+            configData['updated_at'],
+            now.toIso8601String(),
+            reason: 'StudyDayConfigMerger uses updated_at as LWW timestamp',
+          );
+
+          // Doc-id.
+          expect(
+            args['configId'],
+            'mishnayos_1_7',
+            reason:
+                'configId = {curriculum}_{dow}_{track} matches outbox doc-id convention',
+          );
+        },
+      );
+    },
+  );
+
+  // ── Goal parity ───────────────────────────────────────────────────────────────
+  //
+  // GoalMerger reads: curriculum_id, track_id, created_at, updated_at,
+  //   description, target_percent, target_date, date_type, goal_type,
+  //   pace_value, pace_unit.
+  //
+  // GoalEntity.toFirestore() now outputs snake_case to match these field names.
+  // NOTE: GoalEntity has no trackId field — the merger's track_id read will
+  //   return null and the merger will SKIP the row (naturalKey = trackId.toString
+  //   requires a non-null, non-zero trackId). This is a pre-existing gap in the
+  //   own-device outbox path as well. The parity test verifies all fields that
+  //   CAN be provided are snake_case and documents the track_id gap.
+
+  group(
+    'Goal parity — tutorUpsertGoal payload uses snake_case matching GoalMerger',
+    () {
+      test(
+        'GoalEntity.toFirestore outputs snake_case for all merger-read fields',
+        () {
+          final now = DateTime.utc(2026, 5, 28, 10, 0, 0);
+          final goal = GoalEntity(
+            curriculumId: CurriculumId.mishnayos,
+            targetPercent: 100.0,
+            targetDate: now,
+            description: 'Finish by Pesach',
+            dateType: 'gregorian',
+            goalType: 'deadline',
+            createdAt: now,
+            updatedAt: now,
+          );
+
+          final data = goal.toFirestore();
+
+          // All merger-required fields present in snake_case.
+          expect(
+            data.containsKey('curriculum_id'),
+            isTrue,
+            reason:
+                'GoalMerger reads curriculum_id (was camelCase — fixed by S2)',
+          );
+          expect(
+            data.containsKey('target_percent'),
+            isTrue,
+            reason: 'GoalMerger reads target_percent',
+          );
+          expect(
+            data.containsKey('target_date'),
+            isTrue,
+            reason: 'GoalMerger reads target_date',
+          );
+          expect(
+            data.containsKey('description'),
+            isTrue,
+            reason: 'GoalMerger reads description',
+          );
+          expect(
+            data.containsKey('date_type'),
+            isTrue,
+            reason: 'GoalMerger reads date_type',
+          );
+          expect(
+            data.containsKey('goal_type'),
+            isTrue,
+            reason: 'GoalMerger reads goal_type',
+          );
+          expect(
+            data.containsKey('pace_value'),
+            isTrue,
+            reason: 'GoalMerger reads pace_value',
+          );
+          expect(
+            data.containsKey('pace_unit'),
+            isTrue,
+            reason: 'GoalMerger reads pace_unit (was pacePeriod — fixed by S2)',
+          );
+          expect(
+            data.containsKey('created_at'),
+            isTrue,
+            reason: 'GoalMerger reads created_at',
+          );
+          expect(
+            data.containsKey('updated_at'),
+            isTrue,
+            reason: 'GoalMerger reads updated_at (LWW timestamp)',
+          );
+
+          // Values are correct.
+          expect(data['curriculum_id'], CurriculumId.mishnayos.storageKey);
+          expect(data['target_percent'], 100.0);
+          expect(data['description'], 'Finish by Pesach');
+          expect(data['goal_type'], 'deadline');
+          expect(data['updated_at'], now.toIso8601String());
+
+          // Verify no camelCase leakage.
+          expect(
+            data.containsKey('curriculumId'),
+            isFalse,
+            reason:
+                'camelCase curriculumId must not be present after snake_case fix',
+          );
+          expect(data.containsKey('targetPercent'), isFalse);
+          expect(data.containsKey('pacePeriod'), isFalse);
+          expect(data.containsKey('createdAt'), isFalse);
+          expect(data.containsKey('updatedAt'), isFalse);
+        },
+      );
+
+      test('GoalEntity.fromFirestore round-trips through snake_case keys', () {
+        final now = DateTime.utc(2026, 5, 28, 10, 0, 0);
+        final original = GoalEntity(
+          curriculumId: CurriculumId.mishnayos,
+          targetPercent: 80.0,
+          description: 'Round-trip test',
+          dateType: 'hebrew',
+          goalType: 'pace',
+          paceValue: 2,
+          pacePeriod: 'per_week',
+          createdAt: now,
+          updatedAt: now,
+        );
+
+        final data = original.toFirestore();
+        final restored = GoalEntity.fromFirestore(data);
+
+        expect(restored.curriculumId, original.curriculumId);
+        expect(restored.targetPercent, original.targetPercent);
+        expect(restored.description, original.description);
+        expect(restored.dateType, original.dateType);
+        expect(restored.goalType, original.goalType);
+        expect(restored.paceValue, original.paceValue);
+        expect(restored.pacePeriod, original.pacePeriod);
+        expect(restored.createdAt, original.createdAt);
+        expect(restored.updatedAt, original.updatedAt);
+      });
+
+      // NOTE: R2-GOAL-TRACK-ID gap documented here.
+      // GoalMerger.merge() skips rows where track_id is null or 0:
+      //   final trackId = FirestoreCodec.parseInt(row['track_id']);
+      //   if (trackId == null || trackId == 0) continue;
+      // GoalEntity.toFirestore() does NOT include track_id because GoalEntity
+      // has no trackId field (it is not part of the domain entity). This means
+      // goals written by the tutored CF path (and also by the own-device outbox
+      // path via goal_repository_impl) will be silently skipped by the merger.
+      // Remediation: add track_id to GoalEntity or enrich the payload in
+      // goal_repository_impl._syncGoal before calling pushGoal. Tracked as a
+      // separate item; out of S2 scope.
+      test(
+        'GoalEntity.toFirestore does not include track_id (documented gap)',
+        () {
+          final now = DateTime.utc(2026, 5, 28);
+          final goal = GoalEntity(
+            curriculumId: CurriculumId.mishnayos,
+            createdAt: now,
+            updatedAt: now,
+          );
+
+          final data = goal.toFirestore();
+          expect(
+            data.containsKey('track_id'),
+            isFalse,
+            reason:
+                'GoalEntity has no trackId — GoalMerger will skip this row. '
+                'Tracked as R2-GOAL-TRACK-ID gap; remediation out of S2 scope.',
+          );
+        },
+      );
+
+      test(
+        'router passes goal payload to CF with goalId from id key',
+        () async {
+          final record = _InvokerRecord();
+          final router = _router(record);
+
+          final now = DateTime.utc(2026, 5, 28, 10, 0, 0);
+          final goal = GoalEntity(
+            curriculumId: CurriculumId.mishnayos,
+            targetPercent: 100.0,
+            description: 'Test',
+            goalType: 'deadline',
+            targetDate: now,
+            createdAt: now,
+            updatedAt: now,
+          );
+          final payload = goal.toFirestore();
+          payload['id'] = goal.firestoreId;
+
+          await router.pushGoal(payload);
+
+          expect(record.calls, hasLength(1));
+          final call = record.calls.first;
+          expect(call.fn, 'tutorUpsertGoal');
+          final args = call.args;
+          expect(args['goalId'], goal.firestoreId);
+          final goalData = args['goalData'] as Map<String, dynamic>;
+          expect(goalData['curriculum_id'], CurriculumId.mishnayos.storageKey);
+          expect(goalData['updated_at'], now.toIso8601String());
+        },
+      );
+    },
+  );
 } // end main
