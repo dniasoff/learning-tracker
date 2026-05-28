@@ -188,3 +188,16 @@ Event types: `kickoff` · `verify` · `dispatch` · `sync` · `return` · `findi
   - **On-device verification** (Daniel sanity-checks): tutor enters talmid → adds a track (with enrolment) → confirm `bookmark`, `curriculum_tracks`, `stage_definitions`, `profile_program`, `study_day_configs`, `goals`, `gamification_settings`, `learner_profile` (rename) all land in `users/{parentUid}/learner_profiles/{profileId}/…` on live Firestore AND show on parent's app on next sync. Restricted-grant tutor → blocked via permission-denied snackbar.
   - **`tutorUpsertCurriculumScope` UNREACHABLE** (acknowledged): the client doesn't push `curriculum_scope` to Firestore at all (pre-existing; parent doesn't either). CF kept as future-proofing; not exercised at P2.
 - **next:** acknowledge fix-agents; brief Daniel; ASK Daniel deploy decision (we deploy via teammate vs Daniel deploys directly).
+
+---
+
+## [2026-05-28] deploy · D1 — functions deployed (P2 gate)
+- **scope:** D1. Functions deploy from `dev` HEAD `106c2996`.
+- **project:** torah-study-tracker
+- **region:** us-central1 (all 2nd Gen CFs); us-east1 (onUserDeleted, 1st Gen)
+- **NEW CFs (S3):** tutorUpsertBookmark, tutorSetProfileProgram, tutorUpsertCurriculumScope
+- **UPDATED CFs:** deleteCurriculumTrack, deleteLearnerProfile, deleteAccountData, tutorBulkPriorCompletions, inviteTutor, acceptTutorInvite, declineTutorInvite, rescindTutorInvite, revokeTutorGrant, resignTutorGrant, listTutorGrants, purgeExpiredAuditLogs, expirePendingInvites, onUserDeleted
+- **ALSO CREATED CFs (Wave 3 S3 new):** tutorResetCompletion, tutorUpsertGoal, tutorDeleteGoal, tutorUpsertTrack, tutorDeleteTrack, tutorUpsertStageDefinition, tutorUpsertStudyDayConfig, tutorDeleteStudyDayConfig, tutorUpdateGamificationSettings, tutorEditProfile
+- **deploy ID / log:** /tmp/d1-deploy.log
+- **outcome:** success — all 3 new S3 CFs confirmed `Successful create operation`
+- **next:** Daniel's on-device P2 verification.
