@@ -87,38 +87,41 @@ class ProfileSwitcherSheet extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              ListTile(
-                leading: const CircleAvatar(
-                  backgroundColor: AppTheme.brandBlueSoft,
-                  child: Icon(
-                    Icons.swap_horiz_rounded,
-                    color: AppTheme.brandBlueDeep,
+              Material(
+                color: Colors.transparent,
+                child: ListTile(
+                  leading: const CircleAvatar(
+                    backgroundColor: AppTheme.brandBlueSoft,
+                    child: Icon(
+                      Icons.swap_horiz_rounded,
+                      color: AppTheme.brandBlueDeep,
+                    ),
                   ),
-                ),
-                title: Text(
-                  l10n.switchAccount,
-                  style: const TextStyle(fontWeight: FontWeight.w600),
-                ),
-                subtitle: accountEmail == null
-                    ? null
-                    : Text(
-                        accountEmail,
-                        style: const TextStyle(
-                          color: AppTheme.brandInkMuted,
-                          fontSize: 12,
+                  title: Text(
+                    l10n.switchAccount,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  subtitle: accountEmail == null
+                      ? null
+                      : Text(
+                          accountEmail,
+                          style: const TextStyle(
+                            color: AppTheme.brandInkMuted,
+                            fontSize: 12,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
                         ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                trailing: const Icon(
-                  Icons.chevron_right_rounded,
-                  color: AppColors.inkMidGrey,
+                  trailing: const Icon(
+                    Icons.chevron_right_rounded,
+                    color: AppColors.inkMidGrey,
+                  ),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    unawaited(context.pushRoute(const AccountPickerRoute()));
+                  },
+                  contentPadding: EdgeInsets.zero,
                 ),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  unawaited(context.pushRoute(const AccountPickerRoute()));
-                },
-                contentPadding: EdgeInsets.zero,
               ),
               const Divider(height: 24),
               Text(
@@ -154,35 +157,38 @@ class ProfileSwitcherSheet extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              ListTile(
-                leading: Container(
-                  width: 40,
-                  height: 40,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: AppTheme.brandOutline,
-                      style: BorderStyle.solid,
+              Material(
+                color: Colors.transparent,
+                child: ListTile(
+                  leading: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: AppTheme.brandOutline,
+                        style: BorderStyle.solid,
+                      ),
+                    ),
+                    child: const Icon(
+                      Icons.add_rounded,
+                      color: AppTheme.brandBlueDeep,
+                      size: 20,
                     ),
                   ),
-                  child: const Icon(
-                    Icons.add_rounded,
-                    color: AppTheme.brandBlueDeep,
-                    size: 20,
+                  title: Text(
+                    l10n.addProfile,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.brandBlueDeep,
+                    ),
                   ),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    unawaited(showAddProfileDialog(context, ref));
+                  },
+                  contentPadding: EdgeInsets.zero,
                 ),
-                title: Text(
-                  l10n.addProfile,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: AppTheme.brandBlueDeep,
-                  ),
-                ),
-                onTap: () {
-                  Navigator.of(context).pop();
-                  unawaited(showAddProfileDialog(context, ref));
-                },
-                contentPadding: EdgeInsets.zero,
               ),
             ],
           ),
@@ -232,54 +238,57 @@ class _SwitcherProfileTile extends StatelessWidget {
     final typeLabel = profile.profileMode == ProfileMode.child
         ? l10n.profileTypeChild
         : l10n.profileTypeAdult;
-    return ListTile(
-      leading: CircleAvatar(
-        backgroundColor: isActive
-            ? AppTheme.brandBlueBright.withValues(alpha: 0.15)
-            : AppTheme.brandBlueSoft,
-        child: Text(
-          initial,
-          style: TextStyle(
-            color: isActive ? AppTheme.brandBlueBright : AppTheme.brandBlueDeep,
-            fontWeight: FontWeight.w700,
+    return Material(
+      color: Colors.transparent,
+      child: ListTile(
+        leading: CircleAvatar(
+          backgroundColor: isActive
+              ? AppTheme.brandBlueBright.withValues(alpha: 0.15)
+              : AppTheme.brandBlueSoft,
+          child: Text(
+            initial,
+            style: TextStyle(
+              color: isActive ? AppTheme.brandBlueBright : AppTheme.brandBlueDeep,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ),
-      ),
-      title: Text(
-        profile.displayName,
-        style: const TextStyle(fontWeight: FontWeight.w600),
-      ),
-      subtitle: Text(
-        typeLabel,
-        style: const TextStyle(color: AppTheme.brandInkMuted, fontSize: 12),
-      ),
-      trailing: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (isActive)
-            const Padding(
-              padding: EdgeInsetsDirectional.only(end: 4),
-              child: Icon(
-                Icons.check_circle_rounded,
-                color: AppTheme.brandBlueBright,
+        title: Text(
+          profile.displayName,
+          style: const TextStyle(fontWeight: FontWeight.w600),
+        ),
+        subtitle: Text(
+          typeLabel,
+          style: const TextStyle(color: AppTheme.brandInkMuted, fontSize: 12),
+        ),
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (isActive)
+              const Padding(
+                padding: EdgeInsetsDirectional.only(end: 4),
+                child: Icon(
+                  Icons.check_circle_rounded,
+                  color: AppTheme.brandBlueBright,
+                ),
               ),
+            IconButton(
+              icon: const Icon(Icons.edit_outlined, size: 20),
+              color: AppTheme.brandInkMuted,
+              tooltip: l10n.profilesEditLabel,
+              onPressed: onEdit,
             ),
-          IconButton(
-            icon: const Icon(Icons.edit_outlined, size: 20),
-            color: AppTheme.brandInkMuted,
-            tooltip: l10n.profilesEditLabel,
-            onPressed: onEdit,
-          ),
-          IconButton(
-            icon: const Icon(Icons.delete_outline_rounded, size: 20),
-            color: AppTheme.brandCoralDeep,
-            tooltip: l10n.profilesDeleteLabel,
-            onPressed: onDelete,
-          ),
-        ],
+            IconButton(
+              icon: const Icon(Icons.delete_outline_rounded, size: 20),
+              color: AppTheme.brandCoralDeep,
+              tooltip: l10n.profilesDeleteLabel,
+              onPressed: onDelete,
+            ),
+          ],
+        ),
+        onTap: isActive ? null : onTap,
+        contentPadding: EdgeInsets.zero,
       ),
-      onTap: isActive ? null : onTap,
-      contentPadding: EdgeInsets.zero,
     );
   }
 }
