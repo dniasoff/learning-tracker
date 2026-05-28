@@ -404,6 +404,10 @@ class OutboxSyncWriteFacade implements SyncWriteFacade, PointsSyncSink {
   @override
   Future<void> deleteCompletion(String completionId) async {}
 
+  @override
+  Future<void> pushProfileProgram(Map<String, dynamic> payload) =>
+      enqueueProfileProgram(payload);
+
   // ── WS9 Wave-B (C#2) — points spend economy (PointsSyncSink) ────────────────
 
   @override

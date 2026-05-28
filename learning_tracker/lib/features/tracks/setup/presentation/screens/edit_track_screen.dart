@@ -320,15 +320,12 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
     );
 
     // F-C1: Push the updated profile_program row to Firestore so the
-    // new anchor survives reinstall / sync pull.
-    //
-    // Phase 1 — routed through the outbox: was a direct gateway push that
-    // silently dropped the row when offline. The outbox retains the write and
-    // the next drain (write-tee, pull-complete, connectivity, periodic)
-    // ships it on the next online round.
+    // new anchor survives reinstall / sync pull. Routes through
+    // syncWriteFacadeProvider so a tutored session calls tutorSetProfileProgram
+    // instead of the local outbox (which the isProfileTutored guard blocks).
     try {
-      final outboxFacade = ref.read(outboxSyncWriteFacadeProvider);
-      await outboxFacade?.enqueueProfileProgram({
+      final syncFacade = ref.read(syncWriteFacadeProvider);
+      await syncFacade?.pushProfileProgram({
         'profile_id': profileId,
         'curriculum_id': curriculum.storageKey,
         'program_id': enrollment.programId,

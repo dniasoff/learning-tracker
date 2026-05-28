@@ -49,6 +49,7 @@ class _FakeDelegate implements SyncWriteFacade {
   int pushStudyDayConfigCount = 0;
   int pushGamificationCount = 0;
   int pushBookmarkCount = 0;
+  int pushProfileProgramCount = 0;
   int pushLearnerProfileCount = 0;
   int deleteCompletionCount = 0;
 
@@ -61,6 +62,7 @@ class _FakeDelegate implements SyncWriteFacade {
       pushStudyDayConfigCount +
       pushGamificationCount +
       pushBookmarkCount +
+      pushProfileProgramCount +
       pushLearnerProfileCount +
       deleteCompletionCount;
 
@@ -97,6 +99,10 @@ class _FakeDelegate implements SyncWriteFacade {
   @override
   Future<void> pushBookmark(Map<String, dynamic> bookmark) async =>
       pushBookmarkCount++;
+
+  @override
+  Future<void> pushProfileProgram(Map<String, dynamic> payload) async =>
+      pushProfileProgramCount++;
 
   @override
   Future<void> pushSettings(Map<String, dynamic> settings) async {}
@@ -448,6 +454,11 @@ void main() {
             'track_type': 'standard',
             'content_item_id': 'Berakhot.2a',
           });
+          await router.pushProfileProgram({
+            'curriculum_id': 'daf_yomi',
+            'program_id': 'prog_001',
+            'profile_id': 42,
+          });
 
           expect(
             delegate.totalEnqueueCount,
@@ -456,8 +467,8 @@ void main() {
           );
           expect(
             record.callCount,
-            6,
-            reason: '6 CF calls made (one per write)',
+            7,
+            reason: '7 CF calls made (one per write)',
           );
         },
       );
@@ -622,6 +633,101 @@ void main() {
           'curriculum_id': 'daf_yomi',
           'track_type': 'standard',
           'content_item_id': 'Berakhot.2a',
+        });
+
+        expect(delegate.totalEnqueueCount, 0);
+        expect(record.callCount, 1);
+      },
+    );
+  });
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // F2: pushProfileProgram → tutorSetProfileProgram
+  // ────────────────────────────────────────────────────────────────────────────
+
+  group('F2 — pushProfileProgram routes to tutorSetProfileProgram', () {
+    test(
+      'tutored: pushProfileProgram → tutorSetProfileProgram with correct args',
+      () async {
+        final record = _FakeInvokerRecord();
+        final delegate = _FakeDelegate();
+        final router = _tutored(record, delegate);
+
+        await router.pushProfileProgram({
+          'profile_id': 42,
+          'curriculum_id': 'daf_yomi',
+          'program_id': 'prog_001',
+          'tracking_start_date': '2026-01-01T00:00:00.000Z',
+          'tracking_start_ref': 'Berakhot.2a',
+        });
+
+        expect(record.callCount, 1);
+        expect(record.lastCall!.fn, 'tutorSetProfileProgram');
+        expect(record.lastCall!.args['grantId'], _grantId);
+        expect(record.lastCall!.args['ownerUid'], _ownerUid);
+        expect(record.lastCall!.args['profileId'], 42);
+        expect(record.lastCall!.args['programId'], 'prog_001');
+        expect(
+          record.lastCall!.args['programData'],
+          containsPair('curriculum_id', 'daf_yomi'),
+        );
+
+        expect(delegate.pushProfileProgramCount, 0);
+        expect(delegate.totalEnqueueCount, 0);
+      },
+    );
+
+    test('non-tutored: pushProfileProgram passes through to delegate', () async {
+      final record = _FakeInvokerRecord();
+      final delegate = _FakeDelegate();
+      final router = _nonTutored(record, delegate);
+
+      await router.pushProfileProgram({
+        'curriculum_id': 'daf_yomi',
+        'program_id': 'prog_001',
+        'profile_id': 42,
+      });
+
+      expect(delegate.pushProfileProgramCount, 1);
+      expect(record.wasCalled, isFalse);
+    });
+
+    test(
+      'tutored: pushProfileProgram CF failure → throws TutorWriteException',
+      () async {
+        final delegate = _FakeDelegate();
+        final router = TutoredWriteRouter(
+          delegate: delegate,
+          writeService: TutorWriteService(
+            invoker: (_, __) async => throw Exception('network timeout'),
+          ),
+          selection: _tutoredSelection,
+        );
+
+        await expectLater(
+          () => router.pushProfileProgram({
+            'curriculum_id': 'daf_yomi',
+            'program_id': 'prog_001',
+            'profile_id': 42,
+          }),
+          throwsA(isA<TutorWriteException>()),
+        );
+
+        expect(delegate.pushProfileProgramCount, 0);
+      },
+    );
+
+    test(
+      'AC3 extended: pushProfileProgram in tutored mode: 0 outbox depth',
+      () async {
+        final record = _FakeInvokerRecord();
+        final delegate = _FakeDelegate();
+        final router = _tutored(record, delegate);
+
+        await router.pushProfileProgram({
+          'curriculum_id': 'daf_yomi',
+          'program_id': 'prog_outbox_test',
+          'profile_id': 42,
         });
 
         expect(delegate.totalEnqueueCount, 0);

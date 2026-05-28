@@ -134,3 +134,8 @@ Event types: `kickoff` · `verify` · `dispatch` · `sync` · `return` · `findi
 - **commit hygiene:** clean commit; no in-flight sweep. ✅
 - **verdict:** **S2 PASS for stated scope** (the gap is a coordination issue, not an S2 failure). Task #2 → `completed`.
 - **next:** SendMessage S2 (verdict + R2-GOAL-TRACK-ID logged); await S4 at P2; dispatch fix-agent for `pushProfileProgram` after S4 commits; integrated P2 verification + functions deploy.
+
+## [2026-05-28] kickoff · F1 — onReorder migration (CI unblock)
+- **scope:** Fix-Agent F1. Task #14. Migrate `onReorder` → `onReorderItem` in 4 call sites to clear `deprecated_member_use` fatal infos.
+- **analysis:** All 3 handler bodies (`_onReorderSedarim`, `_onReorderMasechtos`, `_onReorder`) contain `final adjustedNew = newIndex > oldIndex ? newIndex - 1 : newIndex;` — this manual index adjustment compensates for the old API passing the post-removal index. `onReorderItem` pre-adjusts, so the correction line must be REMOVED and `adjustedNew` replaced with `newIndex` directly. Test file's `_noOpReorder` is `void Function(int, int)` — correct signature for `onReorderItem`; just change the parameter name at the call site.
+- **next:** Apply all 4 changes, run `make analyze` + `make ci`; commit.

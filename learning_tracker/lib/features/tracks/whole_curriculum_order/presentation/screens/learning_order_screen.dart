@@ -112,7 +112,7 @@ class _LearningOrderScreenState extends ConsumerState<LearningOrderScreen> {
               item: items[index],
               index: index,
             ),
-            onReorder: (oldIndex, newIndex) => _onReorder(oldIndex, newIndex),
+            onReorderItem: (oldIndex, newIndex) => _onReorder(oldIndex, newIndex),
           );
         },
       ),
@@ -132,10 +132,9 @@ class _LearningOrderScreenState extends ConsumerState<LearningOrderScreen> {
     );
     if (!confirmed || !mounted) return;
 
-    final adjustedNew = newIndex > oldIndex ? newIndex - 1 : newIndex;
     final items = List<LearningOrderItem>.from(_localOrder!);
     final moved = items.removeAt(oldIndex);
-    items.insert(adjustedNew, moved);
+    items.insert(newIndex, moved);
 
     // Update userSortOrder to reflect new positions
     final updated = items

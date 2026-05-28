@@ -78,4 +78,11 @@ abstract class SyncWriteFacade {
   /// not a supported own-user operation; the outbox implementation is a no-op
   /// guard that should never be reached.
   Future<void> deleteCompletion(String completionId);
+
+  /// Enqueue a `profile_program` row for Firestore push. Deterministic doc-id
+  /// `{curriculum_id}_{program_id}` mirrors the key used by
+  /// [OutboxSyncWriteFacade.enqueueProfileProgram]. In a tutored session the
+  /// [TutoredWriteRouter] intercepts this and routes it to
+  /// `tutorSetProfileProgram` instead.
+  Future<void> pushProfileProgram(Map<String, dynamic> payload);
 }

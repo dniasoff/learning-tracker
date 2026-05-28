@@ -21,6 +21,7 @@
 //   pushStageDefinitions             → tutorUpsertStageDefinition (one per stage)
 //   pushStudyDayConfig               → tutorUpsertStudyDayConfig
 //   pushBookmark                     → tutorUpsertBookmark
+//   pushProfileProgram               → tutorSetProfileProgram
 //   pushGamificationSettingsSnapshot → tutorUpdateGamificationSettings (S4)
 //   pushLearnerProfile               → tutorEditProfile (S4)
 //   deleteCompletion                 → tutorResetCompletion (S4)
@@ -197,6 +198,22 @@ class TutoredWriteRouter implements SyncWriteFacade {
       bookmarkData: bookmark,
     );
     _handleResult(result, 'tutorUpsertBookmark');
+  }
+
+  @override
+  Future<void> pushProfileProgram(Map<String, dynamic> payload) async {
+    final sel = _selection;
+    if (sel == null) return _delegate.pushProfileProgram(payload);
+
+    final programId = payload['program_id']?.toString() ?? '';
+    final result = await _writeService.setProfileProgram(
+      grantId: sel.grantId,
+      ownerUid: sel.ownerUid,
+      profileId: int.parse(sel.profileId),
+      programId: programId,
+      programData: payload,
+    );
+    _handleResult(result, 'tutorSetProfileProgram');
   }
 
   // ── S4: gamification / profile edit / completion reset ────────────────────

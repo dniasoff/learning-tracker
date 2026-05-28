@@ -259,7 +259,7 @@ void main() {
           _pumpHarness(
             locale: const Locale('en'),
             child: ReorderableListView(
-              onReorder: _noOpReorder,
+              onReorderItem: _noOpReorder,
               children: const [
                 DraggableOrderItem(
                   key: ValueKey('item-0'),

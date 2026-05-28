@@ -87,7 +87,7 @@ class _TrackLearningOrderScreenState
                     ReorderableListView(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      onReorder: _onReorderSedarim,
+                      onReorderItem: _onReorderSedarim,
                       children: [
                         for (var i = 0; i < _localSedarim!.length; i++)
                           DraggableOrderItem(
@@ -115,7 +115,7 @@ class _TrackLearningOrderScreenState
                     ReorderableListView(
                       shrinkWrap: true,
                       physics: const NeverScrollableScrollPhysics(),
-                      onReorder: _onReorderMasechtos,
+                      onReorderItem: _onReorderMasechtos,
                       children: [
                         for (var i = 0; i < _localMasechtos!.length; i++)
                           DraggableOrderItem(
@@ -161,10 +161,9 @@ class _TrackLearningOrderScreenState
     );
     if (!confirmed || !mounted) return;
 
-    final adjustedNew = newIndex > oldIndex ? newIndex - 1 : newIndex;
     final items = List<LearningOrderItem>.from(_localSedarim!);
     final moved = items.removeAt(oldIndex);
-    items.insert(adjustedNew, moved);
+    items.insert(newIndex, moved);
     final updated = items
         .asMap()
         .entries
@@ -189,10 +188,9 @@ class _TrackLearningOrderScreenState
     );
     if (!confirmed || !mounted) return;
 
-    final adjustedNew = newIndex > oldIndex ? newIndex - 1 : newIndex;
     final items = List<LearningOrderItem>.from(_localMasechtos!);
     final moved = items.removeAt(oldIndex);
-    items.insert(adjustedNew, moved);
+    items.insert(newIndex, moved);
     final updated = items
         .asMap()
         .entries
