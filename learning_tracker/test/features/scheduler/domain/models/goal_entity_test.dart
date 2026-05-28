@@ -134,10 +134,10 @@ void main() {
           updatedAt: DateTime.utc(2026, 1, 1),
         );
         final map = entity.toFirestore();
-        expect(map['goalType'], 'pace');
-        expect(map['paceValue'], 1);
-        expect(map['pacePeriod'], 'per_day');
-        expect(map['targetDate'], isNull);
+        expect(map['goal_type'], 'pace');
+        expect(map['pace_value'], 1);
+        expect(map['pace_unit'], 'per_day');
+        expect(map['target_date'], isNull);
       });
 
       test('includes deadline defaults for deadline goal', () {
@@ -148,10 +148,10 @@ void main() {
           updatedAt: DateTime.utc(2026, 1, 1),
         );
         final map = entity.toFirestore();
-        expect(map['goalType'], 'deadline');
-        expect(map['paceValue'], isNull);
-        expect(map['pacePeriod'], isNull);
-        expect(map['targetDate'], isNotNull);
+        expect(map['goal_type'], 'deadline');
+        expect(map['pace_value'], isNull);
+        expect(map['pace_unit'], isNull);
+        expect(map['target_date'], isNotNull);
       });
 
       test('per_week pace unit is preserved', () {
@@ -164,8 +164,8 @@ void main() {
           updatedAt: DateTime.utc(2026, 1, 1),
         );
         final map = entity.toFirestore();
-        expect(map['pacePeriod'], 'per_week');
-        expect(map['paceValue'], 5);
+        expect(map['pace_unit'], 'per_week');
+        expect(map['pace_value'], 5);
       });
     });
 
