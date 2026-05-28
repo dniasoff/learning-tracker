@@ -31,6 +31,19 @@ class AppShellScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // When the Firebase uid changes (account switch or sign-out), clear any
+    // active tutored selection so the keepAlive state doesn't leak into the
+    // next account's session. The listen is mounted in AppShell so widget
+    // tests that don't render the shell never materialise FirebaseAuth.
+    ref.listen(
+      authStateProvider.select((s) => s.currentUser?.firebaseUid),
+      (previous, next) {
+        if (previous != next) {
+          ref.read(activeTutoredProfileSelectionProvider.notifier).exit();
+        }
+      },
+    );
+
     // R3o-C2 / R2o-H2: drive the tutor indicator from the ACTIVE tutored
     // selection (the tutor has actually entered a talmid's context after the
     // PIN gate), NOT from mere grant existence. A parent who merely *holds*

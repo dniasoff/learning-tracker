@@ -12,7 +12,6 @@
 //   • Permission-gated UI — to determine available actions (via activeTutorPermissionsProvider)
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -28,12 +27,10 @@ part 'active_tutored_profile_provider.g.dart';
 class ActiveTutoredProfileSelection extends _$ActiveTutoredProfileSelection {
   @override
   TutoredProfileSelection? build() {
-    // A tutored selection belongs to ONE tutor account. Reset it whenever the
-    // active login changes (account switch / sign-out), keyed on the account's
-    // Firebase uid — the per-account DB `accounts.id` collides at 1, so it is
-    // not a reliable switch signal. Without this, the keepAlive selection (and
-    // its "Tutor mode" bar) would leak into another account's session.
-    ref.watch(authStateProvider.select((s) => s.currentUser?.firebaseUid));
+    // Account-switch reset is handled at the AppShell level via ref.listen
+    // on authStateProvider — see app_shell.dart _AccountSwitchObserver.
+    // Keeping the auth chain OUT of this build() means widget tests that
+    // don't mount AppShell never materialise FirebaseAuth.instance.
     return null;
   }
 
@@ -80,9 +77,9 @@ final activeTutorPermissionsProvider = Provider<TutorPermissions?>((ref) {
 class ResolvedTutoredLocalProfileId extends _$ResolvedTutoredLocalProfileId {
   @override
   int? build() {
-    // Reset alongside the selection when the active login changes — the
-    // resolved mirror id is local to the tutor account that pulled it.
-    ref.watch(authStateProvider.select((s) => s.currentUser?.firebaseUid));
+    // Account-switch reset is coordinated by the same AppShell observer that
+    // resets ActiveTutoredProfileSelection — exit() calls clear() on this
+    // provider, so no direct auth watch needed here.
     return null;
   }
 
