@@ -163,47 +163,66 @@ abstract class GoalEntity with _$GoalEntity {
   }
 
   /// Convert to Firestore document map.
+  ///
+  /// Uses snake_case keys to match what [GoalMerger] reads on the parent side.
   Map<String, dynamic> toFirestore() {
     return {
-      'curriculumId': curriculumId.storageKey,
-      'targetPercent': targetPercent,
-      'targetDate': targetDate?.toIso8601String(),
+      'curriculum_id': curriculumId.storageKey,
+      'target_percent': targetPercent,
+      'target_date': targetDate?.toIso8601String(),
       'description': description,
-      'dateType': dateType,
-      'goalType': goalType,
-      'paceValue': paceValue,
-      'pacePeriod': pacePeriod,
-      'paceGranularity': paceGranularityKey,
-      'createdAt': createdAt.toIso8601String(),
-      'updatedAt': updatedAt.toIso8601String(),
+      'date_type': dateType,
+      'goal_type': goalType,
+      'pace_value': paceValue,
+      'pace_unit': pacePeriod,
+      'pace_granularity': paceGranularityKey,
+      'created_at': createdAt.toIso8601String(),
+      'updated_at': updatedAt.toIso8601String(),
     };
   }
 
   /// Create from Firestore document.
+  ///
+  /// Accepts both snake_case keys (canonical) and camelCase (back-compat for
+  /// any docs written before the snake_case migration).
   static GoalEntity fromFirestore(Map<String, dynamic> data) {
-    final rawUnit = data['paceGranularity'] as String?;
+    final rawCurriculumId =
+        (data['curriculum_id'] ?? data['curriculumId']) as String;
+    final rawUnit =
+        (data['pace_granularity'] ?? data['paceGranularity']) as String?;
     return GoalEntity(
       curriculumId: CurriculumId.values.firstWhere(
-        (c) => c.storageKey == data['curriculumId'] as String,
+        (c) => c.storageKey == rawCurriculumId,
         orElse: () => throw ArgumentError(
-          'Unknown curriculumId: ${data['curriculumId']}',
+          'Unknown curriculumId: $rawCurriculumId',
         ),
       ),
-      targetPercent: (data['targetPercent'] as num?)?.toDouble() ?? 100.0,
-      targetDate: data['targetDate'] != null
-          ? DateTime.parse(data['targetDate'] as String).toUtc()
+      targetPercent:
+          ((data['target_percent'] ?? data['targetPercent']) as num?)
+              ?.toDouble() ??
+          100.0,
+      targetDate: (data['target_date'] ?? data['targetDate']) != null
+          ? DateTime.parse(
+              (data['target_date'] ?? data['targetDate']) as String,
+            ).toUtc()
           : null,
       description: data['description'] as String? ?? '',
-      dateType: data['dateType'] as String? ?? 'gregorian',
-      goalType: data['goalType'] as String? ?? 'deadline',
-      paceValue: data['paceValue'] as int?,
-      pacePeriod: data['pacePeriod'] as String?,
+      dateType:
+          (data['date_type'] ?? data['dateType']) as String? ?? 'gregorian',
+      goalType:
+          (data['goal_type'] ?? data['goalType']) as String? ?? 'deadline',
+      paceValue: (data['pace_value'] ?? data['paceValue']) as int?,
+      pacePeriod: (data['pace_unit'] ?? data['pacePeriod']) as String?,
       paceGranularity: PaceGranularity.fromStorageKey(rawUnit),
       rawLearningUnit: PaceGranularity.fromStorageKey(rawUnit) == null
           ? rawUnit
           : null,
-      createdAt: DateTime.parse(data['createdAt'] as String).toUtc(),
-      updatedAt: DateTime.parse(data['updatedAt'] as String).toUtc(),
+      createdAt: DateTime.parse(
+        (data['created_at'] ?? data['createdAt']) as String,
+      ).toUtc(),
+      updatedAt: DateTime.parse(
+        (data['updated_at'] ?? data['updatedAt']) as String,
+      ).toUtc(),
     );
   }
 }

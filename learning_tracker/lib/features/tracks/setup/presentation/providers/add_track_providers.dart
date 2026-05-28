@@ -15,10 +15,12 @@ final trackCreationServiceProvider = Provider<TrackCreationService>((ref) {
   final wizardService = ref.watch(learningProcessWizardServiceProvider);
   final goalRepo = ref.watch(goalRepositoryProvider);
   // Phase 1 — gateway is still needed for the server-side delete
-  // `removeProfileProgramAssignment`; bookmarks, profile_programs, and
-  // study_day_configs route through the outbox facade now.
+  // `removeProfileProgramAssignment`; bookmarks and study_day_configs route
+  // through syncWriteFacadeProvider (tutored-router-aware); enqueueProfileProgram
+  // remains on the outbox-only facade (S3 parity CF: tutorSetProfileProgram).
   final gateway = ref.watch(firestoreGatewayProvider);
-  final outboxFacade = ref.watch(outboxSyncWriteFacadeProvider);
+  final syncFacade = ref.watch(syncWriteFacadeProvider);
+  final outboxOnlyFacade = ref.watch(outboxSyncWriteFacadeProvider);
   final analytics = ref.watch(analyticsServiceProvider);
 
   final stageRepository = ref.watch(globalStageRepositoryProvider);
@@ -30,7 +32,8 @@ final trackCreationServiceProvider = Provider<TrackCreationService>((ref) {
     goalRepository: goalRepo,
     stageRepository: stageRepository,
     gateway: gateway,
-    outboxFacade: outboxFacade,
+    syncFacade: syncFacade,
+    outboxOnlyFacade: outboxOnlyFacade,
     analytics: analytics,
   );
 });

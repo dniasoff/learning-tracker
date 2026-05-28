@@ -5,6 +5,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
+import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
@@ -40,7 +41,8 @@ class TrackCreationService {
     required GoalRepository goalRepository,
     required StageDefinitionRepository stageRepository,
     FirestoreGateway? gateway,
-    OutboxSyncWriteFacade? outboxFacade,
+    SyncWriteFacade? syncFacade,
+    OutboxSyncWriteFacade? outboxOnlyFacade,
     AnalyticsService? analytics,
   }) : _database = database,
        _activationService = activationService,
@@ -48,7 +50,8 @@ class TrackCreationService {
        _goalRepository = goalRepository,
        _stageRepository = stageRepository,
        _gateway = gateway,
-       _outboxFacade = outboxFacade,
+       _syncFacade = syncFacade,
+       _outboxOnlyFacade = outboxOnlyFacade,
        _analytics = analytics ?? const NullAnalyticsService();
 
   final UserDatabase _database;
@@ -56,11 +59,14 @@ class TrackCreationService {
   final LearningProcessWizardService _wizardService;
   final GoalRepository _goalRepository;
   final StageDefinitionRepository _stageRepository;
-  // Phase 1 — bookmark + profile_program writes go through the outbox; the
-  // remaining `removeProfileProgramAssignment` direct call is a server-side
-  // delete that does not yet have an outbox kind and is left as-is per brief.
   final FirestoreGateway? _gateway;
-  final OutboxSyncWriteFacade? _outboxFacade;
+  // Routable writes (bookmark + study-day) — goes through the tutored router
+  // when a tutor session is active.
+  final SyncWriteFacade? _syncFacade;
+  // Outbox-only writes (enqueueProfileProgram) — outbox-specific, not on
+  // SyncWriteFacade interface; S3 parity CF (tutorSetProfileProgram) will
+  // route this when it lands.
+  final OutboxSyncWriteFacade? _outboxOnlyFacade;
   final AnalyticsService _analytics;
 
   /// Persist all track configuration from the AddTrackFlow result.
@@ -323,7 +329,7 @@ class TrackCreationService {
       );
       // Phase 1 — route the bookmark write through the outbox so offline
       // track-creates do not silently drop the bookmark.
-      await _outboxFacade?.pushBookmark({
+      await _syncFacade?.pushBookmark({
         'curriculum_id': curriculum.storageKey,
         'content_item_id': bookmarkRef,
         'updated_at': updatedAt.toIso8601String(),
@@ -332,7 +338,7 @@ class TrackCreationService {
 
     // Phase 1 — route the profile-program assignment through the outbox
     // (was a direct gateway write that lost the row when offline).
-    await _outboxFacade?.enqueueProfileProgram({
+    await _outboxOnlyFacade?.enqueueProfileProgram({
       'profile_id': profileId,
       'curriculum_id': curriculum.storageKey,
       'program_id': programId,
@@ -364,7 +370,7 @@ class TrackCreationService {
       // The cloud doc-id is derived from (curriculum_id, day_of_week,
       // track_id) so repeated upserts collapse to one document, matching the
       // local PK semantics.
-      await _outboxFacade?.pushStudyDayConfig({
+      await _syncFacade?.pushStudyDayConfig({
         'profile_id': profileId,
         'curriculum_id': curriculumId.storageKey,
         'track_id': trackId,

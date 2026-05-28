@@ -1,4 +1,4 @@
-// S1 — TutoredWriteRouter unit tests
+// S1 + S4 — TutoredWriteRouter unit tests
 //
 // AC1: Tutored session → router invokes the correct CF name + payload with
 //      grantId/ownerUid/profileId; delegate (outbox) NOT called.
@@ -6,8 +6,11 @@
 // AC3: Outbox isolation — a tutored write at either chokepoint never reaches
 //      the delegate outbox path.
 // AC4: CF failure → TutorWriteException thrown (never silently strand).
+// S4-A: pushGamificationSettingsSnapshot → tutorUpdateGamificationSettings (with builder).
+// S4-B: pushLearnerProfile → tutorEditProfile (extracts display_name/avatar/mode).
+// S4-C: deleteCompletion → tutorResetCompletion.
 
-@Tags(['s1', 'tutor_mode', 'routing', 'keystone'])
+@Tags(['s1', 's4', 'tutor_mode', 'routing', 'keystone'])
 library;
 
 import 'package:flutter_test/flutter_test.dart';
@@ -49,6 +52,8 @@ class _FakeDelegate implements SyncWriteFacade {
   int pushStudyDayConfigCount = 0;
   int pushGamificationCount = 0;
   int pushBookmarkCount = 0;
+  int pushLearnerProfileCount = 0;
+  int deleteCompletionCount = 0;
 
   // Aggregate for "outbox depth"
   int get totalEnqueueCount =>
@@ -58,7 +63,9 @@ class _FakeDelegate implements SyncWriteFacade {
       pushStageDefinitionsCount +
       pushStudyDayConfigCount +
       pushGamificationCount +
-      pushBookmarkCount;
+      pushBookmarkCount +
+      pushLearnerProfileCount +
+      deleteCompletionCount;
 
   @override
   Future<void> pushGoal(Map<String, dynamic> goal) async => pushGoalCount++;
@@ -106,13 +113,15 @@ class _FakeDelegate implements SyncWriteFacade {
   }) async {}
 
   @override
-  Future<void> pushLearnerProfile(Map<String, dynamic> profile) async {}
+  Future<void> pushLearnerProfile(Map<String, dynamic> profile) async =>
+      pushLearnerProfileCount++;
 
   @override
   Future<void> deleteLearnerProfile(int profileId) async {}
 
   @override
-  Future<void> deleteCompletion(String completionId) async {}
+  Future<void> deleteCompletion(String completionId) async =>
+      deleteCompletionCount++;
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────
@@ -148,6 +157,25 @@ TutoredWriteRouter _tutored(_FakeInvokerRecord record, _FakeDelegate delegate) =
       delegate: delegate,
       writeService: TutorWriteService(invoker: record.call),
       selection: _tutoredSelection,
+    );
+
+/// Builds a tutored router that also has a gamification snapshot builder.
+TutoredWriteRouter _tutoredWithGamification(
+  _FakeInvokerRecord record,
+  _FakeDelegate delegate, {
+  Map<String, dynamic>? snapshot,
+}) =>
+    TutoredWriteRouter(
+      delegate: delegate,
+      writeService: TutorWriteService(invoker: record.call),
+      selection: _tutoredSelection,
+      gamificationSnapshotBuilder:
+          () async =>
+              snapshot ??
+              <String, dynamic>{
+                'reward_settings': <Map<String, dynamic>>[],
+                'points_config': <Map<String, dynamic>>[],
+              },
     );
 
 /// Builds a router in non-tutored (pass-through) mode.
@@ -571,6 +599,258 @@ void main() {
         'track_type': 'standard',
         'content_item_id': 'Berakhot.2a',
       });
+
+      expect(delegate.totalEnqueueCount, 0);
+      expect(record.callCount, 1);
+    });
+  });
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // S4-A: pushGamificationSettingsSnapshot routing
+  // ────────────────────────────────────────────────────────────────────────────
+
+  group('S4-A — pushGamificationSettingsSnapshot routes to CF with builder',
+      () {
+    test(
+        'tutored + builder: calls tutorUpdateGamificationSettings with snapshot',
+        () async {
+      final record = _FakeInvokerRecord();
+      final delegate = _FakeDelegate();
+      final snapshot = {
+        'schema_version': 3,
+        'reward_settings': [
+          {'id': 'r1', 'title': 'Gold Star', 'threshold_points': 100},
+        ],
+        'points_config': [
+          {'stage_order': 1, 'points': 10},
+        ],
+      };
+      final router = _tutoredWithGamification(
+        record,
+        delegate,
+        snapshot: snapshot,
+      );
+
+      await router.pushGamificationSettingsSnapshot();
+
+      expect(record.callCount, 1);
+      expect(record.lastCall!.fn, 'tutorUpdateGamificationSettings');
+      expect(record.lastCall!.args['grantId'], _grantId);
+      expect(record.lastCall!.args['ownerUid'], _ownerUid);
+      expect(record.lastCall!.args['profileId'], 42);
+      expect(record.lastCall!.args['permKey'], 'can_edit_rewards');
+      expect(
+        record.lastCall!.args['settingsData'],
+        containsPair('reward_settings', isA<List<dynamic>>()),
+      );
+      expect(delegate.pushGamificationCount, 0,
+          reason: 'outbox must NOT receive gamification write in tutored mode');
+    });
+
+    test(
+        'tutored without builder: falls back to delegate (gamification passes through)',
+        () async {
+      final record = _FakeInvokerRecord();
+      final delegate = _FakeDelegate();
+      // No builder → falls through to delegate
+      final router = _tutored(record, delegate);
+
+      await router.pushGamificationSettingsSnapshot();
+
+      expect(delegate.pushGamificationCount, 1,
+          reason: 'fallback to delegate when no builder');
+      expect(record.wasCalled, isFalse);
+    });
+
+    test('non-tutored: always delegates to outbox', () async {
+      final record = _FakeInvokerRecord();
+      final delegate = _FakeDelegate();
+      final router = _nonTutored(record, delegate);
+
+      await router.pushGamificationSettingsSnapshot();
+
+      expect(delegate.pushGamificationCount, 1);
+      expect(record.wasCalled, isFalse);
+    });
+
+    test('CF failure → TutorWriteException', () async {
+      final delegate = _FakeDelegate();
+      final router = TutoredWriteRouter(
+        delegate: delegate,
+        writeService: TutorWriteService(
+          invoker: (_, __) async => throw Exception('CF error'),
+        ),
+        selection: _tutoredSelection,
+        gamificationSnapshotBuilder: () async =>
+            <String, dynamic>{'reward_settings': <Map<String, dynamic>>[]},
+      );
+
+      await expectLater(
+        () => router.pushGamificationSettingsSnapshot(),
+        throwsA(isA<TutorWriteException>()),
+      );
+      expect(delegate.pushGamificationCount, 0);
+    });
+  });
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // S4-B: pushLearnerProfile routing
+  // ────────────────────────────────────────────────────────────────────────────
+
+  group('S4-B — pushLearnerProfile routes to tutorEditProfile', () {
+    test('tutored: display_name field extracted and forwarded', () async {
+      final record = _FakeInvokerRecord();
+      final delegate = _FakeDelegate();
+      final router = _tutored(record, delegate);
+
+      await router.pushLearnerProfile({
+        'profile_id': 42,
+        'display_name': 'Shmuel',
+        'mode': 'child',
+      });
+
+      expect(record.callCount, 1);
+      expect(record.lastCall!.fn, 'tutorEditProfile');
+      expect(record.lastCall!.args['grantId'], _grantId);
+      expect(record.lastCall!.args['ownerUid'], _ownerUid);
+      expect(record.lastCall!.args['profileId'], 42);
+      expect(record.lastCall!.args['displayName'], 'Shmuel');
+      expect(record.lastCall!.args['mode'], 'child');
+
+      expect(delegate.pushLearnerProfileCount, 0,
+          reason: 'outbox must NOT receive profile write in tutored mode');
+    });
+
+    test('tutored: camelCase displayName key extracted', () async {
+      final record = _FakeInvokerRecord();
+      final delegate = _FakeDelegate();
+      final router = _tutored(record, delegate);
+
+      await router.pushLearnerProfile({'displayName': 'Rivka'});
+
+      expect(record.callCount, 1);
+      expect(record.lastCall!.fn, 'tutorEditProfile');
+      expect(record.lastCall!.args['displayName'], 'Rivka');
+      expect(delegate.pushLearnerProfileCount, 0);
+    });
+
+    test('tutored: avatar_index (int) converted to string', () async {
+      final record = _FakeInvokerRecord();
+      final delegate = _FakeDelegate();
+      final router = _tutored(record, delegate);
+
+      await router.pushLearnerProfile({'avatar_index': 3});
+
+      expect(record.callCount, 1);
+      expect(record.lastCall!.fn, 'tutorEditProfile');
+      expect(record.lastCall!.args['avatar'], '3');
+      expect(delegate.pushLearnerProfileCount, 0);
+    });
+
+    test('tutored: profile with no editable fields → no CF call, no delegate',
+        () async {
+      final record = _FakeInvokerRecord();
+      final delegate = _FakeDelegate();
+      final router = _tutored(record, delegate);
+
+      await router.pushLearnerProfile({
+        'profile_id': 42,
+        'account_id': 1,
+        'created_at': '2026-01-01T00:00:00.000Z',
+      });
+
+      expect(record.wasCalled, isFalse,
+          reason: 'no editable fields: CF must not be called');
+      expect(delegate.pushLearnerProfileCount, 0);
+    });
+
+    test('non-tutored: passes through to delegate', () async {
+      final record = _FakeInvokerRecord();
+      final delegate = _FakeDelegate();
+      final router = _nonTutored(record, delegate);
+
+      await router.pushLearnerProfile({'display_name': 'Shimi'});
+
+      expect(delegate.pushLearnerProfileCount, 1);
+      expect(record.wasCalled, isFalse);
+    });
+
+    test('CF failure → TutorWriteException', () async {
+      final delegate = _FakeDelegate();
+      final router = TutoredWriteRouter(
+        delegate: delegate,
+        writeService: TutorWriteService(
+          invoker: (_, __) async => throw Exception('CF error'),
+        ),
+        selection: _tutoredSelection,
+      );
+
+      await expectLater(
+        () => router.pushLearnerProfile({'display_name': 'Shimi'}),
+        throwsA(isA<TutorWriteException>()),
+      );
+      expect(delegate.pushLearnerProfileCount, 0);
+    });
+  });
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // S4-C: deleteCompletion routing
+  // ────────────────────────────────────────────────────────────────────────────
+
+  group('S4-C — deleteCompletion routes to tutorResetCompletion', () {
+    test('tutored: completion id forwarded to CF', () async {
+      final record = _FakeInvokerRecord();
+      final delegate = _FakeDelegate();
+      final router = _tutored(record, delegate);
+
+      await router.deleteCompletion('completion_abc123');
+
+      expect(record.callCount, 1);
+      expect(record.lastCall!.fn, 'tutorResetCompletion');
+      expect(record.lastCall!.args['grantId'], _grantId);
+      expect(record.lastCall!.args['ownerUid'], _ownerUid);
+      expect(record.lastCall!.args['profileId'], 42);
+      expect(record.lastCall!.args['completionId'], 'completion_abc123');
+
+      expect(delegate.deleteCompletionCount, 0,
+          reason: 'outbox must NOT receive completion delete in tutored mode');
+    });
+
+    test('non-tutored: passes through to delegate (no-op in outbox)', () async {
+      final record = _FakeInvokerRecord();
+      final delegate = _FakeDelegate();
+      final router = _nonTutored(record, delegate);
+
+      await router.deleteCompletion('completion_xyz');
+
+      expect(delegate.deleteCompletionCount, 1);
+      expect(record.wasCalled, isFalse);
+    });
+
+    test('CF failure → TutorWriteException', () async {
+      final delegate = _FakeDelegate();
+      final router = TutoredWriteRouter(
+        delegate: delegate,
+        writeService: TutorWriteService(
+          invoker: (_, __) async => throw Exception('CF error'),
+        ),
+        selection: _tutoredSelection,
+      );
+
+      await expectLater(
+        () => router.deleteCompletion('completion_xyz'),
+        throwsA(isA<TutorWriteException>()),
+      );
+      expect(delegate.deleteCompletionCount, 0);
+    });
+
+    test('AC3 extended: deleteCompletion in tutored mode: 0 outbox depth',
+        () async {
+      final record = _FakeInvokerRecord();
+      final delegate = _FakeDelegate();
+      final router = _tutored(record, delegate);
+
+      await router.deleteCompletion('comp_id');
 
       expect(delegate.totalEnqueueCount, 0);
       expect(record.callCount, 1);

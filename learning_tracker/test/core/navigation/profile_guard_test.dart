@@ -10,9 +10,7 @@
 library;
 
 import 'package:auto_route/auto_route.dart';
-import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/database/daos/profile_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/navigation/guards/profile_guard.dart';
@@ -64,7 +62,7 @@ void main() {
   // ── Branch 1: tutored session active ────────────────────────────────────────
 
   group('tutored session active', () {
-    ProfileGuard _makeGuard({required int? selectedId}) => ProfileGuard(
+    ProfileGuard makeGuard({required int? selectedId}) => ProfileGuard(
       getDatabase: () => db,
       getSelectedProfileId: () => selectedId,
       setSelectedProfileId: (_) {},
@@ -74,8 +72,8 @@ void main() {
 
     test('allows through when account has zero own profiles', () async {
       // Profile-less tutor: no own profiles, tutored session active.
-      final accountId = await seedAccount(db);
-      final guard = _makeGuard(selectedId: null);
+      await seedAccount(db);
+      final guard = makeGuard(selectedId: null);
 
       await guard.onNavigation(resolver, router);
 
@@ -88,7 +86,7 @@ void main() {
     test('allows through when account has own profiles', () async {
       final accountId = await seedAccount(db);
       final profileId = await _insertOwnProfile(db, accountId: accountId);
-      final guard = _makeGuard(selectedId: profileId);
+      final guard = makeGuard(selectedId: profileId);
 
       await guard.onNavigation(resolver, router);
 
@@ -101,7 +99,7 @@ void main() {
   // ── Branch 2: count==0 own profiles, no tutored session ─────────────────────
 
   group('zero own profiles, not tutored', () {
-    ProfileGuard _makeGuard() => ProfileGuard(
+    ProfileGuard makeGuard() => ProfileGuard(
       getDatabase: () => db,
       getSelectedProfileId: () => null,
       setSelectedProfileId: (_) {},
@@ -113,7 +111,7 @@ void main() {
       // Genuine new user: no profiles, no tutored session.
       // ProfileGuard must send them to the picker (not a create-wizard).
       await seedAccount(db);
-      final guard = _makeGuard();
+      final guard = makeGuard();
 
       await guard.onNavigation(resolver, router);
 
@@ -128,7 +126,7 @@ void main() {
       // they select a talmid). The picker shows TutoredChildrenSection so they
       // can enter without creating a learner profile.
       await seedAccount(db);
-      final guard = _makeGuard();
+      final guard = makeGuard();
 
       await guard.onNavigation(resolver, router);
 
@@ -144,7 +142,7 @@ void main() {
       final accountId = await seedAccount(db);
       final profileId = await _insertOwnProfile(db, accountId: accountId);
 
-      var selected = <int>[];
+      final selected = <int>[];
       final guard = ProfileGuard(
         getDatabase: () => db,
         getSelectedProfileId: () => null,

@@ -183,7 +183,7 @@ class StudyDayConfigScreen extends ConsumerWidget {
   void _toggleDay(WidgetRef ref, int dayOfWeek, DayType newType) {
     final db = ref.read(userDatabaseProvider);
     final profileId = ref.read(activeProfileIdProvider);
-    final outboxFacade = ref.read(outboxSyncWriteFacadeProvider);
+    final syncFacade = ref.read(syncWriteFacadeProvider);
     // Look up trackId then upsert
     (db.select(db.curriculumTracks)
           ..where(
@@ -202,10 +202,7 @@ class StudyDayConfigScreen extends ConsumerWidget {
             dayOfWeek: dayOfWeek,
             dayType: newType.storageKey,
           );
-          // Phase 1 — sync the toggle to the cloud via the outbox so a
-          // second device sees the new pattern on its next pull. Skipped for
-          // local-born accounts (outbox facade is null).
-          await outboxFacade?.pushStudyDayConfig({
+          await syncFacade?.pushStudyDayConfig({
             'profile_id': profileId,
             'curriculum_id': curriculumId.storageKey,
             'track_id': trackId,
