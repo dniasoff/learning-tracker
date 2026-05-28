@@ -201,3 +201,22 @@ Event types: `kickoff` · `verify` · `dispatch` · `sync` · `return` · `findi
 - **deploy ID / log:** /tmp/d1-deploy.log
 - **outcome:** success — all 3 new S3 CFs confirmed `Successful create operation`
 - **next:** Daniel's on-device P2 verification.
+
+---
+
+## [2026-05-28] fix + deploy · V3-A — router/CFs/rules/goal (1 CRITICAL + 5 HIGH + 2 MEDIUM)
+- **scope:** Fix-Agent V3-A (Task #25). R2 + R3 adversarial review findings in the router / Cloud Functions / Firestore rules / serialization cluster.
+- **commit:** `444dd504` — `fix(tutor): V3-A — router/CFs/rules/goal fixes (1 CRITICAL + 5 HIGH + 2 MEDIUM)` (11 files, +180/-90)
+- **findings resolved:**
+  - **R2-C1 (CRITICAL) — `pushProfileProgram` doc-id:** router was using `payload['program_id']?.toString()` (integer row-id) as the Firestore doc-id; parent gateway uses `curriculum_id` (e.g. `'daf_yomi'`). Fixed: `payload['curriculum_id']?.toString()`. Test assertion updated (`'daf_yomi'` instead of `'prog_001'`).
+  - **R2-H1 (HIGH) — `GoalEntity` missing `trackId`:** Added `int? trackId` field to `GoalEntity` Freezed model + `toFirestore()` emits `track_id` when non-null + `_toEntity()` in `goal_repository_impl.dart` passes `trackId`. Regenerated `goal_entity.freezed.dart`. `GoalMerger` skip-on-null-track_id is now resolved. Test updated: positive assertion replaces the "documented gap" stub.
+  - **R2-H2 (HIGH) — `tutorEditProfile` full-doc write:** CF previously used `set({merge:true})` (partial write), which could leave stale fields if a profile field was removed. Now reads full existing doc, merges updates on top, writes with `merge: false`. Ensures LWW correctness.
+  - **R2-M1 (MEDIUM) — `profile_program` missing `updated_at`:** Two push sites lacked `updated_at`. Fixed: `track_creation_service.dart` uses `DateTimeFactory.nowUtc().toIso8601String()`; `edit_track_screen.dart` uses the already-available `todayUtc` local variable.
+  - **R2-M2 (MEDIUM) — `pushBookmark` doc-id fallback:** Fallback for missing `trackType` was missing the trailing underscore (producing `'mishnayos'` instead of `'mishnayos_'` to match parent gateway). Fixed: unconditionally `'${curriculumId}_$trackType'`.
+  - **R3-H1 (HIGH) — `inviteTutor` missing `can_edit_points` default:** Added `can_edit_points: false` to `defaultPermissions` in `inviteTutor` CF so new grants explicitly start with points editing denied.
+  - **R3-H2 (HIGH) — `tutorUpdateGamificationSettings` dual-permission split:** `pushGamificationSettingsSnapshot` previously called a single CF with the full snapshot; R3 showed the CF only accepts one `permKey` per call. Fixed: router now makes two CF calls — one with `permKey: 'can_edit_rewards'` (reward_settings slice) and one with `permKey: 'can_edit_points'` (points_config slice). Test updated to expect 2 calls.
+  - **R3-H3 (HIGH) — `curriculum_scopes` missing Firestore rule:** Added `match /curriculum_scopes/{scopeId}` block: owner read/write + `hasActiveTutorAccess` read. Prevents tutor from being permission-denied on scope reads.
+- **tests:** `make ci` GREEN — 6070/6070 passed (8 new test assertions across `s1_tutored_write_router_test.dart` + `s2_entity_parity_test.dart`). Lint fixes: removed unused imports in `reward_configuration_screen.dart`, `edit_track_screen.dart`.
+- **TypeScript:** `npm run build` clean (no errors).
+- **deploy:** `firebase deploy --only functions,firestore:rules --project torah-study-tracker` — SUCCESS. All 27 CFs updated; Firestore rules uploaded. Key updates: `tutorEditProfile`, `tutorSetProfileProgram`, `tutorUpdateGamificationSettings`, `inviteTutor`.
+- **verdict:** All 8 R2+R3 findings resolved. CI GREEN. Deploy complete.
