@@ -1,4 +1,4 @@
-// TutoredWriteRouter — S1 (Edit-Propagation Squad)
+// TutoredWriteRouter — S1 + S3 + S4 (Edit-Propagation Squad)
 //
 // A SyncWriteFacade decorator that intercepts outgoing writes when a tutor is
 // active-as-tutored and routes them to the matching TutorWriteService Cloud
@@ -14,17 +14,20 @@
 //      entity kind.  The outbox isProfileTutored guard in OutboxProcessor is
 //      the belt-and-suspenders safety net but should never need to fire.
 //
-// Intercepted entity kinds (S1 + S2 scope):
-//   pushGoal           → tutorUpsertGoal
-//   deleteGoal         → tutorDeleteGoal
-//   pushCurriculumTrack    → tutorUpsertTrack
-//   pushStageDefinitions   → tutorUpsertStageDefinition (one CF call per stage)
-//   pushStudyDayConfig     → tutorUpsertStudyDayConfig
+// Intercepted entity kinds:
+//   pushGoal                         → tutorUpsertGoal
+//   deleteGoal                       → tutorDeleteGoal
+//   pushCurriculumTrack              → tutorUpsertTrack
+//   pushStageDefinitions             → tutorUpsertStageDefinition (one per stage)
+//   pushStudyDayConfig               → tutorUpsertStudyDayConfig
+//   pushBookmark                     → tutorUpsertBookmark
+//   pushGamificationSettingsSnapshot → tutorUpdateGamificationSettings (S4)
+//   pushLearnerProfile               → tutorEditProfile (S4)
+//   deleteCompletion                 → tutorResetCompletion (S4)
 //
-// Pass-through (not yet routed — delegated to outbox, outbox guard is safety net):
-//   pushBookmark, pushSettings, pushLearningOrder, pushLearnerProfile,
-//   deleteLearnerProfile, pushUiPreferencesSnapshot,
-//   pushGamificationSettingsSnapshot (routed in S4 stream).
+// Pass-through (not tutored-routed — delegated to outbox):
+//   pushSettings, pushLearningOrder, pushUiPreferencesSnapshot,
+//   deleteLearnerProfile (talmid's profile deletion is not a tutor right).
 //
 // Error handling: CF failures (TutorWriteFailure) are logged and re-thrown as
 // [TutorWriteException] so callers can surface a clear snackbar. This matches
@@ -172,6 +175,29 @@ class TutoredWriteRouter implements SyncWriteFacade {
     _handleResult(result, 'tutorUpsertStudyDayConfig');
   }
 
+  @override
+  Future<void> pushBookmark(Map<String, dynamic> bookmark) async {
+    final sel = _selection;
+    if (sel == null) return _delegate.pushBookmark(bookmark);
+
+    final curriculumId = bookmark['curriculum_id']?.toString() ?? '';
+    final trackType = bookmark['track_type']?.toString() ?? '';
+    // Mirror firestore_gateway_impl doc-id: {curriculum_id}_{track_type}.
+    // When track_type is absent (TrackCreationService omits it), fall back to
+    // curriculum_id alone so the CF write is still idempotent per curriculum.
+    final bookmarkId = trackType.isNotEmpty
+        ? '${curriculumId}_$trackType'
+        : curriculumId;
+    final result = await _writeService.upsertBookmark(
+      grantId: sel.grantId,
+      ownerUid: sel.ownerUid,
+      profileId: int.parse(sel.profileId),
+      bookmarkId: bookmarkId,
+      bookmarkData: bookmark,
+    );
+    _handleResult(result, 'tutorUpsertBookmark');
+  }
+
   // ── Pass-through (not yet tutored-routed) ─────────────────────────────────
 
   @override
@@ -181,10 +207,6 @@ class TutoredWriteRouter implements SyncWriteFacade {
   @override
   Future<void> pushUiPreferencesSnapshot() =>
       _delegate.pushUiPreferencesSnapshot();
-
-  @override
-  Future<void> pushBookmark(Map<String, dynamic> bookmark) =>
-      _delegate.pushBookmark(bookmark);
 
   @override
   Future<void> pushSettings(Map<String, dynamic> settings) =>
@@ -210,6 +232,10 @@ class TutoredWriteRouter implements SyncWriteFacade {
   @override
   Future<void> deleteLearnerProfile(int profileId) =>
       _delegate.deleteLearnerProfile(profileId);
+
+  @override
+  Future<void> deleteCompletion(String completionId) =>
+      _delegate.deleteCompletion(completionId);
 
   // ── Helper ─────────────────────────────────────────────────────────────────
 

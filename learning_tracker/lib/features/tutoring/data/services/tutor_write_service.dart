@@ -218,6 +218,57 @@ class TutorWriteService {
     'settingsData': settingsData,
   });
 
+  // ── Bookmark (canEditStages) ─────────────────────────────────────────────────
+
+  /// Creates or updates a bookmark document in the child's profile.
+  Future<TutorWriteResult> upsertBookmark({
+    required String grantId,
+    required String ownerUid,
+    required int profileId,
+    required String bookmarkId,
+    required Map<String, dynamic> bookmarkData,
+  }) => _call('tutorUpsertBookmark', {
+    'grantId': grantId,
+    'ownerUid': ownerUid,
+    'profileId': profileId,
+    'bookmarkId': bookmarkId,
+    'bookmarkData': bookmarkData,
+  });
+
+  // ── Profile program (canEditStages) ──────────────────────────────────────────
+
+  /// Creates or updates a profile_programs document in the child's profile.
+  Future<TutorWriteResult> setProfileProgram({
+    required String grantId,
+    required String ownerUid,
+    required int profileId,
+    required String programId,
+    required Map<String, dynamic> programData,
+  }) => _call('tutorSetProfileProgram', {
+    'grantId': grantId,
+    'ownerUid': ownerUid,
+    'profileId': profileId,
+    'programId': programId,
+    'programData': programData,
+  });
+
+  // ── Curriculum scope (canEditStages) ─────────────────────────────────────────
+
+  /// Creates or updates a curriculum_scopes document in the child's profile.
+  Future<TutorWriteResult> upsertCurriculumScope({
+    required String grantId,
+    required String ownerUid,
+    required int profileId,
+    required String scopeId,
+    required Map<String, dynamic> scopeData,
+  }) => _call('tutorUpsertCurriculumScope', {
+    'grantId': grantId,
+    'ownerUid': ownerUid,
+    'profileId': profileId,
+    'scopeId': scopeId,
+    'scopeData': scopeData,
+  });
+
   // ── Profile edit (always allowed for active tutors) ──────────────────────────
 
   /// Updates display_name, avatar, and/or mode on the child's learner_profiles doc.

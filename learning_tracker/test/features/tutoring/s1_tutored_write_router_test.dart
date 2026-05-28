@@ -48,6 +48,7 @@ class _FakeDelegate implements SyncWriteFacade {
   int pushStageDefinitionsCount = 0;
   int pushStudyDayConfigCount = 0;
   int pushGamificationCount = 0;
+  int pushBookmarkCount = 0;
 
   // Aggregate for "outbox depth"
   int get totalEnqueueCount =>
@@ -56,7 +57,8 @@ class _FakeDelegate implements SyncWriteFacade {
       pushTrackCount +
       pushStageDefinitionsCount +
       pushStudyDayConfigCount +
-      pushGamificationCount;
+      pushGamificationCount +
+      pushBookmarkCount;
 
   @override
   Future<void> pushGoal(Map<String, dynamic> goal) async => pushGoalCount++;
@@ -89,7 +91,8 @@ class _FakeDelegate implements SyncWriteFacade {
   Future<void> pushUiPreferencesSnapshot() async {}
 
   @override
-  Future<void> pushBookmark(Map<String, dynamic> bookmark) async {}
+  Future<void> pushBookmark(Map<String, dynamic> bookmark) async =>
+      pushBookmarkCount++;
 
   @override
   Future<void> pushSettings(Map<String, dynamic> settings) async {}
@@ -107,6 +110,9 @@ class _FakeDelegate implements SyncWriteFacade {
 
   @override
   Future<void> deleteLearnerProfile(int profileId) async {}
+
+  @override
+  Future<void> deleteCompletion(String completionId) async {}
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────
@@ -398,13 +404,18 @@ void main() {
         'day_of_week': 1,
         'track_id': 1,
       });
+      await router.pushBookmark({
+        'curriculum_id': 'daf_yomi',
+        'track_type': 'standard',
+        'content_item_id': 'Berakhot.2a',
+      });
 
       expect(
         delegate.totalEnqueueCount,
         0,
         reason: 'No tutored write must reach the outbox delegate',
       );
-      expect(record.callCount, 5, reason: '5 CF calls made (one per write)');
+      expect(record.callCount, 6, reason: '6 CF calls made (one per write)');
     });
 
     test('non-intercepted pass-throughs still reach delegate', () async {
@@ -457,6 +468,112 @@ void main() {
         () => router.deleteGoal({'firestore_id': 'g1'}),
         throwsA(isA<TutorWriteException>()),
       );
+    });
+  });
+
+  // ────────────────────────────────────────────────────────────────────────────
+  // S3: pushBookmark routing (new in S3 — parity CFs)
+  // ────────────────────────────────────────────────────────────────────────────
+
+  group('S3 — pushBookmark routes to tutorUpsertBookmark', () {
+    test('tutored: pushBookmark → tutorUpsertBookmark with {curr}_{trackType} id',
+        () async {
+      final record = _FakeInvokerRecord();
+      final delegate = _FakeDelegate();
+      final router = _tutored(record, delegate);
+
+      await router.pushBookmark({
+        'curriculum_id': 'daf_yomi',
+        'track_type': 'standard',
+        'content_item_id': 'Berakhot.2a',
+        'updated_at': '2026-01-01T00:00:00.000Z',
+      });
+
+      expect(record.callCount, 1);
+      expect(record.lastCall!.fn, 'tutorUpsertBookmark');
+      expect(record.lastCall!.args['grantId'], _grantId);
+      expect(record.lastCall!.args['ownerUid'], _ownerUid);
+      expect(record.lastCall!.args['profileId'], 42);
+      expect(record.lastCall!.args['bookmarkId'], 'daf_yomi_standard');
+      expect(
+        record.lastCall!.args['bookmarkData'],
+        containsPair('curriculum_id', 'daf_yomi'),
+      );
+
+      expect(delegate.pushBookmarkCount, 0);
+      expect(delegate.totalEnqueueCount, 0);
+    });
+
+    test('tutored: pushBookmark without track_type falls back to curriculum_id',
+        () async {
+      final record = _FakeInvokerRecord();
+      final delegate = _FakeDelegate();
+      final router = _tutored(record, delegate);
+
+      await router.pushBookmark({
+        'curriculum_id': 'mishnayos',
+        'content_item_id': 'Berakhot.1.1',
+        'updated_at': '2026-01-01T00:00:00.000Z',
+      });
+
+      expect(record.callCount, 1);
+      expect(record.lastCall!.fn, 'tutorUpsertBookmark');
+      expect(record.lastCall!.args['bookmarkId'], 'mishnayos');
+      expect(delegate.pushBookmarkCount, 0);
+    });
+
+    test('non-tutored: pushBookmark passes through to delegate', () async {
+      final record = _FakeInvokerRecord();
+      final delegate = _FakeDelegate();
+      final router = _nonTutored(record, delegate);
+
+      await router.pushBookmark({
+        'curriculum_id': 'daf_yomi',
+        'track_type': 'standard',
+        'content_item_id': 'Berakhot.2a',
+      });
+
+      expect(delegate.pushBookmarkCount, 1);
+      expect(record.wasCalled, isFalse);
+    });
+
+    test('tutored: pushBookmark CF failure → throws TutorWriteException',
+        () async {
+      final delegate = _FakeDelegate();
+      final router = TutoredWriteRouter(
+        delegate: delegate,
+        writeService: TutorWriteService(
+          invoker: (_, __) async => throw Exception('network timeout'),
+        ),
+        selection: _tutoredSelection,
+      );
+
+      await expectLater(
+        () => router.pushBookmark({
+          'curriculum_id': 'daf_yomi',
+          'track_type': 'standard',
+          'content_item_id': 'Berakhot.2a',
+        }),
+        throwsA(isA<TutorWriteException>()),
+      );
+
+      expect(delegate.pushBookmarkCount, 0);
+    });
+
+    test('AC3 extended: pushBookmark in tutored mode contributes 0 to outbox',
+        () async {
+      final record = _FakeInvokerRecord();
+      final delegate = _FakeDelegate();
+      final router = _tutored(record, delegate);
+
+      await router.pushBookmark({
+        'curriculum_id': 'daf_yomi',
+        'track_type': 'standard',
+        'content_item_id': 'Berakhot.2a',
+      });
+
+      expect(delegate.totalEnqueueCount, 0);
+      expect(record.callCount, 1);
     });
   });
 }

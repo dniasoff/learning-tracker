@@ -1735,6 +1735,183 @@ export const tutorUpdateGamificationSettings = onCall(CALL_OPTS, async (request)
   return { success: true };
 });
 
+// ── tutorUpsertBookmark ───────────────────────────────────────────────────────
+//
+// Creates or updates a bookmark document in the child's profile.
+// Requires canEditStages permission (bookmarks are part of the programme
+// enrolment path which is gated by can_edit_stages).
+//
+// Expects:
+//   {
+//     grantId, ownerUid, profileId,
+//     bookmarkId: string,       // bookmarks doc-id ("{curriculum_id}_{track_type}")
+//     bookmarkData: object,
+//   }
+// Returns: { success: true }
+
+export const tutorUpsertBookmark = onCall(CALL_OPTS, async (request) => {
+  const callerUid = request.auth?.uid;
+  if (!callerUid) throw new HttpsError("unauthenticated", "Must be signed in");
+
+  const { grantId, ownerUid, profileId, bookmarkId, bookmarkData } = request.data ?? {};
+
+  if (typeof grantId !== "string" || !grantId)
+    throw new HttpsError("invalid-argument", "grantId must be a non-empty string");
+  if (typeof ownerUid !== "string" || !ownerUid)
+    throw new HttpsError("invalid-argument", "ownerUid must be a non-empty string");
+  if (typeof profileId !== "number" || !Number.isInteger(profileId) || profileId <= 0)
+    throw new HttpsError("invalid-argument", "profileId must be a positive integer");
+  if (typeof bookmarkId !== "string" || !bookmarkId)
+    throw new HttpsError("invalid-argument", "bookmarkId must be a non-empty string");
+  if (!bookmarkData || typeof bookmarkData !== "object" || Array.isArray(bookmarkData))
+    throw new HttpsError("invalid-argument", "bookmarkData must be an object");
+
+  const { grant, profilePath, writtenAt } = await verifyTutorGrant(
+    callerUid, grantId, ownerUid, profileId, "can_edit_stages",
+  );
+
+  const bookmarkRef = profilePath.collection("bookmarks").doc(bookmarkId);
+  const beforeSnap = await bookmarkRef.get();
+  const beforeValue = beforeSnap.exists ? beforeSnap.data() : null;
+
+  await bookmarkRef.set(
+    { ...bookmarkData, synced_at: writtenAt },
+    { merge: true },
+  );
+
+  await writeAuditLog(
+    grantId, grant, callerUid,
+    "bookmark_upserted",
+    `profile/${profileId}/bookmarks/${bookmarkId}`,
+    beforeValue, bookmarkData, writtenAt,
+  );
+
+  logger.info(
+    `tutorUpsertBookmark: tutor=${callerUid} grant=${grantId} ` +
+      `ownerUid=${ownerUid} profileId=${profileId} bookmarkId=${bookmarkId}`,
+  );
+
+  return { success: true };
+});
+
+// ── tutorSetProfileProgram ────────────────────────────────────────────────────
+//
+// Creates or updates a profile_program document in the child's profile.
+// Requires canEditStages permission (programme assignment is part of the
+// enrolment path gated by can_edit_stages).
+//
+// Expects:
+//   {
+//     grantId, ownerUid, profileId,
+//     programId: string,         // profile_programs doc-id (curriculum_id)
+//     programData: object,
+//   }
+// Returns: { success: true }
+
+export const tutorSetProfileProgram = onCall(CALL_OPTS, async (request) => {
+  const callerUid = request.auth?.uid;
+  if (!callerUid) throw new HttpsError("unauthenticated", "Must be signed in");
+
+  const { grantId, ownerUid, profileId, programId, programData } = request.data ?? {};
+
+  if (typeof grantId !== "string" || !grantId)
+    throw new HttpsError("invalid-argument", "grantId must be a non-empty string");
+  if (typeof ownerUid !== "string" || !ownerUid)
+    throw new HttpsError("invalid-argument", "ownerUid must be a non-empty string");
+  if (typeof profileId !== "number" || !Number.isInteger(profileId) || profileId <= 0)
+    throw new HttpsError("invalid-argument", "profileId must be a positive integer");
+  if (typeof programId !== "string" || !programId)
+    throw new HttpsError("invalid-argument", "programId must be a non-empty string");
+  if (!programData || typeof programData !== "object" || Array.isArray(programData))
+    throw new HttpsError("invalid-argument", "programData must be an object");
+
+  const { grant, profilePath, writtenAt } = await verifyTutorGrant(
+    callerUid, grantId, ownerUid, profileId, "can_edit_stages",
+  );
+
+  const programRef = profilePath.collection("profile_programs").doc(programId);
+  const beforeSnap = await programRef.get();
+  const beforeValue = beforeSnap.exists ? beforeSnap.data() : null;
+
+  await programRef.set(
+    { ...programData, synced_at: writtenAt },
+    { merge: true },
+  );
+
+  await writeAuditLog(
+    grantId, grant, callerUid,
+    "profile_program_set",
+    `profile/${profileId}/profile_programs/${programId}`,
+    beforeValue, programData, writtenAt,
+  );
+
+  logger.info(
+    `tutorSetProfileProgram: tutor=${callerUid} grant=${grantId} ` +
+      `ownerUid=${ownerUid} profileId=${profileId} programId=${programId}`,
+  );
+
+  return { success: true };
+});
+
+// ── tutorUpsertCurriculumScope ────────────────────────────────────────────────
+//
+// Creates or updates a curriculum_scope document in the child's profile.
+// Requires canEditStages permission (scope selection is part of the enrolment
+// path gated by can_edit_stages).
+//
+// Expects:
+//   {
+//     grantId, ownerUid, profileId,
+//     scopeId: string,           // curriculum_scopes doc-id
+//     scopeData: object,
+//   }
+// Returns: { success: true }
+
+export const tutorUpsertCurriculumScope = onCall(CALL_OPTS, async (request) => {
+  const callerUid = request.auth?.uid;
+  if (!callerUid) throw new HttpsError("unauthenticated", "Must be signed in");
+
+  const { grantId, ownerUid, profileId, scopeId, scopeData } = request.data ?? {};
+
+  if (typeof grantId !== "string" || !grantId)
+    throw new HttpsError("invalid-argument", "grantId must be a non-empty string");
+  if (typeof ownerUid !== "string" || !ownerUid)
+    throw new HttpsError("invalid-argument", "ownerUid must be a non-empty string");
+  if (typeof profileId !== "number" || !Number.isInteger(profileId) || profileId <= 0)
+    throw new HttpsError("invalid-argument", "profileId must be a positive integer");
+  if (typeof scopeId !== "string" || !scopeId)
+    throw new HttpsError("invalid-argument", "scopeId must be a non-empty string");
+  if (!scopeData || typeof scopeData !== "object" || Array.isArray(scopeData))
+    throw new HttpsError("invalid-argument", "scopeData must be an object");
+
+  const { grant, profilePath, writtenAt } = await verifyTutorGrant(
+    callerUid, grantId, ownerUid, profileId, "can_edit_stages",
+  );
+
+  const scopeRef = profilePath.collection("curriculum_scopes").doc(scopeId);
+  const beforeSnap = await scopeRef.get();
+  const beforeValue = beforeSnap.exists ? beforeSnap.data() : null;
+
+  await scopeRef.set(
+    { ...scopeData, synced_at: writtenAt },
+    { merge: true },
+  );
+
+  await writeAuditLog(
+    grantId, grant, callerUid,
+    "curriculum_scope_upserted",
+    `profile/${profileId}/curriculum_scopes/${scopeId}`,
+    beforeValue, scopeData, writtenAt,
+  );
+
+  logger.info(
+    `tutorUpsertCurriculumScope: tutor=${callerUid} grant=${grantId} ` +
+      `ownerUid=${ownerUid} profileId=${profileId} scopeId=${scopeId}`,
+  );
+
+  return { success: true };
+});
+
 // ── tutorEditProfile ──────────────────────────────────────────────────────────
 //
 // Updates permitted fields on the child's learner_profiles/{profileId} document.
