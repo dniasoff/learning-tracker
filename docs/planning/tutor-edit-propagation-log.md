@@ -73,3 +73,26 @@ Event types: `kickoff` · `verify` · `dispatch` · `sync` · `return` · `findi
 - **git status:** CLEAN at HEAD `462e5a2d`. `dart analyze` not re-run by the orchestrator (the changes are Daniel's prior-session polish, already analyze-clean per his pre-handoff state); squad will exercise it at their own commits + V1.
 - **S6 OVERLAP NOTE (carry to S6 briefing):** the polish already implements PART of S6's mechanism — own-profile queries correctly exclude mirrors, so a profile-less tutor's `countProfilesForAccount` returns 0 and `ProfileGuard` allows tutored sessions through. The remaining S6 gap is the **initial routing decision** when `count==0` + ≥1 active grant → must route to the picker (TALMID PROFILES visible), not the Create-Profile wizard.
 - **next:** SendMessage S1 → `proceed <SHA>`; dispatch S6 with the overlap note.
+
+## [2026-05-28 10:30] sync · P1 CLOSED + return+verify S6
+
+### return + verify · S6 (profile-less tutor wizard) — PASS
+- **scope:** sync/S6 · `S6-profile-less` reported P1 (commit `e5045281` — `feat(tutor): S6 — profile-less tutor routes to picker, not wizard`, 3 files, +215/-5). S6 wrote its own dispatch entry at [10:16] (commit `e5045281`).
+- **VERIFIED by orchestrator (read diff + code + tests, not self-report):**
+  - **Acceptance branches:**
+    1. ✅ **Profile-less tutor (count==0 + ≥1 active grant):** `sign_in_controller.dart:489+` inside the existing `finalProfileCount == 0 && !cloudAccountHasProfiles` branch adds a `listIncomingGrants()` call with a 4 s timeout + try/catch; if ≥1 grant is `active` → `prefs.setBool(kOnboardingComplete, true)` + `router.replaceAll([ProfilePickerRoute()])`. Picker's `TutoredChildrenSection` then surfaces the talmid.
+    2. ✅ **Genuine new user (count==0 + zero grants):** falls through the new branch to the existing path (`OnboardingRoute` or `EmptyLoginRoute` per `kOnboardingSkipped` history) — wizard preserved.
+    3. ✅ **Active tutor with own profiles:** the new logic is inside the `count == 0` branch only — the count≥1 path is untouched.
+  - **`ProfileGuard` (UNCHANGED by S6):** `core/navigation/guards/profile_guard.dart:89-98` already routes any `count==0` non-tutored navigation to `ProfilePickerRoute` (introduced in the polish commit `7e5f6eb5`). S6's added test file `test/core/navigation/profile_guard_test.dart` (+187) asserts this + the `_isTutoredSession()` short-circuit + auto-select branch + already-selected branch (6 tests).
+  - **Offline-first:** the new grant-check is wrapped in try/catch + 4 s timeout — offline users fall through to the existing offline-safe path. Aligns with [[offline-first]].
+  - **`empty_login_screen.dart`:** "I'm a tutor" button changed from snackbar stub → `router.replaceAll([ProfilePickerRoute()])`. (Bonus minor fix; bundled.)
+- **LOW (V3 candidate):** the NEW grant-check branch in `sign_in_controller.dart` is NOT directly unit-tested (the 6 new tests cover `ProfileGuard`, a related but distinct code path). Change is small + linear; V1 + V6 charter smoke will catch regressions.
+- **MINOR (LOW, log only):** S6 reported "4 pre-existing onReorder infos only — no new issues" for analyze + 6/6 pass for its new test file. Pre-existing `app_shell_test.dart` 2 failures were confirmed pre-existing on baseline before S6's changes (S6 verified). Not blocking P1 — V1 will catch all suite breakage.
+- **verdict:** **S6 PASS.** Task #6 → `completed`.
+
+### sync · P1 CLOSED
+- Both Wave-1 streams done. Tasks #1, #6, #7 → completed. P1's `blockedBy=[1,6]` resolved.
+- **carry forward to Wave 2:** S1's HIGH advisory (refactor `outboxSyncWriteFacadeProvider` direct readers in S2 scope: `add_track_providers.dart:21`, `study_day_config_screen.dart:186`, `edit_track_screen.dart:330`). Briefed into S2.
+- **commit hygiene incident:** at 10:16 my `git add docs/...` + commit inadvertently swept up S6's 3 staged files (race between S6 staging and my docs commit). I `git reset --soft HEAD~1`'d, `git restore --staged`'d S6's 3 files, re-committed docs alone (`2479d60e`), and notified S6. S6 then committed its own work cleanly at `e5045281`. **Procedure tightened:** I will only `git add` files under `docs/planning/tutor-edit-propagation-*` going forward; teammates stage + commit their own code. Cost: one wasted commit (`8df293c4`, now orphaned).
+- **HEAD:** `a0b8c028` (after this commit) on `dev`. Working tree clean.
+- **next:** acknowledge S6 + Daniel; dispatch Wave 2 (S2 + S3 + S4 in parallel) with coordination plan: S2 owns the `outboxSyncWriteFacadeProvider` refactor (3 call-sites). S3 + S4 will both touch the `TutoredWriteRouter` class and `tutor_write_service.dart` — coordinate via SendMessage; no concurrent build_runner.
