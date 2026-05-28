@@ -181,6 +181,16 @@ class ProfileDao extends DatabaseAccessor<UserDatabase> with _$ProfileDaoMixin {
           ))
           .go();
 
+  /// Returns ALL tutored-mirror rows for [accountId] (own profiles excluded).
+  ///
+  /// Used to collect grant IDs before a bulk delete so callers can fire
+  /// per-grant callbacks after the rows are gone.
+  Future<List<LearnerProfile>> getTutoredMirrorsForAccount(int accountId) =>
+      (select(learnerProfiles)..where(
+            (t) => t.accountId.equals(accountId) & t.isTutored.equals(true),
+          ))
+          .get();
+
   /// Delete ALL tutored-mirror rows for the current account (used on sign-out).
   ///
   /// Returns the number of deleted rows (≥ 0).

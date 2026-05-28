@@ -148,7 +148,7 @@ void main() {
       expect(entity.pacePeriod, isNull);
     });
 
-    // AC-7: Firestore sync with new fields
+    // AC-7: Firestore sync with new fields (keys are snake_case in toFirestore)
     test('AC-7: toFirestore includes goalType, paceValue, pacePeriod', () {
       final entity = GoalEntity(
         curriculumId: CurriculumId.bavli,
@@ -159,9 +159,9 @@ void main() {
         updatedAt: today,
       );
       final map = entity.toFirestore();
-      expect(map.containsKey('goalType'), isTrue);
-      expect(map.containsKey('paceValue'), isTrue);
-      expect(map.containsKey('pacePeriod'), isTrue);
+      expect(map.containsKey('goal_type'), isTrue);
+      expect(map.containsKey('pace_value'), isTrue);
+      expect(map.containsKey('pace_unit'), isTrue);
     });
 
     test('AC-7: existing deadline goals sync unchanged', () {
@@ -172,10 +172,10 @@ void main() {
         updatedAt: today,
       );
       final map = entity.toFirestore();
-      expect(map['goalType'], 'deadline');
-      expect(map['paceValue'], isNull);
-      expect(map['pacePeriod'], isNull);
-      expect(map['targetDate'], isNotNull);
+      expect(map['goal_type'], 'deadline');
+      expect(map['pace_value'], isNull);
+      expect(map['pace_unit'], isNull);
+      expect(map['target_date'], isNotNull);
     });
 
     // AC-8: Existing deadline goals unaffected

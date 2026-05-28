@@ -589,9 +589,13 @@ void main() {
         );
 
         // Only one tutored row with this triple.
-        final profiles = await db.profileDao.getProfilesByAccount(accountId);
-        final tutored = profiles.where((p) => p.isTutored).toList();
-        expect(tutored.length, 1, reason: 'No duplicate tutored rows');
+        // getProfilesByAccount excludes mirrors, so use getTutoredProfile directly.
+        final tutoredRow = await db.profileDao.getTutoredProfile(
+          parentUid: 'parent-uid-123',
+          remoteChildProfileId: 'remote-child-42',
+          grantId: 'grant-abc',
+        );
+        expect(tutoredRow, isNotNull, reason: 'No duplicate tutored rows');
       },
     );
 
@@ -723,13 +727,17 @@ void main() {
         expect(ownAfter.isTutored, isFalse);
 
         // Only one own profile (the tutored mirror is a separate row).
-        final allProfiles = await db.profileDao.getProfilesByAccount(accountId);
-        final ownCount = allProfiles.where((p) => !p.isTutored).length;
-        expect(ownCount, 1, reason: 'Pull must not modify own profiles');
+        // getProfilesByAccount returns own profiles only (excludes mirrors).
+        final ownProfiles2 = await db.profileDao.getProfilesByAccount(accountId);
+        expect(ownProfiles2.length, 1, reason: 'Pull must not modify own profiles');
 
-        // The tutored row is distinct.
-        final tutoredCount = allProfiles.where((p) => p.isTutored).length;
-        expect(tutoredCount, 1);
+        // The tutored row is distinct — query via mirror-specific helper.
+        final tutoredRow = await db.profileDao.getTutoredProfile(
+          parentUid: 'parent-uid-123',
+          remoteChildProfileId: 'remote-child-42',
+          grantId: 'grant-abc',
+        );
+        expect(tutoredRow, isNotNull);
       },
     );
   });

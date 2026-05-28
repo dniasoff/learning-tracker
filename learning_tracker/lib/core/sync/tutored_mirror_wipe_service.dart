@@ -52,9 +52,10 @@ class TutoredMirrorWipeService {
   /// Purge every tutored mirror belonging to [accountId] (sign-out).
   Future<void> wipeAllMirrors(int accountId) async {
     // Collect grant ids before deletion so we can fire onWipe for each.
-    final rows = await _profileDao.getProfilesByAccount(accountId);
+    // Must use getTutoredMirrorsForAccount — getProfilesByAccount excludes mirrors.
+    final rows = await _profileDao.getTutoredMirrorsForAccount(accountId);
     final tutoredGrantIds = rows
-        .where((p) => p.isTutored && p.tutorGrantId != null)
+        .where((p) => p.tutorGrantId != null)
         .map((p) => p.tutorGrantId!)
         .toList();
 

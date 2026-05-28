@@ -54,6 +54,16 @@ Widget _wrap({
       selectedProfileIdProvider.overrideWith(
         () => _FixedSelectedProfileId(selectedProfileId),
       ),
+      authStateProvider.overrideWithValue(
+        const AuthState.signedIn(
+          user: AuthUser(
+            profileId: 1,
+            email: 'test@test.com',
+            displayName: 'Test',
+          ),
+          tier: Tier.localBorn,
+        ),
+      ),
     ],
     child: MaterialApp(
       locale: const Locale('en'),
@@ -205,6 +215,16 @@ void main() {
               ),
               selectedProfileIdProvider.overrideWith(
                 () => _FixedSelectedProfileId(1),
+              ),
+              authStateProvider.overrideWithValue(
+                const AuthState.signedIn(
+                  user: AuthUser(
+                    profileId: 1,
+                    email: 'test@test.com',
+                    displayName: 'Test',
+                  ),
+                  tier: Tier.localBorn,
+                ),
               ),
             ],
             child: MaterialApp(

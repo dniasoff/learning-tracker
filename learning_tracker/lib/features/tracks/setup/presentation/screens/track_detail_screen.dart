@@ -474,7 +474,11 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
           ),
         ],
       ),
-      child: Column(
+      child: Material(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(24),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
         children: [
           if (!hasProgramEnrollment) ...[
             // W5-B (Task #16): Bulk-prior path — visually differentiated
@@ -572,6 +576,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
             onTap: () => _showDeleteDialog(track, curriculum),
           ),
         ],
+        ),
       ),
     );
   }
