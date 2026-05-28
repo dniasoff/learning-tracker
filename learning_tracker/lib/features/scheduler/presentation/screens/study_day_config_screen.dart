@@ -137,6 +137,7 @@ class StudyDayConfigScreen extends ConsumerWidget {
                       isStudy: isStudy,
                       onToggle: canEdit
                           ? () => _toggleDay(
+                              context,
                               ref,
                               dow,
                               isStudy ? DayType.review : DayType.study,
@@ -180,7 +181,12 @@ class StudyDayConfigScreen extends ConsumerWidget {
     );
   }
 
-  void _toggleDay(WidgetRef ref, int dayOfWeek, DayType newType) {
+  void _toggleDay(
+    BuildContext context,
+    WidgetRef ref,
+    int dayOfWeek,
+    DayType newType,
+  ) {
     final db = ref.read(userDatabaseProvider);
     final profileId = ref.read(activeProfileIdProvider);
     final syncFacade = ref.read(syncWriteFacadeProvider);
@@ -202,14 +208,26 @@ class StudyDayConfigScreen extends ConsumerWidget {
             dayOfWeek: dayOfWeek,
             dayType: newType.storageKey,
           );
-          await syncFacade?.pushStudyDayConfig({
-            'profile_id': profileId,
-            'curriculum_id': curriculumId.storageKey,
-            'track_id': trackId,
-            'day_of_week': dayOfWeek,
-            'day_type': newType.storageKey,
-            'updated_at': DateTimeFactory.nowUtc().toIso8601String(),
-          });
+          try {
+            await syncFacade?.pushStudyDayConfig({
+              'profile_id': profileId,
+              'curriculum_id': curriculumId.storageKey,
+              'track_id': trackId,
+              'day_of_week': dayOfWeek,
+              'day_type': newType.storageKey,
+              'updated_at': DateTimeFactory.nowUtc().toIso8601String(),
+            });
+          } on TutorWriteException catch (e) {
+            if (context.mounted && e.code == 'permission-denied') {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    AppLocalizations.of(context)!.tutorPermissionDenied,
+                  ),
+                ),
+              );
+            }
+          }
         });
     ref.invalidate(allDailyTasksProvider);
   }

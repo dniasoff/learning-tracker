@@ -545,6 +545,7 @@
   "tutorCannotMarkLiveCompletion": "Tutors cannot mark live completions",
   "tutorWriteForbiddenTitle": "Action not allowed",
   "tutorWriteForbiddenMessage": "Tutors cannot mark live forward completions. This action would credit the child's streak and rewards, which is reserved for the parent or child.",
+  "tutorPermissionDenied": "You don't have permission to make this edit",
   "addProfile": "Add Profile",
   "createProfile": "Create Profile",
   "enterNameHint": "Enter name",

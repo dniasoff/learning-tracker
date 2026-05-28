@@ -16,6 +16,7 @@ import 'package:learning_tracker/features/tracks/setup/presentation/providers/tr
 import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart'
     as domain_stage;
 import 'package:learning_tracker/features/tracks/stages/presentation/providers/stage_providers.dart';
+import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 // Design tokens aligned with Point Settings mock (deep blue + orange accents).
@@ -213,13 +214,13 @@ class _PointConfigScreenState extends ConsumerState<PointConfigScreen> {
     } catch (e) {
       if (mounted) setState(() => _saving = false);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              AppLocalizations.of(context)!.errorGeneric(e.toString()),
-            ),
-          ),
-        );
+        final l10nMsg =
+            (e is TutorWriteException && e.code == 'permission-denied')
+            ? AppLocalizations.of(context)!.tutorPermissionDenied
+            : AppLocalizations.of(context)!.errorGeneric(e.toString());
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10nMsg)));
       }
     }
   }

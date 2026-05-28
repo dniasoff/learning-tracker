@@ -58,13 +58,16 @@ class TutoredWriteRouter implements SyncWriteFacade {
     required SyncWriteFacade delegate,
     required TutorWriteService writeService,
     required TutoredProfileSelection? selection,
-  })  : _delegate = delegate,
-        _writeService = writeService,
-        _selection = selection;
+    Future<Map<String, dynamic>> Function()? gamificationSnapshotBuilder,
+  }) : _delegate = delegate,
+       _writeService = writeService,
+       _selection = selection,
+       _gamificationSnapshotBuilder = gamificationSnapshotBuilder;
 
   final SyncWriteFacade _delegate;
   final TutorWriteService _writeService;
   final TutoredProfileSelection? _selection;
+  final Future<Map<String, dynamic>> Function()? _gamificationSnapshotBuilder;
 
   // ── Intercepted entity writes ──────────────────────────────────────────────
 
@@ -90,9 +93,7 @@ class TutoredWriteRouter implements SyncWriteFacade {
     if (sel == null) return _delegate.deleteGoal(payload);
 
     final goalId =
-        payload['firestore_id']?.toString() ??
-        payload['id']?.toString() ??
-        '';
+        payload['firestore_id']?.toString() ?? payload['id']?.toString() ?? '';
     final result = await _writeService.deleteGoal(
       grantId: sel.grantId,
       ownerUid: sel.ownerUid,
@@ -198,11 +199,79 @@ class TutoredWriteRouter implements SyncWriteFacade {
     _handleResult(result, 'tutorUpsertBookmark');
   }
 
-  // ── Pass-through (not yet tutored-routed) ─────────────────────────────────
+  // ── S4: gamification / profile edit / completion reset ────────────────────
 
   @override
-  Future<void> pushGamificationSettingsSnapshot() =>
-      _delegate.pushGamificationSettingsSnapshot();
+  Future<void> pushGamificationSettingsSnapshot() async {
+    final sel = _selection;
+    if (sel == null) return _delegate.pushGamificationSettingsSnapshot();
+
+    // Build the snapshot via the injected builder (OutboxSyncWriteFacade.
+    // buildGamificationSnapshot). Falls back to delegate if builder absent.
+    final builder = _gamificationSnapshotBuilder;
+    if (builder == null) return _delegate.pushGamificationSettingsSnapshot();
+
+    final settingsData = await builder();
+    // Use can_edit_rewards as the catch-all permKey (the CF accepts both
+    // can_edit_rewards and can_edit_points; it uses .set(merge:true) so the
+    // full snapshot covers reward_settings AND points_config).
+    final result = await _writeService.updateGamificationSettings(
+      grantId: sel.grantId,
+      ownerUid: sel.ownerUid,
+      profileId: int.parse(sel.profileId),
+      permKey: 'can_edit_rewards',
+      settingsData: settingsData,
+    );
+    _handleResult(result, 'tutorUpdateGamificationSettings');
+  }
+
+  @override
+  Future<void> pushLearnerProfile(Map<String, dynamic> profile) async {
+    final sel = _selection;
+    if (sel == null) return _delegate.pushLearnerProfile(profile);
+
+    // Extract editable fields — handle both camelCase and snake_case keys.
+    final displayName =
+        (profile['displayName'] ?? profile['display_name']) as String?;
+    // avatar_index may be an int from Drift or a String from a caller — convert.
+    final avatarRaw = profile['avatar'] ?? profile['avatar_index'];
+    final avatar = avatarRaw?.toString();
+    final mode = profile['mode'] as String?;
+
+    if (displayName == null && avatar == null && mode == null) {
+      AppLogger.instance.debug(
+        event: 'tutored_write_router_profile_no_editable_fields',
+        fields: {'keys': profile.keys.toList().toString()},
+      );
+      return;
+    }
+
+    final result = await _writeService.editProfile(
+      grantId: sel.grantId,
+      ownerUid: sel.ownerUid,
+      profileId: int.parse(sel.profileId),
+      displayName: displayName,
+      avatar: avatar,
+      mode: mode,
+    );
+    _handleResult(result, 'tutorEditProfile');
+  }
+
+  @override
+  Future<void> deleteCompletion(String completionId) async {
+    final sel = _selection;
+    if (sel == null) return _delegate.deleteCompletion(completionId);
+
+    final result = await _writeService.resetCompletion(
+      grantId: sel.grantId,
+      ownerUid: sel.ownerUid,
+      profileId: int.parse(sel.profileId),
+      completionId: completionId,
+    );
+    _handleResult(result, 'tutorResetCompletion');
+  }
+
+  // ── Pass-through (not tutored-routed) ─────────────────────────────────────
 
   @override
   Future<void> pushUiPreferencesSnapshot() =>
@@ -226,16 +295,8 @@ class TutoredWriteRouter implements SyncWriteFacade {
   );
 
   @override
-  Future<void> pushLearnerProfile(Map<String, dynamic> profile) =>
-      _delegate.pushLearnerProfile(profile);
-
-  @override
   Future<void> deleteLearnerProfile(int profileId) =>
       _delegate.deleteLearnerProfile(profileId);
-
-  @override
-  Future<void> deleteCompletion(String completionId) =>
-      _delegate.deleteCompletion(completionId);
 
   // ── Helper ─────────────────────────────────────────────────────────────────
 

@@ -70,4 +70,12 @@ abstract class SyncWriteFacade {
   /// from `curriculum_id`, `day_of_week`, and `track_id` so repeated writes
   /// for the same composite key are idempotent.
   Future<void> pushStudyDayConfig(Map<String, dynamic> payload);
+
+  /// Delete a completion document from Firestore by its Firestore doc id.
+  ///
+  /// Used by the tutor reset-completion path (TutoredWriteRouter → CF). Own-
+  /// profile code does not use this method — individual completion deletes are
+  /// not a supported own-user operation; the outbox implementation is a no-op
+  /// guard that should never be reached.
+  Future<void> deleteCompletion(String completionId);
 }

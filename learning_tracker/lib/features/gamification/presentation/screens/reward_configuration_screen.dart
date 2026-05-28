@@ -13,6 +13,7 @@ import 'package:learning_tracker/features/gamification/presentation/widgets/avat
 import 'package:learning_tracker/features/gamification/presentation/widgets/manage_rewards_list.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/reward_config_header.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/reward_form.dart';
+import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 const Color _kNavy = Color(0xFF00218D);
@@ -127,7 +128,24 @@ class _RewardConfigurationScreenState
                       Navigator.pop(ctx);
                       await _confirmDelete(m, l10n);
                     },
-                    onToggle: (m) => notifier.toggleEnabled(m),
+                    onToggle: (m) async {
+                      try {
+                        await notifier.toggleEnabled(m);
+                      } on TutorWriteException catch (e) {
+                        if (!mounted) return;
+                        if (e.code == 'permission-denied') {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                AppLocalizations.of(
+                                  context,
+                                )!.tutorPermissionDenied,
+                              ),
+                            ),
+                          );
+                        }
+                      }
+                    },
                   ),
                 ),
               ],
@@ -160,15 +178,37 @@ class _RewardConfigurationScreenState
       ),
     );
     if (go != true || !mounted) return;
-    await ref
-        .read(rewardConfigControllerProvider.notifier)
-        .deleteMilestone(milestone);
+    try {
+      await ref
+          .read(rewardConfigControllerProvider.notifier)
+          .deleteMilestone(milestone);
+    } on TutorWriteException catch (e) {
+      if (!mounted) return;
+      if (e.code == 'permission-denied') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.tutorPermissionDenied),
+          ),
+        );
+      }
+    }
   }
 
   Future<void> _saveReward(AppLocalizations l10n) async {
-    final result = await ref
-        .read(rewardConfigControllerProvider.notifier)
-        .saveReward();
+    final RewardSaveResult result;
+    try {
+      result = await ref
+          .read(rewardConfigControllerProvider.notifier)
+          .saveReward();
+    } on TutorWriteException catch (e) {
+      if (!mounted) return;
+      if (e.code == 'permission-denied') {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.tutorPermissionDenied)));
+      }
+      return;
+    }
     if (!mounted) return;
 
     switch (result) {

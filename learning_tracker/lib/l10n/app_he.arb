@@ -530,6 +530,7 @@
   "tutorCannotMarkLiveCompletion": "מדריכים אינם יכולים לסמן השלמות חיות",
   "tutorWriteForbiddenTitle": "פעולה לא מורשית",
   "tutorWriteForbiddenMessage": "מדריכים אינם יכולים לסמן השלמות חיות. פעולה זו מזכה את הרצף והפרסים של הילד, ושמורה להורה או לילד.",
+  "tutorPermissionDenied": "אין לך הרשאה לבצע עריכה זו",
   "addProfile": "הוספת פרופיל",
   "createProfile": "יצירת פרופיל",
   "enterNameHint": "הזינו שם",

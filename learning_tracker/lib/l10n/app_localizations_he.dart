@@ -1091,6 +1091,9 @@ class AppLocalizationsHe extends AppLocalizations {
       'מדריכים אינם יכולים לסמן השלמות חיות. פעולה זו מזכה את הרצף והפרסים של הילד, ושמורה להורה או לילד.';
 
   @override
+  String get tutorPermissionDenied => 'אין לך הרשאה לבצע עריכה זו';
+
+  @override
   String get addProfile => 'הוספת פרופיל';
 
   @override

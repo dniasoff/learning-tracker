@@ -95,6 +95,7 @@ final syncWriteFacadeProvider = Provider<SyncWriteFacade?>((ref) {
     delegate: outboxFacade,
     writeService: ref.watch(tutorWriteServiceProvider),
     selection: tutoredSelection,
+    gamificationSnapshotBuilder: outboxFacade.buildGamificationSnapshot,
   );
 });
 

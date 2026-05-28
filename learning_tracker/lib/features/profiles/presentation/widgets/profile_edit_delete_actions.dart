@@ -7,6 +7,7 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_st
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/profile_avatar.dart';
+import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Canonical edit-profile flow.
@@ -31,11 +32,22 @@ Future<void> editProfileFlow(
   if (result == null) return;
 
   final repo = ref.read(profileRepositoryProvider);
-  await repo.updateProfile(
-    id: profile.id,
-    displayName: result.name,
-    avatarIndex: result.avatar,
-  );
+  try {
+    await repo.updateProfile(
+      id: profile.id,
+      displayName: result.name,
+      avatarIndex: result.avatar,
+    );
+  } on TutorWriteException catch (e) {
+    if (context.mounted && e.code == 'permission-denied') {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)!.tutorPermissionDenied),
+        ),
+      );
+    }
+    return;
+  }
   ref.invalidate(profileListProvider);
   ref.invalidate(profileListStreamProvider);
   ref.invalidate(selectedProfileProvider);

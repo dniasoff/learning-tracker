@@ -118,20 +118,13 @@ class OutboxSyncWriteFacade implements SyncWriteFacade, PointsSyncSink {
     {'profile_id': profileId},
   );
 
-  /// Build the gamification snapshot from local DB + [RewardMilestoneService]
-  /// and enqueue it for push.
+  /// Build the gamification snapshot map from local DB + [RewardMilestoneService].
   ///
-  /// Sets the local `gamification_settings_updated_at_ms_p$profileId`
-  /// SharedPreferences timestamp before enqueuing (matches [SyncEngine]
-  /// behaviour so LWW checks stay consistent).
-  @override
-  Future<void> pushGamificationSettingsSnapshot() async {
+  /// Extracted so [TutoredWriteRouter] can call this to get the payload before
+  /// forwarding it to the matching tutorUpdateGamificationSettings CF without
+  /// re-enqueuing to the outbox (which the tutored-profile guard would drop).
+  Future<Map<String, dynamic>> buildGamificationSnapshot() async {
     final now = _clock.nowUtc();
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(
-      '$_gamificationUpdatedAtMsKeyPrefix$_profileId',
-      now.millisecondsSinceEpoch,
-    );
 
     final pointRows = await (_database.select(
       _database.pointConfigs,
@@ -154,7 +147,7 @@ class OutboxSyncWriteFacade implements SyncWriteFacade, PointsSyncSink {
             .getSingle();
     final totalPointsSum = totalPointsRow.read(totalPointsExpr) ?? 0;
 
-    final payload = <String, dynamic>{
+    return <String, dynamic>{
       'schema_version': 3,
       'updated_at': now.toIso8601String(),
       'points_config': pointRows
@@ -171,6 +164,24 @@ class OutboxSyncWriteFacade implements SyncWriteFacade, PointsSyncSink {
       'reward_settings': rewardPayload,
       'lifetime_stats': {'total_points_from_completions': totalPointsSum},
     };
+  }
+
+  /// Build the gamification snapshot from local DB + [RewardMilestoneService]
+  /// and enqueue it for push.
+  ///
+  /// Sets the local `gamification_settings_updated_at_ms_p$profileId`
+  /// SharedPreferences timestamp before enqueuing (matches [SyncEngine]
+  /// behaviour so LWW checks stay consistent).
+  @override
+  Future<void> pushGamificationSettingsSnapshot() async {
+    final now = _clock.nowUtc();
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(
+      '$_gamificationUpdatedAtMsKeyPrefix$_profileId',
+      now.millisecondsSinceEpoch,
+    );
+
+    final payload = await buildGamificationSnapshot();
 
     await _enqueue(
       OutboxEntityKind.gamificationSettings,
@@ -386,6 +397,12 @@ class OutboxSyncWriteFacade implements SyncWriteFacade, PointsSyncSink {
   @override
   Future<void> pushStudyDayConfig(Map<String, dynamic> payload) =>
       enqueueStudyDayConfig(payload);
+
+  /// Own-profile code never deletes individual completions — this method exists
+  /// only so TutoredWriteRouter can call it on the delegate in non-tutored mode.
+  /// In practice the router intercepts the call before delegation.
+  @override
+  Future<void> deleteCompletion(String completionId) async {}
 
   // ── WS9 Wave-B (C#2) — points spend economy (PointsSyncSink) ────────────────
 

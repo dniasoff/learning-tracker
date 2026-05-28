@@ -1102,6 +1102,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Tutors cannot mark live forward completions. This action would credit the child\'s streak and rewards, which is reserved for the parent or child.';
 
   @override
+  String get tutorPermissionDenied =>
+      "You don't have permission to make this edit";
+
+  @override
   String get addProfile => 'Add Profile';
 
   @override

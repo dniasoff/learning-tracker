@@ -2021,6 +2021,12 @@ abstract class AppLocalizations {
   /// **'Tutors cannot mark live forward completions. This action would credit the child\'s streak and rewards, which is reserved for the parent or child.'**
   String get tutorWriteForbiddenMessage;
 
+  /// No description provided for @tutorPermissionDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'You don\'t have permission to make this edit'**
+  String get tutorPermissionDenied;
+
   /// No description provided for @addProfile.
   ///
   /// In en, this message translates to:
