@@ -60,20 +60,41 @@ Plan: `tutor-edit-propagation-plan.md` · Log: `tutor-edit-propagation-log.md`.
 
 ---
 
-## Wave-2 fix-agents (must land before P2 deploy)
+## Wave-2 fix-agents (ALL LANDED — make ci GREEN)
 
-### F1 — onReorder → onReorderItem migration (CI unblock) — in_progress
-- [ ] 4 call sites: `track_learning_order_screen.dart:90,118`, `learning_order_screen.dart:115`, `epic_27_story_4_widget_golden_test.dart:262`
-- [ ] Migrate API + remove any double-correction `if (oldIndex < newIndex) newIndex -= 1;` in handlers
-- [ ] `make ci` GREEN
+### F1 — onReorder → onReorderItem migration (CI unblock) — **done** (swept into commit `06998374`)
+- [x] 4 call sites migrated; manual `newIndex` adjustment removed to avoid double-correction
 
-### F2 — `pushProfileProgram` interface + route + caller refactor — in_progress
-- [ ] Add `pushProfileProgram(payload)` to `SyncWriteFacade` interface
-- [ ] Implement in `OutboxSyncWriteFacade` (delegate to `enqueueProfileProgram`)
-- [ ] Route in `TutoredWriteRouter` → `tutorSetProfileProgram` CF
-- [ ] Refactor `edit_track_screen.dart:330` + `TrackCreationService` callers to use `syncWriteFacadeProvider.pushProfileProgram`
-- [ ] Tests proving tutored→CF / non-tutored→delegate / 7-kind isolation
-- [ ] Make `tutorSetProfileProgram` CF REACHABLE
+### F2 — `pushProfileProgram` interface + route + caller refactor — **done** (commits `06998374` + `b31914a4`)
+- [x] `pushProfileProgram(payload)` added to `SyncWriteFacade` interface
+- [x] Implemented in `OutboxSyncWriteFacade` (delegates to `enqueueProfileProgram`)
+- [x] Routed in `TutoredWriteRouter` → `tutorSetProfileProgram` CF
+- [x] `edit_track_screen.dart:328` + `TrackCreationService` callers refactored
+- [x] Tests proving tutored→CF / non-tutored→delegate / 7-kind isolation; fake delegate updated in `s2_entity_parity_test.dart`
+- [x] **`tutorSetProfileProgram` CF is now REACHABLE**
+
+### F3 — Auth-watch root cause fix — **done** (commit `25e39be2`)
+- [x] Moved `authStateProvider` watch from `ActiveTutoredProfileSelection.build` + `ResolvedTutoredLocalProfileId.build` to `AppShellScreen` `ref.listen`
+- [x] Account-switch reset behaviour preserved + tested
+- [x] **211 → 53 test failures**
+
+### F4 — ListTile/Material wrapping fix — **done** (commit `ca3a038f`)
+- [x] Wrapped ListTiles in `Material(color: transparent)` inside `_SurfaceCard`/`_SettingsGroupCard` and `ProfileSwitcherSheet` rows
+- [x] **Real prod UI bug fixed** (ink splashes were invisible on device, not just in tests)
+- [x] ~30+ widget test failures resolved
+
+### F5 — Goal entity snake_case test assertion fix — **done** (commit `461e2284`)
+- [x] Updated 3 toFirestore assertions in `goal_entity_test.dart` to snake_case (`goal_type`, `pace_value`, `pace_unit`, `target_date`)
+- [x] Note: `pacePeriod` maps to `pace_unit` (S2's mapping was correct)
+
+### F6 — Mop-up (tutored_pull_isolation + T5.lifecycle wipe + drift shader + profile_switcher_sheet_test + track_detail + epic_16) — **done** (commit `7c0850f3`)
+- [x] **BONUS BUG FIX:** `wipeAllMirrors` was silently no-op after polish `7e5f6eb5` because `getProfilesByAccount` excludes mirrors — added `getTutoredMirrorsForAccount` DAO method + fixed `TutoredMirrorWipeService`. Data-isolation HIGH for V2.
+- [x] Drift shader stale-cache deleted (`build/unit_test_assets/shaders/ink_sparkle.frag`) — root cause of ~48 widget failures (format version mismatch)
+- [x] `profile_switcher_sheet_test` `authStateProvider` override added
+- [x] `track_detail_screen` Material wrap
+- [x] `epic_16_pace_dashboard_test` snake_case fix
+
+### final `make ci` — **GREEN** (6062 passed / 125 skipped / 0 failed / EXIT=0) verified at `/tmp/edit-prop-makeci-5.log`
 
 ### S5 — Delta listeners + caching — pending
 - [ ] On entry (after the initial pull) attach Firestore listeners scoped to the child's collections via the parent-scoped gateway

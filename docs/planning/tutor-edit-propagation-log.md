@@ -135,7 +135,56 @@ Event types: `kickoff` · `verify` · `dispatch` · `sync` · `return` · `findi
 - **verdict:** **S2 PASS for stated scope** (the gap is a coordination issue, not an S2 failure). Task #2 → `completed`.
 - **next:** SendMessage S2 (verdict + R2-GOAL-TRACK-ID logged); await S4 at P2; dispatch fix-agent for `pushProfileProgram` after S4 commits; integrated P2 verification + functions deploy.
 
+## [2026-05-28] fix · F5 — goal_entity_test snake_case assertions
+- **scope:** Fix-Agent F5. Task #18. Updated 3 failing toFirestore assertions in `test/features/scheduler/domain/models/goal_entity_test.dart` to use snake_case keys matching S2's `GoalEntity.toFirestore()` output: `goalType`→`goal_type`, `paceValue`→`pace_value`, `pacePeriod`→`pace_unit`, `targetDate`→`target_date`. Note: `pacePeriod` maps to `pace_unit` in Firestore (field name mismatch by design).
+- **result:** All 19 tests in file green. Commit `461e2284`. `make ci` exit=2 but goal_entity_test failures absent — remaining failures belong to F4/F6 scope.
+
+## [2026-05-28] return · F6 — Mop-up COMPLETE — make ci GREEN
+- **scope:** Fix-Agent F6. Task #19.
+- **starting state:** 53 failures (edit-prop-makeci-4.log).
+- **root causes identified and fixed:**
+  - **Cluster A (tutored_pull_isolation):** `getProfilesByAccount` (polish `7e5f6eb5`) now excludes `isTutored==true` mirrors. Tests (a) re-entry and (c) own-profiles-untouched used it then filtered `.where(isTutored)` → always 0. Fixed: use `getTutoredProfile` for the tutored-row check; use `getProfilesByAccount.length` for own-profiles count.
+  - **T5.lifecycle wipeAllMirrors:** same root cause — `wipeAllMirrors` called `getProfilesByAccount` to collect grant IDs before deleting, getting 0 rows. Fixed: added `getTutoredMirrorsForAccount` to `ProfileDao`; `wipeAllMirrors` uses that instead.
+  - **Cluster B (Drift "multiple databases" + shader):** "multiple databases" was just a warning (not a failure). The actual ~48 failures were ALL from a stale `build/unit_test_assets/shaders/ink_sparkle.frag` cache (format version mismatch: engine expected 2, found 1). Fixed: deleted `build/unit_test_assets/` so shaders regenerate on next run.
+  - **profile_switcher_sheet_test:** `ProfileSwitcherSheet` added `authStateProvider` watch in polish `7e5f6eb5` but tests weren't updated. Added `authStateProvider.overrideWithValue` to `_wrap` helper and to the second inline `ProviderScope`.
+  - **track_detail_screen:** `ListTile` wrapped in `DecoratedBox` without a `Material` ancestor → Flutter debug assertion. Wrapped the `Column` in `Material(color: transparent, borderRadius: 24, clipBehavior: antiAlias)`.
+  - **epic_16_pace_dashboard_test:** `GoalEntity.toFirestore()` was migrated to snake_case by S2 but this test still used camelCase keys. Updated: `goalType→goal_type`, `paceValue→pace_value`, `pacePeriod→pace_unit`, `targetDate→target_date`.
+- **commits:** `7c0850f3` (6 files, +64/-20).
+- **final make ci:** `03:00 +6062 ~125: All tests passed!` — **EXIT=0. GREEN.**
+- **F4 note:** F4 had uncommitted changes in `profile_switcher_sheet.dart`, `settings_screen.dart`, `notifications_screen.dart` when F6 ran. Those changes do not cause failures (analyzer clean, no test regressions detected). F4 must commit their changes separately.
+
 ## [2026-05-28] kickoff · F1 — onReorder migration (CI unblock)
 - **scope:** Fix-Agent F1. Task #14. Migrate `onReorder` → `onReorderItem` in 4 call sites to clear `deprecated_member_use` fatal infos.
 - **analysis:** All 3 handler bodies (`_onReorderSedarim`, `_onReorderMasechtos`, `_onReorder`) contain `final adjustedNew = newIndex > oldIndex ? newIndex - 1 : newIndex;` — this manual index adjustment compensates for the old API passing the post-removal index. `onReorderItem` pre-adjusts, so the correction line must be REMOVED and `adjustedNew` replaced with `newIndex` directly. Test file's `_noOpReorder` is `void Function(int, int)` — correct signature for `onReorderItem`; just change the parameter name at the call site.
 - **next:** Apply all 4 changes, run `make analyze` + `make ci`; commit.
+
+## [2026-05-28 13:10] sync · WAVE 2 COMPLETE · make ci GREEN (6062 passed / 0 failed) · ready for P2 deploy
+- **scope:** orchestration · verifying F3 + F4 + F5 + F6 landed correctly; full integrated state ready for P2 deploy.
+- **journey from RED to GREEN:**
+  - **Initial state** (post-S4 + d954a41f format pass): `make ci` exit 2; 211 test failures. Daniel chose "fix all 211".
+  - **F3** (commit `25e39be2`) — root-cause fix: moved `authStateProvider` watch from `ActiveTutoredProfileSelection.build` + `ResolvedTutoredLocalProfileId.build` to a `ref.listen` in `AppShellScreen.build`. Result: **211 → 53 failures.** The polish commit's `7e5f6eb5` auth-watch had made every consumer of `activeProfileIdProvider` transitively materialize Firebase auth, breaking 158 tests.
+  - **F5** (commit `461e2284`) — 3 failures: updated `goal_entity_test.dart` camelCase assertions to snake_case to match S2's `toFirestore` normalization. Note: `pacePeriod` maps to `pace_unit` in Firestore (field name mismatch by design — S2 had this right).
+  - **F6** (commit `7c0850f3`) — 6 files, +64/-20. Cluster A (tutored_pull_isolation + T5.lifecycle wipeAllMirrors): same root cause — `getProfilesByAccount` excludes mirrors after polish `7e5f6eb5`, so tests + the wipeAllMirrors code that used it then filtered `.where(isTutored)` saw 0 rows. **Real bug discovered: `wipeAllMirrors` silently never wiped any mirror after the polish change** (data-isolation regression — F6 added `getTutoredMirrorsForAccount` DAO method + fixed `TutoredMirrorWipeService`). Cluster B (Drift "multiple databases" + ~48 shader failures): the ~48 widget failures were ALL caused by a stale `build/unit_test_assets/shaders/ink_sparkle.frag` cache (format version mismatch — engine expected v2, found v1); fixed by deleting `build/unit_test_assets/`. profile_switcher_sheet_test: added `authStateProvider.overrideWithValue` to `_wrap` helper (matched polish `7e5f6eb5`'s new auth watch in the sheet). track_detail_screen: wrapped ListTile column in `Material(color: transparent, borderRadius: 24, clipBehavior: antiAlias)`. epic_16_pace_dashboard_test: same snake_case update as F5.
+  - **F4** (commit `ca3a038f`) — 7 widget changes + 203-line restructure of `profile_switcher_sheet.dart`: wrapped ListTiles in `Material(color: transparent)` inside `_SurfaceCard`/`_SettingsGroupCard` and around bare ListTile rows in `ProfileSwitcherSheet`. Resolves the `ListTile background color or ink splashes may be invisible` Flutter assertion that was hitting ~30+ widget tests (and was ALSO invisible in production — a real UI bug, not just a test issue).
+  - **F1** (swept into F2's `06998374`) — 4 `onReorder` → `onReorderItem` migration; removed manual `newIndex` adjustment to avoid double-correction. Resolves the original analyze-blocking deprecation infos.
+  - **Final state:** `make ci` 6062 passed / 125 skipped / 0 failed / EXIT=0. **GREEN.** Independently verified at /tmp/edit-prop-makeci-5.log.
+- **BONUS findings (logged for V2):**
+  - **DATA-ISOLATION BUG (HIGH, pre-existing — discovered + fixed by F6):** `wipeAllMirrors` was silently no-op after polish `7e5f6eb5`. Could have allowed talmid mirror data to persist after grant revocation. Fixed via new `getTutoredMirrorsForAccount` DAO method.
+  - **R2-GOAL-TRACK-ID (HIGH, V2 candidate):** `GoalEntity` has no `trackId` field → `GoalMerger` skips rows. Pre-existing in own-device path. S2 surfaced; carry to V2 R2 review.
+- **WAVE 2 SCOPE DELIVERED:**
+  - S1: TutoredWriteRouter keystone — both facade chokepoints wired ✅
+  - S2: Outbox-provider refactors (2 of 3 + facade split) + goal snake_case parity + R2 parity tests ✅
+  - S3: 3 parity CFs (bookmark + profile_program + curriculum_scope) + TutorWriteService methods + bookmark routing ✅
+  - S4: Gamification/profile/completion routes + UI snackbar gating + l10n EN+HE + interface change (deleteCompletion) ✅
+  - S6: Profile-less tutor → picker (not wizard) ✅
+  - F1: onReorder migration (CI unblock) ✅
+  - F2: pushProfileProgram interface + route + caller refactor → `tutorSetProfileProgram` REACHABLE ✅
+  - F3: Auth-watch root cause → 158 test failures fixed ✅
+  - F4: ListTile/Material wrapping → 30+ test failures fixed + real prod UI bug fixed ✅
+  - F5: Goal entity snake_case test assertions → 3 failures fixed ✅
+  - F6: Mop-up + bonus wipeAllMirrors fix → final ~20 failures + 1 data-isolation bug ✅
+- **OPEN ITEMS for P2 verification:**
+  - **Functions deploy** (LIVE action) — `firebase deploy --only functions` from `learning_tracker/` — needs Daniel approval.
+  - **On-device verification** (Daniel sanity-checks): tutor enters talmid → adds a track (with enrolment) → confirm `bookmark`, `curriculum_tracks`, `stage_definitions`, `profile_program`, `study_day_configs`, `goals`, `gamification_settings`, `learner_profile` (rename) all land in `users/{parentUid}/learner_profiles/{profileId}/…` on live Firestore AND show on parent's app on next sync. Restricted-grant tutor → blocked via permission-denied snackbar.
+  - **`tutorUpsertCurriculumScope` UNREACHABLE** (acknowledged): the client doesn't push `curriculum_scope` to Firestore at all (pre-existing; parent doesn't either). CF kept as future-proofing; not exercised at P2.
+- **next:** acknowledge fix-agents; brief Daniel; ASK Daniel deploy decision (we deploy via teammate vs Daniel deploys directly).
