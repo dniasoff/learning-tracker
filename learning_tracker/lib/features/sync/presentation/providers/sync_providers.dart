@@ -109,9 +109,23 @@ final syncWriteFacadeProvider = Provider<SyncWriteFacade?>((ref) {
 /// returned by [syncWriteFacadeProvider] are NOT shared on purpose: each
 /// provider builds its own facade so widening the surface here cannot
 /// accidentally retire the `SyncWriteFacade` type on the other consumers.
+///
+/// R1-H1: returns `null` during a tutored session so the mirror profile id is
+/// never used as the outbox enqueue target.  Direct readers handle null
+/// gracefully; the isProfileTutored drain guard remains as the fallback.
 final outboxSyncWriteFacadeProvider = Provider<OutboxSyncWriteFacade?>((ref) {
   final authState = ref.watch(authStateProvider);
   if (!authState.isCloudBorn) return null;
+
+  // R1-H1: suppress the outbox sink entirely during a tutored session so the
+  // mirror profile id is never used as the outbox enqueue target.
+  final tutoredSelection = ref.watch(activeTutoredProfileSelectionProvider);
+  if (tutoredSelection != null) {
+    // Clear any previously wired sink so the DAO does not retain a stale
+    // facade from before the tutored session started.
+    ref.read(userDatabaseProvider).pointsBalanceDao.syncSink = null;
+    return null;
+  }
 
   final database = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);

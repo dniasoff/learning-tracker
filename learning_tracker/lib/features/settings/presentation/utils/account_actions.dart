@@ -24,6 +24,8 @@ import 'package:learning_tracker/features/profiles/presentation/providers/profil
 import 'package:learning_tracker/features/settings/presentation/providers/account_management_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/delete_account_dialog.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/reauthenticate_dialog.dart';
+import 'package:learning_tracker/features/tutoring/tutoring.dart'
+    show activeTutoredProfileSelectionProvider;
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -158,8 +160,13 @@ Future<void> showSignOutConfirmation(
     // still have the accountId and the DB handle.
     final accountId = ref.read(currentAccountIdProvider);
     final db = ref.read(userDatabaseProvider);
+    // R4-H2: pass onWipe so exit() fires even when AppShell is not mounted.
+    // The keepAlive tutoredListenerSupervisorProvider would otherwise keep
+    // subscriptions alive indefinitely if AppShell is not mounted at sign-out.
     await TutoredMirrorWipeService(
       profileDao: db.profileDao,
+      onWipe: (_) =>
+          ref.read(activeTutoredProfileSelectionProvider.notifier).exit(),
     ).wipeAllMirrors(accountId);
 
     final service = ref.read(accountManagementServiceProvider);

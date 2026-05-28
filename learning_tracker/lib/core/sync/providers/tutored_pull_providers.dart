@@ -40,6 +40,7 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_pr
 TutoredPullService buildTutoredPullService({
   required Ref ref,
   required String parentUid,
+  TutoredMirrorWipeService? wipeService,
 }) => _build(
   hasFirebaseSession: ref.read(authRepositoryProvider).currentUser != null,
   gateway: FirestoreGatewayImpl(
@@ -49,6 +50,7 @@ TutoredPullService buildTutoredPullService({
   ),
   database: ref.read(userDatabaseProvider),
   mergeRouter: ref.read(mergeRouterProvider),
+  wipeService: wipeService,
 );
 
 /// Variant that accepts a [WidgetRef] (from [ConsumerWidget] / [ConsumerState]
@@ -56,6 +58,7 @@ TutoredPullService buildTutoredPullService({
 TutoredPullService buildTutoredPullServiceFromWidget({
   required WidgetRef ref,
   required String parentUid,
+  TutoredMirrorWipeService? wipeService,
 }) => _build(
   hasFirebaseSession: ref.read(authRepositoryProvider).currentUser != null,
   gateway: FirestoreGatewayImpl(
@@ -65,6 +68,7 @@ TutoredPullService buildTutoredPullServiceFromWidget({
   ),
   database: ref.read(userDatabaseProvider),
   mergeRouter: ref.read(mergeRouterProvider),
+  wipeService: wipeService,
 );
 
 TutoredPullService _build({

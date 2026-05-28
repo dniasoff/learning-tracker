@@ -21,6 +21,9 @@
 //   own namespace is never subscribed to here; the own-data ListenerSupervisor
 //   runs independently via SyncOrchestrator.
 
+import 'dart:async';
+
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/sync/listener_supervisor.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
@@ -147,13 +150,21 @@ class TutoredListenerSupervisor {
 
     if (rows.isEmpty) return;
 
-    // Fire-and-forget: listeners are best-effort; the initial pull is
-    // authoritative. Errors are silently dropped here — callers that need
-    // error visibility should subclass or wrap.
-    _resolveDispatcher().dispatch(
-      profileId: localProfileId,
-      kind: kind,
-      rows: rows,
+    // R4-M1: fire-and-forget with error logging. Listeners are best-effort;
+    // the initial pull is authoritative. Errors were previously silently
+    // dropped — now logged so merge failures are observable.
+    unawaited(
+      _resolveDispatcher()
+          .dispatch(profileId: localProfileId, kind: kind, rows: rows)
+          .catchError((Object err, StackTrace st) {
+        AppLogger.instance.warning(
+          event: 'tutored_listener_merge_error',
+          fields: {'kind': kind, 'profileId': localProfileId},
+          exception: err,
+          stackTrace: st,
+        );
+        return MergeOutcome.halt;
+      }),
     );
   }
 }

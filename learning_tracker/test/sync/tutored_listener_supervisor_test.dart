@@ -116,6 +116,17 @@ class _DrivenChildGateway implements FirestoreGateway {
   );
 }
 
+/// A dispatcher that always throws on dispatch — used to test the R4-M1
+/// catchError path in TutoredListenerSupervisor._onEvent.
+class _ThrowingDispatcher implements MergeDispatcher {
+  @override
+  Future<MergeOutcome> dispatch({
+    required int profileId,
+    required String kind,
+    required List<Map<String, dynamic>> rows,
+  }) => Future<MergeOutcome>.error(StateError('intentional test error'));
+}
+
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 void main() {
@@ -314,6 +325,34 @@ void main() {
         }
 
         await supervisor.detach();
+      },
+    );
+
+    // (G) R4-M1: a failing dispatch must not crash (catchError is wired) ──────
+    test(
+      '(G) R4-M1: dispatch error is swallowed by catchError (no unhandled exception)',
+      () async {
+        final throwingSupervisor = TutoredListenerSupervisor(
+          dispatcher: _ThrowingDispatcher(),
+        );
+        final gateway = _DrivenChildGateway();
+        await throwingSupervisor.attach(
+          localProfileId: 1,
+          gateway: gateway,
+          parentUid: 'parent-uid',
+          remoteProfileId: 'child-1',
+        );
+
+        // Emit a valid payload — dispatch will throw but must not cause an
+        // unhandled exception (the catchError in _onEvent absorbs it).
+        gateway.emitCollection('goals', [
+          {'firestore_id': 'g1', 'updated_at': DateTime.now().toIso8601String()},
+        ]);
+        // If catchError is missing this await would surface an unhandled error.
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+
+        // Reaching here means no crash — catchError is wired correctly.
+        await throwingSupervisor.detach();
       },
     );
 

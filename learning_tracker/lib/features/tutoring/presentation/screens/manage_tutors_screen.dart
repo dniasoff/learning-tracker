@@ -17,6 +17,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/sync/providers/tutored_pull_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
@@ -24,6 +25,7 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_pr
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -299,6 +301,16 @@ class _TutorGrantRowState extends ConsumerState<_TutorGrantRow> {
     try {
       await ref.read(revokeTutorGrantUseCaseProvider).call(grant: widget.grant);
       if (mounted) {
+        // R4-M3: wipe the mirror and exit the tutored session so listeners
+        // detach immediately rather than waiting for the next entry attempt.
+        final grantId = widget.grant.grantId;
+        unawaited(
+          buildTutoredMirrorWipeServiceFromWidget(
+            ref: ref,
+            onWipe: (_) =>
+                ref.read(activeTutoredProfileSelectionProvider.notifier).exit(),
+          ).wipeMirrorForGrant(grantId),
+        );
         ref.invalidate(outgoingTutorGrantsProvider(widget.childProfileId));
         // WS3.3g: fire-and-forget notification — tutor is notified of revocation.
         // Parent name from current auth user; falls back to 'Parent' if unavailable.

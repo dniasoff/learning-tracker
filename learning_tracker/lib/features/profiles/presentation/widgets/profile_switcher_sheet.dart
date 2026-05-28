@@ -15,6 +15,7 @@ import 'package:learning_tracker/features/profiles/presentation/providers/profil
 import 'package:learning_tracker/features/profiles/presentation/widgets/add_profile_dialog.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/profile_edit_delete_actions.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/tutored_children_section.dart';
+import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Opens the canonical profile switcher/manager bottom sheet.
@@ -204,6 +205,10 @@ class ProfileSwitcherSheet extends ConsumerWidget {
   /// guarantee the freshly-selected profile starts unelevated (no banner).
   void _switchProfile(BuildContext context, WidgetRef ref, int profileId) {
     Navigator.of(context).pop();
+    // R4-H1: exit any active tutored session before replacing the route.
+    // No UID change occurs on profile switch, so AppShell's auth-uid listener
+    // does not fire — we must call exit() explicitly here to detach listeners.
+    ref.read(activeTutoredProfileSelectionProvider.notifier).exit();
     // Drop any parent-mode elevation so the freshly-selected profile starts
     // in plain learning view (no banner). The PIN guard's per-(scope,profile)
     // cache re-prompts on the new profile automatically since the scope id

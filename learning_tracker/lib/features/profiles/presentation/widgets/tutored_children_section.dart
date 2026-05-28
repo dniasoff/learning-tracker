@@ -381,9 +381,16 @@ class _TutoredChildRow extends ConsumerWidget {
     }
 
     try {
+      // R4-M2: pass wipeService so permissionDenied clears the stale mirror
+      // row rather than leaving it until the next pull entry.
       final svc = buildTutoredPullServiceFromWidget(
         ref: ref,
         parentUid: selection.ownerUid,
+        wipeService: buildTutoredMirrorWipeServiceFromWidget(
+          ref: ref,
+          onWipe: (_) =>
+              ref.read(activeTutoredProfileSelectionProvider.notifier).exit(),
+        ),
       );
       final result = await svc.pull(
         accountId: accountId,
@@ -408,14 +415,24 @@ class _TutoredChildRow extends ConsumerWidget {
             ref: ref,
             parentUid: selection.ownerUid,
           );
-          unawaited(
-            ref.read(tutoredListenerSupervisorProvider).attach(
-              localProfileId: result.localProfileId,
-              gateway: gateway,
-              parentUid: selection.ownerUid,
-              remoteProfileId: selection.profileId,
-            ),
-          );
+          // R4-L4: wrap unawaited attach so synchronous throws are logged
+          // rather than silently swallowed.
+          try {
+            unawaited(
+              ref.read(tutoredListenerSupervisorProvider).attach(
+                localProfileId: result.localProfileId,
+                gateway: gateway,
+                parentUid: selection.ownerUid,
+                remoteProfileId: selection.profileId,
+              ),
+            );
+          } catch (e, st) {
+            AppLogger.instance.warning(
+              event: 'tutored_listener_attach_error',
+              exception: e,
+              stackTrace: st,
+            );
+          }
           dismissLoading();
           if (context.mounted) {
             unawaited(context.router.replaceAll([const AppShellRoute()]));
