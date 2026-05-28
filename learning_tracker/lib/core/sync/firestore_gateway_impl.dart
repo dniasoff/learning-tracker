@@ -1082,6 +1082,58 @@ class FirestoreGatewayImpl implements FirestoreGateway {
     return _normalizeRow({...data, 'firestore_id': snap.id});
   }
 
+  // ── D3/D5 — parent-scoped child listeners ────────────────────────────────
+
+  @override
+  Stream<ListenerSnapshot> listenToChildCollection({
+    required String parentUid,
+    required String remoteProfileId,
+    required String collection,
+    required String orderField,
+    int limit = kListenerPageSize,
+  }) {
+    final ref = _childCollection(parentUid, remoteProfileId, collection);
+    final bounded = orderField == FirestoreGateway.documentIdOrderField
+        ? ref.orderBy(FieldPath.documentId, descending: true).limit(limit)
+        : ref.orderBy(orderField, descending: true).limit(limit);
+    return bounded.snapshots().map((snapshot) {
+      final localOnly = <String>{};
+      for (final change in snapshot.docChanges) {
+        if (change.doc.metadata.hasPendingWrites) {
+          localOnly.add(change.doc.id);
+        }
+      }
+      final rows = snapshot.docs
+          .where(
+            (d) => !localOnly.contains(d.id) || !d.metadata.hasPendingWrites,
+          )
+          .map((d) => _normalizeRow({...d.data(), 'firestore_id': d.id}))
+          .toList(growable: false);
+      final isAtLimit = snapshot.docs.length >= limit;
+      return ListenerSnapshot(rows: rows, isAtLimit: isAtLimit);
+    });
+  }
+
+  @override
+  Stream<Map<String, dynamic>?> listenToChildDocument({
+    required String parentUid,
+    required String remoteProfileId,
+    required String collection,
+    required String docId,
+  }) {
+    final ref = _childCollection(
+      parentUid,
+      remoteProfileId,
+      collection,
+    ).doc(docId);
+    return ref.snapshots().map((s) {
+      if (!s.exists) return null;
+      final data = s.data();
+      if (data == null) return null;
+      return _normalizeRow({...data, 'firestore_id': s.id});
+    });
+  }
+
   // ── Tutor audit log reads (W6.13) ─────────────────────────────────────────
 
   @override

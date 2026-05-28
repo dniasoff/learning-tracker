@@ -269,6 +269,21 @@ class _RevokedGateway implements FirestoreGateway {
   Stream<ListenerSnapshot> listenToLearnerProfiles({int limit = 500}) =>
       const Stream.empty();
   @override
+  Stream<ListenerSnapshot> listenToChildCollection({
+    required String parentUid,
+    required String remoteProfileId,
+    required String collection,
+    required String orderField,
+    int limit = 500,
+  }) => const Stream.empty();
+  @override
+  Stream<Map<String, dynamic>?> listenToChildDocument({
+    required String parentUid,
+    required String remoteProfileId,
+    required String collection,
+    required String docId,
+  }) => const Stream.empty();
+  @override
   Stream<Map<String, dynamic>?> listenToDocument({
     required int profileId,
     required String collection,
@@ -779,6 +794,21 @@ class _ErrorGateway implements FirestoreGateway {
   @override
   Stream<ListenerSnapshot> listenToLearnerProfiles({int limit = 500}) =>
       const Stream.empty();
+  @override
+  Stream<ListenerSnapshot> listenToChildCollection({
+    required String parentUid,
+    required String remoteProfileId,
+    required String collection,
+    required String orderField,
+    int limit = 500,
+  }) => const Stream.empty();
+  @override
+  Stream<Map<String, dynamic>?> listenToChildDocument({
+    required String parentUid,
+    required String remoteProfileId,
+    required String collection,
+    required String docId,
+  }) => const Stream.empty();
   @override
   Stream<Map<String, dynamic>?> listenToDocument({
     required int profileId,

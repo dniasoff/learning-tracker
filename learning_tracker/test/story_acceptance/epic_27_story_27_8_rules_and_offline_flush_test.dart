@@ -875,6 +875,23 @@ class _ToggleableFakeGateway implements FirestoreGateway {
       const Stream.empty();
 
   @override
+  Stream<ListenerSnapshot> listenToChildCollection({
+    required String parentUid,
+    required String remoteProfileId,
+    required String collection,
+    required String orderField,
+    int limit = 500,
+  }) => const Stream.empty();
+
+  @override
+  Stream<Map<String, dynamic>?> listenToChildDocument({
+    required String parentUid,
+    required String remoteProfileId,
+    required String collection,
+    required String docId,
+  }) => const Stream.empty();
+
+  @override
   Future<List<Map<String, dynamic>>> fetchLearnerProfiles() async =>
       const <Map<String, dynamic>>[];
 

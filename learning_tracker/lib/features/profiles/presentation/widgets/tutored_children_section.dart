@@ -402,6 +402,20 @@ class _TutoredChildRow extends ConsumerWidget {
           ref
               .read(resolvedTutoredLocalProfileIdProvider.notifier)
               .resolve(result.localProfileId);
+          // D3/D5 — attach delta listeners after the initial pull so the
+          // talmid view stays live without full re-pulls.
+          final gateway = buildTutoredGateway(
+            ref: ref,
+            parentUid: selection.ownerUid,
+          );
+          unawaited(
+            ref.read(tutoredListenerSupervisorProvider).attach(
+              localProfileId: result.localProfileId,
+              gateway: gateway,
+              parentUid: selection.ownerUid,
+              remoteProfileId: selection.profileId,
+            ),
+          );
           dismissLoading();
           if (context.mounted) {
             unawaited(context.router.replaceAll([const AppShellRoute()]));

@@ -291,6 +291,37 @@ abstract class FirestoreGateway {
     required String docId,
   });
 
+  // ── D3/D5 — parent-scoped child listeners ────────────────────────────────
+
+  /// Open a real-time stream of a child's subcollection at
+  /// `users/{parentUid}/learner_profiles/{remoteProfileId}/{collection}/`.
+  ///
+  /// Used by [TutoredListenerSupervisor] to stream delta changes from the
+  /// parent's Firestore namespace into the tutor's local Drift mirror.
+  /// The payload shape matches [listenToCollection] (a [ListenerSnapshot]
+  /// with `rows` + `isAtLimit`).
+  ///
+  /// Returns [Stream.empty] when not authenticated.
+  Stream<ListenerSnapshot> listenToChildCollection({
+    required String parentUid,
+    required String remoteProfileId,
+    required String collection,
+    required String orderField,
+    int limit,
+  });
+
+  /// Open a real-time stream of a single document in a child's preference
+  /// subcollection at
+  /// `users/{parentUid}/learner_profiles/{remoteProfileId}/{collection}/{docId}`.
+  ///
+  /// Returns [Stream.empty] when not authenticated.
+  Stream<Map<String, dynamic>?> listenToChildDocument({
+    required String parentUid,
+    required String remoteProfileId,
+    required String collection,
+    required String docId,
+  });
+
   // ── W2.29 additions — stage_definitions/ collection ──────────────────────
 
   /// Push a single stage definition document to the `stage_definitions/`

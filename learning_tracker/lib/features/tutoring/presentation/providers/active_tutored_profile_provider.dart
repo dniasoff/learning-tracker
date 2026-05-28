@@ -12,6 +12,7 @@
 //   • Permission-gated UI — to determine available actions (via activeTutorPermissionsProvider)
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/sync/providers/tutored_pull_providers.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -39,10 +40,14 @@ class ActiveTutoredProfileSelection extends _$ActiveTutoredProfileSelection {
 
   /// Exit the talmid context (return to own profile).
   ///
-  /// Also clears the resolved synthetic local profile id so a subsequent
-  /// talmid entry starts from a clean slate.
+  /// Also clears the resolved synthetic local profile id and detaches all
+  /// tutored Firestore listeners so no subscriptions survive into the next
+  /// session (D3/D5 lifecycle contract).
   void exit() {
     ref.read(resolvedTutoredLocalProfileIdProvider.notifier).clear();
+    // D3/D5 — detach tutored listeners; fire-and-forget (detach is idempotent
+    // and safe even when nothing is attached).
+    ref.read(tutoredListenerSupervisorProvider).detach();
     state = null;
   }
 }
