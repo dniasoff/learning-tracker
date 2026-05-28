@@ -359,6 +359,27 @@ class _TutoredChildRow extends ConsumerWidget {
   ) async {
     final accountId = ref.read(currentAccountIdProvider);
 
+    // The pull is a network round-trip (a couple of seconds). Show a blocking
+    // progress indicator so the tap has immediate feedback instead of a dead
+    // gap before the talmid view appears.
+    var loadingShown = false;
+    if (context.mounted) {
+      loadingShown = true;
+      unawaited(
+        showDialog<void>(
+          context: context,
+          barrierDismissible: false,
+          builder: (_) => const Center(child: CircularProgressIndicator()),
+        ),
+      );
+    }
+    void dismissLoading() {
+      if (loadingShown && context.mounted) {
+        Navigator.of(context, rootNavigator: true).pop();
+        loadingShown = false;
+      }
+    }
+
     try {
       final svc = buildTutoredPullServiceFromWidget(
         ref: ref,
@@ -381,6 +402,7 @@ class _TutoredChildRow extends ConsumerWidget {
           ref
               .read(resolvedTutoredLocalProfileIdProvider.notifier)
               .resolve(result.localProfileId);
+          dismissLoading();
           if (context.mounted) {
             unawaited(context.router.replaceAll([const AppShellRoute()]));
           }
@@ -390,6 +412,7 @@ class _TutoredChildRow extends ConsumerWidget {
             fields: {'grantId': selection.grantId},
           );
           ref.read(activeTutoredProfileSelectionProvider.notifier).exit();
+          dismissLoading();
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -406,6 +429,7 @@ class _TutoredChildRow extends ConsumerWidget {
             fields: {'grantId': selection.grantId},
           );
           ref.read(activeTutoredProfileSelectionProvider.notifier).exit();
+          dismissLoading();
           if (context.mounted) {
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
@@ -424,6 +448,7 @@ class _TutoredChildRow extends ConsumerWidget {
         fields: {'error': e.toString()},
       );
       ref.read(activeTutoredProfileSelectionProvider.notifier).exit();
+      dismissLoading();
     }
   }
 }

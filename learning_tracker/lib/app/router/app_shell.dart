@@ -138,9 +138,12 @@ class AppShellScreen extends ConsumerWidget {
           );
         },
         bottomNavigationBuilder: (context, tabsRouter) {
-          // In parent mode or tutor mode: no bottom nav — navigation is via
-          // the ParentSettingsScreen rows (push) and the top switcher/exit bar.
-          if (parentModeActive || hasActiveTutoredProfiles) {
+          // Parent mode (own child, PIN-elevated) navigates via the
+          // ParentSettingsScreen rows, so it has no bottom nav. The TUTOR
+          // talmid view, by contrast, is the full parent-equivalent app and
+          // needs the standard tabs (Dashboard/Learn/Progress/Settings) to
+          // move between the talmid's surfaces.
+          if (parentModeActive) {
             return const SizedBox.shrink();
           }
           final l10n = AppLocalizations.of(context)!;

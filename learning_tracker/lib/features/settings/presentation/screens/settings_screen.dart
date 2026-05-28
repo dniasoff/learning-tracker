@@ -83,16 +83,16 @@ class SettingsScreen extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
           children: [
-            // Show profile header for own adult profiles AND for tutored
-            // sessions (tutor sees the talmid's profile in read-only context).
-            if (!isChildProfile || isTutorElevated) ...[
-              UserProfileHeaderCard(
-                user: user,
-                activeProfile: activeProfile,
-                surface: UserProfileHeaderSurface.settings,
-              ),
-              const SizedBox(height: 24),
-            ],
+            // Profile header is shown for EVERY profile (child, adult, tutored):
+            // it is the canonical learner + login-account switcher. Daniel
+            // requires children to be able to switch learner and login account
+            // from here too, so it is never hidden.
+            UserProfileHeaderCard(
+              user: user,
+              activeProfile: activeProfile,
+              surface: UserProfileHeaderSurface.settings,
+            ),
+            const SizedBox(height: 24),
             // ── DEVICE section (D2/WS4.settings) ──────────────────────────────
             // Device-scoped settings: applies to this physical device, shared by
             // every login and profile on it (OS permissions, location access).

@@ -17,21 +17,37 @@ class ProfileGuard extends AutoRouteGuard {
     required int? Function() getSelectedProfileId,
     required void Function(int) setSelectedProfileId,
     required int Function() getAccountId,
+    required bool Function() isTutoredSession,
   }) : _getDatabase = getDatabase,
        _getSelectedProfileId = getSelectedProfileId,
        _setSelectedProfileId = setSelectedProfileId,
-       _getAccountId = getAccountId;
+       _getAccountId = getAccountId,
+       _isTutoredSession = isTutoredSession;
 
   final UserDatabase Function() _getDatabase;
   final int? Function() _getSelectedProfileId;
   final void Function(int) _setSelectedProfileId;
   final int Function() _getAccountId;
+  final bool Function() _isTutoredSession;
 
   @override
   Future<void> onNavigation(
     NavigationResolver resolver,
     StackRouter router,
   ) async {
+    // Tutored session: the active profile is the synthetic talmid mirror,
+    // resolved via the tutored providers — NOT selectedProfileIdProvider (which
+    // stays null) and NOT one of the account's own profiles (the mirror is
+    // excluded from getProfilesByAccount). Without this short-circuit a pure
+    // tutor account (zero own profiles) would be bounced to the picker, and a
+    // tutor with own profiles would be forced onto an own profile instead of
+    // the talmid. Allow navigation straight through.
+    if (_isTutoredSession()) {
+      _log.debug(event: 'profile_guard_tutored_session_allow');
+      resolver.next();
+      return;
+    }
+
     // Check how many profiles exist (we need this list both to validate an
     // already-selected id and to auto-select / redirect when nothing is
     // selected). Per-account autoincrement IDs collide across DBs, so a

@@ -1,7 +1,5 @@
-import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
@@ -211,7 +209,7 @@ class _UserProfileHeaderCardState extends ConsumerState<UserProfileHeaderCard> {
                       ),
                     ],
                   ),
-                  if (showEmail) ...[
+                  if (showEmail)
                     Text(
                       user.email!,
                       style: theme.textTheme.bodySmall?.copyWith(
@@ -219,11 +217,6 @@ class _UserProfileHeaderCardState extends ConsumerState<UserProfileHeaderCard> {
                         fontSize: 16,
                       ),
                     ),
-                    if (widget.surface == UserProfileHeaderSurface.settings) ...[
-                      const SizedBox(height: 6),
-                      _AccountSwitchRow(email: user.email!),
-                    ],
-                  ],
                   if (authState.isLocalBorn) ...[
                     const SizedBox(height: 4),
                     const _NoBackupInlineText(),
@@ -406,42 +399,6 @@ class _LocalBornProfileRow extends ConsumerWidget {
     );
 
     return inner;
-  }
-}
-
-class _AccountSwitchRow extends StatelessWidget {
-  const _AccountSwitchRow({required this.email});
-  final String email;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    return InkWell(
-      onTap: () => context.pushRoute(const AccountPickerRoute()),
-      borderRadius: BorderRadius.circular(8),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 2),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(
-              Icons.swap_horiz_rounded,
-              size: 14,
-              color: AppColors.inkMidGrey,
-            ),
-            const SizedBox(width: 4),
-            Text(
-              l10n.switchAccount,
-              style: const TextStyle(
-                color: AppColors.inkMidGrey,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
   }
 }
 

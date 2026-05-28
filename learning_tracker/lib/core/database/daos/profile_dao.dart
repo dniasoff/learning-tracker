@@ -18,21 +18,31 @@ class ProfileDao extends DatabaseAccessor<UserDatabase> with _$ProfileDaoMixin {
   ProfileDao(super.db);
 
   /// Get all profiles for an account.
-  Future<List<LearnerProfile>> getProfilesByAccount(int accountId) => (select(
-    learnerProfiles,
-  )..where((t) => t.accountId.equals(accountId))).get();
+  ///
+  /// Excludes tutored-mirror rows (`isTutored == true`): those are read-only
+  /// copies of a talmid's data and are surfaced separately, never as one of
+  /// the account's own profiles.
+  Future<List<LearnerProfile>> getProfilesByAccount(int accountId) =>
+      (select(learnerProfiles)..where(
+            (t) => t.accountId.equals(accountId) & t.isTutored.equals(false),
+          ))
+          .get();
 
   /// Get a single profile by ID.
   Future<LearnerProfile?> getProfileById(int id) => (select(
     learnerProfiles,
   )..where((t) => t.id.equals(id))).getSingleOrNull();
 
-  /// Count profiles for an account.
+  /// Count profiles for an account (own profiles only — tutored mirrors
+  /// excluded).
   Future<int> countProfilesForAccount(int accountId) async {
     final count = countAll();
     final query = selectOnly(learnerProfiles)
       ..addColumns([count])
-      ..where(learnerProfiles.accountId.equals(accountId));
+      ..where(
+        learnerProfiles.accountId.equals(accountId) &
+            learnerProfiles.isTutored.equals(false),
+      );
     final result = await query.getSingle();
     return result.read(count) ?? 0;
   }
@@ -67,9 +77,14 @@ class ProfileDao extends DatabaseAccessor<UserDatabase> with _$ProfileDaoMixin {
   }
 
   /// Watch all profiles for an account.
-  Stream<List<LearnerProfile>> watchProfilesByAccount(int accountId) => (select(
-    learnerProfiles,
-  )..where((t) => t.accountId.equals(accountId))).watch();
+  ///
+  /// Excludes tutored-mirror rows (`isTutored == true`): those are surfaced in
+  /// the dedicated talmid section, never as one of the account's own profiles.
+  Stream<List<LearnerProfile>> watchProfilesByAccount(int accountId) =>
+      (select(learnerProfiles)..where(
+            (t) => t.accountId.equals(accountId) & t.isTutored.equals(false),
+          ))
+          .watch();
 
   // ── T1.isolation — outbox guard ─────────────────────────────────────────
 

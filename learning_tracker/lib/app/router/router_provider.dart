@@ -46,6 +46,8 @@ final routerProvider = Provider<AppRouter>((ref) {
       setSelectedProfileId: (id) =>
           ref.read(selectedProfileIdProvider.notifier).select(id),
       getAccountId: () => ref.read(currentAccountIdProvider),
+      isTutoredSession: () =>
+          ref.read(activeTutoredProfileSelectionProvider) != null,
     ),
     childModeGuard: ChildModeGuard(
       getDatabase: getDb,

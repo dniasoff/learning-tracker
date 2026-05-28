@@ -58,6 +58,7 @@ Future<AppRouter> _createAuthenticatedRouter() async {
       getSelectedProfileId: () => 1,
       setSelectedProfileId: (_) {},
       getAccountId: () => 1,
+      isTutoredSession: () => false,
     ),
     childModeGuard: ChildModeGuard(
       getDatabase: () => testDb,
@@ -90,6 +91,7 @@ Future<AppRouter> _createUnauthenticatedRouter() async {
       getSelectedProfileId: () => 1,
       setSelectedProfileId: (_) {},
       getAccountId: () => 1,
+      isTutoredSession: () => false,
     ),
     childModeGuard: ChildModeGuard(
       getDatabase: () => testDb,

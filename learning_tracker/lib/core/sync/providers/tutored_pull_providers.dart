@@ -18,10 +18,8 @@ import 'package:learning_tracker/core/sync/providers/firestore_instance_provider
 import 'package:learning_tracker/core/sync/providers/merge_router_provider.dart';
 import 'package:learning_tracker/core/sync/tutored_mirror_wipe_service.dart';
 import 'package:learning_tracker/core/sync/tutored_pull_service.dart';
-import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
-import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 
 /// Build a [TutoredPullService] scoped to [parentUid]'s Firestore namespace.
 ///
@@ -37,7 +35,7 @@ TutoredPullService buildTutoredPullService({
   required Ref ref,
   required String parentUid,
 }) => _build(
-  authState: ref.read(authStateProvider),
+  hasFirebaseSession: ref.read(authRepositoryProvider).currentUser != null,
   gateway: FirestoreGatewayImpl(
     firestore: ref.read(firebaseFirestoreProvider),
     authRepository: ref.read(authRepositoryProvider),
@@ -53,7 +51,7 @@ TutoredPullService buildTutoredPullServiceFromWidget({
   required WidgetRef ref,
   required String parentUid,
 }) => _build(
-  authState: ref.read(authStateProvider),
+  hasFirebaseSession: ref.read(authRepositoryProvider).currentUser != null,
   gateway: FirestoreGatewayImpl(
     firestore: ref.read(firebaseFirestoreProvider),
     authRepository: ref.read(authRepositoryProvider),
@@ -64,15 +62,22 @@ TutoredPullService buildTutoredPullServiceFromWidget({
 );
 
 TutoredPullService _build({
-  required AuthState authState,
+  required bool hasFirebaseSession,
   required FirestoreGatewayImpl gateway,
   required UserDatabase database,
   required MergeRouter mergeRouter,
   TutoredMirrorWipeService? wipeService,
 }) {
-  if (!authState.isCloudBorn) {
+  // The pull reads the PARENT's Firestore namespace; authorisation is by the
+  // tutor's live Firebase session (Firestore rules check request.auth.uid via
+  // hasActiveTutorAccess), NOT by the local app account's tier. Gating on
+  // authState.isCloudBorn was the wrong proxy: in a multi-account session the
+  // app tier can lag behind a valid Firebase session (the active account DB is
+  // mounted after auth-state restore), which would wrongly abort a pull that
+  // Firestore would have authorised. Require only a live Firebase session.
+  if (!hasFirebaseSession) {
     throw StateError(
-      'buildTutoredPullService called for a non-cloud-born account',
+      'buildTutoredPullService called without a Firebase session',
     );
   }
 

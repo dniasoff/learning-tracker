@@ -5,6 +5,7 @@
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/email/transactional_email_service.dart';
+import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
 import 'package:learning_tracker/features/tutoring/domain/services/tutor_notification_service.dart';
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_grant_use_cases.dart';
@@ -61,6 +62,12 @@ final outgoingTutorGrantsProvider =
 ///
 /// Returns all grants where the caller is the tutor (active + pending).
 final incomingTutorGrantsProvider = FutureProvider<List<TutorGrant>>((ref) {
+  // Re-resolve when the active login changes. Incoming grants are scoped to
+  // the signed-in tutor; this keepAlive cache must not survive an account
+  // switch, otherwise the previous account's talmidim leak through (e.g. a
+  // parent who is not a tutor would see the prior tutor account's talmid).
+  // Keyed on Firebase uid because the per-account DB `accounts.id` collides.
+  ref.watch(authStateProvider.select((s) => s.currentUser?.firebaseUid));
   final useCase = ref.watch(listIncomingGrantsUseCaseProvider);
   return useCase();
 });

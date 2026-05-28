@@ -12,6 +12,7 @@
 //   • Permission-gated UI — to determine available actions (via activeTutorPermissionsProvider)
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
@@ -26,7 +27,15 @@ part 'active_tutored_profile_provider.g.dart';
 @Riverpod(keepAlive: true)
 class ActiveTutoredProfileSelection extends _$ActiveTutoredProfileSelection {
   @override
-  TutoredProfileSelection? build() => null;
+  TutoredProfileSelection? build() {
+    // A tutored selection belongs to ONE tutor account. Reset it whenever the
+    // active login changes (account switch / sign-out), keyed on the account's
+    // Firebase uid — the per-account DB `accounts.id` collides at 1, so it is
+    // not a reliable switch signal. Without this, the keepAlive selection (and
+    // its "Tutor mode" bar) would leak into another account's session.
+    ref.watch(authStateProvider.select((s) => s.currentUser?.firebaseUid));
+    return null;
+  }
 
   /// Enter a talmid's context after the TutorPinEntryGate passes.
   void enter(TutoredProfileSelection selection) => state = selection;
@@ -70,7 +79,12 @@ final activeTutorPermissionsProvider = Provider<TutorPermissions?>((ref) {
 @Riverpod(keepAlive: true)
 class ResolvedTutoredLocalProfileId extends _$ResolvedTutoredLocalProfileId {
   @override
-  int? build() => null;
+  int? build() {
+    // Reset alongside the selection when the active login changes — the
+    // resolved mirror id is local to the tutor account that pulled it.
+    ref.watch(authStateProvider.select((s) => s.currentUser?.firebaseUid));
+    return null;
+  }
 
   void resolve(int localProfileId) => state = localProfileId;
 
