@@ -115,3 +115,22 @@ Event types: `kickoff` · `verify` · `dispatch` · `sync` · `return` · `findi
 - **commit hygiene:** clean commit, no in-flight sweep. ✅
 - **verdict:** **S3 PASS for stated scope.** Task #3 → `completed`. P2 NOT closed (awaiting S2 + S4 + integrated verification + functions deploy).
 - **next:** SendMessage S3 (verdict + HOLD on deploy); await S2 + S4. No polling.
+
+## [2026-05-28 10:42] return + verify · S2 (existing-entity wiring + outbox refactor + R2 parity) — PASS for scope, ONE persistent gap deferred to fix-agent
+- **scope:** sync/S2 · `S2-existing-entities` committed `9ccdcd61` (7 files, +740/-55) while I was writing S3's verdict. (Independent commits — no sweep, clean hygiene.)
+- **VERIFIED (S2's scope):**
+  - **Task A (outbox refactor) — 2 of 3 sites done:**
+    1. ✅ `study_day_config_screen.dart`: pushStudyDayConfig → `syncWriteFacadeProvider`.
+    2. ✅ `track_creation_service.dart` + `add_track_providers.dart`: facade SPLIT — `SyncWriteFacade?` (bookmark + study-day → routed for tutored) + `OutboxSyncWriteFacade?` (enqueueProfileProgram → outbox-only).
+    3. ⚠️ **`edit_track_screen.dart:330` LEFT AS-IS.** S2's commit message: "edit_track_screen:330 calls `enqueueProfileProgram` (outbox-specific, not on SyncWriteFacade interface); left on outboxSyncWriteFacadeProvider — S3 owns tutorSetProfileProgram." But S3 did NOT add `pushProfileProgram` to the interface or refactor the caller — S2 ↔ S3 coordination miss.
+  - **Task B (serialization parity):**
+    1. ✅ **`GoalEntity.toFirestore` normalized to snake_case** (`curriculum_id`, `target_percent`, `target_date`, `date_type`, `goal_type`, `pace_value`, `pace_unit`, `created_at`, `updated_at`) — matches `GoalMerger` field reads. `fromFirestore` accepts both keys for back-compat (good — back-compat at the read boundary, modern format at the write boundary).
+    2. 🔍 **R2-GOAL-TRACK-ID finding (HIGH, V2 candidate, out-of-scope):** `GoalEntity` has no `trackId` field → `GoalMerger` skips rows. **Same gap exists in the own-device outbox path** — so this is NOT a tutor regression, it's a pre-existing data-model issue. S2 documented it in the parity test and flagged out-of-scope. Carry into V2 R2 review.
+    3. ✅ **7 parity tests in `s2_entity_parity_test.dart`** (track / stage / study-day / goal × field names + doc-id conventions; goal camelCase leakage check; round-trip test). +290 lines added to `s1_tutored_write_router_test.dart`.
+  - **Bonus cleanup:** `profile_guard_test.dart` S6-introduced analyze warnings fixed (unused imports, underscore locals, `prefer_final_locals`). Added `deleteCompletion` no-op to test `_FakeDelegate` (S4 added `deleteCompletion` to `SyncWriteFacade` interface — important signal that S4 is actively reshaping the interface).
+- **PERSISTENT GAP — `tutorSetProfileProgram` STILL UNREACHABLE:** the `edit_track_screen.dart:330` site (and any tutor-track-creation re-anchor flow) still calls `outboxFacade?.enqueueProfileProgram` → blocked by `isProfileTutored` → STRANDED. The fix requires adding `pushProfileProgram(payload)` to `SyncWriteFacade` + impl in `OutboxSyncWriteFacade` (delegate to `enqueueProfileProgram`) + route in `TutoredWriteRouter` → `_writeService.setProfileProgram` + refactoring `edit_track_screen.dart:330` (and possibly other callers). **Decision: dispatch a fix-agent AFTER S4 commits**, so the work doesn't conflict with S4's in-flight router changes. Track as a Wave-2 fix, NOT V3 (must land before P2 deploy/verification).
+- **PERSISTENT GAP — `tutorUpsertCurriculumScope` STILL UNREACHABLE:** the client doesn't push `curriculum_scope` to Firestore at all (pre-existing — also true for parents). **Decision: leave the CF as future-proofing; do NOT add a full push path in this wave** (would balloon scope into a sync-pipeline change). Document in P2 report.
+- **`make ci`** not run by S2 (correct — reserved for the P2 integrated gate with S4).
+- **commit hygiene:** clean commit; no in-flight sweep. ✅
+- **verdict:** **S2 PASS for stated scope** (the gap is a coordination issue, not an S2 failure). Task #2 → `completed`.
+- **next:** SendMessage S2 (verdict + R2-GOAL-TRACK-ID logged); await S4 at P2; dispatch fix-agent for `pushProfileProgram` after S4 commits; integrated P2 verification + functions deploy.
