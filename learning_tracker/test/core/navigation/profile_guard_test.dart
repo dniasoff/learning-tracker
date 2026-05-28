@@ -28,15 +28,17 @@ class MockStackRouter extends Mock implements StackRouter {}
 class _FakePageRouteInfo extends Fake implements PageRouteInfo {}
 
 Future<int> _insertOwnProfile(UserDatabase db, {required int accountId}) {
-  return db.into(db.learnerProfiles).insert(
-    LearnerProfilesCompanion.insert(
-      accountId: accountId,
-      displayName: 'Own Learner',
-      mode: 'adult',
-      createdAt: DateTimeFactory.nowUtc(),
-      updatedAt: DateTimeFactory.nowUtc(),
-    ),
-  );
+  return db
+      .into(db.learnerProfiles)
+      .insert(
+        LearnerProfilesCompanion.insert(
+          accountId: accountId,
+          displayName: 'Own Learner',
+          mode: 'adult',
+          createdAt: DateTimeFactory.nowUtc(),
+          updatedAt: DateTimeFactory.nowUtc(),
+        ),
+      );
 }
 
 void main() {
@@ -120,19 +122,21 @@ void main() {
       verify(() => resolver.next(false)).called(1);
     });
 
-    test('routes to ProfilePickerRoute — same path for profile-less tutor',
-        () async {
-      // Pure tutor: 0 own profiles, tutored session NOT yet active (before
-      // they select a talmid). The picker shows TutoredChildrenSection so they
-      // can enter without creating a learner profile.
-      await seedAccount(db);
-      final guard = makeGuard();
+    test(
+      'routes to ProfilePickerRoute — same path for profile-less tutor',
+      () async {
+        // Pure tutor: 0 own profiles, tutored session NOT yet active (before
+        // they select a talmid). The picker shows TutoredChildrenSection so they
+        // can enter without creating a learner profile.
+        await seedAccount(db);
+        final guard = makeGuard();
 
-      await guard.onNavigation(resolver, router);
+        await guard.onNavigation(resolver, router);
 
-      verify(() => router.replace(const ProfilePickerRoute())).called(1);
-      verify(() => resolver.next(false)).called(1);
-    });
+        verify(() => router.replace(const ProfilePickerRoute())).called(1);
+        verify(() => resolver.next(false)).called(1);
+      },
+    );
   });
 
   // ── Branch 3: count≥1 own profiles ──────────────────────────────────────────

@@ -104,18 +104,24 @@ void main() {
       );
     });
 
-    test('completions block denies update from non-owners and denies delete', () {
-      final block = _extractRuleBlock(rules, 'completions/{completionId}');
-      // Update must be gated by isOwner(uid) — either as a combined
-      // "create, update" or a separate rule. A tutor (uid ≠ profileId owner)
-      // always fails isOwner(uid), so no tutor can update a completion.
-      expect(
-        block,
-        anyOf(contains('allow update: if false'), contains('allow create, update: if isOwner')),
-        reason: 'completions update MUST be owner-only or explicitly denied.',
-      );
-      expect(block, contains('allow delete: if false'));
-    });
+    test(
+      'completions block denies update from non-owners and denies delete',
+      () {
+        final block = _extractRuleBlock(rules, 'completions/{completionId}');
+        // Update must be gated by isOwner(uid) — either as a combined
+        // "create, update" or a separate rule. A tutor (uid ≠ profileId owner)
+        // always fails isOwner(uid), so no tutor can update a completion.
+        expect(
+          block,
+          anyOf(
+            contains('allow update: if false'),
+            contains('allow create, update: if isOwner'),
+          ),
+          reason: 'completions update MUST be owner-only or explicitly denied.',
+        );
+        expect(block, contains('allow delete: if false'));
+      },
+    );
   });
 
   // ── 2. Owner positive path (regression guard) ───────────────────────────

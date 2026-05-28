@@ -223,8 +223,9 @@ class UserDatabase extends _$UserDatabase {
               columnTransformer: {
                 learnerProfiles.isTutored: const CustomExpression('0'),
                 learnerProfiles.tutorParentUid: const CustomExpression('NULL'),
-                learnerProfiles.tutorRemoteProfileId:
-                    const CustomExpression('NULL'),
+                learnerProfiles.tutorRemoteProfileId: const CustomExpression(
+                  'NULL',
+                ),
                 learnerProfiles.tutorGrantId: const CustomExpression('NULL'),
               },
             ),

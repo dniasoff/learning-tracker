@@ -193,9 +193,8 @@ abstract class GoalEntity with _$GoalEntity {
     return GoalEntity(
       curriculumId: CurriculumId.values.firstWhere(
         (c) => c.storageKey == rawCurriculumId,
-        orElse: () => throw ArgumentError(
-          'Unknown curriculumId: $rawCurriculumId',
-        ),
+        orElse: () =>
+            throw ArgumentError('Unknown curriculumId: $rawCurriculumId'),
       ),
       targetPercent:
           ((data['target_percent'] ?? data['targetPercent']) as num?)

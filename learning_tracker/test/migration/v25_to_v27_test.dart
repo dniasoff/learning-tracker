@@ -266,7 +266,8 @@ void main() {
       expect(
         row.data.values.first,
         greaterThanOrEqualTo(27),
-        reason: 'migration from v25 must reach at least v27; current target is '
+        reason:
+            'migration from v25 must reach at least v27; current target is '
             '${row.data.values.first}',
       );
     });

@@ -282,66 +282,69 @@ class _ChildViewBanner extends ConsumerWidget {
     return GestureDetector(
       onTap: () => showProfileSwitcherSheet(context),
       child: Container(
-      height: 28,
-      color: _childViewAccentColor,
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      child: Row(
-        children: [
-          const Icon(Icons.child_care_rounded, size: 13, color: Colors.white),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Text(
-              l10n.viewingChildBanner(childName),
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.4,
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ),
-          // Explicit, labelled "Exit parent mode" button — returns the parent
-          // to their own (adult) profile via [onExit].
-          Material(
-            type: MaterialType.transparency,
-            child: InkWell(
-              onTap: onExit,
-              borderRadius: BorderRadius.circular(4),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.white.withValues(alpha: 0.2),
-                  borderRadius: BorderRadius.circular(4),
+        height: 28,
+        color: _childViewAccentColor,
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        child: Row(
+          children: [
+            const Icon(Icons.child_care_rounded, size: 13, color: Colors.white),
+            const SizedBox(width: 6),
+            Expanded(
+              child: Text(
+                l10n.viewingChildBanner(childName),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 0.4,
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.logout_rounded,
-                      size: 12,
-                      color: Colors.white,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      l10n.viewingChildBannerExit,
-                      style: const TextStyle(
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            // Explicit, labelled "Exit parent mode" button — returns the parent
+            // to their own (adult) profile via [onExit].
+            Material(
+              type: MaterialType.transparency,
+              child: InkWell(
+                onTap: onExit,
+                borderRadius: BorderRadius.circular(4),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(
+                        Icons.logout_rounded,
+                        size: 12,
                         color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 0.4,
                       ),
-                    ),
-                  ],
+                      const SizedBox(width: 4),
+                      Text(
+                        l10n.viewingChildBannerExit,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.4,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
-      ),
-    ),  // Container
-    );  // GestureDetector
+          ],
+        ),
+      ), // Container
+    ); // GestureDetector
   }
 }
 
@@ -391,8 +394,10 @@ class _TutorModeIndicatorBar extends ConsumerWidget {
                 },
                 borderRadius: BorderRadius.circular(4),
                 child: Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(4),

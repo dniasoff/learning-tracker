@@ -84,31 +84,35 @@ void main() {
               contains('allow update: if false'),
               contains('allow create, update: if isOwner'),
             ),
-            reason: 'completions update must be owner-only or explicitly denied',
+            reason:
+                'completions update must be owner-only or explicitly denied',
           );
           expect(block, contains('allow delete: if false'));
         });
 
         // W3.37 — streak_events is now a per-event collection.
         // W3.36 — learning_ledger uses ULID doc-ids; still append-only.
-        test('streak_events and learning_ledger deny non-owner update and delete', () {
-          for (final c in [
-            'streak_events/{streakEventId}',
-            'learning_ledger/{entryId}',
-          ]) {
-            final block = _extractRuleBlock(rules, c);
-            // Update must be owner-only (either explicit deny or combined with create).
-            expect(
-              block,
-              anyOf(
-                contains('allow update: if false'),
-                contains('allow create, update: if isOwner'),
-              ),
-              reason: '$c update must be owner-only or explicitly denied',
-            );
-            expect(block, contains('allow delete: if false'), reason: c);
-          }
-        });
+        test(
+          'streak_events and learning_ledger deny non-owner update and delete',
+          () {
+            for (final c in [
+              'streak_events/{streakEventId}',
+              'learning_ledger/{entryId}',
+            ]) {
+              final block = _extractRuleBlock(rules, c);
+              // Update must be owner-only (either explicit deny or combined with create).
+              expect(
+                block,
+                anyOf(
+                  contains('allow update: if false'),
+                  contains('allow create, update: if isOwner'),
+                ),
+                reason: '$c update must be owner-only or explicitly denied',
+              );
+              expect(block, contains('allow delete: if false'), reason: c);
+            }
+          },
+        );
 
         // Snapshot collections in the nested layout gate writes through
         // a .hasOnly() whitelist.

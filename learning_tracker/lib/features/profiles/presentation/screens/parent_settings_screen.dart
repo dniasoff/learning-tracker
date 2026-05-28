@@ -98,221 +98,214 @@ class ParentSettingsScreen extends ConsumerWidget {
         centerTitle: true,
       ),
       body: ListView(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-          children: [
-                UserProfileHeaderCard(
-                  user: user,
-                  activeProfile: activeProfile,
-                  surface: UserProfileHeaderSurface.parent,
-                  contextRole: isTutoredContext
-                      ? UserProfileContextRole.tutor
-                      : UserProfileContextRole.parent,
-                ),
-                const SizedBox(height: 16),
-                // WS3.3d: edit panel — only shown when at least one tile is visible.
-                if (showEditPanel) ...[
-                  _WhitePanel(
-                    // WS1.consolidate: "Switch Profile" row removed — the always-on
-                    // avatar switcher in the bottom nav is the canonical path (DEC-11).
-                    child: Column(
-                      children: [
-                        // WS3.3d: canEditStages gates "Manage Tracks" for tutors.
-                        if (canEditTracks) ...[
-                          _ManageRow(
-                            iconBackground: _managePurple,
-                            icon: Icons.route_rounded,
-                            iconColor: Colors.white,
-                            title: l10n.manageTracks,
-                            subtitle: l10n.manageTracksForChildSubtitle,
-                            trailing: const Icon(
-                              Icons.chevron_right_rounded,
-                              color: _chevronMuted,
-                              size: 26,
-                            ),
-                            onTap: () => context.pushRoute(
-                              const ParentTrackManagementRoute(),
-                            ),
-                          ),
-                        ],
-                        // WS3.3d: canEditPoints gates "Point Configuration" for tutors.
-                        if (canEditPoints) ...[
-                          if (canEditTracks) _rowDivider(),
-                          _ManageRow(
-                            iconBackground: _iconCircleMuted,
-                            icon: Icons.tune_rounded,
-                            iconColor: _iconMutedFg,
-                            title: l10n.pointConfiguration,
-                            subtitle: l10n.pointConfigurationSubtitle,
-                            trailing: const Icon(
-                              Icons.chevron_right_rounded,
-                              color: _chevronMuted,
-                              size: 26,
-                            ),
-                            onTap: () =>
-                                context.pushRoute(const PointConfigRoute()),
-                          ),
-                          // WS7.adjust: parent manual add/deduct (DEC-17).
-                          _rowDivider(),
-                          _ManageRow(
-                            iconBackground: const Color(0xFFE0EAFF),
-                            icon: Icons.add_circle_outline_rounded,
-                            iconColor: const Color(0xFF1E52D4),
-                            title: l10n.parentPointsAdjustTitle,
-                            subtitle: l10n.parentPointsAdjustSubtitle,
-                            trailing: const Icon(
-                              Icons.chevron_right_rounded,
-                              color: _chevronMuted,
-                              size: 26,
-                            ),
-                            onTap: () => unawaited(
-                              _showAdjustPointsDialog(context, ref, l10n),
-                            ),
-                          ),
-                        ],
-                        // WS3.3d: canEditRewards gates "Reward Configuration" for tutors.
-                        if (canEditRewards) ...[
-                          if (canEditTracks || canEditPoints) _rowDivider(),
-                          _ManageRow(
-                            iconBackground: const Color(0xFFFFE8CC),
-                            icon: Icons.card_giftcard_rounded,
-                            iconColor: const Color(0xFFB45309),
-                            title: l10n.rewardConfigurationTitle,
-                            subtitle: l10n.rewardConfigurationSubtitle,
-                            trailing: const Icon(
-                              Icons.chevron_right_rounded,
-                              color: _chevronMuted,
-                              size: 26,
-                            ),
-                            onTap: () => context.pushRoute(
-                              const RewardConfigurationRoute(),
-                            ),
-                          ),
-                          // WS7.redeem: pending prize requests from child.
-                          _rowDivider(),
-                          _ManageRow(
-                            iconBackground: const Color(0xFFE8F5E9),
-                            icon: Icons.redeem_rounded,
-                            iconColor: const Color(0xFF388E3C),
-                            title: l10n.pendingRedemptionsTitle,
-                            subtitle: l10n.pendingRedemptionsEmpty,
-                            trailing: const Icon(
-                              Icons.chevron_right_rounded,
-                              color: _chevronMuted,
-                              size: 26,
-                            ),
-                            onTap: () => context.pushRoute(
-                              const ParentPendingRedemptionsRoute(),
-                            ),
-                          ),
-                        ],
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
-                // WS3.3h: bulk-mark tile — shown when canBulkPriorCompletion.
-                // Default = true (G3/DEC-33); tutors always see it unless
-                // the parent explicitly disabled canBulkPriorCompletion.
-                if (canBulkMark)
-                  _WhitePanel(
-                    child: _ManageRow(
-                      iconBackground: const Color(0xFFE8D4B8),
-                      icon: Icons.menu_book_rounded,
-                      iconColor: const Color(0xFF6B4E2E),
-                      leadingSquare: true,
-                      title: l10n.addWhatYouLearned,
-                      subtitle: l10n.addWhatYouLearnedSettingsSubtitle,
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+        children: [
+          UserProfileHeaderCard(
+            user: user,
+            activeProfile: activeProfile,
+            surface: UserProfileHeaderSurface.parent,
+            contextRole: isTutoredContext
+                ? UserProfileContextRole.tutor
+                : UserProfileContextRole.parent,
+          ),
+          const SizedBox(height: 16),
+          // WS3.3d: edit panel — only shown when at least one tile is visible.
+          if (showEditPanel) ...[
+            _WhitePanel(
+              // WS1.consolidate: "Switch Profile" row removed — the always-on
+              // avatar switcher in the bottom nav is the canonical path (DEC-11).
+              child: Column(
+                children: [
+                  // WS3.3d: canEditStages gates "Manage Tracks" for tutors.
+                  if (canEditTracks) ...[
+                    _ManageRow(
+                      iconBackground: _managePurple,
+                      icon: Icons.route_rounded,
+                      iconColor: Colors.white,
+                      title: l10n.manageTracks,
+                      subtitle: l10n.manageTracksForChildSubtitle,
                       trailing: const Icon(
                         Icons.chevron_right_rounded,
                         color: _chevronMuted,
                         size: 26,
                       ),
                       onTap: () =>
-                          context.pushRoute(const LifetimeMarkingRoute()),
+                          context.pushRoute(const ParentTrackManagementRoute()),
                     ),
-                  ),
-                // WS3.3a: "Manage tutors" tile — owner-only (hidden in tutored context).
-                // WS3.3d: tutors cannot manage other tutors.
-                if (showOwnerOnlyTiles) ...[
-                  const SizedBox(height: 16),
-                  _WhitePanel(
-                    child: _ManageRow(
-                      iconBackground: const Color(0xFFE8F4FD),
-                      icon: Icons.school_rounded,
-                      iconColor: AppTheme.brandBlue,
-                      leadingSquare: false,
-                      title: l10n.manageTutors,
-                      subtitle: l10n.manageTutorsSubtitle,
+                  ],
+                  // WS3.3d: canEditPoints gates "Point Configuration" for tutors.
+                  if (canEditPoints) ...[
+                    if (canEditTracks) _rowDivider(),
+                    _ManageRow(
+                      iconBackground: _iconCircleMuted,
+                      icon: Icons.tune_rounded,
+                      iconColor: _iconMutedFg,
+                      title: l10n.pointConfiguration,
+                      subtitle: l10n.pointConfigurationSubtitle,
                       trailing: const Icon(
                         Icons.chevron_right_rounded,
                         color: _chevronMuted,
                         size: 26,
                       ),
-                      onTap: () => context.pushRoute(const ManageTutorsRoute()),
+                      onTap: () => context.pushRoute(const PointConfigRoute()),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  const BackupSyncSection(parentSettingsHeroLayout: true),
-                  const SizedBox(height: 22),
-                  Padding(
-                    padding: const EdgeInsetsDirectional.only(
-                      start: 4,
-                      bottom: 8,
-                    ),
-                    child: Text(
-                      l10n.sectionAccountSafety,
-                      style: theme.textTheme.labelSmall?.copyWith(
-                        color: const Color(0xFF9AA3B0),
-                        fontWeight: FontWeight.w700,
-                        letterSpacing: 1.4,
-                        fontSize: 11,
-                      ),
-                    ),
-                  ),
-                  _WhitePanel(
-                    child: _ManageRow(
-                      iconBackground: _dangerIconBg,
-                      icon: Icons.logout_rounded,
-                      iconColor: AppColors.chartRed,
-                      title: l10n.signOut,
-                      titleColor: AppColors.chartRed,
-                      subtitle: null,
-                      leadingSquare: true,
+                    // WS7.adjust: parent manual add/deduct (DEC-17).
+                    _rowDivider(),
+                    _ManageRow(
+                      iconBackground: const Color(0xFFE0EAFF),
+                      icon: Icons.add_circle_outline_rounded,
+                      iconColor: const Color(0xFF1E52D4),
+                      title: l10n.parentPointsAdjustTitle,
+                      subtitle: l10n.parentPointsAdjustSubtitle,
                       trailing: const Icon(
-                        Icons.logout_outlined,
-                        color: AppColors.chartRed,
-                        size: 24,
+                        Icons.chevron_right_rounded,
+                        color: _chevronMuted,
+                        size: 26,
                       ),
-                      onTap: () => showSignOutConfirmation(context, ref),
+                      onTap: () => unawaited(
+                        _showAdjustPointsDialog(context, ref, l10n),
+                      ),
                     ),
-                  ),
-                  if (showDeleteAccountTile) ...[
-                    const SizedBox(height: 12),
-                    _WhitePanel(
-                      child: _ManageRow(
-                        iconBackground: _dangerIconBg,
-                        icon: Icons.delete_forever_rounded,
-                        iconColor: const Color(0xFFB00020),
-                        title: l10n.deleteAccountTitle,
-                        titleColor: const Color(0xFFB00020),
-                        subtitle: authState.isLocalBorn
-                            ? l10n.deleteLocalAccountSubtitle
-                            : l10n.deleteAccountSubtitle,
-                        subtitleColor: const Color(0xFFB00020),
-                        leadingSquare: true,
-                        trailing: const SizedBox.shrink(),
-                        onTap: () {
-                          if (authState.isLocalBorn) {
-                            showDeleteLocalAccountFlow(context, ref);
-                          } else if (user != null) {
-                            showDeleteAccountFlow(context, ref, user);
-                          }
-                        },
+                  ],
+                  // WS3.3d: canEditRewards gates "Reward Configuration" for tutors.
+                  if (canEditRewards) ...[
+                    if (canEditTracks || canEditPoints) _rowDivider(),
+                    _ManageRow(
+                      iconBackground: const Color(0xFFFFE8CC),
+                      icon: Icons.card_giftcard_rounded,
+                      iconColor: const Color(0xFFB45309),
+                      title: l10n.rewardConfigurationTitle,
+                      subtitle: l10n.rewardConfigurationSubtitle,
+                      trailing: const Icon(
+                        Icons.chevron_right_rounded,
+                        color: _chevronMuted,
+                        size: 26,
+                      ),
+                      onTap: () =>
+                          context.pushRoute(const RewardConfigurationRoute()),
+                    ),
+                    // WS7.redeem: pending prize requests from child.
+                    _rowDivider(),
+                    _ManageRow(
+                      iconBackground: const Color(0xFFE8F5E9),
+                      icon: Icons.redeem_rounded,
+                      iconColor: const Color(0xFF388E3C),
+                      title: l10n.pendingRedemptionsTitle,
+                      subtitle: l10n.pendingRedemptionsEmpty,
+                      trailing: const Icon(
+                        Icons.chevron_right_rounded,
+                        color: _chevronMuted,
+                        size: 26,
+                      ),
+                      onTap: () => context.pushRoute(
+                        const ParentPendingRedemptionsRoute(),
                       ),
                     ),
                   ],
                 ],
+              ),
+            ),
+            const SizedBox(height: 16),
           ],
+          // WS3.3h: bulk-mark tile — shown when canBulkPriorCompletion.
+          // Default = true (G3/DEC-33); tutors always see it unless
+          // the parent explicitly disabled canBulkPriorCompletion.
+          if (canBulkMark)
+            _WhitePanel(
+              child: _ManageRow(
+                iconBackground: const Color(0xFFE8D4B8),
+                icon: Icons.menu_book_rounded,
+                iconColor: const Color(0xFF6B4E2E),
+                leadingSquare: true,
+                title: l10n.addWhatYouLearned,
+                subtitle: l10n.addWhatYouLearnedSettingsSubtitle,
+                trailing: const Icon(
+                  Icons.chevron_right_rounded,
+                  color: _chevronMuted,
+                  size: 26,
+                ),
+                onTap: () => context.pushRoute(const LifetimeMarkingRoute()),
+              ),
+            ),
+          // WS3.3a: "Manage tutors" tile — owner-only (hidden in tutored context).
+          // WS3.3d: tutors cannot manage other tutors.
+          if (showOwnerOnlyTiles) ...[
+            const SizedBox(height: 16),
+            _WhitePanel(
+              child: _ManageRow(
+                iconBackground: const Color(0xFFE8F4FD),
+                icon: Icons.school_rounded,
+                iconColor: AppTheme.brandBlue,
+                leadingSquare: false,
+                title: l10n.manageTutors,
+                subtitle: l10n.manageTutorsSubtitle,
+                trailing: const Icon(
+                  Icons.chevron_right_rounded,
+                  color: _chevronMuted,
+                  size: 26,
+                ),
+                onTap: () => context.pushRoute(const ManageTutorsRoute()),
+              ),
+            ),
+            const SizedBox(height: 16),
+            const BackupSyncSection(parentSettingsHeroLayout: true),
+            const SizedBox(height: 22),
+            Padding(
+              padding: const EdgeInsetsDirectional.only(start: 4, bottom: 8),
+              child: Text(
+                l10n.sectionAccountSafety,
+                style: theme.textTheme.labelSmall?.copyWith(
+                  color: const Color(0xFF9AA3B0),
+                  fontWeight: FontWeight.w700,
+                  letterSpacing: 1.4,
+                  fontSize: 11,
+                ),
+              ),
+            ),
+            _WhitePanel(
+              child: _ManageRow(
+                iconBackground: _dangerIconBg,
+                icon: Icons.logout_rounded,
+                iconColor: AppColors.chartRed,
+                title: l10n.signOut,
+                titleColor: AppColors.chartRed,
+                subtitle: null,
+                leadingSquare: true,
+                trailing: const Icon(
+                  Icons.logout_outlined,
+                  color: AppColors.chartRed,
+                  size: 24,
+                ),
+                onTap: () => showSignOutConfirmation(context, ref),
+              ),
+            ),
+            if (showDeleteAccountTile) ...[
+              const SizedBox(height: 12),
+              _WhitePanel(
+                child: _ManageRow(
+                  iconBackground: _dangerIconBg,
+                  icon: Icons.delete_forever_rounded,
+                  iconColor: const Color(0xFFB00020),
+                  title: l10n.deleteAccountTitle,
+                  titleColor: const Color(0xFFB00020),
+                  subtitle: authState.isLocalBorn
+                      ? l10n.deleteLocalAccountSubtitle
+                      : l10n.deleteAccountSubtitle,
+                  subtitleColor: const Color(0xFFB00020),
+                  leadingSquare: true,
+                  trailing: const SizedBox.shrink(),
+                  onTap: () {
+                    if (authState.isLocalBorn) {
+                      showDeleteLocalAccountFlow(context, ref);
+                    } else if (user != null) {
+                      showDeleteAccountFlow(context, ref, user);
+                    }
+                  },
+                ),
+              ),
+            ],
+          ],
+        ],
       ),
     );
   }

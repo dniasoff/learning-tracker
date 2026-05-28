@@ -118,7 +118,11 @@ class _UserProfileHeaderCardState extends ConsumerState<UserProfileHeaderCard> {
     final profileInitial = _profileInitial(displayName);
 
     // Role-context badge: label + colour vary by who is viewing.
-    final (badgeLabel, badgeColor, badgeTextColor) = switch (widget.contextRole) {
+    final (
+      badgeLabel,
+      badgeColor,
+      badgeTextColor,
+    ) = switch (widget.contextRole) {
       UserProfileContextRole.parent => (
         l10n.parentContextBadge,
         const Color(0xFFE8F4FD),
@@ -308,10 +312,7 @@ class _ParentProfileSurface extends StatelessWidget {
             ? child
             : Material(
                 type: MaterialType.transparency,
-                child: InkWell(
-                  onTap: onTap,
-                  child: child,
-                ),
+                child: InkWell(onTap: onTap, child: child),
               ),
       ),
     );
