@@ -53,16 +53,17 @@ Plan: `tutor-edit-propagation-plan.md` · Log: `tutor-edit-propagation-log.md`.
 - [ ] Cache persists between sessions (already built; verify listeners resync deltas on re-entry, no full re-pull)
 - [ ] Tests: listener attach/detach lifecycle, merge into mirror, isolation across accounts
 
-### S6 — Profile-less tutor wizard — pending
-- [ ] Account with 0 own profiles but ≥1 tutor grant lands on the profile picker (TALMID PROFILES section visible) instead of the Create-Profile wizard
-- [ ] Profile creation remains available but optional (act as a pure tutor)
-- [ ] Tests: profile-less account routing (`ProfileGuard` + picker behaviour)
+### S6 — Profile-less tutor wizard — **done** (P1 PASS)
+- [x] Account with 0 own profiles but ≥1 active tutor grant lands on the profile picker — `sign_in_controller.dart` checks `listIncomingGrants()` (4 s timeout, offline-safe) when count==0; ≥1 active → `ProfilePickerRoute` + onboarding marked complete (commit `e5045281`)
+- [x] Profile creation remains available but optional — picker shows Add Profile path; not forced
+- [x] Tests: 6 `ProfileGuard` unit tests covering the four branches (tutored-session bypass / count==0 → picker / single-profile auto-select / valid-selection short-circuit)
+- ⚠️ **LOW carried to V3:** new `SignInController` grant-check branch not directly unit-tested (only `ProfileGuard` is). Add a SignInController test if V3 budget allows.
 
 ---
 
 ## Sync points
 
-- **P1** (Wave 1 gate) — pending — Router proven by unit test (tutored → CF, non-tutored → outbox); both facade chokepoints wired. S6: profile-less account reaches the picker. **Unblocks S2/S3/S4.**
+- **P1** (Wave 1 gate) — **CLOSED 2026-05-28 10:30** — Router proven by 14 unit tests (S1 commit `f1861516`); profile-less tutor reaches picker via `sign_in_controller` grant-check + picker default routing (S6 commit `e5045281`). HIGH advisory bundled to S2: refactor `outboxSyncWriteFacadeProvider` direct readers.
 - **P2 — WRITE CHECKPOINT** (Wave 2 gate) — pending — Functions deployed; on device a tutor edit (track + enrolment, reward, profile) lands in the parent's Firestore (live query) AND shows on the parent's app. **Daniel sanity-checks before Wave 3.**
 - **P3** (Wave 3 gate) — pending — Delta listeners reflect parent-side + own CF writes in the talmid view live; cache persists between sessions; detaches on exit/wipe.
 
