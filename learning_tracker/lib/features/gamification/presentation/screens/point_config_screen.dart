@@ -235,6 +235,8 @@ class _PointConfigScreenState extends ConsumerState<PointConfigScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final pointsAsync = ref.watch(_pointConfigDataProvider);
+    final tutorPerms = ref.watch(activeTutorPermissionsProvider);
+    final canEdit = tutorPerms == null || tutorPerms.canEditPoints;
 
     return Scaffold(
       backgroundColor: _kScreenBg,
@@ -322,10 +324,14 @@ class _PointConfigScreenState extends ConsumerState<PointConfigScreen> {
                               primaryStageName: _primaryStageRow(
                                 data,
                               ).stage.stageName,
-                              onDecrement: _effectivePrimaryPoints(data) > 1
+                              onDecrement: (canEdit &&
+                                      _effectivePrimaryPoints(data) > 1)
                                   ? () => _bumpPrimary(data, -1)
                                   : null,
-                              onIncrement: () => _bumpPrimary(data, 1),
+                              onIncrement:
+                                  canEdit
+                                      ? () => _bumpPrimary(data, 1)
+                                      : null,
                             ),
                           );
                         }, childCount: pointData.length),
@@ -337,10 +343,18 @@ class _PointConfigScreenState extends ConsumerState<PointConfigScreen> {
               ),
               _SaveBar(
                 l10n: l10n,
-                enabled: _hasPendingEdits && !_saving,
+                enabled: _hasPendingEdits && !_saving && canEdit,
                 busy: _saving,
                 onPressed: () => _savePending(pointData),
                 onNothingToSave: () {
+                  if (!canEdit) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text(l10n.tutorPermissionDenied),
+                      ),
+                    );
+                    return;
+                  }
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(l10n.pointSettingsNothingToSaveSnackbar),
@@ -470,7 +484,7 @@ class _CurriculumPointsCard extends ConsumerWidget {
   final int primaryPoints;
   final String primaryStageName;
   final VoidCallback? onDecrement;
-  final VoidCallback onIncrement;
+  final VoidCallback? onIncrement;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -620,7 +634,7 @@ class _StepperControl extends StatelessWidget {
 
   final int value;
   final VoidCallback? onDecrement;
-  final VoidCallback onIncrement;
+  final VoidCallback? onIncrement;
 
   @override
   Widget build(BuildContext context) {

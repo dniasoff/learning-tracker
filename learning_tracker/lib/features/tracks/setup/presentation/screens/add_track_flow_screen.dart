@@ -28,6 +28,7 @@ import 'package:learning_tracker/features/tracks/setup/presentation/steps/step_s
 import 'package:learning_tracker/features/tracks/setup/presentation/steps/step_study_days.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/widgets/curriculum_picker_step.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/widgets/program_selection_step.dart';
+import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -657,6 +658,15 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
 
       await _clearSavedState();
       widget.onComplete?.call(result);
+    } on TutorWriteException catch (e) {
+      if (!mounted) return;
+      if (e.code == 'permission-denied') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)!.tutorPermissionDenied),
+          ),
+        );
+      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
