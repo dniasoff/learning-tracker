@@ -97,11 +97,10 @@ class EmptyLoginScreen extends ConsumerWidget {
                     shape: const StadiumBorder(),
                   ),
                   onPressed: () {
-                    // WS3 will replace this with navigation to the tutor
-                    // invitation-acceptance flow (ManageGrantsRoute /
-                    // AcceptInviteRoute). For now, show a message.
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(l10n.emptyLoginTutorComingSoon)),
+                    // S6: route to the picker — TALMID PROFILES section shows
+                    // active grants. Profile creation remains optional from there.
+                    unawaited(
+                      context.router.replaceAll([const ProfilePickerRoute()]),
                     );
                   },
                 ),

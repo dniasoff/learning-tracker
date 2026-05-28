@@ -26,6 +26,8 @@ import 'package:learning_tracker/features/account/presentation/widgets/email_ver
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_resume_store.dart'
     show kOnboardingComplete, kOnboardingSkipped;
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/features/tutoring/tutoring.dart'
+    show TutorGrantState, tutorGrantRepositoryProvider;
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -487,6 +489,28 @@ class SignInController extends Notifier<SignInState> {
         .countProfilesForAccount(_ref.read(currentAccountIdProvider));
 
     if (finalProfileCount == 0 && !cloudAccountHasProfiles) {
+      // S6: a profile-less account with ≥1 active tutor grant is a pure tutor.
+      // Route directly to the picker (TALMID PROFILES section visible) so they
+      // are never forced through the profile-creation wizard. We fire-and-forget
+      // with a short timeout so offline users fall through to the existing paths.
+      var hasActiveGrant = false;
+      try {
+        final grants = await _ref
+            .read(tutorGrantRepositoryProvider)
+            .listIncomingGrants()
+            .timeout(const Duration(seconds: 4), onTimeout: () => const []);
+        hasActiveGrant = grants.any(
+          (g) => g.grantState.rawState == TutorGrantState.active,
+        );
+      } catch (_) {
+        // Network unavailable or CF error — fall through to the default path.
+      }
+      if (hasActiveGrant) {
+        await prefs.setBool(kOnboardingComplete, true);
+        unawaited(router.replaceAll([const ProfilePickerRoute()]));
+        return;
+      }
+
       // WS2.relax: if the user has previously skipped profile creation,
       // route to the empty-login surface rather than forcing them back into
       // the onboarding wizard. Without this, a 0-profile account that chose
