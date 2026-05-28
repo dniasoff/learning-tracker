@@ -73,6 +73,8 @@ class _NoopDelegate implements SyncWriteFacade {
   Future<void> deleteLearnerProfile(int profileId) async {}
   @override
   Future<void> deleteCompletion(String completionId) async {}
+  @override
+  Future<void> pushProfileProgram(Map<String, dynamic> payload) async {}
 }
 
 const _sel = TutoredProfileSelection(
