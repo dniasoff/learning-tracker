@@ -88,7 +88,11 @@ class _ScopeSelectionScreenState extends ConsumerState<ScopeSelectionScreen> {
         ),
         actions: [
           TextButton(
-            onPressed: _save,
+            // Disabled for an empty subset: with "select all" OFF and no values
+            // ticked, _save() would write nothing yet still pop with a success
+            // snackbar — telling the user the scope was saved while the previous
+            // scope silently survives. Require either "select all" or ≥1 value.
+            onPressed: _canSave ? _save : null,
             child: Text(AppLocalizations.of(context)!.scopeSelectionSave),
           ),
         ],
@@ -286,6 +290,10 @@ class _ScopeSelectionScreenState extends ConsumerState<ScopeSelectionScreen> {
         )
         .length;
   }
+
+  /// Save is meaningful only when the whole curriculum is selected, or a
+  /// specific subset (≥1 value) has been ticked. An empty subset would no-op.
+  bool get _canSave => _selectAll || _selectedValues.isNotEmpty;
 
   Future<void> _save() async {
     final db = ref.read(userDatabaseProvider);

@@ -41,6 +41,28 @@ defence-in-depth against a future migration). Also **deleted** the redundant old
 
 ---
 
+## Phase 8 — Coverage wave 3: remaining screens & widgets (+ scope-save bug fix)
+
+**+242 tests** (green, analyze clean): scope_selection + lifetime_marking (42), track_management_body +
+track_learning_order (29), onboarding + bulk_mark (34), profile_picker + tutored_children_section (19),
+text_display reader (38, incl. tutor live-mark gating), lifetime_folder_styled_widgets + notification_providers (79).
+
+**BUG fixed (scope_selection_screen, LOW but real):** `_save()` had no else-branch — with "select all" toggled
+OFF, a level picked, but NO values ticked, it wrote nothing yet still `pop()`ed with a *success* snackbar, so
+the user believed the scope was cleared/changed while the previous scope silently survived. FIX: the AppBar
+Save button is now disabled (`onPressed: null`) unless `_selectAll || _selectedValues.isNotEmpty` (a `_canSave`
+getter) — an empty subset is no longer "saveable". Regression test added (Save disabled on empty subset, re-enabled
+once a value is ticked).
+
+### Findings logged (not fixed — low/edge or test-coverage gaps)
+- `scope_selection._save`: `trackId = track?.id ?? 0` fallback can write a dangling `trackId=0` row if a
+  curriculum has no track (likely unreachable for an enrolled curriculum; logged).
+- `TrackManagementBody` vs `TrackManagementHubScreen`: archive path diverges (low).
+- Verifier false-confidence notes: several suites pre-set state rather than driving the widget (sliders/drag),
+  and a couple of "policy" asserts call the mock directly rather than through the screen — backlog to harden.
+
+---
+
 ## Phase 8 — Coverage wave 2: sync engine + onboarding/settings/profiles
 
 **+298 tests** (green, analyze clean, 2 documented skips; no high-severity prod bugs): `firestore_gateway_impl`

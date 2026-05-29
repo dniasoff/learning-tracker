@@ -145,4 +145,6 @@ block), tutor_grants, tutor_active_access, every `users/{uid}/learner_profiles/{
 | 2026-05-30 (backend CF fixes) | fixed 3 server bugs + 3 regression tests (**274/274 green**); **deployed all 27 fns live** to torah-study-tracker | 27/27 | 24/24 | 0 | live backend current |
 | 2026-05-30 (Phase 6 screens) | +CityPicker(19)/CurriculumSettings(26)/Learning(22, **live-mark-block invariant**)/Scheduler(23)/Notifications(37) = **127 L1 tests**; only i18n/cosmetic findings, no prod bugs | 27/27 | 24/24 | 0 | **measured 68.4%** |
 | 2026-05-30 (coverage-leverage) | +249 on highest-uncovered files (sefaria_ref_matcher 116, scheduler_providers 43, sign_in_controller 24, track-setup scope 22 + start-position/goal 44); +v27→v28 migration test | 27/27 | 24/24 | 0 | **measured 70.5%** (from 58.5% baseline) |
+| 2026-05-30 (coverage w2: sync) | +298 (firestore_gateway 114, sync_orchestrator 29, local_data_upload 42, wizard_steps 62, account_actions 25, pin_keypad 26); 2 documented skips | 27/27 | 24/24 | 0 | re-measure pending |
+| 2026-05-30 (coverage w3: screens) | +242 (scope/lifetime 42, tracks body/order 29, onboarding/bulk 34, profiles 19, content reader 38, lifetime-folder/notif-providers 79); **fixed scope-save silent no-op** + regression test | 27/27 | 24/24 | 0 | re-measure pending |
 </content>
