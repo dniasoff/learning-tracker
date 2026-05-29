@@ -1103,7 +1103,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tutorPermissionDenied =>
-      "You don't have permission to make this edit";
+      'You don\'t have permission to make this edit';
 
   @override
   String get addProfile => 'Add Profile';

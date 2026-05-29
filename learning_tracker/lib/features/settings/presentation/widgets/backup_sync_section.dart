@@ -23,6 +23,17 @@ class BackupSyncSection extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final syncStatus = ref.watch(syncStatusProvider);
     final authState = ref.watch(authStateProvider);
+    // A cloud-born user briefly sees SyncStatusLocalOnly while the orchestrator
+    // initialises before its first pullOnLaunch completes.  Show a neutral
+    // "connecting" state rather than the "LOCAL ONLY — upgrade" prompt, which
+    // is misleading for an account that already has cloud sync.
+    if (syncStatus is SyncStatusLocalOnly && authState.isCloudBorn) {
+      return _buildCloudStatusCard(
+        theme,
+        icon: Icons.sync_rounded,
+        subtitle: 'Connecting…',
+      );
+    }
     return switch (syncStatus) {
       SyncStatusLocalOnly() => _buildLocalOnlyCard(
         context,

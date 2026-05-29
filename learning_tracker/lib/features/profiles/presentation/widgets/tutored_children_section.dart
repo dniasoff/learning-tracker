@@ -7,6 +7,7 @@ import 'package:learning_tracker/app/router/router_provider.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/navigation/pin_scope.dart';
+import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/sync/providers/tutored_pull_providers.dart';
 import 'package:learning_tracker/core/sync/tutored_pull_service.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
@@ -352,6 +353,11 @@ class _TutoredChildRow extends ConsumerWidget {
   /// the resolved synthetic local profile id, then replace the stack with the
   /// talmid's AppShell (T2.nav).  On failure, clears the selection and shows
   /// an error snackbar so the user lands back at the picker, never crashes.
+  ///
+  /// Offline-first: if a cached mirror exists from a previous session, navigate
+  /// immediately without waiting for the network.  A fresh pull is only required
+  /// on first access when no local data exists; that pull is capped at 15 s so
+  /// the spinner never hangs indefinitely.
   Future<void> _fireEntryPullAndNavigate(
     BuildContext context,
     WidgetRef ref,
@@ -359,9 +365,51 @@ class _TutoredChildRow extends ConsumerWidget {
   ) async {
     final accountId = ref.read(currentAccountIdProvider);
 
-    // The pull is a network round-trip (a couple of seconds). Show a blocking
-    // progress indicator so the tap has immediate feedback instead of a dead
-    // gap before the talmid view appears.
+    // Offline-first: check for a cached mirror before touching the network.
+    final cachedProfile = await ref
+        .read(userDatabaseProvider)
+        .profileDao
+        .getTutoredProfile(
+          parentUid: selection.ownerUid,
+          remoteChildProfileId: selection.profileId,
+          grantId: selection.grantId,
+        );
+
+    if (cachedProfile != null) {
+      // Mirror from a previous session — enter immediately with local data.
+      // Delta listeners will stream any changes once connectivity is restored.
+      ref
+          .read(resolvedTutoredLocalProfileIdProvider.notifier)
+          .resolve(cachedProfile.id);
+      final gateway = buildTutoredGateway(
+        ref: ref,
+        parentUid: selection.ownerUid,
+      );
+      try {
+        unawaited(
+          ref.read(tutoredListenerSupervisorProvider).attach(
+            localProfileId: cachedProfile.id,
+            gateway: gateway,
+            parentUid: selection.ownerUid,
+            remoteProfileId: selection.profileId,
+          ),
+        );
+      } catch (e, st) {
+        AppLogger.instance.warning(
+          event: 'tutored_listener_attach_error',
+          exception: e,
+          stackTrace: st,
+        );
+      }
+      if (context.mounted) {
+        unawaited(context.router.replaceAll([const AppShellRoute()]));
+      }
+      return;
+    }
+
+    // No cached mirror — first-time access requires a network pull.
+    // Show a blocking progress indicator; cap at 15 s so offline doesn't spin
+    // forever.
     var loadingShown = false;
     if (context.mounted) {
       loadingShown = true;
@@ -392,17 +440,20 @@ class _TutoredChildRow extends ConsumerWidget {
               ref.read(activeTutoredProfileSelectionProvider.notifier).exit(),
         ),
       );
-      final result = await svc.pull(
-        accountId: accountId,
-        parentUid: selection.ownerUid,
-        remoteProfileId: selection.profileId,
-        grantId: selection.grantId,
-        // Grant carries the child display label; fall back to profile id.
-        childDisplayName: grant.childDisplayLabel,
-        // Tutor grants target child profiles (product rule: tutor = adult with
-        // read access to a child's data). Default to 'child'.
-        childMode: 'child',
-      );
+      final result = await svc
+          .pull(
+            accountId: accountId,
+            parentUid: selection.ownerUid,
+            remoteProfileId: selection.profileId,
+            grantId: selection.grantId,
+            childDisplayName: grant.childDisplayLabel,
+            childMode: 'child',
+          )
+          .timeout(
+            const Duration(seconds: 15),
+            onTimeout: () =>
+                (localProfileId: 0, result: TutoredPullResult.error),
+          );
 
       switch (result.result) {
         case TutoredPullResult.success:

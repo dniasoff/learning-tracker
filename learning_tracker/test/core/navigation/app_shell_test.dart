@@ -24,7 +24,9 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_pr
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart';
+import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -109,6 +111,21 @@ const _authOverride = AuthState.signedIn(
   user: AuthUser(profileId: 1, email: 'test@test.com', displayName: 'Test'),
   tier: Tier.localBorn,
 );
+
+/// A single own adult profile so AppShell sees a non-empty profile list and
+/// does NOT trigger the profile-less → Settings-tab jump — it stays on the
+/// Dashboard tab, which is what these shell-navigation tests exercise.
+final _seededProfiles = [
+  ProfileModel(
+    id: 1,
+    accountId: 1,
+    displayName: 'Test',
+    mode: 'adult',
+    avatarIndex: 0,
+    createdAt: DateTime(2024),
+    updatedAt: DateTime(2024),
+  ),
+];
 
 /// Pump enough frames for navigation and async providers to resolve,
 /// without using pumpAndSettle (which hangs on stream providers).
@@ -198,6 +215,9 @@ void main() {
               appDatabaseProvider.overrideWithValue(db),
               userDatabaseProvider.overrideWithValue(db),
               authStateProvider.overrideWithValue(_authOverride),
+              profileListStreamProvider.overrideWith(
+                (ref) => Stream.value(_seededProfiles),
+              ),
               dashboardActiveCurriculaStreamProvider.overrideWith(
                 (ref) => Stream.value(<CurriculumId>[]),
               ),
@@ -241,6 +261,9 @@ void main() {
             appDatabaseProvider.overrideWithValue(db),
             userDatabaseProvider.overrideWithValue(db),
             authStateProvider.overrideWithValue(_authOverride),
+            profileListStreamProvider.overrideWith(
+              (ref) => Stream.value(_seededProfiles),
+            ),
             dashboardActiveCurriculaStreamProvider.overrideWith(
               (ref) => Stream.value(<CurriculumId>[]),
             ),
@@ -284,6 +307,9 @@ void main() {
             appDatabaseProvider.overrideWithValue(db),
             userDatabaseProvider.overrideWithValue(db),
             authStateProvider.overrideWithValue(_authOverride),
+            profileListStreamProvider.overrideWith(
+              (ref) => Stream.value(_seededProfiles),
+            ),
             dashboardActiveCurriculaStreamProvider.overrideWith(
               (ref) => Stream.value(<CurriculumId>[]),
             ),
@@ -338,6 +364,9 @@ void main() {
               appDatabaseProvider.overrideWithValue(db),
               userDatabaseProvider.overrideWithValue(db),
               authStateProvider.overrideWithValue(_authOverride),
+              profileListStreamProvider.overrideWith(
+                (ref) => Stream.value(_seededProfiles),
+              ),
               dashboardActiveCurriculaStreamProvider.overrideWith(
                 (ref) => Stream.value(<CurriculumId>[]),
               ),
@@ -387,6 +416,9 @@ void main() {
             appDatabaseProvider.overrideWithValue(db),
             userDatabaseProvider.overrideWithValue(db),
             authStateProvider.overrideWithValue(_authOverride),
+            profileListStreamProvider.overrideWith(
+              (ref) => Stream.value(_seededProfiles),
+            ),
             dashboardActiveCurriculaStreamProvider.overrideWith(
               (ref) => Stream.value(<CurriculumId>[]),
             ),
@@ -462,6 +494,9 @@ void main() {
             appDatabaseProvider.overrideWithValue(db),
             userDatabaseProvider.overrideWithValue(db),
             authStateProvider.overrideWithValue(_authOverride),
+            profileListStreamProvider.overrideWith(
+              (ref) => Stream.value(_seededProfiles),
+            ),
             dashboardActiveCurriculaStreamProvider.overrideWith(
               (ref) => Stream.value(<CurriculumId>[]),
             ),

@@ -26,23 +26,33 @@ const _tutorAccentColor = Color(0xFFD97706); // Amber-600
 const _childViewAccentColor = Color(0xFF047857); // Emerald-700
 
 @RoutePage()
-class AppShellScreen extends ConsumerWidget {
+class AppShellScreen extends ConsumerStatefulWidget {
   const AppShellScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AppShellScreen> createState() => _AppShellScreenState();
+}
+
+class _AppShellScreenState extends ConsumerState<AppShellScreen> {
+  // Tracks whether we have already jumped to the Settings tab for a
+  // profile-less user.  Reset when profiles become non-empty so that a user
+  // who later adds a profile starts back on Dashboard.
+  bool _didJumpToSettings = false;
+
+  @override
+  Widget build(BuildContext context) {
     // When the Firebase uid changes (account switch or sign-out), clear any
     // active tutored selection so the keepAlive state doesn't leak into the
     // next account's session. The listen is mounted in AppShell so widget
     // tests that don't render the shell never materialise FirebaseAuth.
-    ref.listen(
-      authStateProvider.select((s) => s.currentUser?.firebaseUid),
-      (previous, next) {
-        if (previous != next) {
-          ref.read(activeTutoredProfileSelectionProvider.notifier).exit();
-        }
-      },
-    );
+    ref.listen(authStateProvider.select((s) => s.currentUser?.firebaseUid), (
+      previous,
+      next,
+    ) {
+      if (previous != next) {
+        ref.read(activeTutoredProfileSelectionProvider.notifier).exit();
+      }
+    });
 
     // R3o-C2 / R2o-H2: drive the tutor indicator from the ACTIVE tutored
     // selection (the tutor has actually entered a talmid's context after the
@@ -59,6 +69,19 @@ class AppShellScreen extends ConsumerWidget {
     final activeProfile = profiles
         .where((p) => p.id == activeProfileId)
         .firstOrNull;
+
+    // No own profiles and not in a tutored session → the shell jumps to the
+    // Settings tab once (scheduled in appBarBuilder below) so the user (e.g. a
+    // tutor-only adult) can manage their account / add a profile instead of
+    // being stuck on an empty Dashboard. The jump MUST be scheduled from inside
+    // AutoTabsScaffold's builder — it hands us a valid `tabsRouter`; calling
+    // AutoTabsRouter.of() with this State's own context throws, because the
+    // State sits ABOVE the tabs router, not below it.
+    final hasNoOwnProfiles =
+        profilesAsync.hasValue && profiles.isEmpty && !hasActiveTutoredProfiles;
+    if (!hasNoOwnProfiles) {
+      _didJumpToSettings = false; // reset so next no-profile state jumps again
+    }
 
     // Parent mode is an ELEVATION, not a side-effect of selecting a child.
     // The "Parent mode — viewing [child]" banner shows ONLY when the parent
@@ -105,6 +128,16 @@ class AppShellScreen extends ConsumerWidget {
         // W6.15: When the user has active tutor grants, we show a subtle
         // tutor-mode indicator alongside the offline banner.
         appBarBuilder: (innerContext, tabsRouter) {
+          // Profile-less users land on the Settings tab (see hasNoOwnProfiles
+          // above). Scheduled here because AutoTabsScaffold hands us a valid
+          // tabsRouter; doing it from this State's own context would throw.
+          if (hasNoOwnProfiles && !_didJumpToSettings) {
+            _didJumpToSettings = true;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (!mounted) return;
+              if (tabsRouter.activeIndex != 3) tabsRouter.setActiveIndex(3);
+            });
+          }
           final topInset = MediaQuery.of(innerContext).padding.top;
           final bannerHeight = offlineBannerVisible ? 32.0 : 0.0;
           final tutorHeight = hasActiveTutoredProfiles ? 24.0 : 0.0;

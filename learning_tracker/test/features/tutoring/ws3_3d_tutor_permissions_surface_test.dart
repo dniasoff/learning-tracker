@@ -189,16 +189,24 @@ void main() {
       expect(perms.canViewContent, isTrue);
       expect(perms.canBulkPriorCompletion, isTrue);
       expect(perms.canResetCompletion, isFalse);
-      expect(perms.canEditGoals, isFalse);
-      expect(perms.canEditStages, isFalse);
-      expect(perms.canEditRewards, isFalse);
-      expect(perms.canEditStudyDays, isFalse);
+      // DEC: tutor defaults now grant full parent-equivalent edit access
+      // (manage the talmid's goals/stages/rewards/study-days/points). Only
+      // live completion-marking is barred. TutorPermissions.readOnly() opts
+      // every edit flag back out.
+      expect(perms.canEditGoals, isTrue);
+      expect(perms.canEditStages, isTrue);
+      expect(perms.canEditRewards, isTrue);
+      expect(perms.canEditStudyDays, isTrue);
+      expect(perms.canEditPoints, isTrue);
       // Hard invariant.
       expect(perms.canMarkLiveCompletion, isFalse);
     });
 
     test('AC5: TutorPermissions.copyWith updates individual fields', () {
-      const base = TutorPermissions();
+      // Start from readOnly() (all edit flags false) so we can prove copyWith
+      // flips individual fields on without disturbing the rest. (The default
+      // TutorPermissions() now has every edit flag true — see defaults test.)
+      final base = TutorPermissions.readOnly();
       final updated = base.copyWith(canEditRewards: true, canEditGoals: true);
       expect(updated.canEditRewards, isTrue);
       expect(updated.canEditGoals, isTrue);

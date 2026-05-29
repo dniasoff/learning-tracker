@@ -23,11 +23,11 @@ class TutorPermissions {
     this.canViewContent = true,
     this.canBulkPriorCompletion = true,
     this.canResetCompletion = false,
-    this.canEditGoals = false,
-    this.canEditStages = false,
-    this.canEditRewards = false,
-    this.canEditStudyDays = false,
-    this.canEditPoints = false,
+    this.canEditGoals = true,
+    this.canEditStages = true,
+    this.canEditRewards = true,
+    this.canEditStudyDays = true,
+    this.canEditPoints = true,
   }) : canMarkLiveCompletion = false;
 
   // Intentionally not in constructor — always false.
@@ -71,8 +71,14 @@ class TutorPermissions {
   factory TutorPermissions.defaults() => const TutorPermissions();
 
   /// Minimal read-only permissions (progress + content view only).
-  factory TutorPermissions.readOnly() =>
-      const TutorPermissions(canBulkPriorCompletion: false);
+  factory TutorPermissions.readOnly() => const TutorPermissions(
+    canBulkPriorCompletion: false,
+    canEditGoals: false,
+    canEditStages: false,
+    canEditRewards: false,
+    canEditStudyDays: false,
+    canEditPoints: false,
+  );
 
   TutorPermissions copyWith({
     bool? canViewProgress,
@@ -120,11 +126,11 @@ class TutorPermissions {
         canBulkPriorCompletion:
             data['can_bulk_prior_completion'] as bool? ?? true,
         canResetCompletion: data['can_reset_completion'] as bool? ?? false,
-        canEditGoals: data['can_edit_goals'] as bool? ?? false,
-        canEditStages: data['can_edit_stages'] as bool? ?? false,
-        canEditRewards: data['can_edit_rewards'] as bool? ?? false,
-        canEditStudyDays: data['can_edit_study_days'] as bool? ?? false,
-        canEditPoints: data['can_edit_points'] as bool? ?? false,
+        canEditGoals: data['can_edit_goals'] as bool? ?? true,
+        canEditStages: data['can_edit_stages'] as bool? ?? true,
+        canEditRewards: data['can_edit_rewards'] as bool? ?? true,
+        canEditStudyDays: data['can_edit_study_days'] as bool? ?? true,
+        canEditPoints: data['can_edit_points'] as bool? ?? true,
       );
 
   @override

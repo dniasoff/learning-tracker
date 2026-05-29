@@ -204,21 +204,28 @@ void main() {
       await tester.pump(Duration.zero);
     });
 
-    testWidgets('renders lower sections when scrolled', (tester) async {
-      await tester.pumpWidget(
-        createTestWidget(initialActive: [CurriculumId.mishnayos]),
-      );
-      await pumpUntilSettled(tester);
+    testWidgets(
+      'account actions are NOT in the Settings body (moved to header sheet)',
+      (tester) async {
+        // Account/profile separation: ACCOUNT actions (Sign Out, Delete
+        // account, Change password, Add account) live ONLY in the account
+        // sheet opened from the profile header card — never duplicated in the
+        // Settings body. Scrolling the whole list must not reveal them.
+        await tester.pumpWidget(
+          createTestWidget(initialActive: [CurriculumId.mishnayos]),
+        );
+        await pumpUntilSettled(tester);
 
-      await tester.drag(find.byType(ListView), const Offset(0, -1300));
-      await tester.pump(const Duration(milliseconds: 100));
+        await tester.drag(find.byType(ListView), const Offset(0, -5000));
+        await tester.pumpAndSettle();
 
-      expect(find.text('ACCOUNT'), findsOneWidget);
-      expect(find.text('Sign Out'), findsOneWidget);
+        expect(find.text('ACCOUNT'), findsNothing);
+        expect(find.text('Sign Out'), findsNothing);
 
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump(Duration.zero);
-    });
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(Duration.zero);
+      },
+    );
 
     testWidgets('displays app version when scrolled to bottom', (tester) async {
       await tester.pumpWidget(

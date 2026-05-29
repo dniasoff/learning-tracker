@@ -304,7 +304,7 @@ void main() {
     });
 
     testWidgets(
-      'EmptyLoginScreen CTA banner shows "Add a profile" call-to-action',
+      'EmptyLoginScreen CTA banner shows "Add a learning track" call-to-action',
       (tester) async {
         final mockRouter = _MockStackRouter();
         when(() => mockRouter.replaceAll(any())).thenAnswer((_) async {});
@@ -318,9 +318,11 @@ void main() {
         await tester.pump();
         await tester.pumpAndSettle();
 
-        // SkippedOnboardingCtaBanner in non-tutor mode shows "Set up a learning
-        // track" as the primary CTA — this is the "Add a profile later" path.
-        expect(find.text('Set up a learning track'), findsOneWidget);
+        // SkippedOnboardingCtaBanner (non-tutor) shows a single primary CTA,
+        // "Add a learning track". The separate "Accept a tutor invite" button
+        // was removed from the banner; tutor entry is the dedicated "I'm a
+        // tutor" button on EmptyLoginScreen (tested above).
+        expect(find.text('Add a learning track'), findsOneWidget);
       },
     );
   });

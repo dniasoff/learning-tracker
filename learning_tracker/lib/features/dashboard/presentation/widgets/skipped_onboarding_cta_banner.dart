@@ -11,7 +11,6 @@ import 'dart:async';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
@@ -102,7 +101,7 @@ class _CtaBannerBody extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             Text(
-              joinedToTutor ? l10n.tutorWelcomeBannerTitle : "You're all set!",
+              joinedToTutor ? l10n.tutorWelcomeBannerTitle : 'Get started',
               textAlign: TextAlign.center,
               style: theme.textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.w800,
@@ -113,8 +112,7 @@ class _CtaBannerBody extends StatelessWidget {
             Text(
               joinedToTutor
                   ? l10n.tutorWelcomeBannerBody
-                  : 'Set up your first learning track when you are ready, '
-                        'or accept a tutor invite if someone shared one with you.',
+                  : 'Add a learning track to begin tracking your progress.',
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyLarge?.copyWith(
                 color: AppTheme.brandInkMuted,
@@ -122,35 +120,21 @@ class _CtaBannerBody extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 32),
-            if (!joinedToTutor) ...[
-              FilledButton.icon(
-                icon: const Icon(Icons.add_rounded),
-                label: const Text('Set up a learning track'),
-                style: FilledButton.styleFrom(
-                  backgroundColor: AppTheme.brandBlue,
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: const StadiumBorder(),
-                ),
-                onPressed: () {
-                  unawaited(
-                    context.router.push(
-                      TrackManagementHubRoute(startAdding: true),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 12),
-            ],
-            OutlinedButton.icon(
-              icon: const Icon(Icons.link_rounded),
-              label: const Text('Accept a tutor invite'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppTheme.brandBlueDeep,
-                side: const BorderSide(color: AppTheme.brandBlue),
+            FilledButton.icon(
+              icon: const Icon(Icons.add_rounded),
+              label: const Text('Add a learning track'),
+              style: FilledButton.styleFrom(
+                backgroundColor: AppTheme.brandBlue,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: const StadiumBorder(),
               ),
-              onPressed: () => _handleAcceptInvite(context),
+              onPressed: () {
+                unawaited(
+                  context.router.push(
+                    TrackManagementHubRoute(startAdding: true),
+                  ),
+                );
+              },
             ),
             const SizedBox(height: 24),
             TextButton(
@@ -169,90 +153,4 @@ class _CtaBannerBody extends StatelessWidget {
     );
   }
 
-  void _handleAcceptInvite(BuildContext context) {
-    // W6.9 deep-link handler is the canonical entry. Here we provide a
-    // clipboard-paste fallback: prompt the user to paste their invite link.
-    showDialog<void>(
-      context: context,
-      builder: (ctx) => _PasteInviteLinkDialog(),
-    );
-  }
-}
-
-/// Simple dialog for pasting an invite link (fallback for W6.9 deep-links).
-class _PasteInviteLinkDialog extends StatefulWidget {
-  @override
-  State<_PasteInviteLinkDialog> createState() => _PasteInviteLinkDialogState();
-}
-
-class _PasteInviteLinkDialogState extends State<_PasteInviteLinkDialog> {
-  final _controller = TextEditingController();
-
-  @override
-  void initState() {
-    super.initState();
-    // Pre-fill from clipboard if available.
-    unawaited(_prefillFromClipboard());
-  }
-
-  Future<void> _prefillFromClipboard() async {
-    try {
-      final data = await Clipboard.getData('text/plain');
-      final text = data?.text?.trim() ?? '';
-      if (text.contains('invite') || text.startsWith('https://')) {
-        if (mounted) _controller.text = text;
-      }
-    } catch (_) {
-      // Clipboard unavailable — ignore.
-    }
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text('Accept tutor invite'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Text('Paste the invite link the parent shared with you.'),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _controller,
-            decoration: const InputDecoration(
-              hintText: 'https://...',
-              border: OutlineInputBorder(),
-            ),
-            keyboardType: TextInputType.url,
-            autofocus: true,
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: () {
-            // W6.9: full deep-link flow handled by the incoming URI handler.
-            // For now, close the dialog — the token will be processed once
-            // W6.9's AcceptInviteScreen is wired into the router.
-            Navigator.of(context).pop();
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Invite link received. Processing...'),
-              ),
-            );
-          },
-          child: const Text('Accept'),
-        ),
-      ],
-    );
-  }
 }

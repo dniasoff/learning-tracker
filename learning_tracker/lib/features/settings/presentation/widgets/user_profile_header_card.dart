@@ -7,7 +7,7 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_st
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
-import 'package:learning_tracker/features/profiles/presentation/widgets/profile_switcher_sheet.dart';
+import 'package:learning_tracker/features/settings/presentation/widgets/account_actions_sheet.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Surface for [UserProfileHeaderCard]: matches [SettingsScreen] card vs
@@ -96,7 +96,7 @@ class _UserProfileHeaderCardState extends ConsumerState<UserProfileHeaderCard> {
           authUser: authState.currentUser!,
         ),
         onTap: widget.surface == UserProfileHeaderSurface.settings
-            ? () => showProfileSwitcherSheet(context)
+            ? () => showAccountActionsSheet(context, ref)
             : null,
       );
     }
@@ -147,7 +147,7 @@ class _UserProfileHeaderCardState extends ConsumerState<UserProfileHeaderCard> {
 
     return _wrapSurface(
       widget.surface,
-      onTap: () => showProfileSwitcherSheet(context),
+      onTap: () => showAccountActionsSheet(context, ref),
       Padding(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
         child: Row(

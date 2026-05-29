@@ -253,7 +253,9 @@ class _SwitcherProfileTile extends StatelessWidget {
           child: Text(
             initial,
             style: TextStyle(
-              color: isActive ? AppTheme.brandBlueBright : AppTheme.brandBlueDeep,
+              color: isActive
+                  ? AppTheme.brandBlueBright
+                  : AppTheme.brandBlueDeep,
               fontWeight: FontWeight.w700,
             ),
           ),

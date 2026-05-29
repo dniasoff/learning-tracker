@@ -14,7 +14,6 @@ import 'package:learning_tracker/core/widgets/preference_segmented_tile.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
     hide authStateProvider;
-import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/text_display_providers.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
@@ -22,15 +21,16 @@ import 'package:learning_tracker/features/profiles/presentation/providers/parent
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/parent_pin_keypad_dialog.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_settings_card.dart';
-import 'package:learning_tracker/features/settings/presentation/providers/account_management_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/lifetime_marking_screen.dart';
-import 'package:learning_tracker/features/settings/presentation/utils/account_actions.dart';
 import 'package:learning_tracker/features/settings/presentation/utils/send_logs_service.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/backup_sync_section.dart';
-import 'package:learning_tracker/features/settings/presentation/widgets/change_password_dialog.dart';
-import 'package:learning_tracker/features/settings/presentation/widgets/reauthenticate_dialog.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/user_profile_header_card.dart';
+import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart'
+    show incomingTutorGrantsProvider;
+import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_grant_providers.dart'
+    show pendingTutorInvitesProvider;
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
@@ -42,7 +42,6 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final user = ref.watch(authRepositoryProvider).currentUser;
-    final authState = ref.watch(authStateProvider);
     final theme = Theme.of(context);
 
     final activeProfileId = ref.watch(activeProfileIdProvider);
@@ -51,26 +50,10 @@ class SettingsScreen extends ConsumerWidget {
         .where((p) => p.id == activeProfileId)
         .firstOrNull;
     final isChildProfile = activeProfile?.profileMode == ProfileMode.child;
-    final isAdultProfile = activeProfile?.profileMode == ProfileMode.adult;
     final activeTutoredSelection = ref.watch(
       activeTutoredProfileSelectionProvider,
     );
     final isTutoredSession = activeTutoredSelection != null;
-    // Elevated parent managing this child: account-level actions (e.g. adding
-    // another login) belong to the adult and must be reachable here too, not
-    // only from the adult's own profile.
-    final parentAuthedProfileId = ref.watch(
-      parentPinAuthenticatedProfileIdProvider,
-    );
-    final inParentMode =
-        parentAuthedProfileId != null &&
-        parentAuthedProfileId == activeProfileId;
-    final hasPasswordProvider =
-        user != null && user.providers.contains('password');
-    final showDeleteAccountTile =
-        !isChildProfile &&
-        isAdultProfile &&
-        (user != null || authState.isLocalBorn);
 
     // isTutorElevated: tutor in a talmid's context → parent-equivalent access
     // for the child's LEARNING management (not account-admin surfaces).
@@ -92,6 +75,10 @@ class SettingsScreen extends ConsumerWidget {
               activeProfile: activeProfile,
               surface: UserProfileHeaderSurface.settings,
             ),
+            // ── Pending tutor invitations ──────────────────────────────────────
+            // Shown automatically when a parent has sent an invite addressed to
+            // this account's email — no link sharing required.
+            if (!isTutoredSession) const _PendingInvitesSection(),
             const SizedBox(height: 24),
             // ── DEVICE section (D2/WS4.settings) ──────────────────────────────
             // Device-scoped settings: applies to this physical device, shared by
@@ -212,81 +199,10 @@ class SettingsScreen extends ConsumerWidget {
                 isChildProfile: isChildProfile,
               ),
             ],
-            if (!isTutoredSession &&
-                (!isChildProfile || hasPasswordProvider || inParentMode)) ...[
-              _SectionHeader(title: l10n.sectionAccount),
-              const SizedBox(height: 10),
-              // Always-available entry to add another login on this device.
-              // Previously "Add account" lived only in the count-gated profile
-              // switcher, so a single-account user had no way to reach it.
-              // Also shown to an elevated parent managing a child, so a second
-              // login (e.g. a tutor's account) can be added without first
-              // switching to the adult profile.
-              if (!isChildProfile || inParentMode) ...[
-                _SurfaceCard(
-                  child: PreferenceListTile.withIcon(
-                    icon: Icons.person_add_alt_1_rounded,
-                    iconColor: AppTheme.brandBlueBright,
-                    iconBackground: AppTheme.brandBlueSoft,
-                    title: l10n.switcherSheetAddAccount,
-                    subtitle: l10n.addAnotherAccountSubtitle,
-                    onTap: () => context.pushRoute(SignupRoute()),
-                  ),
-                ),
-                const SizedBox(height: 12),
-              ],
-              if (hasPasswordProvider)
-                Column(
-                  children: [
-                    _SurfaceCard(
-                      child: PreferenceListTile.withIcon(
-                        icon: Icons.vpn_key_outlined,
-                        iconColor: AppTheme.brandInkMuted,
-                        iconBackground: theme.colorScheme.secondaryContainer,
-                        title: l10n.changePassword,
-                        onTap: () =>
-                            _showChangePasswordFlow(context, ref, user),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                  ],
-                ),
-              if (!isChildProfile)
-                _SurfaceCard(
-                  child: PreferenceListTile.withIcon(
-                    icon: Icons.logout_rounded,
-                    iconColor: theme.colorScheme.error,
-                    iconBackground: theme.colorScheme.errorContainer,
-                    title: l10n.signOut,
-                    titleColor: theme.colorScheme.error,
-                    trailing: const SizedBox.shrink(),
-                    onTap: () => showSignOutConfirmation(context, ref),
-                  ),
-                ),
-              if (showDeleteAccountTile) ...[
-                const SizedBox(height: 12),
-                _SurfaceCard(
-                  child: PreferenceListTile.withIcon(
-                    icon: Icons.delete_forever_rounded,
-                    iconColor: theme.colorScheme.error,
-                    iconBackground: theme.colorScheme.errorContainer,
-                    title: l10n.deleteAccountTitle,
-                    subtitle: authState.isLocalBorn
-                        ? l10n.deleteLocalAccountSubtitle
-                        : l10n.deleteAccountSubtitle,
-                    titleColor: theme.colorScheme.error,
-                    trailing: const SizedBox.shrink(),
-                    onTap: () {
-                      if (authState.isLocalBorn) {
-                        showDeleteLocalAccountFlow(context, ref);
-                      } else if (user != null) {
-                        showDeleteAccountFlow(context, ref, user);
-                      }
-                    },
-                  ),
-                ),
-              ],
-            ],
+            // Account management (switch / add login, change password, sign
+            // out, delete account) lives ONLY in the profile header sheet at the
+            // top of this screen (tap the header card). It is intentionally NOT
+            // duplicated here so there is a single home for account actions.
             const SizedBox(height: 24),
             _SurfaceCard(
               child: PreferenceListTile.withIcon(
@@ -703,30 +619,132 @@ class _ParentalControlsSectionState
   }
 }
 
-// ─── Account action helpers ───────────────────────────────────────────────────
+// ── Tutor access section ───────────────────────────────────────────────────────
 
-Future<void> _showChangePasswordFlow(
-  BuildContext context,
-  WidgetRef ref,
-  AppUser user,
-) async {
-  final service = ref.read(accountManagementServiceProvider);
+/// Shows all tutor grants (active + pending) in Settings so the user can see
+/// who they are tutoring and accept/view pending invitations without needing
+/// a link.  Pending invites are discovered automatically from Firestore by
+/// the signed-in user's email address.
+class _PendingInvitesSection extends ConsumerWidget {
+  const _PendingInvitesSection();
 
-  final reauthenticated = await showReauthenticateDialog(
-    context: context,
-    email: user.email ?? '',
-    service: service,
-  );
-  if (reauthenticated != true || !context.mounted) return;
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final activeAsync = ref.watch(incomingTutorGrantsProvider);
+    final pendingAsync = ref.watch(pendingTutorInvitesProvider);
 
-  final changed = await showChangePasswordDialog(
-    context: context,
-    service: service,
-  );
-  if ((changed ?? false) && context.mounted) {
-    final l10n = AppLocalizations.of(context)!;
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(l10n.passwordChangedSuccessfully)));
+    final activeGrants =
+        activeAsync.asData?.value
+            .where((g) => g.grantState is ActiveGrant)
+            .toList() ??
+        const [];
+    final pendingGrants =
+        pendingAsync.asData?.value
+            .where((g) => g.grantState is PendingGrant)
+            .toList() ??
+        const [];
+
+    if (activeGrants.isEmpty && pendingGrants.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    final theme = Theme.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 20),
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Text(
+            'TALMID PROFILES',
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: AppTheme.brandInkMuted,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.6,
+            ),
+          ),
+        ),
+        for (final grant in pendingGrants) ...[
+          _TutorGrantTile(grant: grant, isPending: true),
+          const SizedBox(height: 8),
+        ],
+        for (final grant in activeGrants) ...[
+          _TutorGrantTile(grant: grant, isPending: false),
+          const SizedBox(height: 8),
+        ],
+        const SizedBox(height: 8),
+      ],
+    );
+  }
+}
+
+class _TutorGrantTile extends StatelessWidget {
+  const _TutorGrantTile({required this.grant, required this.isPending});
+
+  final TutorGrant grant;
+  final bool isPending;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final childLabel = grant.childDisplayLabel;
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: isPending ? const Color(0xFFFFF8E1) : const Color(0xFFE8F5E9),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isPending ? const Color(0xFFFFE082) : const Color(0xFFA5D6A7),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.school_rounded,
+            color: isPending
+                ? const Color(0xFFF57F17)
+                : const Color(0xFF2E7D32),
+            size: 26,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  childLabel,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                Text(
+                  isPending ? 'Pending — tap to accept' : 'Tutoring',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: isPending
+                        ? const Color(0xFFF57F17)
+                        : const Color(0xFF2E7D32),
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          if (isPending)
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: const Color(0xFFF57F17),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 8,
+                ),
+              ),
+              onPressed: () =>
+                  context.pushRoute(AcceptInviteRoute(token: grant.grantId)),
+              child: const Text('Accept'),
+            ),
+        ],
+      ),
+    );
   }
 }

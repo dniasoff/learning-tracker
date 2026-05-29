@@ -17,6 +17,7 @@ import 'package:learning_tracker/features/profiles/presentation/providers/profil
 import 'package:learning_tracker/features/profiles/presentation/widgets/add_profile_dialog.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/my_children_section.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/tutored_children_section.dart';
+import 'package:learning_tracker/features/settings/presentation/utils/account_actions.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart';
 // Only pendingTutorInvitesProvider is needed here; incomingTutorGrantsProvider
@@ -143,6 +144,10 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
             ),
             // Talmidim — only renders when the user has ≥1 active tutor grant.
             const TutoredChildrenSection(),
+            // Account exit — shown when the user has no own learner profiles
+            // (tutor-only account) so they can sign out without needing to
+            // create a profile or enter a talmid's context first.
+            if (profiles.isEmpty) _buildSignOutSection(context),
           ],
         ),
       ),
@@ -402,6 +407,43 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
       ref.read(selectedProfileIdProvider.notifier).clear();
     }
     ref.invalidate(profileListProvider);
+  }
+
+  // ── Account exit for tutor-only users ────────────────────────────────────
+
+  Widget _buildSignOutSection(BuildContext context) {
+    final authState = ref.watch(authStateProvider);
+    final theme = Theme.of(context);
+
+    // No sign-out tile for unauthenticated / anonymous sessions.
+    if (!authState.isCloudBorn && !authState.isLocalBorn) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const SizedBox(height: 24),
+        const Divider(),
+        const SizedBox(height: 16),
+        OutlinedButton.icon(
+          icon: Icon(
+            Icons.logout_rounded,
+            color: theme.colorScheme.error,
+          ),
+          label: Text(
+            AppLocalizations.of(context)!.signOut,
+            style: TextStyle(color: theme.colorScheme.error),
+          ),
+          style: OutlinedButton.styleFrom(
+            side: BorderSide(color: theme.colorScheme.error.withValues(alpha: 0.4)),
+            padding: const EdgeInsets.symmetric(vertical: 14),
+          ),
+          onPressed: () => showSignOutConfirmation(context, ref),
+        ),
+        const SizedBox(height: 12),
+      ],
+    );
   }
 }
 

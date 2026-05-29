@@ -1,5 +1,6 @@
 /// Widget tests for the canonical profile switcher/manager flow:
-///   • Tapping the Settings profile header opens the switcher sheet.
+///   • Tapping the Settings profile header opens the ACCOUNT actions sheet
+///     (account/profile separation); the switcher itself is tested directly.
 ///   • The sheet lists every profile (with a child/adult label), the active
 ///     one is marked, and it exposes Add + per-row Edit/Delete affordances.
 ///   • Tapping a non-active profile switches the active profile via
@@ -17,6 +18,9 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
+import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
+import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
+    show authRepositoryProvider;
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
@@ -26,6 +30,8 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
 class _MockStackRouter extends Mock implements StackRouter {}
+
+class _MockAuthRepository extends Mock implements AuthRepository {}
 
 ProfileModel _profile({
   required int id,
@@ -92,13 +98,15 @@ class _FixedSelectedProfileId extends SelectedProfileId {
 
 void main() {
   group('Profile header tap → switcher sheet', () {
-    testWidgets('tapping the Settings profile header opens the sheet', (
+    testWidgets('tapping the Settings profile header opens the account sheet', (
       tester,
     ) async {
       final profiles = [
         _profile(id: 1, name: 'Avi', mode: 'adult'),
         _profile(id: 2, name: 'Beni', mode: 'child'),
       ];
+      final mockAuth = _MockAuthRepository();
+      when(() => mockAuth.currentUser).thenReturn(null);
 
       await tester.pumpWidget(
         ProviderScope(
@@ -109,6 +117,7 @@ void main() {
             selectedProfileIdProvider.overrideWith(
               () => _FixedSelectedProfileId(1),
             ),
+            authRepositoryProvider.overrideWithValue(mockAuth),
             authStateProvider.overrideWithValue(
               const AuthState.signedIn(
                 user: AuthUser(
@@ -146,15 +155,18 @@ void main() {
       );
       await tester.pump();
 
-      // Sheet not yet shown — but "Add profile" lives only in the sheet.
-      expect(find.text('Add Profile'), findsNothing);
+      // Sheet not yet shown.
+      expect(find.text('ACCOUNT'), findsNothing);
 
       await tester.tap(find.text('Avi'));
       await tester.pumpAndSettle();
 
-      // Sheet is open: profiles header + both profile rows + add entry.
-      expect(find.text('Add Profile'), findsOneWidget);
-      expect(find.text('Beni'), findsOneWidget);
+      // Tapping the Settings profile header opens the ACCOUNT actions sheet
+      // (account/profile separation) — NOT the profile switcher. The sheet
+      // shows the ACCOUNT section with switch-account + sign-out.
+      expect(find.text('ACCOUNT'), findsOneWidget);
+      expect(find.text('Switch account'), findsOneWidget);
+      expect(find.text('Sign Out'), findsOneWidget);
     });
   });
 

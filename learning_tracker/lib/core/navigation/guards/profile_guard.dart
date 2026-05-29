@@ -87,13 +87,13 @@ class ProfileGuard extends AutoRouteGuard {
     );
 
     if (profiles.isEmpty) {
-      // An account must always have at least one profile. Zero profiles
-      // means either a fresh cloud sign-in where sync hasn't populated
-      // yet, or a user whose profiles were removed — route them to the
-      // picker so they can add one, never let them into AppShell.
-      _log.info(event: 'profile_guard_no_profiles_redirecting');
-      unawaited(router.replace(const ProfilePickerRoute()));
-      resolver.next(false);
+      // No own learner profiles. Allow navigation to AppShell — the shell
+      // detects this state and jumps to the Settings tab so the user can
+      // manage their account (sign out, delete, device settings, etc.) without
+      // being forced to create a learner profile.  Tutor-only adults in
+      // particular need this path.
+      _log.info(event: 'profile_guard_no_profiles_allow_to_shell');
+      resolver.next();
       return;
     }
 

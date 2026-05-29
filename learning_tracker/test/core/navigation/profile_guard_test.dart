@@ -2,17 +2,17 @@
 //
 // Branch 1: tutored session active → resolver.next() (short-circuit, skip all
 //           profile checks regardless of own-profile count).
-// Branch 2: count==0 own profiles → router.replace(ProfilePickerRoute).
-//           Covers both profile-less tutors and genuine first-run users; in
-//           both cases the picker is the right destination (TutoredChildrenSection
-//           shows active grants; Add Profile CTA handles first-run).
+// Branch 2: count==0 own profiles, no tutored session → resolver.next()
+//           (allow into AppShell). The shell detects the empty-profile state
+//           and jumps to the Settings tab, where a tutor-only adult sees their
+//           grants (TALMID PROFILES) and a first-run user can add a profile.
+//           We never replace() to the picker or call next(false) here.
 // Branch 3: count≥1 own profiles, one profile → auto-select + resolver.next().
 library;
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/navigation/guards/profile_guard.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:mocktail/mocktail.dart';
@@ -109,34 +109,37 @@ void main() {
       isTutoredSession: () => false,
     );
 
-    test('routes to ProfilePickerRoute — not the wizard', () async {
-      // Genuine new user: no profiles, no tutored session.
-      // ProfileGuard must send them to the picker (not a create-wizard).
-      await seedAccount(db);
-      final guard = makeGuard();
-
-      await guard.onNavigation(resolver, router);
-
-      // Picker is the destination for count==0.
-      verify(() => router.replace(const ProfilePickerRoute())).called(1);
-      verify(() => resolver.next(false)).called(1);
-    });
-
     test(
-      'routes to ProfilePickerRoute — same path for profile-less tutor',
+      'allows into AppShell (shell jumps to Settings) — not the picker',
       () async {
-        // Pure tutor: 0 own profiles, tutored session NOT yet active (before
-        // they select a talmid). The picker shows TutoredChildrenSection so they
-        // can enter without creating a learner profile.
+        // Genuine new user: no profiles, no tutored session. ProfileGuard now
+        // lets them into AppShell; the shell jumps to the Settings tab so they
+        // can manage their account / add a profile. No picker redirect.
         await seedAccount(db);
         final guard = makeGuard();
 
         await guard.onNavigation(resolver, router);
 
-        verify(() => router.replace(const ProfilePickerRoute())).called(1);
-        verify(() => resolver.next(false)).called(1);
+        verify(() => resolver.next()).called(1);
+        verifyNever(() => resolver.next(false));
+        verifyNever(() => router.replace(any()));
       },
     );
+
+    test('allows into AppShell — same path for profile-less tutor', () async {
+      // Pure tutor: 0 own profiles, tutored session NOT yet active (before
+      // they select a talmid). They land in AppShell → Settings, where the
+      // TALMID PROFILES section lets them accept/enter without first creating
+      // a learner profile.
+      await seedAccount(db);
+      final guard = makeGuard();
+
+      await guard.onNavigation(resolver, router);
+
+      verify(() => resolver.next()).called(1);
+      verifyNever(() => resolver.next(false));
+      verifyNever(() => router.replace(any()));
+    });
   });
 
   // ── Branch 3: count≥1 own profiles ──────────────────────────────────────────
