@@ -140,4 +140,5 @@ block), tutor_grants, tutor_active_access, every `users/{uid}/learner_profiles/{
 | 2026-05-29 (profiles) | +ProfilePicker(17)/ManageLearners(20)/ParentSettings(33, tile-matrix)/ParentTrackMgmt(20) = **90 L1 tests**; FIXED ProfileEditFormDialog crash (lazy ListView in AlertDialog) + AddProfileCard RTL overflow | 0/27 | 5/24 | 0 | re-measure pending |
 | 2026-05-29 (account/onboarding) | +AppIntro(12)/PermissionPrompt(24)/UpgradeToCloud(17, 7 skip-DI)/DeviceRestore(15) = **68 L1 tests** | 0/27 | 5/24 | 0 | re-measure pending |
 | 2026-05-29 (backend rules) | Firestore rules **5→24/24 paths, 70 assertions** (full learner subtree read/write matrix, tutor read-only + write-block, account-snapshot/diagnostic-logs tutor-exclusion, audit-log, default-deny, hasOnly whitelists) | 0/27 | **24/24** | 0 | rules layer locked |
+| 2026-05-29 (nav guards 5b) | all **5 guards** unit-tested (Auth/Restore/Pin/ChildMode/Profile) + **SYSTEMIC LOCKOUT FIX**: top-level try/catch fail-safe in every guard (no-lockout invariant) + 6 fail-safe regression tests; deleted redundant old auth_guard_test; 111 nav/auth tests green | 0/27 | 24/24 | 0 | guard layer hardened |
 </content>

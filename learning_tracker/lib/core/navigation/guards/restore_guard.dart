@@ -41,43 +41,57 @@ class RestoreGuard extends AutoRouteGuard {
     NavigationResolver resolver,
     StackRouter router,
   ) async {
-    if (_isNewDevice == false) {
-      _log.debug(event: 'restore_guard_already_checked_proceeding');
-      resolver.next();
-      return;
-    }
+    // Fail-safe wrapper (no-lockout invariant): an unhandled throw from the DB
+    // read (or the hasCloudAccount closure) would escape onNavigation and leave
+    // AutoRoute's resolver completer un-completed forever — a navigation hang.
+    // Restore is an optimisation (the user can also restore from Settings), so
+    // on any unexpected error we fail OPEN and let navigation proceed.
+    try {
+      if (_isNewDevice == false) {
+        _log.debug(event: 'restore_guard_already_checked_proceeding');
+        resolver.next();
+        return;
+      }
 
-    // Skip for local-only users — no cloud account means nothing to restore.
-    if (!_hasCloudAccount()) {
-      _log.debug(event: 'restore_guard_no_cloud_account_skipping');
-      _isNewDevice = false;
-      resolver.next();
-      return;
-    }
+      // Skip for local-only users — no cloud account means nothing to restore.
+      if (!_hasCloudAccount()) {
+        _log.debug(event: 'restore_guard_no_cloud_account_skipping');
+        _isNewDevice = false;
+        resolver.next();
+        return;
+      }
 
-    final db = _getDatabase();
-    final analytics = ParentAnalyticsRepositoryImpl(db);
-    final completions = await analytics.getAllCompletions(
-      scope: CrossProfileScope.syncRestore,
-    );
-    final profiles = await db.userProfileDao.getAllUserProfiles();
-    _isNewDevice = completions.isEmpty && profiles.isEmpty;
+      final db = _getDatabase();
+      final analytics = ParentAnalyticsRepositoryImpl(db);
+      final completions = await analytics.getAllCompletions(
+        scope: CrossProfileScope.syncRestore,
+      );
+      final profiles = await db.userProfileDao.getAllUserProfiles();
+      _isNewDevice = completions.isEmpty && profiles.isEmpty;
 
-    _log.info(
-      event: 'restore_guard_new_device_check',
-      fields: {
-        'completionCount': completions.length,
-        'userProfileCount': profiles.length,
-        'isNewDevice': _isNewDevice,
-      },
-    );
+      _log.info(
+        event: 'restore_guard_new_device_check',
+        fields: {
+          'completionCount': completions.length,
+          'userProfileCount': profiles.length,
+          'isNewDevice': _isNewDevice,
+        },
+      );
 
-    if (_isNewDevice!) {
-      _log.info(event: 'restore_guard_redirecting_to_device_restore');
-      unawaited(router.replace(const DeviceRestoreRoute()));
-      resolver.next(false);
-    } else {
-      resolver.next();
+      if (_isNewDevice!) {
+        _log.info(event: 'restore_guard_redirecting_to_device_restore');
+        unawaited(router.replace(const DeviceRestoreRoute()));
+        resolver.next(false);
+      } else {
+        resolver.next();
+      }
+    } catch (error, stack) {
+      _log.error(
+        event: 'restore_guard_failed_safe_allow',
+        exception: error,
+        stackTrace: stack,
+      );
+      if (!resolver.isResolved) resolver.next();
     }
   }
 }

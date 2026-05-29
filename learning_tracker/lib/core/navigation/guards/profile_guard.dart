@@ -35,6 +35,28 @@ class ProfileGuard extends AutoRouteGuard {
     NavigationResolver resolver,
     StackRouter router,
   ) async {
+    // Fail-safe wrapper (no-lockout invariant): the profile DB read
+    // (getProfilesByAccount) can throw — a corrupt/locked DB, a disposed
+    // provider lambda. An unhandled throw would escape onNavigation and leave
+    // AutoRoute's resolver completer un-completed forever — a navigation hang.
+    // ProfileGuard is not a security gate (the shell handles the no-profile
+    // state by jumping to Settings), so on any unexpected error we fail OPEN.
+    try {
+      await _resolve(resolver, router);
+    } catch (error, stack) {
+      _log.error(
+        event: 'profile_guard_failed_safe_allow',
+        exception: error,
+        stackTrace: stack,
+      );
+      if (!resolver.isResolved) resolver.next();
+    }
+  }
+
+  Future<void> _resolve(
+    NavigationResolver resolver,
+    StackRouter router,
+  ) async {
     // Tutored session: the active profile is the synthetic talmid mirror,
     // resolved via the tutored providers — NOT selectedProfileIdProvider (which
     // stays null) and NOT one of the account's own profiles (the mirror is

@@ -7,6 +7,40 @@ test-and-fix run (plan: `exhaustive-test-and-fix-plan-2026-05-29.md`).
 
 ---
 
+## Phase 5b — Navigation guards (unit tests + SYSTEMIC LOCKOUT FIX)
+
+Added unit tests for all 5 AutoRoute guards (Auth 19, Restore 12, Pin 25, ChildMode 7, Profile 14 — branch
+coverage + per-branch "resolver always resolves, never a dead-end" assertions). Adversarial verifiers then
+surfaced a **systemic production bug** across the whole guard layer:
+
+**BUG (HIGH, lockout): no guard wrapped `onNavigation` in a top-level try/catch.** Any throw inside a guard —
+`PinLockoutException` from the PIN prompt, `ProfileMode.fromStorageKey` `ArgumentError` on an unknown mode, a
+Drift/SharedPreferences/device_registry failure, a disposed-provider lambda — escaped `onNavigation`, so
+AutoRoute's `NavigationResolver` completer was never completed. auto_route 11.1.0 awaits that completer →
+**permanent navigation hang (lockout)** on the affected route, with no error surfaced. This is precisely the
+lockout class the project has been burned by before.
+
+**FIX:** wrapped every guard's `onNavigation` body in a try/catch that logs (`AppLogger.error`) and always
+resolves, guarded by `if (!resolver.isResolved)`. Fail direction chosen per guard role:
+- `AuthGuard` → fail to the always-reachable **SignInRoute** + `next(false)` (was a `try/finally` with no
+  `catch`, so a corrupt `device_registry` made `getAllAccounts()`/`close()` propagate → hang).
+- `ProfileGuard`, `RestoreGuard` → **fail OPEN** (`next()`) — not security gates; let the user into the
+  app/shell (which handle empty/no-profile state) rather than hang. (ProfileGuard body extracted to `_resolve`.)
+- `PinGuard`, `ChildModeGuard` → **fail CLOSED** (`next(false)`) — security gates; deny cleanly, never bypass.
+
+**Tests:** each guard got a fail-safe regression test that injects a throwing dependency and asserts the safe
+resolve (no throw, no hang). AuthGuard's is exercised by writing a non-sqlite file to the registry path.
+`make analyze` clean; all 111 navigation/auth tests green.
+
+**Dismissed as NOT a bug:** the ChildModeGuard "corrupt mode string → ArgumentError" finding is already
+defended at the DB layer — `learner_profiles.mode` has a CHECK constraint `IN ('adult','child')`, so a corrupt
+string can't be persisted. The fail-safe stays for the reachable throw sources (disposed provider, DB I/O,
+defence-in-depth against a future migration). Also **deleted** the redundant old `test/core/auth/auth_guard_test.dart`
+(3 branches, no lockout assertions, shared-path mock) — fully subsumed by the new canonical
+`test/core/navigation/auth_guard_test.dart` (19 tests).
+
+---
+
 ## Phase 7 — Backend / Firestore rules (wave a)
 
 `functions/test/firestore_rules.test.mjs`: **5 → 24/24 match paths, 70 assertions, 0 fail** (4.8s under the

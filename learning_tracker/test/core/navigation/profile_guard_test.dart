@@ -189,4 +189,28 @@ void main() {
       verifyNever(() => router.replace(any()));
     });
   });
+
+  // ── Fail-safe: unexpected throw → fail OPEN (not a gate), no hang ──────────
+  //
+  // getProfilesByAccount can throw — a corrupt/locked DB, a disposed provider
+  // lambda. ProfileGuard is not a security gate (the shell handles the empty-
+  // profile state by jumping to Settings), so the guard wraps onNavigation in
+  // a try/catch that fails OPEN (next()) rather than leaving navigation hung.
+  group('unexpected throw (fail-open, no dead-end)', () {
+    test('throwing database lambda → resolver.next(), allows to shell', () async {
+      when(() => resolver.isResolved).thenReturn(false);
+      final guard = ProfileGuard(
+        getDatabase: () => throw StateError('provider disposed mid-flight'),
+        getSelectedProfileId: () => null,
+        setSelectedProfileId: (_) {},
+        getAccountId: () => 1,
+        isTutoredSession: () => false,
+      );
+
+      await guard.onNavigation(resolver, router);
+
+      verify(() => resolver.next()).called(1);
+      verifyNever(() => resolver.next(false));
+    });
+  });
 }

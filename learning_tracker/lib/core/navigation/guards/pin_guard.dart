@@ -1,7 +1,10 @@
 import 'package:auto_route/auto_route.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/navigation/pin_scope.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
+
+final _log = AppLogger.instance;
 
 /// Route guard that protects PIN-gated routes for any [PinScope].
 ///
@@ -76,35 +79,51 @@ class PinGuard extends AutoRouteGuard {
     NavigationResolver resolver,
     StackRouter router,
   ) async {
-    final scope = getScope();
-    if (scope == null) {
-      resolver.next(false);
-      return;
-    }
+    // Fail-safe wrapper (no-lockout invariant): `promptForPin` and the PIN-setup
+    // route can throw (e.g. PinLockoutException after too many attempts, or a
+    // secure-storage error). An unhandled throw would escape onNavigation and
+    // leave AutoRoute's resolver completer un-completed forever — a permanent
+    // hang on a PIN-gated route. This is a SECURITY gate, so on any unexpected
+    // error we fail CLOSED (block the navigation): the user stays on the current
+    // screen and can retry, rather than being stranded or silently let through.
+    try {
+      final scope = getScope();
+      if (scope == null) {
+        resolver.next(false);
+        return;
+      }
 
-    if (_authenticatedScope == scope) {
-      resolver.next(true);
-      return;
-    }
+      if (_authenticatedScope == scope) {
+        resolver.next(true);
+        return;
+      }
 
-    final hasPinSet = await _hasPin(scope);
-    if (!hasPinSet) {
-      final result = await router.push<bool>(const PinFlowSetupRoute());
-      final ok = result ?? false;
-      if (ok) {
+      final hasPinSet = await _hasPin(scope);
+      if (!hasPinSet) {
+        final result = await router.push<bool>(const PinFlowSetupRoute());
+        final ok = result ?? false;
+        if (ok) {
+          _authenticatedScope = scope;
+          onSessionAuthenticated?.call(scope);
+        }
+        resolver.next(ok);
+        return;
+      }
+
+      final verified = await promptForPin();
+      if (verified) {
         _authenticatedScope = scope;
         onSessionAuthenticated?.call(scope);
       }
-      resolver.next(ok);
-      return;
+      resolver.next(verified);
+    } catch (error, stack) {
+      _log.error(
+        event: 'pin_guard_failed_closed',
+        exception: error,
+        stackTrace: stack,
+      );
+      if (!resolver.isResolved) resolver.next(false);
     }
-
-    final verified = await promptForPin();
-    if (verified) {
-      _authenticatedScope = scope;
-      onSessionAuthenticated?.call(scope);
-    }
-    resolver.next(verified);
   }
 
   Future<bool> _hasPin(PinScope scope) {
