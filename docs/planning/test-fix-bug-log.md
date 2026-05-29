@@ -154,5 +154,25 @@ cards). All green.
   will sync when you're back…"), not l10n.
 - `sync_status_indicator.dart`: 9 hardcoded status labels ("Local only", "Synced", "Syncing",
   "$n pending", "$n queued", "Offline", "Sync error", "Sync paused", …) — not l10n.
+
+---
+
+## Phase 3 — Tracks & track-setup wizard (wave 1)
+
++87 L1 tests: **AddTrackFlow** (23 — the LIVE screen + real controller, 6-step machine, exit-confirm +
+replace-existing dialogs, TutorWriteException snackbar, generic error + retry), **EditTrack +
+ChazaraInlineSetup** (25), **TrackManagementHub** (19 — empty/populated, delete archive vs wipe),
+**StudyDayConfig** (20). All green. **No production bugs.**
+
+- Test-harness notes (not prod bugs): EditTrack's ListView lazily culls offstage sections → tall test
+  viewport needed; `FutureProvider.autoDispose.family` `overrideWith((ref) async …)` needs a pump to
+  settle (use `overrideWithValue(AsyncData(x))` for synchronous resolution). study_day_config sizes the
+  viewport via the deprecated `binding.window.*TestValue` (file-level `deprecated_member_use` ignore —
+  no non-deprecated binding-level setter exists for `setUp`; test-only, functional).
+- **Strengthening backlog** (verify flagged render-heavy + partial product-rule coverage): chazara
+  conditional checked only at step-count level, not which chazara widget renders per track type; scope
+  auto-skip positive case (single child → auto-drill) untested; back-date→overdue exercised at the
+  service layer, not through the widget's StartingPositionStep; no-track-type-label asserted only at
+  step 0. → revisit in a strengthening wave.
 </content>
 </invoke>

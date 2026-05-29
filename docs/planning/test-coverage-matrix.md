@@ -134,4 +134,5 @@ block), tutor_grants, tutor_active_access, every `users/{uid}/learner_profiles/{
 | 2026-05-29 (tutor wave 1) | +6 tutoring screens (PinSetup/PinReset/Invite/ManageTutors/ManageGrants/AuditLog) — **111 L1 tests**, 0 skipped (RP3-RETRY fixed: global `retry: null` in bootstrap) | 0/27 | 5/24 | 0 | re-measure pending |
 | 2026-05-29 (tutor wave 2) | +AcceptInvite(6-step)/Decline/PinEntryGate behaviour + ManageTutors strengthen + canMarkLiveCompletion invariant — **all 10 tutoring screens L1-covered** (+104 tests, RTL smoke each) | 0/27 | 5/24 | 0 | re-measure pending |
 | 2026-05-29 (sync/offline) | +OfflineTopBanner(15)/SyncStatusIndicator(19,7-state)/BackupSyncSection(18) = **52 L1 tests**; removed dead `SyncScreen` (/sync) placeholder route | 0/27 | 5/24 | 0 | re-measure pending |
+| 2026-05-29 (tracks) | +AddTrackFlow(23)/EditTrack+Chazara(25)/TrackManagementHub(19)/StudyDayConfig(20) = **87 L1 tests**; product rules asserted (no track-type label, scope, back-date→overdue, chazara) | 0/27 | 5/24 | 0 | re-measure pending |
 </content>
