@@ -41,6 +41,30 @@ defence-in-depth against a future migration). Also **deleted** the redundant old
 
 ---
 
+## Phase 8 — Coverage wave 4: account/tutoring/dashboard (+ CRITICAL upgrade-crash fix)
+
+**+188 tests** (green; 3 skips on email-panel medium bugs): upgrade_to_cloud_service (33), email_verification_confirm_panel
+(24), firestore_tutor_grant_repository (76), dashboard_providers (41), achievement_unlock_celebration (14).
+(`magic_link_service` agent failed to return output — re-target next wave.)
+
+**BUG fixed (CRITICAL — runtime crash on the account-merge flow):** `discardLocalCredentials()` called
+`UserProfileDao.updateUserProfile()` → `update(accounts).replace(entry)`, which requires a COMPLETE row but was
+handed a partial companion (`id` + `passwordHash` only) → **`InvalidDataException` at runtime**. Any user who
+chose "discard local" on the email-collision merge path (and thus all of `executeKeepCloudDiscardLocal()`) would
+crash. FIX: added a dedicated `UserProfileDao.clearPasswordHash(profileId)` doing a targeted `.write()` (the same
+partial-update pattern as `upgradeLocalToCloud`); `discardLocalCredentials` now calls it. **Un-skipped the 3
+tests** the wave had parked over this crash — they pass against the real in-memory DAO. Full suite re-gated.
+
+### Findings logged (email_verification_confirm_panel — medium/low, backlog)
+- RTL (he) layout overflow (~16px) in the Send-Again+Cancel row at 360px (wrap children in Flexible).
+- `_wrapSendAgain`/`_wrapVerified` use try/finally with NO catch → a throwing callback propagates as an unhandled
+  async error (should catch + surface). (2 tests skipped over this.)
+- All panel strings hardcoded English (i18n) — `Confirm Your Email`, `I've verified`, `Open Email`, `Send Again`, `Cancel`.
+- `upgrade_to_cloud_service` deeper paths (verifier): `tryFinalizeVerifiedCloudUpgrade` bare `catch(_)` swallows
+  DB/network errors; `executeUploadLocalIntoCloud` no cloudBorn guard; `_extractFirebaseCode` null-return rethrow.
+
+---
+
 ## Phase 8 — Coverage wave 3: remaining screens & widgets (+ scope-save bug fix)
 
 **+242 tests** (green, analyze clean): scope_selection + lifetime_marking (42), track_management_body +

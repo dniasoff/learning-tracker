@@ -85,6 +85,17 @@ class UserProfileDao extends DatabaseAccessor<UserDatabase>
   Future<bool> updateUserProfile(AccountsCompanion entry) =>
       update(accounts).replace(entry);
 
+  /// Clears the local password hash for [profileId] without touching any other
+  /// column. Used by the "discard local" account-merge choice. This is a
+  /// TARGETED write — `updateUserProfile`/`replace` requires a complete row and
+  /// would throw `InvalidDataException` for a partial (id + passwordHash only)
+  /// companion, crashing the collision-resolution flow.
+  Future<void> clearPasswordHash(int profileId) async {
+    await (update(accounts)..where((t) => t.id.equals(profileId))).write(
+      const AccountsCompanion(passwordHash: Value(null)),
+    );
+  }
+
   Future<int> deleteUserProfile(int id) =>
       (delete(accounts)..where((t) => t.id.equals(id))).go();
 

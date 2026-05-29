@@ -1,4 +1,3 @@
-import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/exceptions/app_exception.dart';
@@ -238,12 +237,10 @@ class UpgradeToCloudService {
   /// Keeps the profile row but clears the password hash — the row
   /// itself will be replaced when the cloud profile is imported.
   Future<void> discardLocalCredentials(int profileId) async {
-    await _dao.updateUserProfile(
-      UserProfilesCompanion(
-        id: Value(profileId),
-        passwordHash: const Value(null),
-      ),
-    );
+    // Targeted partial update — updateUserProfile() does update().replace(),
+    // which requires a COMPLETE row and throws InvalidDataException for this
+    // id+passwordHash-only companion (crashing the "discard local" merge path).
+    await _dao.clearPasswordHash(profileId);
   }
 
   // ───── Collision path execution (v2 §4.3 merge options) ─────
