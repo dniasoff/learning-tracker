@@ -39,55 +39,61 @@ class AddProfileCard extends StatelessWidget {
             ),
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  CustomPaint(
-                    painter: _DashedCirclePainter(
-                      color: isDisabled
-                          ? AppTheme.brandOutline.withValues(alpha: 0.6)
-                          : AppTheme.brandInkMuted,
-                    ),
-                    child: SizedBox(
-                      width: 96,
-                      height: 96,
-                      child: Center(
-                        child: Icon(
-                          Icons.add_rounded,
-                          size: 44,
-                          color: isDisabled
-                              ? AppTheme.brandInkSoft
-                              : AppTheme.brandBlue,
+              // FittedBox(scaleDown) keeps the fixed-size icon + text from
+              // overflowing a short grid cell (the AddProfileCard is taller than
+              // a constrained cell at small viewports / dense grids).
+              child: FittedBox(
+                fit: BoxFit.scaleDown,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    CustomPaint(
+                      painter: _DashedCirclePainter(
+                        color: isDisabled
+                            ? AppTheme.brandOutline.withValues(alpha: 0.6)
+                            : AppTheme.brandInkMuted,
+                      ),
+                      child: SizedBox(
+                        width: 96,
+                        height: 96,
+                        child: Center(
+                          child: Icon(
+                            Icons.add_rounded,
+                            size: 44,
+                            color: isDisabled
+                                ? AppTheme.brandInkSoft
+                                : AppTheme.brandBlue,
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    isDisabled
-                        ? l10n.maxProfilesLabel
-                        : l10n.addProfileCardTitle,
-                    style: theme.textTheme.headlineSmall?.copyWith(
-                      color: AppTheme.brandInk,
-                      fontWeight: FontWeight.w700,
-                      height: 1.08,
+                    const SizedBox(height: 16),
+                    Text(
+                      isDisabled
+                          ? l10n.maxProfilesLabel
+                          : l10n.addProfileCardTitle,
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        color: AppTheme.brandInk,
+                        fontWeight: FontWeight.w700,
+                        height: 1.08,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    isDisabled
-                        ? l10n.maxProfilesSubtitle
-                        : l10n.createNewLearner,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: AppTheme.brandInkMuted,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      height: 1.25,
+                    const SizedBox(height: 4),
+                    Text(
+                      isDisabled
+                          ? l10n.maxProfilesSubtitle
+                          : l10n.createNewLearner,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppTheme.brandInkMuted,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        height: 1.25,
+                      ),
+                      textAlign: TextAlign.center,
                     ),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),

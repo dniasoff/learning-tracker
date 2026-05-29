@@ -204,28 +204,37 @@ class _ProfileEditFormDialogState extends State<ProfileEditFormDialog> {
             const SizedBox(height: 8),
             SizedBox(
               height: 60,
-              child: ListView.builder(
+              // Use a Row in a horizontal SingleChildScrollView, NOT a lazy
+              // ListView: AlertDialog measures its content's intrinsic
+              // dimensions and a lazy RenderViewport can't provide them
+              // ("RenderViewport does not support returning intrinsic
+              // dimensions" → the dialog crashes on open). Only 10 avatars, so
+              // eager layout is cheap.
+              child: SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
-                itemCount: 10,
-                itemBuilder: (context, index) {
-                  final isSelected = index == _avatarIndex;
-                  return GestureDetector(
-                    onTap: () => setState(() => _avatarIndex = index),
-                    child: Container(
-                      margin: const EdgeInsets.symmetric(horizontal: 4),
-                      decoration: isSelected
-                          ? BoxDecoration(
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                color: Theme.of(context).colorScheme.primary,
-                                width: 3,
-                              ),
-                            )
-                          : null,
-                      child: ProfileAvatar(avatarIndex: index, radius: 24),
-                    ),
-                  );
-                },
+                child: Row(
+                  children: [
+                    for (var index = 0; index < 10; index++)
+                      GestureDetector(
+                        onTap: () => setState(() => _avatarIndex = index),
+                        child: Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 4),
+                          decoration: index == _avatarIndex
+                              ? BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  border: Border.all(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary,
+                                    width: 3,
+                                  ),
+                                )
+                              : null,
+                          child: ProfileAvatar(avatarIndex: index, radius: 24),
+                        ),
+                      ),
+                  ],
+                ),
               ),
             ),
           ],

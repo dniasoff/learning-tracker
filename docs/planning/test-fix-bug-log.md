@@ -187,6 +187,37 @@ delete confirm). All green, analyze clean.
   progress-bar arithmetic, status labels, unlock-celebration double-tap guard, pull-to-refresh, sort order
   untested. → strengthen in a later wave.
 
+## Phase 4 — Profiles (wave 1)
+
++90 L1 tests: **ProfilePicker** (17 — selection, sign-out matrix, max-10, empty→TutoredChildrenSection),
+**ManageLearners** (20 — CRUD, edit/delete flows), **ParentSettings** (33 — tutor-permission tile matrix:
+edit tiles gated on `activeTutorPermissionsProvider`, owner-only tiles hidden in tutored context),
+**ParentTrackManagement** (20). All green, analyze clean.
+
+### FIXED (production)
+
+- **[HIGH] ProfileEditFormDialog crashed on open** — the avatar picker was a lazy horizontal `ListView`
+  inside `AlertDialog`, which measures its content's intrinsic dimensions; a lazy `RenderViewport` throws
+  *"RenderViewport does not support returning intrinsic dimensions"*. The edit/rename-profile dialog
+  crashed whenever opened. Fix (`profile_edit_delete_actions.dart`): replaced the `ListView.builder` with
+  a `Row` inside a horizontal `SingleChildScrollView` (intrinsic-friendly; only 10 avatars). Un-skipped
+  the 3 edit-dialog tests → green.
+- **[medium] AddProfileCard RTL/grid overflow** — fixed icon (96) + spacing + text with no flex
+  overflowed (~43px) at constrained grid-cell heights. Fix (`add_profile_card.dart`): wrapped the column
+  in `FittedBox(scaleDown)`.
+
+### OPEN — i18n + RTL (Phase 8)
+
+- `manage_learners_screen.dart`: AppBar title `'Manage Learners'` hardcoded (not l10n).
+- `parent_track_management_screen.dart`: `'Active Tracks'` header + `'$activeCount RUNNING'` badge hardcoded.
+- Residual small RTL overflows in the profile-grid cards (ProfileCard) at 360×780-logical Hebrew
+  (~12px horizontal, ~3.6px vertical) — for the Phase 8 RTL/overflow sweep.
+
+### UX note (low)
+
+- `ManageLearnersScreen` FAB is always enabled; the 10-profile cap is enforced only by the repository
+  (`MaxProfilesExceededException`). Consider a proactive cap indicator / disabled FAB at 10.
+
 ### Skipped-suite repair — epic_15 multi-profile
 
 Un-skipped the library-level `@Skip` on `epic_15_multi_profile_test.dart` (was fully dark) → **119 tests
