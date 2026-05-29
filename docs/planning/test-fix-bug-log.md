@@ -41,6 +41,35 @@ defence-in-depth against a future migration). Also **deleted** the redundant old
 
 ---
 
+## Phase 8 — Coverage wave 2: sync engine + onboarding/settings/profiles
+
+**+298 tests** (green, analyze clean, 2 documented skips; no high-severity prod bugs): `firestore_gateway_impl`
+19.6%→ (**114** — path building, merge idempotency, internal-key stripping, Timestamp normalisation, batch
+chunking, pagination, listeners, unauthenticated/permission-denied error paths), `sync_orchestrator` 54.5%→
+(**29** — pull/push state machine, once-per-launch guard, resume throttle, status emissions, pull ordering),
+`local_data_upload_service` 0%→ (**42** — outbox pipeline), onboarding `wizard_steps` 0%→ (**62**),
+`account_actions` 0%→ (**25** — sign-out/delete dialog confirm+cancel flows), `parent_pin_keypad_dialog` 30%→
+(**26** — digit entry, verify, error/clear).
+
+### Documented skips / findings (not high-severity)
+- `firestore_gateway` fetchPage cursor test: `fake_cloud_firestore` can't handle a `FieldPath.documentId`
+  startAfter cursor (`skip:true`) — fake-library limitation, works on the real emulator/prod.
+- `sync_orchestrator` timeout test: `_perStepTimeout`/`_overallTimeout` are private static consts with no
+  injectable seam (`skip:true`); would need 30–90s real waits. Low — recommend constructor Duration params.
+- `sync_orchestrator` goals-subcollection PUSH gap: known/pre-existing (memory project_sync_orchestrator_status_bug)
+  — pull works + is tested; push absence is the open item, unchanged here.
+- `account_actions` (LOW): `_DeletingAccountOverlay` calls `ref.read(authStateProvider.notifier).signOut()` in a
+  catch during the build/initState-driven deletion; if `deleteAccount` threw *synchronously* it would mutate a
+  provider during build. Edge case (deleteAccount is an async CF call). Logged.
+
+### Verifier-flagged deeper gaps (backlog)
+- `firestore_gateway`: real multi-chunk partial-commit `SyncPushException` committed-keys accuracy;
+  `deleteLearnerProfile` callable path; `_timestampify` DateTime input branch; self-tutoring grant dedup in
+  `listenToTutorGrants`; `deleteUserData` nested sub-subcollection cleanup.
+- `local_data_upload_service`, `wizard_steps` (sliders pre-set not dragged), `pin_keypad`: several branches.
+
+---
+
 ## Phase 8 — Coverage-leverage wave (highest-uncovered files)
 
 Coverage measured 2026-05-30: **68.4%** overall (36774/53763), up from the 58.5% baseline; full suite +6956
