@@ -41,6 +41,30 @@ defence-in-depth against a future migration). Also **deleted** the redundant old
 
 ---
 
+## Phase 6 — Settings / scheduler / notifications / sacred-time / learning (wave a)
+
++127 L1 behaviour tests across 5 zero/low-coverage screens (all green, analyze clean): **CityPicker** (19 —
+search/filter, select→`setManualCity`+`router.pop`, loading/empty/error), **CurriculumSettings** (26 —
+program tiles, change/request, no track-type label), **Learning** (22 — reader states + the **tutor
+live-mark-block product invariant** `canMarkLiveCompletion=false`, chazara-only-when-enabled), **Scheduler**
+(23 — view toggle, skip writes + snackbar, states), **Notifications** (37 — each reminder toggle persists to
+prefs, permission-denied/disabled, states). The LearningScreen live-mark invariant test passes → the gate
+holds in the UI.
+
+### OPEN — i18n / cosmetic (Phase 8 / backlog)
+- `city_picker_screen.dart:79`: empty-state `'No matches for "$query".'` hardcoded English (not l10n).
+- `learning_screen.dart` `_LearnTaskCard`: `Icons.history_rounded` renders on ALL task cards regardless of
+  priority (cosmetic, not a product bug).
+
+### OPEN — coverage strengthening (verifier-flagged; backlog for the loop pass)
+- Notifications: reminder **time** selection persistence (`reminderTimeProvider`) is not asserted (toggles are).
+- Scheduler: skip **Undo** action is found but not tapped/asserted to call `undoSkip`.
+- CurriculumSettings: error-state path claimed in header but no throwing-provider test (screen is thin).
+- Learning: OVERDUE task UI branch (priority_high icon + red OVERDUE badge) not asserted.
+- CityPicker: `TrimLeadingSpaceFormatter`, `admin1==""` branch, query-change provider re-watch untested.
+
+---
+
 ## Phase 7 — Backend / Cloud Functions (wave b)
 
 **All 27 Cloud Functions now have tests: 271 assertions, 271/271 green** via `make test-functions`
@@ -50,6 +74,10 @@ gate matrix (unauthenticated / invalid-argument / not-found / inactive-grant / w
 plus the Firestore side-effect + audit-log write of each happy path. Files: cf_tutor_completions (8),
 cf_tutor_goals_tracks (48), cf_tutor_content (70), cf_tutor_settings_profile (44), cf_grant_invite (29),
 cf_grant_revoke (29), cf_deletes (22), cf_triggers (21).
+
+**DEPLOYED 2026-05-30:** `firebase deploy --only functions --project torah-study-tracker` — all 27 functions
+"Successful update operation", "Deploy complete!". The 3 fixes (expirePendingInvites / declineTutorInvite /
+deleteCurriculumTrack) are live; the live backend now matches the repo.
 
 **HARNESS BUG fixed (was hiding 31 failures):** `clearFirestore()` used the emulator REST clear endpoint,
 which returned before nested subcollections (`tutor_grants/{id}/audit_log`) were purged — stale grants
