@@ -17,7 +17,7 @@ test-rules: ## Run Firestore security-rules tests under the emulator (L5)
 
 test-functions: ## Run Cloud Functions tests (real handlers vs firestore emulator) (L5)
 	npm --prefix functions run build
-	firebase emulators:exec --only firestore --project demo-cf "node --test --test-concurrency=1 functions/test/cf_*.test.mjs"
+	firebase emulators:exec --only firestore,auth --project demo-cf "node --test --test-concurrency=1 functions/test/cf_*.test.mjs"
 
 test-story-4.1: ## Run Story 4.1 (Track Management) acceptance tests
 	flutter test test/story_acceptance/epic_04_multi_track_test.dart

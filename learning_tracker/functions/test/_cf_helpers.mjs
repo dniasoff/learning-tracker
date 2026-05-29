@@ -35,12 +35,19 @@ export const tutorAuth = { uid: TUTOR, token: {} };
 export const parentAuth = { uid: PARENT, token: {} };
 export const strangerAuth = { uid: STRANGER, token: {} };
 
-/** Wipe all emulator data (call in beforeEach). */
+/** Root collections every CF touches. Cleared (incl. subcollections) per test. */
+const ROOT_COLLECTIONS = ['tutor_grants', 'users', 'tutor_active_access'];
+
+/**
+ * Wipe all emulator data (call in beforeEach). Uses the Admin SDK's awaited
+ * recursiveDelete — deterministic and synchronous-to-await, unlike the
+ * emulator REST clear endpoint (which returned before nested subcollections
+ * like tutor_grants/{id}/audit_log were actually purged, leaving stale grants
+ * and accumulating audit entries across tests).
+ */
 export async function clearFirestore() {
-  const host = process.env.FIRESTORE_EMULATOR_HOST;
-  await fetch(
-    `http://${host}/emulator/v1/projects/${PROJECT}/databases/(default)/documents`,
-    { method: 'DELETE' },
+  await Promise.all(
+    ROOT_COLLECTIONS.map((c) => db.recursiveDelete(db.collection(c))),
   );
 }
 

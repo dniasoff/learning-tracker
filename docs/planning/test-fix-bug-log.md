@@ -41,6 +41,51 @@ defence-in-depth against a future migration). Also **deleted** the redundant old
 
 ---
 
+## Phase 7 — Backend / Cloud Functions (wave b)
+
+**All 27 Cloud Functions now have tests: 271 assertions, 271/271 green** via `make test-functions`
+(tsc build → `firebase emulators:exec --only firestore,auth` → `node --test --test-concurrency=1
+functions/test/cf_*.test.mjs`). The suites run the REAL built handlers through `fft.wrap()` and assert the
+gate matrix (unauthenticated / invalid-argument / not-found / inactive-grant / wrong-tutor / missing-permission)
+plus the Firestore side-effect + audit-log write of each happy path. Files: cf_tutor_completions (8),
+cf_tutor_goals_tracks (48), cf_tutor_content (70), cf_tutor_settings_profile (44), cf_grant_invite (29),
+cf_grant_revoke (29), cf_deletes (22), cf_triggers (21).
+
+**HARNESS BUG fixed (was hiding 31 failures):** `clearFirestore()` used the emulator REST clear endpoint,
+which returned before nested subcollections (`tutor_grants/{id}/audit_log`) were purged — stale grants
+survived (so "no grant → not-found" tests instead hit a stale active grant → permission-denied) and audit
+entries accumulated across tests (`2 !== 1`, `3 !== 1`…). Switched to the Admin SDK's awaited
+`recursiveDelete` over `tutor_grants`/`users`/`tutor_active_access`. Also added the **Auth emulator**
+(`--only firestore,auth`) since accept/decline invite call `admin.auth().getUser()`.
+
+### Server-function findings (triaged)
+**To FIX (real bugs, with regression tests):**
+- `expirePendingInvites` (MEDIUM): the Firestore transaction `txn.update(grantDoc.ref, …)` never re-reads the
+  doc inside the txn — the snapshot was taken outside it, so a concurrent run / state change between query and
+  commit is a lost-update race. Fix: read-inside-txn (or guard on state at commit).
+- `declineTutorInvite` (MEDIUM): calls `admin.auth().getUser(callerUid)` BEFORE the cheap state/uid checks,
+  so a wrong caller / non-pending grant triggers a live Auth call first (info-leak + needs Auth emulator to
+  even reject). Fix: move `getUser` after the state + UID-based gates.
+- `deleteCurriculumTrack` (MEDIUM): uses shallow `trackRef.delete()` while every sibling delete CF uses
+  `recursiveDelete`; if a track ever gains a subcollection its docs orphan. Fix: `db.recursiveDelete(trackRef)`.
+
+**Documented (defensible design / low value — NOT changing):**
+- `tutorBulkPriorCompletions`: today/future completion → `permission-denied` (arguably `invalid-argument`);
+  also inline-duplicates `verifyTutorGrant` instead of calling it (drift risk). Rejection itself is correct.
+- `revokeTutorGrant`/`resignTutorGrant`: inactive grant → `failed-precondition` (not `permission-denied` like
+  the verifyTutorGrant CFs) — defensible; and neither writes an audit_log entry (grant `state`/`revoked_at`
+  are self-documenting). Consider an audit entry later.
+- `tutorEditProfile`: `permKey=null` → any active grant may edit name/avatar/mode (intentional per FR-3 §1920).
+- `listTutorGrants` `pending_for_me` returns `[]` when caller has no verified email (silent, not an error).
+- `purgeExpiredAuditLogs`: counter increments per-grant not per-entry (cosmetic logging only).
+
+### Coverage gap (logged)
+- `acceptTutorInvite`/`declineTutorInvite` happy paths need a seeded Auth-emulator user; the gate tests are in
+  but the full accept/decline success flow is not yet asserted. Follow-up: seed `admin.auth().createUser` +
+  assert the grant→active transition + tutor_active_access doc + audit entry.
+
+---
+
 ## Phase 7 — Backend / Firestore rules (wave a)
 
 `functions/test/firestore_rules.test.mjs`: **5 → 24/24 match paths, 70 assertions, 0 fail** (4.8s under the
