@@ -187,6 +187,26 @@ delete confirm). All green, analyze clean.
   progress-bar arithmetic, status labels, unlock-celebration double-tap guard, pull-to-refresh, sort order
   untested. → strengthen in a later wave.
 
+## Phase 5 — Account / Onboarding screens (wave a)
+
++68 L1 tests: **AppIntro** (12 — palette, page swipes, Skip/Get-Started → SignInRoute + kIntroSeen write),
+**PermissionPrompt** (24 — notification/location asks, grant→gateway, skip→proceed), **UpgradeToCloud**
+(17, +7 skipped — see DI note), **DeviceRestore** (15 — in-progress/success/error states). All green,
+analyze clean. No functional production bugs.
+
+### OPEN — i18n (Phase 8)
+- `app_intro_screen.dart`: `'Skip'` / `'Continue Journey'` / `'Get Started'` hardcoded.
+- `permission_prompt_screen.dart`: ALL user-facing strings hardcoded (titles, CTAs, card titles/subtitles, body).
+
+### OPEN — testability / DI refactor (Opus, careful — security-sensitive)
+- `UpgradeToCloudScreen` inline-instantiates `UpgradeToCloudService` (2 call sites) instead of injecting it
+  via a provider, so L1 tests can't mock the argon2id-gated local→cloud upgrade path → **7 tests skipped**.
+  Fix: add `upgradeToCloudServiceProvider` (its deps — authRepository, dao, registry — are already
+  providers) and read it; then un-skip + complete the 7 tests. Functional path works; this is a
+  testability/DI debt to clear in a focused pass.
+
+---
+
 ## Phase 4 — Profiles (wave 1)
 
 +90 L1 tests: **ProfilePicker** (17 — selection, sign-out matrix, max-10, empty→TutoredChildrenSection),

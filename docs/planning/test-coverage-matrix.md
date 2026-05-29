@@ -138,4 +138,5 @@ block), tutor_grants, tutor_active_access, every `users/{uid}/learner_profiles/{
 | 2026-05-29 (gamification) | +GamificationHub(19)/ChildRedemption(15)/ParentPendingRedemptions(17)/RewardConfig(16) = **67 L1 tests**; FIXED double-tap guard on Fulfil/Decline | 0/27 | 5/24 | 0 | re-measure pending |
 | 2026-05-29 (epic_15 un-skip) | un-skipped the fully-`@Skip`'d multi-profile acceptance suite — **119 tests now passing** (12 justified skips: file/git/arch/compile-time checks); 7 fixture-FK repairs, no prod bugs | 0/27 | 5/24 | 0 | re-measure pending |
 | 2026-05-29 (profiles) | +ProfilePicker(17)/ManageLearners(20)/ParentSettings(33, tile-matrix)/ParentTrackMgmt(20) = **90 L1 tests**; FIXED ProfileEditFormDialog crash (lazy ListView in AlertDialog) + AddProfileCard RTL overflow | 0/27 | 5/24 | 0 | re-measure pending |
+| 2026-05-29 (account/onboarding) | +AppIntro(12)/PermissionPrompt(24)/UpgradeToCloud(17, 7 skip-DI)/DeviceRestore(15) = **68 L1 tests** | 0/27 | 5/24 | 0 | re-measure pending |
 </content>
