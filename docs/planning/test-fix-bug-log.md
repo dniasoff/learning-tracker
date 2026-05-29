@@ -96,6 +96,14 @@ every reported bug + owns this analysis.)
   (`app_error_view.dart`); `pin_entry_widget.dart` `'Clear'` / `'Too many failed attempts'` /
   `'Try again in N minute(s)'`. Reachable from tutor PIN setup error state.
 
+### Wave 2 (2026-05-29)
+
++104 behaviour-focused L1 tests: AcceptInviteScreen (23 — all 6 `_AcceptStep` transitions, auth gate,
+offline stub-grant fallback, precondition branches), DeclineInviteScreen (21), TutorPinEntryGate (21 —
+correct/wrong PIN, lockout, reset), ManageTutorsScreen strengthened (31→39). Each file has an he-RTL
+smoke test. No production bugs found; the only finding is the `pin_entry_widget.dart` hardcoded strings
+(already logged under i18n). **All 10 tutoring screens now have L1 coverage.**
+
 ### Tests need strengthening (tracked, not blocking)
 
 Verify pass flagged the wave-1 tests as render-heavy (render-only counts: PinSetup 11, ManageTutors 19,

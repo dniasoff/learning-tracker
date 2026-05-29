@@ -132,4 +132,5 @@ block), tutor_grants, tutor_active_access, every `users/{uid}/learner_profiles/{
 | 2026-05-29 (baseline) | ~27/52 have ≥1 test file (depth unaudited); ~25/52 **zero** | 0/27 | 0/24 | 0 | 58.4% |
 | 2026-05-29 (rig #3) | — | 0/27 | **5/24** (users, completions+tutor-write-block, goals, tutor_grants, tutor_active_access) via `make test-rules` | 0 | 58.4% |
 | 2026-05-29 (tutor wave 1) | +6 tutoring screens (PinSetup/PinReset/Invite/ManageTutors/ManageGrants/AuditLog) — **111 L1 tests**, 0 skipped (RP3-RETRY fixed: global `retry: null` in bootstrap) | 0/27 | 5/24 | 0 | re-measure pending |
+| 2026-05-29 (tutor wave 2) | +AcceptInvite(6-step)/Decline/PinEntryGate behaviour + ManageTutors strengthen + canMarkLiveCompletion invariant — **all 10 tutoring screens L1-covered** (+104 tests, RTL smoke each) | 0/27 | 5/24 | 0 | re-measure pending |
 </content>
