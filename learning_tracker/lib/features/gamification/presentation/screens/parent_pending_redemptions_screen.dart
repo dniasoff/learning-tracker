@@ -126,7 +126,7 @@ class ParentPendingRedemptionsScreen extends ConsumerWidget {
 
 // ─── Card widget ──────────────────────────────────────────────────────────────
 
-class _RedemptionCard extends StatelessWidget {
+class _RedemptionCard extends StatefulWidget {
   const _RedemptionCard({
     required this.redemption,
     required this.l10n,
@@ -138,11 +138,34 @@ class _RedemptionCard extends StatelessWidget {
   final RewardRedemption redemption;
   final AppLocalizations l10n;
   final ThemeData theme;
-  final VoidCallback onFulfil;
-  final VoidCallback onDecline;
+  final Future<void> Function() onFulfil;
+  final Future<void> Function() onDecline;
+
+  @override
+  State<_RedemptionCard> createState() => _RedemptionCardState();
+}
+
+class _RedemptionCardState extends State<_RedemptionCard> {
+  // Double-tap guard: while a fulfil/decline is in flight, BOTH actions are
+  // disabled so the same redemption can't be fulfilled/declined twice (or
+  // fulfilled-then-declined) by rapid taps before the list refreshes.
+  bool _busy = false;
+
+  Future<void> _run(Future<void> Function() action) async {
+    if (_busy) return;
+    setState(() => _busy = true);
+    try {
+      await action();
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final redemption = widget.redemption;
+    final l10n = widget.l10n;
+    final theme = widget.theme;
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -190,7 +213,7 @@ class _RedemptionCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.end,
               children: [
                 FilledButton(
-                  onPressed: onFulfil,
+                  onPressed: _busy ? null : () => _run(widget.onFulfil),
                   style: FilledButton.styleFrom(
                     backgroundColor: const Color(0xFF00218D),
                     padding: const EdgeInsets.symmetric(
@@ -213,7 +236,7 @@ class _RedemptionCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 6),
                 TextButton(
-                  onPressed: onDecline,
+                  onPressed: _busy ? null : () => _run(widget.onDecline),
                   style: TextButton.styleFrom(
                     foregroundColor: const Color(0xFF6B7280),
                     padding: const EdgeInsets.symmetric(

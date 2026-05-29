@@ -157,6 +157,38 @@ cards). All green.
 
 ---
 
+## Phase 4 — Gamification (wave 1)
+
++67 L1 tests: **GamificationScreen** (19 — achievements/streak/points; adults have no points),
+**ChildRedemption** (15 — affordable vs unaffordable gating, confirm/cancel, balance deduction verified),
+**ParentPendingRedemptions** (17 — approve/decline), **RewardConfiguration** (16 — create/edit validation,
+delete confirm). All green, analyze clean.
+
+### FIXED (production)
+
+- **Double-tap guard on ParentPendingRedemptions Fulfil/Decline.** Both buttons were always-enabled; a
+  rapid double-tap could run `fulfilRedemption` → `_pushRedemption` (a redundant sync push) twice. LOW
+  severity — the DAO is idempotent (`fulfilRedemption` sets `status='fulfilled'`; `declineRedemption`
+  early-returns unless `status == 'pending_fulfilment'`, so **no double-refund**) — but the kickoff
+  requires the guard and it matches the app's `_isFinishing`/`_isSaving` pattern. Fix: `_RedemptionCard`
+  is now `StatefulWidget` with a `_busy` flag that disables both actions while the async is in flight.
+  (A deterministic double-tap regression test is infeasible in flutter_test here — guarded `tap()` calls
+  can't overlap and the in-memory DAO resolves before a second awaited tap — so the test asserts the
+  fulfil path and the guard is verified by construction.)
+
+### OPEN — i18n (Phase 8)
+
+- `streak_widget.dart`: `'${currentStreak} day streak!'` (:125) + `'(best: $maxStreak)'` (:177) hardcoded.
+- `points_display_widget.dart`: `'+$pointsEarned points!'` (:96) hardcoded.
+
+### Strengthening backlog
+
+- GamificationScreen render-heavy (9/19 render-only): lock/affordability gating (`LockedAchievementShell`),
+  progress-bar arithmetic, status labels, unlock-celebration double-tap guard, pull-to-refresh, sort order
+  untested. → strengthen in a later wave.
+
+---
+
 ## Phase 3 — Tracks & track-setup wizard (wave 1)
 
 +87 L1 tests: **AddTrackFlow** (23 — the LIVE screen + real controller, 6-step machine, exit-confirm +
