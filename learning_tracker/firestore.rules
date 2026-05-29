@@ -159,6 +159,10 @@ service cloud.firestore {
       allow delete: if false;
 
       // Account profile snapshot — users/{uid}/profile/data
+      // OWNER-ONLY: tutor access is intentionally NOT granted here. This is the
+      // account-level snapshot, a sibling of learner_profiles/, so it never goes
+      // through hasActiveTutorAccess(). Do NOT add a tutor read clause — a tutor
+      // must only ever see a learner's per-profile subtree, never account data.
       match /profile/{docId} {
         allow read: if isOwner(uid);
         allow create, update: if isOwner(uid);
@@ -166,6 +170,8 @@ service cloud.firestore {
       }
 
       // Diagnostic logs — append-only event stream.
+      // OWNER-ONLY: tutor access intentionally excluded (account-scoped, not a
+      // learner subtree). Locked by firestore_rules.test.mjs.
       match /diagnostic_logs/{logId} {
         allow read: if isOwner(uid);
         allow create: if isOwner(uid);

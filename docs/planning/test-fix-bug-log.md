@@ -7,6 +7,28 @@ test-and-fix run (plan: `exhaustive-test-and-fix-plan-2026-05-29.md`).
 
 ---
 
+## Phase 7 — Backend / Firestore rules (wave a)
+
+`functions/test/firestore_rules.test.mjs`: **5 → 24/24 match paths, 70 assertions, 0 fail** (4.8s under the
+firestore emulator via `make test-rules`). New coverage: the full learner subtree (settings, stage_definitions,
+curriculum_tracks, bookmarks, learning_order, preferences, streak_events, learning_ledger, points_ledger,
+reward_redemptions, import_metadata, profile_programs, curriculum_scopes, study_day_configs) — each asserting
+owner read+write, tutor active-access read-only, write-block, stranger/anon deny, delete policy, and `hasOnly`
+field whitelists; the tutor-EXCLUSION blocks (`users/{uid}/profile/{docId}`, `diagnostic_logs`); the
+`tutor_grants/audit_log` party-read/no-client-write; and the global `/{document=**}` default-deny.
+
+**Rule hardening (comment-only — no behaviour/deploy change, re-verified green):** added explicit "tutor access
+intentionally excluded" intent comments to the `/profile/{docId}` and `/diagnostic_logs` blocks (agent finding
+#1) — account-scoped siblings of `learner_profiles/`, owner-only by design; guards against a future refactor
+accidentally extending tutor read access to account data.
+
+### Reviewed & dismissed (NOT bugs)
+- Finding #2 (tutor_active_access asymmetry): the parent/owner cannot directly read the
+  `{tutor}_{owner}_{profile}` access-index doc (only the tutor can). BY DESIGN — the index is a CF-maintained
+  tutor-side lookup; the parent discovers active tutors via `tutor_grants` (which they CAN read). No change.
+
+---
+
 ## Phase pre-0 — green the baseline (WIP-induced failures)
 
 The working tree carried in-progress work (profile-switcher / settings account-separation /

@@ -12,6 +12,8 @@
 //     completion even with an active grant (canMarkLiveCompletion=false, site 3),
 //   • completions field validation (points∈[0,100], completed_at<=now),
 //   • Admin-SDK-only tutor_grants / tutor_active_access.
+//
+// Coverage: 24/24 match paths in firestore.rules.
 
 import { readFileSync } from 'node:fs';
 import { after, before, beforeEach, describe, test } from 'node:test';
@@ -35,8 +37,12 @@ const OWNER = 'owner-uid';
 const TUTOR = 'tutor-uid';
 const STRANGER = 'stranger-uid';
 const PROFILE = '5';
-const COMPLETIONS = `users/${OWNER}/learner_profiles/${PROFILE}/completions`;
-const GOALS = `users/${OWNER}/learner_profiles/${PROFILE}/goals`;
+
+// Subcollection path prefixes
+const LP = `users/${OWNER}/learner_profiles/${PROFILE}`;
+const COMPLETIONS = `${LP}/completions`;
+const GOALS = `${LP}/goals`;
+
 // hasActiveTutorAccess() looks up the deterministic id {tutor}_{owner}_{profile}.
 const ACCESS_ID = `${TUTOR}_${OWNER}_${PROFILE}`;
 
@@ -82,6 +88,10 @@ beforeEach(async () => {
       points: 10,
       completed_at: pastTs,
     });
+    // Pre-existing learner profile doc.
+    await setDoc(doc(db, `users/${OWNER}/learner_profiles/${PROFILE}`), {
+      name: 'Test Profile',
+    });
   });
 });
 
@@ -90,6 +100,72 @@ const tutor = () => env.authenticatedContext(TUTOR).firestore();
 const stranger = () => env.authenticatedContext(STRANGER).firestore();
 const anon = () => env.unauthenticatedContext().firestore();
 
+// ── Helper: assert the standard owner-write / tutor-read / stranger-deny matrix.
+// `path` is the full Firestore path to the document being tested.
+// `validDoc` is a valid payload for owner create/update.
+// `tutorCanRead` controls whether the tutor-read assertion is checked
+//   (false for paths that are owner-only even with active access).
+// `ownerCanDelete` controls whether the owner-delete assertion is checked.
+async function expectOwnerWriteTutorRead(path, validDoc, {
+  tutorCanRead = true,
+  ownerCanDelete = false,
+} = {}) {
+  const db_owner = owner();
+  const db_tutor = tutor();
+  const db_stranger = stranger();
+  const db_anon = anon();
+
+  // Seed the doc so reads have something to return.
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), path), validDoc);
+  });
+
+  // Owner can read and write.
+  await assertSucceeds(getDoc(doc(db_owner, path)));
+  await assertSucceeds(setDoc(doc(db_owner, path), validDoc));
+
+  // Tutor can read iff tutorCanRead; tutor can never write.
+  if (tutorCanRead) {
+    await assertSucceeds(getDoc(doc(db_tutor, path)));
+  } else {
+    await assertFails(getDoc(doc(db_tutor, path)));
+  }
+  await assertFails(setDoc(doc(db_tutor, path), validDoc));
+
+  // Stranger and anon are always denied.
+  await assertFails(getDoc(doc(db_stranger, path)));
+  await assertFails(getDoc(doc(db_anon, path)));
+  await assertFails(setDoc(doc(db_stranger, path), validDoc));
+
+  // Delete: permitted only when ownerCanDelete=true.
+  if (ownerCanDelete) {
+    await assertSucceeds(deleteDoc(doc(db_owner, path)));
+  } else {
+    await assertFails(deleteDoc(doc(db_owner, path)));
+  }
+  // Tutor/stranger can never delete.
+  await env.withSecurityRulesDisabled(async (ctx) => {
+    await setDoc(doc(ctx.firestore(), path), validDoc);
+  });
+  await assertFails(deleteDoc(doc(db_tutor, path)));
+  await assertFails(deleteDoc(doc(db_stranger, path)));
+}
+
+// ── Path 1 / 2: global default-deny ──────────────────────────────────────────
+describe('global default-deny — unlisted paths are denied for everyone', () => {
+  test('arbitrary unlisted collection/doc is denied read and write', async () => {
+    const ref = doc(owner(), 'random_collection/some_doc');
+    await assertFails(getDoc(ref));
+    await assertFails(setDoc(ref, { x: 1 }));
+    await assertFails(deleteDoc(ref));
+  });
+  test('anon and stranger also denied on unlisted path', async () => {
+    await assertFails(getDoc(doc(anon(), 'random_collection/x')));
+    await assertFails(getDoc(doc(stranger(), 'random_collection/x')));
+  });
+});
+
+// ── Path 3: users/{uid} — owner-only (lockout boundary) ─────────────────────
 describe('users/{uid} — owner-only (lockout boundary)', () => {
   test('owner reads & writes own doc', async () => {
     await assertSucceeds(setDoc(doc(owner(), `users/${OWNER}`), { name: 'A' }));
@@ -105,6 +181,91 @@ describe('users/{uid} — owner-only (lockout boundary)', () => {
   });
 });
 
+// ── Path 4: users/{uid}/profile/{docId} — owner-only (tutor DENIED) ─────────
+describe('users/{uid}/profile/{docId} — owner-only; tutor with active access is DENIED', () => {
+  test('owner can read and write profile/data', async () => {
+    await assertSucceeds(
+      setDoc(doc(owner(), `users/${OWNER}/profile/data`), { display_name: 'Alice' }),
+    );
+    await assertSucceeds(getDoc(doc(owner(), `users/${OWNER}/profile/data`)));
+  });
+  test('tutor with active access cannot read profile/data (owner-only path)', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), `users/${OWNER}/profile/data`), { display_name: 'Alice' });
+    });
+    await assertFails(getDoc(doc(tutor(), `users/${OWNER}/profile/data`)));
+  });
+  test('stranger and anon are denied', async () => {
+    await assertFails(getDoc(doc(stranger(), `users/${OWNER}/profile/data`)));
+    await assertFails(getDoc(doc(anon(), `users/${OWNER}/profile/data`)));
+    await assertFails(setDoc(doc(stranger(), `users/${OWNER}/profile/data`), { x: 1 }));
+  });
+  test('delete is denied even for owner', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), `users/${OWNER}/profile/data`), { x: 1 });
+    });
+    await assertFails(deleteDoc(doc(owner(), `users/${OWNER}/profile/data`)));
+  });
+});
+
+// ── Path 5: users/{uid}/diagnostic_logs/{logId} — owner-only (tutor DENIED) ──
+describe('users/{uid}/diagnostic_logs/{logId} — owner-only append; tutor with active access is DENIED', () => {
+  test('owner can create a diagnostic log entry', async () => {
+    await assertSucceeds(
+      setDoc(doc(owner(), `users/${OWNER}/diagnostic_logs/entry1`), { message: 'test' }),
+    );
+  });
+  test('owner can read diagnostic logs', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), `users/${OWNER}/diagnostic_logs/e1`), { msg: 'x' });
+    });
+    await assertSucceeds(getDoc(doc(owner(), `users/${OWNER}/diagnostic_logs/e1`)));
+  });
+  test('tutor with active access cannot read diagnostic logs (owner-only path)', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), `users/${OWNER}/diagnostic_logs/e1`), { msg: 'x' });
+    });
+    await assertFails(getDoc(doc(tutor(), `users/${OWNER}/diagnostic_logs/e1`)));
+  });
+  test('update and delete are denied even for owner (append-only)', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), `users/${OWNER}/diagnostic_logs/e1`), { msg: 'x' });
+    });
+    // update is deny:false in rules
+    await assertFails(deleteDoc(doc(owner(), `users/${OWNER}/diagnostic_logs/e1`)));
+  });
+  test('stranger and anon are denied', async () => {
+    await assertFails(getDoc(doc(stranger(), `users/${OWNER}/diagnostic_logs/e1`)));
+    await assertFails(getDoc(doc(anon(), `users/${OWNER}/diagnostic_logs/e1`)));
+  });
+});
+
+// ── Path 6: learner_profiles/{profileId} doc itself ─────────────────────────
+describe('learner_profiles/{profileId} document — owner write, tutor read, stranger denied', () => {
+  test('owner can read and write the learner profile doc', async () => {
+    await assertSucceeds(getDoc(doc(owner(), `users/${OWNER}/learner_profiles/${PROFILE}`)));
+    await assertSucceeds(
+      setDoc(doc(owner(), `users/${OWNER}/learner_profiles/${PROFILE}`), { name: 'Updated' }),
+    );
+  });
+  test('tutor with active access can read the learner profile doc', async () => {
+    await assertSucceeds(getDoc(doc(tutor(), `users/${OWNER}/learner_profiles/${PROFILE}`)));
+  });
+  test('tutor cannot write the learner profile doc', async () => {
+    await assertFails(
+      setDoc(doc(tutor(), `users/${OWNER}/learner_profiles/${PROFILE}`), { name: 'Hacked' }),
+    );
+  });
+  test('stranger and anon are denied', async () => {
+    await assertFails(getDoc(doc(stranger(), `users/${OWNER}/learner_profiles/${PROFILE}`)));
+    await assertFails(getDoc(doc(anon(), `users/${OWNER}/learner_profiles/${PROFILE}`)));
+  });
+  test('delete is denied even for owner', async () => {
+    await assertFails(deleteDoc(doc(owner(), `users/${OWNER}/learner_profiles/${PROFILE}`)));
+  });
+});
+
+// ── Path 7: completions — owner write + validation + TUTOR WRITE BLOCK ───────
 describe('completions — owner write + validation + TUTOR WRITE BLOCK', () => {
   test('owner creates valid completion (points in range, no future date)', async () => {
     await assertSucceeds(
@@ -135,6 +296,199 @@ describe('completions — owner write + validation + TUTOR WRITE BLOCK', () => {
   });
 });
 
+// ── Path 8: streak_events ────────────────────────────────────────────────────
+describe('streak_events — owner write, tutor read, delete denied', () => {
+  test('owner-write + tutor-read + stranger-deny matrix', async () => {
+    await expectOwnerWriteTutorRead(`${LP}/streak_events/s1`, { event: 'start' });
+  });
+  test('tutor cannot write streak_events', async () => {
+    await assertFails(setDoc(doc(tutor(), `${LP}/streak_events/x`), { event: 'x' }));
+  });
+});
+
+// ── Path 9: learning_ledger ──────────────────────────────────────────────────
+describe('learning_ledger — owner write, tutor read, delete denied', () => {
+  test('owner-write + tutor-read + stranger-deny matrix', async () => {
+    await expectOwnerWriteTutorRead(`${LP}/learning_ledger/ll1`, { minutes: 30 });
+  });
+  test('tutor cannot write learning_ledger', async () => {
+    await assertFails(setDoc(doc(tutor(), `${LP}/learning_ledger/x`), { minutes: 1 }));
+  });
+});
+
+// ── Path 10: points_ledger ───────────────────────────────────────────────────
+describe('points_ledger — owner write, tutor read, delete denied', () => {
+  test('owner-write + tutor-read + stranger-deny matrix', async () => {
+    await expectOwnerWriteTutorRead(`${LP}/points_ledger/pl1`, { points: 10 });
+  });
+  test('tutor cannot write points_ledger', async () => {
+    await assertFails(setDoc(doc(tutor(), `${LP}/points_ledger/x`), { points: 5 }));
+  });
+});
+
+// ── Path 11: reward_redemptions ──────────────────────────────────────────────
+describe('reward_redemptions — owner write, tutor read, delete denied', () => {
+  test('owner-write + tutor-read + stranger-deny matrix', async () => {
+    await expectOwnerWriteTutorRead(`${LP}/reward_redemptions/rr1`, {
+      reward_id: 'r1',
+      state: 'pending_fulfilment',
+    });
+  });
+  test('tutor cannot write reward_redemptions', async () => {
+    await assertFails(
+      setDoc(doc(tutor(), `${LP}/reward_redemptions/x`), { reward_id: 'r1', state: 'pending_fulfilment' }),
+    );
+  });
+});
+
+// ── Path 12: settings ────────────────────────────────────────────────────────
+describe('settings — owner write (open bag), tutor read, delete denied', () => {
+  test('owner-write + tutor-read + stranger-deny matrix', async () => {
+    await expectOwnerWriteTutorRead(`${LP}/settings/cur1`, {
+      profile_id: PROFILE,
+      custom_open_key: 'value',
+    });
+  });
+  test('tutor cannot write settings', async () => {
+    await assertFails(
+      setDoc(doc(tutor(), `${LP}/settings/cur1`), { profile_id: PROFILE }),
+    );
+  });
+});
+
+// ── Path 13: stage_definitions (with hasOnly whitelist) ──────────────────────
+describe('stage_definitions — owner write with key whitelist, tutor read, delete denied', () => {
+  const validStage = {
+    profile_id: PROFILE,
+    curriculum_id: 'c1',
+    track_id: 't1',
+    stage_order: 1,
+    stage_name: 'Stage 1',
+    schedule: 'daily',
+    delay_days: 0,
+    is_default: true,
+    days_of_week: [1, 2, 3],
+    rolling_window_size: 7,
+    updated_at: pastTs,
+    synced_at: pastTs,
+  };
+
+  test('owner-write + tutor-read + stranger-deny matrix', async () => {
+    await expectOwnerWriteTutorRead(`${LP}/stage_definitions/t1_1`, validStage);
+  });
+  test('owner write with unknown field is rejected (whitelist)', async () => {
+    await assertFails(
+      setDoc(doc(owner(), `${LP}/stage_definitions/t1_1`), {
+        ...validStage,
+        hacker_field: true,
+      }),
+    );
+  });
+  test('tutor cannot write stage_definitions', async () => {
+    await assertFails(setDoc(doc(tutor(), `${LP}/stage_definitions/t1_1`), validStage));
+  });
+});
+
+// ── Path 14: curriculum_tracks (with hasOnly whitelist) ──────────────────────
+describe('curriculum_tracks — owner write with key whitelist, tutor read, delete denied', () => {
+  const validTrack = {
+    profile_id: PROFILE,
+    track_id: 't1',
+    curriculum_id: 'c1',
+    state: 'active',
+    state_changed_at: pastTs,
+    activated_at: pastTs,
+    synced_at: pastTs,
+  };
+
+  test('owner-write + tutor-read + stranger-deny matrix', async () => {
+    await expectOwnerWriteTutorRead(`${LP}/curriculum_tracks/t1`, validTrack);
+  });
+  test('owner write with unknown field is rejected (whitelist)', async () => {
+    await assertFails(
+      setDoc(doc(owner(), `${LP}/curriculum_tracks/t1`), {
+        ...validTrack,
+        extra_field: 'bad',
+      }),
+    );
+  });
+  test('tutor cannot write curriculum_tracks', async () => {
+    await assertFails(setDoc(doc(tutor(), `${LP}/curriculum_tracks/t1`), validTrack));
+  });
+});
+
+// ── Path 15: bookmarks (with hasOnly whitelist) ───────────────────────────────
+describe('bookmarks — owner write with key whitelist, tutor read, delete denied', () => {
+  const validBookmark = {
+    profile_id: PROFILE,
+    curriculum_id: 'c1',
+    track_type: 'primary',
+    content_item_id: 'item1',
+    sefaria_ref: 'Berakhot.2a',
+    stage_id: 's1',
+    updated_at: pastTs,
+    synced_at: pastTs,
+  };
+
+  test('owner-write + tutor-read + stranger-deny matrix', async () => {
+    await expectOwnerWriteTutorRead(`${LP}/bookmarks/bk1`, validBookmark);
+  });
+  test('owner write with unknown field is rejected (whitelist)', async () => {
+    await assertFails(
+      setDoc(doc(owner(), `${LP}/bookmarks/bk1`), {
+        ...validBookmark,
+        unknown_field: 'x',
+      }),
+    );
+  });
+  test('tutor cannot write bookmarks', async () => {
+    await assertFails(setDoc(doc(tutor(), `${LP}/bookmarks/bk1`), validBookmark));
+  });
+});
+
+// ── Path 16: learning_order (with hasOnly whitelist) ─────────────────────────
+describe('learning_order — owner write with key whitelist, tutor read, delete denied', () => {
+  const validOrder = {
+    curriculum_id: 'c1',
+    sefaria_ref: 'Berakhot.2a',
+    ref: 'Berakhot 2a',
+    user_sort_order: 1,
+    updated_at: pastTs,
+    synced_at: pastTs,
+  };
+
+  test('owner-write + tutor-read + stranger-deny matrix', async () => {
+    await expectOwnerWriteTutorRead(`${LP}/learning_order/o1`, validOrder);
+  });
+  test('owner write with unknown field is rejected (whitelist)', async () => {
+    await assertFails(
+      setDoc(doc(owner(), `${LP}/learning_order/o1`), {
+        ...validOrder,
+        bad_field: 99,
+      }),
+    );
+  });
+  test('tutor cannot write learning_order', async () => {
+    await assertFails(setDoc(doc(tutor(), `${LP}/learning_order/o1`), validOrder));
+  });
+});
+
+// ── Path 17: preferences (open bag, no whitelist) ────────────────────────────
+describe('preferences — owner write (open bag, no whitelist), tutor read, delete denied', () => {
+  test('owner-write + tutor-read + stranger-deny matrix', async () => {
+    await expectOwnerWriteTutorRead(`${LP}/preferences/notification_settings`, {
+      enabled: true,
+      any_open_field: 'allowed',
+    });
+  });
+  test('tutor cannot write preferences', async () => {
+    await assertFails(
+      setDoc(doc(tutor(), `${LP}/preferences/notification_settings`), { enabled: false }),
+    );
+  });
+});
+
+// ── Path 18: goals (with hasOnly whitelist) ───────────────────────────────────
 describe('goals — owner write with key whitelist, tutor read-only', () => {
   test('owner writes goal with whitelisted keys', async () => {
     await assertSucceeds(
@@ -157,6 +511,121 @@ describe('goals — owner write with key whitelist, tutor read-only', () => {
   });
 });
 
+// ── Path 19: import_metadata (with hasOnly whitelist) ────────────────────────
+describe('import_metadata — owner write with key whitelist, tutor read, delete denied', () => {
+  const validMeta = {
+    profile_id: PROFILE,
+    curriculum_id: 'c1',
+    item_count: 50,
+    imported_at: pastTs,
+    synced_at: pastTs,
+  };
+
+  test('owner-write + tutor-read + stranger-deny matrix', async () => {
+    await expectOwnerWriteTutorRead(`${LP}/import_metadata/c1`, validMeta);
+  });
+  test('owner write with unknown field is rejected (whitelist)', async () => {
+    await assertFails(
+      setDoc(doc(owner(), `${LP}/import_metadata/c1`), {
+        ...validMeta,
+        sneaky: true,
+      }),
+    );
+  });
+  test('tutor cannot write import_metadata', async () => {
+    await assertFails(setDoc(doc(tutor(), `${LP}/import_metadata/c1`), validMeta));
+  });
+});
+
+// ── Path 20: profile_programs (with hasOnly whitelist; owner DELETE allowed) ──
+describe('profile_programs — owner write+delete with key whitelist, tutor read', () => {
+  const validProgram = {
+    profile_id: PROFILE,
+    curriculum_id: 'c1',
+    program_id: 'p1',
+    tracking_start_date: '2024-01-01',
+    tracking_start_ref: 'Berakhot.2a',
+    synced_at: pastTs,
+  };
+
+  test('owner-write + tutor-read + stranger-deny matrix (owner can delete)', async () => {
+    await expectOwnerWriteTutorRead(`${LP}/profile_programs/c1`, validProgram, {
+      ownerCanDelete: true,
+    });
+  });
+  test('owner write with unknown field is rejected (whitelist)', async () => {
+    await assertFails(
+      setDoc(doc(owner(), `${LP}/profile_programs/c1`), {
+        ...validProgram,
+        extra: 'bad',
+      }),
+    );
+  });
+  test('tutor cannot write or delete profile_programs', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), `${LP}/profile_programs/c1`), validProgram);
+    });
+    await assertFails(setDoc(doc(tutor(), `${LP}/profile_programs/c1`), validProgram));
+    await assertFails(deleteDoc(doc(tutor(), `${LP}/profile_programs/c1`)));
+  });
+});
+
+// ── Path 21: curriculum_scopes (open bag; owner DELETE allowed) ───────────────
+describe('curriculum_scopes — owner write+delete (no whitelist), tutor read', () => {
+  const validScope = {
+    curriculum_id: 'c1',
+    scope_data: 'some-value',
+  };
+
+  test('owner-write + tutor-read + stranger-deny matrix (owner can delete)', async () => {
+    await expectOwnerWriteTutorRead(`${LP}/curriculum_scopes/sc1`, validScope, {
+      ownerCanDelete: true,
+    });
+  });
+  test('tutor cannot write or delete curriculum_scopes', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), `${LP}/curriculum_scopes/sc1`), validScope);
+    });
+    await assertFails(setDoc(doc(tutor(), `${LP}/curriculum_scopes/sc1`), validScope));
+    await assertFails(deleteDoc(doc(tutor(), `${LP}/curriculum_scopes/sc1`)));
+  });
+});
+
+// ── Path 22: study_day_configs (with hasOnly whitelist; owner DELETE allowed) ─
+describe('study_day_configs — owner write+delete with key whitelist, tutor read', () => {
+  const validConfig = {
+    profile_id: PROFILE,
+    curriculum_id: 'c1',
+    track_id: 't1',
+    day_of_week: 1,
+    day_type: 'learning',
+    updated_at: pastTs,
+    synced_at: pastTs,
+  };
+
+  test('owner-write + tutor-read + stranger-deny matrix (owner can delete)', async () => {
+    await expectOwnerWriteTutorRead(`${LP}/study_day_configs/cfg1`, validConfig, {
+      ownerCanDelete: true,
+    });
+  });
+  test('owner write with unknown field is rejected (whitelist)', async () => {
+    await assertFails(
+      setDoc(doc(owner(), `${LP}/study_day_configs/cfg1`), {
+        ...validConfig,
+        bad_field: 'x',
+      }),
+    );
+  });
+  test('tutor cannot write or delete study_day_configs', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), `${LP}/study_day_configs/cfg1`), validConfig);
+    });
+    await assertFails(setDoc(doc(tutor(), `${LP}/study_day_configs/cfg1`), validConfig));
+    await assertFails(deleteDoc(doc(tutor(), `${LP}/study_day_configs/cfg1`)));
+  });
+});
+
+// ── Path 23: tutor_grants & tutor_grants/audit_log ────────────────────────────
 describe('tutor_grants & tutor_active_access — Admin-SDK only', () => {
   test('tutor reads grant where tutor_uid matches; parent where parent_uid matches', async () => {
     await assertSucceeds(getDoc(doc(tutor(), `tutor_grants/g1`)));
@@ -174,5 +643,41 @@ describe('tutor_grants & tutor_active_access — Admin-SDK only', () => {
     await assertSucceeds(getDoc(doc(tutor(), `tutor_active_access/${ACCESS_ID}`)));
     await assertFails(getDoc(doc(owner(), `tutor_active_access/${ACCESS_ID}`)));
     await assertFails(setDoc(doc(tutor(), `tutor_active_access/forge`), { tutor_uid: TUTOR }));
+  });
+});
+
+// ── Path 24: tutor_grants/{grantId}/audit_log/{entryId} ──────────────────────
+describe('tutor_grants/{grantId}/audit_log/{entryId} — read-only for parties; no client writes', () => {
+  const GRANT_ID = 'g1';
+  const AUDIT_PATH = `tutor_grants/${GRANT_ID}/audit_log/entry1`;
+
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), AUDIT_PATH), {
+        action: 'accepted',
+        ts: pastTs,
+      });
+    });
+  });
+
+  test('parent (owner of grant parent_uid) can read audit log entry', async () => {
+    await assertSucceeds(getDoc(doc(owner(), AUDIT_PATH)));
+  });
+  test('tutor can read audit log entry for their own grant', async () => {
+    await assertSucceeds(getDoc(doc(tutor(), AUDIT_PATH)));
+  });
+  test('stranger and anon cannot read audit log entry', async () => {
+    await assertFails(getDoc(doc(stranger(), AUDIT_PATH)));
+    await assertFails(getDoc(doc(anon(), AUDIT_PATH)));
+  });
+  test('no client can create, update, or delete audit log entries (Admin SDK only)', async () => {
+    await assertFails(
+      setDoc(doc(owner(), AUDIT_PATH), { action: 'forged' }),
+    );
+    await assertFails(
+      setDoc(doc(tutor(), `tutor_grants/${GRANT_ID}/audit_log/new`), { action: 'forge' }),
+    );
+    await assertFails(deleteDoc(doc(owner(), AUDIT_PATH)));
+    await assertFails(deleteDoc(doc(tutor(), AUDIT_PATH)));
   });
 });
