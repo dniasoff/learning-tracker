@@ -59,15 +59,18 @@ entries accumulated across tests (`2 !== 1`, `3 !== 1`…). Switched to the Admi
 (`--only firestore,auth`) since accept/decline invite call `admin.auth().getUser()`.
 
 ### Server-function findings (triaged)
-**To FIX (real bugs, with regression tests):**
-- `expirePendingInvites` (MEDIUM): the Firestore transaction `txn.update(grantDoc.ref, …)` never re-reads the
-  doc inside the txn — the snapshot was taken outside it, so a concurrent run / state change between query and
-  commit is a lost-update race. Fix: read-inside-txn (or guard on state at commit).
-- `declineTutorInvite` (MEDIUM): calls `admin.auth().getUser(callerUid)` BEFORE the cheap state/uid checks,
-  so a wrong caller / non-pending grant triggers a live Auth call first (info-leak + needs Auth emulator to
-  even reject). Fix: move `getUser` after the state + UID-based gates.
-- `deleteCurriculumTrack` (MEDIUM): uses shallow `trackRef.delete()` while every sibling delete CF uses
-  `recursiveDelete`; if a track ever gains a subcollection its docs orphan. Fix: `db.recursiveDelete(trackRef)`.
+**FIXED (real bugs, with regression tests — 274/274 green):**
+- `expirePendingInvites` (MEDIUM): the Firestore transaction `txn.update(grantDoc.ref, …)` never re-read the
+  doc inside the txn — the snapshot was taken outside it, so a state change (accept/decline/rescind) between
+  the query and commit was a lost-update race that could expire an already-accepted grant. FIXED: re-read
+  inside the txn and only expire if `state === 'pending'`; return whether it actually expired.
+- `declineTutorInvite` (MEDIUM): called `admin.auth().getUser(callerUid)` BEFORE the cheap uid check. FIXED:
+  resolve `isTutorByUid` first (no Auth call) and only fall back to the live `getUser` email comparison when
+  the uid doesn't match — preserves the permission-before-state order, avoids an Auth round-trip on the common
+  path, and makes the uid-match decline path testable without the Auth emulator (2 new regression tests).
+- `deleteCurriculumTrack` (MEDIUM): used shallow `trackRef.delete()` while every sibling delete CF uses
+  `recursiveDelete`. FIXED: `db.recursiveDelete(trackRef)` (+ a regression test seeding a nested subcollection
+  doc and asserting it's purged).
 
 **Documented (defensible design / low value — NOT changing):**
 - `tutorBulkPriorCompletions`: today/future completion → `permission-denied` (arguably `invalid-argument`);

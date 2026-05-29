@@ -184,6 +184,29 @@ describe('deleteCurriculumTrack', () => {
     const res = await call(fns.deleteCurriculumTrack, goodArgs, parentAuth);
     assert.equal(res.success, true);
   });
+
+  test('recursiveDelete → a nested track subcollection doc is also purged', async () => {
+    const trackRef = db
+      .collection('users')
+      .doc(PARENT)
+      .collection('learner_profiles')
+      .doc(String(PROFILE))
+      .collection('curriculum_tracks')
+      .doc('genesis');
+    await trackRef.set({ curriculumId: 'genesis' });
+    const nestedRef = trackRef.collection('history').doc('h1');
+    await nestedRef.set({ note: 'should not orphan' });
+
+    const res = await call(fns.deleteCurriculumTrack, goodArgs, parentAuth);
+
+    assert.equal(res.success, true);
+    assert.equal((await trackRef.get()).exists, false, 'track doc deleted');
+    assert.equal(
+      (await nestedRef.get()).exists,
+      false,
+      'nested subcollection doc must also be purged (recursiveDelete, not shallow)',
+    );
+  });
 });
 
 // ── deleteAccountData ─────────────────────────────────────────────────────────

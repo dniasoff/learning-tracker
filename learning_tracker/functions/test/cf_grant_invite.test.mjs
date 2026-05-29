@@ -217,6 +217,39 @@ describe('declineTutorInvite', () => {
       'not-found',
     );
   });
+
+  // The caller-is-tutor check now resolves by uid FIRST (no admin.auth() call),
+  // so the uid-match path is fully testable under the firestore emulator.
+  test('caller matches tutor_uid + pending → success, grant declined', async () => {
+    await db.collection('tutor_grants').doc(GRANT).set({
+      tutor_uid: TUTOR,
+      parent_uid: PARENT,
+      child_profile_id: PROFILE,
+      state: 'pending',
+      tutor_email: 'tutor@example.com',
+    });
+
+    const res = await call(fns.declineTutorInvite, goodArgs); // default tutorAuth
+
+    assert.equal(res.success, true);
+    const after = (await db.collection('tutor_grants').doc(GRANT).get()).data();
+    assert.equal(after.state, 'declined');
+  });
+
+  test('caller matches tutor_uid but grant not pending → failed-precondition', async () => {
+    await db.collection('tutor_grants').doc(GRANT).set({
+      tutor_uid: TUTOR,
+      parent_uid: PARENT,
+      child_profile_id: PROFILE,
+      state: 'active',
+      tutor_email: 'tutor@example.com',
+    });
+
+    await expectHttpsError(
+      call(fns.declineTutorInvite, goodArgs),
+      'failed-precondition',
+    );
+  });
 });
 
 // ── rescindTutorInvite ────────────────────────────────────────────────────────

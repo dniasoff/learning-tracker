@@ -174,7 +174,9 @@ export const deleteCurriculumTrack = onCall(CALL_OPTS, async (request) => {
     .collection("learner_profiles").doc(String(profileId))
     .collection("curriculum_tracks").doc(docId);
 
-  await trackRef.delete();
+  // recursiveDelete (not a shallow delete) so any future track subcollection
+  // is purged too — consistent with deleteLearnerProfile / deleteAccountData.
+  await db.recursiveDelete(trackRef);
   logger.info(`deleteCurriculumTrack: uid=${uid} profileId=${profileId} doc=${docId}`);
   return { success: true };
 });
@@ -774,13 +776,18 @@ export const declineTutorInvite = onCall(CALL_OPTS, async (request) => {
 
   const grant = grantSnap.data()!;
 
-  // Allow decline if pending OR if tutor_uid matches (already accepted but wants to resign via this path).
-  // Primary path: caller email matches invited email.
-  const callerRecord = await admin.auth().getUser(callerUid);
-  const callerEmail = (callerRecord.email ?? "").toLowerCase().trim();
-  const grantEmail = (grant.tutor_email ?? "").toLowerCase().trim();
-  const isTutorByEmail = callerEmail === grantEmail;
+  // Caller is the invited tutor either by uid (already linked) or by email
+  // (invite not yet accepted). Check the uid first — it needs no Auth lookup —
+  // and only fall back to the live getUser() email comparison when it doesn't
+  // match, so the common path avoids an unnecessary Auth round-trip.
   const isTutorByUid = grant.tutor_uid === callerUid;
+  let isTutorByEmail = false;
+  if (!isTutorByUid) {
+    const callerRecord = await admin.auth().getUser(callerUid);
+    const callerEmail = (callerRecord.email ?? "").toLowerCase().trim();
+    const grantEmail = (grant.tutor_email ?? "").toLowerCase().trim();
+    isTutorByEmail = callerEmail === grantEmail;
+  }
 
   if (!isTutorByEmail && !isTutorByUid) {
     throw new HttpsError("permission-denied", "You are not the invited tutor for this grant");
@@ -1068,7 +1075,15 @@ export const expirePendingInvites = pubsub
     for (const grantDoc of snapshot.docs) {
       const grantId = grantDoc.id;
       try {
-        await db.runTransaction(async (txn) => {
+        const didExpire = await db.runTransaction(async (txn) => {
+          // Re-read INSIDE the transaction: the grant may have been accepted,
+          // declined, or rescinded between the query above and now. Only expire
+          // a grant that is STILL pending — never clobber a newer state.
+          const fresh = await txn.get(grantDoc.ref);
+          if (!fresh.exists || fresh.data()?.state !== "pending") {
+            return false;
+          }
+
           txn.update(grantDoc.ref, {
             state: "expired",
             updated_at: now,
@@ -1083,16 +1098,19 @@ export const expirePendingInvites = pubsub
             .doc();
           txn.set(auditRef, {
             tutor_uid: null,
-            tutor_name_snapshot: grantDoc.data().tutor_email ?? "",
+            tutor_name_snapshot: fresh.data()?.tutor_email ?? "",
             action: "invite_expired",
             target: `grant/${grantId}`,
             after_value: JSON.stringify({ state: "expired" }),
             timestamp: now.toDate().toISOString(),
           });
+          return true;
         });
 
-        expiredCount++;
-        logger.info(`expirePendingInvites: expired grant=${grantId}`);
+        if (didExpire) {
+          expiredCount++;
+          logger.info(`expirePendingInvites: expired grant=${grantId}`);
+        }
       } catch (e) {
         logger.error(`expirePendingInvites: failed to expire grant=${grantId}`, e);
       }
