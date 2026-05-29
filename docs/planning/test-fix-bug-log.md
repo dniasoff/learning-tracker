@@ -129,5 +129,30 @@ smoke test. No production bugs found; the only finding is the `pin_entry_widget.
 Verify pass flagged the wave-1 tests as render-heavy (render-only counts: PinSetup 11, ManageTutors 19,
 AuditLog 10, others fewer). Missing cells noted: loading/`_isSaving` spinner, he-RTL, negative
 assertions (callback NOT fired on error). Wave 2 will strengthen behaviour assertions + add he-RTL.
+
+---
+
+## Phase 2 — Sync & offline-first (wave 1)
+
++52 L1 tests: **OfflineTopBanner** (15 — tier-gated visibility: cloud-born+offline shows, local-born/
+online hidden), **SyncStatusIndicator** (19 — 7 states: localOnly/synced/syncing/pending/offline/error/
+degraded), **BackupSyncSection** (18 — cloud-synced / cloud-offline "LOCAL ONLY" / local-born upgrade
+cards). All green.
+
+### FIXED — dead code removed
+
+- **SyncScreen (`/sync`) was an unreachable placeholder.** AppBar + a static `Center(Text)` with no
+  state-driven rendering; the `SyncRoute` was registered with authGuard but **never navigated to** from
+  anywhere in the app (no in-app push, no deep-link). The real sync UX is BackupSyncSection + the offline
+  banner + the status indicator (sync is informational-only, `feedback_offline_first`). Deleted the
+  screen + route + import and regenerated the router. (The 6 "bugs" the test agent reported against it
+  were all "this placeholder is unimplemented" — resolved by removal, not implementation.)
+
+### OPEN — i18n (Phase 8)
+
+- `offline_top_banner.dart`: banner body + Semantics label are hardcoded English ("Offline — changes
+  will sync when you're back…"), not l10n.
+- `sync_status_indicator.dart`: 9 hardcoded status labels ("Local only", "Synced", "Syncing",
+  "$n pending", "$n queued", "Offline", "Sync error", "Sync paused", …) — not l10n.
 </content>
 </invoke>

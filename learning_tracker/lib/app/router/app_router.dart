@@ -44,7 +44,6 @@ import 'package:learning_tracker/features/settings/presentation/screens/curricul
 import 'package:learning_tracker/features/settings/presentation/screens/lifetime_marking_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/settings_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/upgrade_to_cloud_screen.dart';
-import 'package:learning_tracker/features/sync/presentation/screens/sync_screen.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/screens/track_detail_screen.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/screens/track_management_hub_screen.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/presentation/screens/learning_order_screen.dart';
@@ -264,7 +263,6 @@ class AppRouter extends RootStackRouter {
       page: StudyDayConfigRoute.page,
       guards: [authGuard],
     ),
-    AutoRoute(path: '/sync', page: SyncRoute.page, guards: [authGuard]),
     AutoRoute(
       path: '/settings/tracks',
       page: TrackManagementHubRoute.page,
