@@ -41,6 +41,29 @@ defence-in-depth against a future migration). Also **deleted** the redundant old
 
 ---
 
+## Phase 8 — Coverage-leverage wave (highest-uncovered files)
+
+Coverage measured 2026-05-30: **68.4%** overall (36774/53763), up from the 58.5% baseline; full suite +6956
+tests green. Targeted the highest-leverage uncovered files with **+249 tests** (all green, analyze clean, no
+prod bugs):
+- `sefaria_ref_matcher.dart` (was 0%) — **116 unit tests** across normalize/displayRef/range-expand/fuzzy-match/
+  container-resolution/program-today-refs.
+- `scheduler_providers.dart` (was 11.7%) — 43 tests (section/grouped notifiers, SkippedTasks date-rollover,
+  paceStatus, overdueCount, firstTaskInTrackForCategory).
+- `sign_in_controller.dart` (was 8.5%) — 24 tests (auth-error mapping, Google sign-in routing, resend-verify).
+- `step_scope.dart`/`scope_views.dart` (was ~0%) — 22 tests (DNI-202 scope auto-skip, toggle/select-all/Learn-All).
+- `step_starting_position(+calendar+goal).dart` (was ~0%) — 44 tests (the [today−30, today] window + **back-date
+  → positive daysFromToday/overdue** product rule, goal step).
+
+### OPEN — deeper integration paths still uncovered (verifier-flagged backlog)
+- `scheduler_providers`: `allDailyTasksProvider`'s ~400-line body is bypassed (tests override it with fixed
+  lists) — the previously-skipped priority-boost + bulk-prior sentinel paths aren't exercised end-to-end.
+- `sefaria_ref_matcher`: level4 hierarchy filtering, fuzzy-score==1 boundary, container-vs-indexed fallback
+  ordering, range→container fallback, and `normalizeTitle` blind spots (bavli/yerushalmi/tractate/masechta).
+- track-setup scope: re-render/re-selection stateful logic; start-position: a few production UI paths.
+
+---
+
 ## Phase 6 — Settings / scheduler / notifications / sacred-time / learning (wave a)
 
 +127 L1 behaviour tests across 5 zero/low-coverage screens (all green, analyze clean): **CityPicker** (19 —
