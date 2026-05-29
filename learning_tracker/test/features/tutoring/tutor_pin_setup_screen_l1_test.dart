@@ -1,0 +1,611 @@
+// L1 widget tests for TutorPinSetupScreen (lib/features/tutoring/presentation/screens/tutor_pin_setup_screen.dart)
+//
+// Covers:
+//   • Rendering — initial state (enterPin step) with correct l10n labels
+//   • Rendering — AppBar title, heading, body text, icon present
+//   • Rendering — "Set up later" button shown only when onSkip is provided
+//   • Behaviour — entering first 4-digit PIN advances to confirmPin step
+//   • Behaviour — entering mismatching confirm PIN shows mismatch error and
+//                 resets to step 1
+//   • Behaviour — entering matching confirm PIN calls the service and, on
+//                 TutorPinSuccess, calls onPinSet
+//   • Behaviour — service returning TutorPinValidationError shows the error
+//                 message and resets to step 1
+//   • Behaviour — service returning TutorPinIncorrect shows generic save error
+//   • Behaviour — service returning TutorPinLockedOut shows generic save error
+//   • Behaviour — tapping "Set up later" calls onSkip
+
+@Tags(['l1', 'tutoring', 'pin_setup'])
+library;
+
+import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/features/tutoring/domain/services/tutor_pin_service.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_pin_providers.dart';
+import 'package:learning_tracker/features/tutoring/presentation/screens/tutor_pin_setup_screen.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
+
+// ---------------------------------------------------------------------------
+// Stub TutorPinService
+// ---------------------------------------------------------------------------
+
+/// A [TutorPinService] stub that returns a pre-configured result.
+///
+/// Uses a function so tests can configure different return values.
+class _StubTutorPinService implements TutorPinService {
+  _StubTutorPinService({required this.setResult});
+
+  final Future<TutorPinResult> Function(int profileId, String rawPin) setResult;
+
+  @override
+  Future<TutorPinResult> setTutorPin({
+    required int profileId,
+    required String rawPin,
+  }) => setResult(profileId, rawPin);
+
+  @override
+  Future<TutorPinResult> verifyTutorPin({
+    required int profileId,
+    required String rawPin,
+  }) async => const TutorPinSuccess();
+
+  @override
+  Future<bool> hasTutorPin(int profileId) async => false;
+
+  @override
+  Future<void> clearTutorPin(int profileId) async {}
+
+  @override
+  Future<int> lockoutRemainingMinutes(int profileId) async => 0;
+}
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+/// Wraps [TutorPinSetupScreen] in the canonical pump harness.
+///
+/// [stubService] — the [TutorPinService] to inject. Defaults to a service that
+/// always returns [TutorPinSuccess].
+///
+/// [onPinSet], [onSkip] — callbacks forwarded to the screen.
+Widget _buildHarness({
+  required TutorPinService stubService,
+  required VoidCallback onPinSet,
+  VoidCallback? onSkip,
+}) {
+  return ProviderScope(
+    overrides: [tutorPinServiceProvider.overrideWithValue(stubService)],
+    child: MaterialApp(
+      locale: const Locale('en'),
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: TutorPinSetupScreen(
+        profileId: 42,
+        onPinSet: onPinSet,
+        onSkip: onSkip,
+      ),
+    ),
+  );
+}
+
+/// Types a 4-digit PIN into the PinEntryWidget text fields.
+///
+/// Finds the 4 [TextField] widgets that make up the PIN entry row, enters
+/// one digit each, and waits for Flutter to propagate the changes.
+Future<void> _enterPin(WidgetTester tester, String pin) async {
+  assert(pin.length == 4, 'PIN must be 4 digits');
+  for (var i = 0; i < 4; i++) {
+    final fieldFinder = find.byType(TextField).at(i);
+    await tester.tap(fieldFinder);
+    await tester.pump();
+    await tester.enterText(fieldFinder, pin[i]);
+    await tester.pump();
+  }
+  // Give PinEntryWidget time to call onPinComplete.
+  await tester.pump(const Duration(milliseconds: 100));
+}
+
+/// Teardown that disposes all widgets cleanly (avoids stream/timer leaks).
+Future<void> _teardown(WidgetTester tester) async {
+  await tester.pumpWidget(const SizedBox.shrink());
+  await tester.pump(Duration.zero);
+}
+
+// ---------------------------------------------------------------------------
+// Tests
+// ---------------------------------------------------------------------------
+
+void main() {
+  // Suppress size warnings — some screens need more vertical space.
+  setUp(() {});
+
+  group('TutorPinSetupScreen — initial render (enterPin step)', () {
+    testWidgets('renders a Scaffold', (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(
+        _buildHarness(
+          stubService: _StubTutorPinService(
+            setResult: (_, __) async => const TutorPinSuccess(),
+          ),
+          onPinSet: () {},
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.byType(Scaffold), findsAtLeastNWidgets(1));
+      await _teardown(tester);
+    });
+
+    testWidgets('shows l10n AppBar title "Set Tutor PIN"', (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(
+        _buildHarness(
+          stubService: _StubTutorPinService(
+            setResult: (_, __) async => const TutorPinSuccess(),
+          ),
+          onPinSet: () {},
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('Set Tutor PIN'), findsAtLeastNWidgets(1));
+      await _teardown(tester);
+    });
+
+    testWidgets('shows "Create your Tutor PIN" heading on step 1', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(
+        _buildHarness(
+          stubService: _StubTutorPinService(
+            setResult: (_, __) async => const TutorPinSuccess(),
+          ),
+          onPinSet: () {},
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('Create your Tutor PIN'), findsOneWidget);
+      await _teardown(tester);
+    });
+
+    testWidgets('shows create body text on step 1', (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(
+        _buildHarness(
+          stubService: _StubTutorPinService(
+            setResult: (_, __) async => const TutorPinSuccess(),
+          ),
+          onPinSet: () {},
+        ),
+      );
+      await tester.pump();
+
+      expect(
+        find.textContaining('Tutor PIN protects access'),
+        findsOneWidget,
+        reason: 'tutorPinSetupCreateBody must be visible on step 1',
+      );
+      await _teardown(tester);
+    });
+
+    testWidgets('shows lock_person_rounded icon', (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(
+        _buildHarness(
+          stubService: _StubTutorPinService(
+            setResult: (_, __) async => const TutorPinSuccess(),
+          ),
+          onPinSet: () {},
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byIcon(Icons.lock_person_rounded), findsOneWidget);
+      await _teardown(tester);
+    });
+
+    testWidgets('hides "Set up later" button when onSkip is null', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(
+        _buildHarness(
+          stubService: _StubTutorPinService(
+            setResult: (_, __) async => const TutorPinSuccess(),
+          ),
+          onPinSet: () {},
+          onSkip: null,
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('Set up later'), findsNothing);
+      await _teardown(tester);
+    });
+
+    testWidgets('shows "Set up later" button when onSkip is provided', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(
+        _buildHarness(
+          stubService: _StubTutorPinService(
+            setResult: (_, __) async => const TutorPinSuccess(),
+          ),
+          onPinSet: () {},
+          onSkip: () {},
+        ),
+      );
+      await tester.pump();
+
+      expect(find.text('Set up later'), findsOneWidget);
+      await _teardown(tester);
+    });
+
+    testWidgets('shows PinEntryWidget with "Enter New PIN" label', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(
+        _buildHarness(
+          stubService: _StubTutorPinService(
+            setResult: (_, __) async => const TutorPinSuccess(),
+          ),
+          onPinSet: () {},
+        ),
+      );
+      await tester.pump();
+
+      // PinEntryWidget renders its title as Text — "Enter New PIN"
+      expect(find.text('Enter New PIN'), findsOneWidget);
+      await _teardown(tester);
+    });
+
+    testWidgets('4 digit text fields are rendered', (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(
+        _buildHarness(
+          stubService: _StubTutorPinService(
+            setResult: (_, __) async => const TutorPinSuccess(),
+          ),
+          onPinSet: () {},
+        ),
+      );
+      await tester.pump();
+
+      expect(find.byType(TextField), findsNWidgets(4));
+      await _teardown(tester);
+    });
+  });
+
+  group('TutorPinSetupScreen — step transition (enterPin → confirmPin)', () {
+    testWidgets('entering first PIN advances to confirm step', (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(
+        _buildHarness(
+          stubService: _StubTutorPinService(
+            setResult: (_, __) async => const TutorPinSuccess(),
+          ),
+          onPinSet: () {},
+        ),
+      );
+      await tester.pump();
+
+      // Enter the first 4-digit PIN.
+      await _enterPin(tester, '1234');
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // Heading changes to "Confirm your Tutor PIN".
+      expect(find.text('Confirm your Tutor PIN'), findsOneWidget);
+      // Create heading is gone.
+      expect(find.text('Create your Tutor PIN'), findsNothing);
+      await _teardown(tester);
+    });
+
+    testWidgets('confirm step shows "Confirm PIN" label', (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(
+        _buildHarness(
+          stubService: _StubTutorPinService(
+            setResult: (_, __) async => const TutorPinSuccess(),
+          ),
+          onPinSet: () {},
+        ),
+      );
+      await tester.pump();
+      await _enterPin(tester, '1234');
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('Confirm PIN'), findsOneWidget);
+      await _teardown(tester);
+    });
+
+    testWidgets('confirm step shows confirm body text', (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await tester.pumpWidget(
+        _buildHarness(
+          stubService: _StubTutorPinService(
+            setResult: (_, __) async => const TutorPinSuccess(),
+          ),
+          onPinSet: () {},
+        ),
+      );
+      await tester.pump();
+      await _enterPin(tester, '1234');
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(
+        find.text('Re-enter the same 4-digit PIN to confirm.'),
+        findsOneWidget,
+      );
+      await _teardown(tester);
+    });
+  });
+
+  group('TutorPinSetupScreen — PIN mismatch', () {
+    testWidgets(
+      'entering non-matching confirm PIN shows mismatch error and resets to step 1',
+      (tester) async {
+        tester.view.physicalSize = const Size(800, 1600);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+
+        await tester.pumpWidget(
+          _buildHarness(
+            stubService: _StubTutorPinService(
+              setResult: (_, __) async => const TutorPinSuccess(),
+            ),
+            onPinSet: () {},
+          ),
+        );
+        await tester.pump();
+
+        // Step 1: enter first PIN.
+        await _enterPin(tester, '1234');
+        await tester.pump(const Duration(milliseconds: 100));
+
+        // Step 2: enter a DIFFERENT confirm PIN.
+        await _enterPin(tester, '9999');
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.pump(const Duration(seconds: 1));
+
+        // Mismatch error must appear.
+        expect(
+          find.text('PINs do not match. Please try again.'),
+          findsOneWidget,
+          reason: 'l10n.tutorPinSetupMismatch must be shown on PIN mismatch',
+        );
+        // Screen resets to step 1.
+        expect(find.text('Create your Tutor PIN'), findsOneWidget);
+        await _teardown(tester);
+      },
+    );
+  });
+
+  group('TutorPinSetupScreen — matching PIN (TutorPinSuccess)', () {
+    testWidgets(
+      'entering matching confirm PIN calls setTutorPin and then onPinSet',
+      (tester) async {
+        tester.view.physicalSize = const Size(800, 1600);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+
+        var onPinSetCalled = false;
+        int? serviceProfileId;
+        String? servicePin;
+
+        await tester.pumpWidget(
+          _buildHarness(
+            stubService: _StubTutorPinService(
+              setResult: (profileId, rawPin) async {
+                serviceProfileId = profileId;
+                servicePin = rawPin;
+                return const TutorPinSuccess();
+              },
+            ),
+            onPinSet: () => onPinSetCalled = true,
+          ),
+        );
+        await tester.pump();
+
+        // Step 1.
+        await _enterPin(tester, '5678');
+        await tester.pump(const Duration(milliseconds: 100));
+
+        // Step 2 — same PIN.
+        await _enterPin(tester, '5678');
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.pump(const Duration(seconds: 1));
+
+        expect(serviceProfileId, 42, reason: 'correct profileId passed');
+        expect(servicePin, '5678', reason: 'correct PIN passed');
+        expect(onPinSetCalled, isTrue, reason: 'onPinSet called on success');
+        await _teardown(tester);
+      },
+    );
+  });
+
+  group('TutorPinSetupScreen — service error paths', () {
+    testWidgets(
+      'TutorPinValidationError shows error message and resets to step 1',
+      (tester) async {
+        tester.view.physicalSize = const Size(800, 1600);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+
+        const validationMessage = 'Custom validation error';
+
+        await tester.pumpWidget(
+          _buildHarness(
+            stubService: _StubTutorPinService(
+              setResult: (_, __) async =>
+                  const TutorPinValidationError(message: validationMessage),
+            ),
+            onPinSet: () {},
+          ),
+        );
+        await tester.pump();
+
+        // Enter matching PINs so the service is called.
+        await _enterPin(tester, '1111');
+        await tester.pump(const Duration(milliseconds: 100));
+        await _enterPin(tester, '1111');
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.pump(const Duration(seconds: 1));
+
+        expect(
+          find.text(validationMessage),
+          findsOneWidget,
+          reason: 'TutorPinValidationError.message must be shown as error text',
+        );
+        // Resets to step 1.
+        expect(find.text('Create your Tutor PIN'), findsOneWidget);
+        await _teardown(tester);
+      },
+    );
+
+    testWidgets(
+      'TutorPinIncorrect shows generic save error and resets to step 1',
+      (tester) async {
+        tester.view.physicalSize = const Size(800, 1600);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+
+        await tester.pumpWidget(
+          _buildHarness(
+            stubService: _StubTutorPinService(
+              setResult: (_, __) async => const TutorPinIncorrect(),
+            ),
+            onPinSet: () {},
+          ),
+        );
+        await tester.pump();
+
+        await _enterPin(tester, '2222');
+        await tester.pump(const Duration(milliseconds: 100));
+        await _enterPin(tester, '2222');
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.pump(const Duration(seconds: 1));
+
+        expect(
+          find.text('Unable to save PIN. Please try again.'),
+          findsOneWidget,
+          reason:
+              'l10n.tutorPinSetupSaveError must appear for TutorPinIncorrect',
+        );
+        expect(find.text('Create your Tutor PIN'), findsOneWidget);
+        await _teardown(tester);
+      },
+    );
+
+    testWidgets(
+      'TutorPinLockedOut shows generic save error and resets to step 1',
+      (tester) async {
+        tester.view.physicalSize = const Size(800, 1600);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+
+        await tester.pumpWidget(
+          _buildHarness(
+            stubService: _StubTutorPinService(
+              setResult: (_, __) async =>
+                  const TutorPinLockedOut(remainingMinutes: 5),
+            ),
+            onPinSet: () {},
+          ),
+        );
+        await tester.pump();
+
+        await _enterPin(tester, '3333');
+        await tester.pump(const Duration(milliseconds: 100));
+        await _enterPin(tester, '3333');
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.pump(const Duration(seconds: 1));
+
+        expect(
+          find.text('Unable to save PIN. Please try again.'),
+          findsOneWidget,
+          reason:
+              'l10n.tutorPinSetupSaveError must appear for TutorPinLockedOut',
+        );
+        expect(find.text('Create your Tutor PIN'), findsOneWidget);
+        await _teardown(tester);
+      },
+    );
+  });
+
+  group('TutorPinSetupScreen — skip button', () {
+    testWidgets('tapping "Set up later" calls onSkip', (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      var skipCalled = false;
+
+      await tester.pumpWidget(
+        _buildHarness(
+          stubService: _StubTutorPinService(
+            setResult: (_, __) async => const TutorPinSuccess(),
+          ),
+          onPinSet: () {},
+          onSkip: () => skipCalled = true,
+        ),
+      );
+      await tester.pump();
+
+      await tester.tap(find.text('Set up later'));
+      await tester.pump();
+
+      expect(skipCalled, isTrue, reason: 'onSkip must be called on tap');
+      await _teardown(tester);
+    });
+  });
+}

@@ -64,6 +64,13 @@ Future<BootstrapResult> bootstrap() async {
       // provider tree so sync subsystems can record non-fatal errors.
       crashlyticsServiceProvider.overrideWithValue(crashlytics),
     ],
+    // RP3: disable Riverpod 3's default provider auto-retry app-wide. With retry
+    // on, a persistently-failing FutureProvider stays in AsyncLoading(error:) so
+    // `asyncValue.when(error:)` never fires and screens show a spinner forever.
+    // Surfacing AsyncError immediately restores the error+retry UI (the explicit
+    // Retry button is the recovery path); matches the codegen providers, which
+    // already emit `retry: null`.
+    retry: (_, __) => null,
     observers: [
       TalkerRiverpodObserver(
         talker: talker,
