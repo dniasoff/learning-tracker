@@ -57,6 +57,26 @@ skip / 0 fail). Line coverage baseline **58.4%** (31,238 / 53,527).
 
 ---
 
+## On-device verification (2026-05-29, Galaxy S24 over Tailscale ADB)
+
+Confirmed live on the physical phone (`com.jcom.torah.learning_tracker`):
+- **Build→install→run pipeline** works end-to-end: `flutter build apk --debug` (JDK 21) → `adb install`
+  → relaunch → MainActivity renders. `flutter devices` lists the phone (android-arm64, Android 16).
+- **Dashboard** (empty-state "Add a learning track"), **Settings**, the **account-actions sheet**
+  (Switch/Add/Sign-out/Delete — Material fix confirmed, no invisible-ink), and the **Account Picker**
+  (Daniel = CLOUD valid; Family = "SIGN IN AGAIN" expired) all render correctly.
+- **Account switch**: tapping the valid account switched **instantly back to the Dashboard, no sign-out**
+  — matches DEC-34. (Locked by `account_picker_switch_test.dart`.)
+- **Deploy**: `firebase deploy --only firestore:rules` → "Deploy complete!".
+
+L4 tooling note: this Flutter build does **not** expose a semantics tree to `uiautomator` (single-surface
+render), so the on-device sweep harness must be **screenshot-coordinate based** (read screenshot → compute
+pixel → `input tap`), NOT UI-hierarchy based. The app bottom-nav row is ~y≈2200 on 1080×2340; the system
+nav bar sits ~y≈2300 (don't tap there — it backgrounds the app). `integration_test` (widget-finder based)
+needs the debug-VM connection, which is flaky over wireless ADB — prefer the coordinate sweep for L4.
+
+---
+
 ## Phase 1 — Tutoring (wave 1: 6 zero-coverage screens)
 
 Added **111 L1 widget tests** across the 6 screens that had no dedicated tests — TutorPinSetup (18),
