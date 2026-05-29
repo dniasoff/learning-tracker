@@ -136,4 +136,5 @@ block), tutor_grants, tutor_active_access, every `users/{uid}/learner_profiles/{
 | 2026-05-29 (sync/offline) | +OfflineTopBanner(15)/SyncStatusIndicator(19,7-state)/BackupSyncSection(18) = **52 L1 tests**; removed dead `SyncScreen` (/sync) placeholder route | 0/27 | 5/24 | 0 | re-measure pending |
 | 2026-05-29 (tracks) | +AddTrackFlow(23)/EditTrack+Chazara(25)/TrackManagementHub(19)/StudyDayConfig(20) = **87 L1 tests**; product rules asserted (no track-type label, scope, back-date→overdue, chazara) | 0/27 | 5/24 | 0 | re-measure pending |
 | 2026-05-29 (gamification) | +GamificationHub(19)/ChildRedemption(15)/ParentPendingRedemptions(17)/RewardConfig(16) = **67 L1 tests**; FIXED double-tap guard on Fulfil/Decline | 0/27 | 5/24 | 0 | re-measure pending |
+| 2026-05-29 (epic_15 un-skip) | un-skipped the fully-`@Skip`'d multi-profile acceptance suite — **119 tests now passing** (12 justified skips: file/git/arch/compile-time checks); 7 fixture-FK repairs, no prod bugs | 0/27 | 5/24 | 0 | re-measure pending |
 </content>

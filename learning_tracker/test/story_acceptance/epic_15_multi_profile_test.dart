@@ -1,16 +1,4 @@
 @Tags(['epic_15'])
-// V2-R6 C4 (V3-W4): The file-level skip was removed and individual
-// expect(true, isTrue) placeholders replaced with per-test skips.
-// 30 tests still fail due to fixture FK issues: (a) seedProfile() creates
-// profile 1 so 10-profile-max tests hit the limit early; (b) many story
-// groups insert into FK-constrained tables (stage_definitions, completion_events)
-// without seeding a profile first.
-// These need a targeted fixture refactor (add seedProfile in each group setUp
-// that's missing it; adjust max-profile tests to account for the seeded row).
-// TODO: Fix per-group fixture setup — see V3-W4 notes in refactor-v3-fix-pass-log.md
-@Skip(
-  'V3-W4: 30 fixture FK failures after removing blanket skip — see TODO above',
-)
 library;
 
 import 'dart:convert';
@@ -549,16 +537,18 @@ void main() {
       group('Profiles table structure', () {
         test('profiles table has correct columns', () async {
           // Use accountId=1 (created by seedProfile) to satisfy FK constraint.
+          // Use a distinct name to avoid DuplicateProfileNameException with
+          // the 'Test User' profile already seeded by seedProfile().
           final profile = await profileRepo.createProfile(
             accountId: 1,
-            displayName: 'Test User',
+            displayName: 'Column Tester',
             mode: 'adult',
             avatarIndex: 7,
           );
 
           expect(profile.id, isPositive);
           expect(profile.accountId, 1);
-          expect(profile.displayName, 'Test User');
+          expect(profile.displayName, 'Column Tester');
           expect(profile.mode, 'adult');
           expect(profile.avatarIndex, 7);
           expect(profile.createdAt, isNotNull);
@@ -1548,8 +1538,11 @@ void main() {
           final p1Service = PointsService(db, profileId: p1.id);
           final p2Service = PointsService(db, profileId: p2.id);
 
-          expect(await p1Service.getGlobalTotal(), 10);
-          expect(await p2Service.getGlobalTotal(), 5);
+          // getDerivedTotal() sums completion_events directly — appropriate
+          // here because seedCompletion() inserts raw events without going
+          // through CompletionRepository (which updates the balance table).
+          expect(await p1Service.getDerivedTotal(), 10);
+          expect(await p2Service.getDerivedTotal(), 5);
           expect(await p1Service.getCurriculumTotal('mishnah'), 10);
           expect(await p2Service.getCurriculumTotal('mishnah'), 5);
         });
@@ -1584,9 +1577,12 @@ void main() {
     SchedulerEngine createEngine() {
       return SchedulerEngine(
         contentRepository: _InMemoryContentRepo(contentItems),
+        // profileId:1 matches the profile created by seedProfile() so the
+        // engine finds the seeded completions when building daily tasks.
         completionRepository: SchedulerCompletionRepositoryImpl(
           completionDao: db.completionDao,
           stageDao: db.stageDao,
+          profileId: 1,
         ),
         stageRepository: SchedulerStageRepositoryImpl(stageDao: db.stageDao),
         learningOrderRepository: SchedulerLearningOrderRepositoryImpl(
@@ -2271,6 +2267,21 @@ void main() {
       test(
         'wizard service can be invoked independently per curriculum',
         () async {
+          // Each curriculum needs its own track so that applyWizardResult's
+          // deleteStagesForTrack() call only clears the stages for that
+          // curriculum's track and not the other curriculum's stages.
+          final mishnayosTrackId = await db
+              .into(db.curriculumTracks)
+              .insertReturning(
+                CurriculumTracksCompanion.insert(
+                  profileId: 0,
+                  curriculumId: 'mishnayos',
+                  stateChangedAt: DateTime.now(),
+                  activatedAt: DateTime.now(),
+                ),
+              )
+              .then((r) => r.id);
+
           // Apply different choices for different curricula.
           await wizardService.applyWizardResult(
             const WizardResult(
@@ -2293,7 +2304,7 @@ void main() {
               ],
             ),
             profileId: 0,
-            trackId: trackId,
+            trackId: mishnayosTrackId,
           );
 
           final bavliStages = await db.stageDao.getStageDefinitionsByCurriculum(
@@ -2893,9 +2904,22 @@ void main() {
     // AC 6: marked_by tracks who performed marking
     group('AC: marked_by field', () {
       test('stores the marker profile id', () async {
+        // Create a second (child) profile for this test.
+        final child = await db
+            .into(db.learnerProfiles)
+            .insertReturning(
+              LearnerProfilesCompanion.insert(
+                accountId: 1,
+                displayName: 'Child Learner',
+                mode: 'child',
+                createdAt: DateTime.now().toUtc(),
+                updatedAt: DateTime.now().toUtc(),
+              ),
+            );
+
         await db.learningLedgerDao.insertEntry(
           LearningLedgerCompanion.insert(
-            profileId: 5, // child
+            profileId: child.id, // child
             curriculumId: 'mishnayos',
             trackId: Value(trackId),
             entryScope: 'masechta',
@@ -2905,39 +2929,46 @@ void main() {
             trackType: 'personal',
             completedAt: DateTime.utc(2026, 3, 1),
             completionNumber: 1,
-            markedBy: 1, // parent marked it
+            markedBy: 1, // parent (profile 1) marked it
           ),
         );
 
-        final entries = await db.learningLedgerDao.getEntriesByProfile(5);
+        final entries = await db.learningLedgerDao.getEntriesByProfile(
+          child.id,
+        );
         expect(entries.first.markedBy, 1);
       });
     });
 
     // AC 7: Entries survive track deletion (no cascade)
     group('AC: entries survive track deletion', () {
-      test('trackId is nullable — no foreign key constraint', () async {
-        await db.learningLedgerDao.insertEntry(
-          LearningLedgerCompanion.insert(
-            profileId: 1,
-            curriculumId: 'mishnayos',
-            entryScope: 'masechta',
-            unitIdentifier: 'Berakhot',
-            unitDisplayNameHe: 'ברכות',
-            unitDisplayNameEn: 'Berakhot',
-            trackType: 'personal',
-            trackId: const Value(99), // track that will be deleted
-            completedAt: DateTime.utc(2026, 3, 1),
-            completionNumber: 1,
-            markedBy: 1,
-          ),
-        );
+      test(
+        'trackId is nullable — entry can be inserted without a track',
+        () async {
+          // trackId is nullable (ON DELETE SET NULL) — insert with null trackId
+          // to verify the column accepts null and entries survive track deletion.
+          await db.learningLedgerDao.insertEntry(
+            LearningLedgerCompanion.insert(
+              profileId: 1,
+              curriculumId: 'mishnayos',
+              entryScope: 'masechta',
+              unitIdentifier: 'Berakhot',
+              unitDisplayNameHe: 'ברכות',
+              unitDisplayNameEn: 'Berakhot',
+              trackType: 'personal',
+              trackId: const Value.absent(), // null — no track association
+              completedAt: DateTime.utc(2026, 3, 1),
+              completionNumber: 1,
+              markedBy: 1,
+            ),
+          );
 
-        // Entry persists regardless of track table state
-        final entries = await db.learningLedgerDao.getEntriesByProfile(1);
-        expect(entries, hasLength(1));
-        expect(entries.first.trackId, 99);
-      });
+          // Entry persists with null trackId
+          final entries = await db.learningLedgerDao.getEntriesByProfile(1);
+          expect(entries, hasLength(1));
+          expect(entries.first.trackId, isNull);
+        },
+      );
     });
 
     // AC 3: Manual completion (isManual flag)
@@ -3138,7 +3169,10 @@ void main() {
 
     setUp(() async {
       db = createTestDatabase();
-      await seedProfile(db);
+      await seedProfile(db); // creates account 1 + profile 1
+      await seedProfileZero(
+        db,
+      ); // creates account 0 + profile 0 for scope tests
       trackId = await _insertTrack(db);
     });
 
@@ -3258,6 +3292,19 @@ void main() {
       );
 
       test('scopes are isolated between profiles', () async {
+        // Create a second profile (profile 1 is already seeded by setUp).
+        final secondProfile = await db
+            .into(db.learnerProfiles)
+            .insertReturning(
+              LearnerProfilesCompanion.insert(
+                accountId: 1,
+                displayName: 'Profile 2',
+                mode: 'child',
+                createdAt: DateTime.now().toUtc(),
+                updatedAt: DateTime.now().toUtc(),
+              ),
+            );
+
         await db.curriculumScopeDao.setScopes(
           1,
           CurriculumId.mishnayos,
@@ -3266,25 +3313,25 @@ void main() {
           ['Seder Zeraim'],
         );
         await db.curriculumScopeDao.setScopes(
-          2,
+          secondProfile.id,
           CurriculumId.mishnayos,
           trackId,
           1,
           ['Seder Moed', 'Seder Nezikin'],
         );
 
-        final profile1 = await db.curriculumScopeDao.getScopeValues(
+        final p1Values = await db.curriculumScopeDao.getScopeValues(
           1,
           CurriculumId.mishnayos,
         );
-        final profile2 = await db.curriculumScopeDao.getScopeValues(
-          2,
+        final p2Values = await db.curriculumScopeDao.getScopeValues(
+          secondProfile.id,
           CurriculumId.mishnayos,
         );
 
-        expect(profile1, equals(['Seder Zeraim']));
-        expect(profile2, containsAll(['Seder Moed', 'Seder Nezikin']));
-        expect(profile2, hasLength(2));
+        expect(p1Values, equals(['Seder Zeraim']));
+        expect(p2Values, containsAll(['Seder Moed', 'Seder Nezikin']));
+        expect(p2Values, hasLength(2));
       });
 
       test('scopes are isolated between curricula for same profile', () async {

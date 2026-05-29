@@ -187,6 +187,16 @@ delete confirm). All green, analyze clean.
   progress-bar arithmetic, status labels, unlock-celebration double-tap guard, pull-to-refresh, sort order
   untested. → strengthen in a later wave.
 
+### Skipped-suite repair — epic_15 multi-profile
+
+Un-skipped the library-level `@Skip` on `epic_15_multi_profile_test.dart` (was fully dark) → **119 tests
+now passing**, 12 intentionally skipped (file-existence/git/architecture/compile-time-API checks that
+can't be unit-asserted), analyze clean. **No production bugs** — all 11 exposed failures were test-fixture
+issues (7 repairs): missing `seedProfile`/`seedProfileZero` before FK-constrained inserts, the 10-profile
+cap test colliding with the pre-seeded "Test User", `getGlobalTotal()`→`getDerivedTotal()` (raw events
+don't touch points_balance), per-curriculum distinct `trackId`s, and FK-valid trackId/profileId in ledger
+tests.
+
 ---
 
 ## Phase 3 — Tracks & track-setup wizard (wave 1)
