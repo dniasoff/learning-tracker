@@ -79,7 +79,7 @@ use-case `mark_live_completion_use_case.dart:55-63`, `firestore.rules:203-232` (
 |---|--|--|--|--|--|--|--|--|--|--|
 | SignInScreen (idle/submit/error/watchdog) | 2~ |  |  | · |  |  |  |  |  |
 | SignupScreen (5-acct cap, collide→upgrade) | 1~ |  |  | · |  |  |  |  |  |
-| AccountPickerScreen | **0** |  |  |  |  |  |  |  |  |
+| AccountPickerScreen (switch = no sign-out ✓) | 1 | ~ |  |  |  |  |  |  |  |
 | UpgradeToCloudScreen | **0** |  |  |  |  |  |  |  |  |
 | AppIntroScreen | **0** |  | · | · | · |  |  |  |  |
 | OnboardingScreen (child/adult/skip/join-tutor) | 4~ |  |  |  |  |  |  |  |  |
