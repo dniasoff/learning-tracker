@@ -148,4 +148,5 @@ block), tutor_grants, tutor_active_access, every `users/{uid}/learner_profiles/{
 | 2026-05-30 (coverage w2: sync) | +298 (firestore_gateway 114, sync_orchestrator 29, local_data_upload 42, wizard_steps 62, account_actions 25, pin_keypad 26); 2 documented skips | 27/27 | 24/24 | 0 | re-measure pending |
 | 2026-05-30 (coverage w3: screens) | +242 (scope/lifetime 42, tracks body/order 29, onboarding/bulk 34, profiles 19, content reader 38, lifetime-folder/notif-providers 79); **fixed scope-save silent no-op** + regression test | 27/27 | 24/24 | 0 | **measured 74.7%** (sync 30.5%→74.9%) |
 | 2026-05-30 (coverage w4: account) | +188 (upgrade_service 33, email_verify_panel 24, tutor_grant_repo 76, dashboard_providers 41, achievement_celebration 14); **fixed CRITICAL upgrade-crash** (discardLocalCredentials replace→clearPasswordHash) + un-skipped 3 tests | 27/27 | 24/24 | 0 | re-measure pending |
+| 2026-05-30 (coverage w5) | +169 (magic_link 27, edit_track/detail 41, add_track_flow 12, recent_activity/hierarchy 27, onboarding 34); **fixed magic-link deep-link crash** (malformed % encoding) + un-skip | 27/27 | 24/24 | 0 | re-measure pending |
 </content>

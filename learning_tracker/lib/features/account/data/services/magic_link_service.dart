@@ -142,7 +142,16 @@ class MagicLinkService {
       if (next == null || next.isEmpty) {
         return current;
       }
-      final decoded = Uri.decodeComponent(next);
+      // A malformed wrapped value (invalid percent-encoding, e.g. "%%%") makes
+      // Uri.decodeComponent throw ArgumentError; that would escape the stream
+      // listener and crash the service. Treat an undecodable wrapper as "no
+      // further unwrapping" and return what we have.
+      final String decoded;
+      try {
+        decoded = Uri.decodeComponent(next);
+      } on ArgumentError {
+        return current;
+      }
       final parsed = Uri.tryParse(decoded);
       if (parsed == null || parsed.toString() == current.toString()) {
         return current;

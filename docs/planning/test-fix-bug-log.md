@@ -41,6 +41,28 @@ defence-in-depth against a future migration). Also **deleted** the redundant old
 
 ---
 
+## Phase 8 — Coverage wave 5: magic-link + tracks/progress/content/onboarding (+ magic-link crash fix)
+
+**+169 tests** (green, analyze clean, all standalone-green — the wave required isolation after a prior
+order-dependent file): magic_link_service (27), edit_track + track_detail (41), add_track_flow (12),
+recent_activity + hierarchy_selection_panel (27), onboarding_screen (34).
+
+**BUG fixed (magic_link_service, MEDIUM):** `_extractActionUri` called `Uri.decodeComponent(next)` with no
+try/catch when unwrapping a `link=`/`deep_link_id=` deep link. A malformed percent-encoded value (e.g. `%%%`)
+threw `ArgumentError: Invalid URL encoding`, which propagated uncaught through the deep-link stream listener and
+crashed the service. FIX: the decode is wrapped in try/catch and returns the current URI (stops unwrapping) on
+failure. Un-skipped the regression test.
+
+### Findings logged (backlog)
+- `add_track_flow` (MEDIUM): the DNI-202 scope auto-skip (empty scope content) means pressing Back from the step
+  after scope lands on the scope step which immediately re-advances — the user can't navigate back past an
+  auto-skipped step. Fix would need skip-on-back symmetry in the wizard nav; logged.
+- magic_link deeper paths (verifier): `onSignedIn`/`updateDisplayName` throwing escapes the listener; simultaneous
+  cold+warm duplicate delivery → double sign-in; >3-level wrapping silently fails; warm-link tests use a 50ms
+  `Future.delayed` timing hack (CI-fragile) rather than a completion signal.
+
+---
+
 ## Phase 8 — Coverage wave 4: account/tutoring/dashboard (+ CRITICAL upgrade-crash fix)
 
 **+188 tests** (green; 3 skips on email-panel medium bugs): upgrade_to_cloud_service (33), email_verification_confirm_panel
