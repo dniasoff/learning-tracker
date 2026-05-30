@@ -41,6 +41,22 @@ defence-in-depth against a future migration). Also **deleted** the redundant old
 
 ---
 
+## Phase 8 — Coverage wave 9: worst-feature lift (+ sacred-time race fix)
+
+**+217 tests** (green, analyze clean, standalone): sacred_location + cities_repository + location_service (47),
+notification_gateway (60), account_picker_screen (14), siyumim_timeline + lifetime_knowledge_providers (32),
+tutor_pin_entry_dialog + goal_setup_screen (34), text_display reader deeper (30).
+
+**BUG fixed (sacred_time, MEDIUM race):** `InIsraelNotifier._load()` is re-triggered by `ref.invalidate()` inside
+`setManualCity`/`detect`. Being async, the rebuilt notifier's `_load()` could resume AFTER a synchronous
+`setInIsrael(true)` and clobber it with the stale prefs value — silently reverting a visitor's manual "two-day
+chag" inIsrael toggle (set non-IL city, then flip inIsrael=true → race reverted it to false). FIX: a per-instance
+`_explicitlySet` flag — an explicit `setInIsrael` wins over a racing `_load`; the flag resets on rebuild, giving
+the intended semantics (location change → country default; manual override sticks until the next location change).
+Also added `ref.mounted` guards to both `_load()`s (no set-after-dispose on account switch). Un-skipped the race test.
+
+---
+
 ## Phase 8 — Coverage waves 7+8: profiles cluster + SYNC-ENGINE internals
 
 **Wave 7 (+150, all behavioral, no prod bugs):** pin_flow + parent_pin_setup_dialog (28), profile_picker +

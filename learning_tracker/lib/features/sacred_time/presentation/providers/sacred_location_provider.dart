@@ -24,6 +24,9 @@ class SacredLocationNotifier extends _$SacredLocationNotifier {
 
   Future<void> _load() async {
     final prefs = await SharedPreferences.getInstance();
+    // After the async gap the provider may have been invalidated/disposed (e.g.
+    // an account switch rebuilds it). Never write state on a disposed notifier.
+    if (!ref.mounted) return;
     final loc = SacredTimePreferences.readLocation(prefs);
     if (loc != null) state = loc;
   }
@@ -119,6 +122,13 @@ class SacredLocationNotifier extends _$SacredLocationNotifier {
 /// afterwards (e.g. visitors who keep two-day chag while in Israel).
 @Riverpod(keepAlive: true)
 class InIsraelNotifier extends _$InIsraelNotifier {
+  /// True once an explicit [setInIsrael] has run for this notifier instance.
+  /// Guards against the build-time async [_load] resuming AFTER an explicit
+  /// set and clobbering it with a stale prefs value. Resets on each rebuild
+  /// (a location change invalidates this provider → new instance → reload from
+  /// the new country default), which is the intended semantics.
+  bool _explicitlySet = false;
+
   @override
   bool build() {
     _load();
@@ -127,11 +137,16 @@ class InIsraelNotifier extends _$InIsraelNotifier {
 
   Future<void> _load() async {
     final prefs = await SharedPreferences.getInstance();
+    // Bail if disposed (account switch) or if an explicit setInIsrael() already
+    // ran during the async gap — a stale prefs read must not clobber the user's
+    // manual choice (the visitor "two-day chag" flip: non-IL city + inIsrael=true).
+    if (!ref.mounted || _explicitlySet) return;
     final value = SacredTimePreferences.readInIsrael(prefs);
     if (value != state) state = value;
   }
 
   Future<void> setInIsrael(bool value) async {
+    _explicitlySet = true;
     state = value;
     final prefs = await SharedPreferences.getInstance();
     await SacredTimePreferences.writeInIsrael(prefs, value);
