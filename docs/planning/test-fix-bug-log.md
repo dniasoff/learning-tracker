@@ -41,6 +41,34 @@ defence-in-depth against a future migration). Also **deleted** the redundant old
 
 ---
 
+## Phase 8 — Coverage wave 6: deep logic (scheduler engine, credit policy, controllers)
+
+**+167 tests** (green, analyze clean, standalone, no prod bugs found): the high-value ones drive REAL logic, not
+mocks:
+- **scheduler `allDailyTasksProvider`** (11) — wires the actual SchedulerEngine + projection + DAOs over an
+  in-memory DB and asserts the COMPUTED task list: self-paced pace→N tasks, overdue vs new bucketing, the
+  bulk-prior SENTINEL-date shift, skipped-ref exclusion, previously-skipped→overdueChazara priority boost,
+  rest-day study-day configs, multi-curriculum, priority sort. (Previously the provider body was overridden away.)
+- **reward_config_controller** (47) — real Drift DB + RewardMilestoneService (save/edit/delete/validation).
+- **completion_writer** (41) — the three-tier credit policy + bulk-mark sentinel date (credits lifetime/siyum,
+  not streak/recent) + dedup. Policy holds (no bug).
+- **step_chazara_readonly + step_goal** (31); **signup_screen** (37).
+
+### Integrity note — DISCARDED a false-confidence test
+The sign_in_controller "main flow" test (12) was **discarded**: the independent verifier found every non-trivial
+assertion was network-conditional (silently skipped offline) or tautological. Root cause is testability debt, not
+the tests — committing them would have inflated the coverage number without verifying behaviour.
+
+### Testability debt logged (DI refactors for a focused pass)
+- `sign_in_controller` / `signup_screen`: `InternetConnectionChecker.instance` is a non-injectable STATIC
+  singleton (no provider) → connectivity can't be mocked, so the local-vs-cloud routing + offline paths can't be
+  deterministically unit-tested. Also `LocalAuthService` is constructed internally with production argon2id
+  (19 MiB / 2 iters) which blocks the test event loop >30s. Fix: provider-inject the connectivity checker + a
+  test-fast PasswordHasher. Sign-in error-MAPPING is already covered (leverage wave); this unblocks the deep flow.
+- `signup_screen`: `_showError` strings hardcoded English (i18n).
+
+---
+
 ## Phase 8 — Coverage wave 5: magic-link + tracks/progress/content/onboarding (+ magic-link crash fix)
 
 **+169 tests** (green, analyze clean, all standalone-green — the wave required isolation after a prior
