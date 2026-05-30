@@ -152,4 +152,8 @@ block), tutor_grants, tutor_active_access, every `users/{uid}/learner_profiles/{
 | 2026-05-30 (coverage w6 deep) | +167 (scheduler allDailyTasks-body 11, reward_config 47, completion_writer 41, chazara/goal 31, signup 37); discarded 1 false-confidence sign-in test (integrity) | 27/27 | 24/24 | 0 | **measured 77.3%** (scheduler 22→60%) |
 | 2026-05-30 (coverage w7) | +150 (pin_flow/setup-dialog 28, profile_picker/tutored deep 24, settings/point-config 36, notif-providers deep 32, study-days/content-hierarchy 25, scheduler branches 5) | 27/27 | 24/24 | 0 | (rolled into w8 measure) |
 | 2026-05-30 (coverage w8 sync) | +229 sync-engine internals (push_pipeline 39, **drift_merge_store 59 LWW**, outbox 17, seed_manager 43, codecs/mergers 71); no merge/sync bugs — engine holds | 27/27 | 24/24 | 0 | **measured 78.5%** |
+| 2026-05-30 (coverage w9) | +217 (sacred_time data/location 47, notification_gateway 60, account_picker 14, siyumim/lifetime 32, tutor_pin/goal_setup 34, content reader 30); **fixed sacred-time inIsrael race** | 27/27 | 24/24 | 0 | **measured 79.4%** |
+| 2026-05-30 (connectivity DI) | sign_in_controller now reads internetConnectionCheckerProvider (was bypassing it) — unblocks deterministic sign-in tests | 27/27 | 24/24 | 0 | testability fix |
+| 2026-05-30 (coverage w10) | +99 (sign_in routing 7, settings utils 11, curriculum/change-password 23, content tile/search/providers 28, pending-signup/mode-card 30) | 27/27 | 24/24 | 0 | **measured 80.1%** |
+| 2026-05-30 (CI gate) | **`make ci` GREEN** (analyze + format-check + 8937 tests) after normalizing dart-format across 35 test files — the canonical clean full pass | 27/27 | 24/24 | 0 | **80.1%, make ci green** |
 </content>
