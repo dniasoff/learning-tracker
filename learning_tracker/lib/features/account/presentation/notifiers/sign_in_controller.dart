@@ -5,7 +5,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart'
     show GoogleSignInException, GoogleSignInExceptionCode;
-import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
@@ -22,6 +21,7 @@ import 'package:learning_tracker/features/account/domain/services/upgrade_to_clo
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart'
     as auth_state;
+import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
 import 'package:learning_tracker/features/account/presentation/widgets/email_verification_dialog.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_resume_store.dart'
     show kOnboardingComplete, kOnboardingSkipped;
@@ -596,7 +596,8 @@ class SignInController extends Notifier<SignInState> {
         );
         await session.setActiveAccount(account.accountId);
 
-        final isOnline = await InternetConnectionChecker.instance.hasConnection;
+        final isOnline =
+            await _ref.read(internetConnectionCheckerProvider).hasConnection;
         if (isOnline) {
           final upgradeSvc = UpgradeToCloudService(
             dao: dao,
@@ -651,7 +652,8 @@ class SignInController extends Notifier<SignInState> {
           unawaited(router.replaceAll([const ProfilePickerRoute()]));
         }
       } else if (account != null && account.accountTier.isCloud) {
-        final isOnline = await InternetConnectionChecker.instance.hasConnection;
+        final isOnline =
+            await _ref.read(internetConnectionCheckerProvider).hasConnection;
         if (isOnline) {
           final authRepo = _ref.read(authRepositoryProvider);
           await authRepo
@@ -685,7 +687,8 @@ class SignInController extends Notifier<SignInState> {
           return;
         }
 
-        final isOnline = await InternetConnectionChecker.instance.hasConnection;
+        final isOnline =
+            await _ref.read(internetConnectionCheckerProvider).hasConnection;
         if (isOnline) {
           final authRepo = _ref.read(authRepositoryProvider);
           await authRepo

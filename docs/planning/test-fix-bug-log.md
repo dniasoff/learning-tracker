@@ -41,6 +41,19 @@ defence-in-depth against a future migration). Also **deleted** the redundant old
 
 ---
 
+## Phase 8 — Testability refactor: connectivity DI in sign-in (unblocks account coverage)
+
+`sign_in_controller` called `InternetConnectionChecker.instance.hasConnection` directly at 3 sites, bypassing the
+existing `internetConnectionCheckerProvider` — whose own doc says it's "exposed as a provider so tests can override
+with a fake". That made the local-vs-cloud routing + offline branches untestable (wave 6's sign-in test was
+discarded as false-confidence for exactly this reason). FIX: read the provider via `_ref` (3 sites) and dropped the
+now-unused direct import. Behaviour-preserving (configured instance vs singleton, same probe); analyze clean.
+Tests can now override connectivity online/offline. (Remaining auth testability debt: `LocalAuthService` is
+constructed internally with production argon2id — the localBorn sign-in branch still needs a fast-hasher provider
+seam; logged.)
+
+---
+
 ## Phase 8 — Coverage wave 9: worst-feature lift (+ sacred-time race fix)
 
 **+217 tests** (green, analyze clean, standalone): sacred_location + cities_repository + location_service (47),
