@@ -194,8 +194,7 @@ Widget _buildHierarchyView({
           currentLevel: currentLevel,
           maxSelectableLevel: maxSelectableLevel,
           labelForLevel: (level) => level == 1 ? 'Seder' : 'Masechta',
-          isSelected: (item) =>
-              selections.any((s) => s.value == item.level2),
+          isSelected: (item) => selections.any((s) => s.value == item.level2),
           isDirectlySelected: (item) =>
               selections.any((s) => s.value == item.level2),
           onToggle: onToggle ?? (_) {},
@@ -257,32 +256,37 @@ void main() {
   // ==========================================================================
 
   group('Empty content — DNI-202 auto-skip', () {
-    testWidgets('empty item list calls onComplete(null) via postFrameCallback', (
-      tester,
-    ) async {
-      final contentRepo = _MockContentRepository();
-      when(
-        () => contentRepo.getContentForCurriculum(any<CurriculumId>()),
-      ).thenAnswer((_) async => []);
+    testWidgets(
+      'empty item list calls onComplete(null) via postFrameCallback',
+      (tester) async {
+        final contentRepo = _MockContentRepository();
+        when(
+          () => contentRepo.getContentForCurriculum(any<CurriculumId>()),
+        ).thenAnswer((_) async => []);
 
-      List<ScopeEntry>? completed;
-      var completedCalled = false;
-      await tester.pumpWidget(
-        _buildScopeStep(
-          overrides: _overrides(contentRepo: contentRepo),
-          onComplete: (r) {
-            completedCalled = true;
-            completed = r;
-          },
-        ),
-      );
-      await _settle(tester);
+        List<ScopeEntry>? completed;
+        var completedCalled = false;
+        await tester.pumpWidget(
+          _buildScopeStep(
+            overrides: _overrides(contentRepo: contentRepo),
+            onComplete: (r) {
+              completedCalled = true;
+              completed = r;
+            },
+          ),
+        );
+        await _settle(tester);
 
-      expect(completedCalled, isTrue, reason: 'Auto-skip must fire for empty content');
-      expect(completed, isNull, reason: 'Auto-skip passes null (learn all)');
+        expect(
+          completedCalled,
+          isTrue,
+          reason: 'Auto-skip must fire for empty content',
+        );
+        expect(completed, isNull, reason: 'Auto-skip passes null (learn all)');
 
-      addTearDown(() => _tearDown(tester));
-    });
+        addTearDown(() => _tearDown(tester));
+      },
+    );
   });
 
   // ==========================================================================
@@ -323,7 +327,9 @@ void main() {
   // ==========================================================================
 
   group('Top-level render', () {
-    testWidgets('"Learn All" hero card and scope title present', (tester) async {
+    testWidgets('"Learn All" hero card and scope title present', (
+      tester,
+    ) async {
       final contentRepo = _MockContentRepository();
       when(
         () => contentRepo.getContentForCurriculum(any<CurriculumId>()),
@@ -343,10 +349,7 @@ void main() {
         findsOneWidget,
       );
       // "Learn All" hero.
-      expect(
-        find.text('I want to learn everything!'),
-        findsOneWidget,
-      );
+      expect(find.text('I want to learn everything!'), findsOneWidget);
 
       addTearDown(() => _tearDown(tester));
     });
@@ -380,30 +383,29 @@ void main() {
   // ==========================================================================
 
   group('No track-type labels', () {
-    testWidgets(
-      'scope step shows no Personal/Standard/Custom/אישי labels',
-      (tester) async {
-        final contentRepo = _MockContentRepository();
-        when(
-          () => contentRepo.getContentForCurriculum(any<CurriculumId>()),
-        ).thenAnswer((_) async => _mishnayosItems());
+    testWidgets('scope step shows no Personal/Standard/Custom/אישי labels', (
+      tester,
+    ) async {
+      final contentRepo = _MockContentRepository();
+      when(
+        () => contentRepo.getContentForCurriculum(any<CurriculumId>()),
+      ).thenAnswer((_) async => _mishnayosItems());
 
-        await tester.pumpWidget(
-          _buildScopeStep(
-            overrides: _overrides(contentRepo: contentRepo),
-            onComplete: (_) {},
-          ),
-        );
-        await _settle(tester);
+      await tester.pumpWidget(
+        _buildScopeStep(
+          overrides: _overrides(contentRepo: contentRepo),
+          onComplete: (_) {},
+        ),
+      );
+      await _settle(tester);
 
-        expect(find.text('Personal'), findsNothing);
-        expect(find.text('Standard'), findsNothing);
-        expect(find.text('Custom'), findsNothing);
-        expect(find.text('אישי'), findsNothing);
+      expect(find.text('Personal'), findsNothing);
+      expect(find.text('Standard'), findsNothing);
+      expect(find.text('Custom'), findsNothing);
+      expect(find.text('אישי'), findsNothing);
 
-        addTearDown(() => _tearDown(tester));
-      },
-    );
+      addTearDown(() => _tearDown(tester));
+    });
   });
 
   // ==========================================================================
@@ -500,7 +502,9 @@ void main() {
       // The button text changes to 'Continue with 1 selected' or similar.
       final btns = tester.widgetList<FilledButton>(find.byType(FilledButton));
       final doneBtn = btns.lastWhere(
-        (b) => b.child is Text && ((b.child as Text).data?.contains('Continue') ?? false),
+        (b) =>
+            b.child is Text &&
+            ((b.child as Text).data?.contains('Continue') ?? false),
         orElse: () => btns.first,
       );
       expect(doneBtn.onPressed, isNotNull);
@@ -618,35 +622,36 @@ void main() {
   // ==========================================================================
 
   group('"Learn All" hero', () {
-    testWidgets('tapping "I want to learn everything!" calls onComplete(null)', (
-      tester,
-    ) async {
-      final contentRepo = _MockContentRepository();
-      when(
-        () => contentRepo.getContentForCurriculum(any<CurriculumId>()),
-      ).thenAnswer((_) async => _mishnayosItems());
+    testWidgets(
+      'tapping "I want to learn everything!" calls onComplete(null)',
+      (tester) async {
+        final contentRepo = _MockContentRepository();
+        when(
+          () => contentRepo.getContentForCurriculum(any<CurriculumId>()),
+        ).thenAnswer((_) async => _mishnayosItems());
 
-      List<ScopeEntry>? result;
-      var called = false;
-      await tester.pumpWidget(
-        _buildScopeStep(
-          overrides: _overrides(contentRepo: contentRepo),
-          onComplete: (r) {
-            called = true;
-            result = r;
-          },
-        ),
-      );
-      await _settle(tester);
+        List<ScopeEntry>? result;
+        var called = false;
+        await tester.pumpWidget(
+          _buildScopeStep(
+            overrides: _overrides(contentRepo: contentRepo),
+            onComplete: (r) {
+              called = true;
+              result = r;
+            },
+          ),
+        );
+        await _settle(tester);
 
-      await tester.tap(find.text('I want to learn everything!'));
-      await tester.pump();
+        await tester.tap(find.text('I want to learn everything!'));
+        await tester.pump();
 
-      expect(called, isTrue);
-      expect(result, isNull, reason: 'Learn All passes null to onComplete');
+        expect(called, isTrue);
+        expect(result, isNull, reason: 'Learn All passes null to onComplete');
 
-      addTearDown(() => _tearDown(tester));
-    });
+        addTearDown(() => _tearDown(tester));
+      },
+    );
   });
 
   // ==========================================================================
@@ -678,9 +683,7 @@ void main() {
       // Tap the Continue button — finds it by substring so the count suffix
       // ("Continue with 1 selected") doesn't break the match.
       final continueFinder = find.byWidgetPredicate(
-        (w) =>
-            w is Text &&
-            (w.data?.startsWith('Continue') ?? false),
+        (w) => w is Text && (w.data?.startsWith('Continue') ?? false),
       );
       expect(continueFinder, findsOneWidget);
       await tester.tap(continueFinder);

@@ -371,28 +371,27 @@ void main() {
       },
     );
 
-    testWidgets(
-      'self-paced Chumash shows exactly 6 total steps',
-      (tester) async {
-        final svc = MockTrackCreationService();
-        await tester.pumpWidget(
-          _buildApp(overrides: _baseOverrides(creationService: svc)),
-        );
-        await _settle(tester);
+    testWidgets('self-paced Chumash shows exactly 6 total steps', (
+      tester,
+    ) async {
+      final svc = MockTrackCreationService();
+      await tester.pumpWidget(
+        _buildApp(overrides: _baseOverrides(creationService: svc)),
+      );
+      await _settle(tester);
 
-        await _tapCurriculum(tester, 'Chumash');
+      await _tapCurriculum(tester, 'Chumash');
 
-        final (_, total) = _parseStep(tester);
-        // curriculum(1) + scope(2) + studyDays(3) + chazara(4) + goal(5) + bulkMark(6)
-        expect(
-          total,
-          6,
-          reason:
-              'Self-paced Chumash (no programs) must have exactly 6 active steps.',
-        );
-        addTearDown(() => _tearDown(tester));
-      },
-    );
+      final (_, total) = _parseStep(tester);
+      // curriculum(1) + scope(2) + studyDays(3) + chazara(4) + goal(5) + bulkMark(6)
+      expect(
+        total,
+        6,
+        reason:
+            'Self-paced Chumash (no programs) must have exactly 6 active steps.',
+      );
+      addTearDown(() => _tearDown(tester));
+    });
 
     testWidgets(
       'Mishnayos (program track) has fewer total steps than self-paced Chumash',
@@ -858,8 +857,7 @@ void main() {
             profileId: any(named: 'profileId'),
           ),
         ).thenAnswer((inv) async {
-          capturedProfileId =
-              inv.namedArguments[#profileId] as int;
+          capturedProfileId = inv.namedArguments[#profileId] as int;
         });
 
         await tester.pumpWidget(
@@ -876,7 +874,8 @@ void main() {
         expect(
           capturedProfileId,
           7,
-          reason: 'The profileId prop must be forwarded to TrackCreationService',
+          reason:
+              'The profileId prop must be forwarded to TrackCreationService',
         );
         addTearDown(() => _tearDown(tester));
       },
@@ -1238,9 +1237,7 @@ void main() {
       (tester) async {
         final svc = MockTrackCreationService();
         await tester.pumpWidget(
-          _buildApp(
-            overrides: _baseOverridesWithContent(creationService: svc),
-          ),
+          _buildApp(overrides: _baseOverridesWithContent(creationService: svc)),
         );
         await _settle(tester);
 
@@ -1268,9 +1265,7 @@ void main() {
       (tester) async {
         final svc = MockTrackCreationService();
         await tester.pumpWidget(
-          _buildApp(
-            overrides: _baseOverridesWithContent(creationService: svc),
-          ),
+          _buildApp(overrides: _baseOverridesWithContent(creationService: svc)),
         );
         await _settle(tester);
 
@@ -1283,7 +1278,11 @@ void main() {
         await _settle(tester);
 
         final (stepAfter, totalAfter) = _parseStep(tester);
-        expect(stepAfter, 1, reason: 'Back navigation must decrement step counter');
+        expect(
+          stepAfter,
+          1,
+          reason: 'Back navigation must decrement step counter',
+        );
         expect(
           totalAfter,
           totalBefore,
@@ -1293,34 +1292,33 @@ void main() {
       },
     );
 
-    testWidgets(
-      'back navigation from step 2 does not call onCancel',
-      (tester) async {
-        var cancelled = false;
-        final svc = MockTrackCreationService();
-        await tester.pumpWidget(
-          _buildApp(
-            overrides: _baseOverridesWithContent(creationService: svc),
-            onCancel: () => cancelled = true,
-          ),
-        );
-        await _settle(tester);
+    testWidgets('back navigation from step 2 does not call onCancel', (
+      tester,
+    ) async {
+      var cancelled = false;
+      final svc = MockTrackCreationService();
+      await tester.pumpWidget(
+        _buildApp(
+          overrides: _baseOverridesWithContent(creationService: svc),
+          onCancel: () => cancelled = true,
+        ),
+      );
+      await _settle(tester);
 
-        await _tapCurriculum(tester, 'Chumash');
-        await _settle(tester);
-        expect(find.textContaining('STEP 2 OF'), findsAtLeastNWidgets(1));
+      await _tapCurriculum(tester, 'Chumash');
+      await _settle(tester);
+      expect(find.textContaining('STEP 2 OF'), findsAtLeastNWidgets(1));
 
-        await tester.binding.handlePopRoute();
-        await _settle(tester);
+      await tester.binding.handlePopRoute();
+      await _settle(tester);
 
-        expect(
-          cancelled,
-          isFalse,
-          reason: 'Back from step 2 goes to step 1 — must not call onCancel',
-        );
-        addTearDown(() => _tearDown(tester));
-      },
-    );
+      expect(
+        cancelled,
+        isFalse,
+        reason: 'Back from step 2 goes to step 1 — must not call onCancel',
+      );
+      addTearDown(() => _tearDown(tester));
+    });
   });
 
   // ==========================================================================
@@ -1343,8 +1341,7 @@ void main() {
             .where((t) => t.data?.endsWith('%') ?? false)
             .first
             .data!;
-        final intBefore =
-            int.parse(percentBefore.replaceAll('%', '').trim());
+        final intBefore = int.parse(percentBefore.replaceAll('%', '').trim());
 
         await _tapCurriculum(tester, 'Chumash');
 
@@ -1353,8 +1350,7 @@ void main() {
             .where((t) => t.data?.endsWith('%') ?? false)
             .first
             .data!;
-        final intAfter =
-            int.parse(percentAfter.replaceAll('%', '').trim());
+        final intAfter = int.parse(percentAfter.replaceAll('%', '').trim());
 
         expect(
           intAfter,
@@ -1400,93 +1396,92 @@ void main() {
   // ==========================================================================
 
   group('Wizard state integrity', () {
-    testWidgets(
-      'prefs-restored studyDays are forwarded to createTrack',
-      (tester) async {
-        // Seed prefs with a study days map (only Mon+Tue active).
-        const studyDaysJson = '{"1":"study","2":"study","3":"review",'
-            '"4":"review","5":"review","6":"review","7":"review"}';
-        SharedPreferences.setMockInitialValues({
-          'add_track_step': AddTrackStep.bulkMark.index,
-          'add_track_curriculum': CurriculumId.chumash.storageKey,
-          'add_track_study_days': studyDaysJson,
-        });
+    testWidgets('prefs-restored studyDays are forwarded to createTrack', (
+      tester,
+    ) async {
+      // Seed prefs with a study days map (only Mon+Tue active).
+      const studyDaysJson =
+          '{"1":"study","2":"study","3":"review",'
+          '"4":"review","5":"review","6":"review","7":"review"}';
+      SharedPreferences.setMockInitialValues({
+        'add_track_step': AddTrackStep.bulkMark.index,
+        'add_track_curriculum': CurriculumId.chumash.storageKey,
+        'add_track_study_days': studyDaysJson,
+      });
 
-        final svc = MockTrackCreationService();
-        AddTrackResult? captured;
-        when(
-          () => svc.createTrack(
-            result: any(named: 'result'),
-            profileId: any(named: 'profileId'),
-          ),
-        ).thenAnswer((inv) async {
-          captured = inv.namedArguments[#result] as AddTrackResult;
-        });
+      final svc = MockTrackCreationService();
+      AddTrackResult? captured;
+      when(
+        () => svc.createTrack(
+          result: any(named: 'result'),
+          profileId: any(named: 'profileId'),
+        ),
+      ).thenAnswer((inv) async {
+        captured = inv.namedArguments[#result] as AddTrackResult;
+      });
 
-        await tester.pumpWidget(
-          _buildApp(overrides: _baseOverrides(creationService: svc)),
-        );
-        await _settle(tester);
+      await tester.pumpWidget(
+        _buildApp(overrides: _baseOverrides(creationService: svc)),
+      );
+      await _settle(tester);
 
-        await tester.tap(find.text('Skip for now'));
-        await _settle(tester);
+      await tester.tap(find.text('Skip for now'));
+      await _settle(tester);
 
-        // The restored study days must be present in the result passed to
-        // createTrack, not replaced by defaults.
-        expect(
-          captured?.studyDays[1],
-          'study',
-          reason: 'Restored studyDays[Monday] must be "study"',
-        );
-        expect(
-          captured?.studyDays[3],
-          'review',
-          reason: 'Restored studyDays[Wednesday] must be "review"',
-        );
-        addTearDown(() => _tearDown(tester));
-      },
-    );
+      // The restored study days must be present in the result passed to
+      // createTrack, not replaced by defaults.
+      expect(
+        captured?.studyDays[1],
+        'study',
+        reason: 'Restored studyDays[Monday] must be "study"',
+      );
+      expect(
+        captured?.studyDays[3],
+        'review',
+        reason: 'Restored studyDays[Wednesday] must be "review"',
+      );
+      addTearDown(() => _tearDown(tester));
+    });
 
-    testWidgets(
-      'prefs are cleared after successful track creation',
-      (tester) async {
-        SharedPreferences.setMockInitialValues({
-          'add_track_step': AddTrackStep.bulkMark.index,
-          'add_track_curriculum': CurriculumId.chumash.storageKey,
-        });
+    testWidgets('prefs are cleared after successful track creation', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({
+        'add_track_step': AddTrackStep.bulkMark.index,
+        'add_track_curriculum': CurriculumId.chumash.storageKey,
+      });
 
-        final svc = MockTrackCreationService();
-        when(
-          () => svc.createTrack(
-            result: any(named: 'result'),
-            profileId: any(named: 'profileId'),
-          ),
-        ).thenAnswer((_) async {});
+      final svc = MockTrackCreationService();
+      when(
+        () => svc.createTrack(
+          result: any(named: 'result'),
+          profileId: any(named: 'profileId'),
+        ),
+      ).thenAnswer((_) async {});
 
-        await tester.pumpWidget(
-          _buildApp(overrides: _baseOverrides(creationService: svc)),
-        );
-        await _settle(tester);
+      await tester.pumpWidget(
+        _buildApp(overrides: _baseOverrides(creationService: svc)),
+      );
+      await _settle(tester);
 
-        await tester.tap(find.text('Skip for now'));
-        await _settle(tester);
+      await tester.tap(find.text('Skip for now'));
+      await _settle(tester);
 
-        final prefs = await SharedPreferences.getInstance();
-        expect(
-          prefs.getInt('add_track_step'),
-          isNull,
-          reason:
-              '_clearSavedState must remove add_track_step on successful completion',
-        );
-        expect(
-          prefs.getString('add_track_curriculum'),
-          isNull,
-          reason:
-              '_clearSavedState must remove add_track_curriculum on successful completion',
-        );
-        addTearDown(() => _tearDown(tester));
-      },
-    );
+      final prefs = await SharedPreferences.getInstance();
+      expect(
+        prefs.getInt('add_track_step'),
+        isNull,
+        reason:
+            '_clearSavedState must remove add_track_step on successful completion',
+      );
+      expect(
+        prefs.getString('add_track_curriculum'),
+        isNull,
+        reason:
+            '_clearSavedState must remove add_track_curriculum on successful completion',
+      );
+      addTearDown(() => _tearDown(tester));
+    });
 
     testWidgets(
       'prefs are NOT cleared after failed track creation (error path)',
@@ -1531,23 +1526,22 @@ void main() {
   // ==========================================================================
 
   group('Hebrew locale smoke test', () {
-    testWidgets(
-      'flow renders without localisation errors in he locale',
-      (tester) async {
-        final svc = MockTrackCreationService();
-        await tester.pumpWidget(
-          _buildApp(
-            overrides: _baseOverrides(creationService: svc),
-            locale: const Locale('he'),
-          ),
-        );
-        await _settle(tester);
+    testWidgets('flow renders without localisation errors in he locale', (
+      tester,
+    ) async {
+      final svc = MockTrackCreationService();
+      await tester.pumpWidget(
+        _buildApp(
+          overrides: _baseOverrides(creationService: svc),
+          locale: const Locale('he'),
+        ),
+      );
+      await _settle(tester);
 
-        // No exceptions thrown. The step counter must still be present.
-        expect(find.textContaining('STEP 1 OF'), findsOneWidget);
-        addTearDown(() => _tearDown(tester));
-      },
-    );
+      // No exceptions thrown. The step counter must still be present.
+      expect(find.textContaining('STEP 1 OF'), findsOneWidget);
+      addTearDown(() => _tearDown(tester));
+    });
   });
 
   // ==========================================================================
@@ -1576,25 +1570,22 @@ void main() {
       },
     );
 
-    testWidgets(
-      'isOnboarding=false shows "Select a Curriculum" header',
-      (tester) async {
-        final svc = MockTrackCreationService();
-        await tester.pumpWidget(
-          _buildApp(
-            overrides: _baseOverrides(creationService: svc),
-          ),
-        );
-        await _settle(tester);
+    testWidgets('isOnboarding=false shows "Select a Curriculum" header', (
+      tester,
+    ) async {
+      final svc = MockTrackCreationService();
+      await tester.pumpWidget(
+        _buildApp(overrides: _baseOverrides(creationService: svc)),
+      );
+      await _settle(tester);
 
-        expect(
-          find.text('Select a Curriculum'),
-          findsOneWidget,
-          reason: 'Non-onboarding mode must show the generic header copy',
-        );
-        addTearDown(() => _tearDown(tester));
-      },
-    );
+      expect(
+        find.text('Select a Curriculum'),
+        findsOneWidget,
+        reason: 'Non-onboarding mode must show the generic header copy',
+      );
+      addTearDown(() => _tearDown(tester));
+    });
   });
 }
 

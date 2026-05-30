@@ -77,7 +77,9 @@ Widget _buildCard(SignInModeHint mode, {Locale locale = const Locale('en')}) {
         body: Builder(
           builder: (context) {
             final l10n = AppLocalizations.of(context)!;
-            return Center(child: SignInModeCard(mode: mode, l10n: l10n));
+            return Center(
+              child: SignInModeCard(mode: mode, l10n: l10n),
+            );
           },
         ),
       ),
@@ -191,14 +193,17 @@ void main() {
     });
 
     // F. duplicate reservation fails (same case)
-    test('F. tryReserveEmail returns false for already-reserved email', () async {
-      await PendingLocalSignupStore.tryReserveEmail(prefs, 'eve@example.com');
-      final ok = await PendingLocalSignupStore.tryReserveEmail(
-        prefs,
-        'eve@example.com',
-      );
-      expect(ok, isFalse);
-    });
+    test(
+      'F. tryReserveEmail returns false for already-reserved email',
+      () async {
+        await PendingLocalSignupStore.tryReserveEmail(prefs, 'eve@example.com');
+        final ok = await PendingLocalSignupStore.tryReserveEmail(
+          prefs,
+          'eve@example.com',
+        );
+        expect(ok, isFalse);
+      },
+    );
 
     // G. case-insensitive duplicate detection
     test('G. tryReserveEmail is case-insensitive', () async {
@@ -228,23 +233,26 @@ void main() {
     });
 
     // J. multiple distinct emails
-    test('J. multiple distinct emails can be reserved simultaneously', () async {
-      final ok1 = await PendingLocalSignupStore.tryReserveEmail(
-        prefs,
-        'alice@x.com',
-      );
-      final ok2 = await PendingLocalSignupStore.tryReserveEmail(
-        prefs,
-        'bob@x.com',
-      );
-      final dupA = await PendingLocalSignupStore.tryReserveEmail(
-        prefs,
-        'alice@x.com',
-      );
-      expect(ok1, isTrue);
-      expect(ok2, isTrue);
-      expect(dupA, isFalse);
-    });
+    test(
+      'J. multiple distinct emails can be reserved simultaneously',
+      () async {
+        final ok1 = await PendingLocalSignupStore.tryReserveEmail(
+          prefs,
+          'alice@x.com',
+        );
+        final ok2 = await PendingLocalSignupStore.tryReserveEmail(
+          prefs,
+          'bob@x.com',
+        );
+        final dupA = await PendingLocalSignupStore.tryReserveEmail(
+          prefs,
+          'alice@x.com',
+        );
+        expect(ok1, isTrue);
+        expect(ok2, isTrue);
+        expect(dupA, isFalse);
+      },
+    );
 
     // K. release only removes the matching email, leaves others intact
     test('K. releaseEmail only removes the targeted email', () async {
@@ -274,7 +282,11 @@ void main() {
         prefs,
         '  henry@x.com  ',
       );
-      expect(ok, isFalse, reason: 'Email with spaces should match trimmed version');
+      expect(
+        ok,
+        isFalse,
+        reason: 'Email with spaces should match trimmed version',
+      );
     });
   });
 
@@ -367,20 +379,19 @@ void main() {
     });
 
     // 2. cloud mode does NOT show warning or offline icons
-    testWidgets(
-      '2. cloud mode does not render warning or cloud-off icons',
-      (tester) async {
-        await tester.pumpWidget(_buildCard(SignInModeHint.cloud));
-        await tester.pump();
-        await tester.pump(const Duration(seconds: 1));
+    testWidgets('2. cloud mode does not render warning or cloud-off icons', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_buildCard(SignInModeHint.cloud));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
 
-        expect(find.byIcon(Icons.cloud_off_rounded), findsNothing);
-        expect(find.byIcon(Icons.warning_amber_rounded), findsNothing);
-        expect(find.byIcon(Icons.dangerous_rounded), findsNothing);
+      expect(find.byIcon(Icons.cloud_off_rounded), findsNothing);
+      expect(find.byIcon(Icons.warning_amber_rounded), findsNothing);
+      expect(find.byIcon(Icons.dangerous_rounded), findsNothing);
 
-        await _tearDownWidget(tester);
-      },
-    );
+      await _tearDownWidget(tester);
+    });
   });
 
   group('SignInModeCard — cloudOffline mode', () {
@@ -436,23 +447,22 @@ void main() {
     });
 
     // 6. local mode shows danger icon + local body text (two containers)
-    testWidgets(
-      '6. local mode also renders danger icon and local body text',
-      (tester) async {
-        await tester.pumpWidget(_buildCard(SignInModeHint.local));
-        await tester.pump();
-        await tester.pump(const Duration(seconds: 1));
+    testWidgets('6. local mode also renders danger icon and local body text', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_buildCard(SignInModeHint.local));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
 
-        expect(find.byIcon(Icons.dangerous_rounded), findsOneWidget);
-        expect(
-          find.textContaining('No cloud backup'),
-          findsWidgets,
-          reason: 'local mode must display the local body text',
-        );
+      expect(find.byIcon(Icons.dangerous_rounded), findsOneWidget);
+      expect(
+        find.textContaining('No cloud backup'),
+        findsWidgets,
+        reason: 'local mode must display the local body text',
+      );
 
-        await _tearDownWidget(tester);
-      },
-    );
+      await _tearDownWidget(tester);
+    });
   });
 
   group('SignInModeCard — unknown mode', () {

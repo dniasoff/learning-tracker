@@ -220,7 +220,9 @@ void main() {
     });
 
     test('TutorWriteException catch precedes generic catch', () {
-      final tutorCatchIdx = addTrackFlowSrc.indexOf('on TutorWriteException catch');
+      final tutorCatchIdx = addTrackFlowSrc.indexOf(
+        'on TutorWriteException catch',
+      );
       final genericCatchIdx = addTrackFlowSrc.indexOf('} catch (e)');
       expect(
         tutorCatchIdx,
@@ -239,115 +241,123 @@ void main() {
 
   // ── R3 M1 + M2: edit_track_screen ────────────────────────────────────────
 
-  group('R3 M1+M2 — edit_track_screen: canEditGoals/canEditStages + TutorWriteException', () {
-    test('imports tutoring barrel', () {
-      expect(
-        editTrackSrc,
-        contains("'package:learning_tracker/features/tutoring/tutoring.dart'"),
-        reason:
-            'edit_track_screen must import tutoring.dart to access '
-            'activeTutorPermissionsProvider and TutorWriteException (R3 M1+M2)',
-      );
-    });
+  group(
+    'R3 M1+M2 — edit_track_screen: canEditGoals/canEditStages + TutorWriteException',
+    () {
+      test('imports tutoring barrel', () {
+        expect(
+          editTrackSrc,
+          contains(
+            "'package:learning_tracker/features/tutoring/tutoring.dart'",
+          ),
+          reason:
+              'edit_track_screen must import tutoring.dart to access '
+              'activeTutorPermissionsProvider and TutorWriteException (R3 M1+M2)',
+        );
+      });
 
-    test('watches activeTutorPermissionsProvider', () {
-      expect(
-        editTrackSrc,
-        contains('activeTutorPermissionsProvider'),
-        reason:
-            'edit_track_screen must watch activeTutorPermissionsProvider '
-            'to derive canEditGoals + canEditStages (R3 M1+M2)',
-      );
-    });
+      test('watches activeTutorPermissionsProvider', () {
+        expect(
+          editTrackSrc,
+          contains('activeTutorPermissionsProvider'),
+          reason:
+              'edit_track_screen must watch activeTutorPermissionsProvider '
+              'to derive canEditGoals + canEditStages (R3 M1+M2)',
+        );
+      });
 
-    test('derives canEditGoals from tutorPerms', () {
-      expect(
-        editTrackSrc,
-        contains('canEditGoals'),
-        reason:
-            'edit_track_screen must derive canEditGoals to gate the save '
-            'affordance and the goal-write path (R3 M1)',
-      );
-    });
+      test('derives canEditGoals from tutorPerms', () {
+        expect(
+          editTrackSrc,
+          contains('canEditGoals'),
+          reason:
+              'edit_track_screen must derive canEditGoals to gate the save '
+              'affordance and the goal-write path (R3 M1)',
+        );
+      });
 
-    test('derives canEditStages from tutorPerms', () {
-      expect(
-        editTrackSrc,
-        contains('canEditStages'),
-        reason:
-            'edit_track_screen must derive canEditStages to gate the save '
-            'affordance for stage/track writes (R3 M2)',
-      );
-    });
+      test('derives canEditStages from tutorPerms', () {
+        expect(
+          editTrackSrc,
+          contains('canEditStages'),
+          reason:
+              'edit_track_screen must derive canEditStages to gate the save '
+              'affordance for stage/track writes (R3 M2)',
+        );
+      });
 
-    test('derives canSave as conjunction of canEditGoals and canEditStages', () {
-      expect(
-        editTrackSrc,
-        contains('canSave = canEditGoals && canEditStages'),
-        reason:
-            'canSave must be the conjunction of both flags — the save button '
-            'is disabled if either flag is false (R3 M1+M2)',
+      test(
+        'derives canSave as conjunction of canEditGoals and canEditStages',
+        () {
+          expect(
+            editTrackSrc,
+            contains('canSave = canEditGoals && canEditStages'),
+            reason:
+                'canSave must be the conjunction of both flags — the save button '
+                'is disabled if either flag is false (R3 M1+M2)',
+          );
+        },
       );
-    });
 
-    test('save button onPressed gated on canSave', () {
-      expect(
-        editTrackSrc,
-        contains('onPressed: canSave'),
-        reason:
-            'save button onPressed must be conditioned on canSave — '
-            'restricted tutors must not trigger track/goal saves (R3 M1+M2)',
-      );
-    });
+      test('save button onPressed gated on canSave', () {
+        expect(
+          editTrackSrc,
+          contains('onPressed: canSave'),
+          reason:
+              'save button onPressed must be conditioned on canSave — '
+              'restricted tutors must not trigger track/goal saves (R3 M1+M2)',
+        );
+      });
 
-    test('shows tutorPermissionDenied snackbar when !canSave', () {
-      expect(
-        editTrackSrc,
-        contains('tutorPermissionDenied'),
-        reason:
-            'edit_track_screen must show tutorPermissionDenied snackbar '
-            'when save is tapped but !canSave (R3 M1+M2)',
-      );
-    });
+      test('shows tutorPermissionDenied snackbar when !canSave', () {
+        expect(
+          editTrackSrc,
+          contains('tutorPermissionDenied'),
+          reason:
+              'edit_track_screen must show tutorPermissionDenied snackbar '
+              'when save is tapped but !canSave (R3 M1+M2)',
+        );
+      });
 
-    test('_save catches TutorWriteException', () {
-      expect(
-        editTrackSrc,
-        contains('on TutorWriteException catch'),
-        reason:
-            '_save must catch TutorWriteException so CF permission denials '
-            'from tutored goal/track writes do not crash the screen (R3 M2)',
-      );
-    });
+      test('_save catches TutorWriteException', () {
+        expect(
+          editTrackSrc,
+          contains('on TutorWriteException catch'),
+          reason:
+              '_save must catch TutorWriteException so CF permission denials '
+              'from tutored goal/track writes do not crash the screen (R3 M2)',
+        );
+      });
 
-    test("_save checks for 'permission-denied' code", () {
-      expect(
-        editTrackSrc,
-        contains("e.code == 'permission-denied'"),
-        reason:
-            'The TutorWriteException catch must inspect e.code to show '
-            'the right user message for permission failures (R3 M2)',
-      );
-    });
+      test("_save checks for 'permission-denied' code", () {
+        expect(
+          editTrackSrc,
+          contains("e.code == 'permission-denied'"),
+          reason:
+              'The TutorWriteException catch must inspect e.code to show '
+              'the right user message for permission failures (R3 M2)',
+        );
+      });
 
-    test('canEdit guard pattern is null-safe for goals', () {
-      expect(
-        editTrackSrc,
-        contains('tutorPerms == null || tutorPerms.canEditGoals'),
-        reason:
-            'canEditGoals guard must be null-safe so owners are never blocked '
-            'when no tutored session is active (R3 M1)',
-      );
-    });
+      test('canEdit guard pattern is null-safe for goals', () {
+        expect(
+          editTrackSrc,
+          contains('tutorPerms == null || tutorPerms.canEditGoals'),
+          reason:
+              'canEditGoals guard must be null-safe so owners are never blocked '
+              'when no tutored session is active (R3 M1)',
+        );
+      });
 
-    test('canEdit guard pattern is null-safe for stages', () {
-      expect(
-        editTrackSrc,
-        contains('tutorPerms == null || tutorPerms.canEditStages'),
-        reason:
-            'canEditStages guard must be null-safe so owners are never blocked '
-            'when no tutored session is active (R3 M2)',
-      );
-    });
-  });
+      test('canEdit guard pattern is null-safe for stages', () {
+        expect(
+          editTrackSrc,
+          contains('tutorPerms == null || tutorPerms.canEditStages'),
+          reason:
+              'canEditStages guard must be null-safe so owners are never blocked '
+              'when no tutored session is active (R3 M2)',
+        );
+      });
+    },
+  );
 }

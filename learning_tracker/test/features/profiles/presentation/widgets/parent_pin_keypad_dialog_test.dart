@@ -382,9 +382,9 @@ void main() {
         int? capturedProfileId;
         String? capturedPin;
 
-        when(
-          () => svc.verifyProfilePin(any<int>(), any<String>()),
-        ).thenAnswer((inv) async {
+        when(() => svc.verifyProfilePin(any<int>(), any<String>())).thenAnswer((
+          inv,
+        ) async {
           capturedProfileId = inv.positionalArguments[0] as int;
           capturedPin = inv.positionalArguments[1] as String;
           return true;
@@ -419,7 +419,9 @@ void main() {
           () => svc.verifyProfilePin(any<int>(), any<String>()),
         ).thenAnswer((_) async => true);
         when(
-          () => analytics.logParentModeEntered(profileId: any(named: 'profileId')),
+          () => analytics.logParentModeEntered(
+            profileId: any(named: 'profileId'),
+          ),
         ).thenAnswer((_) async {});
 
         await tester.pumpWidget(
@@ -446,41 +448,40 @@ void main() {
   // ── Wrong PIN → error + stays open ─────────────────────────────────────────
 
   group('ParentPinKeypadDialog — wrong PIN → error shown', () {
-    testWidgets(
-      'wrong PIN shows "Incorrect PIN" error and dialog stays open',
-      (tester) async {
-        setViewSize(tester);
-        final svc = _MockPinService();
-        bool? dialogResult;
+    testWidgets('wrong PIN shows "Incorrect PIN" error and dialog stays open', (
+      tester,
+    ) async {
+      setViewSize(tester);
+      final svc = _MockPinService();
+      bool? dialogResult;
 
-        when(
-          () => svc.verifyProfilePin(any<int>(), any<String>()),
-        ).thenAnswer((_) async => false);
+      when(
+        () => svc.verifyProfilePin(any<int>(), any<String>()),
+      ).thenAnswer((_) async => false);
 
-        await tester.pumpWidget(
-          _verificationHarness(
-            pinService: svc,
-            onResult: (r) => dialogResult = r,
-          ),
-        );
-        await _openVerificationDialog(tester);
+      await tester.pumpWidget(
+        _verificationHarness(
+          pinService: svc,
+          onResult: (r) => dialogResult = r,
+        ),
+      );
+      await _openVerificationDialog(tester);
 
-        await _enterPin(tester, '9999');
-        await tester.pump(const Duration(seconds: 1));
+      await _enterPin(tester, '9999');
+      await tester.pump(const Duration(seconds: 1));
 
-        expect(
-          find.text('Incorrect PIN'),
-          findsAtLeastNWidgets(1),
-          reason: 'incorrectPin l10n text must appear after wrong PIN',
-        );
-        // Dialog is still open → result not delivered yet
-        expect(dialogResult, isNull);
-        // Title still visible
-        expect(find.text('Enter Parent PIN'), findsAtLeastNWidgets(1));
+      expect(
+        find.text('Incorrect PIN'),
+        findsAtLeastNWidgets(1),
+        reason: 'incorrectPin l10n text must appear after wrong PIN',
+      );
+      // Dialog is still open → result not delivered yet
+      expect(dialogResult, isNull);
+      // Title still visible
+      expect(find.text('Enter Parent PIN'), findsAtLeastNWidgets(1));
 
-        await _teardown(tester);
-      },
-    );
+      await _teardown(tester);
+    });
 
     testWidgets('wrong PIN clears the digits (dot row resets to 0)', (
       tester,
@@ -584,7 +585,9 @@ void main() {
   // ── Cancel / close ──────────────────────────────────────────────────────────
 
   group('ParentPinKeypadDialog — cancel / close → dialog returns false', () {
-    testWidgets('Cancel button on keypad pops dialog with false', (tester) async {
+    testWidgets('Cancel button on keypad pops dialog with false', (
+      tester,
+    ) async {
       setViewSize(tester);
       final svc = _MockPinService();
       bool? dialogResult;
@@ -755,36 +758,29 @@ void main() {
       },
     );
 
-    testWidgets(
-      'lockout during change-PIN verify step shows lockout panel',
-      (tester) async {
-        setViewSize(tester);
-        final svc = _MockPinService();
+    testWidgets('lockout during change-PIN verify step shows lockout panel', (
+      tester,
+    ) async {
+      setViewSize(tester);
+      final svc = _MockPinService();
 
-        when(
-          () => svc.verifyProfilePin(any<int>(), any<String>()),
-        ).thenThrow(const PinLockoutException(3));
+      when(
+        () => svc.verifyProfilePin(any<int>(), any<String>()),
+      ).thenThrow(const PinLockoutException(3));
 
-        await tester.pumpWidget(
-          _changeHarness(pinService: svc, onResult: (_) {}),
-        );
-        await _openChangeDialog(tester);
+      await tester.pumpWidget(
+        _changeHarness(pinService: svc, onResult: (_) {}),
+      );
+      await _openChangeDialog(tester);
 
-        await _enterPin(tester, '1234');
-        await tester.pump(const Duration(seconds: 1));
+      await _enterPin(tester, '1234');
+      await tester.pump(const Duration(seconds: 1));
 
-        expect(
-          find.text('Too many failed attempts'),
-          findsAtLeastNWidgets(1),
-        );
-        expect(
-          find.textContaining('3'),
-          findsAtLeastNWidgets(1),
-        );
+      expect(find.text('Too many failed attempts'), findsAtLeastNWidgets(1));
+      expect(find.textContaining('3'), findsAtLeastNWidgets(1));
 
-        await _teardown(tester);
-      },
-    );
+      await _teardown(tester);
+    });
   });
 
   // ── PinKeypadDialogFrame smoke ──────────────────────────────────────────────
@@ -879,10 +875,7 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
 
       expect(find.byIcon(Icons.lock_clock), findsAtLeastNWidgets(1));
-      expect(
-        find.text('Too many failed attempts'),
-        findsAtLeastNWidgets(1),
-      );
+      expect(find.text('Too many failed attempts'), findsAtLeastNWidgets(1));
       expect(find.textContaining('12'), findsAtLeastNWidgets(1));
       expect(find.byIcon(Icons.backspace_outlined), findsNothing);
 

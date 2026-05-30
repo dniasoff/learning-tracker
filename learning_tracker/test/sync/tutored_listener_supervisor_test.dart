@@ -22,8 +22,7 @@ import 'package:learning_tracker/core/sync/tutored_listener_supervisor.dart';
 
 /// Records every dispatch call.
 class _RecordingDispatcher implements MergeDispatcher {
-  final dispatched =
-      <({int profileId, String kind, int rowCount})>[];
+  final dispatched = <({int profileId, String kind, int rowCount})>[];
 
   @override
   Future<MergeOutcome> dispatch({
@@ -96,10 +95,11 @@ class _DrivenChildGateway implements FirestoreGateway {
       );
 
   @override
-  Stream<ListenerSnapshot> listenToLearnerProfiles({int limit = 500}) =>
-      throw StateError(
-        'listenToLearnerProfiles must not be called by TutoredListenerSupervisor',
-      );
+  Stream<ListenerSnapshot> listenToLearnerProfiles({
+    int limit = 500,
+  }) => throw StateError(
+    'listenToLearnerProfiles must not be called by TutoredListenerSupervisor',
+  );
 
   @override
   Stream<Map<String, dynamic>?> listenToDocument({
@@ -308,7 +308,10 @@ void main() {
         expect(supervisor.isAttached, isTrue);
 
         gateway2.emitCollection('goals', [
-          {'firestore_id': 'goal-1', 'updated_at': DateTime.now().toIso8601String()},
+          {
+            'firestore_id': 'goal-1',
+            'updated_at': DateTime.now().toIso8601String(),
+          },
         ]);
         await Future<void>.delayed(Duration.zero);
 
@@ -346,7 +349,10 @@ void main() {
         // Emit a valid payload — dispatch will throw but must not cause an
         // unhandled exception (the catchError in _onEvent absorbs it).
         gateway.emitCollection('goals', [
-          {'firestore_id': 'g1', 'updated_at': DateTime.now().toIso8601String()},
+          {
+            'firestore_id': 'g1',
+            'updated_at': DateTime.now().toIso8601String(),
+          },
         ]);
         // If catchError is missing this await would surface an unhandled error.
         await Future<void>.delayed(const Duration(milliseconds: 10));

@@ -464,30 +464,28 @@ void main() {
           expect(
             data.containsKey('track_id'),
             isTrue,
-            reason: 'GoalMerger reads track_id; omitting it caused silent data loss.',
+            reason:
+                'GoalMerger reads track_id; omitting it caused silent data loss.',
           );
           expect(data['track_id'], 7);
         },
       );
 
-      test(
-        'GoalEntity.toFirestore omits track_id when trackId is null',
-        () {
-          final now = DateTime.utc(2026, 5, 28);
-          final goal = GoalEntity(
-            curriculumId: CurriculumId.mishnayos,
-            createdAt: now,
-            updatedAt: now,
-          );
+      test('GoalEntity.toFirestore omits track_id when trackId is null', () {
+        final now = DateTime.utc(2026, 5, 28);
+        final goal = GoalEntity(
+          curriculumId: CurriculumId.mishnayos,
+          createdAt: now,
+          updatedAt: now,
+        );
 
-          final data = goal.toFirestore();
-          expect(
-            data.containsKey('track_id'),
-            isFalse,
-            reason: 'track_id is omitted when not set (nullable field).',
-          );
-        },
-      );
+        final data = goal.toFirestore();
+        expect(
+          data.containsKey('track_id'),
+          isFalse,
+          reason: 'track_id is omitted when not set (nullable field).',
+        );
+      });
 
       test(
         'router passes goal payload to CF with goalId from id key',

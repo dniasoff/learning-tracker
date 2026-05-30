@@ -360,21 +360,24 @@ void main() {
   // the always-reachable SignInRoute and resolves, rather than hanging.
 
   group('Fail-safe — corrupt registry never dead-ends', () {
-    test('unreadable device_registry → SignInRoute + next(false), no hang', () async {
-      SharedPreferences.setMockInitialValues({'intro_seen': true});
-      // Write a non-sqlite file so driftDatabase open/query throws.
-      final dir = Directory(_kTestAppDocDir);
-      if (!dir.existsSync()) dir.createSync(recursive: true);
-      File(_kRegistryPath).writeAsStringSync('this is not a sqlite database');
+    test(
+      'unreadable device_registry → SignInRoute + next(false), no hang',
+      () async {
+        SharedPreferences.setMockInitialValues({'intro_seen': true});
+        // Write a non-sqlite file so driftDatabase open/query throws.
+        final dir = Directory(_kTestAppDocDir);
+        if (!dir.existsSync()) dir.createSync(recursive: true);
+        File(_kRegistryPath).writeAsStringSync('this is not a sqlite database');
 
-      await expectLater(guard.onNavigation(resolver, router), completes);
+        await expectLater(guard.onNavigation(resolver, router), completes);
 
-      final captured = verify(
-        () => router.replace(captureAny<PageRouteInfo>()),
-      ).captured.last;
-      expect(captured, isA<SignInRoute>());
-      verify(() => resolver.next(false)).called(1);
-      verifyNever(() => resolver.next());
-    });
+        final captured = verify(
+          () => router.replace(captureAny<PageRouteInfo>()),
+        ).captured.last;
+        expect(captured, isA<SignInRoute>());
+        verify(() => resolver.next(false)).called(1);
+        verifyNever(() => resolver.next());
+      },
+    );
   });
 }

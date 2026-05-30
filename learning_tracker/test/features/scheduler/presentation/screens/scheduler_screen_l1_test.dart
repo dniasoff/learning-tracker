@@ -99,14 +99,12 @@ Widget _buildScreen({
     allDailyTasksProvider.overrideWith(
       (ref) => tasksFactory != null ? tasksFactory() : Future.value(tasks),
     ),
-    schedulerTaskSectionProvider.overrideWith(
-      () {
-        final n = SchedulerTaskSectionNotifier();
-        // post-init hook — set section after build() returns default
-        Future.microtask(() => n.setSection(section));
-        return n;
-      },
-    ),
+    schedulerTaskSectionProvider.overrideWith(() {
+      final n = SchedulerTaskSectionNotifier();
+      // post-init hook — set section after build() returns default
+      Future.microtask(() => n.setSection(section));
+      return n;
+    }),
   ];
 
   return ProviderScope(
@@ -212,10 +210,8 @@ void main() {
     ) async {
       await tester.pumpWidget(
         _buildScreen(
-          tasksFactory: () => Future.error(
-            Exception('db exploded'),
-            StackTrace.empty,
-          ),
+          tasksFactory: () =>
+              Future.error(Exception('db exploded'), StackTrace.empty),
         ),
       );
       await tester.pump();
@@ -230,10 +226,7 @@ void main() {
     testWidgets('no task cards shown in error state', (tester) async {
       await tester.pumpWidget(
         _buildScreen(
-          tasksFactory: () => Future.error(
-            Exception('fail'),
-            StackTrace.empty,
-          ),
+          tasksFactory: () => Future.error(Exception('fail'), StackTrace.empty),
         ),
       );
       await tester.pump();
@@ -335,13 +328,8 @@ void main() {
 
     // ── 11. Flat task list ─────────────────────────────────────────────────────
 
-    testWidgets('flat list renders one DailyTaskCard per task', (
-      tester,
-    ) async {
-      final tasks = [
-        _task(ref: 'Ref_1'),
-        _task(ref: 'Ref_2'),
-      ];
+    testWidgets('flat list renders one DailyTaskCard per task', (tester) async {
+      final tasks = [_task(ref: 'Ref_1'), _task(ref: 'Ref_2')];
 
       await tester.pumpWidget(_buildScreen(tasks: tasks));
       await tester.pump();
@@ -520,55 +508,51 @@ void main() {
       await _tearDown(tester);
     });
 
-    testWidgets(
-      'tapping toggle switches from flat list to GroupedDailyView',
-      (tester) async {
-        await tester.pumpWidget(_buildScreen(tasks: [_task()]));
-        await tester.pump();
-        await tester.pump(const Duration(seconds: 1));
+    testWidgets('tapping toggle switches from flat list to GroupedDailyView', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_buildScreen(tasks: [_task()]));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
 
-        // Flat view: no GroupedDailyView
-        expect(find.byType(GroupedDailyView), findsNothing);
+      // Flat view: no GroupedDailyView
+      expect(find.byType(GroupedDailyView), findsNothing);
 
-        // Tap the toggle (InkWell inside _GoalCard wrapping the icon).
-        await tester.tap(find.byIcon(Icons.grid_view_rounded));
-        await tester.pump();
-        await tester.pump(const Duration(seconds: 1));
+      // Tap the toggle (InkWell inside _GoalCard wrapping the icon).
+      await tester.tap(find.byIcon(Icons.grid_view_rounded));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
 
-        // Grouped view now rendered.
-        expect(find.byType(GroupedDailyView), findsOneWidget);
-        // Icon flips to list view icon.
-        expect(find.byIcon(Icons.view_list_rounded), findsOneWidget);
+      // Grouped view now rendered.
+      expect(find.byType(GroupedDailyView), findsOneWidget);
+      // Icon flips to list view icon.
+      expect(find.byIcon(Icons.view_list_rounded), findsOneWidget);
 
-        await _tearDown(tester);
-      },
-    );
+      await _tearDown(tester);
+    });
 
-    testWidgets(
-      'tapping toggle twice returns to flat list',
-      (tester) async {
-        await tester.pumpWidget(_buildScreen(tasks: [_task()]));
-        await tester.pump();
-        await tester.pump(const Duration(seconds: 1));
+    testWidgets('tapping toggle twice returns to flat list', (tester) async {
+      await tester.pumpWidget(_buildScreen(tasks: [_task()]));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
 
-        // First tap: switch to grouped.
-        await tester.tap(find.byIcon(Icons.grid_view_rounded));
-        await tester.pump();
-        await tester.pump(const Duration(seconds: 1));
+      // First tap: switch to grouped.
+      await tester.tap(find.byIcon(Icons.grid_view_rounded));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
 
-        expect(find.byType(GroupedDailyView), findsOneWidget);
+      expect(find.byType(GroupedDailyView), findsOneWidget);
 
-        // Second tap: back to flat.
-        await tester.tap(find.byIcon(Icons.view_list_rounded));
-        await tester.pump();
-        await tester.pump(const Duration(seconds: 1));
+      // Second tap: back to flat.
+      await tester.tap(find.byIcon(Icons.view_list_rounded));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
 
-        expect(find.byType(GroupedDailyView), findsNothing);
-        expect(find.byIcon(Icons.grid_view_rounded), findsOneWidget);
+      expect(find.byType(GroupedDailyView), findsNothing);
+      expect(find.byIcon(Icons.grid_view_rounded), findsOneWidget);
 
-        await _tearDown(tester);
-      },
-    );
+      await _tearDown(tester);
+    });
   });
 
   // ── 12. Skip snackbar ───────────────────────────────────────────────────────
@@ -584,10 +568,7 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
 
       // Dismissible wraps each card — drag end-to-start.
-      await tester.drag(
-        find.byType(Dismissible).first,
-        const Offset(-600, 0),
-      );
+      await tester.drag(find.byType(Dismissible).first, const Offset(-600, 0));
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 
@@ -601,38 +582,34 @@ void main() {
   // ── 13. No track-type labels ────────────────────────────────────────────────
 
   group('SchedulerScreen — no track-type labels', () {
-    testWidgets(
-      'no "Personal"/"Standard"/"Custom"/"אישי" label shown',
-      (tester) async {
-        final tasks = [_task(ref: 'Ref_1'), _task(ref: 'Ref_2')];
+    testWidgets('no "Personal"/"Standard"/"Custom"/"אישי" label shown', (
+      tester,
+    ) async {
+      final tasks = [_task(ref: 'Ref_1'), _task(ref: 'Ref_2')];
 
-        await tester.pumpWidget(_buildScreen(tasks: tasks));
-        await tester.pump();
-        await tester.pump(const Duration(seconds: 1));
+      await tester.pumpWidget(_buildScreen(tasks: tasks));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
 
-        expect(find.text('Personal'), findsNothing);
-        expect(find.text('Standard'), findsNothing);
-        expect(find.text('Custom'), findsNothing);
-        expect(find.textContaining('אישי'), findsNothing);
+      expect(find.text('Personal'), findsNothing);
+      expect(find.text('Standard'), findsNothing);
+      expect(find.text('Custom'), findsNothing);
+      expect(find.textContaining('אישי'), findsNothing);
 
-        await _tearDown(tester);
-      },
-    );
+      await _tearDown(tester);
+    });
 
-    testWidgets(
-      'no track-type label in empty state',
-      (tester) async {
-        await tester.pumpWidget(_buildScreen(tasks: const []));
-        await tester.pump();
-        await tester.pump(const Duration(seconds: 1));
+    testWidgets('no track-type label in empty state', (tester) async {
+      await tester.pumpWidget(_buildScreen(tasks: const []));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
 
-        expect(find.text('Personal'), findsNothing);
-        expect(find.text('Standard'), findsNothing);
-        expect(find.text('Custom'), findsNothing);
+      expect(find.text('Personal'), findsNothing);
+      expect(find.text('Standard'), findsNothing);
+      expect(find.text('Custom'), findsNothing);
 
-        await _tearDown(tester);
-      },
-    );
+      await _tearDown(tester);
+    });
   });
 
   // ── 14. Hebrew RTL smoke ────────────────────────────────────────────────────
@@ -641,10 +618,7 @@ void main() {
     testWidgets('screen pumps without error under he locale (tasks)', (
       tester,
     ) async {
-      final tasks = [
-        _task(ref: 'Ref_1'),
-        _task(ref: 'Ref_2'),
-      ];
+      final tasks = [_task(ref: 'Ref_1'), _task(ref: 'Ref_2')];
 
       await tester.pumpWidget(
         _buildScreen(tasks: tasks, locale: const Locale('he')),

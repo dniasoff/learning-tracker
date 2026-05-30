@@ -89,48 +89,59 @@ void _buildV27Schema(Database raw) {
 }
 
 void main() {
-  test('v27 → v28 adds tutor mirror columns, preserves rows, backfills is_tutored=0', () async {
-    final raw = sqlite3.openInMemory();
-    _buildV27Schema(raw);
+  test(
+    'v27 → v28 adds tutor mirror columns, preserves rows, backfills is_tutored=0',
+    () async {
+      final raw = sqlite3.openInMemory();
+      _buildV27Schema(raw);
 
-    // Opening the live UserDatabase against the v27 DB fires onUpgrade(27→28).
-    final db = UserDatabase(NativeDatabase.opened(raw));
-    addTearDown(db.close);
+      // Opening the live UserDatabase against the v27 DB fires onUpgrade(27→28).
+      final db = UserDatabase(NativeDatabase.opened(raw));
+      addTearDown(db.close);
 
-    // Force the migration to run by issuing a query.
-    final profiles = await db
-        .customSelect('SELECT id, display_name, is_tutored, tutor_parent_uid, '
-            'tutor_remote_profile_id, tutor_grant_id FROM learner_profiles ORDER BY id')
-        .get();
+      // Force the migration to run by issuing a query.
+      final profiles = await db
+          .customSelect(
+            'SELECT id, display_name, is_tutored, tutor_parent_uid, '
+            'tutor_remote_profile_id, tutor_grant_id FROM learner_profiles ORDER BY id',
+          )
+          .get();
 
-    // 1. The four tutor mirror columns now exist (the SELECT above would throw
-    //    if any were missing) and 2. both profiles are preserved.
-    expect(profiles.length, 2, reason: 'both profiles preserved across migration');
-    expect(profiles[0].data['display_name'], 'Avi');
-    expect(profiles[1].data['display_name'], 'Mum');
+      // 1. The four tutor mirror columns now exist (the SELECT above would throw
+      //    if any were missing) and 2. both profiles are preserved.
+      expect(
+        profiles.length,
+        2,
+        reason: 'both profiles preserved across migration',
+      );
+      expect(profiles[0].data['display_name'], 'Avi');
+      expect(profiles[1].data['display_name'], 'Mum');
 
-    // 3. is_tutored backfilled to 0 (NOT NULL DEFAULT 0), not NULL.
-    expect(profiles[0].data['is_tutored'], 0);
-    expect(profiles[1].data['is_tutored'], 0);
+      // 3. is_tutored backfilled to 0 (NOT NULL DEFAULT 0), not NULL.
+      expect(profiles[0].data['is_tutored'], 0);
+      expect(profiles[1].data['is_tutored'], 0);
 
-    // 4. tutor_* columns are NULL on pre-existing rows.
-    expect(profiles[0].data['tutor_parent_uid'], isNull);
-    expect(profiles[0].data['tutor_remote_profile_id'], isNull);
-    expect(profiles[0].data['tutor_grant_id'], isNull);
+      // 4. tutor_* columns are NULL on pre-existing rows.
+      expect(profiles[0].data['tutor_parent_uid'], isNull);
+      expect(profiles[0].data['tutor_remote_profile_id'], isNull);
+      expect(profiles[0].data['tutor_grant_id'], isNull);
 
-    // 5. No orphaned FK rows (the child completion_event still resolves).
-    final fkCheck = await db.customSelect('PRAGMA foreign_key_check').get();
-    expect(fkCheck, isEmpty, reason: 'no orphaned rows after migration');
-    final events = await db.customSelect('SELECT COUNT(*) AS c FROM completion_events').getSingle();
-    expect(events.data['c'], 1, reason: 'child completion_event preserved');
+      // 5. No orphaned FK rows (the child completion_event still resolves).
+      final fkCheck = await db.customSelect('PRAGMA foreign_key_check').get();
+      expect(fkCheck, isEmpty, reason: 'no orphaned rows after migration');
+      final events = await db
+          .customSelect('SELECT COUNT(*) AS c FROM completion_events')
+          .getSingle();
+      expect(events.data['c'], 1, reason: 'child completion_event preserved');
 
-    // 6. The is_tutored CHECK (IN (0,1)) is enforced on the migrated table.
-    await expectLater(
-      db.customStatement(
-        'INSERT INTO learner_profiles (account_id, display_name, mode, is_tutored, created_at, updated_at) '
-        "VALUES (1, 'Bad', 'child', 2, 0, 0)",
-      ),
-      throwsA(isA<SqliteException>()),
-    );
-  });
+      // 6. The is_tutored CHECK (IN (0,1)) is enforced on the migrated table.
+      await expectLater(
+        db.customStatement(
+          'INSERT INTO learner_profiles (account_id, display_name, mode, is_tutored, created_at, updated_at) '
+          "VALUES (1, 'Bad', 'child', 2, 0, 0)",
+        ),
+        throwsA(isA<SqliteException>()),
+      );
+    },
+  );
 }

@@ -321,9 +321,7 @@ void main() {
       '"Tutoring" status + "Tutor" badge',
       (tester) async {
         final grant = _activeGrant(childName: 'Yossi Levi');
-        await tester.pumpWidget(
-          _buildSection(() => Future.value([grant])),
-        );
+        await tester.pumpWidget(_buildSection(() => Future.value([grant])));
         await tester.pump();
         await tester.pump(const Duration(seconds: 1));
 
@@ -352,9 +350,7 @@ void main() {
     ) async {
       final g1 = _activeGrant(grantId: 'g1', childName: 'Yossi Levi');
       final g2 = _activeGrant(grantId: 'g2', childName: 'Dovid Klein');
-      await tester.pumpWidget(
-        _buildSection(() => Future.value([g1, g2])),
-      );
+      await tester.pumpWidget(_buildSection(() => Future.value([g1, g2])));
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 
@@ -369,9 +365,7 @@ void main() {
       'A7: childName is null — row label falls back to "Talmid" (not raw id)',
       (tester) async {
         final grant = _activeGrant(childName: null);
-        await tester.pumpWidget(
-          _buildSection(() => Future.value([grant])),
-        );
+        await tester.pumpWidget(_buildSection(() => Future.value([grant])));
         await tester.pump();
         await tester.pump(const Duration(seconds: 1));
 
@@ -389,9 +383,7 @@ void main() {
       'A8: pending grant only — section visible + "View invitations" row shown',
       (tester) async {
         final pending = _pendingGrant();
-        await tester.pumpWidget(
-          _buildSection(() => Future.value([pending])),
-        );
+        await tester.pumpWidget(_buildSection(() => Future.value([pending])));
         await tester.pump();
         await tester.pump(const Duration(seconds: 1));
 
@@ -433,17 +425,12 @@ void main() {
       (tester) async {
         final p1 = _pendingGrant(grantId: 'p1');
         final p2 = _pendingGrant(grantId: 'p2', childName: 'Binyamin');
-        await tester.pumpWidget(
-          _buildSection(() => Future.value([p1, p2])),
-        );
+        await tester.pumpWidget(_buildSection(() => Future.value([p1, p2])));
         await tester.pump();
         await tester.pump(const Duration(seconds: 1));
 
         // Plural form (count=2): "2 pending tutor invitations"
-        expect(
-          find.text('2 pending tutor invitations'),
-          findsOneWidget,
-        );
+        expect(find.text('2 pending tutor invitations'), findsOneWidget);
 
         await _teardown(tester);
       },
@@ -454,16 +441,11 @@ void main() {
       'A10b: one pending grant — subtitle shows "1 pending tutor invitation"',
       (tester) async {
         final p1 = _pendingGrant(grantId: 'p1');
-        await tester.pumpWidget(
-          _buildSection(() => Future.value([p1])),
-        );
+        await tester.pumpWidget(_buildSection(() => Future.value([p1])));
         await tester.pump();
         await tester.pump(const Duration(seconds: 1));
 
-        expect(
-          find.text('1 pending tutor invitation'),
-          findsOneWidget,
-        );
+        expect(find.text('1 pending tutor invitation'), findsOneWidget);
 
         await _teardown(tester);
       },
@@ -517,11 +499,7 @@ void main() {
       'TALMID PROFILES section',
       (tester) async {
         await tester.pumpWidget(
-          _buildPicker(
-            router: router,
-            profiles: [_adult()],
-            grants: [],
-          ),
+          _buildPicker(router: router, profiles: [_adult()], grants: []),
         );
         await tester.pump();
         await tester.pump(const Duration(seconds: 1));
@@ -542,11 +520,7 @@ void main() {
       (tester) async {
         final grant = _activeGrant(childName: 'Yossi Levi');
         await tester.pumpWidget(
-          _buildPicker(
-            router: router,
-            profiles: [_adult()],
-            grants: [grant],
-          ),
+          _buildPicker(router: router, profiles: [_adult()], grants: [grant]),
         );
         await tester.pump();
         await tester.pump(const Duration(seconds: 1));
@@ -609,24 +583,19 @@ void main() {
     );
 
     // B5 ─ no pending invite card when pendingInvites is empty
-    testWidgets(
-      'B5: no pending invite card when pendingInvites is empty',
-      (tester) async {
-        await tester.pumpWidget(
-          _buildPicker(
-            router: router,
-            profiles: [_adult()],
-            pendingInvites: [],
-          ),
-        );
-        await tester.pump();
-        await tester.pump(const Duration(seconds: 1));
+    testWidgets('B5: no pending invite card when pendingInvites is empty', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _buildPicker(router: router, profiles: [_adult()], pendingInvites: []),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
 
-        expect(find.text('Accept invite'), findsNothing);
+      expect(find.text('Accept invite'), findsNothing);
 
-        await _teardown(tester);
-      },
-    );
+      await _teardown(tester);
+    });
   });
 
   // ────────────────────────────────────────────────────────────────────────────
@@ -656,30 +625,28 @@ void main() {
     );
 
     // C2 ─ no "parent" profile mode label rendered
-    testWidgets(
-      'C2: child+adult only — no "parent" mode label in profile grid '
-      '(product rule: two profile types)',
-      (tester) async {
-        final profiles = [
-          _child(id: 1, name: 'Yosef'),
-          _adult(id: 2, name: 'Avraham'),
-        ];
-        await tester.pumpWidget(
-          _buildPicker(router: router, profiles: profiles),
-        );
-        await tester.pump();
-        await tester.pump(const Duration(seconds: 1));
+    testWidgets('C2: child+adult only — no "parent" mode label in profile grid '
+        '(product rule: two profile types)', (tester) async {
+      final profiles = [
+        _child(id: 1, name: 'Yosef'),
+        _adult(id: 2, name: 'Avraham'),
+      ];
+      await tester.pumpWidget(_buildPicker(router: router, profiles: profiles));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
 
-        // CHILD MODE and ADULT MODE should appear.
-        expect(find.text('CHILD MODE'), findsOneWidget);
-        expect(find.text('ADULT MODE'), findsOneWidget);
+      // CHILD MODE and ADULT MODE should appear.
+      expect(find.text('CHILD MODE'), findsOneWidget);
+      expect(find.text('ADULT MODE'), findsOneWidget);
 
-        // HARD RULE: no "parent" mode anywhere.
-        expect(find.textContaining('PARENT'), findsNothing);
-        expect(find.textContaining('Parent Mode', findRichText: true), findsNothing);
+      // HARD RULE: no "parent" mode anywhere.
+      expect(find.textContaining('PARENT'), findsNothing);
+      expect(
+        find.textContaining('Parent Mode', findRichText: true),
+        findsNothing,
+      );
 
-        await _teardown(tester);
-      },
-    );
+      await _teardown(tester);
+    });
   });
 }

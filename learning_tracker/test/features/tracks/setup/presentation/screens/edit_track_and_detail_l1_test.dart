@@ -311,9 +311,7 @@ Widget _buildDetailApp({
         ).overrideWith((ref) async => hasProgramEnrollment),
       if (curriculum != null)
         scopedItemCountProvider(curriculum).overrideWith((ref) async => 100),
-      trackDualProgressMetricsProvider(
-        track.profileId,
-      ).overrideWith(
+      trackDualProgressMetricsProvider(track.profileId).overrideWith(
         (ref) async => [
           _dualMetric(
             trackId: track.id,
@@ -323,9 +321,7 @@ Widget _buildDetailApp({
           ),
         ],
       ),
-      trackHasChazaraProvider(
-        track.id,
-      ).overrideWith((ref) async => hasChazara),
+      trackHasChazaraProvider(track.id).overrideWith((ref) async => hasChazara),
     ],
     child: MaterialApp(
       locale: locale,
@@ -1359,11 +1355,7 @@ void main() {
         final track = _track(id: 1, profileId: 0);
 
         await tester.pumpWidget(
-          _buildDetailApp(
-            track: track,
-            db: db2,
-            hasProgramEnrollment: false,
-          ),
+          _buildDetailApp(track: track, db: db2, hasProgramEnrollment: false),
         );
         await tester.pump();
         await tester.pump(const Duration(seconds: 1));
@@ -1375,56 +1367,46 @@ void main() {
       },
     );
 
-    testWidgets(
-      'non-program track: Reorder Content tile is present',
-      (tester) async {
-        final db2 = inMemoryDb();
-        await seedProfileZero(db2);
-        addTearDown(() => db2.close());
+    testWidgets('non-program track: Reorder Content tile is present', (
+      tester,
+    ) async {
+      final db2 = inMemoryDb();
+      await seedProfileZero(db2);
+      addTearDown(() => db2.close());
 
-        final track = _track(id: 1, profileId: 0);
+      final track = _track(id: 1, profileId: 0);
 
-        await tester.pumpWidget(
-          _buildDetailApp(
-            track: track,
-            db: db2,
-            hasProgramEnrollment: false,
-          ),
-        );
-        await tester.pump();
-        await tester.pump(const Duration(seconds: 1));
+      await tester.pumpWidget(
+        _buildDetailApp(track: track, db: db2, hasProgramEnrollment: false),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
 
-        expect(find.text('Reorder Content'), findsOneWidget);
+      expect(find.text('Reorder Content'), findsOneWidget);
 
-        await _tearDown(tester);
-      },
-    );
+      await _tearDown(tester);
+    });
 
-    testWidgets(
-      'program track: bulk-prior tile is hidden (self-paced-only)',
-      (tester) async {
-        final db2 = inMemoryDb();
-        await seedProfileZero(db2);
-        addTearDown(() => db2.close());
+    testWidgets('program track: bulk-prior tile is hidden (self-paced-only)', (
+      tester,
+    ) async {
+      final db2 = inMemoryDb();
+      await seedProfileZero(db2);
+      addTearDown(() => db2.close());
 
-        final track = _track(id: 1, profileId: 0);
+      final track = _track(id: 1, profileId: 0);
 
-        await tester.pumpWidget(
-          _buildDetailApp(
-            track: track,
-            db: db2,
-            hasProgramEnrollment: true,
-          ),
-        );
-        await tester.pump();
-        await tester.pump(const Duration(seconds: 1));
+      await tester.pumpWidget(
+        _buildDetailApp(track: track, db: db2, hasProgramEnrollment: true),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
 
-        expect(find.text('Mark as previously learned'), findsNothing);
-        expect(find.text('Reorder Content'), findsNothing);
+      expect(find.text('Mark as previously learned'), findsNothing);
+      expect(find.text('Reorder Content'), findsNothing);
 
-        await _tearDown(tester);
-      },
-    );
+      await _tearDown(tester);
+    });
 
     testWidgets('bulk-prior tile carries outlined shape and tileColor', (
       tester,
@@ -1436,16 +1418,14 @@ void main() {
       final track = _track(id: 1, profileId: 0);
 
       await tester.pumpWidget(
-        _buildDetailApp(
-          track: track,
-          db: db2,
-          hasProgramEnrollment: false,
-        ),
+        _buildDetailApp(track: track, db: db2, hasProgramEnrollment: false),
       );
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 
-      final bulkTileFinder = find.byKey(const ValueKey('trackDetail.bulkPriorTile'));
+      final bulkTileFinder = find.byKey(
+        const ValueKey('trackDetail.bulkPriorTile'),
+      );
       expect(bulkTileFinder, findsOneWidget);
       final bulkTile = tester.widget<ListTile>(bulkTileFinder);
 
@@ -1535,11 +1515,7 @@ void main() {
       final track = _track(id: 1, profileId: 0);
 
       await tester.pumpWidget(
-        _buildDetailApp(
-          track: track,
-          db: db2,
-          locale: const Locale('he'),
-        ),
+        _buildDetailApp(track: track, db: db2, locale: const Locale('he')),
       );
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));

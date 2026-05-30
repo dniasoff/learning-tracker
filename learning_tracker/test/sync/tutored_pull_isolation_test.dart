@@ -745,8 +745,14 @@ void main() {
 
         // Only one own profile (the tutored mirror is a separate row).
         // getProfilesByAccount returns own profiles only (excludes mirrors).
-        final ownProfiles2 = await db.profileDao.getProfilesByAccount(accountId);
-        expect(ownProfiles2.length, 1, reason: 'Pull must not modify own profiles');
+        final ownProfiles2 = await db.profileDao.getProfilesByAccount(
+          accountId,
+        );
+        expect(
+          ownProfiles2.length,
+          1,
+          reason: 'Pull must not modify own profiles',
+        );
 
         // The tutored row is distinct — query via mirror-specific helper.
         final tutoredRow = await db.profileDao.getTutoredProfile(

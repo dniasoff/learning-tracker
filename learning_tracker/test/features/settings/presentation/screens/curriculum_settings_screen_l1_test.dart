@@ -190,8 +190,10 @@ void main() {
         // After full pump (resolved) the screen shows data, not loading.
         // Confirm the loading string is the expected l10n text when present.
         // (If the DB resolved synchronously it shows "Custom schedule" instead.)
-        final hasLoading =
-            find.text('Loading program...').evaluate().isNotEmpty;
+        final hasLoading = find
+            .text('Loading program...')
+            .evaluate()
+            .isNotEmpty;
         final hasResolved =
             find.text('Custom schedule').evaluate().isNotEmpty ||
             find.textContaining('Program:').evaluate().isNotEmpty;
@@ -211,32 +213,28 @@ void main() {
   // ── Data state — no program (custom schedule) ───────────────────────────────
 
   group('CurriculumSettingsScreen — data: no program enrolled', () {
-    testWidgets(
-      'shows "Custom schedule" when no profile_program row exists',
-      (tester) async {
-        // No profile_program row seeded — DB query returns null.
-        await _pump(tester, _buildApp(db: _db));
+    testWidgets('shows "Custom schedule" when no profile_program row exists', (
+      tester,
+    ) async {
+      // No profile_program row seeded — DB query returns null.
+      await _pump(tester, _buildApp(db: _db));
 
-        expect(find.text('Custom schedule'), findsOneWidget);
+      expect(find.text('Custom schedule'), findsOneWidget);
 
-        await _tearDown(tester);
-      },
-    );
+      await _tearDown(tester);
+    });
 
-    testWidgets(
-      '"Custom schedule" tile has no subtitle',
-      (tester) async {
-        await _pump(tester, _buildApp(db: _db));
+    testWidgets('"Custom schedule" tile has no subtitle', (tester) async {
+      await _pump(tester, _buildApp(db: _db));
 
-        // The data branch sets subtitle: null when info == null.
-        // We verify there is no description text — just the title.
-        expect(find.text('Custom schedule'), findsOneWidget);
-        // No description from a real program should be present.
-        expect(find.text('Daily Talmud study'), findsNothing);
+      // The data branch sets subtitle: null when info == null.
+      // We verify there is no description text — just the title.
+      expect(find.text('Custom schedule'), findsOneWidget);
+      // No description from a real program should be present.
+      expect(find.text('Daily Talmud study'), findsNothing);
 
-        await _tearDown(tester);
-      },
-    );
+      await _tearDown(tester);
+    });
   });
 
   // ── Data state — program enrolled ───────────────────────────────────────────
@@ -258,24 +256,21 @@ void main() {
       },
     );
 
-    testWidgets(
-      'program tile shows description as subtitle',
-      (tester) async {
-        await _seedProfileProgram(_db, programId: 1);
+    testWidgets('program tile shows description as subtitle', (tester) async {
+      await _seedProfileProgram(_db, programId: 1);
 
-        await _pump(tester, _buildApp(db: _db));
+      await _pump(tester, _buildApp(db: _db));
 
-        // Program description from LearningProgramRepository seed is non-empty.
-        // We just verify there is a subtitle text widget (description != null).
-        final programTile = find.ancestor(
-          of: find.textContaining('Program:'),
-          matching: find.byType(ListTile),
-        );
-        expect(programTile, findsOneWidget);
+      // Program description from LearningProgramRepository seed is non-empty.
+      // We just verify there is a subtitle text widget (description != null).
+      final programTile = find.ancestor(
+        of: find.textContaining('Program:'),
+        matching: find.byType(ListTile),
+      );
+      expect(programTile, findsOneWidget);
 
-        await _tearDown(tester);
-      },
-    );
+      await _tearDown(tester);
+    });
   });
 
   // ── Change Program tile ─────────────────────────────────────────────────────
@@ -312,37 +307,33 @@ void main() {
       await _tearDown(tester);
     });
 
-    testWidgets(
-      'Change Program tile shows l10n subtitle',
-      (tester) async {
-        await _pump(tester, _buildApp(db: _db));
+    testWidgets('Change Program tile shows l10n subtitle', (tester) async {
+      await _pump(tester, _buildApp(db: _db));
 
-        // l10n key: curriculumSettingsChangeProgramSubtitle
-        expect(
-          find.text('Switch to a different learning program'),
-          findsOneWidget,
-        );
+      // l10n key: curriculumSettingsChangeProgramSubtitle
+      expect(
+        find.text('Switch to a different learning program'),
+        findsOneWidget,
+      );
 
-        await _tearDown(tester);
-      },
-    );
+      await _tearDown(tester);
+    });
   });
 
   // ── Request Program tile ────────────────────────────────────────────────────
 
   group('CurriculumSettingsScreen — Request Program tile', () {
-    testWidgets(
-      '"Don\'t see your program?" tile is present with l10n labels',
-      (tester) async {
-        await _pump(tester, _buildApp(db: _db));
+    testWidgets('"Don\'t see your program?" tile is present with l10n labels', (
+      tester,
+    ) async {
+      await _pump(tester, _buildApp(db: _db));
 
-        // l10n keys: curriculumSettingsDontSeeProgram, curriculumSettingsRequestProgram
-        expect(find.text("Don't see your program?"), findsOneWidget);
-        expect(find.text('Request a new program'), findsOneWidget);
+      // l10n keys: curriculumSettingsDontSeeProgram, curriculumSettingsRequestProgram
+      expect(find.text("Don't see your program?"), findsOneWidget);
+      expect(find.text('Request a new program'), findsOneWidget);
 
-        await _tearDown(tester);
-      },
-    );
+      await _tearDown(tester);
+    });
 
     testWidgets('Request Program tile has mail_outline leading icon', (
       tester,
@@ -382,44 +373,41 @@ void main() {
   // ── Track-type label product rule ────────────────────────────────────────────
 
   group('CurriculumSettingsScreen — product rule: no track-type labels', () {
-    testWidgets(
-      'no "Personal" track-type label anywhere on the screen (en)',
-      (tester) async {
-        await _pump(tester, _buildApp(db: _db));
+    testWidgets('no "Personal" track-type label anywhere on the screen (en)', (
+      tester,
+    ) async {
+      await _pump(tester, _buildApp(db: _db));
 
-        expect(find.text('Personal'), findsNothing);
+      expect(find.text('Personal'), findsNothing);
 
-        await _tearDown(tester);
-      },
-    );
+      await _tearDown(tester);
+    });
 
-    testWidgets(
-      'no "Standard" track-type label anywhere on the screen (en)',
-      (tester) async {
-        await _pump(tester, _buildApp(db: _db));
+    testWidgets('no "Standard" track-type label anywhere on the screen (en)', (
+      tester,
+    ) async {
+      await _pump(tester, _buildApp(db: _db));
 
-        expect(find.text('Standard'), findsNothing);
+      expect(find.text('Standard'), findsNothing);
 
-        await _tearDown(tester);
-      },
-    );
+      await _tearDown(tester);
+    });
 
-    testWidgets(
-      'no "Custom" track-type label anywhere on the screen (en)',
-      (tester) async {
-        // Note: "Custom schedule" is the program-absent data label, NOT a
-        // track-type label. The rule prohibits track-type labels such as
-        // "Custom" standalone as a track category.  We verify neither the
-        // bare word "Custom" as a standalone tile title nor "Custom track"
-        // appears (the forbidden track-type form).
-        await _pump(tester, _buildApp(db: _db));
+    testWidgets('no "Custom" track-type label anywhere on the screen (en)', (
+      tester,
+    ) async {
+      // Note: "Custom schedule" is the program-absent data label, NOT a
+      // track-type label. The rule prohibits track-type labels such as
+      // "Custom" standalone as a track category.  We verify neither the
+      // bare word "Custom" as a standalone tile title nor "Custom track"
+      // appears (the forbidden track-type form).
+      await _pump(tester, _buildApp(db: _db));
 
-        expect(find.text('Custom'), findsNothing);
-        expect(find.textContaining('Custom track'), findsNothing);
+      expect(find.text('Custom'), findsNothing);
+      expect(find.textContaining('Custom track'), findsNothing);
 
-        await _tearDown(tester);
-      },
-    );
+      await _tearDown(tester);
+    });
 
     testWidgets(
       'no "אישי" (Hebrew personal track-type) label anywhere on the screen (he)',
@@ -449,10 +437,7 @@ void main() {
         );
 
         // CurriculumId.mishnayos.displayNameHe = "משניות"
-        expect(
-          find.textContaining(_curriculum.displayNameHe),
-          findsWidgets,
-        );
+        expect(find.textContaining(_curriculum.displayNameHe), findsWidgets);
 
         await _tearDown(tester);
       },

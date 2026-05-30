@@ -136,7 +136,11 @@ void main() {
       Locale locale = const Locale('en'),
       bool useHebrew = false,
     }) {
-      final ctx = _ctx(onAdvance: () async { advanceCalled = true; });
+      final ctx = _ctx(
+        onAdvance: () async {
+          advanceCalled = true;
+        },
+      );
       return ProviderScope(
         overrides: [
           useHebrewTermsProvider.overrideWith(
@@ -165,60 +169,51 @@ void main() {
       );
     }
 
-    testWidgets(
-      'shows "Custom schedule" option card always',
-      (tester) async {
-        await tester.pumpWidget(buildDirect());
-        await _settle(tester);
+    testWidgets('shows "Custom schedule" option card always', (tester) async {
+      await tester.pumpWidget(buildDirect());
+      await _settle(tester);
 
-        expect(find.text('Custom schedule'), findsOneWidget);
-        await _tearDown(tester);
-      },
-    );
+      expect(find.text('Custom schedule'), findsOneWidget);
+      await _tearDown(tester);
+    });
 
-    testWidgets(
-      'shows "No formal review" option card always',
-      (tester) async {
-        await tester.pumpWidget(buildDirect());
-        await _settle(tester);
+    testWidgets('shows "No formal review" option card always', (tester) async {
+      await tester.pumpWidget(buildDirect());
+      await _settle(tester);
 
-        expect(find.text('No formal review'), findsOneWidget);
-        await _tearDown(tester);
-      },
-    );
+      expect(find.text('No formal review'), findsOneWidget);
+      await _tearDown(tester);
+    });
 
-    testWidgets(
-      'shows "Follow a program" card when presets are non-empty',
-      (tester) async {
-        await tester.pumpWidget(buildDirect(presets: [_preset()]));
-        await _settle(tester);
+    testWidgets('shows "Follow a program" card when presets are non-empty', (
+      tester,
+    ) async {
+      await tester.pumpWidget(buildDirect(presets: [_preset()]));
+      await _settle(tester);
 
-        expect(find.text('Follow a program'), findsOneWidget);
-        await _tearDown(tester);
-      },
-    );
+      expect(find.text('Follow a program'), findsOneWidget);
+      await _tearDown(tester);
+    });
 
-    testWidgets(
-      'hides "Follow a program" card when presets list is empty',
-      (tester) async {
-        await tester.pumpWidget(buildDirect());
-        await _settle(tester);
+    testWidgets('hides "Follow a program" card when presets list is empty', (
+      tester,
+    ) async {
+      await tester.pumpWidget(buildDirect());
+      await _settle(tester);
 
-        expect(find.text('Follow a program'), findsNothing);
-        await _tearDown(tester);
-      },
-    );
+      expect(find.text('Follow a program'), findsNothing);
+      await _tearDown(tester);
+    });
 
-    testWidgets(
-      'question text is "How do you review?" in self mode',
-      (tester) async {
-        await tester.pumpWidget(buildDirect(isChildMode: false));
-        await _settle(tester);
+    testWidgets('question text is "How do you review?" in self mode', (
+      tester,
+    ) async {
+      await tester.pumpWidget(buildDirect(isChildMode: false));
+      await _settle(tester);
 
-        expect(find.text('How do you review?'), findsOneWidget);
-        await _tearDown(tester);
-      },
-    );
+      expect(find.text('How do you review?'), findsOneWidget);
+      await _tearDown(tester);
+    });
 
     testWidgets(
       'question text includes childName when isChildMode=true and childName is set',
@@ -236,7 +231,9 @@ void main() {
     testWidgets(
       'question text falls back to "How do you review?" when childName is null',
       (tester) async {
-        await tester.pumpWidget(buildDirect(isChildMode: true, childName: null));
+        await tester.pumpWidget(
+          buildDirect(isChildMode: true, childName: null),
+        );
         await _settle(tester);
 
         expect(find.text('How do you review?'), findsOneWidget);
@@ -295,50 +292,47 @@ void main() {
       },
     );
 
-    testWidgets(
-      'onComplete result carries the correct curriculumId',
-      (tester) async {
-        await tester.pumpWidget(buildDirect());
-        await _settle(tester);
+    testWidgets('onComplete result carries the correct curriculumId', (
+      tester,
+    ) async {
+      await tester.pumpWidget(buildDirect());
+      await _settle(tester);
 
-        await tester.tap(find.text('No formal review'));
-        await tester.pump();
+      await tester.tap(find.text('No formal review'));
+      await tester.pump();
 
-        expect(
-          capturedResult!.wizardResult.curriculumId,
-          equals(CurriculumId.mishnayos),
-        );
-        await _tearDown(tester);
-      },
-    );
+      expect(
+        capturedResult!.wizardResult.curriculumId,
+        equals(CurriculumId.mishnayos),
+      );
+      await _tearDown(tester);
+    });
 
-    testWidgets(
-      'presets count subtitle shows number of available programs',
-      (tester) async {
-        await tester.pumpWidget(
-          buildDirect(presets: [_preset(id: 1), _preset(id: 2)]),
-        );
-        await _settle(tester);
+    testWidgets('presets count subtitle shows number of available programs', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildDirect(presets: [_preset(id: 1), _preset(id: 2)]),
+      );
+      await _settle(tester);
 
-        expect(find.text('2 programs available'), findsOneWidget);
-        await _tearDown(tester);
-      },
-    );
+      expect(find.text('2 programs available'), findsOneWidget);
+      await _tearDown(tester);
+    });
 
-    testWidgets(
-      'Hebrew locale smoke: step mounts without overflow or crash',
-      (tester) async {
-        await tester.pumpWidget(
-          buildDirect(locale: const Locale('he'), useHebrew: true),
-        );
-        await _settle(tester);
+    testWidgets('Hebrew locale smoke: step mounts without overflow or crash', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildDirect(locale: const Locale('he'), useHebrew: true),
+      );
+      await _settle(tester);
 
-        // Key affordances must still be findable.
-        expect(find.text('Custom schedule'), findsOneWidget);
-        expect(find.text('No formal review'), findsOneWidget);
-        await _tearDown(tester);
-      },
-    );
+      // Key affordances must still be findable.
+      expect(find.text('Custom schedule'), findsOneWidget);
+      expect(find.text('No formal review'), findsOneWidget);
+      await _tearDown(tester);
+    });
   });
 
   // ── WizardSelectPresetStep ──────────────────────────────────────────────────
@@ -388,67 +382,61 @@ void main() {
       );
     }
 
-    testWidgets(
-      'renders each preset card by displayName',
-      (tester) async {
-        final presets = [
-          _preset(id: 1, displayName: 'Program Alpha'),
-          _preset(id: 2, displayName: 'Program Beta'),
-        ];
-        await tester.pumpWidget(buildDirect(presets: presets));
-        await _settle(tester);
+    testWidgets('renders each preset card by displayName', (tester) async {
+      final presets = [
+        _preset(id: 1, displayName: 'Program Alpha'),
+        _preset(id: 2, displayName: 'Program Beta'),
+      ];
+      await tester.pumpWidget(buildDirect(presets: presets));
+      await _settle(tester);
 
-        expect(find.text('Program Alpha'), findsOneWidget);
-        expect(find.text('Program Beta'), findsOneWidget);
-        await _tearDown(tester);
-      },
-    );
+      expect(find.text('Program Alpha'), findsOneWidget);
+      expect(find.text('Program Beta'), findsOneWidget);
+      await _tearDown(tester);
+    });
 
-    testWidgets(
-      'Confirm button is disabled when no preset is selected',
-      (tester) async {
-        final presets = [_preset(id: 1, displayName: 'Only Program')];
-        await tester.pumpWidget(buildDirect(presets: presets));
-        await _settle(tester);
+    testWidgets('Confirm button is disabled when no preset is selected', (
+      tester,
+    ) async {
+      final presets = [_preset(id: 1, displayName: 'Only Program')];
+      await tester.pumpWidget(buildDirect(presets: presets));
+      await _settle(tester);
 
-        final button = tester.widget<FilledButton>(find.byType(FilledButton));
-        expect(button.onPressed, isNull);
-        await _tearDown(tester);
-      },
-    );
+      final button = tester.widget<FilledButton>(find.byType(FilledButton));
+      expect(button.onPressed, isNull);
+      await _tearDown(tester);
+    });
 
-    testWidgets(
-      'tapping a preset card selects it (shows check_circle icon)',
-      (tester) async {
-        final presets = [_preset(id: 1, displayName: 'Solo Program')];
-        await tester.pumpWidget(buildDirect(presets: presets));
-        await _settle(tester);
+    testWidgets('tapping a preset card selects it (shows check_circle icon)', (
+      tester,
+    ) async {
+      final presets = [_preset(id: 1, displayName: 'Solo Program')];
+      await tester.pumpWidget(buildDirect(presets: presets));
+      await _settle(tester);
 
-        expect(find.byIcon(Icons.check_circle), findsNothing);
+      expect(find.byIcon(Icons.check_circle), findsNothing);
 
-        await tester.tap(find.text('Solo Program'));
-        await tester.pump();
+      await tester.tap(find.text('Solo Program'));
+      await tester.pump();
 
-        expect(find.byIcon(Icons.check_circle), findsOneWidget);
-        await _tearDown(tester);
-      },
-    );
+      expect(find.byIcon(Icons.check_circle), findsOneWidget);
+      await _tearDown(tester);
+    });
 
-    testWidgets(
-      'Confirm button is enabled after selecting a preset',
-      (tester) async {
-        final presets = [_preset(id: 1, displayName: 'Selectable')];
-        await tester.pumpWidget(buildDirect(presets: presets));
-        await _settle(tester);
+    testWidgets('Confirm button is enabled after selecting a preset', (
+      tester,
+    ) async {
+      final presets = [_preset(id: 1, displayName: 'Selectable')];
+      await tester.pumpWidget(buildDirect(presets: presets));
+      await _settle(tester);
 
-        await tester.tap(find.text('Selectable'));
-        await tester.pump();
+      await tester.tap(find.text('Selectable'));
+      await tester.pump();
 
-        final button = tester.widget<FilledButton>(find.byType(FilledButton));
-        expect(button.onPressed, isNotNull);
-        await _tearDown(tester);
-      },
-    );
+      final button = tester.widget<FilledButton>(find.byType(FilledButton));
+      expect(button.onPressed, isNotNull);
+      await _tearDown(tester);
+    });
 
     testWidgets(
       'tapping Confirm fires onComplete with WizardChoice.preset and correct programId',
@@ -473,35 +461,27 @@ void main() {
       },
     );
 
-    testWidgets(
-      'shows "Select a program" heading when not in child mode',
-      (tester) async {
-        final presets = [_preset()];
-        await tester.pumpWidget(buildDirect(presets: presets));
-        await _settle(tester);
+    testWidgets('shows "Select a program" heading when not in child mode', (
+      tester,
+    ) async {
+      final presets = [_preset()];
+      await tester.pumpWidget(buildDirect(presets: presets));
+      await _settle(tester);
 
-        expect(find.text('Select a program'), findsOneWidget);
-        await _tearDown(tester);
-      },
-    );
+      expect(find.text('Select a program'), findsOneWidget);
+      await _tearDown(tester);
+    });
 
     testWidgets(
       'shows child-name heading when isChildMode=true and childName is set',
       (tester) async {
         final presets = [_preset()];
         await tester.pumpWidget(
-          buildDirect(
-            presets: presets,
-            isChildMode: true,
-            childName: 'Yoni',
-          ),
+          buildDirect(presets: presets, isChildMode: true, childName: 'Yoni'),
         );
         await _settle(tester);
 
-        expect(
-          find.text('What program does Yoni follow?'),
-          findsOneWidget,
-        );
+        expect(find.text('What program does Yoni follow?'), findsOneWidget);
         await _tearDown(tester);
       },
     );
@@ -528,23 +508,22 @@ void main() {
       },
     );
 
-    testWidgets(
-      'Hebrew locale smoke: preset cards render without overflow',
-      (tester) async {
-        final presets = [_preset(id: 1, displayName: 'Daf Yomi')];
-        await tester.pumpWidget(
-          buildDirect(
-            presets: presets,
-            locale: const Locale('he'),
-            useHebrew: true,
-          ),
-        );
-        await _settle(tester);
+    testWidgets('Hebrew locale smoke: preset cards render without overflow', (
+      tester,
+    ) async {
+      final presets = [_preset(id: 1, displayName: 'Daf Yomi')];
+      await tester.pumpWidget(
+        buildDirect(
+          presets: presets,
+          locale: const Locale('he'),
+          useHebrew: true,
+        ),
+      );
+      await _settle(tester);
 
-        expect(find.text('Daf Yomi'), findsOneWidget);
-        await _tearDown(tester);
-      },
-    );
+      expect(find.text('Daf Yomi'), findsOneWidget);
+      await _tearDown(tester);
+    });
   });
 
   // ── WizardCustomStep1 ───────────────────────────────────────────────────────
@@ -574,7 +553,11 @@ void main() {
         home: Scaffold(
           body: Consumer(
             builder: (context, ref, _) {
-              final ctx = _ctx(onAdvance: () async { advanceCalled = true; });
+              final ctx = _ctx(
+                onAdvance: () async {
+                  advanceCalled = true;
+                },
+              );
               return WizardCustomStep1(data: stepData).build(context, ref, ctx);
             },
           ),
@@ -582,53 +565,43 @@ void main() {
       ),
     );
 
-    testWidgets(
-      'shows "How many review rounds?" heading',
-      (tester) async {
-        await tester.pumpWidget(buildDirect());
-        await _settle(tester);
+    testWidgets('shows "How many review rounds?" heading', (tester) async {
+      await tester.pumpWidget(buildDirect());
+      await _settle(tester);
 
-        expect(find.text('How many review rounds?'), findsOneWidget);
-        await _tearDown(tester);
-      },
-    );
+      expect(find.text('How many review rounds?'), findsOneWidget);
+      await _tearDown(tester);
+    });
 
-    testWidgets(
-      'initial display shows "1 round" (default chazarahRounds=1)',
-      (tester) async {
-        await tester.pumpWidget(buildDirect());
-        await _settle(tester);
+    testWidgets('initial display shows "1 round" (default chazarahRounds=1)', (
+      tester,
+    ) async {
+      await tester.pumpWidget(buildDirect());
+      await _settle(tester);
 
-        expect(find.text('1 round'), findsOneWidget);
-        await _tearDown(tester);
-      },
-    );
+      expect(find.text('1 round'), findsOneWidget);
+      await _tearDown(tester);
+    });
 
-    testWidgets(
-      'Slider widget is rendered',
-      (tester) async {
-        await tester.pumpWidget(buildDirect());
-        await _settle(tester);
+    testWidgets('Slider widget is rendered', (tester) async {
+      await tester.pumpWidget(buildDirect());
+      await _settle(tester);
 
-        expect(find.byType(Slider), findsOneWidget);
-        await _tearDown(tester);
-      },
-    );
+      expect(find.byType(Slider), findsOneWidget);
+      await _tearDown(tester);
+    });
 
-    testWidgets(
-      'tapping Next button calls ctx.advance',
-      (tester) async {
-        await tester.pumpWidget(buildDirect());
-        await _settle(tester);
+    testWidgets('tapping Next button calls ctx.advance', (tester) async {
+      await tester.pumpWidget(buildDirect());
+      await _settle(tester);
 
-        // "Next" from actionNext l10n key
-        await tester.tap(find.text('Next'));
-        await tester.pump();
+      // "Next" from actionNext l10n key
+      await tester.tap(find.text('Next'));
+      await tester.pump();
 
-        expect(advanceCalled, isTrue);
-        await _tearDown(tester);
-      },
-    );
+      expect(advanceCalled, isTrue);
+      await _tearDown(tester);
+    });
 
     testWidgets(
       'tapping Next with default 1 round syncs rounds list to length 1',
@@ -676,18 +649,17 @@ void main() {
       },
     );
 
-    testWidgets(
-      'Hebrew locale smoke: step mounts without crash',
-      (tester) async {
-        await tester.pumpWidget(
-          buildDirect(locale: const Locale('he'), useHebrew: true),
-        );
-        await _settle(tester);
+    testWidgets('Hebrew locale smoke: step mounts without crash', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildDirect(locale: const Locale('he'), useHebrew: true),
+      );
+      await _settle(tester);
 
-        expect(find.text('How many review rounds?'), findsOneWidget);
-        await _tearDown(tester);
-      },
-    );
+      expect(find.text('How many review rounds?'), findsOneWidget);
+      await _tearDown(tester);
+    });
   });
 
   // ── WizardCustomStep2 ───────────────────────────────────────────────────────
@@ -726,8 +698,11 @@ void main() {
           home: Scaffold(
             body: Consumer(
               builder: (context, ref, _) {
-                final ctx =
-                    _ctx(onAdvance: () async { advanceCalled = true; });
+                final ctx = _ctx(
+                  onAdvance: () async {
+                    advanceCalled = true;
+                  },
+                );
                 return WizardCustomStep2(data: d).build(context, ref, ctx);
               },
             ),
@@ -736,39 +711,32 @@ void main() {
       );
     }
 
-    testWidgets(
-      'shows "Set delay for each round" heading',
-      (tester) async {
-        await tester.pumpWidget(buildDirect());
-        await _settle(tester);
+    testWidgets('shows "Set delay for each round" heading', (tester) async {
+      await tester.pumpWidget(buildDirect());
+      await _settle(tester);
 
-        expect(find.text('Set delay for each round'), findsOneWidget);
-        await _tearDown(tester);
-      },
-    );
+      expect(find.text('Set delay for each round'), findsOneWidget);
+      await _tearDown(tester);
+    });
 
-    testWidgets(
-      'renders one timing card per round',
-      (tester) async {
-        await tester.pumpWidget(buildDirect());
-        await _settle(tester);
+    testWidgets('renders one timing card per round', (tester) async {
+      await tester.pumpWidget(buildDirect());
+      await _settle(tester);
 
-        // SegmentedButton appears once per round.
-        expect(find.byType(SegmentedButton<bool>), findsNWidgets(2));
-        await _tearDown(tester);
-      },
-    );
+      // SegmentedButton appears once per round.
+      expect(find.byType(SegmentedButton<bool>), findsNWidgets(2));
+      await _tearDown(tester);
+    });
 
-    testWidgets(
-      'delay slider is visible in Days mode (default)',
-      (tester) async {
-        await tester.pumpWidget(buildDirect());
-        await _settle(tester);
+    testWidgets('delay slider is visible in Days mode (default)', (
+      tester,
+    ) async {
+      await tester.pumpWidget(buildDirect());
+      await _settle(tester);
 
-        expect(find.byType(Slider), findsWidgets);
-        await _tearDown(tester);
-      },
-    );
+      expect(find.byType(Slider), findsWidgets);
+      await _tearDown(tester);
+    });
 
     testWidgets(
       'switching to Weeks mode hides delay slider and shows day chips',
@@ -786,79 +754,72 @@ void main() {
       },
     );
 
-    testWidgets(
-      'day chips include all expected days in Weeks mode',
-      (tester) async {
-        await tester.pumpWidget(buildDirect());
-        await _settle(tester);
+    testWidgets('day chips include all expected days in Weeks mode', (
+      tester,
+    ) async {
+      await tester.pumpWidget(buildDirect());
+      await _settle(tester);
 
-        await tester.tap(find.text('Weeks').first);
-        await tester.pump();
+      await tester.tap(find.text('Weeks').first);
+      await tester.pump();
 
-        for (final day in ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Shabbos']) {
-          expect(find.text(day), findsWidgets);
-        }
-        await _tearDown(tester);
-      },
-    );
+      for (final day in ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Shabbos']) {
+        expect(find.text(day), findsWidgets);
+      }
+      await _tearDown(tester);
+    });
 
-    testWidgets(
-      'tapping a day chip in Weeks mode adds it to selectedDays',
-      (tester) async {
-        await tester.pumpWidget(buildDirect());
-        await _settle(tester);
+    testWidgets('tapping a day chip in Weeks mode adds it to selectedDays', (
+      tester,
+    ) async {
+      await tester.pumpWidget(buildDirect());
+      await _settle(tester);
 
-        await tester.tap(find.text('Weeks').first);
-        await tester.pump();
+      await tester.tap(find.text('Weeks').first);
+      await tester.pump();
 
-        await tester.tap(find.text('Mon').first);
-        await tester.pump();
+      await tester.tap(find.text('Mon').first);
+      await tester.pump();
 
-        expect(stepData.rounds[0].selectedDays.contains(1), isTrue);
-        await _tearDown(tester);
-      },
-    );
+      expect(stepData.rounds[0].selectedDays.contains(1), isTrue);
+      await _tearDown(tester);
+    });
 
-    testWidgets(
-      'tapping Next calls ctx.advance',
-      (tester) async {
-        await tester.pumpWidget(buildDirect());
-        await _settle(tester);
+    testWidgets('tapping Next calls ctx.advance', (tester) async {
+      await tester.pumpWidget(buildDirect());
+      await _settle(tester);
 
-        await tester.tap(find.text('Next'));
-        await tester.pump();
+      await tester.tap(find.text('Next'));
+      await tester.pump();
 
-        expect(advanceCalled, isTrue);
-        await _tearDown(tester);
-      },
-    );
+      expect(advanceCalled, isTrue);
+      await _tearDown(tester);
+    });
 
-    testWidgets(
-      'single-round step renders exactly one timing card',
-      (tester) async {
-        final d = WizardStepData()
-          ..chazarahRounds = 1
-          ..rounds = [CustomRoundState.withDefault(0)];
-        await tester.pumpWidget(buildDirect(data: d));
-        await _settle(tester);
+    testWidgets('single-round step renders exactly one timing card', (
+      tester,
+    ) async {
+      final d = WizardStepData()
+        ..chazarahRounds = 1
+        ..rounds = [CustomRoundState.withDefault(0)];
+      await tester.pumpWidget(buildDirect(data: d));
+      await _settle(tester);
 
-        expect(find.byType(SegmentedButton<bool>), findsOneWidget);
-        await _tearDown(tester);
-      },
-    );
+      expect(find.byType(SegmentedButton<bool>), findsOneWidget);
+      await _tearDown(tester);
+    });
 
-    testWidgets(
-      'Hebrew locale smoke: step renders without crash',
-      (tester) async {
-        await tester.pumpWidget(
-          buildDirect(locale: const Locale('he'), useHebrew: true),
-        );
-        await _settle(tester);
+    testWidgets('Hebrew locale smoke: step renders without crash', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildDirect(locale: const Locale('he'), useHebrew: true),
+      );
+      await _settle(tester);
 
-        expect(find.text('Set delay for each round'), findsOneWidget);
-        await _tearDown(tester);
-      },
-    );
+      expect(find.text('Set delay for each round'), findsOneWidget);
+      await _tearDown(tester);
+    });
   });
 
   // ── WizardCustomStep3 ───────────────────────────────────────────────────────
@@ -909,39 +870,34 @@ void main() {
       );
     }
 
-    testWidgets(
-      'shows "Review your schedule" heading',
-      (tester) async {
-        await tester.pumpWidget(buildDirect());
-        await _settle(tester);
+    testWidgets('shows "Review your schedule" heading', (tester) async {
+      await tester.pumpWidget(buildDirect());
+      await _settle(tester);
 
-        expect(find.text('Review your schedule'), findsOneWidget);
-        await _tearDown(tester);
-      },
-    );
+      expect(find.text('Review your schedule'), findsOneWidget);
+      await _tearDown(tester);
+    });
 
-    testWidgets(
-      'shows "Daily new material" subtitle for the Learn stage',
-      (tester) async {
-        await tester.pumpWidget(buildDirect());
-        await _settle(tester);
+    testWidgets('shows "Daily new material" subtitle for the Learn stage', (
+      tester,
+    ) async {
+      await tester.pumpWidget(buildDirect());
+      await _settle(tester);
 
-        expect(find.text('Daily new material'), findsOneWidget);
-        await _tearDown(tester);
-      },
-    );
+      expect(find.text('Daily new material'), findsOneWidget);
+      await _tearDown(tester);
+    });
 
-    testWidgets(
-      'shows delay summary text for a delay-mode round',
-      (tester) async {
-        await tester.pumpWidget(buildDirect());
-        await _settle(tester);
+    testWidgets('shows delay summary text for a delay-mode round', (
+      tester,
+    ) async {
+      await tester.pumpWidget(buildDirect());
+      await _settle(tester);
 
-        // First round: delayDays=1 → "1 day after learning"
-        expect(find.text('1 day after learning'), findsOneWidget);
-        await _tearDown(tester);
-      },
-    );
+      // First round: delayDays=1 → "1 day after learning"
+      expect(find.text('1 day after learning'), findsOneWidget);
+      await _tearDown(tester);
+    });
 
     testWidgets(
       'plural delay days in summary text: 7 days → "7 days after learning"',
@@ -954,74 +910,65 @@ void main() {
       },
     );
 
-    testWidgets(
-      'shows weekly day summary text for a weekly-mode round',
-      (tester) async {
-        final d = WizardStepData()
-          ..chazarahRounds = 1
-          ..rounds = [
-            CustomRoundState.withDefault(0)
-              ..useWeekly = true
-              ..selectedDays = {1, 4},  // Mon, Thu
-          ];
-        await tester.pumpWidget(buildDirect(data: d));
-        await _settle(tester);
+    testWidgets('shows weekly day summary text for a weekly-mode round', (
+      tester,
+    ) async {
+      final d = WizardStepData()
+        ..chazarahRounds = 1
+        ..rounds = [
+          CustomRoundState.withDefault(0)
+            ..useWeekly = true
+            ..selectedDays = {1, 4}, // Mon, Thu
+        ];
+      await tester.pumpWidget(buildDirect(data: d));
+      await _settle(tester);
 
-        expect(find.textContaining('Every'), findsOneWidget);
-        expect(find.textContaining('Mon'), findsOneWidget);
-        expect(find.textContaining('Thu'), findsOneWidget);
-        await _tearDown(tester);
-      },
-    );
+      expect(find.textContaining('Every'), findsOneWidget);
+      expect(find.textContaining('Mon'), findsOneWidget);
+      expect(find.textContaining('Thu'), findsOneWidget);
+      await _tearDown(tester);
+    });
 
-    testWidgets(
-      'tapping Confirm fires onComplete with WizardChoice.custom',
-      (tester) async {
-        await tester.pumpWidget(buildDirect());
-        await _settle(tester);
+    testWidgets('tapping Confirm fires onComplete with WizardChoice.custom', (
+      tester,
+    ) async {
+      await tester.pumpWidget(buildDirect());
+      await _settle(tester);
 
-        await tester.tap(find.text('Confirm'));
-        await tester.pump();
+      await tester.tap(find.text('Confirm'));
+      await tester.pump();
 
-        expect(capturedResult, isNotNull);
-        expect(
-          capturedResult!.wizardResult.choice,
-          equals(WizardChoice.custom),
-        );
-        await _tearDown(tester);
-      },
-    );
+      expect(capturedResult, isNotNull);
+      expect(capturedResult!.wizardResult.choice, equals(WizardChoice.custom));
+      await _tearDown(tester);
+    });
 
-    testWidgets(
-      'Confirm result carries correct curriculumId',
-      (tester) async {
-        await tester.pumpWidget(buildDirect());
-        await _settle(tester);
+    testWidgets('Confirm result carries correct curriculumId', (tester) async {
+      await tester.pumpWidget(buildDirect());
+      await _settle(tester);
 
-        await tester.tap(find.text('Confirm'));
-        await tester.pump();
+      await tester.tap(find.text('Confirm'));
+      await tester.pump();
 
-        expect(
-          capturedResult!.wizardResult.curriculumId,
-          equals(CurriculumId.mishnayos),
-        );
-        await _tearDown(tester);
-      },
-    );
+      expect(
+        capturedResult!.wizardResult.curriculumId,
+        equals(CurriculumId.mishnayos),
+      );
+      await _tearDown(tester);
+    });
 
-    testWidgets(
-      'Confirm result carries correct number of customRounds',
-      (tester) async {
-        await tester.pumpWidget(buildDirect());
-        await _settle(tester);
+    testWidgets('Confirm result carries correct number of customRounds', (
+      tester,
+    ) async {
+      await tester.pumpWidget(buildDirect());
+      await _settle(tester);
 
-        await tester.tap(find.text('Confirm'));
-        await tester.pump();
+      await tester.tap(find.text('Confirm'));
+      await tester.pump();
 
-        expect(capturedResult!.wizardResult.customRounds, hasLength(2));
-        await _tearDown(tester);
-      },
-    );
+      expect(capturedResult!.wizardResult.customRounds, hasLength(2));
+      await _tearDown(tester);
+    });
 
     testWidgets(
       'customRound for delay mode has ScheduleType.delay and correct delayDays',
@@ -1075,20 +1022,19 @@ void main() {
       },
     );
 
-    testWidgets(
-      'single round: card renders one chazara stage row',
-      (tester) async {
-        final d = WizardStepData()
-          ..chazarahRounds = 1
-          ..rounds = [CustomRoundState.withDefault(0)];
-        await tester.pumpWidget(buildDirect(data: d));
-        await _settle(tester);
+    testWidgets('single round: card renders one chazara stage row', (
+      tester,
+    ) async {
+      final d = WizardStepData()
+        ..chazarahRounds = 1
+        ..rounds = [CustomRoundState.withDefault(0)];
+      await tester.pumpWidget(buildDirect(data: d));
+      await _settle(tester);
 
-        expect(find.text('1 day after learning'), findsOneWidget);
-        // No second row divider needed — just the single round summary.
-        await _tearDown(tester);
-      },
-    );
+      expect(find.text('1 day after learning'), findsOneWidget);
+      // No second row divider needed — just the single round summary.
+      await _tearDown(tester);
+    });
   });
 
   // ── WizardStepData + CustomRoundState unit behaviour ────────────────────────

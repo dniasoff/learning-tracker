@@ -680,20 +680,23 @@ void main() {
       },
     );
 
-    test('non-tutored: pushProfileProgram passes through to delegate', () async {
-      final record = _FakeInvokerRecord();
-      final delegate = _FakeDelegate();
-      final router = _nonTutored(record, delegate);
+    test(
+      'non-tutored: pushProfileProgram passes through to delegate',
+      () async {
+        final record = _FakeInvokerRecord();
+        final delegate = _FakeDelegate();
+        final router = _nonTutored(record, delegate);
 
-      await router.pushProfileProgram({
-        'curriculum_id': 'daf_yomi',
-        'program_id': 'prog_001',
-        'profile_id': 42,
-      });
+        await router.pushProfileProgram({
+          'curriculum_id': 'daf_yomi',
+          'program_id': 'prog_001',
+          'profile_id': 42,
+        });
 
-      expect(delegate.pushProfileProgramCount, 1);
-      expect(record.wasCalled, isFalse);
-    });
+        expect(delegate.pushProfileProgramCount, 1);
+        expect(record.wasCalled, isFalse);
+      },
+    );
 
     test(
       'tutored: pushProfileProgram CF failure → throws TutorWriteException',
@@ -777,11 +780,13 @@ void main() {
         expect(rewardsCall.args['ownerUid'], _ownerUid);
         expect(rewardsCall.args['profileId'], int.parse(_profileId));
         expect(
-          (rewardsCall.args['settingsData'] as Map<String, dynamic>)['reward_settings'],
+          (rewardsCall.args['settingsData']
+              as Map<String, dynamic>)['reward_settings'],
           isA<List<dynamic>>(),
         );
         expect(
-          (pointsCall.args['settingsData'] as Map<String, dynamic>)['points_config'],
+          (pointsCall.args['settingsData']
+              as Map<String, dynamic>)['points_config'],
           isA<List<dynamic>>(),
         );
         expect(delegate.pushGamificationCount, 0);

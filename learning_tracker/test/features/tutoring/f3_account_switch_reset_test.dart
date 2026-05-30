@@ -41,16 +41,19 @@ void main() {
 
     // ── AC3 / AC4 — structural assertions (source-level, no Firebase) ─────────
 
-    test('AC3: authStateProvider import removed from active_tutored_profile_provider', () {
-      expect(
-        providerSrc,
-        isNot(contains('auth_state_provider')),
-        reason:
-            'active_tutored_profile_provider.dart must NOT import auth_state_provider — '
-            'that import materialised FirebaseAuth.instance in widget tests and '
-            'caused ~200 test failures (F3 root cause)',
-      );
-    });
+    test(
+      'AC3: authStateProvider import removed from active_tutored_profile_provider',
+      () {
+        expect(
+          providerSrc,
+          isNot(contains('auth_state_provider')),
+          reason:
+              'active_tutored_profile_provider.dart must NOT import auth_state_provider — '
+              'that import materialised FirebaseAuth.instance in widget tests and '
+              'caused ~200 test failures (F3 root cause)',
+        );
+      },
+    );
 
     test('AC3: authStateProvider ref.watch removed from build()', () {
       expect(
@@ -84,8 +87,7 @@ void main() {
       expect(
         shellSrc,
         contains('.exit()'),
-        reason:
-            'AppShell ref.listen must call .exit() on account uid change',
+        reason: 'AppShell ref.listen must call .exit() on account uid change',
       );
     });
 

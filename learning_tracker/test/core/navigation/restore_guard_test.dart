@@ -359,18 +359,21 @@ void main() {
   // also restore from Settings), so the guard wraps onNavigation in a try/catch
   // that fails OPEN (next()) — letting navigation proceed rather than hang.
   group('unexpected throw (fail-open, no dead-end)', () {
-    test('throwing database lambda → resolver.next(), allows through', () async {
-      when(() => resolver.isResolved).thenReturn(false);
-      final guard = RestoreGuard(
-        getDatabase: () => throw StateError('provider disposed mid-flight'),
-        hasCloudAccount: () => true,
-      );
+    test(
+      'throwing database lambda → resolver.next(), allows through',
+      () async {
+        when(() => resolver.isResolved).thenReturn(false);
+        final guard = RestoreGuard(
+          getDatabase: () => throw StateError('provider disposed mid-flight'),
+          hasCloudAccount: () => true,
+        );
 
-      await guard.onNavigation(resolver, router);
+        await guard.onNavigation(resolver, router);
 
-      verify(() => resolver.next()).called(1);
-      verifyNever(() => resolver.next(false));
-      verifyNever(() => router.replace(any<PageRouteInfo>()));
-    });
+        verify(() => resolver.next()).called(1);
+        verifyNever(() => resolver.next(false));
+        verifyNever(() => router.replace(any<PageRouteInfo>()));
+      },
+    );
   });
 }
