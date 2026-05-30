@@ -41,6 +41,23 @@ defence-in-depth against a future migration). Also **deleted** the redundant old
 
 ---
 
+## Phase 8 — Coverage wave 10: account/settings/content <75% lift
+
+**+99 tests** (green, analyze clean, standalone, no prod bugs): **sign_in_controller routing** (7 — NOW real,
+post connectivity-DI: cloudBorn online→Firebase, offline→local-restore, offline+no-data→error, email-verify
+guard, Submitting state; 2 honest skips for the localBorn argon2id path), settings utils send_logs +
+account_actions (11), curriculum_settings + change_password_dialog (23), content tile/search/providers (28),
+pending_local_signup + sign_in_mode_card (30).
+
+### Backlog (verifier-flagged, not bugs)
+- sign_in localBorn arm + `_navigateAfterSignIn` destination routing + 15s watchdog + tutor-grant bypass still
+  uncovered — gated by the `LocalAuthService` argon2id seam (PasswordHasher.dummyVerify blocks tests >30s).
+  Needs a fast-hasher provider injection (the next auth testability refactor).
+- `showDeleteLocalAccountFlow` (account_actions) guard-heavy flow untested; one weak tautological assert in
+  send_logs (lvl-uppercase). Logged.
+
+---
+
 ## Phase 8 — Testability refactor: connectivity DI in sign-in (unblocks account coverage)
 
 `sign_in_controller` called `InternetConnectionChecker.instance.hasConnection` directly at 3 sites, bypassing the
