@@ -41,6 +41,28 @@ defence-in-depth against a future migration). Also **deleted** the redundant old
 
 ---
 
+## Phase 8 — Coverage waves 7+8: profiles cluster + SYNC-ENGINE internals
+
+**Wave 7 (+150, all behavioral, no prod bugs):** pin_flow + parent_pin_setup_dialog (28), profile_picker +
+tutored_children deeper (24), settings_screen + point_config (36), notification_providers deeper (32),
+step_study_days + content_hierarchy (25), scheduler amnesty/deadline branches (5). Logged latent: pin
+change-mode confirm lacks an ArgumentError catch (likely unreachable behind the 4-digit guard).
+
+**Wave 8 — sync-engine internals (+229, all behavioral, no prod bugs):** the historical quality-crisis area is
+now heavily tested and verified correct: `push_pipeline_impl` (39 — per-collection routing, single-flight
+serialisation per kind, partial-commit propagation), **`drift_merge_store` (59 — the LWW / merge-forward rules
+for every entity: remote-newer vs older, clock-skew tie-break, tombstone resurrection, malformed-skip,
+idempotency)**, `outbox_processor` (17 — drain ordering/retry/single-flight guard), `seed_manager` (43 —
+extract/upgrade/integrity-recovery branches), `stage_definition_codec` + `ui_preferences_merger` (71 — codec
+round-trips + per-field preference merge). No merge/sync correctness bugs found — the engine holds.
+
+### Verifier-flagged backlog (gaps, not bugs)
+- push_pipeline: concurrent-failure-with-queued-waiter path; wrong-typed `profile_id` payload cast.
+- drift_merge_store: bookmark LWW is enforced at the DAO layer (not the store); `_upsertTrack` is_active→state
+  back-compat shim untested.
+
+---
+
 ## Phase 8 — Coverage wave 6: deep logic (scheduler engine, credit policy, controllers)
 
 **+167 tests** (green, analyze clean, standalone, no prod bugs found): the high-value ones drive REAL logic, not

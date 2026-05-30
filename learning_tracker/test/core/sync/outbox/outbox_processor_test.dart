@@ -5,7 +5,9 @@ library;
 import 'dart:async';
 import 'dart:convert';
 
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
@@ -13,6 +15,17 @@ import 'package:learning_tracker/core/sync/outbox/push_pipeline.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 
 import '../../../helpers/drift_memory.dart';
+
+// ── Fake AnalyticsService ────────────────────────────────────────────────────
+
+class _FakeAnalyticsService extends AnalyticsService {
+  final List<(String name, Map<String, Object?>?)> events = [];
+
+  @override
+  Future<void> logEvent(String name, {Map<String, Object?>? parameters}) async {
+    events.add((name, parameters));
+  }
+}
 
 // ── Fake PushPipeline ────────────────────────────────────────────────────────
 
@@ -539,6 +552,523 @@ void main() {
     });
   });
 
+  // ── FIFO ordering ─────────────────────────────────────────────────────────
+  group('OutboxProcessor.drain — FIFO ordering', () {
+    test('completion rows are sent in creation-time order (oldest first)',
+        () async {
+      // Three rows created with distinct timestamps — the drain must dispatch
+      // them in FIFO (oldest-first) order.
+      await db.outboxDao.insertOutboxRow(
+        OutboxCompanion.insert(
+          profileId: profileId,
+          entityKind: OutboxEntityKind.completion,
+          entityKey: 'first',
+          payload: jsonEncode({'ref': 'Berakhot.2a'}),
+          createdAt: DateTime.utc(2026, 5, 14, 10, 0, 0),
+        ),
+      );
+      await db.outboxDao.insertOutboxRow(
+        OutboxCompanion.insert(
+          profileId: profileId,
+          entityKind: OutboxEntityKind.completion,
+          entityKey: 'second',
+          payload: jsonEncode({'ref': 'Berakhot.2b'}),
+          createdAt: DateTime.utc(2026, 5, 14, 11, 0, 0),
+        ),
+      );
+      await db.outboxDao.insertOutboxRow(
+        OutboxCompanion.insert(
+          profileId: profileId,
+          entityKind: OutboxEntityKind.completion,
+          entityKey: 'third',
+          payload: jsonEncode({'ref': 'Berakhot.3a'}),
+          createdAt: DateTime.utc(2026, 5, 14, 12, 0, 0),
+        ),
+      );
+
+      await processor.drain(profileId);
+
+      // All three dispatched; the pipeline received them in creation order.
+      expect(
+        pipeline.batchCalls.single,
+        equals(['first', 'second', 'third']),
+        reason: 'completions drained oldest-first',
+      );
+    });
+
+    test('non-completion rows are drained in the deterministic kind order '
+        '(streaks before settings)', () async {
+      // Enqueue a settings row and a streak row — settings first in the DB,
+      // but streaks must be dispatched first per _nonCompletionKinds ordering.
+      await db.outboxDao.insertOutboxRow(
+        OutboxCompanion.insert(
+          profileId: profileId,
+          entityKind: OutboxEntityKind.settings,
+          entityKey: 'sett1',
+          payload: jsonEncode({'key': 'v'}),
+          createdAt: DateTime.utc(2026, 5, 14, 10, 0, 0),
+        ),
+      );
+      await db.outboxDao.insertOutboxRow(
+        OutboxCompanion.insert(
+          profileId: profileId,
+          entityKind: OutboxEntityKind.streak,
+          entityKey: 'streak1',
+          payload: jsonEncode({'count': 1}),
+          createdAt: DateTime.utc(2026, 5, 14, 11, 0, 0),
+        ),
+      );
+
+      await processor.drain(profileId);
+
+      // streak must appear before settings in the calls list.
+      final kindOrder = pipeline.calls.map((c) => c.$1).toList();
+      final streakIdx = kindOrder.indexOf('streak');
+      final settingsIdx = kindOrder.indexOf('settings');
+      expect(
+        streakIdx,
+        lessThan(settingsIdx),
+        reason: 'streak drained before settings per _nonCompletionKinds order',
+      );
+    });
+  });
+
+  // ── Exponential backoff ────────────────────────────────────────────────────
+  group('OutboxProcessor.drain — exponential backoff', () {
+    late FakeLocalDayClock clock;
+
+    setUp(() {
+      clock = FakeLocalDayClock(DateTime.utc(2026, 5, 14));
+      useLocalDayClock(clock);
+      processor = OutboxProcessor(
+        outboxDao: db.outboxDao,
+        pipeline: pipeline,
+        clock: clock,
+      );
+    });
+
+    tearDown(resetLocalDayClock);
+
+    test(
+        'non-completion row with attempts=1 is skipped while backoff window '
+        'is active, then retried once the window elapses', () async {
+      await db.outboxDao.insertOutboxRow(
+        OutboxCompanion.insert(
+          profileId: profileId,
+          entityKind: OutboxEntityKind.streak,
+          entityKey: 'sk1',
+          payload: jsonEncode({'count': 1}),
+          createdAt: clock.nowUtc(),
+          // Simulate a row that already had one failed attempt 5 seconds ago.
+          attempts: const Value(1),
+          lastAttemptAt: Value(clock.nowUtc().subtract(const Duration(seconds: 5))),
+        ),
+      );
+
+      // Clock is now: lastAttemptAt was 5s ago; backoff base = 30s, so
+      // nextAttemptAt ≈ lastAttemptAt + 30s, which is still in the future.
+      final countWhileBackoff = await processor.drain(profileId);
+      expect(
+        countWhileBackoff,
+        0,
+        reason: 'row in backoff window must be skipped',
+      );
+      expect(pipeline.calls, isEmpty, reason: 'no push while in backoff');
+
+      // Advance 60s past lastAttemptAt — well clear of the 30s base window.
+      clock.advance(const Duration(seconds: 60));
+
+      final countAfterBackoff = await processor.drain(profileId);
+      expect(
+        countAfterBackoff,
+        1,
+        reason: 'row eligible again after backoff window elapses',
+      );
+      expect(pipeline.calls, [('streak', 'sk1')]);
+    });
+
+    test(
+        'completion row with attempts=1 is skipped while backoff window is '
+        'active, then sent in the next drain', () async {
+      await db.outboxDao.insertOutboxRow(
+        OutboxCompanion.insert(
+          profileId: profileId,
+          entityKind: OutboxEntityKind.completion,
+          entityKey: 'c1',
+          payload: jsonEncode({'ref': 'Berakhot.2a'}),
+          createdAt: clock.nowUtc(),
+          attempts: const Value(1),
+          lastAttemptAt: Value(
+            clock.nowUtc().subtract(const Duration(seconds: 5)),
+          ),
+        ),
+      );
+
+      // Still in backoff window.
+      expect(await processor.drain(profileId), 0);
+      expect(pipeline.batchCalls, isEmpty);
+
+      // Advance past the base window (~30s jittered; 120s is safe).
+      clock.advance(const Duration(seconds: 120));
+
+      expect(await processor.drain(profileId), 1);
+      expect(pipeline.batchCalls, hasLength(1));
+    });
+
+    test('fresh row (attempts=0, no lastAttemptAt) is always eligible', () async {
+      await insertRow(entityKind: OutboxEntityKind.streak, entityKey: 'new');
+      // Clock has not moved; row has 0 attempts and null lastAttemptAt.
+      expect(await processor.drain(profileId), 1);
+    });
+  });
+
+  // ── Dead-letter at _maxAttempts ────────────────────────────────────────────
+  group('OutboxProcessor.drain — dead-letter at maxAttempts', () {
+    late FakeLocalDayClock clock;
+    late _FakeAnalyticsService analytics;
+
+    setUp(() {
+      clock = FakeLocalDayClock(DateTime.utc(2026, 5, 14));
+      useLocalDayClock(clock);
+      analytics = _FakeAnalyticsService();
+      processor = OutboxProcessor(
+        outboxDao: db.outboxDao,
+        pipeline: pipeline,
+        clock: clock,
+        analytics: analytics,
+      );
+    });
+
+    tearDown(resetLocalDayClock);
+
+    test(
+        'non-completion row with attempts == 10 is permanently skipped and '
+        'never pushed', () async {
+      // Insert a row that has already hit the max-attempts ceiling.
+      await db.outboxDao.insertOutboxRow(
+        OutboxCompanion.insert(
+          profileId: profileId,
+          entityKind: OutboxEntityKind.streak,
+          entityKey: 'dead',
+          payload: jsonEncode({'count': 5}),
+          createdAt: DateTime.utc(2026, 5, 1),
+          attempts: const Value(10),
+          lastAttemptAt: Value(DateTime.utc(2026, 5, 13)),
+        ),
+      );
+
+      final count = await processor.drain(profileId);
+      expect(count, 0, reason: 'dead-lettered row must not be pushed');
+      expect(
+        pipeline.calls.where((c) => c.$2 == 'dead'),
+        isEmpty,
+        reason: 'pipeline never called for a dead-lettered key',
+      );
+      // Row is NOT deleted — it stays in the outbox (observable via depth).
+      expect(await db.outboxDao.depth(profileId), 1);
+    });
+
+    test(
+        'dead-lettered non-completion row fires the outbox_dead_lettered '
+        'analytics event', () async {
+      await db.outboxDao.insertOutboxRow(
+        OutboxCompanion.insert(
+          profileId: profileId,
+          entityKind: OutboxEntityKind.streak,
+          entityKey: 'dead-streak',
+          payload: jsonEncode({'count': 5}),
+          createdAt: DateTime.utc(2026, 5, 1),
+          attempts: const Value(10),
+          lastAttemptAt: Value(DateTime.utc(2026, 5, 13)),
+        ),
+      );
+
+      await processor.drain(profileId);
+
+      // The analytics event must have been fired with the dead-letter tag.
+      expect(analytics.events, isNotEmpty);
+      final eventNames = analytics.events.map((e) => e.$1).toList();
+      expect(
+        eventNames,
+        contains('sync_outbox_dead_lettered'),
+        reason: 'analytics must record the dead-lettered row',
+      );
+      final params = analytics.events
+          .firstWhere((e) => e.$1 == 'sync_outbox_dead_lettered')
+          .$2;
+      expect(params?['entity_kind'], OutboxEntityKind.streak);
+      expect(params?['entity_key'], 'dead-streak');
+      expect(params?['attempts'], 10);
+    });
+
+    test(
+        'dead-lettered completion row fires the outbox_dead_lettered analytics '
+        'event and is never pushed', () async {
+      await db.outboxDao.insertOutboxRow(
+        OutboxCompanion.insert(
+          profileId: profileId,
+          entityKind: OutboxEntityKind.completion,
+          entityKey: 'dead-c1',
+          payload: jsonEncode({'ref': 'Berakhot.2a'}),
+          createdAt: DateTime.utc(2026, 5, 1),
+          attempts: const Value(10),
+          lastAttemptAt: Value(DateTime.utc(2026, 5, 13)),
+        ),
+      );
+
+      await processor.drain(profileId);
+
+      expect(pipeline.batchCalls, isEmpty, reason: 'dead completion not pushed');
+      final eventNames = analytics.events.map((e) => e.$1).toList();
+      expect(eventNames, contains('sync_outbox_dead_lettered'));
+      final params = analytics.events
+          .firstWhere((e) => e.$1 == 'sync_outbox_dead_lettered')
+          .$2;
+      expect(params?['entity_kind'], OutboxEntityKind.completion);
+      expect(params?['entity_key'], 'dead-c1');
+    });
+
+    test(
+        'a row with attempts == 9 (one below ceiling) IS still tried', () async {
+      await db.outboxDao.insertOutboxRow(
+        OutboxCompanion.insert(
+          profileId: profileId,
+          entityKind: OutboxEntityKind.streak,
+          entityKey: 'almost-dead',
+          payload: jsonEncode({'count': 9}),
+          createdAt: DateTime.utc(2026, 5, 1),
+          attempts: const Value(9),
+          // Place lastAttemptAt far enough in the past that the (capped at 1h)
+          // backoff window is fully elapsed.
+          lastAttemptAt: Value(DateTime.utc(2026, 5, 12)),
+        ),
+      );
+
+      final count = await processor.drain(profileId);
+      expect(count, 1, reason: 'row at attempts=9 is not yet dead-lettered');
+      expect(pipeline.calls, [('streak', 'almost-dead')]);
+      // The row is deleted after a successful push.
+      expect(await db.outboxDao.depth(profileId), 0);
+    });
+  });
+
+  // ── T1.isolation — tutored-profile guard ──────────────────────────────────
+  group('OutboxProcessor.drain — isTutoredProfile guard (T1.isolation)', () {
+    test('tutored profiles are never drained — drain returns 0 immediately',
+        () async {
+      final tutoredProcessor = OutboxProcessor(
+        outboxDao: db.outboxDao,
+        pipeline: pipeline,
+        clock: FakeLocalDayClock(DateTime.utc(2026, 5, 14)),
+        isTutoredProfile: (id) async => true, // every profile is tutored
+      );
+
+      await insertRow(
+        entityKind: OutboxEntityKind.completion,
+        entityKey: 'c1',
+      );
+
+      final count = await tutoredProcessor.drain(profileId);
+      expect(count, 0, reason: 'tutored profile must never be drained');
+      expect(pipeline.calls, isEmpty);
+      // Row is preserved — never deleted.
+      expect(await db.outboxDao.depth(profileId), 1);
+    });
+
+    test('non-tutored profile is drained normally when guard returns false',
+        () async {
+      final normalProcessor = OutboxProcessor(
+        outboxDao: db.outboxDao,
+        pipeline: pipeline,
+        clock: FakeLocalDayClock(DateTime.utc(2026, 5, 14)),
+        isTutoredProfile: (id) async => false, // not tutored
+      );
+
+      await insertRow(entityKind: OutboxEntityKind.completion, entityKey: 'c1');
+
+      final count = await normalProcessor.drain(profileId);
+      expect(count, 1);
+      expect(pipeline.calls, [('completion', 'c1')]);
+    });
+
+    test(
+        'tutored-profile guard also blocks the profile-0 sweep so '
+        'tutored account-level rows are never pushed', () async {
+      final tutoredProcessor = OutboxProcessor(
+        outboxDao: db.outboxDao,
+        pipeline: pipeline,
+        clock: FakeLocalDayClock(DateTime.utc(2026, 5, 14)),
+        // Both the active profile AND profile 0 are treated as tutored.
+        isTutoredProfile: (id) async => true,
+      );
+
+      // Enqueue a row under profile 0 (the SYNC-2 account-level path).
+      await db.outboxDao.insertOutboxRow(
+        OutboxCompanion.insert(
+          profileId: 0,
+          entityKind: OutboxEntityKind.learnerProfile,
+          entityKey: '1',
+          payload: jsonEncode({'profile_id': 1}),
+          createdAt: DateTime.utc(2026, 5, 14),
+        ),
+      );
+
+      final count = await tutoredProcessor.drain(profileId);
+      expect(count, 0);
+      // Profile-0 row still in outbox.
+      expect(await db.outboxDao.depth(0), 1);
+    });
+
+    test('guard is only consulted for matching profileId — other profiles '
+        'are unaffected', () async {
+      // Guard returns true only for profileId 99 (simulates a tutored profile
+      // running alongside a normal profile).
+      final mixedProcessor = OutboxProcessor(
+        outboxDao: db.outboxDao,
+        pipeline: pipeline,
+        clock: FakeLocalDayClock(DateTime.utc(2026, 5, 14)),
+        isTutoredProfile: (id) async => id == 99,
+      );
+
+      // Normal profile (profileId=1) has a completion row.
+      await insertRow(entityKind: OutboxEntityKind.completion, entityKey: 'c1');
+
+      final count = await mixedProcessor.drain(profileId); // profileId == 1
+      expect(count, 1, reason: 'non-tutored profile still drained');
+      expect(pipeline.calls, [('completion', 'c1')]);
+    });
+  });
+
+  // ── Drain-while-offline behaviour ─────────────────────────────────────────
+  group('OutboxProcessor.drain — drain-while-offline (network failure)', () {
+    late FakeLocalDayClock clock;
+
+    setUp(() {
+      clock = FakeLocalDayClock(DateTime.utc(2026, 5, 14));
+      useLocalDayClock(clock);
+      processor = OutboxProcessor(
+        outboxDao: db.outboxDao,
+        pipeline: pipeline,
+        clock: clock,
+      );
+    });
+
+    tearDown(resetLocalDayClock);
+
+    test(
+        'all rows are retained in the outbox when every push fails '
+        '(simulating offline / network unavailable)', () async {
+      // Enqueue 3 completion rows. Total failure = every key NOT committed.
+      await insertRow(entityKind: OutboxEntityKind.completion, entityKey: 'c1');
+      await insertRow(entityKind: OutboxEntityKind.completion, entityKey: 'c2');
+      await insertRow(entityKind: OutboxEntityKind.completion, entityKey: 'c3');
+
+      pipeline.failNextPush = true; // triggers Exception('network error')
+
+      final count = await processor.drain(profileId);
+      expect(count, 0, reason: 'offline drain pushes nothing');
+
+      // All 3 rows are still in the outbox — no data is lost.
+      expect(await db.outboxDao.depth(profileId), 3);
+    });
+
+    test(
+        'rows that failed while offline have their attempt counter incremented '
+        'and will be retried once connectivity is restored', () async {
+      await insertRow(entityKind: OutboxEntityKind.completion, entityKey: 'c1');
+
+      pipeline.failNextPush = true;
+      await processor.drain(profileId);
+
+      final rows = await db.outboxDao.getPendingByKind(
+        OutboxEntityKind.completion,
+        profileId,
+      );
+      expect(rows.single.attempts, 1, reason: 'attempt counter incremented');
+      expect(rows.single.lastError, isNotNull);
+      expect(rows.single.lastAttemptAt, isNotNull);
+
+      // Simulate connectivity restored: advance clock past backoff window and
+      // drain again — this time the push succeeds.
+      clock.advance(const Duration(seconds: 120));
+      pipeline.failNextPush = false;
+
+      final countOnline = await processor.drain(profileId);
+      expect(countOnline, 1, reason: 'row successfully drained once online');
+      expect(await db.outboxDao.depth(profileId), 0);
+    });
+
+    test(
+        'non-completion rows are also retained when the push fails offline, '
+        'and other rows in the batch continue to be attempted', () async {
+      // Two streak rows — both will fail. Other rows in later kinds are
+      // unaffected: failure on one row does NOT abort the whole drain.
+      pipeline.hangStreak = false; // ensure no hang
+      final failPipeline = _ErroringNonCompletionPipeline();
+      final offlineProcessor = OutboxProcessor(
+        outboxDao: db.outboxDao,
+        pipeline: failPipeline,
+        clock: clock,
+      );
+
+      await db.outboxDao.insertOutboxRow(
+        OutboxCompanion.insert(
+          profileId: profileId,
+          entityKind: OutboxEntityKind.streak,
+          entityKey: 'sk1',
+          payload: jsonEncode({'count': 1}),
+          createdAt: clock.nowUtc(),
+        ),
+      );
+      await db.outboxDao.insertOutboxRow(
+        OutboxCompanion.insert(
+          profileId: profileId,
+          entityKind: OutboxEntityKind.streak,
+          entityKey: 'sk2',
+          payload: jsonEncode({'count': 2}),
+          createdAt: clock.nowUtc().add(const Duration(seconds: 1)),
+        ),
+      );
+
+      final count = await offlineProcessor.drain(profileId);
+      expect(count, 0, reason: 'both streak pushes failed');
+      expect(await db.outboxDao.depth(profileId), 2);
+
+      // Both rows have attempts == 1 (each individually marked attempted).
+      final rows = await db.outboxDao.getPendingByKind(
+        OutboxEntityKind.streak,
+        profileId,
+      );
+      for (final row in rows) {
+        expect(row.attempts, 1);
+        expect(row.lastError, isNotNull);
+      }
+    });
+  });
+
+  // ── Non-completion batch-size ceiling (_batchSize = 50) ───────────────────
+  group('OutboxProcessor.drain — non-completion batch size', () {
+    test('drains at most 50 non-completion rows per drain call', () async {
+      // Insert 55 streak rows — only the first 50 should be drained.
+      final now = DateTime.utc(2026, 5, 14);
+      for (var i = 0; i < 55; i++) {
+        await db.outboxDao.insertOutboxRow(
+          OutboxCompanion.insert(
+            profileId: profileId,
+            entityKind: OutboxEntityKind.streak,
+            entityKey: 'sk$i',
+            payload: jsonEncode({'idx': i}),
+            createdAt: now.add(Duration(seconds: i)),
+          ),
+        );
+      }
+
+      final count = await processor.drain(profileId);
+      expect(count, 50, reason: 'batch ceiling is 50 for non-completion kinds');
+      expect(await db.outboxDao.depth(profileId), 5, reason: '5 rows deferred');
+    });
+  });
+
   group('OutboxEntityKind constants', () {
     test('completion constant is "completion"', () {
       expect(OutboxEntityKind.completion, 'completion');
@@ -690,6 +1220,180 @@ class _BlockingPipeline extends Fake implements PushPipeline {
     batchCalls++;
     await _gate.future;
     return entries.map((e) => e.entityKey).toList();
+  }
+}
+
+/// Pipeline that always throws [Exception] for non-completion kinds.
+/// Used to test drain-while-offline behaviour for non-completion rows.
+class _ErroringNonCompletionPipeline extends Fake implements PushPipeline {
+  @override
+  Future<List<String>> pushCompletionsBatch({
+    required int profileId,
+    required List<({String entityKey, Map<String, dynamic> payload})> entries,
+  }) async {
+    return entries.map((e) => e.entityKey).toList();
+  }
+
+  @override
+  Future<void> pushStreak({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) async {
+    throw Exception('offline: pushStreak failed');
+  }
+
+  @override
+  Future<void> pushSettings({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) async {
+    throw Exception('offline: pushSettings failed');
+  }
+
+  @override
+  Future<void> pushTrack({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) async {
+    throw Exception('offline: pushTrack failed');
+  }
+
+  @override
+  Future<void> pushLearningOrder({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) async {
+    throw Exception('offline: pushLearningOrder failed');
+  }
+
+  @override
+  Future<void> pushBookmark({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) async {
+    throw Exception('offline: pushBookmark failed');
+  }
+
+  @override
+  Future<void> pushLearnerProfile({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) async {
+    throw Exception('offline: pushLearnerProfile failed');
+  }
+
+  @override
+  Future<void> pushStageDefinition({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) async {
+    throw Exception('offline: pushStageDefinition failed');
+  }
+
+  @override
+  Future<void> pushGoal({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) async {
+    throw Exception('offline: pushGoal failed');
+  }
+
+  @override
+  Future<void> deleteGoal({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) async {
+    throw Exception('offline: deleteGoal failed');
+  }
+
+  @override
+  Future<void> deleteLearnerProfile({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) async {
+    throw Exception('offline: deleteLearnerProfile failed');
+  }
+
+  @override
+  Future<void> pushGamificationSettings({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) async {
+    throw Exception('offline: pushGamificationSettings failed');
+  }
+
+  @override
+  Future<void> pushNotificationSettings({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) async {
+    throw Exception('offline: pushNotificationSettings failed');
+  }
+
+  @override
+  Future<void> pushUiPreferences({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) async {
+    throw Exception('offline: pushUiPreferences failed');
+  }
+
+  @override
+  Future<void> pushProfileProgram({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) async {
+    throw Exception('offline: pushProfileProgram failed');
+  }
+
+  @override
+  Future<void> pushLearningLedgerEntry({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) async {
+    throw Exception('offline: pushLearningLedgerEntry failed');
+  }
+
+  @override
+  Future<void> pushStudyDayConfig({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) async {
+    throw Exception('offline: pushStudyDayConfig failed');
+  }
+
+  @override
+  Future<void> pushPointsLedgerEntry({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) async {
+    throw Exception('offline: pushPointsLedgerEntry failed');
+  }
+
+  @override
+  Future<void> pushRewardRedemption({
+    required int profileId,
+    required String entityKey,
+    required Map<String, dynamic> payload,
+  }) async {
+    throw Exception('offline: pushRewardRedemption failed');
   }
 }
 
