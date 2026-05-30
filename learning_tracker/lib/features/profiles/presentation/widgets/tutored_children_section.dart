@@ -387,12 +387,14 @@ class _TutoredChildRow extends ConsumerWidget {
       );
       try {
         unawaited(
-          ref.read(tutoredListenerSupervisorProvider).attach(
-            localProfileId: cachedProfile.id,
-            gateway: gateway,
-            parentUid: selection.ownerUid,
-            remoteProfileId: selection.profileId,
-          ),
+          ref
+              .read(tutoredListenerSupervisorProvider)
+              .attach(
+                localProfileId: cachedProfile.id,
+                gateway: gateway,
+                parentUid: selection.ownerUid,
+                remoteProfileId: selection.profileId,
+              ),
         );
       } catch (e, st) {
         AppLogger.instance.warning(
@@ -470,12 +472,14 @@ class _TutoredChildRow extends ConsumerWidget {
           // rather than silently swallowed.
           try {
             unawaited(
-              ref.read(tutoredListenerSupervisorProvider).attach(
-                localProfileId: result.localProfileId,
-                gateway: gateway,
-                parentUid: selection.ownerUid,
-                remoteProfileId: selection.profileId,
-              ),
+              ref
+                  .read(tutoredListenerSupervisorProvider)
+                  .attach(
+                    localProfileId: result.localProfileId,
+                    gateway: gateway,
+                    parentUid: selection.ownerUid,
+                    remoteProfileId: selection.profileId,
+                  ),
             );
           } catch (e, st) {
             AppLogger.instance.warning(

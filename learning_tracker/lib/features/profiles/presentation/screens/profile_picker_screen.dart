@@ -427,16 +427,15 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
         const Divider(),
         const SizedBox(height: 16),
         OutlinedButton.icon(
-          icon: Icon(
-            Icons.logout_rounded,
-            color: theme.colorScheme.error,
-          ),
+          icon: Icon(Icons.logout_rounded, color: theme.colorScheme.error),
           label: Text(
             AppLocalizations.of(context)!.signOut,
             style: TextStyle(color: theme.colorScheme.error),
           ),
           style: OutlinedButton.styleFrom(
-            side: BorderSide(color: theme.colorScheme.error.withValues(alpha: 0.4)),
+            side: BorderSide(
+              color: theme.colorScheme.error.withValues(alpha: 0.4),
+            ),
             padding: const EdgeInsets.symmetric(vertical: 14),
           ),
           onPressed: () => showSignOutConfirmation(context, ref),

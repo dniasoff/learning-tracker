@@ -137,15 +137,16 @@ TutoredMirrorWipeService buildTutoredMirrorWipeServiceFromWidget({
 /// The supervisor resolves the [MergeRouter] lazily (via [mergeRouterProvider])
 /// so a DB swap (multi-account flow) is picked up without recreating the
 /// supervisor.
-final tutoredListenerSupervisorProvider =
-    Provider<TutoredListenerSupervisor>((ref) {
-      ref.keepAlive();
-      // Resolve the MergeRouter lazily so a DB swap (multi-account flow) is
-      // picked up without recreating the supervisor.
-      return TutoredListenerSupervisor(
-        resolveDispatcher: () => ref.read(mergeRouterProvider),
-      );
-    });
+final tutoredListenerSupervisorProvider = Provider<TutoredListenerSupervisor>((
+  ref,
+) {
+  ref.keepAlive();
+  // Resolve the MergeRouter lazily so a DB swap (multi-account flow) is
+  // picked up without recreating the supervisor.
+  return TutoredListenerSupervisor(
+    resolveDispatcher: () => ref.read(mergeRouterProvider),
+  );
+});
 
 /// Build a parent-scoped [FirestoreGatewayImpl] for talmid listener streams.
 ///

@@ -324,14 +324,13 @@ class _PointConfigScreenState extends ConsumerState<PointConfigScreen> {
                               primaryStageName: _primaryStageRow(
                                 data,
                               ).stage.stageName,
-                              onDecrement: (canEdit &&
-                                      _effectivePrimaryPoints(data) > 1)
+                              onDecrement:
+                                  (canEdit && _effectivePrimaryPoints(data) > 1)
                                   ? () => _bumpPrimary(data, -1)
                                   : null,
-                              onIncrement:
-                                  canEdit
-                                      ? () => _bumpPrimary(data, 1)
-                                      : null,
+                              onIncrement: canEdit
+                                  ? () => _bumpPrimary(data, 1)
+                                  : null,
                             ),
                           );
                         }, childCount: pointData.length),
@@ -349,9 +348,7 @@ class _PointConfigScreenState extends ConsumerState<PointConfigScreen> {
                 onNothingToSave: () {
                   if (!canEdit) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text(l10n.tutorPermissionDenied),
-                      ),
+                      SnackBar(content: Text(l10n.tutorPermissionDenied)),
                     );
                     return;
                   }

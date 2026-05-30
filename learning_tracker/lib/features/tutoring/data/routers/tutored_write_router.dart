@@ -254,7 +254,10 @@ class TutoredWriteRouter implements SyncWriteFacade {
         permKey: 'can_edit_rewards',
         settingsData: rewardsSlice,
       );
-      _handleResult(result, 'tutorUpdateGamificationSettings[can_edit_rewards]');
+      _handleResult(
+        result,
+        'tutorUpdateGamificationSettings[can_edit_rewards]',
+      );
     }
     if (pointsSlice.isNotEmpty) {
       final result = await _writeService.updateGamificationSettings(

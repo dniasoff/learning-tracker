@@ -96,8 +96,7 @@ class TutoredListenerSupervisor {
 
     _supervisor = ListenerSupervisor(
       source: source,
-      onEvent: (channel, payload) =>
-          _onEvent(localProfileId, channel, payload),
+      onEvent: (channel, payload) => _onEvent(localProfileId, channel, payload),
     );
 
     await _supervisor!.start();
@@ -157,14 +156,14 @@ class TutoredListenerSupervisor {
       _resolveDispatcher()
           .dispatch(profileId: localProfileId, kind: kind, rows: rows)
           .catchError((Object err, StackTrace st) {
-        AppLogger.instance.warning(
-          event: 'tutored_listener_merge_error',
-          fields: {'kind': kind, 'profileId': localProfileId},
-          exception: err,
-          stackTrace: st,
-        );
-        return MergeOutcome.halt;
-      }),
+            AppLogger.instance.warning(
+              event: 'tutored_listener_merge_error',
+              fields: {'kind': kind, 'profileId': localProfileId},
+              exception: err,
+              stackTrace: st,
+            );
+            return MergeOutcome.halt;
+          }),
     );
   }
 }

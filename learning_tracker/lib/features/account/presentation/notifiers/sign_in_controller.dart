@@ -596,8 +596,9 @@ class SignInController extends Notifier<SignInState> {
         );
         await session.setActiveAccount(account.accountId);
 
-        final isOnline =
-            await _ref.read(internetConnectionCheckerProvider).hasConnection;
+        final isOnline = await _ref
+            .read(internetConnectionCheckerProvider)
+            .hasConnection;
         if (isOnline) {
           final upgradeSvc = UpgradeToCloudService(
             dao: dao,
@@ -652,8 +653,9 @@ class SignInController extends Notifier<SignInState> {
           unawaited(router.replaceAll([const ProfilePickerRoute()]));
         }
       } else if (account != null && account.accountTier.isCloud) {
-        final isOnline =
-            await _ref.read(internetConnectionCheckerProvider).hasConnection;
+        final isOnline = await _ref
+            .read(internetConnectionCheckerProvider)
+            .hasConnection;
         if (isOnline) {
           final authRepo = _ref.read(authRepositoryProvider);
           await authRepo
@@ -687,8 +689,9 @@ class SignInController extends Notifier<SignInState> {
           return;
         }
 
-        final isOnline =
-            await _ref.read(internetConnectionCheckerProvider).hasConnection;
+        final isOnline = await _ref
+            .read(internetConnectionCheckerProvider)
+            .hasConnection;
         if (isOnline) {
           final authRepo = _ref.read(authRepositoryProvider);
           await authRepo

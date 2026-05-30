@@ -247,9 +247,9 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
         );
       } on TutorWriteException catch (e) {
         if (mounted && e.code == 'permission-denied') {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(l10n.tutorPermissionDenied)),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(l10n.tutorPermissionDenied)));
         }
         return;
       }
@@ -403,8 +403,8 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
               onPressed: canSave
                   ? _save
                   : () => ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text(l10n.tutorPermissionDenied)),
-                      ),
+                      SnackBar(content: Text(l10n.tutorPermissionDenied)),
+                    ),
               child: Text(
                 l10n.trackEditSaveButton,
                 style: const TextStyle(fontWeight: FontWeight.w700),

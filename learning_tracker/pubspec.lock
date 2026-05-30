@@ -74,7 +74,7 @@ packages:
     source: hosted
     version: "1.0.3"
   app_links_platform_interface:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: app_links_platform_interface
       sha256: "05f5379577c513b534a29ddea68176a4d4802c46180ee8e2e966257158772a3f"
@@ -888,7 +888,7 @@ packages:
     source: hosted
     version: "3.1.0"
   geocoding_platform_interface:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: geocoding_platform_interface
       sha256: "8c2c8226e5c276594c2e18bfe88b19110ed770aeb7c1ab50ede570be8b92229b"
@@ -928,7 +928,7 @@ packages:
     source: hosted
     version: "0.2.4"
   geolocator_platform_interface:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: geolocator_platform_interface
       sha256: "30cb64f0b9adcc0fb36f628b4ebf4f731a2961a0ebd849f4b56200205056fe67"
@@ -1396,7 +1396,7 @@ packages:
     source: hosted
     version: "2.2.1"
   path_provider_platform_interface:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: path_provider_platform_interface
       sha256: "88f5779f72ba699763fa3a3b06aa4bf6de76c8e5de842cf6f29e2e06476c2334"
@@ -1428,7 +1428,7 @@ packages:
     source: hosted
     version: "3.1.6"
   plugin_platform_interface:
-    dependency: transitive
+    dependency: "direct dev"
     description:
       name: plugin_platform_interface
       sha256: "4820fbfdb9478b1ebae27888254d445073732dae3d6ea81f0b7e06d5dedc3f02"

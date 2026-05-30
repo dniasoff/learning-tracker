@@ -112,7 +112,8 @@ class _LearningOrderScreenState extends ConsumerState<LearningOrderScreen> {
               item: items[index],
               index: index,
             ),
-            onReorderItem: (oldIndex, newIndex) => _onReorder(oldIndex, newIndex),
+            onReorderItem: (oldIndex, newIndex) =>
+                _onReorder(oldIndex, newIndex),
           );
         },
       ),

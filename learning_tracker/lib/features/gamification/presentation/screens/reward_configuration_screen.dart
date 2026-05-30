@@ -436,11 +436,14 @@ class _RewardConfigurationScreenState
                         child: FilledButton(
                           onPressed: canEdit
                               ? () => unawaited(_saveReward(l10n))
-                              : () => ScaffoldMessenger.of(context).showSnackBar(
-                                    SnackBar(
-                                      content: Text(l10n.tutorPermissionDenied),
+                              : () =>
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          l10n.tutorPermissionDenied,
+                                        ),
+                                      ),
                                     ),
-                                  ),
                           style: FilledButton.styleFrom(
                             backgroundColor: _kNavy,
                             foregroundColor: Colors.white,

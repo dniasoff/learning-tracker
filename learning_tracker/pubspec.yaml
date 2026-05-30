@@ -129,6 +129,11 @@ dev_dependencies:
   # Testing
   test: ^1.26.0
   mocktail: ^1.0.4
+  app_links_platform_interface: ^2.0.2
+  plugin_platform_interface: ^2.1.8
+  geolocator_platform_interface: ^4.2.6
+  geocoding_platform_interface: ^3.2.0
+  path_provider_platform_interface: ^2.1.2
   # DNI-377 (27.1): Fake Firestore for unit/integration tests that exercise
   # the sync layer without spinning up the emulator.
   fake_cloud_firestore: ^4.1.0

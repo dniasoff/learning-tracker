@@ -152,5 +152,4 @@ class _CtaBannerBody extends StatelessWidget {
       ),
     );
   }
-
 }

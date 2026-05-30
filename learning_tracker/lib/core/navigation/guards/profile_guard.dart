@@ -53,10 +53,7 @@ class ProfileGuard extends AutoRouteGuard {
     }
   }
 
-  Future<void> _resolve(
-    NavigationResolver resolver,
-    StackRouter router,
-  ) async {
+  Future<void> _resolve(NavigationResolver resolver, StackRouter router) async {
     // Tutored session: the active profile is the synthetic talmid mirror,
     // resolved via the tutored providers — NOT selectedProfileIdProvider (which
     // stays null) and NOT one of the account's own profiles (the mirror is

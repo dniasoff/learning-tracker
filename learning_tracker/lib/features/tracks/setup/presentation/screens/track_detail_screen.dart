@@ -479,103 +479,107 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
         borderRadius: BorderRadius.circular(24),
         clipBehavior: Clip.antiAlias,
         child: Column(
-        children: [
-          if (!hasProgramEnrollment) ...[
-            // W5-B (Task #16): Bulk-prior path — visually differentiated
-            // from a "Mark complete" (live) action with outlined/secondary
-            // styling so users can't confuse historical/lifetime marking
-            // with live completion (which credits engagement). The icon and
-            // foreground colour both use the secondary outline treatment.
-            // Copy hardcoded English for now — l10n sweep follows.
-            ListTile(
-              key: const ValueKey('trackDetail.bulkPriorTile'),
-              shape: RoundedRectangleBorder(
-                borderRadius: const BorderRadius.vertical(
-                  top: Radius.circular(24),
+          children: [
+            if (!hasProgramEnrollment) ...[
+              // W5-B (Task #16): Bulk-prior path — visually differentiated
+              // from a "Mark complete" (live) action with outlined/secondary
+              // styling so users can't confuse historical/lifetime marking
+              // with live completion (which credits engagement). The icon and
+              // foreground colour both use the secondary outline treatment.
+              // Copy hardcoded English for now — l10n sweep follows.
+              ListTile(
+                key: const ValueKey('trackDetail.bulkPriorTile'),
+                shape: RoundedRectangleBorder(
+                  borderRadius: const BorderRadius.vertical(
+                    top: Radius.circular(24),
+                  ),
+                  side: BorderSide(
+                    color: AppColors.blueMedium.withValues(alpha: 0.4),
+                    width: 1,
+                  ),
                 ),
-                side: BorderSide(
-                  color: AppColors.blueMedium.withValues(alpha: 0.4),
-                  width: 1,
+                tileColor: AppColors.blueMedium.withValues(alpha: 0.06),
+                leading: const Icon(
+                  Icons.history_edu_outlined,
+                  color: AppColors.blueMedium,
                 ),
+                title: Text(
+                  AppLocalizations.of(context)!.trackMarkPreviouslyLearned,
+                  style: const TextStyle(color: AppColors.blueMedium),
+                ),
+                trailing: const Icon(
+                  Icons.chevron_right_rounded,
+                  color: AppColors.blueMedium,
+                ),
+                onTap: curriculum != null
+                    ? () => _openBulkMark(track, curriculum)
+                    : null,
               ),
-              tileColor: AppColors.blueMedium.withValues(alpha: 0.06),
-              leading: const Icon(
-                Icons.history_edu_outlined,
-                color: AppColors.blueMedium,
-              ),
-              title: Text(
-                AppLocalizations.of(context)!.trackMarkPreviouslyLearned,
-                style: const TextStyle(color: AppColors.blueMedium),
-              ),
-              trailing: const Icon(
-                Icons.chevron_right_rounded,
-                color: AppColors.blueMedium,
-              ),
-              onTap: curriculum != null
-                  ? () => _openBulkMark(track, curriculum)
-                  : null,
-            ),
-            const Divider(height: 1, indent: 56),
-            ListTile(
-              leading: const Icon(
-                Icons.swap_vert_rounded,
-                color: AppColors.blueMedium,
-              ),
-              title: Text(AppLocalizations.of(context)!.trackReorderContent),
-              trailing: const Icon(Icons.chevron_right_rounded),
-              onTap: curriculum != null
-                  ? () => Navigator.of(context).push<void>(
-                      MaterialPageRoute<void>(
-                        builder: (_) => TrackLearningOrderScreen(
-                          trackId: track.id,
-                          curriculumId: curriculum,
+              const Divider(height: 1, indent: 56),
+              ListTile(
+                leading: const Icon(
+                  Icons.swap_vert_rounded,
+                  color: AppColors.blueMedium,
+                ),
+                title: Text(AppLocalizations.of(context)!.trackReorderContent),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: curriculum != null
+                    ? () => Navigator.of(context).push<void>(
+                        MaterialPageRoute<void>(
+                          builder: (_) => TrackLearningOrderScreen(
+                            trackId: track.id,
+                            curriculumId: curriculum,
+                          ),
                         ),
+                      )
+                    : null,
+              ),
+              const Divider(height: 1, indent: 56),
+            ],
+            ListTile(
+              shape: hasProgramEnrollment
+                  ? const RoundedRectangleBorder(
+                      borderRadius: BorderRadius.vertical(
+                        top: Radius.circular(24),
                       ),
                     )
                   : null,
-            ),
-            const Divider(height: 1, indent: 56),
-          ],
-          ListTile(
-            shape: hasProgramEnrollment
-                ? const RoundedRectangleBorder(
-                    borderRadius: BorderRadius.vertical(
-                      top: Radius.circular(24),
-                    ),
-                  )
-                : null,
-            leading: const Icon(
-              Icons.edit_outlined,
-              color: AppColors.blueMedium,
-            ),
-            title: Text(AppLocalizations.of(context)!.trackEditLabel),
-            trailing: const Icon(Icons.chevron_right_rounded),
-            onTap: () => Navigator.of(context).push<void>(
-              MaterialPageRoute(builder: (_) => EditTrackScreen(track: track)),
-            ),
-          ),
-          const Divider(height: 1, indent: 56),
-          ListTile(
-            shape: const RoundedRectangleBorder(
-              borderRadius: BorderRadius.vertical(bottom: Radius.circular(24)),
-            ),
-            leading: Icon(
-              Icons.delete_outline_rounded,
-              color: theme.colorScheme.error,
-            ),
-            title: Text(
-              AppLocalizations.of(context)!.trackDeleteLabel,
-              style: theme.textTheme.bodyLarge?.copyWith(
-                color: theme.colorScheme.error,
+              leading: const Icon(
+                Icons.edit_outlined,
+                color: AppColors.blueMedium,
+              ),
+              title: Text(AppLocalizations.of(context)!.trackEditLabel),
+              trailing: const Icon(Icons.chevron_right_rounded),
+              onTap: () => Navigator.of(context).push<void>(
+                MaterialPageRoute(
+                  builder: (_) => EditTrackScreen(track: track),
+                ),
               ),
             ),
-            trailing: Icon(
-              Icons.chevron_right_rounded,
-              color: theme.colorScheme.error,
+            const Divider(height: 1, indent: 56),
+            ListTile(
+              shape: const RoundedRectangleBorder(
+                borderRadius: BorderRadius.vertical(
+                  bottom: Radius.circular(24),
+                ),
+              ),
+              leading: Icon(
+                Icons.delete_outline_rounded,
+                color: theme.colorScheme.error,
+              ),
+              title: Text(
+                AppLocalizations.of(context)!.trackDeleteLabel,
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: theme.colorScheme.error,
+                ),
+              ),
+              trailing: Icon(
+                Icons.chevron_right_rounded,
+                color: theme.colorScheme.error,
+              ),
+              onTap: () => _showDeleteDialog(track, curriculum),
             ),
-            onTap: () => _showDeleteDialog(track, curriculum),
-          ),
-        ],
+          ],
         ),
       ),
     );
