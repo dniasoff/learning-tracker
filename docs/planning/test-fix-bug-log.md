@@ -7,6 +7,42 @@ test-and-fix run (plan: `exhaustive-test-and-fix-plan-2026-05-29.md`).
 
 ---
 
+## On-device sweep 2026-05-31 (ADB, real phone) — F-flows + clusters
+
+**D1 (HIGH, product-rule §5 / `feedback_profile_switcher_top` — repeatedly-requested, "top priority"):**
+*Symptom* — On-device F6: the **persistent profile/role switcher is absent from the default Dashboard /
+Learn / Progress contexts.** Tapped through Dashboard + Learn (self-learner adult, "Daniel Niasoff"): no
+top role label / switcher anywhere; only Settings exposed an entry (`UserProfileHeaderCard`), and that now
+opens the **account** sheet (`showAccountActionsSheet`), not the switcher (correct per §6, but it means the
+switcher entry is gone from the default context entirely).
+*Cause* — `AppShellScreen.appBarBuilder` (`lib/app/router/app_shell.dart`) only rendered top chrome
+conditionally: `OfflineTopBanner` (offline), `_TutorModeIndicatorBar` (tutor session, →switcher),
+`_ChildViewBanner` (parent-mode, →switcher). The **default own-profile case** (neither tutor nor parent-mode)
+rendered **no bar at all**, so `showProfileSwitcherSheet` was unreachable from Dashboard/Learn/Progress.
+*Fix* — Added a slim always-present `_ProfileSwitcherBar` (44px) to `appBarBuilder`, shown exactly when
+`!hasActiveTutoredProfiles && !isViewingChildProfile` (mutually exclusive with the tutor/child bars, so every
+context now has exactly one tappable switcher entry at the top). Shows active-profile avatar + name +
+`SELF-LEARNER` role badge + `unfold_more` affordance; `onTap → showProfileSwitcherSheet(context)`. Height
+folded into the `PreferredSize` calc. Reuses existing l10n (`selfLearnerBadge`) — no new strings. *(Visual
+treatment is a sensible default consistent with the existing tutor/child bars; flagged for owner polish.)*
+*Name-resolution follow-up (caught on-device)* — first build showed the bar as **"User"** (generic fallback)
+instead of "Daniel Niasoff": the bar's name chain skipped the account name. Fixed to the SAME chain as
+`UserProfileHeaderCard` — `activeProfile?.displayName ?? account.displayName ?? account.email-handle ??
+userFallbackDisplayName` — so a self-learner whose identity lives on the account (no own profile row / pre-stream)
+shows their real name.
+*Test* — `test/core/navigation/app_shell_test.dart` group "persistent profile switcher": (a) default context
+renders the keyed bar + the **resolved active-profile name** + `SELF-LEARNER` badge + unfold icon; (b) tapping
+the bar presents `ProfileSwitcherSheet`. The active profile id is pinned deterministically via a
+`_FixedActiveProfileId` notifier override (the nav harness never sets the selected-profile pref), so the test
+asserts the REAL name, not a fallback. 9/9 green; `make ci` green (8939). **On-device re-verified** (2026-05-31):
+bar renders "D · Daniel Niasoff · SELF-LEARNER · ⇕" at top of Dashboard / Learn / Progress / Settings; tapping
+opens `ProfileSwitcherSheet` (ACCOUNT / Profiles / TALMID PROFILES / Add Profile). Confirmed Daniel's account has
+NO own profile row (Profiles section empty) — identity is the account, which is exactly why the account-name
+fallback was required. Pushed drill-down screens (e.g. Manage Tracks) keep their own title bar + back, no
+switcher — by design (§5 targets the main tab contexts + parent portal).
+
+---
+
 ## Phase 5b — Navigation guards (unit tests + SYSTEMIC LOCKOUT FIX)
 
 Added unit tests for all 5 AutoRoute guards (Auth 19, Restore 12, Pin 25, ChildMode 7, Profile 14 — branch

@@ -143,9 +143,22 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
           final tutorHeight = hasActiveTutoredProfiles ? 24.0 : 0.0;
           // WS4.banner: child-view bar height — only when no tutor bar.
           final childViewHeight = isViewingChildProfile ? 28.0 : 0.0;
+          // §5 persistent switcher (feedback_profile_switcher_top): the
+          // profile/role switcher must be present at the TOP of EVERY context.
+          // The tutor and parent-child contexts have their own tappable bars
+          // (both open the switcher); the DEFAULT own-profile context — shown
+          // when neither of those bars is — previously had NO switcher at all.
+          // This slim, always-present identity bar is that switcher entry.
+          final showSwitcherBar =
+              !hasActiveTutoredProfiles && !isViewingChildProfile;
+          final switcherHeight = showSwitcherBar ? 44.0 : 0.0;
           return PreferredSize(
             preferredSize: Size.fromHeight(
-              topInset + bannerHeight + tutorHeight + childViewHeight,
+              topInset +
+                  bannerHeight +
+                  tutorHeight +
+                  childViewHeight +
+                  switcherHeight,
             ),
             child: Padding(
               // Push our custom appBar content below the system status bar.
@@ -162,6 +175,9 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
                   // parent/child-mode path. Only shown when a child profile is
                   // active and no tutor bar is already displayed.
                   // Now tappable → profile switcher (Fix 1).
+                  // Default context (own profile, not tutor, not parent-mode):
+                  // the always-present profile/role switcher bar.
+                  if (showSwitcherBar) const _ProfileSwitcherBar(),
                   if (isViewingChildProfile && viewingChildName != null)
                     _ChildViewBanner(
                       childName: viewingChildName,
@@ -292,6 +308,126 @@ class _ShellNavItem extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+// §5 persistent switcher (feedback_profile_switcher_top): the always-present
+// profile/role switcher bar shown in the DEFAULT own-profile context.
+//
+// Product rule: a tappable role label must sit at the TOP of EVERY context
+// (Dashboard / Learn / Progress / Settings), opening the profile + mode
+// switcher. The tutor and parent-child contexts have their own tappable bars
+// (_TutorModeIndicatorBar / _ChildViewBanner, both → showProfileSwitcherSheet);
+// this bar covers the default own-profile context, which previously had no
+// switcher entry at all. Shows the active profile name + role badge + an
+// unfold affordance, and opens the canonical switcher sheet on tap.
+class _ProfileSwitcherBar extends ConsumerWidget {
+  const _ProfileSwitcherBar();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
+    final primary = theme.colorScheme.primary;
+
+    final activeProfileId = ref.watch(activeProfileIdProvider);
+    final profiles =
+        ref.watch(profileListStreamProvider).asData?.value ??
+        const <ProfileModel>[];
+    final activeProfile = profiles
+        .where((p) => p.id == activeProfileId)
+        .firstOrNull;
+    // Same fallback chain as UserProfileHeaderCard: prefer the active profile's
+    // name, then the signed-in account's display name / email handle, then a
+    // generic label. A self-learner whose identity lives on the account (no
+    // separate profile row, or before the profile stream resolves) still shows
+    // their real name — not the generic "User" fallback.
+    final authUser = ref.watch(authStateProvider).currentUser;
+    String? accountName;
+    if (authUser != null) {
+      if (authUser.displayName.trim().isNotEmpty) {
+        accountName = authUser.displayName.trim();
+      } else if (authUser.email.contains('@')) {
+        accountName = authUser.email.split('@').first;
+      }
+    }
+    final displayName =
+        activeProfile?.displayName ??
+        accountName ??
+        l10n.userFallbackDisplayName;
+    final trimmed = displayName.trim();
+    final initial = trimmed.isEmpty
+        ? 'U'
+        : trimmed.substring(0, 1).toUpperCase();
+
+    return Material(
+      type: MaterialType.transparency,
+      child: InkWell(
+        key: const Key('appShellProfileSwitcherBar'),
+        onTap: () => showProfileSwitcherSheet(context),
+        child: Container(
+          height: 44,
+          decoration: BoxDecoration(
+            color: primary.withValues(alpha: 0.06),
+            border: Border(
+              bottom: BorderSide(color: primary.withValues(alpha: 0.10)),
+            ),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 14),
+          child: Row(
+            children: [
+              Container(
+                width: 28,
+                height: 28,
+                alignment: Alignment.center,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: primary.withValues(alpha: 0.14),
+                ),
+                child: Text(
+                  initial,
+                  style: TextStyle(
+                    color: primary,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Text(
+                  displayName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: primary.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  l10n.selfLearnerBadge,
+                  style: TextStyle(
+                    color: primary,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.5,
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Icon(Icons.unfold_more_rounded, size: 20, color: primary),
+            ],
+          ),
         ),
       ),
     );

@@ -26,7 +26,9 @@ import 'package:learning_tracker/features/dashboard/presentation/providers/dashb
 import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/features/profiles/presentation/widgets/profile_switcher_sheet.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -36,6 +38,15 @@ import '../../helpers/test_database.dart';
 class MockAuthRepository extends Mock implements AuthRepository {}
 
 class MockPinService extends Mock implements PinService {}
+
+/// Pins the active profile id deterministically so the switcher bar resolves
+/// the seeded profile (id 1) and shows its real name — instead of the
+/// account/fallback chain (the nav harness never sets the selected-profile
+/// pref, so the real `activeProfileIdProvider` would not resolve to a profile).
+class _FixedActiveProfileId extends ActiveProfileId {
+  @override
+  int build() => 1;
+}
 
 Future<AppRouter> _createAuthenticatedRouter() async {
   final mockPinService = MockPinService();
@@ -218,6 +229,7 @@ void main() {
               profileListStreamProvider.overrideWith(
                 (ref) => Stream.value(_seededProfiles),
               ),
+              activeProfileIdProvider.overrideWith(_FixedActiveProfileId.new),
               dashboardActiveCurriculaStreamProvider.overrideWith(
                 (ref) => Stream.value(<CurriculumId>[]),
               ),
@@ -367,6 +379,7 @@ void main() {
               profileListStreamProvider.overrideWith(
                 (ref) => Stream.value(_seededProfiles),
               ),
+              activeProfileIdProvider.overrideWith(_FixedActiveProfileId.new),
               dashboardActiveCurriculaStreamProvider.overrideWith(
                 (ref) => Stream.value(<CurriculumId>[]),
               ),
@@ -520,6 +533,128 @@ void main() {
       expect(find.text('LEARN'), findsOneWidget);
       expect(find.text('PROGRESS'), findsOneWidget);
       expect(find.text('SETTINGS'), findsOneWidget);
+
+      await _cleanUpWidgets(tester);
+    });
+  });
+
+  // §5 persistent switcher (feedback_profile_switcher_top): the profile/role
+  // switcher must be present at the TOP of EVERY context. Regression guard for
+  // the previously-missing switcher in the DEFAULT own-profile context
+  // (Dashboard/Learn/Progress had no switcher entry; only Settings did).
+  group('AppShellScreen persistent profile switcher', () {
+    testWidgets(
+      'default own-profile context shows the persistent switcher bar at top',
+      (tester) async {
+        final router = await _createAuthenticatedRouter();
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              appDatabaseProvider.overrideWithValue(db),
+              userDatabaseProvider.overrideWithValue(db),
+              authStateProvider.overrideWithValue(_authOverride),
+              profileListStreamProvider.overrideWith(
+                (ref) => Stream.value(_seededProfiles),
+              ),
+              activeProfileIdProvider.overrideWith(_FixedActiveProfileId.new),
+              dashboardActiveCurriculaStreamProvider.overrideWith(
+                (ref) => Stream.value(<CurriculumId>[]),
+              ),
+              dashboardStreakProvider.overrideWith(
+                (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
+              ),
+              dashboardStreakRecoveryProvider.overrideWith(
+                (ref) => Future.value(
+                  const StreakRecoveryInfo(
+                    wasRecovered: false,
+                    currentStreak: 0,
+                  ),
+                ),
+              ),
+            ],
+            child: _wrapApp(
+              router.config(
+                deepLinkBuilder: (_) => const DeepLink.path('/dashboard'),
+              ),
+            ),
+          ),
+        );
+        await _pumpDashboard(tester);
+
+        // The always-present switcher bar (keyed) is rendered on the default
+        // Dashboard context, showing the active profile name + role badge.
+        expect(
+          find.byKey(const Key('appShellProfileSwitcherBar')),
+          findsOneWidget,
+        );
+        // Resolved active-profile name + role badge + the unfold affordance
+        // that signals it opens the switcher.
+        expect(find.text('Test'), findsWidgets);
+        expect(find.text('SELF-LEARNER'), findsOneWidget);
+        expect(find.byIcon(Icons.unfold_more_rounded), findsOneWidget);
+
+        await _cleanUpWidgets(tester);
+      },
+    );
+
+    testWidgets('tapping the switcher bar opens the ProfileSwitcherSheet', (
+      tester,
+    ) async {
+      final router = await _createAuthenticatedRouter();
+
+      // Opening the sheet pulls in the tutored-children section, which reads
+      // tutoring/Firestore providers not wired in this navigation test;
+      // suppress those expected ProviderExceptions — we only assert the sheet
+      // (the switcher entry point) was presented.
+      final originalOnError = FlutterError.onError;
+      FlutterError.onError = (details) {
+        final msg = details.exception.toString();
+        if (msg.contains('ProviderException') || msg.contains('overflowed')) {
+          return;
+        }
+        originalOnError?.call(details);
+      };
+      addTearDown(() => FlutterError.onError = originalOnError);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            appDatabaseProvider.overrideWithValue(db),
+            userDatabaseProvider.overrideWithValue(db),
+            authStateProvider.overrideWithValue(_authOverride),
+            profileListStreamProvider.overrideWith(
+              (ref) => Stream.value(_seededProfiles),
+            ),
+            dashboardActiveCurriculaStreamProvider.overrideWith(
+              (ref) => Stream.value(<CurriculumId>[]),
+            ),
+            dashboardStreakProvider.overrideWith(
+              (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
+            ),
+            dashboardStreakRecoveryProvider.overrideWith(
+              (ref) => Future.value(
+                const StreakRecoveryInfo(wasRecovered: false, currentStreak: 0),
+              ),
+            ),
+          ],
+          child: _wrapApp(
+            router.config(
+              deepLinkBuilder: (_) => const DeepLink.path('/dashboard'),
+            ),
+          ),
+        ),
+      );
+      await _pumpDashboard(tester);
+
+      expect(find.byType(ProfileSwitcherSheet), findsNothing);
+
+      await tester.tap(find.byKey(const Key('appShellProfileSwitcherBar')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      // The canonical profile switcher/manager sheet is now presented.
+      expect(find.byType(ProfileSwitcherSheet), findsOneWidget);
 
       await _cleanUpWidgets(tester);
     });
