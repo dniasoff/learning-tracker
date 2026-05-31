@@ -1,4 +1,13 @@
-# Bug-hunt round 2 — confirmed 13/17
+# Bug-hunt round 2 — confirmed 13/17 — ALL 13 FIXED ✅ (2026-05-31)
+
+> **Status: RESOLVED.** All 13 confirmed findings fixed at root cause + regression-tested,
+> committed green to `dev` in two passes:
+> - Pass A (commit `90c7a20e`): R1 restore cross-profile, R6 notification blanket-cancel,
+>   R8 scheduler all-review study-day, R9 back-date offset sign, R10 pace distinct-items,
+>   R11 completion source, R12 streak watch-surfaces-errors, R13 v29 syncEnqueuedAt backfill.
+> - Pass B (commit `aaeab9aa`): R2 reader insight-chips removed, R3 reader offline/error l10n,
+>   R4 reader fake 15% progress bar removed, R5 sacred-time card l10n, R7 password dialogs l10n.
+> Fixes done via parallel sub-agents on disjoint files; `make ci` (+8997) + `format-check` green.
 
 ## [high/correctness] Device restore content-import step is keyed to profile id 0 and never runs for the actually-restored profiles  (onboarding-restore)
 - File: `lib/app/restore/device_restore_service.dart:188`
