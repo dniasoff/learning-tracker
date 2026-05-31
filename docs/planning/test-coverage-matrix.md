@@ -53,9 +53,16 @@ through the dirshu read-only chazara step.
 **REMAINING QUEUE (prioritized, all in the findings doc + bug-log):**
 - HIGH: **B2** self-paced `per_week` pace `ceil()` inflation (scheduler_providers.dart:740) → over-schedule/overdue flood.
 - MED data-loss (sync): tombstone-resurrection timestamp mismatch (drift_merge_store:239); ledger enqueue outside txn (points_balance_dao:497); remoteIsNewer clobbers newer un-pushed local in 5s window (drift_merge_store:132).
-- MED correctness: sync status 'Synced' while profile-0 outbox row stuck (sync_orchestrator:940); progress stage breakdown keyed by DB id not stageOrder (curriculum_progress_service:229); streak UTC-vs-local day bucketing (streak_reducer:75); coarse pace granularity ignored (scheduler_providers:711); revoked talmid resurrects active (manage_tutors_providers:104); cloud-account-delete ghost registry row (account_management_service:61); swipe-away active account deletes open DB (account_picker_screen:539); registry lastActiveAccountId never cleared (device_registry_database:105); dashboard lifetime-knowledge card D2-class staleness (dashboard_model_provider:99).
-- MED l10n: hardcoded English on skipped_onboarding_cta_banner:104.
+- MED correctness: sync status 'Synced' while profile-0 outbox row stuck (sync_orchestrator:940); progress stage breakdown keyed by DB id not stageOrder (curriculum_progress_service:229); streak UTC-vs-local day bucketing (streak_reducer:75); coarse pace granularity ignored (scheduler_providers:711); revoked talmid resurrects active (manage_tutors_providers:104); cloud-account-delete ghost registry row (account_management_service:61); swipe-away active account deletes open DB (account_picker_screen:539); registry lastActiveAccountId never cleared (device_registry_database:105); ~~dashboard lifetime-knowledge card D2-class staleness~~ **FIXED (D9)**.
+- ~~MED l10n: hardcoded English on skipped_onboarding_cta_banner:104~~ **FIXED (D8)**.
 - LOW: live streak stream captures 'today' once (midnight rollover) (streak_state_provider:69).
+
+**Session fix tally (12 commits, all `make ci` green):** D1 switcher · D2 reactive points balance · D3 PIN-lockout
+l10n · D4a/D4b Add-Profile silent no-op · D5 fulfilRedemption race · B1 program-chazara zero-stages (data-loss) ·
+D8 CTA-banner l10n · D9 dashboard lifetime staleness · + ParentPortalBottomNav deleted. On-device verified:
+F6, F7, D1, D4. **Remaining queue above (~11 bugs) + D6/D7 are the continuation work** — the sync data-loss trio
+(drift_merge_store, points_balance_dao:497, sync_orchestrator) is highest-value-next but highest-risk (merge
+engine), best done with fresh focus.
 
 **Also FOUND on-device (D6/D7, not yet fixed, see bug-log):** D6 profile-less account is offered "Add a learning
 track" but save fails (no profile; product call needed); D7 track creation is non-atomic (orphaned track +
