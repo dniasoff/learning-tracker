@@ -202,6 +202,13 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
       await db.curriculumScopeDao.clearScopesForTrack(trackId);
       await db.studyDayConfigDao.deleteConfigsForTrack(trackId);
       await db.trackLearningOrderDao.deleteByTrack(trackId);
+      // D7: also remove the program-enrolment row — otherwise a deleted program
+      // track leaves a dangling profile_programs row (the scheduler would keep
+      // projecting that program's tasks against a now-deleted track).
+      await db.profileProgramDao.clearProgramForProfileAndCurriculum(
+        track.profileId,
+        track.curriculumId,
+      );
       // Soft-delete: set state = 'deleted' instead of removing the row.
       await (update(
         curriculumTracks,
@@ -398,6 +405,11 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
       await db.curriculumScopeDao.clearScopesForTrack(trackId);
       await db.studyDayConfigDao.deleteConfigsForTrack(trackId);
       await db.trackLearningOrderDao.deleteByTrack(trackId);
+      // D7: also remove the program-enrolment row (see deleteTrackAndData).
+      await db.profileProgramDao.clearProgramForProfileAndCurriculum(
+        track.profileId,
+        track.curriculumId,
+      );
       // Hard-delete the track row. Bookmarks cascade-delete via ON DELETE CASCADE (C2).
       // Learning ledger trackId is SET NULL via ON DELETE SET NULL.
       await (db.delete(

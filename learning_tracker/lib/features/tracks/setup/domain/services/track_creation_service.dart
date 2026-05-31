@@ -64,118 +64,42 @@ class TrackCreationService {
 
   /// Persist all track configuration from the AddTrackFlow result.
   ///
-  /// Curriculum activation runs outside the transaction (idempotent).
-  /// Remaining steps replace any prior track configuration for this curriculum.
+  /// D7: the track row, stage seeding, study days, scopes, point seeds and the
+  /// LOCAL program-enrolment row all run in a SINGLE transaction, so a
+  /// stage-seed failure (e.g. an FK error on a profile-less account) rolls back
+  /// the track row AND the program row together — no orphaned 0-stage track or
+  /// dangling enrolment. Network / idempotent work (curriculum activation, goal
+  /// sync, cloud pushes) runs AFTER commit so the transaction is never held
+  /// open on a network round.
   Future<void> createTrack({
     required AddTrackResult result,
     required int profileId,
   }) async {
     final curriculum = result.curriculumId;
+    final (:bookmarkRef, :trackingStartDate) = result.programId == null
+        ? (bookmarkRef: null, trackingStartDate: null)
+        : _parseProgramStartingRef(result.startingRef);
 
-    final trackId = await _restoreOrCreateTrack(
-      profileId: profileId,
-      curriculum: curriculum,
-    );
+    late int trackId;
+    var clearedProgram = false;
 
-    await _deleteExistingGoals(trackId);
-
-    await _runCoreTransaction(
-      result: result,
-      profileId: profileId,
-      curriculum: curriculum,
-      trackId: trackId,
-    );
-
-    await _recreateGoal(
-      result: result,
-      profileId: profileId,
-      curriculum: curriculum,
-      trackId: trackId,
-    );
-
-    if (result.programId == null) {
-      await _clearProgramEnrollment(
-        profileId: profileId,
-        curriculum: curriculum,
-      );
-    } else {
-      await _enrollInProgram(
-        result: result,
-        profileId: profileId,
-        curriculum: curriculum,
-        trackId: trackId,
-      );
-    }
-
-    AppLogger.instance.info(
-      event:
-          'TrackCreationService: track "${result.label}" created for '
-          '${curriculum.storageKey} (profile=$profileId)',
-    );
-
-    // Story 27.14 (DNI-390): fire analytics event after successful track creation.
-    unawaited(_analytics.logTrackAdded(curriculumId: curriculum.storageKey));
-  }
-
-  /// Restore a soft-deleted track row or create a fresh one, and ensure the
-  /// curriculum is activated for this profile. Returns the track ID.
-  Future<int> _restoreOrCreateTrack({
-    required int profileId,
-    required CurriculumId curriculum,
-  }) async {
-    // Restore any soft-deleted track row (avoids UNIQUE violation on re-add).
-    final trackId = await _database.trackDao.restoreOrCreate(
-      profileId: profileId,
-      curriculumId: curriculum,
-    );
-
-    // Activate the curriculum in active_curricula (idempotent, outside
-    // transaction). A soft-deleted track can exist without an active_curricula
-    // row, so we always attempt this even when restoreOrCreate found an
-    // existing row.
-    try {
-      await _activationService.activateForProfile(curriculum, profileId);
-    } catch (_) {
-      AppLogger.instance.debug(
-        event:
-            'TrackCreationService: curriculum ${curriculum.storageKey} '
-            'activation skipped (likely already active)',
-      );
-    }
-
-    return trackId;
-  }
-
-  /// Delete all existing goals for [trackId], syncing tombstones so
-  /// re-add does not stack duplicates.
-  Future<void> _deleteExistingGoals(int trackId) async {
-    final existingGoals = await _database.goalDao.getGoalsByTrack(trackId);
-    for (final g in existingGoals) {
-      await _goalRepository.deleteGoal(g.id);
-    }
-  }
-
-  /// Run the core DB transaction: delete old stages, apply wizard result,
-  /// save study days, save scopes, and seed point configs.
-  Future<void> _runCoreTransaction({
-    required AddTrackResult result,
-    required int profileId,
-    required CurriculumId curriculum,
-    required int trackId,
-  }) async {
     await _database.transaction(() async {
-      await _stageRepository.deleteStagesForTrack(trackId);
+      // Restore any soft-deleted track row (avoids UNIQUE violation on re-add).
+      trackId = await _database.trackDao.restoreOrCreate(
+        profileId: profileId,
+        curriculumId: curriculum,
+      );
 
+      await _stageRepository.deleteStagesForTrack(trackId);
       if (result.wizardResult != null) {
-        final wizard = result.wizardResult!;
         await _wizardService.applyWizardResult(
-          wizard.wizardResult,
+          result.wizardResult!.wizardResult,
           profileId: profileId,
           trackId: trackId,
         );
       }
 
-      await _saveStudyDays(
+      await _saveStudyDaysLocal(
         profileId: profileId,
         curriculumId: curriculum,
         trackId: trackId,
@@ -198,7 +122,111 @@ class TrackCreationService {
         curriculumId: curriculum,
         trackId: trackId,
       );
+
+      // Program-enrolment LOCAL row (or clear) — in the SAME transaction so a
+      // stage-seed failure above rolls it back too.
+      if (result.programId == null) {
+        final removed = await _database.profileProgramDao
+            .clearProgramForProfileAndCurriculum(
+              profileId,
+              curriculum.storageKey,
+            );
+        clearedProgram = removed > 0;
+      } else {
+        await _database.profileProgramDao.setProfileProgram(
+          profileId: profileId,
+          curriculumType: curriculum.storageKey,
+          programId: result.programId!,
+          trackingStartDate: trackingStartDate,
+          trackingStartRef: bookmarkRef,
+        );
+        if (bookmarkRef != null && bookmarkRef.isNotEmpty) {
+          await _database.bookmarkDao.upsertBookmarkByProfile(
+            profileId: profileId,
+            curriculumId: curriculum.storageKey,
+            trackId: trackId,
+            sefariaRef: bookmarkRef,
+            updatedAt: DateTimeFactory.nowUtc(),
+          );
+        }
+      }
     });
+
+    // ── post-commit: idempotent activation, goal sync, cloud pushes ──────────
+
+    // Activate the curriculum in active_curricula (idempotent). A soft-deleted
+    // track can exist without an active_curricula row, so we always attempt it.
+    try {
+      await _activationService.activateForProfile(curriculum, profileId);
+    } catch (_) {
+      AppLogger.instance.debug(
+        event:
+            'TrackCreationService: curriculum ${curriculum.storageKey} '
+            'activation skipped (likely already active)',
+      );
+    }
+
+    await _deleteExistingGoals(trackId);
+    await _recreateGoal(
+      result: result,
+      profileId: profileId,
+      curriculum: curriculum,
+      trackId: trackId,
+    );
+
+    // Cloud pushes (network) — fire after the local state is durable.
+    await _pushStudyDaysCloud(
+      profileId: profileId,
+      curriculumId: curriculum,
+      trackId: trackId,
+      studyDays: result.studyDays,
+    );
+    if (result.programId == null) {
+      if (clearedProgram) {
+        await _gateway?.removeProfileProgramAssignment(
+          profileId: profileId,
+          curriculumStorageKey: curriculum.storageKey,
+        );
+      }
+    } else {
+      if (bookmarkRef != null && bookmarkRef.isNotEmpty) {
+        // Phase 1 — route the bookmark write through the outbox so offline
+        // track-creates do not silently drop the bookmark.
+        await _syncFacade?.pushBookmark({
+          'curriculum_id': curriculum.storageKey,
+          'content_item_id': bookmarkRef,
+          'updated_at': DateTimeFactory.nowUtc().toIso8601String(),
+        });
+      }
+      // Phase 1 — route the profile-program assignment through syncFacade so
+      // tutored sessions call tutorSetProfileProgram instead of the outbox.
+      await _syncFacade?.pushProfileProgram({
+        'profile_id': profileId,
+        'curriculum_id': curriculum.storageKey,
+        'program_id': result.programId,
+        'tracking_start_date': trackingStartDate?.toIso8601String(),
+        'tracking_start_ref': bookmarkRef,
+        'updated_at': DateTimeFactory.nowUtc().toIso8601String(),
+      });
+    }
+
+    AppLogger.instance.info(
+      event:
+          'TrackCreationService: track "${result.label}" created for '
+          '${curriculum.storageKey} (profile=$profileId)',
+    );
+
+    // Story 27.14 (DNI-390): fire analytics event after successful track creation.
+    unawaited(_analytics.logTrackAdded(curriculumId: curriculum.storageKey));
+  }
+
+  /// Delete all existing goals for [trackId], syncing tombstones so
+  /// re-add does not stack duplicates.
+  Future<void> _deleteExistingGoals(int trackId) async {
+    final existingGoals = await _database.goalDao.getGoalsByTrack(trackId);
+    for (final g in existingGoals) {
+      await _goalRepository.deleteGoal(g.id);
+    }
   }
 
   /// Create the goal from [result] if one is present.
@@ -229,21 +257,6 @@ class TrackCreationService {
       dateType: goal.dateType,
       paceGranularity: goal.paceGranularityKey,
     );
-  }
-
-  /// Clear program enrollment locally and on cloud when switching to self-paced.
-  Future<void> _clearProgramEnrollment({
-    required int profileId,
-    required CurriculumId curriculum,
-  }) async {
-    final removed = await _database.profileProgramDao
-        .clearProgramForProfileAndCurriculum(profileId, curriculum.storageKey);
-    if (removed > 0) {
-      await _gateway?.removeProfileProgramAssignment(
-        profileId: profileId,
-        curriculumStorageKey: curriculum.storageKey,
-      );
-    }
   }
 
   /// Parse the raw startingRef string into a bookmark ref and tracking-start date.
@@ -290,58 +303,9 @@ class TrackCreationService {
     return (bookmarkRef: bookmarkRef, trackingStartDate: trackingStartDate);
   }
 
-  /// Link the profile to the selected program and push to Firestore.
-  /// Also upserts the bookmark if a starting ref was specified.
-  Future<void> _enrollInProgram({
-    required AddTrackResult result,
-    required int profileId,
-    required CurriculumId curriculum,
-    required int trackId,
-  }) async {
-    final programId = result.programId!;
-    final (:bookmarkRef, :trackingStartDate) = _parseProgramStartingRef(
-      result.startingRef,
-    );
-
-    await _database.profileProgramDao.setProfileProgram(
-      profileId: profileId,
-      curriculumType: curriculum.storageKey,
-      programId: programId,
-      trackingStartDate: trackingStartDate,
-      trackingStartRef: bookmarkRef,
-    );
-
-    if (bookmarkRef != null && bookmarkRef.isNotEmpty) {
-      final updatedAt = DateTimeFactory.nowUtc();
-      await _database.bookmarkDao.upsertBookmarkByProfile(
-        profileId: profileId,
-        curriculumId: curriculum.storageKey,
-        trackId: trackId,
-        sefariaRef: bookmarkRef,
-        updatedAt: updatedAt,
-      );
-      // Phase 1 — route the bookmark write through the outbox so offline
-      // track-creates do not silently drop the bookmark.
-      await _syncFacade?.pushBookmark({
-        'curriculum_id': curriculum.storageKey,
-        'content_item_id': bookmarkRef,
-        'updated_at': updatedAt.toIso8601String(),
-      });
-    }
-
-    // Phase 1 — route the profile-program assignment through syncFacade so
-    // tutored sessions call tutorSetProfileProgram instead of the outbox.
-    await _syncFacade?.pushProfileProgram({
-      'profile_id': profileId,
-      'curriculum_id': curriculum.storageKey,
-      'program_id': programId,
-      'tracking_start_date': trackingStartDate?.toIso8601String(),
-      'tracking_start_ref': bookmarkRef,
-      'updated_at': DateTimeFactory.nowUtc().toIso8601String(),
-    });
-  }
-
-  Future<void> _saveStudyDays({
+  /// Write study-day config rows for [trackId] (LOCAL only — runs inside the
+  /// creation transaction). Cloud push is deferred to [_pushStudyDaysCloud].
+  Future<void> _saveStudyDaysLocal({
     required int profileId,
     required CurriculumId curriculumId,
     required int trackId,
@@ -360,11 +324,23 @@ class TrackCreationService {
         dayOfWeek: entry.key,
         dayType: entry.value,
       );
-      // Phase 1 — sync the new study-day config to the cloud via the outbox.
-      // The cloud doc-id is derived from (curriculum_id, day_of_week,
-      // track_id) so repeated upserts collapse to one document, matching the
-      // local PK semantics.
-      await _syncFacade?.pushStudyDayConfig({
+    }
+  }
+
+  /// Push the study-day configs to the cloud (network — runs AFTER commit).
+  ///
+  /// The cloud doc-id is derived from (curriculum_id, day_of_week, track_id)
+  /// so repeated upserts collapse to one document, matching the local PK.
+  Future<void> _pushStudyDaysCloud({
+    required int profileId,
+    required CurriculumId curriculumId,
+    required int trackId,
+    required Map<int, String> studyDays,
+  }) async {
+    final facade = _syncFacade;
+    if (facade == null) return;
+    for (final entry in studyDays.entries) {
+      await facade.pushStudyDayConfig({
         'profile_id': profileId,
         'curriculum_id': curriculumId.storageKey,
         'track_id': trackId,

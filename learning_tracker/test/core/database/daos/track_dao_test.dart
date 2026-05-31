@@ -134,6 +134,56 @@ void main() {
     );
 
     test(
+      'D7: deleteTrackAndData removes the program-enrolment row (no dangling '
+      'profile_programs)',
+      () async {
+        final trackId = await insertTrack(profileId: 1);
+        await database.profileProgramDao.setProfileProgram(
+          profileId: 1,
+          curriculumType: 'bavli',
+          programId: 99,
+        );
+        expect(
+          await database.profileProgramDao.getProgramForProfileAndCurriculum(
+            1,
+            'bavli',
+          ),
+          isNotNull,
+        );
+
+        await database.trackDao.deleteTrackAndData(trackId);
+
+        expect(
+          await database.profileProgramDao.getProgramForProfileAndCurriculum(
+            1,
+            'bavli',
+          ),
+          isNull,
+          reason: 'deleting the track must also clear its program enrolment',
+        );
+      },
+    );
+
+    test('D7: purgeHistory also removes the program-enrolment row', () async {
+      final trackId = await insertTrack(profileId: 1);
+      await database.profileProgramDao.setProfileProgram(
+        profileId: 1,
+        curriculumType: 'bavli',
+        programId: 99,
+      );
+
+      await database.trackDao.purgeHistory(trackId);
+
+      expect(
+        await database.profileProgramDao.getProgramForProfileAndCurriculum(
+          1,
+          'bavli',
+        ),
+        isNull,
+      );
+    });
+
+    test(
       'getActiveTracks excludes soft-deleted tracks (deletedAt IS NOT NULL)',
       () async {
         final trackId = await insertTrack();
