@@ -6,6 +6,8 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:learning_tracker/app/router/persistent_switcher_scaffold.dart';
+import 'package:learning_tracker/app/router/router_provider.dart' as rp;
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
@@ -166,6 +168,25 @@ MaterialApp _wrapApp(RouterConfig<Object> routerConfig) {
       GlobalCupertinoLocalizations.delegate,
     ],
     supportedLocales: AppLocalizations.supportedLocales,
+  );
+}
+
+/// Like [_wrapApp] but mounts the production [PersistentSwitcherScaffold] in the
+/// `MaterialApp.router` builder slot — the global layer that keeps the
+/// profile/role switcher bar at the top of EVERY pushed sub-route. Used by the
+/// persistent-switcher regression tests so the test tree matches production.
+MaterialApp _wrapAppWithPersistentSwitcher(RouterConfig<Object> routerConfig) {
+  return MaterialApp.router(
+    routerConfig: routerConfig,
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    supportedLocales: AppLocalizations.supportedLocales,
+    builder: (context, child) =>
+        PersistentSwitcherScaffold(child: child ?? const SizedBox.shrink()),
   );
 }
 
@@ -658,5 +679,80 @@ void main() {
 
       await _cleanUpWidgets(tester);
     });
+  });
+
+  // BUG E3 (feedback_profile_switcher_top): the persistent profile/role
+  // switcher must remain at the TOP of EVERY pushed sub-route — not only the
+  // four shell tabs. Sub-routes are TOP-LEVEL siblings of the shell, so when
+  // pushed they replace the shell and used to lose the switcher entirely.
+  // PersistentSwitcherScaffold (mounted in the MaterialApp.router builder slot)
+  // re-renders the SAME ProfileSwitcherBar above the sub-route. This guards
+  // against regressing to a switcher-less sub-screen.
+  group('Persistent switcher on pushed sub-routes (BUG E3)', () {
+    testWidgets(
+      'switcher bar is present on a pushed sub-route above the shell',
+      (tester) async {
+        final router = await _createAuthenticatedRouter();
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              appDatabaseProvider.overrideWithValue(db),
+              userDatabaseProvider.overrideWithValue(db),
+              authStateProvider.overrideWithValue(_authOverride),
+              profileListStreamProvider.overrideWith(
+                (ref) => Stream.value(_seededProfiles),
+              ),
+              activeProfileIdProvider.overrideWith(_FixedActiveProfileId.new),
+              // Override the dashboard streak providers so the underlying
+              // dashboard route (resolved before the push) doesn't spawn the
+              // 15-min rollover timer that trips the test timer-invariant.
+              dashboardActiveCurriculaStreamProvider.overrideWith(
+                (ref) => Stream.value(<CurriculumId>[]),
+              ),
+              dashboardStreakProvider.overrideWith(
+                (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
+              ),
+              dashboardStreakRecoveryProvider.overrideWith(
+                (ref) => Future.value(
+                  const StreakRecoveryInfo(
+                    wasRecovered: false,
+                    currentStreak: 0,
+                  ),
+                ),
+              ),
+              // The PersistentSwitcherScaffold resolves the active router via
+              // routerProvider; point it at the same test router instance so it
+              // observes the real navigation stack.
+              rp.routerProvider.overrideWithValue(router),
+            ],
+            child: _wrapAppWithPersistentSwitcher(
+              router.config(
+                // Land directly on a PUSHED sub-route (City picker), which is a
+                // top-level sibling of the shell — not a shell tab. Chosen as a
+                // lightweight sub-route with no DB/plugin/timer dependencies.
+                deepLinkBuilder: (_) =>
+                    const DeepLink.path('/sacred-time/city'),
+              ),
+            ),
+          ),
+        );
+        await _pumpDashboard(tester);
+
+        // We are on the sub-route, NOT a shell tab — the bottom-nav tab labels
+        // are absent here.
+        expect(find.text('DASHBOARD'), findsNothing);
+
+        // Yet the persistent profile/role switcher bar is still rendered at the
+        // top, supplied by the global builder-slot layer.
+        expect(
+          find.byKey(const Key('appShellProfileSwitcherBar')),
+          findsOneWidget,
+        );
+        expect(find.byIcon(Icons.unfold_more_rounded), findsOneWidget);
+
+        await _cleanUpWidgets(tester);
+      },
+    );
   });
 }

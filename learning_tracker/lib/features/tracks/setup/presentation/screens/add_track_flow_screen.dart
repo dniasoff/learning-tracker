@@ -99,6 +99,14 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
   _AnimState _animState = const _AnimIdle();
   bool _isFinishing = false;
 
+  /// D2: inline error message for a failed track save. Rendered as a prominent
+  /// banner within the wizard content (above the step's primary action) rather
+  /// than via ScaffoldMessenger — the app-shell-level ScaffoldMessenger queue
+  /// lives above the wizard's route, so its snackbars leak across route pushes.
+  /// An inline message is scoped to the wizard and cannot leak. Cleared on any
+  /// step change.
+  String? _errorMessage;
+
   /// Whether a program was selected (vs self-paced).
   bool get _isProgramTrack => _state.programId != null;
 
@@ -331,6 +339,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
       setState(() {
         _state = _state.copyWith(currentStep: nextStep);
         _animState = const _Animating();
+        _errorMessage = null; // D2: clear inline error on step change.
       });
       _pageController
           .nextPage(
@@ -354,6 +363,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
       final prevStep = _activeSteps[currentIndex - 1];
       setState(() {
         _state = _state.copyWith(currentStep: prevStep);
+        _errorMessage = null; // D2: clear inline error on step change.
       });
       _pageController.previousPage(
         duration: const Duration(milliseconds: 300),
@@ -687,18 +697,15 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
         stackTrace: st,
       );
       if (!mounted) return;
-      // D2: clear any stale snackbars before showing so the error does not
-      // leak across routes via the app-level ScaffoldMessenger queue.
-      ScaffoldMessenger.of(context).clearSnackBars();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context)!.errorSaveTrackFailed),
-          action: SnackBarAction(
-            label: AppLocalizations.of(context)!.actionRetry,
-            onPressed: _finishFlow,
-          ),
-        ),
-      );
+      // D2: surface the failure INLINE within the wizard rather than via the
+      // app-shell ScaffoldMessenger. The messenger's snackbar queue lives above
+      // this wizard's route, so a snackbar shown here persists (leaks) onto the
+      // next route after the wizard pops. An inline message is scoped to the
+      // wizard's own widget tree and disappears with it. Retry is the step's
+      // primary action (e.g. "Start Here"); the banner also offers a retry tap.
+      setState(() {
+        _errorMessage = AppLocalizations.of(context)!.errorSaveTrackFailed;
+      });
     } finally {
       _isFinishing = false;
     }
@@ -804,6 +811,62 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
                         ),
                       ),
                     ],
+                  ),
+                ),
+              // D2: inline save-error banner — scoped to the wizard, no
+              // ScaffoldMessenger, so it cannot leak across routes.
+              if (_errorMessage != null)
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(24, 4, 24, 4),
+                  child: Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.statusErrorSoft,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: AppColors.chartRed.withValues(alpha: 0.4),
+                      ),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(
+                          Icons.error_outline_rounded,
+                          color: AppColors.chartRed,
+                          size: 20,
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            _errorMessage!,
+                            style: theme.textTheme.bodyMedium?.copyWith(
+                              color: AppColors.chartRed,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        TextButton(
+                          onPressed: () {
+                            setState(() => _errorMessage = null);
+                            unawaited(_finishFlow());
+                          },
+                          style: TextButton.styleFrom(
+                            foregroundColor: AppColors.chartRed,
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            minimumSize: Size.zero,
+                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          ),
+                          child: Text(
+                            AppLocalizations.of(context)!.actionRetry,
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               Expanded(

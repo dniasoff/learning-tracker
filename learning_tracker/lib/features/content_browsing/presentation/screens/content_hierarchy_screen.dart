@@ -155,6 +155,16 @@ class _ContentHierarchyScreenState
               ? _navigateUp
               : () => context.router.maybePop(),
         ),
+        actions: [
+          IconButton(
+            key: const Key('content_hierarchy_search_icon'),
+            icon: const Icon(Icons.search),
+            tooltip: 'Search',
+            onPressed: () => context.router.push(
+              ContentSearchRoute(curriculumId: widget.curriculumId),
+            ),
+          ),
+        ],
       ),
       body: Column(
         children: [

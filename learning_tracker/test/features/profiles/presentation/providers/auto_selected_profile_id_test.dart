@@ -1,0 +1,168 @@
+/// Regression test for BUG D1 — track-creation FK failure after force-stop /
+/// cold start.
+///
+/// Root cause: on a force-stop + cold start with a still-valid session, the app
+/// skips the interactive sign-in flow (the only caller of
+/// `selectedProfileIdProvider.notifier.select(...)`), leaving the in-memory
+/// selection null → `activeProfileIdProvider` returns 0 → writes into
+/// `profile_id`-FK'd tables (e.g. `stage_definitions` during track creation)
+/// fail with `SqliteException(787): FOREIGN KEY constraint failed`.
+///
+/// Fix: `autoSelectedProfileIdProvider` selects the account's first profile
+/// whenever auth is signed-in and no profile is selected yet. These tests pin
+/// that behaviour: after an auth-valid startup, `selectedProfileIdProvider` is
+/// non-null and holds a valid profile id.
+library;
+
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
+import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
+import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+
+// ─── Fakes ──────────────────────────────────────────────────────────────────
+
+final _epoch = DateTime.utc(2026, 1, 1);
+
+ProfileModel _profile({required int id, String mode = 'adult'}) => ProfileModel(
+  id: id,
+  accountId: 1,
+  displayName: 'Profile $id',
+  mode: mode,
+  avatarIndex: 0,
+  createdAt: _epoch,
+  updatedAt: _epoch,
+);
+
+/// A repository that returns a fixed profile list and records the account id
+/// it was queried with.
+class _FakeProfileRepository implements ProfileRepository {
+  _FakeProfileRepository(this._profiles);
+  final List<ProfileModel> _profiles;
+
+  @override
+  Future<List<ProfileModel>> getProfilesByAccount(int accountId) async =>
+      _profiles;
+
+  @override
+  Future<ProfileModel?> getProfileById(int id) async =>
+      _profiles.where((p) => p.id == id).firstOrNull;
+
+  @override
+  Future<int> countProfilesForAccount(int accountId) async => _profiles.length;
+
+  @override
+  Future<ProfileModel> createProfile({
+    required int accountId,
+    required String displayName,
+    required String mode,
+    int avatarIndex = 0,
+  }) => throw UnimplementedError();
+
+  @override
+  Future<void> deleteProfile(int id, {bool allowLast = false}) =>
+      throw UnimplementedError();
+
+  @override
+  Future<ProfileModel> updateProfile({
+    required int id,
+    String? displayName,
+    String? mode,
+    int? avatarIndex,
+  }) => throw UnimplementedError();
+}
+
+const _signedIn = AuthState.signedIn(
+  user: AuthUser(profileId: 1, email: 't@t.com', displayName: 'Test'),
+  tier: Tier.localBorn,
+);
+
+ProviderContainer _container({
+  required AuthState authState,
+  required List<ProfileModel> profiles,
+}) {
+  final container = ProviderContainer(
+    overrides: [
+      authStateProvider.overrideWithValue(authState),
+      profileRepositoryProvider.overrideWithValue(
+        _FakeProfileRepository(profiles),
+      ),
+      currentAccountIdProvider.overrideWithValue(1),
+    ],
+  );
+  addTearDown(container.dispose);
+  return container;
+}
+
+void main() {
+  group('autoSelectedProfileId (BUG D1)', () {
+    test(
+      'auth-valid cold start with null selection selects the first profile',
+      () async {
+        final container = _container(
+          authState: _signedIn,
+          profiles: [_profile(id: 7), _profile(id: 8)],
+        );
+
+        // Pre-condition: nothing selected (simulates the force-stop cold start
+        // where the sign-in flow never ran).
+        expect(container.read(selectedProfileIdProvider), isNull);
+
+        final selected = await container.read(
+          autoSelectedProfileIdProvider.future,
+        );
+
+        // The effect selected the account's first profile…
+        expect(selected, 7);
+        // …and the canonical selection state is now non-null & valid.
+        expect(container.read(selectedProfileIdProvider), 7);
+        // …so the active profile id is NOT 0 (which would FK-fail).
+        expect(container.read(selectedProfileIdProvider), isNot(0));
+      },
+    );
+
+    test('does not clobber an already-selected profile', () async {
+      final container = _container(
+        authState: _signedIn,
+        profiles: [_profile(id: 7), _profile(id: 8)],
+      );
+
+      // The picker / sign-in flow already chose profile 8.
+      container.read(selectedProfileIdProvider.notifier).select(8);
+
+      final selected = await container.read(
+        autoSelectedProfileIdProvider.future,
+      );
+
+      expect(selected, 8);
+      expect(container.read(selectedProfileIdProvider), 8);
+    });
+
+    test('signed-out startup leaves selection null', () async {
+      final container = _container(
+        authState: const AuthState.signedOut(),
+        profiles: [_profile(id: 7)],
+      );
+
+      final selected = await container.read(
+        autoSelectedProfileIdProvider.future,
+      );
+
+      expect(selected, isNull);
+      expect(container.read(selectedProfileIdProvider), isNull);
+    });
+
+    test('signed-in account with no profiles leaves selection null', () async {
+      final container = _container(authState: _signedIn, profiles: const []);
+
+      final selected = await container.read(
+        autoSelectedProfileIdProvider.future,
+      );
+
+      expect(selected, isNull);
+      expect(container.read(selectedProfileIdProvider), isNull);
+    });
+  });
+}

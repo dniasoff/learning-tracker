@@ -76,6 +76,16 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
       ref.watch(incomingTutorGrantsProvider);
     }
 
+    // BUG D1: on a force-stop + cold-start with a still-valid session, the
+    // interactive sign-in flow (the only caller of selectedProfileId.select)
+    // is skipped, leaving the in-memory selection null → activeProfileId 0 →
+    // FK failures on profile_id-scoped writes (track creation's
+    // stage_definitions insert). Watching this effect provider re-selects the
+    // account's first profile on every auth-valid mount when nothing is
+    // selected yet. The value itself is unused; the subscription is what runs
+    // the selection side-effect.
+    ref.watch(autoSelectedProfileIdProvider);
+
     final activeProfileId = ref.watch(activeProfileIdProvider);
     final profilesAsync = ref.watch(profileListStreamProvider);
     final profiles = profilesAsync.asData?.value ?? <ProfileModel>[];
@@ -190,7 +200,7 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
                   // Now tappable → profile switcher (Fix 1).
                   // Default context (own profile, not tutor, not parent-mode):
                   // the always-present profile/role switcher bar.
-                  if (showSwitcherBar) const _ProfileSwitcherBar(),
+                  if (showSwitcherBar) const ProfileSwitcherBar(),
                   if (isViewingChildProfile && viewingChildName != null)
                     _ChildViewBanner(
                       childName: viewingChildName,
@@ -331,14 +341,20 @@ class _ShellNavItem extends StatelessWidget {
 // profile/role switcher bar shown in the DEFAULT own-profile context.
 //
 // Product rule: a tappable role label must sit at the TOP of EVERY context
-// (Dashboard / Learn / Progress / Settings), opening the profile + mode
-// switcher. The tutor and parent-child contexts have their own tappable bars
-// (_TutorModeIndicatorBar / _ChildViewBanner, both → showProfileSwitcherSheet);
-// this bar covers the default own-profile context, which previously had no
-// switcher entry at all. Shows the active profile name + role badge + an
-// unfold affordance, and opens the canonical switcher sheet on tap.
-class _ProfileSwitcherBar extends ConsumerWidget {
-  const _ProfileSwitcherBar();
+// (Dashboard / Learn / Progress / Settings — AND every pushed sub-route),
+// opening the profile + mode switcher. The tutor and parent-child contexts have
+// their own tappable bars (_TutorModeIndicatorBar / _ChildViewBanner, both →
+// showProfileSwitcherSheet); this bar covers the default own-profile context,
+// which previously had no switcher entry at all. Shows the active profile name +
+// role badge + an unfold affordance, and opens the canonical switcher sheet on
+// tap.
+//
+// Public so the global [PersistentSwitcherScaffold] (mounted in the
+// MaterialApp.router builder slot) can render the SAME bar above pushed
+// sub-routes, where the shell's own appBar no longer applies. Single source of
+// truth for the role-switcher bar across tab views and sub-routes.
+class ProfileSwitcherBar extends ConsumerWidget {
+  const ProfileSwitcherBar({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

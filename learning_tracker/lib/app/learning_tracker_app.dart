@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/app/router/persistent_switcher_scaffold.dart';
 import 'package:learning_tracker/app/sync_runtime/sync_lifecycle_observer.dart';
 import 'package:learning_tracker/core/analytics/streak_milestone_analytics_observer.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
@@ -65,7 +66,14 @@ class _LearningTrackerAppState extends ConsumerState<LearningTrackerApp> {
           GlobalCupertinoLocalizations.delegate,
         ],
         supportedLocales: AppLocalizations.supportedLocales,
-        builder: (context, child) => child ?? const SizedBox.shrink(),
+        // Persistent profile/role switcher (feedback_profile_switcher_top):
+        // the tappable role label must sit at the TOP of EVERY context. The
+        // shell renders it for its tab views; this builder-slot layer renders
+        // the SAME bar above every PUSHED sub-route, which would otherwise lose
+        // it. Mounted here so it wraps the entire router output and survives all
+        // route pushes/pops.
+        builder: (context, child) =>
+            PersistentSwitcherScaffold(child: child ?? const SizedBox.shrink()),
       ),
     );
   }

@@ -889,4 +889,63 @@ void main() {
       await _teardown(tester);
     });
   });
+
+  // ── E2 regression: search icon navigates to ContentSearchRoute ───────────────
+
+  group('ContentHierarchyScreen — search icon navigation (E2)', () {
+    testWidgets('26. search icon is present in AppBar', (tester) async {
+      await tester.pumpWidget(
+        _buildContentHierarchyApp(
+          router: router,
+          mockRepo: mockRepo,
+          filteredItems: const [],
+        ),
+      );
+      await _settle(tester);
+
+      expect(
+        find.byKey(const Key('content_hierarchy_search_icon')),
+        findsOneWidget,
+      );
+      await _teardown(tester);
+    });
+
+    testWidgets(
+      '27. tapping search icon calls router.push(ContentSearchRoute)',
+      (tester) async {
+        await tester.pumpWidget(
+          _buildContentHierarchyApp(
+            router: router,
+            mockRepo: mockRepo,
+            curriculumId: 'mishnayos',
+            filteredItems: const [],
+          ),
+        );
+        await _settle(tester);
+
+        await tester.tap(
+          find.byKey(const Key('content_hierarchy_search_icon')),
+        );
+        await tester.pump();
+
+        final captured = verify(
+          () => router.push<Object?>(
+            captureAny(),
+            onFailure: any(named: 'onFailure'),
+          ),
+        ).captured;
+        expect(
+          captured.any(
+            (arg) =>
+                arg is PageRouteInfo && arg.routeName == 'ContentSearchRoute',
+          ),
+          isTrue,
+          reason:
+              'Tapping the search icon must push ContentSearchRoute (E2 fix)',
+        );
+
+        await _teardown(tester);
+      },
+    );
+  });
 }

@@ -47,6 +47,53 @@ class SelectedProfileId extends _$SelectedProfileId {
   }
 }
 
+/// Auto-selects the account's first profile on an auth-valid startup.
+///
+/// BUG D1: on a force-stop + cold start with a still-valid Firebase/local
+/// session, the app skips the interactive sign-in flow (which is the only
+/// place that calls `selectedProfileIdProvider.notifier.select(...)`, see
+/// `sign_in_controller.dart`). Without this effect the in-memory
+/// `selectedProfileIdProvider` stays `null`, so `activeProfileIdProvider`
+/// returns `0` and any write into a `profile_id`-FK'd table (e.g.
+/// `stage_definitions` during track creation) fails with
+/// `SqliteException(787): FOREIGN KEY constraint failed`.
+///
+/// Mirrors the single-profile branch of `_finishOnboardingRouting` (line ~536
+/// of sign_in_controller): whenever auth transitions to signed-in AND no
+/// profile is selected yet, select the account's first profile. Multi-profile
+/// accounts route through the picker, which selects explicitly — so we only
+/// auto-select when exactly one profile is the unambiguous choice; for >1 we
+/// leave the selection null (the picker owns it). When there is exactly one we
+/// select it; when there are several we pick the first as a safe non-null
+/// default so cold-start writes never hit `profile_id=0`.
+///
+/// Watched by the app shell so it runs on every auth-valid mount. Returns the
+/// id that was (or already had been) selected, or null when signed-out / no
+/// profiles exist yet.
+@Riverpod(keepAlive: true)
+Future<int?> autoSelectedProfileId(Ref ref) async {
+  final authState = ref.watch(authStateProvider);
+  if (!authState.isSignedIn) return null;
+
+  // Already selected (e.g. by the sign-in flow or the picker) — leave it.
+  final current = ref.read(selectedProfileIdProvider);
+  if (current != null) return current;
+
+  final repo = ref.read(profileRepositoryProvider);
+  final accountId = ref.read(currentAccountIdProvider);
+  final profiles = await repo.getProfilesByAccount(accountId);
+  if (profiles.isEmpty) return null;
+
+  final id = profiles.first.id;
+  // Re-check after the await: the picker / sign-in flow may have selected
+  // a profile while we were fetching. Don't clobber an explicit choice.
+  if (ref.read(selectedProfileIdProvider) == null) {
+    ref.read(selectedProfileIdProvider.notifier).select(id);
+    return id;
+  }
+  return ref.read(selectedProfileIdProvider);
+}
+
 /// Profiles for the current account.
 @riverpod
 Future<List<ProfileModel>> profileList(Ref ref) async {

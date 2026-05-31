@@ -23,6 +23,8 @@
 //  15.  New-learning task icon — newLearning priority → Icons.auto_stories_rounded.
 //  16.  No track-type labels anywhere (no 'Personal'/'Standard'/'Custom'/'אישי').
 //  17.  Hebrew (RTL) smoke — screen pumps without error under 'he' locale.
+//  19.  E4 regression: tapping a Browse card pushes ContentHierarchyRoute via
+//       context.router — never fires an external URL / launchUrl.
 //
 // Chazara product rule note:
 //   The LearningScreen does not check track.chazaraEnabled directly.
@@ -34,6 +36,7 @@ library;
 
 import 'dart:async';
 
+import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -41,6 +44,7 @@ import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/screens/learning_screen.dart';
@@ -52,7 +56,14 @@ import 'package:learning_tracker/features/tutoring/domain/models/session_role.da
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+// ── Mock router ───────────────────────────────────────────────────────────────
+
+class _MockStackRouter extends Mock implements StackRouter {}
+
+class _FakePageRouteInfo extends Fake implements PageRouteInfo {}
 
 // ── Notifier stubs ────────────────────────────────────────────────────────────
 
@@ -224,6 +235,8 @@ Widget _buildScreen({
 void main() {
   setUpAll(() {
     SharedPreferences.setMockInitialValues({});
+    // E4 regression: register fallback values for mocktail router matchers.
+    registerFallbackValue(_FakePageRouteInfo());
   });
 
   // ── 1. Loading state ────────────────────────────────────────────────────────
@@ -825,6 +838,119 @@ void main() {
       expect(find.byType(Scaffold), findsWidgets);
       // Streak card renders with fallback 0-day streak.
       expect(find.text('0 Day Streak'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    },
+  );
+
+  // ── 19. E4 regression — Browse card tap navigates in-app, never launchUrl ──
+  //
+  // Root cause: in an earlier version of _CurriculumBrowseCard, the onTap
+  // handler incorrectly launched an external URI (triggering Android's
+  // "Complete action using" intent chooser with music apps) instead of
+  // navigating within the app via context.router.push(ContentHierarchyRoute).
+  // The fix is: onTap MUST call context.router.push(ContentHierarchyRoute(
+  //   curriculumId: curriculum.storageKey)) — no launchUrl, no external URI.
+  // This test locks in that behavior by verifying the mock router receives
+  // the correct ContentHierarchyRoute push on card tap.
+
+  testWidgets(
+    'E4 regression: tapping a Browse card pushes ContentHierarchyRoute, '
+    'never launchUrl',
+    (tester) async {
+      final router = _MockStackRouter();
+      when(() => router.canPop()).thenReturn(false);
+      when(
+        () => router.maybePop<Object?>(any()),
+      ).thenAnswer((_) async => false);
+      when(
+        () => router.push<Object?>(any(), onFailure: any(named: 'onFailure')),
+      ).thenAnswer((_) async => null);
+
+      // Use a single-curriculum screen so the first Browse card is always
+      // chumash (first value in CurriculumId.values).
+      final overrides = <Override>[
+        useHebrewTermsProvider.overrideWith(_HebrewTermsOff.new),
+        currentTransliterationVariantProvider.overrideWithValue(
+          TransliterationVariant.ashkenazi,
+        ),
+        dashboardActiveCurriculaStreamProvider.overrideWith(
+          (ref) => Stream.value([CurriculumId.chumash]),
+        ),
+        dashboardStreakProvider.overrideWith(
+          (ref) => Stream.value(_zeroStreak),
+        ),
+        allDailyTasksProvider.overrideWith(
+          (ref) => Future.value(const <DailyTask>[]),
+        ),
+        selectedProfileProvider.overrideWith(
+          (ref) => Future.value(_adultProfile()),
+        ),
+        activeTutoredProfileSelectionProvider.overrideWith(
+          _FakeNoTutorSession.new,
+        ),
+      ];
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: overrides,
+          child: MaterialApp(
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: StackRouterScope(
+              controller: router,
+              stateHash: 0,
+              child: const Scaffold(body: LearningScreen()),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      // The Browse section must be visible with a chumash card.
+      expect(find.text('Browse'), findsOneWidget);
+
+      // Tap the first (and only) chumash Browse card InkWell.
+      // The card occupies a large area; we find the InkWell by its
+      // borderRadius and tap the centre. Because all cards share the same
+      // structure we find them by Icon and tap the first card area.
+      // Use the auto_stories icon that appears inside _CurriculumBrowseCard
+      // as a stable landmark, then tap the parent InkWell's region.
+      final cardFinder = find.byIcon(Icons.auto_stories_rounded).first;
+      expect(cardFinder, findsOneWidget);
+      await tester.tap(cardFinder);
+      await tester.pump();
+
+      // Verify router.push was called with ContentHierarchyRoute whose
+      // curriculumId matches CurriculumId.chumash.storageKey ('chumash').
+      // This is the E4 fix invariant: the tap MUST use in-app navigation,
+      // never an external URL/launchUrl.
+      final captured = verify(
+        () => router.push<Object?>(
+          captureAny(),
+          onFailure: any(named: 'onFailure'),
+        ),
+      ).captured;
+
+      expect(
+        captured.any(
+          (arg) =>
+              arg is ContentHierarchyRoute &&
+              arg.args?.curriculumId == CurriculumId.chumash.storageKey,
+        ),
+        isTrue,
+        reason:
+            'E4 fix: tapping a Browse card MUST push ContentHierarchyRoute('
+            "curriculumId: '${CurriculumId.chumash.storageKey}') via "
+            'context.router — must never fire launchUrl or an external intent.',
+      );
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(Duration.zero);
