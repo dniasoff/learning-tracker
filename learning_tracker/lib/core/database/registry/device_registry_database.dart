@@ -102,9 +102,20 @@ class DeviceRegistryDatabase extends _$DeviceRegistryDatabase {
   }
 
   /// Remove an account from the registry (does NOT delete the DB file).
-  Future<int> removeAccount(String accountId) => (delete(
-    deviceAccounts,
-  )..where((t) => t.accountId.equals(accountId))).go();
+  ///
+  /// If the removed account is the current `lastActiveAccountId`, the pointer
+  /// is cleared so the next launch does NOT silently auto-activate an arbitrary
+  /// fallback account against a dangling pointer (D10). Covers every removal
+  /// caller (remove-cloud / delete-local / delete-cloud / dedupe).
+  Future<int> removeAccount(String accountId) async {
+    final deleted = await (delete(
+      deviceAccounts,
+    )..where((t) => t.accountId.equals(accountId))).go();
+    if (await getLastActiveAccountId() == accountId) {
+      await setLastActiveAccountId(null);
+    }
+    return deleted;
+  }
 
   /// Update the lastUsedAt timestamp for an account.
   Future<void> updateLastUsed(String accountId, DateTime time) =>

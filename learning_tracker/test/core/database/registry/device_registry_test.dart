@@ -141,6 +141,38 @@ void main() {
     });
 
     test(
+      'removeAccount clears it when removing the ACTIVE account (D10)',
+      () async {
+        await db.addAccount(makeAccount(id: 'a1'));
+        await db.addAccount(makeAccount(id: 'a2', email: 'b@test.local'));
+        await db.setLastActiveAccountId('a1');
+
+        await db.removeAccount('a1');
+
+        expect(
+          await db.getLastActiveAccountId(),
+          isNull,
+          reason:
+              'removing the active account must clear the pointer so the next '
+              'launch does not auto-activate an arbitrary fallback account',
+        );
+      },
+    );
+
+    test(
+      'removeAccount leaves it when removing a DIFFERENT account (D10)',
+      () async {
+        await db.addAccount(makeAccount(id: 'a1'));
+        await db.addAccount(makeAccount(id: 'a2', email: 'b@test.local'));
+        await db.setLastActiveAccountId('a1');
+
+        await db.removeAccount('a2');
+
+        expect(await db.getLastActiveAccountId(), 'a1');
+      },
+    );
+
+    test(
       'survives DB close and reopen (in-memory is fresh, but API works)',
       () async {
         // With in-memory DB this just validates the API contract

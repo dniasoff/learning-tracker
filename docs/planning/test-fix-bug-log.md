@@ -162,6 +162,15 @@ fractional rate (1/7×7=0.999…) would cause. *Test:* `overdue_projection_test.
 1/week over 14 days → 2 units (not 14); 2/week → 4; default window=1 → 14 (legacy preserved). `make ci` green.
 *(Related medium "coarse pace granularity ignored" (:711) is the same root and is covered by this fix.)*
 
+**D10 (MEDIUM, correctness — fixed):** Removing/deleting the **active** account left the registry's
+`device_state.lastActiveAccountId` pointing at the removed id → on next launch `resolveActiveAccountId()` found
+the dangling pointer and silently auto-activated an arbitrary fallback account (`accounts.first`), with no
+sign-in. *Cause:* `DeviceRegistryDatabase.removeAccount` only deleted the `deviceAccounts` row; no caller cleared
+the active pointer. *Fix:* `removeAccount` now clears `lastActiveAccountId` when the removed id was the active
+one (covers all callers: remove-cloud / delete-local / delete-cloud / dedupe). *Test:* `device_registry_test.dart`
+— removing the active account clears the pointer; removing a different account leaves it. Bug-hunt finding.
+`make ci` green.
+
 **D6 (MEDIUM, UX/edge — FOUND on-device, not yet fixed):** A **profile-less account** (e.g. Daniel's
 churn-anomaly account: accounts.id=2, zero `learner_profiles`; also a tutor-only adult) is shown the Dashboard
 **"Add a learning track"** CTA, but completing AddTrackFlow fails with a surfaced **"Failed to save track. Please
