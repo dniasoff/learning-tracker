@@ -1,10 +1,60 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/goal_repository_impl.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 
 import '../../../../helpers/test_database.dart';
+
+/// Recording [SyncWriteFacade] that captures [pushGoal] payloads.
+///
+/// All other methods are no-ops — only the goal push path is under test.
+class _RecordingGoalSyncFacade implements SyncWriteFacade {
+  final List<Map<String, dynamic>> goalPayloads = [];
+
+  @override
+  Future<void> pushGoal(Map<String, dynamic> goal) async {
+    goalPayloads.add(Map<String, dynamic>.from(goal));
+  }
+
+  @override
+  Future<void> deleteGoal(Map<String, dynamic> payload) async {}
+  @override
+  Future<void> pushGamificationSettingsSnapshot() async {}
+  @override
+  Future<void> pushUiPreferencesSnapshot() async {}
+  @override
+  Future<void> pushBookmark(Map<String, dynamic> bookmark) async {}
+  @override
+  Future<void> pushSettings(Map<String, dynamic> settings) async {}
+  @override
+  Future<void> pushCurriculumTrack(Map<String, dynamic> trackData) async {}
+  @override
+  Future<void> pushLearningOrder({
+    required int profileId,
+    required String curriculumId,
+    required List<Map<String, dynamic>> items,
+    required DateTime updatedAt,
+  }) async {}
+  @override
+  Future<void> pushLearnerProfile(Map<String, dynamic> profile) async {}
+  @override
+  Future<void> deleteLearnerProfile(int profileId) async {}
+  @override
+  Future<void> pushStageDefinitions({
+    required int trackId,
+    required String curriculumId,
+    required List<Map<String, dynamic>> stages,
+    required DateTime updatedAt,
+  }) async {}
+  @override
+  Future<void> deleteCompletion(String completionId) async {}
+  @override
+  Future<void> pushProfileProgram(Map<String, dynamic> payload) async {}
+  @override
+  Future<void> pushStudyDayConfig(Map<String, dynamic> payload) async {}
+}
 
 void main() {
   late UserDatabase db;
@@ -252,6 +302,78 @@ void main() {
         );
         // goalType=none → paceTarget getter returns null
         expect(goal.paceTarget, isNull);
+      });
+    });
+
+    // R4-6 regression — goal push payload must include profile_id and id.
+    //
+    // Pull-side scoping is purely path-based (GoalMerger.merge receives
+    // profileId from PullPipeline and never reads this field), so the field is
+    // defensive rather than load-bearing. Its absence was still a detectable
+    // inconsistency with sibling per-profile entities (tracks, bookmarks, etc.)
+    // and could trip future Firestore security-rule audits.
+    group('sync payload completeness (R4-6)', () {
+      late _RecordingGoalSyncFacade syncFacade;
+      late GoalRepositoryImpl repoWithSync;
+
+      setUp(() {
+        syncFacade = _RecordingGoalSyncFacade();
+        // profileId=1 matches the profile seeded by seedProfile() in the outer
+        // setUp.
+        repoWithSync = GoalRepositoryImpl(
+          database: db,
+          syncEngine: syncFacade,
+          profileId: 1,
+        );
+      });
+
+      test('createGoal pushes profile_id in the outbox payload', () async {
+        await repoWithSync.createGoal(
+          profileId: 1,
+          curriculumId: CurriculumId.mishnayos,
+          trackId: trackId,
+          targetPercent: 100.0,
+          description: 'test payload completeness',
+        );
+
+        expect(syncFacade.goalPayloads, hasLength(1));
+        final payload = syncFacade.goalPayloads.first;
+        expect(
+          payload['profile_id'],
+          equals(1),
+          reason: 'profile_id must be denormalised into the Firestore payload',
+        );
+        expect(
+          payload['id'],
+          isNotNull,
+          reason:
+              'id (firestoreId) must be present so gateway uses a '
+              'deterministic doc-id rather than auto-generating one',
+        );
+        // Sanity-check that the core goal fields are also present.
+        expect(payload['curriculum_id'], equals('mishnayos'));
+        expect(payload['target_percent'], equals(100.0));
+      });
+
+      test('updateGoal pushes profile_id in the outbox payload', () async {
+        final goal = await repoWithSync.createGoal(
+          profileId: 1,
+          curriculumId: CurriculumId.mishnayos,
+          trackId: trackId,
+          targetPercent: 50.0,
+        );
+        syncFacade.goalPayloads.clear();
+
+        await repoWithSync.updateGoal(goalId: goal.id!, targetPercent: 75.0);
+
+        expect(syncFacade.goalPayloads, hasLength(1));
+        final payload = syncFacade.goalPayloads.first;
+        expect(
+          payload['profile_id'],
+          equals(1),
+          reason: 'profile_id must be present on update pushes too',
+        );
+        expect(payload['id'], isNotNull);
       });
     });
   });

@@ -13,6 +13,7 @@ void main() {
     required VoidCallback onTap,
     int completionCount = 0,
     bool hebrewTermsScript = true,
+    bool showReviewBadge = true,
   }) {
     SharedPreferences.setMockInitialValues({
       'hebrew_terms_script_p0': hebrewTermsScript,
@@ -30,6 +31,7 @@ void main() {
             item: item,
             curriculum: CurriculumId.mishnayos,
             onTap: onTap,
+            showReviewBadge: showReviewBadge,
           ),
         ),
       ),
@@ -188,6 +190,104 @@ void main() {
 
       await tester.tap(find.byType(ListTile));
       expect(tapped, isTrue);
+    });
+
+    // Chazara product rule regression tests (R4-7):
+    // ReviewCountBadge is review-specific and MUST NOT render when
+    // showReviewBadge is false (i.e. no chazara track is active).
+
+    testWidgets(
+      'hides ReviewCountBadge for leaf item when showReviewBadge is false '
+      '(non-chazara track context)',
+      (tester) async {
+        const item = ContentItem(
+          curriculumId: 'mishnayos',
+          level1: 'Seder Zeraim',
+          level2: 'Berachos',
+          level3: 'Perek 1',
+          level4: 'Mishna 1',
+          displayNameHe: 'משנה א',
+          displayNameEn: 'Mishna 1',
+          sefariaRef: 'Mishnah Berakhot 1.1',
+          sortOrder: 0,
+          isLeaf: true,
+        );
+
+        await tester.pumpWidget(
+          createTestWidget(
+            item: item,
+            onTap: () {},
+            completionCount: 3,
+            showReviewBadge: false,
+          ),
+        );
+        await tester.pump();
+
+        // Badge text should not appear even though count > 0.
+        expect(find.text('3x'), findsNothing);
+        expect(find.text('1x'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'shows ReviewCountBadge for leaf item when showReviewBadge is true '
+      '(chazara track context) and count > 0',
+      (tester) async {
+        const item = ContentItem(
+          curriculumId: 'mishnayos',
+          level1: 'Seder Zeraim',
+          level2: 'Berachos',
+          level3: 'Perek 1',
+          level4: 'Mishna 1',
+          displayNameHe: 'משנה א',
+          displayNameEn: 'Mishna 1',
+          sefariaRef: 'Mishnah Berakhot 1.1',
+          sortOrder: 0,
+          isLeaf: true,
+        );
+
+        await tester.pumpWidget(
+          createTestWidget(
+            item: item,
+            onTap: () {},
+            completionCount: 2,
+            showReviewBadge: true,
+          ),
+        );
+        await tester.pump();
+
+        // Badge must render when chazara is enabled and count > 0.
+        expect(find.text('2x'), findsOneWidget);
+      },
+    );
+
+    testWidgets('hides ReviewCountBadge for leaf item when count is 0 '
+        'regardless of showReviewBadge', (tester) async {
+      const item = ContentItem(
+        curriculumId: 'mishnayos',
+        level1: 'Seder Zeraim',
+        level2: 'Berachos',
+        level3: 'Perek 1',
+        level4: 'Mishna 1',
+        displayNameHe: 'משנה א',
+        displayNameEn: 'Mishna 1',
+        sefariaRef: 'Mishnah Berakhot 1.1',
+        sortOrder: 0,
+        isLeaf: true,
+      );
+
+      await tester.pumpWidget(
+        createTestWidget(
+          item: item,
+          onTap: () {},
+          completionCount: 0,
+          showReviewBadge: true,
+        ),
+      );
+      await tester.pump();
+
+      // ReviewCountBadge renders SizedBox.shrink() when count == 0.
+      expect(find.text('0x'), findsNothing);
     });
   });
 

@@ -80,6 +80,7 @@ class GoalMerger implements EntityMerger {
         goalType: row['goal_type'] as String? ?? 'deadline',
         paceValue: FirestoreCodec.parseInt(row['pace_value']),
         pacePeriod: row['pace_unit'] as String?,
+        paceGranularity: row['pace_granularity'] as String?,
         createdAt: createdAt,
         updatedAt: updatedAt,
       );

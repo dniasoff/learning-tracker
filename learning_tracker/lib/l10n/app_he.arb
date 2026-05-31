@@ -1054,6 +1054,34 @@
   "changePasswordFailedError": "שינוי הסיסמה נכשל. אנא נסו שוב.",
   "currentPasswordLabel": "סיסמה נוכחית",
   "invalidPasswordError": "סיסמה שגויה. אנא נסו שוב.",
+  "calendarOffsetToday": "היום",
+  "calendarOffsetDay": "יום {offset}",
+  "@calendarOffsetDay": {
+    "placeholders": {
+      "offset": { "type": "String" }
+    }
+  },
+  "calendarDirectionForward": "קדימה",
+  "calendarDirectionBackwards": "אחורה",
+  "calendarDirectionToday": "היום",
+  "calendarOffsetDaysCount": "{count, plural, =1{יום אחד} =2{יומיים} other{{count} ימים}}",
+  "@calendarOffsetDaysCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "startingPositionSelectInstruction": "בחרו את {itemLabel} שאתם נמצאים בו כעת.",
+  "@startingPositionSelectInstruction": {
+    "placeholders": {
+      "itemLabel": { "type": "String" }
+    }
+  },
+  "searchFieldHint": "חיפוש {label}…",
+  "@searchFieldHint": {
+    "placeholders": {
+      "label": { "type": "String" }
+    }
+  },
   "cityPickerTitle": "בחרו עיר",
   "cityPickerHint": "הקלד שם עיר…",
 

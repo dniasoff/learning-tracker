@@ -8,6 +8,7 @@ import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
+import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/domain/services/account_management_service.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/user_profile_service.dart';
@@ -646,6 +647,17 @@ void main() {
       service = AccountManagementService(
         authRepository: mockAuthRepo,
         database: db,
+      );
+      // R4-11: deleteAccount() now guards that the signed-in user matches the
+      // uid being deleted, so currentUser must be stubbed to that user.
+      when(() => mockAuthRepo.currentUser).thenReturn(
+        const AppUser(
+          uid: 'uid-1',
+          email: 'user@example.com',
+          displayName: 'User',
+          emailVerified: true,
+          providers: ['password'],
+        ),
       );
     });
 

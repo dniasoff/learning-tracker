@@ -12,6 +12,7 @@ import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/content_item_tile.dart';
+import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
@@ -96,8 +97,9 @@ class _ContentSearchScreenState extends ConsumerState<ContentSearchScreen> {
           autofocus: true,
           inputFormatters: const [TrimLeadingSpaceFormatter()],
           decoration: InputDecoration(
-            hintText:
-                'Search ${curriculumLabelText(ref, curriculum: curriculum)}…',
+            hintText: AppLocalizations.of(context)!.searchFieldHint(
+              curriculumLabelText(ref, curriculum: curriculum),
+            ),
             border: InputBorder.none,
             hintStyle: TextStyle(
               color: Theme.of(context).colorScheme.onSurface.withAlpha(128),
@@ -116,6 +118,11 @@ class _ContentSearchScreenState extends ConsumerState<ContentSearchScreen> {
     CurriculumId curriculum,
     AsyncValue<List<ContentItem>>? resultsAsync,
   ) {
+    // R4-7: gate the chazara review badge to whether any active track has
+    // chazara enabled (default false while loading) — consistent with the
+    // content hierarchy screen, so non-chazara users see no review badge.
+    final showReviewBadge =
+        ref.watch(anyActiveTrackHasChazaraProvider).asData?.value ?? false;
     if (resultsAsync == null) {
       return Center(
         child: Text(AppLocalizations.of(context)!.searchHintEnterTerm),
@@ -139,6 +146,7 @@ class _ContentSearchScreenState extends ConsumerState<ContentSearchScreen> {
             return ContentItemTile(
               item: item,
               curriculum: curriculum,
+              showReviewBadge: showReviewBadge,
               onTap: () {
                 if (item.isLeaf) {
                   context.router.push(

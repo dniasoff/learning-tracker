@@ -2233,6 +2233,44 @@ class AppLocalizationsEn extends AppLocalizations {
   String get invalidPasswordError => 'Invalid password. Please try again.';
 
   @override
+  String get calendarOffsetToday => 'Today';
+
+  @override
+  String calendarOffsetDay(String offset) {
+    return 'Day $offset';
+  }
+
+  @override
+  String get calendarDirectionForward => 'FORWARD';
+
+  @override
+  String get calendarDirectionBackwards => 'BACKWARDS';
+
+  @override
+  String get calendarDirectionToday => 'TODAY';
+
+  @override
+  String calendarOffsetDaysCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Days',
+      one: '1 Day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String startingPositionSelectInstruction(String itemLabel) {
+    return 'Select the $itemLabel you are currently up to.';
+  }
+
+  @override
+  String searchFieldHint(String label) {
+    return 'Search $label…';
+  }
+
+  @override
   String get cityPickerTitle => 'Choose a city';
 
   @override

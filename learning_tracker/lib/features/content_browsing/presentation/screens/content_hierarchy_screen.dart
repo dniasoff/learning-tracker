@@ -15,6 +15,7 @@ import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/breadcrumb_navigation.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/content_item_tile.dart';
+import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
@@ -262,6 +263,11 @@ class _ContentHierarchyScreenState
                 final variant = ref.watch(
                   currentTransliterationVariantProvider,
                 );
+                // Chazara product rule: only show the review badge when at
+                // least one active track in this profile has chazara enabled.
+                final anyChazara =
+                    ref.watch(anyActiveTrackHasChazaraProvider).asData?.value ??
+                    false;
                 final groupedItems = _groupItemsByNextLevel(items, variant);
 
                 return ListView.builder(
@@ -273,6 +279,7 @@ class _ContentHierarchyScreenState
                       item: item,
                       curriculum: curriculum,
                       onTap: () => _handleItemTap(item),
+                      showReviewBadge: anyChazara,
                     );
                   },
                 );

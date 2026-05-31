@@ -908,6 +908,35 @@ void main() {
         );
         expect(after, _local);
       });
+
+      // R4-5 regression: pace_granularity must survive pull on fresh device.
+      test(
+        'pace_granularity from Firestore row is persisted to local DB',
+        () async {
+          await seedTrack();
+
+          await merger.merge(
+            profileId: profileId,
+            rows: [
+              {
+                ...row(updatedAt: _remoteNewer),
+                'pace_value': 2,
+                'pace_unit': 'week',
+                'pace_granularity': 'perek',
+              },
+            ],
+          );
+
+          final goal = await db.goalDao.getGoalByTrack(1);
+          expect(goal, isNotNull);
+          expect(
+            goal!.paceGranularity,
+            'perek',
+            reason:
+                'pace_granularity must not be dropped during GoalMerger.merge()',
+          );
+        },
+      );
     });
 
     // ── NotificationSettingsMerger ─────────────────────────────────────────

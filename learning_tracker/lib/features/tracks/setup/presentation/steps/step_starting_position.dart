@@ -187,7 +187,7 @@ class _StartingPositionStepState extends ConsumerState<StartingPositionStep> {
           ),
           const SizedBox(height: 4),
           Text(
-            'Select the $leafLabel you are currently up to.',
+            l10n.startingPositionSelectInstruction(leafLabel),
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),

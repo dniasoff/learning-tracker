@@ -17,6 +17,12 @@ import 'package:learning_tracker/features/tracks/stages/presentation/providers/s
 /// When the Hebrew Terms toggle is on (default), shows only the Hebrew name.
 /// When off, shows the Hebrew name with the English transliteration as a
 /// subtitle. Leaf items show a review count badge that updates reactively.
+///
+/// [showReviewBadge] guards the [ReviewCountBadge] per the chazara product
+/// rule: the badge is review/chazara-specific and MUST NOT render when the
+/// viewing context has no track with chazara enabled.  Defaults to `true` so
+/// that call sites that don't yet know the track context (e.g. cross-track
+/// search) are conservative rather than silent.
 class ContentItemTile extends ConsumerWidget {
   const ContentItemTile({
     super.key,
@@ -24,6 +30,7 @@ class ContentItemTile extends ConsumerWidget {
     required this.curriculum,
     required this.onTap,
     this.reviewCount,
+    this.showReviewBadge = true,
   });
 
   final ContentItem item;
@@ -33,6 +40,13 @@ class ContentItemTile extends ConsumerWidget {
   /// Pre-loaded review count from batch provider. Falls back to per-item
   /// provider if null.
   final int? reviewCount;
+
+  /// Whether the review count badge should be shown for this context.
+  ///
+  /// Pass `false` when the viewing track (or any active track in the
+  /// curriculum) does not have chazara enabled.  Hiding the badge prevents
+  /// confusing "1x" indicators on learn-only tracks.
+  final bool showReviewBadge;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -64,7 +78,7 @@ class ContentItemTile extends ConsumerWidget {
       ),
       trailing: _buildTrailing(theme, count),
       onTap: onTap,
-      onLongPress: item.isLeaf && count > 0
+      onLongPress: item.isLeaf && count > 0 && showReviewBadge
           ? () => _showStageBreakdown(context, ref)
           : null,
     );
@@ -99,6 +113,9 @@ class ContentItemTile extends ConsumerWidget {
   Widget? _buildTrailing(ThemeData theme, int completionCount) {
     if (item.isLeaf) {
       // AC-4: Show review count badge; AC-6: hidden when 0.
+      // Chazara rule: badge is review-specific — suppress it when the
+      // viewing track context has no chazara enabled.
+      if (!showReviewBadge) return null;
       return ReviewCountBadge(count: completionCount);
     } else {
       return Icon(

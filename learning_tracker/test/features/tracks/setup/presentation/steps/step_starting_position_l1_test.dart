@@ -445,6 +445,51 @@ void main() {
       addTearDown(() => _tearDown(tester));
     });
 
+    // ── R4-3 Hebrew-locale regression test ───────────────────────────────────
+
+    testWidgets(
+      'R4-3: Hebrew locale — instruction renders בחרו, not "Select the"',
+      (tester) async {
+        final contentRepo = _MockContentRepository();
+        when(
+          () => contentRepo.getContentForCurriculum(any()),
+        ).thenAnswer((_) async => []);
+        when(() => contentRepo.getHierarchyConfig(any())).thenAnswer(
+          (_) async => const CurriculumHierarchyConfig(
+            curriculumId: 'mishnayos',
+            levelLabels: ['Seder', 'Masechet', 'Mishna'],
+            totalItems: 0,
+          ),
+        );
+
+        await tester.pumpWidget(
+          _buildStartingPositionApp(
+            overrides: _baseOverridesWithContentRepo(contentRepo),
+            selectedProgram: _nonCalendarProgram(),
+            locale: const Locale('he'),
+          ),
+        );
+        await _settle(tester);
+
+        // The instruction text must contain the Hebrew prefix.
+        expect(
+          find.textContaining('בחרו את'),
+          findsOneWidget,
+          reason:
+              'R4-3: startingPositionSelectInstruction must render '
+              '"בחרו את …" in Hebrew locale, not the English "Select the …"',
+        );
+        // The English form must be absent.
+        expect(
+          find.textContaining('Select the'),
+          findsNothing,
+          reason:
+              'R4-3: hardcoded English "Select the" must be absent in he locale',
+        );
+        addTearDown(() => _tearDown(tester));
+      },
+    );
+
     testWidgets(
       'no track-type labels anywhere (Personal/Standard/Custom/אישי)',
       (tester) async {
@@ -1008,6 +1053,118 @@ void main() {
       expect(find.text('Standard'), findsNothing);
       expect(find.text('Custom'), findsNothing);
       expect(find.text('אישי'), findsNothing);
+      addTearDown(() => _tearDown(tester));
+    });
+
+    // ── R4-2 Hebrew-locale regression tests ──────────────────────────────────
+
+    testWidgets('R4-2: Hebrew locale — offset=0 shows היום, not TODAY/Today', (
+      tester,
+    ) async {
+      final calendarSvc = _MockCalendarProgramService();
+      when(
+        () => calendarSvc.getEntry(any(), any()),
+      ).thenAnswer((_) async => null);
+
+      final db = inMemoryDb();
+      final overrides = [
+        userDatabaseProvider.overrideWithValue(db),
+        calendarProgramServiceProvider.overrideWithValue(calendarSvc),
+        useHebrewTermsProvider.overrideWith(() => _TrueUseHebrewTerms()),
+        syncWriteFacadeProvider.overrideWithValue(null),
+        activeProfileIdProvider.overrideWith(_ProfileIdOverride.new),
+      ];
+
+      await tester.pumpWidget(
+        _buildCalendarModeApp(
+          overrides: overrides,
+          program: _calendarProgram(),
+          locale: const Locale('he'),
+        ),
+      );
+      await _settle(tester);
+
+      // At offset=0 both the offset badge and the direction label read "היום".
+      expect(
+        find.text('היום'),
+        findsAtLeastNWidgets(1),
+        reason:
+            'R4-2: Hebrew calendarOffsetToday / calendarDirectionToday '
+            'must render "היום", not the English "Today" / "TODAY"',
+      );
+      // English direction / offset literals must be absent.
+      expect(
+        find.text('TODAY'),
+        findsNothing,
+        reason:
+            'R4-2: "TODAY" is the English direction label — must be absent in he locale',
+      );
+      expect(
+        find.text('Today'),
+        findsNothing,
+        reason:
+            'R4-2: "Today" is an English label — must be absent in he locale',
+      );
+      addTearDown(() => _tearDown(tester));
+    });
+
+    testWidgets('R4-2: Hebrew locale — offset=-1 shows אחורה, not BACKWARDS', (
+      tester,
+    ) async {
+      final calendarSvc = _MockCalendarProgramService();
+      when(
+        () => calendarSvc.getEntry(any(), any()),
+      ).thenAnswer((_) async => null);
+
+      final db = inMemoryDb();
+      final overrides = [
+        userDatabaseProvider.overrideWithValue(db),
+        calendarProgramServiceProvider.overrideWithValue(calendarSvc),
+        useHebrewTermsProvider.overrideWith(() => _TrueUseHebrewTerms()),
+        syncWriteFacadeProvider.overrideWithValue(null),
+        activeProfileIdProvider.overrideWith(_ProfileIdOverride.new),
+      ];
+
+      await tester.pumpWidget(
+        _buildCalendarModeApp(
+          overrides: overrides,
+          program: _calendarProgram(),
+          locale: const Locale('he'),
+        ),
+      );
+      await _settle(tester);
+
+      // Tap the back chevron to move offset to -1.
+      await tester.tap(find.byIcon(Icons.chevron_left_rounded));
+      await _settle(tester);
+
+      // Direction label must be the Hebrew "אחורה".
+      expect(
+        find.text('אחורה'),
+        findsOneWidget,
+        reason:
+            'R4-2: Hebrew calendarDirectionBackwards must render '
+            '"אחורה", not the English "BACKWARDS"',
+      );
+      // The English literal must be absent.
+      expect(
+        find.text('BACKWARDS'),
+        findsNothing,
+        reason:
+            'R4-2: hardcoded English "BACKWARDS" must be absent in he locale',
+      );
+      // Also assert "יום אחד" appears (calendarOffsetDaysCount(1) = "יום אחד").
+      expect(
+        find.text('יום אחד'),
+        findsOneWidget,
+        reason:
+            'R4-2: Hebrew calendarOffsetDaysCount(1) must render "יום אחד", not "1 Day"',
+      );
+      expect(
+        find.text('1 Day'),
+        findsNothing,
+        reason: 'R4-2: English "1 Day" must be absent in he locale',
+      );
       addTearDown(() => _tearDown(tester));
     });
   });

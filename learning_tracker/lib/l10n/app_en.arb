@@ -1069,6 +1069,34 @@
   "changePasswordFailedError": "Failed to change password. Please try again.",
   "currentPasswordLabel": "Current Password",
   "invalidPasswordError": "Invalid password. Please try again.",
+  "calendarOffsetToday": "Today",
+  "calendarOffsetDay": "Day {offset}",
+  "@calendarOffsetDay": {
+    "placeholders": {
+      "offset": { "type": "String" }
+    }
+  },
+  "calendarDirectionForward": "FORWARD",
+  "calendarDirectionBackwards": "BACKWARDS",
+  "calendarDirectionToday": "TODAY",
+  "calendarOffsetDaysCount": "{count, plural, =1{1 Day} other{{count} Days}}",
+  "@calendarOffsetDaysCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "startingPositionSelectInstruction": "Select the {itemLabel} you are currently up to.",
+  "@startingPositionSelectInstruction": {
+    "placeholders": {
+      "itemLabel": { "type": "String" }
+    }
+  },
+  "searchFieldHint": "Search {label}…",
+  "@searchFieldHint": {
+    "placeholders": {
+      "label": { "type": "String" }
+    }
+  },
   "cityPickerTitle": "Choose a city",
   "cityPickerHint": "Type a city name…",
 

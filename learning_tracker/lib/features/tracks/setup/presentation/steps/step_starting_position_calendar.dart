@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:learning_tracker/core/domain/value_objects/program_starting_position.dart';
 import 'package:learning_tracker/core/providers/calendar_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
@@ -10,30 +11,6 @@ import 'package:learning_tracker/features/scheduler/domain/services/calendar_pro
 import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
-
-const _kWeekdayNames = [
-  'Monday',
-  'Tuesday',
-  'Wednesday',
-  'Thursday',
-  'Friday',
-  'Saturday',
-  'Sunday',
-];
-const _kMonthNames = [
-  'Jan',
-  'Feb',
-  'Mar',
-  'Apr',
-  'May',
-  'Jun',
-  'Jul',
-  'Aug',
-  'Sep',
-  'Oct',
-  'Nov',
-  'Dec',
-];
 
 /// Calendar-program variant of the starting-position step.
 ///
@@ -124,21 +101,24 @@ class _StartingPositionCalendarModeState
     }
   }
 
-  String _dateLabel() {
-    final d = _selectedDate;
-    return '${_kWeekdayNames[d.weekday - 1]}, ${_kMonthNames[d.month - 1]} ${d.day}';
+  // Locale-aware weekday + month + day (e.g. "Monday, May 31" / Hebrew
+  // equivalent) — replaces the old hardcoded English name arrays so Hebrew
+  // users see Hebrew (R4-2).
+  String _dateLabel(BuildContext context) {
+    final localeName = Localizations.localeOf(context).languageCode;
+    return DateFormat('EEEE, MMM d', localeName).format(_selectedDate);
   }
 
-  String _offsetLabel() => switch (_offsetDays) {
-    0 => 'Today',
-    < 0 => 'Day $_offsetDays',
-    _ => 'Day +$_offsetDays',
+  String _offsetLabel(AppLocalizations l10n) => switch (_offsetDays) {
+    0 => l10n.calendarOffsetToday,
+    < 0 => l10n.calendarOffsetDay('$_offsetDays'),
+    _ => l10n.calendarOffsetDay('+$_offsetDays'),
   };
 
-  String _directionLabel() => switch (_offsetDays) {
-    > 0 => 'FORWARD',
-    < 0 => 'BACKWARDS',
-    _ => 'TODAY',
+  String _directionLabel(AppLocalizations l10n) => switch (_offsetDays) {
+    > 0 => l10n.calendarDirectionForward,
+    < 0 => l10n.calendarDirectionBackwards,
+    _ => l10n.calendarDirectionToday,
   };
 
   @override
@@ -146,7 +126,7 @@ class _StartingPositionCalendarModeState
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
     final absDays = _offsetDays.abs();
-    final daysLabel = absDays == 1 ? '1 Day' : '$absDays Days';
+    final daysLabel = l10n.calendarOffsetDaysCount(absDays);
     final canStart = _calendarEntry != null && !_calendarLoading;
 
     return Padding(
@@ -168,9 +148,9 @@ class _StartingPositionCalendarModeState
             ),
           ),
           const SizedBox(height: 18),
-          _buildDateCard(theme, l10n),
+          _buildDateCard(theme, l10n, _dateLabel(context)),
           const SizedBox(height: 14),
-          _buildOffsetStepper(theme, daysLabel),
+          _buildOffsetStepper(theme, l10n, daysLabel),
           const Spacer(),
           FilledButton.tonal(
             onPressed: () {
@@ -214,7 +194,11 @@ class _StartingPositionCalendarModeState
     );
   }
 
-  Widget _buildDateCard(ThemeData theme, AppLocalizations l10n) {
+  Widget _buildDateCard(
+    ThemeData theme,
+    AppLocalizations l10n,
+    String dateLabel,
+  ) {
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -254,7 +238,7 @@ class _StartingPositionCalendarModeState
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  _dateLabel(),
+                  dateLabel,
                   textAlign: TextAlign.center,
                   style: theme.textTheme.headlineMedium?.copyWith(
                     color: AppTheme.brandBlueDeep,
@@ -285,7 +269,7 @@ class _StartingPositionCalendarModeState
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               child: Text(
-                _offsetLabel(),
+                _offsetLabel(l10n),
                 style: theme.textTheme.titleSmall?.copyWith(
                   color: Colors.white,
                   fontWeight: FontWeight.w800,
@@ -298,7 +282,11 @@ class _StartingPositionCalendarModeState
     );
   }
 
-  Widget _buildOffsetStepper(ThemeData theme, String daysLabel) {
+  Widget _buildOffsetStepper(
+    ThemeData theme,
+    AppLocalizations l10n,
+    String daysLabel,
+  ) {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: Colors.white,
@@ -332,14 +320,14 @@ class _StartingPositionCalendarModeState
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(
-                      _offsetDays == 0 ? 'Today' : daysLabel,
+                      _offsetDays == 0 ? l10n.calendarOffsetToday : daysLabel,
                       style: theme.textTheme.headlineMedium?.copyWith(
                         fontWeight: FontWeight.w800,
                       ),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      _directionLabel(),
+                      _directionLabel(l10n),
                       style: theme.textTheme.titleSmall?.copyWith(
                         letterSpacing: 1.1,
                         color: AppTheme.brandInkMuted,

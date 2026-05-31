@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/domain/services/account_management_service.dart';
 import 'package:mocktail/mocktail.dart';
@@ -8,6 +9,15 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../../helpers/test_database.dart';
 
 class MockAuthRepository extends Mock implements AuthRepository {}
+
+/// Returns a minimal [AppUser] with the given [uid].
+AppUser _makeUser(String uid) => AppUser(
+  uid: uid,
+  email: '$uid@test.example',
+  displayName: 'Test User',
+  emailVerified: true,
+  providers: const ['password'],
+);
 
 void main() {
   late MockAuthRepository mockAuthRepo;
@@ -64,6 +74,8 @@ void main() {
 
   group('deleteAccount', () {
     setUp(() {
+      // The guard reads currentUser before proceeding; stub it to match.
+      when(() => mockAuthRepo.currentUser).thenReturn(_makeUser('test-uid'));
       when(() => mockAuthRepo.deleteAccount()).thenAnswer((_) async {});
     });
 
@@ -117,6 +129,59 @@ void main() {
               'the outbox is a pending-command queue — it must not survive '
               'account deletion (a stale row would push to the next account)',
         );
+      },
+    );
+
+    // ── R4-11 regression: UID guard ──────────────────────────────────────────
+
+    test('throws StateError and does NOT call deleteAccount/signOut when '
+        'currentUser is null', () async {
+      when(() => mockAuthRepo.currentUser).thenReturn(null);
+
+      await expectLater(
+        () => service.deleteAccount('test-uid'),
+        throwsA(
+          isA<StateError>().having(
+            (e) => e.message,
+            'message',
+            contains('no user is currently signed in'),
+          ),
+        ),
+      );
+
+      // Neither the Firebase Auth delete nor any signOut must have been called.
+      verifyNever(() => mockAuthRepo.deleteAccount());
+      verifyNever(() => mockAuthRepo.signOut());
+    });
+
+    test('throws StateError and does NOT call deleteAccount/signOut when '
+        'currentUser.uid != the passed uid', () async {
+      when(
+        () => mockAuthRepo.currentUser,
+      ).thenReturn(_makeUser('different-uid'));
+
+      await expectLater(
+        () => service.deleteAccount('test-uid'),
+        throwsA(
+          isA<StateError>().having(
+            (e) => e.message,
+            'message',
+            allOf(contains('different-uid'), contains('test-uid')),
+          ),
+        ),
+      );
+
+      verifyNever(() => mockAuthRepo.deleteAccount());
+      verifyNever(() => mockAuthRepo.signOut());
+    });
+
+    test(
+      'proceeds normally when currentUser.uid matches the passed uid',
+      () async {
+        // currentUser already stubbed in outer setUp to return 'test-uid'.
+        await service.deleteAccount('test-uid');
+
+        verify(() => mockAuthRepo.deleteAccount()).called(1);
       },
     );
   });

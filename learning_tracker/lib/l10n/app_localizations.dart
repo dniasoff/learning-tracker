@@ -4001,6 +4001,54 @@ abstract class AppLocalizations {
   /// **'Invalid password. Please try again.'**
   String get invalidPasswordError;
 
+  /// No description provided for @calendarOffsetToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today'**
+  String get calendarOffsetToday;
+
+  /// No description provided for @calendarOffsetDay.
+  ///
+  /// In en, this message translates to:
+  /// **'Day {offset}'**
+  String calendarOffsetDay(String offset);
+
+  /// No description provided for @calendarDirectionForward.
+  ///
+  /// In en, this message translates to:
+  /// **'FORWARD'**
+  String get calendarDirectionForward;
+
+  /// No description provided for @calendarDirectionBackwards.
+  ///
+  /// In en, this message translates to:
+  /// **'BACKWARDS'**
+  String get calendarDirectionBackwards;
+
+  /// No description provided for @calendarDirectionToday.
+  ///
+  /// In en, this message translates to:
+  /// **'TODAY'**
+  String get calendarDirectionToday;
+
+  /// No description provided for @calendarOffsetDaysCount.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 Day} other{{count} Days}}'**
+  String calendarOffsetDaysCount(int count);
+
+  /// No description provided for @startingPositionSelectInstruction.
+  ///
+  /// In en, this message translates to:
+  /// **'Select the {itemLabel} you are currently up to.'**
+  String startingPositionSelectInstruction(String itemLabel);
+
+  /// No description provided for @searchFieldHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Search {label}…'**
+  String searchFieldHint(String label);
+
   /// No description provided for @cityPickerTitle.
   ///
   /// In en, this message translates to:

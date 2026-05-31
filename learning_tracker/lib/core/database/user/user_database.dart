@@ -273,11 +273,14 @@ class UserDatabase extends _$UserDatabase {
             'WHERE ulid IS NOT NULL AND sync_enqueued_at IS NULL',
           );
         }
-        if (from == 27) {
+        if (from >= 26 && from < 28) {
           // Tutor "talmid view" mirror columns on learner_profiles (v28).
-          // Only runs when upgrading FROM exactly v27, because migrations from
-          // v25/v26 already include these columns via the v26 alterTable rebuild
-          // (which copies the current schema, including v28 columns).
+          // Guard: from >= 26 because migrations from v25 or earlier already
+          // receive these columns via the v26 alterTable rebuild (columnTransformer
+          // supplies literal defaults for all four tutor columns). A v26 database
+          // skips that rebuild entirely (from < 26 is false), so we must addColumn
+          // here. The guard from < 28 avoids double-adding on databases that were
+          // already at v28 or later.
           await m.addColumn(learnerProfiles, learnerProfiles.isTutored);
           await m.addColumn(learnerProfiles, learnerProfiles.tutorParentUid);
           await m.addColumn(

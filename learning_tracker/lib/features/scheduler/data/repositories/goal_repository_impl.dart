@@ -219,6 +219,13 @@ class GoalRepositoryImpl implements GoalRepository {
     // and creates a new duplicate doc per save.
     final data = entity.toFirestore();
     data['id'] = entity.firestoreId;
+    // Denormalise profile_id into the document so it is consistent with sibling
+    // per-profile entities (tracks, bookmarks, study_day_configs, etc.).
+    // Pull-side scoping is purely path-based (GoalMerger.merge receives profileId
+    // as a parameter from PullPipeline and never reads this field), so the field
+    // is defensive/cosmetic rather than load-bearing — but its absence is a
+    // detectable inconsistency and it future-proofs Firestore security-rule audits.
+    data['profile_id'] = _profileId;
     await _syncEngine.pushGoal(data);
   }
 

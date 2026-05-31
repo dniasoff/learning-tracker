@@ -58,7 +58,23 @@ class AccountManagementService {
   /// 2. Delete Firebase Auth account
   /// 3. Clear local database (FR103)
   /// 4. Clear SharedPreferences
+  ///
+  /// Throws [StateError] if there is no signed-in user or if the signed-in
+  /// user's UID does not match [uid], preventing accidental cross-account
+  /// deletion in the event of a race or session mismatch.
   Future<void> deleteAccount(String uid) async {
+    // Guard: verify the current session matches the account being deleted.
+    final currentUser = _authRepository.currentUser;
+    if (currentUser == null) {
+      throw StateError('deleteAccount($uid): no user is currently signed in.');
+    }
+    if (currentUser.uid != uid) {
+      throw StateError(
+        'deleteAccount($uid): current user UID (${currentUser.uid}) does not '
+        'match the account being deleted.',
+      );
+    }
+
     // 1. Clear local database FIRST — stops SyncEngine from re-pushing local
     //    data back to Firestore after we delete it in step 2.
     await _clearLocalDatabase();
@@ -109,12 +125,17 @@ class AccountManagementService {
 
   /// Deletes all Firestore data for the current user via the `deleteAccountData`
   /// Cloud Function, which uses Admin SDK `recursiveDelete` server-side.
+  ///
+  /// The [uid] is passed explicitly so the Cloud Function can validate it
+  /// server-side if desired. The CF currently also infers the caller from
+  /// Firebase Auth context; the client-side guard in [deleteAccount] is the
+  /// primary safety net — the explicit uid is belt-and-suspenders.
   Future<void> _deleteFirestoreUserData(String uid) async {
     try {
       final callable = FirebaseFunctions.instance.httpsCallable(
         'deleteAccountData',
       );
-      await callable.call<Map<String, dynamic>>(<String, dynamic>{});
+      await callable.call<Map<String, dynamic>>(<String, dynamic>{'uid': uid});
     } catch (e) {
       // Log but don't rethrow — auth deletion + local cleanup still proceed.
       // The onUserDeleted Cloud Function will also fire when Auth account is

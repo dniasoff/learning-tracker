@@ -1,15 +1,34 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/screens/content_search_screen.dart';
+import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
+/// Override that keeps useHebrewTermsProvider always-false (English terms),
+/// so the label passed to searchFieldHint is the English curriculum name.
+class _FalseUseHebrewTerms extends UseHebrewTerms {
+  @override
+  bool build() => false;
+}
 
 void main() {
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
+
   group('ContentSearchScreen', () {
     testWidgets('renders without error', (tester) async {
       await tester.pumpWidget(
-        const ProviderScope(
-          child: MaterialApp(
+        ProviderScope(
+          overrides: [
+            // Avoid pulling in a real UserDatabase via the chazara-badge gate.
+            anyActiveTrackHasChazaraProvider.overrideWith((ref) => false),
+          ],
+          child: const MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
             supportedLocales: AppLocalizations.supportedLocales,
             home: ContentSearchScreen(curriculumId: 'mishnayos'),
@@ -19,6 +38,52 @@ void main() {
       await tester.pump();
 
       expect(find.byType(Scaffold), findsOneWidget);
+    });
+
+    // ── R4-4 Hebrew-locale regression test ───────────────────────────────────
+
+    testWidgets('R4-4: Hebrew locale — search hint shows חיפוש, not "Search "', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            useHebrewTermsProvider.overrideWith(() => _FalseUseHebrewTerms()),
+            anyActiveTrackHasChazaraProvider.overrideWith((ref) => false),
+          ],
+          child: const MaterialApp(
+            locale: Locale('he'),
+            localizationsDelegates: [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: ContentSearchScreen(curriculumId: 'mishnayos'),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      // With Hebrew locale and English terms (useHebrewTermsProvider=false),
+      // the hint text is "חיפוש Mishnayos…" (l10n key searchFieldHint).
+      // Assert the exact Hebrew-prefixed hint is present in the TextField.
+      expect(
+        find.text('חיפוש Mishnayos…'),
+        findsOneWidget,
+        reason:
+            'R4-4: searchFieldHint in he locale must render '
+            '"חיפוש Mishnayos…", not the English "Search Mishnayos…"',
+      );
+      // The bare English "Search " prefix must be absent.
+      expect(
+        find.textContaining('Search '),
+        findsNothing,
+        reason:
+            'R4-4: hardcoded English "Search " prefix must be absent in he locale',
+      );
     });
   });
 }

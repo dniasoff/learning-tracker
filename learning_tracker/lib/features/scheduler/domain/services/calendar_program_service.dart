@@ -32,13 +32,16 @@ class CalendarProgramEntry {
   final String todayRefHe;
   final String apiSource;
 
-  /// The calendar date this entry represents (local, time stripped).
+  /// The calendar date this entry represents (UTC midnight, `.isUtc == true`).
   ///
   /// Populated by [LocalCalendarEngine] from the DB's `date_key` column so
   /// that projection code can use the true calendar date rather than
-  /// inferring it from a sequential cursor walk.  Null only in legacy
-  /// construction paths that pre-date this field; the scheduler projection
-  /// asserts non-null before using it.
+  /// inferring it from a sequential cursor walk.  UTC midnight is required by
+  /// the projection helpers (`_dayOnly` in `overdue_schedule.dart`) which
+  /// re-create `DateTime.utc` from the year/month/day components — a local
+  /// midnight would shift the date by the device's UTC offset (R4-1).
+  /// Null only in legacy construction paths that pre-date this field; the
+  /// scheduler projection asserts non-null before using it.
   final DateTime? date;
 }
 

@@ -2204,6 +2204,45 @@ class AppLocalizationsHe extends AppLocalizations {
   String get invalidPasswordError => 'סיסמה שגויה. אנא נסו שוב.';
 
   @override
+  String get calendarOffsetToday => 'היום';
+
+  @override
+  String calendarOffsetDay(String offset) {
+    return 'יום $offset';
+  }
+
+  @override
+  String get calendarDirectionForward => 'קדימה';
+
+  @override
+  String get calendarDirectionBackwards => 'אחורה';
+
+  @override
+  String get calendarDirectionToday => 'היום';
+
+  @override
+  String calendarOffsetDaysCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ימים',
+      two: 'יומיים',
+      one: 'יום אחד',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String startingPositionSelectInstruction(String itemLabel) {
+    return 'בחרו את $itemLabel שאתם נמצאים בו כעת.';
+  }
+
+  @override
+  String searchFieldHint(String label) {
+    return 'חיפוש $label…';
+  }
+
+  @override
   String get cityPickerTitle => 'בחרו עיר';
 
   @override

@@ -133,8 +133,15 @@ class LocalCalendarEngine {
   }
 
   /// Parse a `YYYY-MM-DD` string (as stored in the DB `date_key` column)
-  /// back to a local-midnight [DateTime].  Returns null on malformed input
+  /// back to a UTC-midnight [DateTime].  Returns null on malformed input
   /// so callers can safely skip corrupt rows.
+  ///
+  /// Returns a UTC midnight value (`.isUtc == true`) so the parsed date
+  /// flows safely into projection helpers such as `_dayOnly()` in
+  /// `overdue_schedule.dart`, which creates `DateTime.utc(dt.year, dt.month,
+  /// dt.day)` from the components.  Using a local [DateTime] here would cause
+  /// `_dayOnly` to extract the UTC components of a local midnight, shifting
+  /// the effective calendar date by the device's UTC offset (R4-1).
   static DateTime? _parseDateKey(String dateKey) {
     final parts = dateKey.split('-');
     if (parts.length != 3) return null;
@@ -142,7 +149,7 @@ class LocalCalendarEngine {
     final month = int.tryParse(parts[1]);
     final day = int.tryParse(parts[2]);
     if (year == null || month == null || day == null) return null;
-    return DateTime(year, month, day);
+    return DateTime.utc(year, month, day);
   }
 
   /// Legacy alias retained from the pre-19.4 engine — kept so existing
