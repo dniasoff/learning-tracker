@@ -810,6 +810,12 @@ abstract class AppLocalizations {
   /// **'Add a learning track'**
   String get ctaAddLearningTrack;
 
+  /// No description provided for @ctaCreateProfileFirst.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a learner profile first, then add a track.'**
+  String get ctaCreateProfileFirst;
+
   /// No description provided for @commonDismiss.
   ///
   /// In en, this message translates to:

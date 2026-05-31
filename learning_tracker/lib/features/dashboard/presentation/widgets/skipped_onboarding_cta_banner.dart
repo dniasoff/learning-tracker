@@ -14,6 +14,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart'
+    show profileListProvider;
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -130,7 +132,21 @@ class _CtaBannerBody extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: const StadiumBorder(),
               ),
-              onPressed: () {
+              onPressed: () async {
+                // D6: a track cannot be saved on a profile-less account — the
+                // active profileId resolves to the sentinel 0, which has no
+                // learner_profiles row, so the track/stage insert FK-fails and
+                // the user only sees "Failed to save track". Guide them to
+                // create a profile FIRST instead of into a guaranteed failure.
+                final profiles = await ref.read(profileListProvider.future);
+                if (!context.mounted) return;
+                if (profiles.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text(l10n.ctaCreateProfileFirst)),
+                  );
+                  unawaited(context.router.push(const ManageLearnersRoute()));
+                  return;
+                }
                 unawaited(
                   context.router.push(
                     TrackManagementHubRoute(startAdding: true),

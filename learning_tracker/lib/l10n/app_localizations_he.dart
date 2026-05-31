@@ -405,6 +405,10 @@ class AppLocalizationsHe extends AppLocalizations {
   String get ctaAddLearningTrack => 'הוסיפו מסלול לימוד';
 
   @override
+  String get ctaCreateProfileFirst =>
+      'צרו תחילה פרופיל לומד, ואז הוסיפו מסלול.';
+
+  @override
   String get commonDismiss => 'סגירה';
 
   @override

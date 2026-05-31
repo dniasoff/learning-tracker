@@ -407,6 +407,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get ctaAddLearningTrack => 'Add a learning track';
 
   @override
+  String get ctaCreateProfileFirst =>
+      'Create a learner profile first, then add a track.';
+
+  @override
   String get commonDismiss => 'Dismiss';
 
   @override
