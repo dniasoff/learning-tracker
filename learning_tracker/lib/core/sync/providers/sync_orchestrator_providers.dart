@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:learning_tracker/core/analytics/analytics_provider.dart';
@@ -86,6 +88,10 @@ final syncOrchestratorProvider = Provider<SyncOrchestrator?>((ref) {
   // redemption debit/refund, parent adjust) is pushed to the outbox regardless
   // of which UI path triggered it.
   database.pointsBalanceDao.syncSink = uploadFacade;
+  // D14: recover any ledger rows written before the sink was wired (recovers
+  // a cloud-born account's first credit, and any crash-window gap) by
+  // re-enqueuing every row still lacking a sync marker. Fire-and-forget.
+  unawaited(database.pointsBalanceDao.reEnqueueUnsyncedLedgerRows(profileId));
   final uploadService = LocalDataUploadService(
     facade: uploadFacade,
     database: database,

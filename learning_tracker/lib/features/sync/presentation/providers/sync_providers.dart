@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/sync/providers/outbox_providers.dart';
@@ -145,5 +147,9 @@ final outboxSyncWriteFacadeProvider = Provider<OutboxSyncWriteFacade?>((ref) {
   // to the outbox. The DAO lives in core/ and cannot import the facade, so the
   // wiring happens here at the features-layer composition root.
   database.pointsBalanceDao.syncSink = facade;
+  // D14: recover any ledger rows written before this sink was wired (e.g. a
+  // cloud-born account's first credit) by re-enqueuing every row still lacking
+  // a sync marker. Idempotent + fire-and-forget so it never blocks the UI.
+  unawaited(database.pointsBalanceDao.reEnqueueUnsyncedLedgerRows(profileId));
   return facade;
 });

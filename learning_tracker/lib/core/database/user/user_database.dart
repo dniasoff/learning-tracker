@@ -155,7 +155,7 @@ class UserDatabase extends _$UserDatabase {
   UserDatabase(super.e);
 
   @override
-  int get schemaVersion => 28;
+  int get schemaVersion => 29;
 
   // drift_dev cannot express WHERE in a Dart-defined view's `as()` body
   // (cascade `..where()` confuses the generator).  The auto-generated SQL for
@@ -251,6 +251,12 @@ class UserDatabase extends _$UserDatabase {
           // Safe on existing rows (NULL default); Wave-B backfills/populates.
           await m.addColumn(pointsLedger, pointsLedger.ulid);
           await m.addColumn(rewardRedemptions, rewardRedemptions.ulid);
+        }
+        if (from < 29) {
+          // D14: additive nullable marker so the points-ledger sync
+          // reconciliation knows which rows have never been queued for push.
+          // Safe on existing rows (NULL default).
+          await m.addColumn(pointsLedger, pointsLedger.syncEnqueuedAt);
         }
         if (from == 27) {
           // Tutor "talmid view" mirror columns on learner_profiles (v28).

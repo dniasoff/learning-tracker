@@ -728,7 +728,7 @@ final class DashboardGlobalPointsProvider
 }
 
 String _$dashboardGlobalPointsHash() =>
-    r'08e64e48fb171f259721731ba3b8cb317ee2a571';
+    r'4cce4745284a3ce7c875b0a82537e205973ccfde';
 
 /// Write-path effect: strips legacy stock-template milestones for the current
 /// profile and pushes updated gamification settings to Firestore if any rows

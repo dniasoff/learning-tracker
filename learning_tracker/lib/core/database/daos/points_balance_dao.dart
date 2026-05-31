@@ -1,6 +1,10 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/tables/points_balance.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart'
+    show OutboxEntityKind;
 import 'package:learning_tracker/core/time/ulid.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 
@@ -14,13 +18,15 @@ part 'points_balance_dao.g.dart';
 /// The DAO calls back after every ledger insert and every redemption mutation
 /// so the rows reach Firestore via the outbox.
 abstract class PointsSyncSink {
-  /// Enqueue an append-only ledger row for push to
-  /// `users/{uid}/learner_profiles/{profileId}/points_ledger/{ulid}`.
-  Future<void> enqueuePointsLedgerEntry(Map<String, dynamic> payload);
-
   /// Enqueue a reward-redemption state-machine doc for push to
   /// `users/{uid}/learner_profiles/{profileId}/reward_redemptions/{ulid}`.
   Future<void> enqueueRewardRedemption(Map<String, dynamic> payload);
+
+  /// D14: kick the outbox processor so rows the DAO enqueued *inside* its own
+  /// transaction (atomically with the ledger write) are pushed promptly,
+  /// without the DAO needing to know about the processor. Best-effort —
+  /// failures are swallowed; the row is durable and a later trigger retries.
+  Future<void> requestSyncDrain();
 }
 
 /// DAO for managing the stored debitable points balance (WS7.balance).
@@ -117,8 +123,9 @@ class PointsBalanceDao extends DatabaseAccessor<UserDatabase>
         );
       }
     });
-    final row = ledgerRow;
-    if (row != null) await _pushLedgerEntry(row);
+    // D14: the outbox row was enqueued atomically inside the transaction; just
+    // kick the drain so it pushes promptly.
+    if (ledgerRow != null) await _requestDrain();
   }
 
   // ─── Redemption CRUD ────────────────────────────────────────────────────────
@@ -166,7 +173,6 @@ class PointsBalanceDao extends DatabaseAccessor<UserDatabase>
     required int pointsCost,
   }) async {
     RewardRedemption? result;
-    PointsLedgerData? debitLedger;
     await db.transaction(() async {
       final current = await _readBalanceInTransaction(profileId);
       if (current < pointsCost) return;
@@ -187,8 +193,9 @@ class PointsBalanceDao extends DatabaseAccessor<UserDatabase>
         rewardRedemptions,
       )..where((t) => t.id.equals(id))).getSingle();
 
-      // Debit the balance in the same transaction.
-      debitLedger = await _applyDeltaInTransaction(
+      // Debit the balance in the same transaction. The debit's ledger outbox
+      // row is enqueued atomically inside _applyDeltaInTransaction (D14).
+      await _applyDeltaInTransaction(
         profileId: profileId,
         delta: -pointsCost,
         entryKind: 'redemption_debit',
@@ -199,9 +206,9 @@ class PointsBalanceDao extends DatabaseAccessor<UserDatabase>
     });
     final redemption = result;
     if (redemption != null) {
+      // _pushRedemption enqueues the redemption doc AND kicks the drain, so the
+      // in-transaction debit-ledger row is pushed in the same round.
       await _pushRedemption(redemption);
-      final ledger = debitLedger;
-      if (ledger != null) await _pushLedgerEntry(ledger);
     }
     return result;
   }
@@ -240,7 +247,6 @@ class PointsBalanceDao extends DatabaseAccessor<UserDatabase>
     )..where((t) => t.id.equals(redemptionId))).getSingleOrNull();
     if (row == null || row.status != 'pending_fulfilment') return;
 
-    PointsLedgerData? refundLedger;
     RewardRedemption? updated;
     await db.transaction(() async {
       final now = DateTimeFactory.nowUtc();
@@ -252,7 +258,9 @@ class PointsBalanceDao extends DatabaseAccessor<UserDatabase>
           updatedAt: Value(now),
         ),
       );
-      refundLedger = await _applyDeltaInTransaction(
+      // The refund's ledger outbox row is enqueued atomically inside
+      // _applyDeltaInTransaction (D14).
+      await _applyDeltaInTransaction(
         profileId: row.profileId,
         delta: row.pointsCost,
         entryKind: 'redemption_refund',
@@ -265,9 +273,9 @@ class PointsBalanceDao extends DatabaseAccessor<UserDatabase>
       )..where((t) => t.id.equals(redemptionId))).getSingle();
     });
     final u = updated;
+    // _pushRedemption kicks the drain, pushing the in-transaction refund-ledger
+    // row in the same round.
     if (u != null) await _pushRedemption(u);
-    final ledger = refundLedger;
-    if (ledger != null) await _pushLedgerEntry(ledger);
   }
 
   // ─── Ledger reads ───────────────────────────────────────────────────────────
@@ -312,6 +320,9 @@ class PointsBalanceDao extends DatabaseAccessor<UserDatabase>
         redemptionId: Value(redemptionId),
         createdAt: createdAt,
         ulid: Value(ulid),
+        // D14: a pulled row is already on the cloud — stamp it enqueued so the
+        // reconciliation never echoes it back to Firestore.
+        syncEnqueuedAt: Value(createdAt),
       ),
     );
     return true;
@@ -428,8 +439,9 @@ class PointsBalanceDao extends DatabaseAccessor<UserDatabase>
         now: DateTimeFactory.nowUtc(),
       );
     });
-    final row = ledgerRow;
-    if (row != null) await _pushLedgerEntry(row);
+    // D14: the outbox row was enqueued atomically inside the transaction; just
+    // kick the drain so it pushes promptly.
+    if (ledgerRow != null) await _requestDrain();
   }
 
   /// Read the current balance inside an already-open transaction.
@@ -489,15 +501,45 @@ class PointsBalanceDao extends DatabaseAccessor<UserDatabase>
         ulid: Value(newUlid(now)),
       ),
     );
-    return (select(
+    final row = await (select(
       pointsLedger,
     )..where((t) => t.id.equals(ledgerId))).getSingle();
+
+    // D14: enqueue the cloud-sync outbox row IN THE SAME TRANSACTION as the
+    // ledger write so the two commit (or roll back) atomically — eliminating
+    // the crash window where the ledger row was durable but its outbox enqueue
+    // (previously run after the transaction) was lost.
+    await _enqueueLedgerInTransaction(row);
+    return row;
   }
 
-  Future<void> _pushLedgerEntry(PointsLedgerData row) async {
-    final sink = syncSink;
-    if (sink == null || row.ulid == null) return;
-    await sink.enqueuePointsLedgerEntry({
+  /// Enqueue [row] onto the cloud-sync outbox **within the caller's open
+  /// transaction** and stamp `sync_enqueued_at` so the reconciliation
+  /// ([reEnqueueUnsyncedLedgerRows]) never re-queues it.
+  ///
+  /// No-op when no sync sink is wired (local-born account, or a cloud-born
+  /// account before the features layer registers the sink — the latter is
+  /// recovered by the reconciliation on wire).
+  Future<void> _enqueueLedgerInTransaction(PointsLedgerData row) async {
+    if (syncSink == null || row.ulid == null) return;
+    await db.outboxDao.insertOutboxRow(
+      OutboxCompanion(
+        profileId: Value(row.profileId),
+        entityKind: const Value(OutboxEntityKind.pointsLedgerEntry),
+        entityKey: Value(row.ulid!),
+        payload: Value(jsonEncode(await _ledgerPayload(row))),
+        createdAt: Value(row.createdAt),
+      ),
+    );
+    await (update(pointsLedger)..where((t) => t.id.equals(row.id))).write(
+      PointsLedgerCompanion(syncEnqueuedAt: Value(row.createdAt)),
+    );
+  }
+
+  /// The Firestore push payload for a ledger [row] (deterministic doc-id =
+  /// `ulid`). Shared by the in-transaction enqueue and the reconciliation.
+  Future<Map<String, dynamic>> _ledgerPayload(PointsLedgerData row) async {
+    return {
       'ulid': row.ulid,
       'profile_id': row.profileId,
       'entry_kind': row.entryKind,
@@ -505,7 +547,44 @@ class PointsBalanceDao extends DatabaseAccessor<UserDatabase>
       'note': row.note,
       'redemption_ulid': await _redemptionUlidFor(row.redemptionId),
       'created_at': row.createdAt.toIso8601String(),
+    };
+  }
+
+  /// Ask the sink to drain the outbox after an in-transaction enqueue, so the
+  /// freshly-committed ledger row is pushed promptly. Best-effort.
+  Future<void> _requestDrain() async {
+    await syncSink?.requestSyncDrain();
+  }
+
+  /// D14 reconciliation — re-enqueue every ledger row for [profileId] that was
+  /// never queued for push (`sync_enqueued_at IS NULL`). Recovers rows written
+  /// while no sync sink was wired (a cloud-born account's first credit before
+  /// the features layer registered the sink). Idempotent: once a row is
+  /// enqueued its marker is set, so subsequent runs skip it; and even a
+  /// re-pushed row is a no-op merge on the receiver (deterministic doc-id =
+  /// `ulid`). No-op when no sink is wired (local-born — nothing to push to).
+  ///
+  /// Call right after wiring [syncSink] (cloud session start / profile switch).
+  Future<void> reEnqueueUnsyncedLedgerRows(int profileId) async {
+    if (syncSink == null) return;
+    final unsynced =
+        await (select(pointsLedger)
+              ..where(
+                (t) =>
+                    t.profileId.equals(profileId) &
+                    t.syncEnqueuedAt.isNull() &
+                    t.ulid.isNotNull(),
+              )
+              ..orderBy([(t) => OrderingTerm.asc(t.createdAt)]))
+            .get();
+    if (unsynced.isEmpty) return;
+
+    await db.transaction(() async {
+      for (final row in unsynced) {
+        await _enqueueLedgerInTransaction(row);
+      }
     });
+    await _requestDrain();
   }
 
   /// Resolve the stable [RewardRedemptions.ulid] for a local redemption id so

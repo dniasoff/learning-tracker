@@ -11858,6 +11858,18 @@ class $PointsLedgerTable extends PointsLedger
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _syncEnqueuedAtMeta = const VerificationMeta(
+    'syncEnqueuedAt',
+  );
+  @override
+  late final GeneratedColumn<DateTime> syncEnqueuedAt =
+      GeneratedColumn<DateTime>(
+        'sync_enqueued_at',
+        aliasedName,
+        true,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: false,
+      );
   @override
   List<GeneratedColumn> get $columns => [
     id,
@@ -11868,6 +11880,7 @@ class $PointsLedgerTable extends PointsLedger
     redemptionId,
     createdAt,
     ulid,
+    syncEnqueuedAt,
   ];
   @override
   String get aliasedName => _alias ?? actualTableName;
@@ -11937,6 +11950,15 @@ class $PointsLedgerTable extends PointsLedger
         ulid.isAcceptableOrUnknown(data['ulid']!, _ulidMeta),
       );
     }
+    if (data.containsKey('sync_enqueued_at')) {
+      context.handle(
+        _syncEnqueuedAtMeta,
+        syncEnqueuedAt.isAcceptableOrUnknown(
+          data['sync_enqueued_at']!,
+          _syncEnqueuedAtMeta,
+        ),
+      );
+    }
     return context;
   }
 
@@ -11978,6 +12000,10 @@ class $PointsLedgerTable extends PointsLedger
         DriftSqlType.string,
         data['${effectivePrefix}ulid'],
       ),
+      syncEnqueuedAt: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}sync_enqueued_at'],
+      ),
     );
   }
 
@@ -12014,6 +12040,17 @@ class PointsLedgerData extends DataClass
   /// Wave-B sync agent backfills + populates this going forward, and uses it
   /// as the deterministic Firestore document id for ledger entries.
   final String? ulid;
+
+  /// D14 — set once this row has been enqueued onto the cloud-sync outbox
+  /// (or pulled FROM the cloud, in which case it is already remote).
+  ///
+  /// `null` means the row was written while no sync sink was wired (e.g. a
+  /// cloud-born account's first credit before the features layer registered
+  /// the sink) and has never been queued for push. The startup/post-wire
+  /// reconciliation re-enqueues every `null`-marker row exactly once so no
+  /// ledger entry is permanently stranded off the cloud. Local-born rows stay
+  /// `null` forever (correct — they have no cloud destination until upgrade).
+  final DateTime? syncEnqueuedAt;
   const PointsLedgerData({
     required this.id,
     required this.profileId,
@@ -12023,6 +12060,7 @@ class PointsLedgerData extends DataClass
     this.redemptionId,
     required this.createdAt,
     this.ulid,
+    this.syncEnqueuedAt,
   });
   @override
   Map<String, Expression> toColumns(bool nullToAbsent) {
@@ -12041,6 +12079,9 @@ class PointsLedgerData extends DataClass
     if (!nullToAbsent || ulid != null) {
       map['ulid'] = Variable<String>(ulid);
     }
+    if (!nullToAbsent || syncEnqueuedAt != null) {
+      map['sync_enqueued_at'] = Variable<DateTime>(syncEnqueuedAt);
+    }
     return map;
   }
 
@@ -12056,6 +12097,9 @@ class PointsLedgerData extends DataClass
           : Value(redemptionId),
       createdAt: Value(createdAt),
       ulid: ulid == null && nullToAbsent ? const Value.absent() : Value(ulid),
+      syncEnqueuedAt: syncEnqueuedAt == null && nullToAbsent
+          ? const Value.absent()
+          : Value(syncEnqueuedAt),
     );
   }
 
@@ -12073,6 +12117,7 @@ class PointsLedgerData extends DataClass
       redemptionId: serializer.fromJson<int?>(json['redemptionId']),
       createdAt: serializer.fromJson<DateTime>(json['createdAt']),
       ulid: serializer.fromJson<String?>(json['ulid']),
+      syncEnqueuedAt: serializer.fromJson<DateTime?>(json['syncEnqueuedAt']),
     );
   }
   @override
@@ -12087,6 +12132,7 @@ class PointsLedgerData extends DataClass
       'redemptionId': serializer.toJson<int?>(redemptionId),
       'createdAt': serializer.toJson<DateTime>(createdAt),
       'ulid': serializer.toJson<String?>(ulid),
+      'syncEnqueuedAt': serializer.toJson<DateTime?>(syncEnqueuedAt),
     };
   }
 
@@ -12099,6 +12145,7 @@ class PointsLedgerData extends DataClass
     Value<int?> redemptionId = const Value.absent(),
     DateTime? createdAt,
     Value<String?> ulid = const Value.absent(),
+    Value<DateTime?> syncEnqueuedAt = const Value.absent(),
   }) => PointsLedgerData(
     id: id ?? this.id,
     profileId: profileId ?? this.profileId,
@@ -12108,6 +12155,9 @@ class PointsLedgerData extends DataClass
     redemptionId: redemptionId.present ? redemptionId.value : this.redemptionId,
     createdAt: createdAt ?? this.createdAt,
     ulid: ulid.present ? ulid.value : this.ulid,
+    syncEnqueuedAt: syncEnqueuedAt.present
+        ? syncEnqueuedAt.value
+        : this.syncEnqueuedAt,
   );
   PointsLedgerData copyWithCompanion(PointsLedgerCompanion data) {
     return PointsLedgerData(
@@ -12121,6 +12171,9 @@ class PointsLedgerData extends DataClass
           : this.redemptionId,
       createdAt: data.createdAt.present ? data.createdAt.value : this.createdAt,
       ulid: data.ulid.present ? data.ulid.value : this.ulid,
+      syncEnqueuedAt: data.syncEnqueuedAt.present
+          ? data.syncEnqueuedAt.value
+          : this.syncEnqueuedAt,
     );
   }
 
@@ -12134,7 +12187,8 @@ class PointsLedgerData extends DataClass
           ..write('note: $note, ')
           ..write('redemptionId: $redemptionId, ')
           ..write('createdAt: $createdAt, ')
-          ..write('ulid: $ulid')
+          ..write('ulid: $ulid, ')
+          ..write('syncEnqueuedAt: $syncEnqueuedAt')
           ..write(')'))
         .toString();
   }
@@ -12149,6 +12203,7 @@ class PointsLedgerData extends DataClass
     redemptionId,
     createdAt,
     ulid,
+    syncEnqueuedAt,
   );
   @override
   bool operator ==(Object other) =>
@@ -12161,7 +12216,8 @@ class PointsLedgerData extends DataClass
           other.note == this.note &&
           other.redemptionId == this.redemptionId &&
           other.createdAt == this.createdAt &&
-          other.ulid == this.ulid);
+          other.ulid == this.ulid &&
+          other.syncEnqueuedAt == this.syncEnqueuedAt);
 }
 
 class PointsLedgerCompanion extends UpdateCompanion<PointsLedgerData> {
@@ -12173,6 +12229,7 @@ class PointsLedgerCompanion extends UpdateCompanion<PointsLedgerData> {
   final Value<int?> redemptionId;
   final Value<DateTime> createdAt;
   final Value<String?> ulid;
+  final Value<DateTime?> syncEnqueuedAt;
   const PointsLedgerCompanion({
     this.id = const Value.absent(),
     this.profileId = const Value.absent(),
@@ -12182,6 +12239,7 @@ class PointsLedgerCompanion extends UpdateCompanion<PointsLedgerData> {
     this.redemptionId = const Value.absent(),
     this.createdAt = const Value.absent(),
     this.ulid = const Value.absent(),
+    this.syncEnqueuedAt = const Value.absent(),
   });
   PointsLedgerCompanion.insert({
     this.id = const Value.absent(),
@@ -12192,6 +12250,7 @@ class PointsLedgerCompanion extends UpdateCompanion<PointsLedgerData> {
     this.redemptionId = const Value.absent(),
     required DateTime createdAt,
     this.ulid = const Value.absent(),
+    this.syncEnqueuedAt = const Value.absent(),
   }) : profileId = Value(profileId),
        entryKind = Value(entryKind),
        delta = Value(delta),
@@ -12205,6 +12264,7 @@ class PointsLedgerCompanion extends UpdateCompanion<PointsLedgerData> {
     Expression<int>? redemptionId,
     Expression<DateTime>? createdAt,
     Expression<String>? ulid,
+    Expression<DateTime>? syncEnqueuedAt,
   }) {
     return RawValuesInsertable({
       if (id != null) 'id': id,
@@ -12215,6 +12275,7 @@ class PointsLedgerCompanion extends UpdateCompanion<PointsLedgerData> {
       if (redemptionId != null) 'redemption_id': redemptionId,
       if (createdAt != null) 'created_at': createdAt,
       if (ulid != null) 'ulid': ulid,
+      if (syncEnqueuedAt != null) 'sync_enqueued_at': syncEnqueuedAt,
     });
   }
 
@@ -12227,6 +12288,7 @@ class PointsLedgerCompanion extends UpdateCompanion<PointsLedgerData> {
     Value<int?>? redemptionId,
     Value<DateTime>? createdAt,
     Value<String?>? ulid,
+    Value<DateTime?>? syncEnqueuedAt,
   }) {
     return PointsLedgerCompanion(
       id: id ?? this.id,
@@ -12237,6 +12299,7 @@ class PointsLedgerCompanion extends UpdateCompanion<PointsLedgerData> {
       redemptionId: redemptionId ?? this.redemptionId,
       createdAt: createdAt ?? this.createdAt,
       ulid: ulid ?? this.ulid,
+      syncEnqueuedAt: syncEnqueuedAt ?? this.syncEnqueuedAt,
     );
   }
 
@@ -12267,6 +12330,9 @@ class PointsLedgerCompanion extends UpdateCompanion<PointsLedgerData> {
     if (ulid.present) {
       map['ulid'] = Variable<String>(ulid.value);
     }
+    if (syncEnqueuedAt.present) {
+      map['sync_enqueued_at'] = Variable<DateTime>(syncEnqueuedAt.value);
+    }
     return map;
   }
 
@@ -12280,7 +12346,8 @@ class PointsLedgerCompanion extends UpdateCompanion<PointsLedgerData> {
           ..write('note: $note, ')
           ..write('redemptionId: $redemptionId, ')
           ..write('createdAt: $createdAt, ')
-          ..write('ulid: $ulid')
+          ..write('ulid: $ulid, ')
+          ..write('syncEnqueuedAt: $syncEnqueuedAt')
           ..write(')'))
         .toString();
   }
@@ -23279,6 +23346,7 @@ typedef $$PointsLedgerTableCreateCompanionBuilder =
       Value<int?> redemptionId,
       required DateTime createdAt,
       Value<String?> ulid,
+      Value<DateTime?> syncEnqueuedAt,
     });
 typedef $$PointsLedgerTableUpdateCompanionBuilder =
     PointsLedgerCompanion Function({
@@ -23290,6 +23358,7 @@ typedef $$PointsLedgerTableUpdateCompanionBuilder =
       Value<int?> redemptionId,
       Value<DateTime> createdAt,
       Value<String?> ulid,
+      Value<DateTime?> syncEnqueuedAt,
     });
 
 final class $$PointsLedgerTableReferences
@@ -23361,6 +23430,11 @@ class $$PointsLedgerTableFilterComposer
     builder: (column) => ColumnFilters(column),
   );
 
+  ColumnFilters<DateTime> get syncEnqueuedAt => $composableBuilder(
+    column: $table.syncEnqueuedAt,
+    builder: (column) => ColumnFilters(column),
+  );
+
   $$LearnerProfilesTableFilterComposer get profileId {
     final $$LearnerProfilesTableFilterComposer composer = $composerBuilder(
       composer: this,
@@ -23429,6 +23503,11 @@ class $$PointsLedgerTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<DateTime> get syncEnqueuedAt => $composableBuilder(
+    column: $table.syncEnqueuedAt,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   $$LearnerProfilesTableOrderingComposer get profileId {
     final $$LearnerProfilesTableOrderingComposer composer = $composerBuilder(
       composer: this,
@@ -23484,6 +23563,11 @@ class $$PointsLedgerTableAnnotationComposer
 
   GeneratedColumn<String> get ulid =>
       $composableBuilder(column: $table.ulid, builder: (column) => column);
+
+  GeneratedColumn<DateTime> get syncEnqueuedAt => $composableBuilder(
+    column: $table.syncEnqueuedAt,
+    builder: (column) => column,
+  );
 
   $$LearnerProfilesTableAnnotationComposer get profileId {
     final $$LearnerProfilesTableAnnotationComposer composer = $composerBuilder(
@@ -23545,6 +23629,7 @@ class $$PointsLedgerTableTableManager
                 Value<int?> redemptionId = const Value.absent(),
                 Value<DateTime> createdAt = const Value.absent(),
                 Value<String?> ulid = const Value.absent(),
+                Value<DateTime?> syncEnqueuedAt = const Value.absent(),
               }) => PointsLedgerCompanion(
                 id: id,
                 profileId: profileId,
@@ -23554,6 +23639,7 @@ class $$PointsLedgerTableTableManager
                 redemptionId: redemptionId,
                 createdAt: createdAt,
                 ulid: ulid,
+                syncEnqueuedAt: syncEnqueuedAt,
               ),
           createCompanionCallback:
               ({
@@ -23565,6 +23651,7 @@ class $$PointsLedgerTableTableManager
                 Value<int?> redemptionId = const Value.absent(),
                 required DateTime createdAt,
                 Value<String?> ulid = const Value.absent(),
+                Value<DateTime?> syncEnqueuedAt = const Value.absent(),
               }) => PointsLedgerCompanion.insert(
                 id: id,
                 profileId: profileId,
@@ -23574,6 +23661,7 @@ class $$PointsLedgerTableTableManager
                 redemptionId: redemptionId,
                 createdAt: createdAt,
                 ulid: ulid,
+                syncEnqueuedAt: syncEnqueuedAt,
               ),
           withReferenceMapper: (p0) => p0
               .map(

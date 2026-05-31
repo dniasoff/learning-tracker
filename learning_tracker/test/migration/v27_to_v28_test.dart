@@ -72,6 +72,22 @@ void _buildV27Schema(Database raw) {
     );
   ''');
 
+  // points_ledger — v27 shape (table added at v25, `ulid` added at v27). A real
+  // v27 DB has this table; the fixture must include it so the additive v29
+  // `sync_enqueued_at` column migration (D14) has a table to alter.
+  raw.execute('''
+    CREATE TABLE points_ledger (
+      id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+      profile_id INTEGER NOT NULL REFERENCES learner_profiles (id) ON DELETE CASCADE,
+      entry_kind TEXT NOT NULL,
+      delta INTEGER NOT NULL,
+      note TEXT,
+      redemption_id INTEGER,
+      created_at INTEGER NOT NULL,
+      ulid TEXT
+    );
+  ''');
+
   raw.execute(
     'INSERT INTO accounts (id, email, tier, display_name, created_at, updated_at) '
     "VALUES (1, 'a@example.com', 'localBorn', 'Account', 0, 0);",

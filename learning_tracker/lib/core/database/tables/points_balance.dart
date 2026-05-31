@@ -61,6 +61,17 @@ class PointsLedger extends Table {
   /// Wave-B sync agent backfills + populates this going forward, and uses it
   /// as the deterministic Firestore document id for ledger entries.
   TextColumn get ulid => text().nullable()();
+
+  /// D14 — set once this row has been enqueued onto the cloud-sync outbox
+  /// (or pulled FROM the cloud, in which case it is already remote).
+  ///
+  /// `null` means the row was written while no sync sink was wired (e.g. a
+  /// cloud-born account's first credit before the features layer registered
+  /// the sink) and has never been queued for push. The startup/post-wire
+  /// reconciliation re-enqueues every `null`-marker row exactly once so no
+  /// ledger entry is permanently stranded off the cloud. Local-born rows stay
+  /// `null` forever (correct — they have no cloud destination until upgrade).
+  DateTimeColumn get syncEnqueuedAt => dateTime().nullable()();
 }
 
 /// Tracks reward redemption requests (WS7.redeem).

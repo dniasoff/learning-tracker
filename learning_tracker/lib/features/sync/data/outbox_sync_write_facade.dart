@@ -410,17 +410,14 @@ class OutboxSyncWriteFacade implements SyncWriteFacade, PointsSyncSink {
 
   // ── WS9 Wave-B (C#2) — points spend economy (PointsSyncSink) ────────────────
 
+  /// D14: kick the outbox processor so points-ledger rows the DAO enqueued
+  /// inside its own transaction are pushed promptly. Reuses the same drain tee
+  /// every [_enqueue] fires; best-effort (the facade swallows drain failures).
   @override
-  Future<void> enqueuePointsLedgerEntry(
-    Map<String, dynamic> payload,
-  ) => _enqueue(
-    OutboxEntityKind.pointsLedgerEntry,
-    // ULID is the deterministic Firestore doc-id; use it as the local
-    // outbox dedup key so repeated enqueues of the same ledger row collapse.
-    payload['ulid']?.toString() ??
-        DateTimeFactory.nowUtc().millisecondsSinceEpoch.toString(),
-    payload,
-  );
+  Future<void> requestSyncDrain() async {
+    final tee = _onEnqueueDrain;
+    if (tee != null) await tee();
+  }
 
   @override
   Future<void> enqueueRewardRedemption(Map<String, dynamic> payload) =>

@@ -1,7 +1,26 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/database/daos/points_balance_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 
 import '../../../helpers/drift_memory.dart';
+
+/// Records sink callbacks so the D14 tests can assert the DAO requests a drain
+/// after an in-transaction enqueue without wiring the real outbox processor.
+class _FakeSink implements PointsSyncSink {
+  int drainRequests = 0;
+  final List<Map<String, dynamic>> redemptions = [];
+
+  @override
+  Future<void> enqueueRewardRedemption(Map<String, dynamic> payload) async {
+    redemptions.add(payload);
+  }
+
+  @override
+  Future<void> requestSyncDrain() async {
+    drainRequests++;
+  }
+}
 
 void main() {
   late UserDatabase db;
@@ -199,6 +218,101 @@ void main() {
       final pending = await db.pointsBalanceDao.getPendingRedemptions(1);
       expect(pending, hasLength(1));
       expect(pending.first.id, r2!.id);
+    });
+  });
+
+  // ── D14: ledger rows must reach the cloud sync outbox, atomically ──────────
+  group('PointsBalanceDao cloud-sync enqueue (D14)', () {
+    Future<List<OutboxData>> ledgerOutbox(UserDatabase db) => db.outboxDao
+        .getPendingByKind(OutboxEntityKind.pointsLedgerEntry, 1, limit: 100);
+
+    test(
+      'credit with a wired sink enqueues the ledger row IN the same '
+      'transaction (atomic) and stamps the sync marker + requests a drain',
+      () async {
+        final sink = _FakeSink();
+        db.pointsBalanceDao.syncSink = sink;
+
+        await db.pointsBalanceDao.creditCompletion(1, 10);
+
+        final outbox = await ledgerOutbox(db);
+        expect(outbox, hasLength(1), reason: 'ledger row enqueued atomically');
+
+        final ledger = await db.pointsBalanceDao.getLedger(1);
+        expect(ledger, hasLength(1));
+        // The outbox dedup key is the ledger ULID (deterministic Firestore id).
+        expect(outbox.single.entityKey, ledger.single.ulid);
+        // Marker set so reconciliation never re-enqueues it.
+        expect(ledger.single.syncEnqueuedAt, isNotNull);
+        // Drain requested so the freshly-committed row pushes promptly.
+        expect(sink.drainRequests, greaterThanOrEqualTo(1));
+      },
+    );
+
+    test(
+      'a credit written while syncSink is NULL is recovered by the post-wire '
+      'reconciliation (the silent-drop bug)',
+      () async {
+        // No sink wired yet (cloud-born account, first credit before the
+        // features layer registers the sink).
+        await db.pointsBalanceDao.creditCompletion(1, 7);
+
+        // Nothing enqueued, and the row carries no sync marker.
+        expect(await ledgerOutbox(db), isEmpty);
+        var ledger = await db.pointsBalanceDao.getLedger(1);
+        expect(ledger.single.syncEnqueuedAt, isNull);
+
+        // Wire the sink and run the reconciliation.
+        final sink = _FakeSink();
+        db.pointsBalanceDao.syncSink = sink;
+        await db.pointsBalanceDao.reEnqueueUnsyncedLedgerRows(1);
+
+        final outbox = await ledgerOutbox(db);
+        expect(outbox, hasLength(1), reason: 'orphaned ledger row recovered');
+        ledger = await db.pointsBalanceDao.getLedger(1);
+        expect(outbox.single.entityKey, ledger.single.ulid);
+        expect(ledger.single.syncEnqueuedAt, isNotNull);
+      },
+    );
+
+    test('reconciliation is idempotent — never double-enqueues', () async {
+      final sink = _FakeSink();
+      db.pointsBalanceDao.syncSink = sink;
+
+      await db.pointsBalanceDao.creditCompletion(1, 5); // already enqueued
+      await db.pointsBalanceDao.reEnqueueUnsyncedLedgerRows(1);
+      await db.pointsBalanceDao.reEnqueueUnsyncedLedgerRows(1);
+
+      expect(await ledgerOutbox(db), hasLength(1));
+    });
+
+    test('a pulled remote ledger row is marked enqueued and is NOT echoed back '
+        'to the cloud by reconciliation', () async {
+      final sink = _FakeSink();
+      db.pointsBalanceDao.syncSink = sink;
+
+      await db.pointsBalanceDao.insertRemoteLedgerEntryIfAbsent(
+        profileId: 1,
+        ulid: 'remote-ulid-1',
+        entryKind: 'completion',
+        delta: 12,
+        createdAt: DateTime.utc(2026, 5, 30, 9),
+      );
+
+      await db.pointsBalanceDao.reEnqueueUnsyncedLedgerRows(1);
+
+      expect(
+        await ledgerOutbox(db),
+        isEmpty,
+        reason: 'remote-origin rows must never be re-pushed',
+      );
+    });
+
+    test('local-born account (no sink) never enqueues or reconciles', () async {
+      // No sink wired — local-born has no cloud destination.
+      await db.pointsBalanceDao.creditCompletion(1, 9);
+      await db.pointsBalanceDao.reEnqueueUnsyncedLedgerRows(1);
+      expect(await ledgerOutbox(db), isEmpty);
     });
   });
 }
