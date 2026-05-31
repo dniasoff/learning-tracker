@@ -128,20 +128,25 @@ class DriftMergeStore implements MergeStore {
       return remoteUtc.isAfter(localUtc);
     }
 
-    // Inside the window: fall back to the Firestore server timestamp.
+    // Inside the window: when BOTH sides carry a Firestore server timestamp,
+    // it is the authoritative ordering for two already-pushed writes.
     if (remoteSyncedAt != null && localSyncedAt != null) {
       if (remoteSyncedAt.isAfter(localSyncedAt)) return true;
       if (localSyncedAt.isAfter(remoteSyncedAt)) return false;
-      // Equal synced_at — fall through to the "prefer remote" default.
+      // Equal synced_at — fall through to the updated_at / convergence tie.
     }
 
-    // Tie within the window with no usable server timestamp on at least one
-    // side → prefer remote (it has authoritatively reached the server;
-    // preserves convergence).
-    //
-    // The one true tie (local == remote with no server-timestamp signal) is
-    // resolved by preferring remote so two devices that wrote the same
-    // value at the same instant converge instead of bouncing.
+    // D15: at least one side has no usable server timestamp — typically a
+    // fresh LOCAL edit that has `updated_at` but no `synced_at` yet (it has
+    // not been pushed). Do NOT blindly prefer remote here: that silently
+    // clobbers a demonstrably-newer un-pushed local edit with an OLDER remote
+    // value. Compare the client `updated_at` and keep the strictly-newer side.
+    if (remoteUtc.isAfter(localUtc)) return true;
+    if (localUtc.isAfter(remoteUtc)) return false;
+
+    // The one true tie (equal `updated_at`, no decisive server timestamp) is
+    // resolved by preferring remote so two devices that wrote the same value
+    // at the same instant converge instead of bouncing.
     return true;
   }
 

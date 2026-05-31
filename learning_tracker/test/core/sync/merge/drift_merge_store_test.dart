@@ -196,6 +196,58 @@ void main() {
         isTrue,
       );
     });
+
+    // ── D15: a fresh, newer, un-pushed local edit must NOT be clobbered by an
+    // OLDER remote inside the 5 s window just because it lacks a synced_at. ──
+    test(
+      'D15: newer un-pushed local (no syncedAt) beats an OLDER remote within '
+      'the window — keep local',
+      () {
+        final t = DateTime.utc(2026, 5, 1, 12, 0, 3);
+        // Local edited at T, never pushed → no synced_at.
+        // Remote arrived 3 s EARLIER but has a server timestamp.
+        expect(
+          store.remoteIsNewer(
+            localUpdatedAt: t,
+            remoteUpdatedAt: t.subtract(const Duration(seconds: 3)),
+            localSyncedAt: null,
+            remoteSyncedAt: t,
+          ),
+          isFalse,
+          reason: 'older remote must not overwrite a newer un-pushed local',
+        );
+      },
+    );
+
+    test(
+      'D15: within the window with no usable server timestamps, a NEWER remote '
+      'still wins',
+      () {
+        final t = DateTime.utc(2026, 5, 1, 12, 0, 0);
+        expect(
+          store.remoteIsNewer(
+            localUpdatedAt: t,
+            remoteUpdatedAt: t.add(const Duration(seconds: 3)),
+          ),
+          isTrue,
+        );
+      },
+    );
+
+    test(
+      'D15: within the window, an OLDER remote (both sides lack syncedAt) does '
+      'NOT win',
+      () {
+        final t = DateTime.utc(2026, 5, 1, 12, 0, 4);
+        expect(
+          store.remoteIsNewer(
+            localUpdatedAt: t,
+            remoteUpdatedAt: t.subtract(const Duration(seconds: 4)),
+          ),
+          isFalse,
+        );
+      },
+    );
   });
 
   // ── currentUpdatedAt / persistUpdatedAt round-trip ───────────────────────
