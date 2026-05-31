@@ -39,8 +39,28 @@ F8 (rewards economy; cheat-sheet predicts the now-fixed D2 + a fulfil-vs-decline
 F11 (chazara conditional, derived from stage count >1), F2 (tutor invite), F3 (offline sync), F13 (Hebrew/RTL),
 then the §1–§12 element-by-element sweep. Create a throwaway child profile via the switcher (now works) to
 unblock child/parent/rewards testing. Source-grounded watch-fors per flow: `on-device-preflight-cheatsheet.md`.
-§0 dead code to resolve: **ParentPortalBottomNav** + **ScopeSelectionScreen** provably-dead (delete);
-**TrackLearningOrderScreen** reachable via TrackDetail → "Reorder content" (document).
+§0 dead code to resolve: **ParentPortalBottomNav** (DELETED) + **ScopeSelectionScreen** provably-dead (delete,
+needs test surgery); **TrackLearningOrderScreen** reachable via TrackDetail → "Reorder content" (document).
+
+### Update 2 (same session, continued)
+**Fixed + committed since:** **D5** `fix(gamification)` fulfilRedemption status guard (no fulfil-vs-decline
+race); **ParentPortalBottomNav** deleted (§0); **B1** `fix(tracks)` program-with-chazara track now seeds its
+stages (was a dead/0-stage track + data-loss). **F7 PASS** on-device (child Settings → Parent Mode → PIN gate →
+correct PIN → Parent Settings with all surfaces; guard fix holds). B1's preset code-path verified on-device
+through the dirshu read-only chazara step.
+
+**Adversarial bug-hunt workflow → 16 confirmed bugs** (`bug-hunt-findings-2026-05-31.md`), of which B1 fixed.
+**REMAINING QUEUE (prioritized, all in the findings doc + bug-log):**
+- HIGH: **B2** self-paced `per_week` pace `ceil()` inflation (scheduler_providers.dart:740) → over-schedule/overdue flood.
+- MED data-loss (sync): tombstone-resurrection timestamp mismatch (drift_merge_store:239); ledger enqueue outside txn (points_balance_dao:497); remoteIsNewer clobbers newer un-pushed local in 5s window (drift_merge_store:132).
+- MED correctness: sync status 'Synced' while profile-0 outbox row stuck (sync_orchestrator:940); progress stage breakdown keyed by DB id not stageOrder (curriculum_progress_service:229); streak UTC-vs-local day bucketing (streak_reducer:75); coarse pace granularity ignored (scheduler_providers:711); revoked talmid resurrects active (manage_tutors_providers:104); cloud-account-delete ghost registry row (account_management_service:61); swipe-away active account deletes open DB (account_picker_screen:539); registry lastActiveAccountId never cleared (device_registry_database:105); dashboard lifetime-knowledge card D2-class staleness (dashboard_model_provider:99).
+- MED l10n: hardcoded English on skipped_onboarding_cta_banner:104.
+- LOW: live streak stream captures 'today' once (midnight rollover) (streak_state_provider:69).
+
+**Also FOUND on-device (D6/D7, not yet fixed, see bug-log):** D6 profile-less account is offered "Add a learning
+track" but save fails (no profile; product call needed); D7 track creation is non-atomic (orphaned track +
+profile_programs rows persist on stage-seed failure; track-delete leaves a dangling profile_programs row).
+Device left CLEAN (test profile + orphan track deleted; account back to 0 profiles / 0 tracks).
 
 ---
 

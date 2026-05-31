@@ -131,6 +131,24 @@ A 26-agent find→adversarially-verify workflow over sync/gamification/tracks/tu
 surfaced **16 confirmed defects** (of 20 reported) — full list with file:line + fix + verifier reasoning in
 `docs/planning/bug-hunt-findings-2026-05-31.md`. Fixing in priority order; B1 done below.
 
+**D6 (MEDIUM, UX/edge — FOUND on-device, not yet fixed):** A **profile-less account** (e.g. Daniel's
+churn-anomaly account: accounts.id=2, zero `learner_profiles`; also a tutor-only adult) is shown the Dashboard
+**"Add a learning track"** CTA, but completing AddTrackFlow fails with a surfaced **"Failed to save track. Please
+try again."** — there is no profile to attach the track to (the active profileId resolves to the sentinel `0`,
+which has no `learner_profiles` row → FK fail on the track/stage insert). Same profile-less-account class as D4.
+*Suggested fix (needs product call):* on a profile-less account, route the empty-state CTA to **profile
+creation** first (or block/guide AddTrackFlow until a profile exists) instead of letting track creation fail.
+
+**D7 (MEDIUM, data-integrity — FOUND on-device, not yet fixed):** Track creation is **non-atomic**. When stage
+seeding throws mid-creation (reproduced on the profile-less account: the B1 preset's `_applyPreset` stage insert
+FK-failed on profile_id=0), the **`curriculum_tracks` + `profile_programs` rows persist** (orphaned, 0 stages)
+even though the operation reports "Failed to save track". Separately, **deleting a track does not remove its
+`profile_programs` row** (a dangling enrollment remained after Delete-and-wipe-history). *Suggested fix:* wrap
+the whole `TrackCreationService._runCoreTransaction` (track insert + program enrolment + stage seeding) in a
+single DB transaction so a stage-seed failure rolls back the track + program rows; and have track deletion also
+delete the matching `profile_programs` row. *(On a normal profiled account stage seeding succeeds, so this orphan
+only surfaces on the profile-less edge — but the atomicity gap is real.)*
+
 **B1 (HIGH, correctness + DATA-LOSS — track setup):**
 *Symptom* — Enrolling in an **active calendar program that has built-in chazara stages** (e.g.
 `dirshu_amud_hayomi`) produces a track with **ZERO stage definitions** → NO daily, overdue, OR chazara tasks
