@@ -50,19 +50,26 @@ correct PIN → Parent Settings with all surfaces; guard fix holds). B1's preset
 through the dirshu read-only chazara step.
 
 **Adversarial bug-hunt workflow → 16 confirmed bugs** (`bug-hunt-findings-2026-05-31.md`), of which B1 fixed.
-**REMAINING QUEUE (prioritized, all in the findings doc + bug-log):**
-- HIGH: **B2** self-paced `per_week` pace `ceil()` inflation (scheduler_providers.dart:740) → over-schedule/overdue flood.
-- MED data-loss (sync): tombstone-resurrection timestamp mismatch (drift_merge_store:239); ledger enqueue outside txn (points_balance_dao:497); remoteIsNewer clobbers newer un-pushed local in 5s window (drift_merge_store:132).
-- MED correctness: sync status 'Synced' while profile-0 outbox row stuck (sync_orchestrator:940); progress stage breakdown keyed by DB id not stageOrder (curriculum_progress_service:229); streak UTC-vs-local day bucketing (streak_reducer:75); coarse pace granularity ignored (scheduler_providers:711); revoked talmid resurrects active (manage_tutors_providers:104); cloud-account-delete ghost registry row (account_management_service:61); swipe-away active account deletes open DB (account_picker_screen:539); registry lastActiveAccountId never cleared (device_registry_database:105); ~~dashboard lifetime-knowledge card D2-class staleness~~ **FIXED (D9)**.
-- ~~MED l10n: hardcoded English on skipped_onboarding_cta_banner:104~~ **FIXED (D8)**.
-- LOW: live streak stream captures 'today' once (midnight rollover) (streak_state_provider:69).
+**REMAINING QUEUE (after the 12-fix batch; all specs in the findings doc + bug-log):**
+- MED data-loss (sync, HIGH-VALUE NEXT, merge-engine — do with fresh context):
+  • **ledger enqueue outside txn** (points_balance_dao:497) — points never reach Firestore / devices diverge.
+  • **remoteIsNewer clobbers a newer un-pushed local edit** inside the 5 s window when local has no synced_at (drift_merge_store:132).
+- MED correctness:
+  • **D13 (PREPPED, fix known):** sync status 'Synced' while a profile-0 outbox row is stuck (sync_orchestrator:940) — fix = sum depth/stuck across `_profileId` AND profile 0 (+ min oldestPendingAt) in `_recomputeOutboxStatus`, mirroring `_doDrain`. Lib fix trivial; needs an orchestrator+failing-pipeline status test.
+  • streak UTC-vs-local day bucketing (streak_reducer:75) + live streak stream captures 'today' once / midnight rollover (streak_state_provider:69) — timezone, test carefully.
+  • revoked talmid resurrects active via offline-mirror union (manage_tutors_providers:104).
+  • cloud-account-delete ghost registry row + undeleted DB file (account_management_service:61) — sibling of D10.
+  • swipe-away active account in Account Picker deletes its open DB + strands the session (account_picker_screen:539).
+- **D6/D7** (on-device): profile-less account offered Add-Track but save fails (product call); non-atomic track creation leaves orphaned track + profile_programs rows (wrap creation in one txn; delete profile_program on track-delete).
 
-**Session fix tally (12 commits, all `make ci` green):** D1 switcher · D2 reactive points balance · D3 PIN-lockout
-l10n · D4a/D4b Add-Profile silent no-op · D5 fulfilRedemption race · B1 program-chazara zero-stages (data-loss) ·
-D8 CTA-banner l10n · D9 dashboard lifetime staleness · + ParentPortalBottomNav deleted. On-device verified:
-F6, F7, D1, D4. **Remaining queue above (~11 bugs) + D6/D7 are the continuation work** — the sync data-loss trio
-(drift_merge_store, points_balance_dao:497, sync_orchestrator) is highest-value-next but highest-risk (merge
-engine), best done with fresh focus.
+**Done this batch (FIXED + committed green):** ~~B2~~ pace inflation · ~~D10~~ registry lastActiveAccountId ·
+~~D11~~ tombstone-resurrection timestamp · ~~D12~~ stage breakdown by stageOrder · (earlier: D1–D5, B1, D8, D9 + ParentPortalBottomNav).
+
+**Session fix tally (12 distinct defects, ~20 commits, `make ci` green throughout):** D1 switcher · D2 reactive
+points balance · D3 + D8 l10n · D4a/D4b Add-Profile silent no-op · D5 fulfilRedemption race · B1 program-chazara
+zero-stages (data-loss) · B2 weekly-pace inflation · D9 dashboard lifetime staleness · D10 registry pointer ·
+D11 tombstone resurrection (data-loss) · D12 stage breakdown · + ParentPortalBottomNav deleted. On-device
+verified: F6, F7, D1, D4 (+ B1 code-path). Device left clean.
 
 **Also FOUND on-device (D6/D7, not yet fixed, see bug-log):** D6 profile-less account is offered "Add a learning
 track" but save fails (no profile; product call needed); D7 track creation is non-atomic (orphaned track +
