@@ -1,6 +1,8 @@
 /// Tests for StreakStateProvider covering read() and watch().
 library;
 
+import 'dart:async';
+
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
@@ -74,7 +76,7 @@ void main() {
       final state = await provider.read(profileId: profileId);
       expect(state.currentStreak, 0);
       expect(state.maxStreak, 0);
-      expect(state.lastCompletionDayUtc, isNull);
+      expect(state.lastCompletionDayLocal, isNull);
     });
 
     test('returns streak of 1 for a single completion today', () async {
@@ -170,5 +172,37 @@ void main() {
       expect(states.length, greaterThanOrEqualTo(2));
       expect(states.last, 1);
     });
+
+    // ── D17: a dashboard left open across local midnight lapses the streak ──
+    test(
+      'D17: advancing the clock past local midnight (no new events) lapses the '
+      'streak to 0 on the next rollover tick — without a relaunch',
+      () async {
+        // Seed a completion "today" (clock is 2026-05-14 in setUp).
+        await insertEvent(db, DateTime.utc(2026, 5, 14, 12));
+
+        final ticks = StreamController<void>();
+        addTearDown(ticks.close);
+        final states = <int>[];
+        final sub = provider
+            .watch(profileId: profileId, rolloverTicks: ticks.stream)
+            .listen((s) => states.add(s.currentStreak));
+        addTearDown(sub.cancel);
+
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        expect(states.last, 1, reason: 'streak alive on the seeded day');
+
+        // Two local days pass with NO new completion, then a rollover tick.
+        clock.advance(const Duration(days: 2));
+        ticks.add(null);
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+
+        expect(
+          states.last,
+          0,
+          reason: 'recomputing today on the tick lapses the stale streak',
+        );
+      },
+    );
   });
 }

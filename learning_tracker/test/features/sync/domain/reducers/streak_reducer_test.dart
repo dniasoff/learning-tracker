@@ -24,7 +24,7 @@ void main() {
       final state = reducer.reduce([], today: today);
       expect(state.currentStreak, 0);
       expect(state.maxStreak, 0);
-      expect(state.lastCompletionDayUtc, isNull);
+      expect(state.lastCompletionDayLocal, isNull);
     });
 
     test('2 — single event today yields current streak = 1', () {
@@ -116,5 +116,48 @@ void main() {
       expect(state.currentStreak, 0);
       expect(state.maxStreak, 3);
     });
+
+    // ── D16: buckets by LOCAL day, not UTC ─────────────────────────────────
+    test(
+      'D16: two completions on consecutive LOCAL days that share one UTC day '
+      'count as TWO streak days (local bucketing), not one (UTC bucketing)',
+      () {
+        // Simulate US-Pacific (UTC-8), independent of the host timezone:
+        //   Mon 23:00 PT = Tue 07:00 UTC
+        //   Tue 01:00 PT = Tue 09:00 UTC   ← same UTC day, different LOCAL day
+        DateTime pacificDay(DateTime t) {
+          final pt = t.toUtc().subtract(const Duration(hours: 8));
+          return DateTime.utc(pt.year, pt.month, pt.day);
+        }
+
+        DateTime utcDay(DateTime t) {
+          final u = t.toUtc();
+          return DateTime.utc(u.year, u.month, u.day);
+        }
+
+        final events = [
+          StreakEvent(
+            profileId: profileId,
+            eventType: 'completion',
+            eventTimestamp: DateTime.utc(2026, 5, 12, 7), // Mon 23:00 PT
+          ),
+          StreakEvent(
+            profileId: profileId,
+            eventType: 'completion',
+            eventTimestamp: DateTime.utc(2026, 5, 12, 9), // Tue 01:00 PT
+          ),
+        ];
+        final anchor = DateTime.utc(2026, 5, 12, 9);
+
+        // The fix — LOCAL day bucketing keeps the two days distinct.
+        final local = reducer.reduce(events, today: anchor, dayOf: pacificDay);
+        expect(local.currentStreak, 2);
+        expect(local.maxStreak, 2);
+
+        // The bug — UTC bucketing merges them into a single day.
+        final utc = reducer.reduce(events, today: anchor, dayOf: utcDay);
+        expect(utc.currentStreak, 1);
+      },
+    );
   });
 }

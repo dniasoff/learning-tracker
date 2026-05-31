@@ -51,7 +51,7 @@ class StreakService {
     // StreakService injects UserDatabase so we can read directly.
     // This path is kept for calendar widgets that show activity dots.
     final state = await _provider.read(profileId: _profileId);
-    final lastDay = state.lastCompletionDayUtc;
+    final lastDay = state.lastCompletionDayLocal;
     if (lastDay == null) return {};
 
     // Build the set of active UTC days from streak_events.

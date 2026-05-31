@@ -127,7 +127,7 @@ void main() {
 
         expect(state.currentStreak, 3);
         expect(state.maxStreak, 3);
-        expect(state.lastCompletionDayUtc, DateTime.utc(2026, 5, 10));
+        expect(state.lastCompletionDayLocal, DateTime(2026, 5, 10));
       });
 
       // ── AC2: cloud restore reconstitutes streak from completion_events ─
@@ -258,7 +258,7 @@ void main() {
 
           expect(state.currentStreak, 2);
           expect(state.maxStreak, 2);
-          expect(state.lastCompletionDayUtc, DateTime.utc(2026, 5, 10));
+          expect(state.lastCompletionDayLocal, DateTime(2026, 5, 10));
         },
       );
 

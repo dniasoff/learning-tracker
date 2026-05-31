@@ -128,28 +128,34 @@ void main() {
         );
       });
 
-      // ── AC2: StreakReducer (UTC day boundaries) ───────────────────────
-
-      group('AC2 — StreakReducer uses UTC day boundaries', () {
-        test('consecutive UTC days extend the streak', () {
+      // ── AC2: StreakReducer (LOCAL day boundaries — D16) ───────────────
+      //
+      // D16 (2026-05-31) reversed Story 25.16's original UTC-day choice: the
+      // streak now buckets by LOCAL day so the headline agrees with the
+      // Recent-Activity calendar dots (which use DateUtils.extractLocalDate),
+      // the scheduler, and LocalDayClock. Timestamps here use ~noon UTC so the
+      // local date is identical across every real timezone (offset within
+      // ±12h), keeping the assertions deterministic regardless of the host TZ.
+      group('AC2 — StreakReducer uses LOCAL day boundaries (D16)', () {
+        test('consecutive local days extend the streak', () {
           final events = [
             StreakEvent(
               profileId: 1,
               eventType: 'completion',
-              eventTimestamp: DateTime.utc(2026, 5, 8, 22),
+              eventTimestamp: DateTime.utc(2026, 5, 8, 12),
             ),
             StreakEvent(
               profileId: 1,
               eventType: 'completion',
-              eventTimestamp: DateTime.utc(2026, 5, 9, 6),
+              eventTimestamp: DateTime.utc(2026, 5, 9, 12),
             ),
             StreakEvent(
               profileId: 1,
               eventType: 'completion',
-              eventTimestamp: DateTime.utc(2026, 5, 10, 6),
+              eventTimestamp: DateTime.utc(2026, 5, 10, 12),
             ),
           ];
-          final today = DateTime.utc(2026, 5, 10);
+          final today = DateTime.utc(2026, 5, 10, 12);
 
           final state = const StreakReducer().reduce(events, today: today);
 
@@ -157,20 +163,20 @@ void main() {
           expect(state.maxStreak, 3);
         });
 
-        test('multiple events on the SAME UTC day count as one day', () {
+        test('multiple events on the SAME local day count as one day', () {
           final events = [
             StreakEvent(
               profileId: 1,
               eventType: 'completion',
-              eventTimestamp: DateTime.utc(2026, 5, 10, 6),
+              eventTimestamp: DateTime.utc(2026, 5, 10, 10),
             ),
             StreakEvent(
               profileId: 1,
               eventType: 'completion',
-              eventTimestamp: DateTime.utc(2026, 5, 10, 23, 59),
+              eventTimestamp: DateTime.utc(2026, 5, 10, 14),
             ),
           ];
-          final today = DateTime.utc(2026, 5, 10);
+          final today = DateTime.utc(2026, 5, 10, 12);
 
           final state = const StreakReducer().reduce(events, today: today);
 
@@ -246,30 +252,38 @@ void main() {
           },
         );
 
-        test(
-          'late-evening UTC completion + early-morning UTC completion '
-          'on the NEXT UTC day are TWO days, even though they could be the '
-          'same local day in some timezones — regression for v1.0.60 bug',
-          () {
-            // 23:30 UTC and 01:30 UTC the next day — adjacent UTC days.
-            final events = [
-              StreakEvent(
-                profileId: 1,
-                eventType: 'completion',
-                eventTimestamp: DateTime.utc(2026, 5, 9, 23, 30),
-              ),
-              StreakEvent(
-                profileId: 1,
-                eventType: 'completion',
-                eventTimestamp: DateTime.utc(2026, 5, 10, 1, 30),
-              ),
-            ];
-            final today = DateTime.utc(2026, 5, 10);
+        test('D16: two completions on consecutive LOCAL days that share one UTC '
+            'day count as TWO days (matches the local calendar dots) — '
+            'supersedes the original UTC-boundary choice', () {
+          // US-Pacific (UTC-8), pinned via dayOf so the host TZ is irrelevant:
+          //   Mon 23:00 PT = Tue 07:00 UTC
+          //   Tue 01:00 PT = Tue 09:00 UTC   (same UTC day, two LOCAL days)
+          DateTime pacificDay(DateTime t) {
+            final pt = t.toUtc().subtract(const Duration(hours: 8));
+            return DateTime.utc(pt.year, pt.month, pt.day);
+          }
 
-            final state = const StreakReducer().reduce(events, today: today);
-            expect(state.currentStreak, 2);
-          },
-        );
+          final events = [
+            StreakEvent(
+              profileId: 1,
+              eventType: 'completion',
+              eventTimestamp: DateTime.utc(2026, 5, 12, 7),
+            ),
+            StreakEvent(
+              profileId: 1,
+              eventType: 'completion',
+              eventTimestamp: DateTime.utc(2026, 5, 12, 9),
+            ),
+          ];
+          final today = DateTime.utc(2026, 5, 12, 9);
+
+          final state = const StreakReducer().reduce(
+            events,
+            today: today,
+            dayOf: pacificDay,
+          );
+          expect(state.currentStreak, 2);
+        });
 
         test('empty input → zero streak', () {
           final state = const StreakReducer().reduce(
