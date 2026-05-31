@@ -933,9 +933,9 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
       return;
     }
 
-    final int depth;
-    final DateTime? oldest;
-    final int stuck;
+    int depth;
+    DateTime? oldest;
+    int stuck;
     try {
       depth = await dao.depth(_profileId);
       oldest = await dao.oldestPendingAt(_profileId);
@@ -943,6 +943,23 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
         _profileId,
         minAttempts: _degradedAttemptThreshold,
       );
+      // D13: `_doDrain` sweeps the active profile AND profile 0 (the bootstrap
+      // `learner_profile` push and any account-level row is enqueued under
+      // profile 0 before a profile is active). The status MUST mirror that
+      // two-profile sweep — otherwise a wedged profile-0 row (e.g.
+      // permission-denied) is invisible here, depth reads 0, and the indicator
+      // shows a false 'Synced' while the bootstrap push never reaches the cloud.
+      if (_profileId != 0) {
+        depth += await dao.depth(0);
+        stuck += await dao.stuckCount(
+          0,
+          minAttempts: _degradedAttemptThreshold,
+        );
+        final oldest0 = await dao.oldestPendingAt(0);
+        if (oldest0 != null && (oldest == null || oldest0.isBefore(oldest))) {
+          oldest = oldest0;
+        }
+      }
     } catch (e, st) {
       // Drift errors during shutdown / DB swap — degrade gracefully.
       _logger?.warning(
