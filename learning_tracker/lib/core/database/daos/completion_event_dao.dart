@@ -52,13 +52,20 @@ class CompletionEventDao extends DatabaseAccessor<UserDatabase>
   ///
   /// Used by the pull-merge path (H2) to resurrect a row that was tombstoned
   /// on this device but re-marked as complete on another device.
+  /// Finds a tombstoned (purged) completion row by its UNIQUE natural key —
+  /// {profileId, curriculumId, sefariaRef, stageId, trackType}.
+  ///
+  /// D11: must NOT filter on eventTimestamp. A re-mark produces a NEW
+  /// completed_at, while the existing tombstone keeps its ORIGINAL timestamp,
+  /// so a timestamp predicate would miss the tombstone — the incoming row would
+  /// then INSERT-OR-IGNORE-collide on the natural key and the completion would
+  /// stay permanently dead. The unique index has no eventTimestamp column.
   Future<CompletionEvent?> findTombstonedEventByNaturalKey({
     required int profileId,
     required String curriculumId,
     required String sefariaRef,
     required int stageId,
     required String trackType,
-    required DateTime eventTimestamp,
   }) async {
     final result =
         await (select(completionEvents)
@@ -69,7 +76,6 @@ class CompletionEventDao extends DatabaseAccessor<UserDatabase>
                     t.sefariaRef.equals(sefariaRef) &
                     t.stageId.equals(stageId) &
                     t.trackType.equals(trackType) &
-                    t.eventTimestamp.equals(eventTimestamp) &
                     t.purgedAt.isNotNull(),
               )
               ..limit(1))
@@ -78,10 +84,17 @@ class CompletionEventDao extends DatabaseAccessor<UserDatabase>
   }
 
   /// Clears the tombstone on the row with [id] by setting `purgedAt` to null,
-  /// making the completion active again.
-  Future<void> clearTombstone(int id) async {
+  /// making the completion active again. When [eventTimestamp] is provided the
+  /// row's timestamp is updated to it too, so a resurrected completion reflects
+  /// the incoming re-mark time (matching the local re-mark path).
+  Future<void> clearTombstone(int id, {DateTime? eventTimestamp}) async {
     await (update(completionEvents)..where((t) => t.id.equals(id))).write(
-      const CompletionEventsCompanion(purgedAt: Value(null)),
+      CompletionEventsCompanion(
+        purgedAt: const Value(null),
+        eventTimestamp: eventTimestamp == null
+            ? const Value.absent()
+            : Value(eventTimestamp),
+      ),
     );
   }
 }

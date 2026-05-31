@@ -1447,6 +1447,61 @@ void main() {
       },
     );
 
+    test(
+      'tombstone resurrection (D11): remote with a DIFFERENT timestamp still '
+      'clears the tombstone',
+      () async {
+        // Seed + tombstone a completion at T1.
+        final t1 = DateTime.utc(2026, 5, 5, 12);
+        final id = await db.completionEventDao.appendEvent(
+          CompletionEventsCompanion.insert(
+            profileId: profileId,
+            curriculumId: 'mishnayos',
+            sefariaRef: 'Mishnah Berakhot 3.1',
+            stageId: 2,
+            trackType: 'personal',
+            eventTimestamp: t1,
+          ),
+        );
+        await (db.update(
+          db.completionEvents,
+        )..where((t) => t.id.equals(id))).write(
+          CompletionEventsCompanion(purgedAt: Value(DateTime.utc(2026, 5, 10))),
+        );
+
+        // A re-mark elsewhere produces a NEW completed_at (T2 != T1) — the
+        // realistic case the old timestamp-matching lookup missed.
+        final t2 = DateTime.utc(2026, 5, 12, 9);
+        await store.insertIfAbsent(
+          kind: EntityKind.completion,
+          profileId: profileId,
+          naturalKey: 'tombstone-key-2',
+          fields: {
+            'curriculum_id': 'mishnayos',
+            'sefaria_ref': 'Mishnah Berakhot 3.1',
+            'stage_id': 2,
+            'track_type': 'personal',
+            'completed_at': t2.toIso8601String(),
+          },
+        );
+
+        final rows = await db.completionEventDao.getEventsByProfile(profileId);
+        expect(rows, hasLength(1));
+        expect(
+          rows.single.purgedAt,
+          isNull,
+          reason:
+              'D11: tombstone must clear even when the re-mark timestamp '
+              'differs from the tombstoned row',
+        );
+        expect(
+          rows.single.eventTimestamp.isAtSameMomentAs(t2),
+          isTrue,
+          reason: 'D11: resurrected row adopts the incoming completion time',
+        );
+      },
+    );
+
     test('malformed skip: missing curriculum_id → no row inserted', () async {
       await store.insertIfAbsent(
         kind: EntityKind.completion,

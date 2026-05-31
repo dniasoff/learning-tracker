@@ -243,10 +243,16 @@ class DriftMergeStore implements MergeStore {
           sefariaRef: sefariaRef,
           stageId: stageId,
           trackType: trackType,
-          eventTimestamp: eventTs,
         );
     if (tombstoned != null) {
-      await _db.completionEventDao.clearTombstone(tombstoned.id);
+      // Resurrect: clear the tombstone and adopt the incoming completion time.
+      // The re-mark's timestamp (eventTs) differs from the tombstoned row's
+      // original — matching on the natural key (not the timestamp) is what lets
+      // this find the tombstone at all (D11).
+      await _db.completionEventDao.clearTombstone(
+        tombstoned.id,
+        eventTimestamp: eventTs,
+      );
       return;
     }
 

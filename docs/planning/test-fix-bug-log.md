@@ -171,6 +171,17 @@ one (covers all callers: remove-cloud / delete-local / delete-cloud / dedupe). *
 — removing the active account clears the pointer; removing a different account leaves it. Bug-hunt finding.
 `make ci` green.
 
+**D11 (MEDIUM, DATA-LOSS — sync; fixed):** A completion purged (tombstoned) on device A and later re-marked
+(on any device) stayed permanently dead on a device still holding the tombstone — the unit showed
+not-completed even though Firestore had it, and re-pulling never healed it. *Cause:*
+`findTombstonedEventByNaturalKey` filtered on `eventTimestamp.equals(...)`, but the UNIQUE natural key has NO
+timestamp; a re-mark carries a NEW `completed_at`, so the lookup missed the tombstone (which kept its original
+timestamp) → fell through to `appendEvent` → INSERT-OR-IGNORE collided on the natural key → silently ignored →
+tombstone never cleared. *Fix:* the lookup now matches the 5-column natural key only (dropped the timestamp
+param/predicate); on resurrection `clearTombstone` also adopts the incoming completion time. *Test:*
+`drift_merge_store_test.dart` — new D11 case: tombstone at T1, remote re-mark at T2≠T1 → tombstone cleared +
+row adopts T2 (the existing H2 test only passed because it reused one timestamp). Bug-hunt finding. `make ci` green.
+
 **D6 (MEDIUM, UX/edge — FOUND on-device, not yet fixed):** A **profile-less account** (e.g. Daniel's
 churn-anomaly account: accounts.id=2, zero `learner_profiles`; also a tutor-only adult) is shown the Dashboard
 **"Add a learning track"** CTA, but completing AddTrackFlow fails with a surfaced **"Failed to save track. Please
