@@ -674,11 +674,16 @@ void main() {
         if (syncedAt != null) 'synced_at': syncedAt.toIso8601String(),
       };
 
+      // R3-6 fix: naturalKey is just curriculumId — profileId is added by
+      // _scopedKey inside the store; using '$profileId|bavli' here was the
+      // same double-scoping bug that the merger had. All four tests below now
+      // use 'bavli' directly, matching the TrackConfigMerger pattern.
+
       test('remote newer than local → applies', () async {
         await store.persistUpdatedAt(
           kind: EntityKind.profileProgram,
           profileId: profileId,
-          naturalKey: '$profileId|bavli',
+          naturalKey: 'bavli',
           updatedAt: _local,
         );
 
@@ -690,7 +695,7 @@ void main() {
         final after = await store.currentUpdatedAt(
           kind: EntityKind.profileProgram,
           profileId: profileId,
-          naturalKey: '$profileId|bavli',
+          naturalKey: 'bavli',
         );
         expect(after, _remoteNewer);
       });
@@ -699,7 +704,7 @@ void main() {
         await store.persistUpdatedAt(
           kind: EntityKind.profileProgram,
           profileId: profileId,
-          naturalKey: '$profileId|bavli',
+          naturalKey: 'bavli',
           updatedAt: _local,
         );
 
@@ -711,10 +716,117 @@ void main() {
         final after = await store.currentUpdatedAt(
           kind: EntityKind.profileProgram,
           profileId: profileId,
-          naturalKey: '$profileId|bavli',
+          naturalKey: 'bavli',
         );
         expect(after, _local);
       });
+
+      test('within ±5 s — remote synced_at newer → applies', () async {
+        await store.persistUpdatedAt(
+          kind: EntityKind.profileProgram,
+          profileId: profileId,
+          naturalKey: 'bavli',
+          updatedAt: _localSkew,
+          syncedAt: _localSynced,
+        );
+
+        await merger.merge(
+          profileId: profileId,
+          rows: [row(updatedAt: _remoteSkew, syncedAt: _remoteSyncedNewer)],
+        );
+
+        final after = await store.currentUpdatedAt(
+          kind: EntityKind.profileProgram,
+          profileId: profileId,
+          naturalKey: 'bavli',
+        );
+        expect(after, _remoteSkew);
+      });
+
+      test('same synced_at — remote wins (convergence)', () async {
+        await store.persistUpdatedAt(
+          kind: EntityKind.profileProgram,
+          profileId: profileId,
+          naturalKey: 'bavli',
+          updatedAt: _localSkew,
+          syncedAt: _localSynced,
+        );
+
+        await merger.merge(
+          profileId: profileId,
+          rows: [row(updatedAt: _remoteSkew, syncedAt: _localSynced)],
+        );
+
+        final after = await store.currentUpdatedAt(
+          kind: EntityKind.profileProgram,
+          profileId: profileId,
+          naturalKey: 'bavli',
+        );
+        expect(after, _remoteSkew);
+      });
+
+      // R3-6 regression: verify that the key written by the merger on a
+      // successful apply is exactly the key that currentUpdatedAt reads back.
+      // Before the fix the merger wrote '$profileId|$profileId|$curriculumId'
+      // while the test read '$profileId|$curriculumId' — a permanent key miss
+      // that made every subsequent remote pull look "new".
+      test(
+        'R3-6 regression — key written by merger matches key read back',
+        () async {
+          // Start with no local timestamp for this (profileId, curriculumId).
+          final before = await store.currentUpdatedAt(
+            kind: EntityKind.profileProgram,
+            profileId: profileId,
+            naturalKey: 'bavli',
+          );
+          expect(
+            before,
+            isNull,
+            reason: 'no local timestamp before first merge',
+          );
+
+          // First merge: remote is applied because there is no local record.
+          await merger.merge(
+            profileId: profileId,
+            rows: [row(updatedAt: _remoteNewer)],
+          );
+
+          // The timestamp the merger persisted must be readable under the same
+          // (profileId, 'bavli') natural key.
+          final afterFirst = await store.currentUpdatedAt(
+            kind: EntityKind.profileProgram,
+            profileId: profileId,
+            naturalKey: 'bavli',
+          );
+          expect(
+            afterFirst,
+            _remoteNewer,
+            reason:
+                'merger must write the scoped key that currentUpdatedAt reads',
+          );
+
+          // Second merge with an older remote: should NOT overwrite because local
+          // is newer. This only passes if the key used by merge() == the key
+          // used by currentUpdatedAt() — i.e., no double-scoping.
+          await merger.merge(
+            profileId: profileId,
+            rows: [row(updatedAt: _remoteOlder)],
+          );
+
+          final afterSecond = await store.currentUpdatedAt(
+            kind: EntityKind.profileProgram,
+            profileId: profileId,
+            naturalKey: 'bavli',
+          );
+          expect(
+            afterSecond,
+            _remoteNewer,
+            reason:
+                'older remote must NOT overwrite the newer local — key mismatch '
+                'would make every merge look new and allow silent overwrites',
+          );
+        },
+      );
     });
 
     // ── GoalMerger ─────────────────────────────────────────────────────────

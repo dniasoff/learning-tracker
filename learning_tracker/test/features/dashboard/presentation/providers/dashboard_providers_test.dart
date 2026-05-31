@@ -2,6 +2,7 @@
 ///
 /// Covers:
 ///   • [dashboardUserModeProvider]               — adult/child/missing profile
+///   • [dashboardUserModeProvider] (R3-1)        — tutor session → always adult
 ///   • [dashboardActiveCurriculaProvider]         — empty, single, multi, unknown
 ///   • [dashboardActiveCurriculaStreamProvider]   — emits via reactive watch
 ///   • [dashboardLastCompletionProvider]          — empty, latest selected
@@ -12,8 +13,10 @@
 ///   • [dashboardActiveTracksStreamProvider]      — empty, active, archived
 ///   • [trackHasChazaraProvider]                  — single vs multi-stage
 ///   • [anyActiveTrackHasChazaraProvider]         — any-true gates
+///   • [dashboardChildNextRewardProvider] (R3-12) — happy-path after await
 ///   • Product rule: adults have no points
 ///   • Product rule: chazara only when stage count > 1
+///   • Product rule (R3-1): tutor sees adult view even when child profile active
 library;
 
 import 'package:drift/drift.dart' show InsertMode, Value;
@@ -29,6 +32,9 @@ import 'package:learning_tracker/features/dashboard/presentation/providers/dashb
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
+import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
+import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -1164,6 +1170,154 @@ void main() {
 
       expect(childPoints, 500, reason: 'child should see their balance');
       expect(adultPoints, 0, reason: 'adult should always see 0');
+    });
+  });
+
+  // ── R3-1: tutor session overrides dashboardUserMode to adult ─────────────
+  //
+  // Product rule: a tutor ALWAYS sees the adult/management view of the child —
+  // never child-mode gamification UI — regardless of the tutored profile's own
+  // mode value in the database.
+
+  group('dashboardUserModeProvider — tutor session (R3-1)', () {
+    /// Returns a [TutoredProfileSelection] stub suitable for overriding the
+    /// provider in tests.  Uses a read-only permission set to avoid pulling in
+    /// full-permission logic that is irrelevant to the mode test.
+    TutoredProfileSelection stubTutoredSelection() =>
+        const TutoredProfileSelection(
+          profileId: 'talmid-remote-id',
+          ownerUid: 'parent-uid',
+          grantId: 'grant-abc',
+          permissions: TutorPermissions(),
+        );
+
+    test('returns ProfileMode.adult when tutor session is active '
+        'and the tutored profile is a child', () async {
+      // Seed a child profile (id=2) that the tutor is viewing.
+      await _seedChildProfile(db); // id=2, mode='child'
+
+      // Override activeTutoredProfileSelectionProvider to non-null to
+      // simulate an active tutor session. activeProfileId points at the
+      // child profile as the tutored mirror.
+      final container = ProviderContainer(
+        overrides: [
+          userDatabaseProvider.overrideWithValue(db),
+          activeProfileIdProvider.overrideWithValue(_childProfileId),
+          syncWriteFacadeProvider.overrideWithValue(null),
+          activeTutoredProfileSelectionProvider.overrideWithValue(
+            stubTutoredSelection(),
+          ),
+          for (final c in CurriculumId.values)
+            scopedItemCountProvider(c).overrideWith((ref) => Future.value(0)),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final mode = await container.read(dashboardUserModeProvider.future);
+      expect(
+        mode,
+        ProfileMode.adult,
+        reason:
+            'R3-1: tutor must always see adult/management view, '
+            'never child-mode gamification',
+      );
+    });
+
+    test('returns ProfileMode.adult when tutor session is active '
+        'even if there is no matching DB profile row', () async {
+      // No profile seeded for id=9999 — the tutor session guard must fire
+      // before the DB lookup so we never hit a missing-profile fallback path
+      // via the DB.
+      final container = ProviderContainer(
+        overrides: [
+          userDatabaseProvider.overrideWithValue(db),
+          activeProfileIdProvider.overrideWithValue(9999),
+          syncWriteFacadeProvider.overrideWithValue(null),
+          activeTutoredProfileSelectionProvider.overrideWithValue(
+            stubTutoredSelection(),
+          ),
+          for (final c in CurriculumId.values)
+            scopedItemCountProvider(c).overrideWith((ref) => Future.value(0)),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final mode = await container.read(dashboardUserModeProvider.future);
+      expect(
+        mode,
+        ProfileMode.adult,
+        reason: 'tutor guard fires before DB lookup',
+      );
+    });
+
+    test(
+      'does NOT apply tutor override when activeTutoredProfileSelection is null '
+      '(normal own-profile mode)',
+      () async {
+        // A child profile viewed by its owner must still return child mode.
+        await _seedChildProfile(db); // id=2, mode='child'
+
+        final container = _makeContainer(db, profileId: _childProfileId);
+        addTearDown(container.dispose);
+
+        // activeTutoredProfileSelectionProvider is not overridden here;
+        // the default ProviderContainer leaves it null.
+        final mode = await container.read(dashboardUserModeProvider.future);
+        expect(
+          mode,
+          ProfileMode.child,
+          reason:
+              'no tutor session active — child profile must return child mode',
+        );
+      },
+    );
+  });
+
+  // ── R3-12: dashboardChildNextReward happy path ────────────────────────────
+  //
+  // Deterministically triggering disposal during the async gap of an autoDispose
+  // provider is difficult in unit tests (the gap is one microtask). We therefore
+  // test the happy path: with no active tracks and a child profile, the provider
+  // resolves to null (no milestones) without throwing. This confirms the
+  // ref.mounted guard did not regress the normal completion path.
+
+  group('dashboardChildNextReward — mounted-guard (R3-12)', () {
+    test(
+      'happy path: returns null for a child profile with no tracks/milestones',
+      () async {
+        // Seed child profile (id=2).
+        await _seedChildProfile(db); // id=2, mode='child'
+
+        final container = _makeContainer(db, profileId: _childProfileId);
+        addTearDown(container.dispose);
+
+        // Confirm the provider resolves to null without throwing.  If the
+        // ref.mounted guard incorrectly returned a non-null sentinel we would
+        // detect it here; if it threw, the future would complete with an error.
+        final result = await container.read(
+          dashboardChildNextRewardProvider.future,
+        );
+        expect(
+          result,
+          isNull,
+          reason:
+              'no tracks/milestones → null; mounted guard must not break the '
+              'normal resolution path',
+        );
+      },
+    );
+
+    test('returns null immediately for adult profile '
+        '(mode guard before the await gap)', () async {
+      // Adult profile (id=1) seeded in setUp. userMode != child → early null
+      // before the await, so the mounted guard is never reached.
+      final container = _makeContainer(db);
+      addTearDown(container.dispose);
+
+      final result = await container.read(
+        dashboardChildNextRewardProvider.future,
+      );
+      expect(result, isNull, reason: 'adult mode → null before async gap');
     });
   });
 }

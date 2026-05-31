@@ -54,7 +54,12 @@ class ProfileProgramMerger implements EntityMerger {
       // `tracking_start_date` for older payloads.
       final remoteUpdatedAt = decoded.updatedAt ?? decoded.trackingStartDate;
 
-      final naturalKey = '${decoded.profileId}|${decoded.curriculumId}';
+      // R3-6: naturalKey is just curriculumId — profileId is added by
+      // _scopedKey inside currentUpdatedAt/persistUpdatedAt, matching the
+      // pattern used by TrackConfigMerger and every other LWW merger.
+      // The previous '${decoded.profileId}|${decoded.curriculumId}' caused
+      // double-scoping: stored key became '$profileId|$profileId|$curriculumId'.
+      final naturalKey = decoded.curriculumId;
       final localUpdatedAt = await _store.currentUpdatedAt(
         kind: kind,
         profileId: profileId,

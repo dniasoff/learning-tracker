@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/providers/network_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/text_input_formatters.dart';
-import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/profile_avatar.dart';
@@ -53,8 +51,9 @@ Future<void> editProfileFlow(
   ref.invalidate(selectedProfileProvider);
 }
 
-/// Canonical delete-profile flow (with last-profile guard + offline guard for
-/// cloud accounts). Shared between Manage Learners and the switcher sheet.
+/// Canonical delete-profile flow (with last-profile guard).
+/// Works offline: the repository deletes locally first and enqueues the cloud
+/// delete to the outbox. Shared between Manage Learners and the switcher sheet.
 Future<void> deleteProfileFlow(
   BuildContext context,
   WidgetRef ref,
@@ -96,23 +95,9 @@ Future<void> deleteProfileFlow(
 
   if (confirmed != true) return;
 
-  final isLocalBorn = ref.read(authStateProvider).isLocalBorn;
-  if (!isLocalBorn) {
-    final isOnline = await ref.read(connectivityServiceProvider).isOnline;
-    if (!isOnline) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              AppLocalizations.of(context)!.errorDeleteProfileRequiresInternet,
-            ),
-          ),
-        );
-      }
-      return;
-    }
-  }
-
+  // Offline-first: the repository always deletes locally via Drift first,
+  // then enqueues the cloud delete to the outbox (OutboxSyncWriteFacade
+  // .deleteLearnerProfile). No connectivity check is needed here.
   final selectedId = ref.read(selectedProfileIdProvider);
   await repo.deleteProfile(profile.id, allowLast: isLast);
 

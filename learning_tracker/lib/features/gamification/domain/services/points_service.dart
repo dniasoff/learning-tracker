@@ -2,6 +2,7 @@ import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_tier_filter.dart';
 
 /// Record of a single points award event.
 class PointsHistoryEntry {
@@ -95,15 +96,25 @@ class PointsService {
 
   /// Points history log — point awards from reward-eligible tracks only,
   /// ordered by timestamp, scoped to active profile.
+  ///
+  /// Uses [CompletionTierFilter.liveOnly] (engagement tier) to exclude
+  /// bulk-import and prior completions, per the three-tier credit policy.
   Future<List<PointsHistoryEntry>> getPointsHistory({
     String? curriculumId,
   }) async {
-    final completions = curriculumId != null
-        ? await _database.completionDao.getCompletionsByCurriculumAndProfile(
-            curriculumId,
-            profileId,
-          )
-        : await _database.completionDao.getCompletionsByProfile(profileId);
+    // Resolve the raw storage key to a typed enum value so we can pass it to
+    // the tier-filtered DAO accessor (which requires CurriculumId?).
+    final curriculumEnum = curriculumId == null
+        ? null
+        : CurriculumId.values
+              .where((c) => c.storageKey == curriculumId)
+              .firstOrNull;
+
+    final completions = await _database.completionDao.getCompletionsByTier(
+      profileId: profileId,
+      tier: CompletionTierFilter.liveOnly,
+      curriculumId: curriculumEnum,
+    );
 
     final eligibility = await _rewardEligibilityByTrackId(completions);
 

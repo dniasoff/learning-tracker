@@ -3277,6 +3277,9 @@ class AppLocalizationsHe extends AppLocalizations {
       'אין מספיק נקודות לפדות פרס זה.';
 
   @override
+  String get redeemScreenTutorUnavailable => 'לא זמין (מצב מדריך)';
+
+  @override
   String get pendingRedemptionsTitle => 'פרסים ממתינים';
 
   @override

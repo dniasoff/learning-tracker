@@ -124,7 +124,7 @@ final class DashboardUserModeProvider
   }
 }
 
-String _$dashboardUserModeHash() => r'1c87fec8197ef6b77fafc77b457a3012f71aa361';
+String _$dashboardUserModeHash() => r'a39159891268c9e4cbfb443eb8b07b9b58928c39';
 
 /// Provider for list of active curricula IDs, scoped to active profile.
 
@@ -845,7 +845,7 @@ final class DashboardChildNextRewardProvider
 }
 
 String _$dashboardChildNextRewardHash() =>
-    r'1cde7c0c8cf446693fd9c00474aa689f3993a354';
+    r'5cb60e3eb74d7995c5aba22068d6010a6a29e28d';
 
 /// Streak recovery info — whether the streak was just saved by grace period.
 

@@ -11,7 +11,7 @@
 //   • Delete flow — Delete popup → confirm dialog → repo.deleteProfile called
 //   • Delete flow — Cancel on confirm dialog → repo.deleteProfile NOT called
 //   • Delete last profile — shows last-profile confirm dialog title
-//   • Delete cloud-born offline — deleteProfile NOT called (snackbar instead)
+//   • Delete cloud-born offline — deleteProfile STILL called (offline-first, R3-10)
 //   • Max-10 cap — FAB is present regardless of count (cap is repo-only)
 //   • he-RTL smoke — Hebrew locale: screen renders without overflow/crash
 //   • Hardcoded-string audit — AppBar title 'Manage Learners' is hardcoded (BUG)
@@ -664,7 +664,8 @@ void main() {
     );
 
     testWidgets(
-      'cloud-born offline: confirming Delete does NOT call repo.deleteProfile',
+      'cloud-born offline: confirming Delete STILL calls repo.deleteProfile '
+      '(offline-first — R3-10)',
       (tester) async {
         final profile = _profile(id: 1, name: 'Beni', mode: 'child');
         final repo = _MockProfileRepository();
@@ -672,6 +673,9 @@ void main() {
         when(
           () => repo.countProfilesForAccount(any()),
         ).thenAnswer((_) async => 2);
+        when(
+          () => repo.deleteProfile(any(), allowLast: any(named: 'allowLast')),
+        ).thenAnswer((_) async {});
         // Simulate offline.
         when(() => connectivity.isOnline).thenAnswer((_) async => false);
 
@@ -681,7 +685,8 @@ void main() {
             profilesState: AsyncData([profile]),
             repo: repo,
             connectivity: connectivity,
-            // Cloud-born account so the offline guard fires.
+            // Cloud-born account: pre-R3-10 this was gated offline; now the
+            // delete is offline-first (local delete + queued cloud delete).
             authState: _kCloudBornAuthState,
           ),
         );
@@ -696,10 +701,10 @@ void main() {
         await tester.tap(find.text('Delete').last);
         await tester.pumpAndSettle();
 
-        // deleteProfile must NOT have been called because we are offline.
-        verifyNever(
-          () => repo.deleteProfile(any(), allowLast: any(named: 'allowLast')),
-        );
+        // R3-10: offline-first — the delete must proceed offline (no online gate).
+        verify(
+          () => repo.deleteProfile(1, allowLast: any(named: 'allowLast')),
+        ).called(1);
 
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump(Duration.zero);

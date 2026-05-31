@@ -1854,6 +1854,7 @@
     "placeholders": { "title": { "type": "String" } }
   },
   "redeemScreenInsufficientSnackbar": "אין מספיק נקודות לפדות פרס זה.",
+  "redeemScreenTutorUnavailable": "לא זמין (מצב מדריך)",
 
   "pendingRedemptionsTitle": "פרסים ממתינים",
   "pendingRedemptionsEmpty": "אין בקשות פרס ממתינות.",

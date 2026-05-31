@@ -1879,6 +1879,7 @@
     "placeholders": { "title": { "type": "String" } }
   },
   "redeemScreenInsufficientSnackbar": "Not enough points to redeem this prize.",
+  "redeemScreenTutorUnavailable": "Not available (tutor mode)",
 
   "pendingRedemptionsTitle": "Pending Prizes",
   "pendingRedemptionsEmpty": "No pending prize requests.",

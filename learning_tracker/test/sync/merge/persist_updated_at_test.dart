@@ -258,8 +258,10 @@ void main() {
 
       final updatedAt = await store.currentUpdatedAt(
         kind: EntityKind.profileProgram,
+        // R3-6: natural key is the entity key only ('bavli'); profileId is added
+        // by _scopedKey. Previously this was double-scoped ('$profileId|bavli').
+        naturalKey: 'bavli',
         profileId: _profileId,
-        naturalKey: '$_profileId|bavli',
       );
       expect(updatedAt, _ts);
     });

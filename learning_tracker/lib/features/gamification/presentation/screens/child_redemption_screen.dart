@@ -18,6 +18,7 @@ import 'package:learning_tracker/features/gamification/domain/reward_milestone_i
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
+import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
@@ -62,6 +63,9 @@ class ChildRedemptionScreen extends ConsumerWidget {
     final theme = Theme.of(context);
     final balanceAsync = ref.watch(childRedemptionBalanceProvider);
     final rewardsAsync = ref.watch(childRedemptionRewardsProvider);
+    // R3-7: detect active tutored session — redemption is VIEW-ONLY for tutors.
+    final isTutoredSession =
+        ref.watch(activeTutoredProfileSelectionProvider) != null;
 
     return Scaffold(
       backgroundColor: AppColors.surfaceF4b,
@@ -102,6 +106,7 @@ class ChildRedemptionScreen extends ConsumerWidget {
                   itemBuilder: (ctx, i) => _RewardCard(
                     reward: rewards[i],
                     balance: balance,
+                    isTutoredSession: isTutoredSession,
                     l10n: l10n,
                     theme: theme,
                     onRedeem: () =>
@@ -122,6 +127,12 @@ class ChildRedemptionScreen extends ConsumerWidget {
     RewardMilestone reward,
     AppLocalizations l10n,
   ) async {
+    // R3-7 defense-in-depth: hard-guard against redemption in a tutored session.
+    // The UI already disables the button when isTutoredSession is true; this
+    // guard ensures createRedemption is NEVER called even if the button were
+    // somehow reached (e.g. programmatic invocation, future refactor).
+    if (ref.read(activeTutoredProfileSelectionProvider) != null) return;
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -251,6 +262,7 @@ class _RewardCard extends StatelessWidget {
   const _RewardCard({
     required this.reward,
     required this.balance,
+    required this.isTutoredSession,
     required this.l10n,
     required this.theme,
     required this.onRedeem,
@@ -258,6 +270,9 @@ class _RewardCard extends StatelessWidget {
 
   final RewardMilestone reward;
   final int balance;
+  // R3-7: when true the redeem button is disabled and shows the tutor-mode
+  // label, mirroring how the mark-complete button is barred in tutor sessions.
+  final bool isTutoredSession;
   final AppLocalizations l10n;
   final ThemeData theme;
   final VoidCallback onRedeem;
@@ -265,6 +280,13 @@ class _RewardCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final canAfford = balance >= reward.pointsCost;
+    // R3-7: tutors see the button as disabled regardless of balance.
+    final buttonEnabled = canAfford && !isTutoredSession;
+    final buttonLabel = isTutoredSession
+        ? l10n.redeemScreenTutorUnavailable
+        : canAfford
+        ? l10n.redeemScreenAffordableLabel
+        : l10n.redeemScreenCannotAfford;
     return Card(
       elevation: 2,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -311,7 +333,7 @@ class _RewardCard extends StatelessWidget {
             ),
             const SizedBox(width: 8),
             FilledButton(
-              onPressed: canAfford ? onRedeem : null,
+              onPressed: buttonEnabled ? onRedeem : null,
               style: FilledButton.styleFrom(
                 backgroundColor: const Color(0xFF00218D),
                 disabledBackgroundColor: const Color(0xFFE5E7EB),
@@ -324,11 +346,9 @@ class _RewardCard extends StatelessWidget {
                 ),
               ),
               child: Text(
-                canAfford
-                    ? l10n.redeemScreenAffordableLabel
-                    : l10n.redeemScreenCannotAfford,
+                buttonLabel,
                 style: theme.textTheme.labelMedium?.copyWith(
-                  color: canAfford ? Colors.white : const Color(0xFF9CA3AF),
+                  color: buttonEnabled ? Colors.white : const Color(0xFF9CA3AF),
                   fontWeight: FontWeight.w700,
                   fontSize: 13,
                 ),

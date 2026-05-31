@@ -7,6 +7,9 @@ import 'package:test/test.dart';
 import '../../../../helpers/drift_memory.dart' show seedCompletion;
 import '../../../../helpers/test_database.dart';
 
+// Sentinel date used by bulk-prior / lifetime-only imports.
+final _sentinelDate = DateTime.utc(2000, 1, 1);
+
 void main() {
   late UserDatabase db;
   late PointsService service;
@@ -305,6 +308,122 @@ void main() {
       await service.ensureDefaultConfigs(currId, trackId: trackId);
       configs = await db.pointConfigDao.getConfigsByCurriculum(currId);
       expect(configs, hasLength(3));
+    });
+
+    // R3-9 regression: getPointsHistory must use liveOnly tier filtering so
+    // that bulk-prior completions (sentinel date ~2000-01-01, written with
+    // points=0 today but possibly points>0 in future) are NEVER surfaced in
+    // the points history log.
+    test(
+      'R3-9: getPointsHistory excludes bulk-prior (sentinel-date) completions '
+      'via liveOnly tier filter',
+      () async {
+        final liveAt = DateTime.utc(2026, 3, 15, 12, 0);
+
+        // 1. Live completion — points > 0, real timestamp → must appear.
+        await seedCompletion(
+          db,
+          CompletionEventsCompanion.insert(
+            profileId: 0,
+            curriculumId: CurriculumId.mishnayos.storageKey,
+            sefariaRef: 'Mishnah Berachos 1.1',
+            stageId: 1,
+            trackType: 'personal',
+            trackId: Value(trackId),
+            eventTimestamp: liveAt,
+            points: const Value(10),
+          ),
+        );
+
+        // 2. Bulk-prior completion — sentinel date, points > 0 to simulate the
+        //    future risk scenario where a bulk import carries points. This row
+        //    is also recorded in prior_completion_imports (source=lifetimeOnly)
+        //    so the liveOnly filter excludes it.
+        await seedCompletion(
+          db,
+          CompletionEventsCompanion.insert(
+            profileId: 0,
+            curriculumId: CurriculumId.mishnayos.storageKey,
+            sefariaRef: 'Mishnah Berachos 1.2',
+            stageId: 1,
+            trackType: 'personal',
+            trackId: Value(trackId),
+            eventTimestamp: _sentinelDate,
+            points: const Value(
+              10,
+            ), // non-zero to prove it's the tier that filters it
+          ),
+        );
+        await db.priorCompletionImportDao.batchInsertImports([
+          PriorCompletionImportsCompanion.insert(
+            profileId: 0,
+            curriculumId: CurriculumId.mishnayos.storageKey,
+            sefariaRef: 'Mishnah Berachos 1.2',
+            stageId: 1,
+            trackType: 'personal',
+            source: 'lifetimeOnly',
+          ),
+        ]);
+
+        final history = await service.getPointsHistory();
+
+        // Only the live completion should appear in the history.
+        expect(history, hasLength(1));
+        expect(history.first.sefariaRef, 'Mishnah Berachos 1.1');
+        expect(history.first.points, 10);
+        expect(history.first.timestamp.toUtc(), liveAt);
+      },
+    );
+
+    // R3-9 variant: same exclusion applies when filtering by curriculum.
+    test('R3-9: getPointsHistory with curriculumId filter still excludes '
+        'bulk-prior completions', () async {
+      final liveAt = DateTime.utc(2026, 4, 1, 9, 0);
+
+      await seedCompletion(
+        db,
+        CompletionEventsCompanion.insert(
+          profileId: 0,
+          curriculumId: CurriculumId.mishnayos.storageKey,
+          sefariaRef: 'Mishnah Berachos 2.1',
+          stageId: 1,
+          trackType: 'personal',
+          trackId: Value(trackId),
+          eventTimestamp: liveAt,
+          points: const Value(10),
+        ),
+      );
+
+      await seedCompletion(
+        db,
+        CompletionEventsCompanion.insert(
+          profileId: 0,
+          curriculumId: CurriculumId.mishnayos.storageKey,
+          sefariaRef: 'Mishnah Berachos 2.2',
+          stageId: 1,
+          trackType: 'personal',
+          trackId: Value(trackId),
+          eventTimestamp: _sentinelDate,
+          points: const Value(10),
+        ),
+      );
+      await db.priorCompletionImportDao.batchInsertImports([
+        PriorCompletionImportsCompanion.insert(
+          profileId: 0,
+          curriculumId: CurriculumId.mishnayos.storageKey,
+          sefariaRef: 'Mishnah Berachos 2.2',
+          stageId: 1,
+          trackType: 'personal',
+          source: 'bulkInTrack',
+        ),
+      ]);
+
+      final history = await service.getPointsHistory(
+        curriculumId: CurriculumId.mishnayos.storageKey,
+      );
+
+      expect(history, hasLength(1));
+      expect(history.first.sefariaRef, 'Mishnah Berachos 2.1');
     });
   });
 }

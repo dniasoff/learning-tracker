@@ -25,6 +25,7 @@ import 'package:learning_tracker/features/settings/presentation/providers/curric
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/features/tracks/domain/services/track_progress_service.dart';
 import 'package:learning_tracker/features/tracks/stages/presentation/providers/stage_providers.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'dashboard_providers.g.dart';
@@ -64,6 +65,12 @@ CrossCurriculumAggregator crossCurriculumAggregator(Ref ref) {
 /// directly. [UserMode] enum has been deleted.
 @riverpod
 Future<ProfileMode> dashboardUserMode(Ref ref) async {
+  // Product rule: a tutor ALWAYS sees the adult/management view of the child.
+  // Check this before reading the profile so child-mode gamification UI is
+  // never shown to a tutor, regardless of the tutored profile's own mode.
+  final tutoredSelection = ref.watch(activeTutoredProfileSelectionProvider);
+  if (tutoredSelection != null) return ProfileMode.adult;
+
   final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   final profile = await db.profileDao.getProfileById(profileId);
@@ -326,6 +333,10 @@ Future<DashboardChildNextReward?> dashboardChildNextReward(Ref ref) async {
   // The actual strip + cloud push runs in [stripStockMilestonesEffectProvider]
   // (a separate write-path provider) so this read provider stays side-effect-free.
   await ref.watch(stripStockMilestonesEffectProvider.future);
+
+  // Guard: if this autoDispose provider was disposed during the async gap above
+  // (e.g. user navigated away), the subsequent ref.watch calls would throw.
+  if (!ref.mounted) return null;
 
   final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);

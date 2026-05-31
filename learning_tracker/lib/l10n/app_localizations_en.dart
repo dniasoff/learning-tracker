@@ -3312,6 +3312,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'Not enough points to redeem this prize.';
 
   @override
+  String get redeemScreenTutorUnavailable => 'Not available (tutor mode)';
+
+  @override
   String get pendingRedemptionsTitle => 'Pending Prizes';
 
   @override

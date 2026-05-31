@@ -20,6 +20,7 @@ final curriculumActivationServiceProvider =
         pushCurriculumTrack: syncFacade?.pushCurriculumTrack,
         trackRepository: trackRepository,
         profileId: profileId,
+        syncFacade: syncFacade,
       );
     });
 

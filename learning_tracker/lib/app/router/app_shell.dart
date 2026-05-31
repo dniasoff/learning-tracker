@@ -14,6 +14,8 @@ import 'package:learning_tracker/features/profiles/presentation/providers/profil
 import 'package:learning_tracker/features/profiles/presentation/widgets/profile_switcher_sheet.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_lock_overlay.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart'
+    show incomingTutorGrantsProvider;
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 // W6.15: Tutor mode colour accent — a warm amber that contrasts with the
@@ -62,6 +64,17 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
       activeTutoredProfileSelectionProvider,
     );
     final hasActiveTutoredProfiles = activeTutoredSelection != null;
+
+    // R3-fix: keep incomingTutorGrantsProvider subscribed for the duration of a
+    // tutored session so its revocation-reconciliation (wipe + auto-exit) runs
+    // whenever the CF result lands — not only when a grants-watching screen is
+    // mounted. Without this watch, a tutor deep in Dashboard/Learn/Content would
+    // never detect a parent's mid-session revocation until navigating back to a
+    // grants screen. The value is intentionally ignored; the subscription is what
+    // matters. Gated on an active session so non-tutor sessions pay no cost.
+    if (hasActiveTutoredProfiles) {
+      ref.watch(incomingTutorGrantsProvider);
+    }
 
     final activeProfileId = ref.watch(activeProfileIdProvider);
     final profilesAsync = ref.watch(profileListStreamProvider);

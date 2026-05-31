@@ -3,6 +3,8 @@ import 'package:learning_tracker/core/database/daos/track_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/core/sync/sync_write_facade.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/track_repository.dart';
 import 'package:learning_tracker/features/settings/domain/exceptions/last_active_curriculum_exception.dart';
 
@@ -16,15 +18,19 @@ class CurriculumActivationService {
     required Future<void> Function(Map<String, dynamic>)? pushCurriculumTrack,
     required TrackRepository trackRepository,
     int profileId = 0,
+    SyncWriteFacade? syncFacade,
   }) : _database = database,
        _pushCurriculumTrack = pushCurriculumTrack,
        _trackRepository = trackRepository,
-       _profileId = profileId;
+       _profileId = profileId,
+       _syncFacade = syncFacade;
 
   final UserDatabase _database;
   final Future<void> Function(Map<String, dynamic>)? _pushCurriculumTrack;
   final TrackRepository _trackRepository;
   final int _profileId;
+  // Facade for enqueuing study-day configs to the sync outbox (R3-5 fix).
+  final SyncWriteFacade? _syncFacade;
 
   /// Initialize default active curricula for this profile if none exist.
   Future<void> initialize() async {
@@ -39,6 +45,11 @@ class CurriculumActivationService {
       await _database.studyDayConfigDao.seedDefaults(
         profileId: _profileId,
         curriculumId: CurriculumId.mishnayos.storageKey,
+        trackId: trackId,
+      );
+      await _pushStudyDaysCloud(
+        profileId: _profileId,
+        curriculumId: CurriculumId.mishnayos,
         trackId: trackId,
       );
       await _syncToFirestore();
@@ -63,6 +74,11 @@ class CurriculumActivationService {
       curriculumId: curriculum.storageKey,
       trackId: trackId,
     );
+    await _pushStudyDaysCloud(
+      profileId: _profileId,
+      curriculumId: curriculum,
+      trackId: trackId,
+    );
     await _syncToFirestore();
   }
 
@@ -85,6 +101,11 @@ class CurriculumActivationService {
     await _database.studyDayConfigDao.seedDefaults(
       profileId: profileId,
       curriculumId: curriculum.storageKey,
+      trackId: trackId,
+    );
+    await _pushStudyDaysCloud(
+      profileId: profileId,
+      curriculumId: curriculum,
       trackId: trackId,
     );
     await _syncToFirestore();
@@ -164,6 +185,31 @@ class CurriculumActivationService {
               ..limit(1))
             .getSingleOrNull();
     return track?.id ?? 0;
+  }
+
+  /// Enqueue seeded study-day configs (all 7 default days) to the sync outbox.
+  ///
+  /// Mirrors [TrackCreationService._pushStudyDaysCloud]. Called after every
+  /// [StudyDayConfigDao.seedDefaults] so a fresh device/restore receives the
+  /// schedule via the normal OutboxProcessor drain cycle (R3-5 fix).
+  Future<void> _pushStudyDaysCloud({
+    required int profileId,
+    required CurriculumId curriculumId,
+    required int trackId,
+  }) async {
+    final facade = _syncFacade;
+    if (facade == null) return;
+    final now = DateTimeFactory.nowUtc().toIso8601String();
+    for (var day = 1; day <= 7; day++) {
+      await facade.pushStudyDayConfig({
+        'profile_id': profileId,
+        'curriculum_id': curriculumId.storageKey,
+        'track_id': trackId,
+        'day_of_week': day,
+        'day_type': 'study',
+        'updated_at': now,
+      });
+    }
   }
 
   /// Sync this profile's tracks to Firestore.

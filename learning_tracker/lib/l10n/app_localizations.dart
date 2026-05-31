@@ -5819,6 +5819,12 @@ abstract class AppLocalizations {
   /// **'Not enough points to redeem this prize.'**
   String get redeemScreenInsufficientSnackbar;
 
+  /// No description provided for @redeemScreenTutorUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Not available (tutor mode)'**
+  String get redeemScreenTutorUnavailable;
+
   /// No description provided for @pendingRedemptionsTitle.
   ///
   /// In en, this message translates to:
