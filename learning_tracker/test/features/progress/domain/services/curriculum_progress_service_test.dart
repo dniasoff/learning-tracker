@@ -130,8 +130,16 @@ void main() {
           stageName: 'Learned',
         );
         final completions = <Completion>[
-          await insertCompletion(db, sefariaRef: 'ref1', stageId: stage.id),
-          await insertCompletion(db, sefariaRef: 'ref2', stageId: stage.id),
+          await insertCompletion(
+            db,
+            sefariaRef: 'ref1',
+            stageId: stage.stageOrder,
+          ),
+          await insertCompletion(
+            db,
+            sefariaRef: 'ref2',
+            stageId: stage.stageOrder,
+          ),
         ];
 
         final result = CurriculumProgressService.compute(
@@ -176,14 +184,38 @@ void main() {
 
       final completions = <Completion>[
         // ref1: learned + chazara1
-        await insertCompletion(db, sefariaRef: 'ref1', stageId: learnStage.id),
-        await insertCompletion(db, sefariaRef: 'ref1', stageId: chazara1.id),
+        await insertCompletion(
+          db,
+          sefariaRef: 'ref1',
+          stageId: learnStage.stageOrder,
+        ),
+        await insertCompletion(
+          db,
+          sefariaRef: 'ref1',
+          stageId: chazara1.stageOrder,
+        ),
         // ref2: learned only
-        await insertCompletion(db, sefariaRef: 'ref2', stageId: learnStage.id),
+        await insertCompletion(
+          db,
+          sefariaRef: 'ref2',
+          stageId: learnStage.stageOrder,
+        ),
         // ref3: learned + chazara1 + chazara2
-        await insertCompletion(db, sefariaRef: 'ref3', stageId: learnStage.id),
-        await insertCompletion(db, sefariaRef: 'ref3', stageId: chazara1.id),
-        await insertCompletion(db, sefariaRef: 'ref3', stageId: chazara2.id),
+        await insertCompletion(
+          db,
+          sefariaRef: 'ref3',
+          stageId: learnStage.stageOrder,
+        ),
+        await insertCompletion(
+          db,
+          sefariaRef: 'ref3',
+          stageId: chazara1.stageOrder,
+        ),
+        await insertCompletion(
+          db,
+          sefariaRef: 'ref3',
+          stageId: chazara2.stageOrder,
+        ),
       ];
 
       final result = CurriculumProgressService.compute(
@@ -213,19 +245,19 @@ void main() {
         await insertCompletion(
           db,
           sefariaRef: 'ref1',
-          stageId: stage.id,
+          stageId: stage.stageOrder,
           trackType: 'personal',
         ),
         await insertCompletion(
           db,
           sefariaRef: 'ref1',
-          stageId: stage.id,
+          stageId: stage.stageOrder,
           trackType: 'personal',
         ),
         await insertCompletion(
           db,
           sefariaRef: 'ref1',
-          stageId: stage.id,
+          stageId: stage.stageOrder,
           trackType: 'personal',
         ),
       ];
@@ -255,10 +287,10 @@ void main() {
 
       final completions = <Completion>[
         // ref1: completed all stages
-        await insertCompletion(db, sefariaRef: 'ref1', stageId: s1.id),
-        await insertCompletion(db, sefariaRef: 'ref1', stageId: s2.id),
+        await insertCompletion(db, sefariaRef: 'ref1', stageId: s1.stageOrder),
+        await insertCompletion(db, sefariaRef: 'ref1', stageId: s2.stageOrder),
         // ref2: in progress (only 1 of 2 stages)
-        await insertCompletion(db, sefariaRef: 'ref2', stageId: s1.id),
+        await insertCompletion(db, sefariaRef: 'ref2', stageId: s1.stageOrder),
         // ref3, ref4: not started
       ];
 
@@ -286,8 +318,16 @@ void main() {
 
       final stage = await insertStage(db, stageOrder: 0, stageName: 'Learned');
       final completions = <Completion>[
-        await insertCompletion(db, sefariaRef: 'ref1', stageId: stage.id),
-        await insertCompletion(db, sefariaRef: 'ref4', stageId: stage.id),
+        await insertCompletion(
+          db,
+          sefariaRef: 'ref1',
+          stageId: stage.stageOrder,
+        ),
+        await insertCompletion(
+          db,
+          sefariaRef: 'ref4',
+          stageId: stage.stageOrder,
+        ),
       ];
 
       final result = CurriculumProgressService.compute(

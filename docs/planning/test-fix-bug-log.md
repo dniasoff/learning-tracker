@@ -182,6 +182,15 @@ param/predicate); on resurrection `clearTombstone` also adopts the incoming comp
 `drift_merge_store_test.dart` — new D11 case: tombstone at T1, remote re-mark at T2≠T1 → tombstone cleared +
 row adopts T2 (the existing H2 test only passed because it reused one timestamp). Bug-hunt finding. `make ci` green.
 
+**D12 (MEDIUM, correctness — fixed):** The Curriculum-Progress per-level stage breakdown (Learned / Chazara 1 /
+Chazara 2 counts) showed 0 (or wrong) for every track except the first. *Cause:* `curriculum_progress_service.dart`
+built `stageCounts` keyed by the completion's `stageId` (= stage ORDER) but READ it by the StageDefinition's
+auto-increment PK (`stageCounts[sd.id]`); PK == order only for the first seeded stages, so later tracks (PKs
+4,5,6…) read counts that never existed → 0. *Fix:* read by `sd.stageOrder`. Also corrected the test fixtures
+(they inserted completions with `stageId: stage.id`, masking the bug) to `stageId: stage.stageOrder` matching
+production — with distinct orders (0/1/2) ≠ PKs, the suite now genuinely exercises the fix. Bug-hunt finding.
+`make ci` green.
+
 **D6 (MEDIUM, UX/edge — FOUND on-device, not yet fixed):** A **profile-less account** (e.g. Daniel's
 churn-anomaly account: accounts.id=2, zero `learner_profiles`; also a tutor-only adult) is shown the Dashboard
 **"Add a learning track"** CTA, but completing AddTrackFlow fails with a surfaced **"Failed to save track. Please

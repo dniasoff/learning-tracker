@@ -226,7 +226,12 @@ class CurriculumProgressService {
     final stageBreakdown = stageDefinitions.map((sd) {
       return StageBreakdownEntry(
         stageName: sd.stageName,
-        count: stageCounts[sd.id] ?? 0,
+        // D12: completions store stageId = the stage ORDER (1=Learn, 2=Chazara1
+        // …), NOT the StageDefinition auto-increment PK. Keying the read by
+        // sd.id returned 0 for every track whose stage rows didn't get PKs
+        // equal to their order (i.e. every track after the first). Read by
+        // stageOrder to match how completions are recorded.
+        count: stageCounts[sd.stageOrder] ?? 0,
       );
     }).toList();
 
