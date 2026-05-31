@@ -89,9 +89,16 @@ List<ScheduledUnit> programSchedule({
 /// exactly [pace] units (clamped to the available refs).
 ///
 /// Throws [MissingPaceError] when [pace] is null.
+/// [paceWindowStudyDays] is the denominator of the pace: [pace] units accrue
+/// per [paceWindowStudyDays] study days. The default (1) preserves the legacy
+/// "[pace] units every study day" behaviour for per-day paces. A weekly pace
+/// passes the week's study-day count (e.g. 7), so `pace=1, window=7` schedules
+/// exactly one ref per 7 study days instead of one per study day (B2 — a
+/// sub-weekly pace must NOT be inflated to 1/study-day).
 List<ScheduledUnit> selfPacedSchedule({
   required DateTime anchor,
   required int? pace,
+  int paceWindowStudyDays = 1,
   required StudyDayPattern studyDayPattern,
   required List<String> orderedRefs,
   required DateTime today,
@@ -100,6 +107,7 @@ List<ScheduledUnit> selfPacedSchedule({
   if (pace <= 0) {
     throw ArgumentError.value(pace, 'pace', 'Pace must be a positive integer.');
   }
+  final window = paceWindowStudyDays < 1 ? 1 : paceWindowStudyDays;
 
   final anchorDay = _dayOnly(anchor);
   final todayDay = _dayOnly(today);
@@ -110,11 +118,18 @@ List<ScheduledUnit> selfPacedSchedule({
   final result = <ScheduledUnit>[];
   var refIndex = 0;
   var cursor = anchorDay;
+  // Exact integer accumulation: [pace] units accrue per [window] study days.
+  // window=1 → [pace] refs every study day (legacy); window=N → [pace] refs
+  // every N study days. Integer math avoids the float error a fractional
+  // per-study-day rate would introduce (e.g. 1/7 × 7 = 0.9999…).
+  var accumulator = 0;
 
   while (!cursor.isAfter(todayDay)) {
     if (studyDayPattern.isStudyDay(cursor.weekday)) {
-      // Assign 'pace' refs to this day.
-      for (var i = 0; i < pace && refIndex < orderedRefs.length; i++) {
+      accumulator += pace;
+      final assignCount = accumulator ~/ window;
+      accumulator -= assignCount * window;
+      for (var i = 0; i < assignCount && refIndex < orderedRefs.length; i++) {
         result.add(
           ScheduledUnit(date: cursor, sefariaRef: orderedRefs[refIndex]),
         );

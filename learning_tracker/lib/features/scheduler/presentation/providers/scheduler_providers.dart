@@ -737,7 +737,6 @@ Future<List<DailyTask>> _buildProjectionTasks({
       }
     }
     if (paceValue == null || pacePeriod == null) continue;
-    final pace = PaceCalculator.paceToDaily(paceValue, pacePeriod).ceil();
 
     // Fetch study-day pattern.
     final studyConfigs = await db.studyDayConfigDao.getConfigsByTrack(trackId);
@@ -748,6 +747,14 @@ Future<List<DailyTask>> _buildProjectionTasks({
               if (c.dayType == 'study') c.dayOfWeek,
           };
     final pattern = StudyDayPattern(studyWeekdays);
+
+    // B2: a weekly pace = paceValue units per WEEK, spread across that week's
+    // study days — NOT 1 unit per study day. Pass the window so
+    // selfPacedSchedule accrues paceValue units per studyDaysPerWeek study days.
+    // (paceToDaily(per_week)=paceValue/7 was previously ceil'd to 1, inflating
+    // any sub-8 weekly pace to ~1/study-day and flooding the overdue queue.)
+    final studyDaysPerWeek = studyWeekdays.isEmpty ? 7 : studyWeekdays.length;
+    final paceWindowStudyDays = pacePeriod == 'per_week' ? studyDaysPerWeek : 1;
 
     final anchor = DateUtils.extractLocalDate(startedAt);
 
@@ -777,7 +784,8 @@ Future<List<DailyTask>> _buildProjectionTasks({
 
     final schedule = selfPacedSchedule(
       anchor: anchor,
-      pace: pace,
+      pace: paceValue,
+      paceWindowStudyDays: paceWindowStudyDays,
       studyDayPattern: pattern,
       orderedRefs: scheduleRefs,
       today: todayDate,

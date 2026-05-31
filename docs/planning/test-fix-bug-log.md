@@ -150,6 +150,18 @@ already localized); regenerated l10n. *Test:* `empty_login_ws2_test.dart` — ne
 Hebrew" (he locale → Hebrew strings render, English absent); existing en assertions unchanged (en values
 identical). `make ci` green. (Bug-hunt finding.)
 
+**B2 (HIGH, correctness — fixed):** A self-paced **weekly** pace (`N per week`, N=1..7) was inflated to **one
+ref every study day** (up to 7×) → "due today" over-scheduled and the overdue queue flooded (badly so on
+back-dated tracks). *Cause:* `scheduler_providers.dart` did `PaceCalculator.paceToDaily(paceValue, 'per_week')
+.ceil()` = `(paceValue/7).ceil()` = 1 for all 1..7, and `selfPacedSchedule` assigned that integer pace **per
+study day**. *Fix:* added a backward-compatible `int paceWindowStudyDays = 1` to `selfPacedSchedule` with exact
+integer accumulation (`pace` units accrue per `window` study days; window=1 = legacy per-study-day behaviour,
+unchanged). The provider now passes `pace: paceValue, paceWindowStudyDays: (per_week ? studyDaysPerWeek : 1)` —
+so `1/week` schedules exactly one ref per `studyDaysPerWeek` study days. Integer math avoids the float error a
+fractional rate (1/7×7=0.999…) would cause. *Test:* `overdue_projection_test.dart` — "weekly pace window" group:
+1/week over 14 days → 2 units (not 14); 2/week → 4; default window=1 → 14 (legacy preserved). `make ci` green.
+*(Related medium "coarse pace granularity ignored" (:711) is the same root and is covered by this fix.)*
+
 **D6 (MEDIUM, UX/edge — FOUND on-device, not yet fixed):** A **profile-less account** (e.g. Daniel's
 churn-anomaly account: accounts.id=2, zero `learner_profiles`; also a tutor-only adult) is shown the Dashboard
 **"Add a learning track"** CTA, but completing AddTrackFlow fails with a surfaced **"Failed to save track. Please

@@ -809,6 +809,66 @@ void main() {
       );
     },
   );
+
+  // B2 — a weekly pace must schedule paceValue units per WEEK, not per study
+  // day. Previously paceToDaily(per_week)=paceValue/7 was ceil'd to 1, so any
+  // 1..7 per-week pace inflated to one ref EVERY study day (up to 7x) and
+  // flooded the overdue queue.
+  group('B2 — weekly pace window does not inflate to per-study-day', () {
+    test('pace 1 over a 7-study-day window schedules one ref per 7 days', () {
+      final anchor = DateTime.utc(2026, 5, 4); // Monday
+      final today = anchor.add(const Duration(days: 13)); // 14 days inclusive
+      final refs = List.generate(20, (i) => 'r$i');
+      const everyDay = StudyDayPattern.everyDay; // empty = every day
+
+      final weekly = selfPacedSchedule(
+        anchor: anchor,
+        pace: 1,
+        paceWindowStudyDays: 7,
+        studyDayPattern: everyDay,
+        orderedRefs: refs,
+        today: today,
+      );
+      // 14 study days / 7 = exactly 2 units (the old ceil bug produced 14).
+      expect(
+        weekly.length,
+        2,
+        reason: '1/week over 14 days must be 2 units, not 14',
+      );
+
+      // Default window (1) keeps the legacy 1-unit-per-study-day behaviour.
+      final daily = selfPacedSchedule(
+        anchor: anchor,
+        pace: 1,
+        studyDayPattern: everyDay,
+        orderedRefs: refs,
+        today: today,
+      );
+      expect(
+        daily.length,
+        14,
+        reason: 'window=1 (default) is unchanged: one unit per study day',
+      );
+    });
+
+    test('pace 2 per week distributes 2 units across each 7-day window', () {
+      final anchor = DateTime.utc(2026, 5, 4);
+      final today = anchor.add(const Duration(days: 13));
+      final refs = List.generate(20, (i) => 'r$i');
+      const everyDay = StudyDayPattern.everyDay;
+
+      final weekly = selfPacedSchedule(
+        anchor: anchor,
+        pace: 2,
+        paceWindowStudyDays: 7,
+        studyDayPattern: everyDay,
+        orderedRefs: refs,
+        today: today,
+      );
+      // 14 study days × (2/7) = 4 units.
+      expect(weekly.length, 4);
+    });
+  });
 }
 
 // ---------------------------------------------------------------------------
