@@ -87,7 +87,7 @@ Widget _wrap({
       lifetimeTotalsAcrossAllCurriculaProvider(
         _profileId,
       ).overrideWith((ref) => Future.value(totals)),
-      dashboardGlobalPointsProvider.overrideWith((ref) => Future.value(points)),
+      dashboardGlobalPointsProvider.overrideWith((ref) => Stream.value(points)),
     ],
     child: MaterialApp(
       localizationsDelegates: const [
@@ -237,7 +237,7 @@ void main() {
               _profileId,
             ).overrideWith((ref) => Completer<LifetimeTotals>().future),
             dashboardGlobalPointsProvider.overrideWith(
-              (ref) => Completer<int>().future,
+              (ref) => Completer<int>().future.asStream(),
             ),
           ],
           child: const MaterialApp(
@@ -301,7 +301,7 @@ void main() {
                 _profileId,
               ).overrideWith((ref) => Completer<LifetimeTotals>().future),
               dashboardGlobalPointsProvider.overrideWith(
-                (ref) => Future.value(42),
+                (ref) => Stream.value(42),
               ),
             ],
             child: const MaterialApp(

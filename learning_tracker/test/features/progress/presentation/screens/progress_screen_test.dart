@@ -126,7 +126,7 @@ Widget _wrap({
       dashboardStreakProvider.overrideWith(
         (ref) => Stream.value((currentStreak: streak, maxStreak: streak)),
       ),
-      dashboardGlobalPointsProvider.overrideWith((ref) => Future.value(points)),
+      dashboardGlobalPointsProvider.overrideWith((ref) => Stream.value(points)),
       journeyViewModelProvider(
         _profileId,
       ).overrideWith((ref) => Future.value(journey)),

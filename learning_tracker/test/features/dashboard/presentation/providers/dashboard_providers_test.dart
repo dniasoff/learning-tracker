@@ -173,6 +173,21 @@ ProviderContainer _makeContainer(
   );
 }
 
+/// Reads [dashboardGlobalPointsProvider] while holding a listener.
+///
+/// It is an autoDispose StreamProvider whose build awaits the user-mode future;
+/// reading `.future` without a listener lets the provider autoDispose during
+/// its loading state ("disposed during loading"). The production dashboard
+/// always holds a `ref.watch` listener — this mirrors that.
+Future<int> _readGlobalPoints(ProviderContainer container) async {
+  final sub = container.listen(dashboardGlobalPointsProvider, (_, __) {});
+  try {
+    return await container.read(dashboardGlobalPointsProvider.future);
+  } finally {
+    sub.close();
+  }
+}
+
 // ── Tests ─────────────────────────────────────────────────────────────────────
 
 void main() {
@@ -527,9 +542,7 @@ void main() {
         final mode = await container.read(dashboardUserModeProvider.future);
         expect(mode, ProfileMode.adult);
 
-        final points = await container.read(
-          dashboardGlobalPointsProvider.future,
-        );
+        final points = await _readGlobalPoints(container);
         expect(
           points,
           0,
@@ -560,7 +573,7 @@ void main() {
       final mode = await container.read(dashboardUserModeProvider.future);
       expect(mode, ProfileMode.child);
 
-      final points = await container.read(dashboardGlobalPointsProvider.future);
+      final points = await _readGlobalPoints(container);
       expect(points, 250);
     });
 
@@ -573,8 +586,53 @@ void main() {
       final mode = await container.read(dashboardUserModeProvider.future);
       expect(mode, ProfileMode.child);
 
-      final points = await container.read(dashboardGlobalPointsProvider.future);
+      final points = await _readGlobalPoints(container);
       expect(points, 0, reason: 'no balance row → 0 for child');
+    });
+
+    test('reflects balance changes reactively without invalidate '
+        '(D2: watchBalance stream, not a stale one-shot future)', () async {
+      await _seedChildProfile(db); // id=2, mode='child'
+      final now = DateTime.utc(2026, 1, 1);
+      await db
+          .into(db.pointsBalance)
+          .insert(
+            PointsBalanceCompanion.insert(
+              profileId: const Value(_childProfileId),
+              balance: const Value(100),
+              updatedAt: now,
+            ),
+          );
+
+      final container = _makeContainer(db, profileId: _childProfileId);
+      addTearDown(container.dispose);
+
+      expect(
+        await container.read(dashboardUserModeProvider.future),
+        ProfileMode.child,
+      );
+
+      // Hold a listener (mirrors the mounted dashboard's ref.watch) BEFORE
+      // reading, so the autoDispose stream provider is not torn down during its
+      // loading state. The OLD one-shot future would stay at 100 forever; the
+      // reactive stream must emit the debited value.
+      final sub = container.listen(dashboardGlobalPointsProvider, (_, __) {});
+      addTearDown(sub.close);
+
+      expect(await container.read(dashboardGlobalPointsProvider.future), 100);
+
+      // A redemption debit (any balance mutation) writes the balance row.
+      await (db.update(db.pointsBalance)
+            ..where((t) => t.profileId.equals(_childProfileId)))
+          .write(const PointsBalanceCompanion(balance: Value(70)));
+
+      // No manual invalidate — the stream emits the new balance.
+      var latest = container.read(dashboardGlobalPointsProvider).value;
+      for (var i = 0; i < 50 && latest != 70; i++) {
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+        latest = container.read(dashboardGlobalPointsProvider).value;
+      }
+      expect(latest, 70, reason: 'dashboard points must reflect the debit');
     });
   });
 
@@ -1040,9 +1098,7 @@ void main() {
         expect(mode, ProfileMode.adult);
 
         // Even with a balance row, adults should receive 0.
-        final points = await container.read(
-          dashboardGlobalPointsProvider.future,
-        );
+        final points = await _readGlobalPoints(container);
         expect(
           points,
           0,
@@ -1103,12 +1159,8 @@ void main() {
       await childContainer.read(dashboardUserModeProvider.future);
       await adultContainer.read(dashboardUserModeProvider.future);
 
-      final childPoints = await childContainer.read(
-        dashboardGlobalPointsProvider.future,
-      );
-      final adultPoints = await adultContainer.read(
-        dashboardGlobalPointsProvider.future,
-      );
+      final childPoints = await _readGlobalPoints(childContainer);
+      final adultPoints = await _readGlobalPoints(adultContainer);
 
       expect(childPoints, 500, reason: 'child should see their balance');
       expect(adultPoints, 0, reason: 'adult should always see 0');

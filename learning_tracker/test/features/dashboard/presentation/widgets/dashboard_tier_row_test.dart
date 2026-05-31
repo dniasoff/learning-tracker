@@ -156,7 +156,7 @@ List<Override> _overridesFor({
         maxStreak: currentStreak,
       )),
     ),
-    dashboardGlobalPointsProvider.overrideWith((ref) => Future.value(points)),
+    dashboardGlobalPointsProvider.overrideWith((ref) => Stream.value(points)),
     dashboardStreakRecoveryProvider.overrideWith(
       (ref) => Future.value(
         StreakRecoveryInfo(wasRecovered: false, currentStreak: currentStreak),
@@ -604,7 +604,7 @@ void main() {
             maxStreak: currentStreak,
           )),
         ),
-        dashboardGlobalPointsProvider.overrideWith((ref) => Future.value(0)),
+        dashboardGlobalPointsProvider.overrideWith((ref) => Stream.value(0)),
         dashboardStreakRecoveryProvider.overrideWith(
           (ref) => Future.value(
             StreakRecoveryInfo(

@@ -696,8 +696,8 @@ final dashboardGlobalPointsProvider = DashboardGlobalPointsProvider._();
 /// Returns 0 for adult profiles (Rule 3: adults have no points).
 
 final class DashboardGlobalPointsProvider
-    extends $FunctionalProvider<AsyncValue<int>, int, FutureOr<int>>
-    with $FutureModifier<int>, $FutureProvider<int> {
+    extends $FunctionalProvider<AsyncValue<int>, int, Stream<int>>
+    with $FutureModifier<int>, $StreamProvider<int> {
   /// Stored debitable points balance, scoped to active child profile (WS7.balance).
   ///
   /// Reads from [PointsBalanceDao] — the spend-economy source of truth (DEC-32).
@@ -718,17 +718,17 @@ final class DashboardGlobalPointsProvider
 
   @$internal
   @override
-  $FutureProviderElement<int> $createElement($ProviderPointer pointer) =>
-      $FutureProviderElement(pointer);
+  $StreamProviderElement<int> $createElement($ProviderPointer pointer) =>
+      $StreamProviderElement(pointer);
 
   @override
-  FutureOr<int> create(Ref ref) {
+  Stream<int> create(Ref ref) {
     return dashboardGlobalPoints(ref);
   }
 }
 
 String _$dashboardGlobalPointsHash() =>
-    r'8fe91dadd16bdbd387fd4e1676826796e207afbf';
+    r'08e64e48fb171f259721731ba3b8cb317ee2a571';
 
 /// Write-path effect: strips legacy stock-template milestones for the current
 /// profile and pushes updated gamification settings to Firestore if any rows

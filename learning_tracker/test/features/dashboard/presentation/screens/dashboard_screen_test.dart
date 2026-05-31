@@ -28,7 +28,7 @@ void main() {
           dashboardStreakProvider.overrideWith(
             (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
           ),
-          dashboardGlobalPointsProvider.overrideWith((ref) => Future.value(0)),
+          dashboardGlobalPointsProvider.overrideWith((ref) => Stream.value(0)),
           allDailyTasksProvider.overrideWith((ref) => Future.value([])),
           dashboardStreakRecoveryProvider.overrideWith(
             (ref) => Future.value(
@@ -90,7 +90,7 @@ void main() {
               (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
             ),
             dashboardGlobalPointsProvider.overrideWith(
-              (ref) => Future.value(0),
+              (ref) => Stream.value(0),
             ),
             allDailyTasksProvider.overrideWith((ref) => Future.value([])),
             dashboardStreakRecoveryProvider.overrideWith(

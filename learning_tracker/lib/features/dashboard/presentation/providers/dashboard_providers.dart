@@ -269,14 +269,28 @@ Stream<({int currentStreak, int maxStreak})> dashboardStreak(Ref ref) async* {
 /// Reads from [PointsBalanceDao] — the spend-economy source of truth (DEC-32).
 /// Returns 0 for adult profiles (Rule 3: adults have no points).
 @riverpod
-Future<int> dashboardGlobalPoints(Ref ref) async {
-  ref.watch<int>(completionCommittedProvider);
-  final userMode = ref.watch(dashboardUserModeProvider).asData?.value;
-  if (userMode != ProfileMode.child) return 0;
-
+Stream<int> dashboardGlobalPoints(Ref ref) async* {
+  // Establish sync dependencies before the async gap (Riverpod: no ref.watch
+  // after await).
   final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
-  return db.pointsBalanceDao.getBalance(profileId);
+  // Await the resolved mode via `.future` (does NOT rebuild on loading→data,
+  // unlike watching the AsyncValue — avoids a premature stream that gets
+  // disposed mid-load).
+  final userMode = await ref.watch(dashboardUserModeProvider.future);
+  if (userMode != ProfileMode.child) {
+    yield 0; // adults have no points (product rule)
+    return;
+  }
+  // Reactive stream (watchBalance), NOT a one-shot getBalance future: the
+  // dashboard star counter must reflect EVERY balance mutation — completion
+  // credits, redemption debits, and parent decline-refunds — without waiting
+  // for a pull-to-refresh. Previously a Future<int> that only re-ran on
+  // completionCommittedProvider / pull-to-refresh, so a redemption debit (or
+  // refund) left the counter STALE while the dashboard stayed mounted under
+  // the pushed redemption route (D2, on-device F8). watchBalance emits the
+  // current balance on subscribe and on every PointsBalance row change.
+  yield* db.pointsBalanceDao.watchBalance(profileId);
 }
 
 /// Write-path effect: strips legacy stock-template milestones for the current

@@ -41,6 +41,30 @@ NO own profile row (Profiles section empty) — identity is the account, which i
 fallback was required. Pushed drill-down screens (e.g. Manage Tracks) keep their own title bar + back, no
 switcher — by design (§5 targets the main tab contexts + parent portal).
 
+**D2 (HIGH, correctness/UX — F8 rewards economy):**
+*Symptom* — Child redeems a reward (balance debits in DB) but the **Dashboard star-points counter stays
+stale** (shows the pre-redemption balance) until a pull-to-refresh or the next completion. Same staleness for
+a parent **decline-refund** not reflecting on the child Dashboard. (Source-confirmed; the redemption screen is
+pushed OVER the still-mounted Dashboard, so the dashboard provider is kept alive but never re-evaluated.)
+*Cause* — `dashboardGlobalPointsProvider` (`lib/features/dashboard/presentation/providers/dashboard_providers.dart`)
+was a one-shot `Future<int>` reading `getBalance`, re-evaluated ONLY on `completionCommittedProvider` change or
+pull-to-refresh. `child_redemption_screen.dart:171` invalidates only its own `childRedemptionBalanceProvider`,
+NOT the dashboard provider; the parent refund path doesn't touch it either. The DAO already exposed an unused
+reactive `watchBalance` stream (`points_balance_dao.dart:62`).
+*Fix (root cause)* — Converted `dashboardGlobalPointsProvider` to a reactive `Stream<int>` over
+`pointsBalanceDao.watchBalance(profileId)` (`async*`, awaiting `dashboardUserModeProvider.future` to keep the
+adults-have-no-points gate and avoid a load-time rebuild/dispose race). Now EVERY balance mutation — completion
+credit, redemption debit, decline refund — updates the star counter live; no per-call-site invalidation needed
+(eliminates the whole staleness class). build_runner regenerated the provider as a StreamProvider.
+*Test* — `dashboard_providers_test.dart`: new "reflects balance changes reactively without invalidate (D2)" —
+seeds a child balance, holds a listener (mirrors the mounted dashboard), writes a debit to the balance row, and
+asserts the provider emits the new value with NO manual invalidate. Added `_readGlobalPoints` listener-holding
+helper (autoDispose StreamProvider whose build awaits → `.read(.future)` without a listener disposes mid-load).
+Migrated all `dashboardGlobalPointsProvider.overrideWith((ref) => Future.value(x))` test sites (4 files) to
+`Stream.value(x)` (+ the perpetual-loading one to `Completer.future.asStream()`). 91 affected tests green;
+`make ci` green. **On-device re-verify: pending (needs a child profile + reward + redemption; will confirm in
+the F8 on-device pass).**
+
 ---
 
 ## Phase 5b — Navigation guards (unit tests + SYSTEMIC LOCKOUT FIX)
