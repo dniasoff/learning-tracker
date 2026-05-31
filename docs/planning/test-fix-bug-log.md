@@ -125,6 +125,31 @@ or double-fulfil).
 decline (refund → balance restored, status declined), then a late fulfil → asserts status STAYS declined and
 balance unchanged. `make ci` green (8945).
 
+## Bug-hunt (high-risk clusters) — adversarial workflow 2026-05-31
+
+A 26-agent find→adversarially-verify workflow over sync/gamification/tracks/tutoring/profiles/dashboard
+surfaced **16 confirmed defects** (of 20 reported) — full list with file:line + fix + verifier reasoning in
+`docs/planning/bug-hunt-findings-2026-05-31.md`. Fixing in priority order; B1 done below.
+
+**B1 (HIGH, correctness + DATA-LOSS — track setup):**
+*Symptom* — Enrolling in an **active calendar program that has built-in chazara stages** (e.g.
+`dirshu_amud_hayomi`) produces a track with **ZERO stage definitions** → NO daily, overdue, OR chazara tasks
+(the program is silently dead after setup). Re-configuring an existing program track through this path also
+**wipes its existing stages** (data loss).
+*Cause* — `add_track_flow_screen.dart:885` `_buildChazaraStep`'s `ChazaraReadOnlyStep` (the `_isProgramTrack &&
+_programHasChazara` branch) called `onContinue: () => _onChazaraComplete(null)`, so `wizardResult` stayed null.
+`TrackCreationService._runCoreTransaction` unconditionally `deleteStagesForTrack` then only
+`applyWizardResult(...)` when `wizardResult != null` — so nothing seeded the program's stages. (Verified: the
+only other seeder, `initializeDefaults`, is gamification-only and seeds generic stages, never the program's.)
+*Fix* — pass a real PRESET `LearningProcessWizardResult(WizardResult(curriculumId, choice: preset, programId))`
+so `LearningProcessWizardService._applyPreset` reads `program.stagesConfig` and inserts the learn + chazara
+stages. (Mirrors how `step_chazara.dart` builds its result.)
+*Test* — the preset-seeding contract is already unit-tested (`learning_process_wizard_service_test.dart` —
+applyWizardResult preset path). This fix is a screen-wiring change (null → preset); its regression is the **L4
+on-device verification**: enroll in a chazara program → confirm the track gets daily + chazara tasks (was dead).
+A faithful flow-widget test (drive program→chazara→finish, capture the wizardResult) is a documented follow-up.
+`make ci` green (existing flow/wizard tests pass with the change).
+
 ---
 
 ## Phase 5b — Navigation guards (unit tests + SYSTEMIC LOCKOUT FIX)

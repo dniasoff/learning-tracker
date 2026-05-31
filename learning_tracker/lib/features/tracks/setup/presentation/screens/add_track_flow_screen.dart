@@ -12,6 +12,7 @@ import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/models/wizard_result_wrapper.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
+import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
@@ -882,7 +883,21 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
       return ChazaraReadOnlyStep(
         programName: _state.programName ?? '',
         stages: chazaraStages,
-        onContinue: () => _onChazaraComplete(null),
+        // B1: pass the program's PRESET so its learn + chazara stages are
+        // actually seeded. Passing null left wizardResult null, so
+        // TrackCreationService deleted the track's stages and never re-applied
+        // them — the program track ended up with ZERO stages (dead: no daily,
+        // overdue, or chazara tasks), and re-configuring an existing track
+        // wiped its schedule. _applyPreset reads the program's stagesConfig.
+        onContinue: () => _onChazaraComplete(
+          LearningProcessWizardResult(
+            wizardResult: WizardResult(
+              curriculumId: _state.curriculumId!,
+              choice: WizardChoice.preset,
+              programId: _state.programId,
+            ),
+          ),
+        ),
       );
     }
 
