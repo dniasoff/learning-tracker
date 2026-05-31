@@ -3662,6 +3662,14 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get parentPinLockoutTitle => 'Too many failed attempts';
+
+  @override
+  String parentPinLockoutBody(int minutes) {
+    return 'Try again in $minutes minute(s)';
+  }
+
+  @override
   String tutorPinErrorPrefix(String error) {
     return 'Error: $error';
   }

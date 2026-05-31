@@ -2060,6 +2060,13 @@
       "minutes": { "type": "int" }
     }
   },
+  "parentPinLockoutTitle": "Too many failed attempts",
+  "parentPinLockoutBody": "Try again in {minutes} minute(s)",
+  "@parentPinLockoutBody": {
+    "placeholders": {
+      "minutes": { "type": "int" }
+    }
+  },
   "tutorPinErrorPrefix": "Error: {error}",
   "@tutorPinErrorPrefix": {
     "placeholders": {

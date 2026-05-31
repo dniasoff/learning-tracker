@@ -455,6 +455,7 @@ class _LockoutPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.all(20),
@@ -467,7 +468,7 @@ class _LockoutPanel extends StatelessWidget {
           Icon(Icons.lock_clock, size: 48, color: theme.colorScheme.error),
           const SizedBox(height: 12),
           Text(
-            'Too many failed attempts',
+            l10n.parentPinLockoutTitle,
             textAlign: TextAlign.center,
             style: theme.textTheme.titleMedium?.copyWith(
               color: theme.colorScheme.onErrorContainer,
@@ -476,7 +477,7 @@ class _LockoutPanel extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'Try again in $minutes minute(s)',
+            l10n.parentPinLockoutBody(minutes),
             textAlign: TextAlign.center,
             style: theme.textTheme.bodyMedium?.copyWith(
               color: theme.colorScheme.onErrorContainer,

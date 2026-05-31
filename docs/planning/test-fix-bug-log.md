@@ -65,6 +65,20 @@ Migrated all `dashboardGlobalPointsProvider.overrideWith((ref) => Future.value(x
 `make ci` green. **On-device re-verify: pending (needs a child profile + reward + redemption; will confirm in
 the F8 on-device pass).**
 
+**D3 (MEDIUM, l10n — F7 parent-PIN):**
+*Symptom* — The parent-PIN lockout panel (shown after 5 failed attempts) renders **hard-coded English**
+("Too many failed attempts" / "Try again in N minute(s)") regardless of locale → a Hebrew-locale user sees
+English. Violates the Hebrew-terms/locale rule.
+*Cause* — `_LockoutPanel.build` in `parent_pin_keypad_dialog.dart` used string literals instead of l10n
+(while the tutor equivalent `tutorPinLockedOut` was already localized).
+*Fix* — Added `parentPinLockoutTitle` + `parentPinLockoutBody` (with `{minutes}` placeholder) to `app_en.arb`
+and `app_he.arb` (HE: "יותר מדי ניסיונות כושלים" / "נסה שוב בעוד {minutes} דקות"); `_LockoutPanel` now uses
+`l10n.parentPinLockoutTitle` + `l10n.parentPinLockoutBody(minutes)`. Regenerated via `flutter gen-l10n`.
+*Test* — `parent_pin_keypad_dialog_test.dart`: new "lockout panel is localized in Hebrew (not hard-coded
+English)" — pumps the panel (`PinKeypadDialogFrame`, lockedOut, 12 min) in `Locale('he')`, asserts the Hebrew
+title renders and the English title is absent. Existing English lockout assertions unchanged (EN value is the
+same string). ARB parity (DNI-389) + analyze green.
+
 ---
 
 ## Phase 5b — Navigation guards (unit tests + SYSTEMIC LOCKOUT FIX)

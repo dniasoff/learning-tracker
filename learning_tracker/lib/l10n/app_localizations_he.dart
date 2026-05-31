@@ -3626,6 +3626,14 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
+  String get parentPinLockoutTitle => 'יותר מדי ניסיונות כושלים';
+
+  @override
+  String parentPinLockoutBody(int minutes) {
+    return 'נסה שוב בעוד $minutes דקות';
+  }
+
+  @override
   String tutorPinErrorPrefix(String error) {
     return 'שגיאה: $error';
   }

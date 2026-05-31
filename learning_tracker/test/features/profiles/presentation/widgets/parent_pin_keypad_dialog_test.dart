@@ -882,6 +882,58 @@ void main() {
       await _teardown(tester);
     });
 
+    // D3: the lockout panel must be LOCALIZED (was hard-coded English). In
+    // Hebrew locale it must render the Hebrew strings and NOT the English ones.
+    testWidgets(
+      'lockout panel is localized in Hebrew (not hard-coded English)',
+      (tester) async {
+        setViewSize(tester);
+
+        await tester.pumpWidget(
+          ProviderScope(
+            child: MaterialApp(
+              locale: const Locale('he'),
+              localizationsDelegates: const [
+                AppLocalizations.delegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Scaffold(
+                body: PinKeypadDialogFrame(
+                  title: 'Test Title',
+                  subtitle: 'Test subtitle',
+                  digits: '',
+                  errorMessage: null,
+                  lockedOut: true,
+                  lockoutMinutes: 12,
+                  busy: false,
+                  onClose: () {},
+                  onDigit: (_) {},
+                  onBackspace: () {},
+                  onCancel: () {},
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        expect(find.text('יותר מדי ניסיונות כושלים'), findsAtLeastNWidgets(1));
+        expect(
+          find.text('Too many failed attempts'),
+          findsNothing,
+          reason:
+              'Hebrew locale must not show the old hard-coded English title',
+        );
+        expect(find.textContaining('12'), findsAtLeastNWidgets(1));
+
+        await _teardown(tester);
+      },
+    );
+
     testWidgets('errorMessage is shown in error colour text widget', (
       tester,
     ) async {

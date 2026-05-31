@@ -2035,6 +2035,13 @@
       "minutes": { "type": "int" }
     }
   },
+  "parentPinLockoutTitle": "יותר מדי ניסיונות כושלים",
+  "parentPinLockoutBody": "נסה שוב בעוד {minutes} דקות",
+  "@parentPinLockoutBody": {
+    "placeholders": {
+      "minutes": { "type": "int" }
+    }
+  },
   "tutorPinErrorPrefix": "שגיאה: {error}",
   "@tutorPinErrorPrefix": {
     "placeholders": {

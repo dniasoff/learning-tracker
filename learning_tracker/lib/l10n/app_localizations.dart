@@ -6443,6 +6443,18 @@ abstract class AppLocalizations {
   /// **'Too many attempts. Locked for {minutes} minute(s).'**
   String tutorPinLockedOut(int minutes);
 
+  /// No description provided for @parentPinLockoutTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many failed attempts'**
+  String get parentPinLockoutTitle;
+
+  /// No description provided for @parentPinLockoutBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Try again in {minutes} minute(s)'**
+  String parentPinLockoutBody(int minutes);
+
   /// No description provided for @tutorPinErrorPrefix.
   ///
   /// In en, this message translates to:
