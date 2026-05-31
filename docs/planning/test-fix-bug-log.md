@@ -131,6 +131,14 @@ A 26-agent find→adversarially-verify workflow over sync/gamification/tracks/tu
 surfaced **16 confirmed defects** (of 20 reported) — full list with file:line + fix + verifier reasoning in
 `docs/planning/bug-hunt-findings-2026-05-31.md`. Fixing in priority order; B1 done below.
 
+**D8 (MEDIUM, l10n — fixed):** The dashboard skipped-onboarding CTA banner (the "Get started / Add a learning
+track / Dismiss" empty-state, `skipped_onboarding_cta_banner.dart:104/115/125/146`) hard-coded English in the
+non-tutor branch → Hebrew UI leak. *Fix:* added `ctaGetStartedTitle` / `ctaGetStartedBody` /
+`ctaAddLearningTrack` / `commonDismiss` to `app_en.arb` + `app_he.arb` and use them (the tutor branch was
+already localized); regenerated l10n. *Test:* `empty_login_ws2_test.dart` — new "CTA banner is localized in
+Hebrew" (he locale → Hebrew strings render, English absent); existing en assertions unchanged (en values
+identical). `make ci` green. (Bug-hunt finding.)
+
 **D6 (MEDIUM, UX/edge — FOUND on-device, not yet fixed):** A **profile-less account** (e.g. Daniel's
 churn-anomaly account: accounts.id=2, zero `learner_profiles`; also a tutor-only adult) is shown the Dashboard
 **"Add a learning track"** CTA, but completing AddTrackFlow fails with a surfaced **"Failed to save track. Please

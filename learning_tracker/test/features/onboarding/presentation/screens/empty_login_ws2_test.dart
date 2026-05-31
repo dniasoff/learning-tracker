@@ -34,7 +34,11 @@ class _StubNotificationGateway extends Mock implements NotificationGateway {
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
-Widget _wrapWithProviders({required Widget child, StackRouter? router}) {
+Widget _wrapWithProviders({
+  required Widget child,
+  StackRouter? router,
+  Locale locale = const Locale('en'),
+}) {
   final mockRouter = router ?? _MockStackRouter();
   return ProviderScope(
     overrides: [
@@ -54,7 +58,7 @@ Widget _wrapWithProviders({required Widget child, StackRouter? router}) {
       notificationServiceProvider.overrideWithValue(_StubNotificationGateway()),
     ],
     child: MaterialApp(
-      locale: const Locale('en'),
+      locale: locale,
       localizationsDelegates: const [
         AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
@@ -323,6 +327,29 @@ void main() {
         // was removed from the banner; tutor entry is the dedicated "I'm a
         // tutor" button on EmptyLoginScreen (tested above).
         expect(find.text('Add a learning track'), findsOneWidget);
+      },
+    );
+
+    testWidgets(
+      'CTA banner is localized in Hebrew — no hardcoded English leak (D-l10n)',
+      (tester) async {
+        final mockRouter = _MockStackRouter();
+        when(() => mockRouter.replaceAll(any())).thenAnswer((_) async {});
+
+        await tester.pumpWidget(
+          _wrapWithProviders(
+            child: const EmptyLoginScreen(),
+            router: mockRouter,
+            locale: const Locale('he'),
+          ),
+        );
+        await tester.pump();
+        await tester.pumpAndSettle();
+
+        // The Hebrew CTA renders; the old hardcoded English must NOT leak.
+        expect(find.text('הוסיפו מסלול לימוד'), findsOneWidget);
+        expect(find.text('בואו נתחיל'), findsWidgets);
+        expect(find.text('Add a learning track'), findsNothing);
       },
     );
   });

@@ -101,7 +101,9 @@ class _CtaBannerBody extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             Text(
-              joinedToTutor ? l10n.tutorWelcomeBannerTitle : 'Get started',
+              joinedToTutor
+                  ? l10n.tutorWelcomeBannerTitle
+                  : l10n.ctaGetStartedTitle,
               textAlign: TextAlign.center,
               style: theme.textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.w800,
@@ -112,7 +114,7 @@ class _CtaBannerBody extends StatelessWidget {
             Text(
               joinedToTutor
                   ? l10n.tutorWelcomeBannerBody
-                  : 'Add a learning track to begin tracking your progress.',
+                  : l10n.ctaGetStartedBody,
               textAlign: TextAlign.center,
               style: theme.textTheme.bodyLarge?.copyWith(
                 color: AppTheme.brandInkMuted,
@@ -122,7 +124,7 @@ class _CtaBannerBody extends StatelessWidget {
             const SizedBox(height: 32),
             FilledButton.icon(
               icon: const Icon(Icons.add_rounded),
-              label: const Text('Add a learning track'),
+              label: Text(l10n.ctaAddLearningTrack),
               style: FilledButton.styleFrom(
                 backgroundColor: AppTheme.brandBlue,
                 padding: const EdgeInsets.symmetric(vertical: 14),
@@ -142,9 +144,9 @@ class _CtaBannerBody extends StatelessWidget {
                 await clearOnboardingSkipState();
                 ref.invalidate(onboardingSkipStateProvider);
               },
-              child: const Text(
-                'Dismiss',
-                style: TextStyle(color: AppTheme.brandInkMuted),
+              child: Text(
+                l10n.commonDismiss,
+                style: const TextStyle(color: AppTheme.brandInkMuted),
               ),
             ),
           ],

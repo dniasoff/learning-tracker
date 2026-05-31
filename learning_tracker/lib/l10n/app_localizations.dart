@@ -792,6 +792,30 @@ abstract class AppLocalizations {
   /// **'Get Started'**
   String get getStarted;
 
+  /// No description provided for @ctaGetStartedTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Get started'**
+  String get ctaGetStartedTitle;
+
+  /// No description provided for @ctaGetStartedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a learning track to begin tracking your progress.'**
+  String get ctaGetStartedBody;
+
+  /// No description provided for @ctaAddLearningTrack.
+  ///
+  /// In en, this message translates to:
+  /// **'Add a learning track'**
+  String get ctaAddLearningTrack;
+
+  /// No description provided for @commonDismiss.
+  ///
+  /// In en, this message translates to:
+  /// **'Dismiss'**
+  String get commonDismiss;
+
   /// No description provided for @alreadyHaveAccount.
   ///
   /// In en, this message translates to:

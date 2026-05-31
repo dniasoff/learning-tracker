@@ -397,6 +397,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get getStarted => 'Get Started';
 
   @override
+  String get ctaGetStartedTitle => 'Get started';
+
+  @override
+  String get ctaGetStartedBody =>
+      'Add a learning track to begin tracking your progress.';
+
+  @override
+  String get ctaAddLearningTrack => 'Add a learning track';
+
+  @override
+  String get commonDismiss => 'Dismiss';
+
+  @override
   String get alreadyHaveAccount => 'Already have an account?';
 
   @override

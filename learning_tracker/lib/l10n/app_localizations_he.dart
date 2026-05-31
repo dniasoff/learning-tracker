@@ -395,6 +395,19 @@ class AppLocalizationsHe extends AppLocalizations {
   String get getStarted => 'בואו נתחיל';
 
   @override
+  String get ctaGetStartedTitle => 'בואו נתחיל';
+
+  @override
+  String get ctaGetStartedBody =>
+      'הוסיפו מסלול לימוד כדי להתחיל לעקוב אחר ההתקדמות.';
+
+  @override
+  String get ctaAddLearningTrack => 'הוסיפו מסלול לימוד';
+
+  @override
+  String get commonDismiss => 'סגירה';
+
+  @override
   String get alreadyHaveAccount => 'כבר יש לך חשבון?';
 
   @override
