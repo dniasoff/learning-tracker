@@ -7,6 +7,7 @@ import 'package:learning_tracker/core/content/hierarchy_selection.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
@@ -14,6 +15,7 @@ import 'package:learning_tracker/features/onboarding/domain/models/wizard_result
 import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
@@ -634,18 +636,28 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
       startingRef: _state.startingRef,
     );
 
+    // D1: widget.profileId may be 0 if selectedProfileIdProvider was null
+    // at build time (cold start / force-stop before ProfileGuard ran).
+    // Re-read the current activeProfileId so the write uses the correct FK.
+    final effectiveProfileId = widget.profileId != 0
+        ? widget.profileId
+        : ref.read(activeProfileIdProvider);
+
     try {
       final creationService = ref.read(trackCreationServiceProvider);
       await creationService.createTrack(
         result: result,
-        profileId: widget.profileId,
+        profileId: effectiveProfileId,
       );
 
-      await invalidateAfterTrackDataChange(ref, widget.profileId);
+      await invalidateAfterTrackDataChange(ref, effectiveProfileId);
 
       if (!_isProgramTrack && priorSelections != null) {
         unawaited(
-          _applySelfPacedPriorCompletions(priorSelections).then(
+          _applySelfPacedPriorCompletions(
+            priorSelections,
+            profileId: effectiveProfileId,
+          ).then(
             (_) {
               // Bulk marking completed in background.
             },
@@ -668,8 +680,16 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
           ),
         );
       }
-    } catch (e) {
+    } catch (e, st) {
+      AppLogger.instance.error(
+        event: 'track_creation_failed',
+        exception: e,
+        stackTrace: st,
+      );
       if (!mounted) return;
+      // D2: clear any stale snackbars before showing so the error does not
+      // leak across routes via the app-level ScaffoldMessenger queue.
+      ScaffoldMessenger.of(context).clearSnackBars();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(AppLocalizations.of(context)!.errorSaveTrackFailed),
@@ -685,7 +705,10 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
   }
 
   Future<({int itemCount, int completionCount})>
-  _applySelfPacedPriorCompletions(Set<HierarchySelection> selections) async {
+  _applySelfPacedPriorCompletions(
+    Set<HierarchySelection> selections, {
+    required int profileId,
+  }) async {
     if (selections.isEmpty) return (itemCount: 0, completionCount: 0);
 
     final service = ref.read(bulkPriorCompletionServiceProvider);
@@ -703,11 +726,11 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
       curriculumId: curriculum,
       resolvedItems: resolved,
       stageIds: const [1],
-      profileId: widget.profileId,
+      profileId: profileId,
     );
 
     // Refresh dashboard/progress/task views immediately.
-    await onTrackChanged(ref, widget.profileId);
+    await onTrackChanged(ref, profileId);
 
     return (
       itemCount: completion.itemCount,

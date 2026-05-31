@@ -223,7 +223,14 @@ void main() {
       final tutorCatchIdx = addTrackFlowSrc.indexOf(
         'on TutorWriteException catch',
       );
-      final genericCatchIdx = addTrackFlowSrc.indexOf('} catch (e)');
+      // Accept either `catch (e)` or `catch (e, st)` — the stack-trace variant
+      // was added in round-7 to log the root cause (D1 fix).
+      final genericCatchIdx = () {
+        final idx1 = addTrackFlowSrc.indexOf('} catch (e, st)');
+        final idx2 = addTrackFlowSrc.indexOf('} catch (e)');
+        if (idx1 >= 0 && idx2 >= 0) return idx1 < idx2 ? idx1 : idx2;
+        return idx1 >= 0 ? idx1 : idx2;
+      }();
       expect(
         tutorCatchIdx,
         greaterThan(0),
