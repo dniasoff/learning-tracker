@@ -83,6 +83,7 @@ CompletionCommand _cmd({
   DateTime? completedAt,
   int points = 10,
   bool priorMarkOnly = false,
+  CompletionSource source = CompletionSource.live,
 }) => CompletionCommand(
   profileId: profileId,
   curriculumId: curriculumId,
@@ -93,6 +94,7 @@ CompletionCommand _cmd({
   completedAt: completedAt ?? DateTime.utc(2026, 5, 15, 12),
   points: points,
   priorMarkOnly: priorMarkOnly,
+  source: source,
 );
 
 /// The bulk-prior sentinel date as used by the production service.
@@ -434,6 +436,86 @@ void main() {
         expect(imports, hasLength(1));
         expect(imports.first.sefariaRef, 'Berakhot 1');
         expect(imports.first.profileId, profileId);
+      },
+    );
+
+    // ── Regression: prior_completion_imports.source provenance (B1) ──────────
+    // Round-2 bug: the writer hard-coded source='bulkInTrack' for every
+    // prior-mark write, so a lifetimeOnly import could never be persisted as
+    // 'lifetimeOnly' and would leak into the trackAchievement tier. The writer
+    // must now persist the command's own CompletionSource.
+    test('commit with source=bulkInTrack persists '
+        "prior_completion_imports.source = 'bulkInTrack'", () async {
+      await writer.commit(
+        _cmd(
+          profileId: profileId,
+          trackId: trackId,
+          completedAt: _sentinel,
+          priorMarkOnly: true,
+          source: CompletionSource.bulkInTrack,
+        ),
+      );
+
+      final imports = await db.select(db.priorCompletionImports).get();
+      expect(imports, hasLength(1));
+      expect(imports.first.source, 'bulkInTrack');
+    });
+
+    test('commit with source=lifetimeOnly persists '
+        "prior_completion_imports.source = 'lifetimeOnly' (not mis-tagged "
+        "'bulkInTrack')", () async {
+      await writer.commit(
+        _cmd(
+          profileId: profileId,
+          trackId: trackId,
+          completedAt: _sentinel,
+          priorMarkOnly: true,
+          source: CompletionSource.lifetimeOnly,
+        ),
+      );
+
+      final imports = await db.select(db.priorCompletionImports).get();
+      expect(imports, hasLength(1));
+      expect(
+        imports.first.source,
+        'lifetimeOnly',
+        reason:
+            'B1: a lifetimeOnly import must NOT be persisted as bulkInTrack, '
+            'or it leaks into the trackAchievement tier (Items Learned, '
+            'siyumim, charts).',
+      );
+    });
+
+    test(
+      'commitBatch with source=lifetimeOnly persists '
+      "prior_completion_imports.source = 'lifetimeOnly' for every row",
+      () async {
+        await writer.commitBatch([
+          _cmd(
+            profileId: profileId,
+            trackId: trackId,
+            sefariaRef: 'Berakhot 1',
+            completedAt: _sentinel,
+            priorMarkOnly: true,
+            source: CompletionSource.lifetimeOnly,
+          ),
+          _cmd(
+            profileId: profileId,
+            trackId: trackId,
+            sefariaRef: 'Berakhot 2',
+            completedAt: _sentinel,
+            priorMarkOnly: true,
+            source: CompletionSource.lifetimeOnly,
+          ),
+        ]);
+
+        final imports = await db.select(db.priorCompletionImports).get();
+        expect(imports, hasLength(2));
+        expect(
+          imports.map((i) => i.source).toSet(),
+          {'lifetimeOnly'},
+          reason: 'commitBatch must carry lifetimeOnly provenance through too.',
+        );
       },
     );
 

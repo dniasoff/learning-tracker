@@ -257,6 +257,21 @@ class UserDatabase extends _$UserDatabase {
           // reconciliation knows which rows have never been queued for push.
           // Safe on existing rows (NULL default).
           await m.addColumn(pointsLedger, pointsLedger.syncEnqueuedAt);
+          // Backfill the marker for rows that were ALREADY pushed under
+          // v27/v28 (they carry a non-NULL `ulid`, which is stamped on insert
+          // and was the deterministic cloud doc-id used to push them). Without
+          // this, reEnqueueUnsyncedLedgerRows — which selects rows WHERE
+          // sync_enqueued_at IS NULL AND ulid IS NOT NULL — would treat every
+          // pre-existing synced row as "never queued" and re-push the entire
+          // historical ledger on first post-upgrade launch (a needless one-time
+          // outbox spike / burst of redundant Firestore writes). Stamping the
+          // marker from created_at leaves only genuinely never-enqueued rows
+          // (ulid NULL, or future rows) for the reconciliation to pick up.
+          await customStatement(
+            'UPDATE points_ledger '
+            'SET sync_enqueued_at = created_at '
+            'WHERE ulid IS NOT NULL AND sync_enqueued_at IS NULL',
+          );
         }
         if (from == 27) {
           // Tutor "talmid view" mirror columns on learner_profiles (v28).

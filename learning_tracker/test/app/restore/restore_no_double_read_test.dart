@@ -123,6 +123,128 @@ void main() {
       },
     );
 
+    // Regression (bug-hunt round 2): on a fresh-device restore the active
+    // profile id is the sentinel 0 (no profile is selected yet), but the
+    // restored profiles keep their original non-zero ids. The earlier code
+    // scoped Step 2 to `getActiveTracksForProfile(profileId)` with
+    // profileId == 0, which returned an empty set and silently skipped content
+    // import for EVERY restored profile. The fix derives active curricula
+    // across ALL profiles, so import must cover every restored profile's
+    // active curriculum even when the service was constructed with profileId 0.
+    test(
+      'restore() with profileId 0 (fresh-device sentinel) imports curricula '
+      'for ALL restored non-zero profiles, not the empty profile-0 set',
+      () async {
+        final db = inMemoryDb();
+        addTearDown(db.close);
+
+        // Seed an account + two real (non-zero) learner profiles, mirroring
+        // what LearnerProfileMerger would write after pulling
+        // users/{uid}/learner_profiles/. Their ids are the autoincremented
+        // 1 and 2 — never 0.
+        final accountId = await db
+            .into(db.accounts)
+            .insert(
+              AccountsCompanion.insert(
+                email: 'family@example.com',
+                tier: 'cloudBorn',
+                displayName: 'Family Account',
+                createdAt: DateTimeFactory.nowUtc(),
+                updatedAt: DateTimeFactory.nowUtc(),
+              ),
+            );
+        final parentId = await db
+            .into(db.learnerProfiles)
+            .insert(
+              LearnerProfilesCompanion.insert(
+                accountId: accountId,
+                displayName: 'Parent',
+                mode: 'adult',
+                createdAt: DateTimeFactory.nowUtc(),
+                updatedAt: DateTimeFactory.nowUtc(),
+              ),
+            );
+        final childId = await db
+            .into(db.learnerProfiles)
+            .insert(
+              LearnerProfilesCompanion.insert(
+                accountId: accountId,
+                displayName: 'Child',
+                mode: 'child',
+                createdAt: DateTimeFactory.nowUtc(),
+                updatedAt: DateTimeFactory.nowUtc(),
+              ),
+            );
+        // Both real profile ids must be non-zero (the bug's precondition).
+        expect(parentId, isNot(0));
+        expect(childId, isNot(0));
+
+        // Each profile has a distinct active track — what pullOnLaunch would
+        // have merged into curriculum_tracks under the restored ids.
+        await db
+            .into(db.curriculumTracks)
+            .insert(
+              CurriculumTracksCompanion.insert(
+                profileId: parentId,
+                curriculumId: CurriculumId.mishnayos.storageKey,
+                stateChangedAt: DateTimeFactory.nowUtc(),
+                activatedAt: DateTimeFactory.nowUtc(),
+                state: const Value('active'),
+              ),
+            );
+        await db
+            .into(db.curriculumTracks)
+            .insert(
+              CurriculumTracksCompanion.insert(
+                profileId: childId,
+                curriculumId: CurriculumId.tanach.storageKey,
+                stateChangedAt: DateTimeFactory.nowUtc(),
+                activatedAt: DateTimeFactory.nowUtc(),
+                state: const Value('active'),
+              ),
+            );
+
+        final orchestrator = _StubSyncOrchestrator();
+        final importSvc = _MockCurriculumImportService();
+        when(
+          () => importSvc.importAll(any()),
+        ).thenAnswer((_) => const Stream.empty());
+
+        final svc = DeviceRestoreService(
+          database: db,
+          syncOrchestrator: orchestrator,
+          // The fresh-device production state: no profile selected →
+          // active_profile_provider resolves to the sentinel 0.
+          profileId: 0,
+          isAuthenticated: true,
+          curriculumImportService: importSvc,
+          logger: AppLogger(Talker()),
+        );
+        addTearDown(svc.dispose);
+
+        final result = await svc.restore();
+        expect(result, isTrue);
+
+        // Before the fix, scoping to profile 0 yielded an empty set and
+        // importAll was never invoked. After the fix, import covers BOTH
+        // restored profiles' active curricula.
+        final captured = verify(
+          () => importSvc.importAll(captureAny()),
+        ).captured.single;
+        expect(
+          captured,
+          isA<List<CurriculumId>>().having(
+            (l) => l.map((c) => c.storageKey).toSet(),
+            'storageKeys',
+            equals({
+              CurriculumId.mishnayos.storageKey,
+              CurriculumId.tanach.storageKey,
+            }),
+          ),
+        );
+      },
+    );
+
     test('restore() with an empty local DB performs zero importAll calls — '
         'derivation is local, no fallback to Firestore re-read', () async {
       final db = inMemoryDb();

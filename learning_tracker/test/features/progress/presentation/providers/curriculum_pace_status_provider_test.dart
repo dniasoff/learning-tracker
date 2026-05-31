@@ -164,19 +164,20 @@ Future<void> _seedBulk(
   );
 }
 
-/// Seeds a live completion at the given timestamp.
+/// Seeds a live completion at the given timestamp for a specific stage.
 Future<void> _seedLive(
   UserDatabase db, {
   required int trackId,
   required String ref,
   required DateTime at,
+  int stageId = 1,
 }) async {
   await db.completionEventDao.appendEvent(
     CompletionEventsCompanion.insert(
       profileId: _profileId,
       curriculumId: _curriculumKey,
       sefariaRef: ref,
-      stageId: 1,
+      stageId: stageId,
       trackType: 'personal',
       trackId: Value(trackId),
       eventTimestamp: at,
@@ -412,4 +413,142 @@ void main() {
 
     expect(result, isNull);
   });
+
+  // -------------------------------------------------------------------------
+  // 5 — Chazara regression: distinct refs, NOT raw stage rows.
+  //
+  // 100-item / 100-day chazara track (stages learn + chazara1 + chazara2), at
+  // day 50 with the first 50 items fully completed (each ref produces 3
+  // completion_events rows = 150 rows total). On a row-counting numerator this
+  // reported liveProgress=150 vs expected=50 → phantom "Ahead by ~100 days".
+  // With distinct-ref counting, liveProgress=50 == expected=50 → onTrack.
+  // -------------------------------------------------------------------------
+  test(
+    'chazara: 50 items fully done (150 stage rows) on day 50 of 100 → onTrack '
+    '(distinct refs, not raw rows)',
+    () async {
+      db = inMemoryDb();
+      await seedProfile(db);
+
+      final trackStart = _today.subtract(const Duration(days: 50));
+      final trackId = await seedTrack(
+        db,
+        profileId: _profileId,
+        curriculumId: _curriculumKey,
+        activatedAt: trackStart,
+      );
+
+      // 50 fully-completed items, each at 3 stages (learn + 2 chazaras),
+      // spread across the elapsed window → 150 completion_events rows.
+      for (var i = 0; i < 50; i++) {
+        final at = trackStart.add(Duration(days: i + 1));
+        for (final stageId in const [1, 2, 3]) {
+          await _seedLive(
+            db,
+            trackId: trackId,
+            ref: 'live_$i',
+            at: at,
+            stageId: stageId,
+          );
+        }
+      }
+
+      // Goal: 100 days from trackStart (50 days from today).
+      await _seedGoal(
+        db,
+        trackId: trackId,
+        targetDate: trackStart.add(const Duration(days: 100)),
+        createdAt: trackStart,
+      );
+
+      container = _container(db: db, leafCount: 100, today: _today);
+
+      final result = await container.read(
+        curriculumPaceStatusProvider(_curriculumKey).future,
+      );
+
+      expect(result, isNotNull);
+      // 150 stage rows must collapse to 50 distinct refs.
+      expect(
+        result!.liveProgress,
+        50,
+        reason:
+            'liveProgress must count distinct sefariaRefs (50), not raw '
+            'completion_events rows (150) — chazara stages multiply rows',
+      );
+      // required = 100/100 = 1/day, expected = 1 * 50 = 50, paceVariance = 0.
+      expect(result.paceVariance, 0.0);
+      expect(
+        result.paceStatus,
+        PaceStatus.onTrack,
+        reason:
+            '50 distinct items done vs 50 expected → onTrack; a row-based '
+            'numerator would yield 150 vs 50 → phantom ahead',
+      );
+      expect(result.paceStatus, isNot(PaceStatus.ahead));
+    },
+  );
+
+  // -------------------------------------------------------------------------
+  // 6 — Chazara bulk baseline: distinct refs, not raw stage rows.
+  //
+  // Bulk-marking 40 items on a 3-stage track produced 120 rows → bulkBaseline
+  // over-counted to 120 > totalItems(100), clamping requiredVelocity to a
+  // degenerate 0. With distinct-ref counting, bulkBaseline = 40.
+  // -------------------------------------------------------------------------
+  test(
+    'chazara: 40 items bulk-marked (120 stage rows) → bulkBaseline = 40, not 120',
+    () async {
+      db = inMemoryDb();
+      await seedProfile(db);
+
+      final trackId = await seedTrack(
+        db,
+        profileId: _profileId,
+        curriculumId: _curriculumKey,
+        activatedAt: _today,
+      );
+
+      // 40 bulk-marked items, each at 3 stages → 120 sentinel-dated rows.
+      for (var i = 0; i < 40; i++) {
+        for (final stageId in const [1, 2, 3]) {
+          await db.completionEventDao.appendEvent(
+            CompletionEventsCompanion.insert(
+              profileId: _profileId,
+              curriculumId: _curriculumKey,
+              sefariaRef: 'ref_$i',
+              stageId: stageId,
+              trackType: 'personal',
+              trackId: Value(trackId),
+              eventTimestamp: _sentinelDate,
+            ),
+          );
+        }
+      }
+
+      await _seedGoal(
+        db,
+        trackId: trackId,
+        targetDate: _today.add(const Duration(days: 100)),
+        createdAt: _today,
+      );
+
+      container = _container(db: db, leafCount: 100, today: _today);
+
+      final result = await container.read(
+        curriculumPaceStatusProvider(_curriculumKey).future,
+      );
+
+      expect(result, isNotNull);
+      expect(
+        result!.bulkBaseline,
+        40,
+        reason:
+            'bulkBaseline must count distinct sefariaRefs (40), not raw rows '
+            '(120) — 120 > totalItems(100) clamps requiredVelocity to 0',
+      );
+      // remaining = 100 - 40 = 60 over 100 days → requiredVelocity > 0 (non-degenerate).
+      expect(result.requiredVelocity, greaterThan(0.0));
+    },
+  );
 }

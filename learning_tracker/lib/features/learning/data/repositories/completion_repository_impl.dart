@@ -351,6 +351,10 @@ class CompletionRepositoryImpl implements CompletionRepository {
             // B8: flag these rows as prior-marks so expunge can distinguish
             // them from genuine in-app learning events.
             priorMarkOnly: true,
+            // B1: carry the real provenance (bulkInTrack vs lifetimeOnly) so the
+            // writer persists prior_completion_imports.source correctly instead
+            // of mis-tagging every import as 'bulkInTrack'.
+            source: _bulkSourceFor(request),
           ),
         )
         .toList();

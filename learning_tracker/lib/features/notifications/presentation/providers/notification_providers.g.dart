@@ -591,8 +591,15 @@ String _$notificationSchedulerHash() =>
 /// one-shots instead of a repeating notification. Sacred Time windows are
 /// checked per-fire-time by [NotificationScheduler.scheduleReminder].
 ///
-/// Also respects Shabbos quiet mode — cancels all notifications when Sacred
-/// Time is currently active (the live lock-screen guard).
+/// Shabbos quiet mode is enforced PER FIRE-TIME inside
+/// [NotificationScheduler.buildFireTimesForTest] — any fire-time that falls
+/// inside a Sacred Time window is dropped from the batch. We deliberately do
+/// NOT blanket-cancel the whole 14-day batch while a window is live: doing so
+/// would also drop the surrounding non-Shabbos weekday reminders, which only
+/// get re-scheduled when the app is next resumed (or the in-isolate window
+/// timer flips). If the app is closed over Shabbos, those weekday reminders
+/// would silently never fire. Always (re)scheduling the per-fire-time-filtered
+/// batch keeps Shabbos fire-times suppressed while weekday reminders survive.
 ///
 /// Kept alive so that time/enable changes always trigger a reschedule,
 /// even if no UI is watching this provider at the moment.
@@ -607,8 +614,15 @@ final reminderSyncEffectProvider = ReminderSyncEffectProvider._();
 /// one-shots instead of a repeating notification. Sacred Time windows are
 /// checked per-fire-time by [NotificationScheduler.scheduleReminder].
 ///
-/// Also respects Shabbos quiet mode — cancels all notifications when Sacred
-/// Time is currently active (the live lock-screen guard).
+/// Shabbos quiet mode is enforced PER FIRE-TIME inside
+/// [NotificationScheduler.buildFireTimesForTest] — any fire-time that falls
+/// inside a Sacred Time window is dropped from the batch. We deliberately do
+/// NOT blanket-cancel the whole 14-day batch while a window is live: doing so
+/// would also drop the surrounding non-Shabbos weekday reminders, which only
+/// get re-scheduled when the app is next resumed (or the in-isolate window
+/// timer flips). If the app is closed over Shabbos, those weekday reminders
+/// would silently never fire. Always (re)scheduling the per-fire-time-filtered
+/// batch keeps Shabbos fire-times suppressed while weekday reminders survive.
 ///
 /// Kept alive so that time/enable changes always trigger a reschedule,
 /// even if no UI is watching this provider at the moment.
@@ -623,8 +637,15 @@ final class ReminderSyncEffectProvider
   /// one-shots instead of a repeating notification. Sacred Time windows are
   /// checked per-fire-time by [NotificationScheduler.scheduleReminder].
   ///
-  /// Also respects Shabbos quiet mode — cancels all notifications when Sacred
-  /// Time is currently active (the live lock-screen guard).
+  /// Shabbos quiet mode is enforced PER FIRE-TIME inside
+  /// [NotificationScheduler.buildFireTimesForTest] — any fire-time that falls
+  /// inside a Sacred Time window is dropped from the batch. We deliberately do
+  /// NOT blanket-cancel the whole 14-day batch while a window is live: doing so
+  /// would also drop the surrounding non-Shabbos weekday reminders, which only
+  /// get re-scheduled when the app is next resumed (or the in-isolate window
+  /// timer flips). If the app is closed over Shabbos, those weekday reminders
+  /// would silently never fire. Always (re)scheduling the per-fire-time-filtered
+  /// batch keeps Shabbos fire-times suppressed while weekday reminders survive.
   ///
   /// Kept alive so that time/enable changes always trigger a reschedule,
   /// even if no UI is watching this provider at the moment.
@@ -654,7 +675,7 @@ final class ReminderSyncEffectProvider
 }
 
 String _$reminderSyncEffectHash() =>
-    r'b10f02d6e662a227452d160f7de0a5abed49a729';
+    r'd15feea3b70e6f676c213817e7b29ba1cf72fa84';
 
 /// Provides the [StreakAlertService] instance.
 
@@ -768,7 +789,7 @@ final class AllProfilesReminderBootstrapProvider
 }
 
 String _$allProfilesReminderBootstrapHash() =>
-    r'a76e6f3105a5937179c8a33a660fbda38f253eff';
+    r'1b677e4d36fb8a0f0186f88c04a24bf8a2519224';
 
 /// Watches streak alert settings and evaluates whether to schedule or cancel
 /// the streak protection alert.

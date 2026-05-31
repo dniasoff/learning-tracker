@@ -31,6 +31,12 @@ class DeviceRestoreService {
   DeviceRestoreService({
     required UserDatabase database,
     required SyncOrchestrator syncOrchestrator,
+    // Retained for call-site/API compatibility but intentionally unused:
+    // restore runs before any profile is selected, so the active profile id is
+    // the sentinel 0 here. Content re-import is therefore derived across ALL
+    // restored profiles via [TrackDao.getAllActiveTracks], never scoped to a
+    // single (possibly-0) profile id.
+    // ignore: avoid_unused_constructor_parameters
     required int profileId,
     required bool isAuthenticated,
     required CurriculumImportService curriculumImportService,
@@ -38,7 +44,6 @@ class DeviceRestoreService {
     AnalyticsService? analytics,
   }) : _database = database,
        _syncOrchestrator = syncOrchestrator,
-       _profileId = profileId,
        _isAuthenticated = isAuthenticated,
        _curriculumImportService = curriculumImportService,
        _logger = logger,
@@ -46,7 +51,6 @@ class DeviceRestoreService {
 
   final UserDatabase _database;
   final SyncOrchestrator _syncOrchestrator;
-  final int _profileId;
   final bool _isAuthenticated;
   final CurriculumImportService _curriculumImportService;
   final AppLogger _logger;
@@ -177,6 +181,13 @@ class DeviceRestoreService {
       // active set is already in `_database.trackDao`. Issuing a second
       // `fetchAll('curriculum_tracks')` against Firestore here would duplicate
       // a read that already landed on the wire.
+      //
+      // Read active tracks across ALL restored profiles, NOT just the active
+      // profile id. Restore runs before any profile is selected, so the active
+      // profile id is the sentinel 0 here (active_profile_provider returns 0
+      // with no selection). Restored profiles keep their original non-zero ids,
+      // so scoping to profile 0 would return an empty set and silently skip
+      // content import for every restored profile.
       _updateStatus(
         const RestoreStatus.restoring(
           phase: 'Loading curricula...',
@@ -184,8 +195,7 @@ class DeviceRestoreService {
           totalSteps: totalSteps,
         ),
       );
-      final localActiveTracks = await _database.trackDao
-          .getActiveTracksForProfile(_profileId);
+      final localActiveTracks = await _database.trackDao.getAllActiveTracks();
       final activeCurriculaKeys = localActiveTracks
           .map((t) => t.curriculumId)
           .toSet();

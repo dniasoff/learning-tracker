@@ -739,13 +739,25 @@ Future<List<DailyTask>> _buildProjectionTasks({
     if (paceValue == null || pacePeriod == null) continue;
 
     // Fetch study-day pattern.
+    //
+    // Disambiguate "no config" (default = study every day) from "config exists
+    // but ZERO study days" (every day toggled to review). The projection's
+    // StudyDayPattern treats an EMPTY weekday set as "study every day", so
+    // passing {} for an all-review config would collapse to all-study and
+    // schedule brand-new learning on days the user explicitly marked
+    // review-only — disagreeing with isStudyDayForTrack (which correctly
+    // reports those days are NOT study days). When rows exist but none are
+    // 'study', skip new-learning scheduling entirely for this track.
     final studyConfigs = await db.studyDayConfigDao.getConfigsByTrack(trackId);
-    final studyWeekdays = studyConfigs.isEmpty
-        ? const <int>{}
-        : {
-            for (final c in studyConfigs)
-              if (c.dayType == 'study') c.dayOfWeek,
-          };
+    final studyWeekdays = <int>{
+      for (final c in studyConfigs)
+        if (c.dayType == 'study') c.dayOfWeek,
+    };
+    if (studyConfigs.isNotEmpty && studyWeekdays.isEmpty) {
+      // Genuine zero-study-day pattern: the user marked every day review-only.
+      // Schedule no new learning (no overdue, no due-today) for this track.
+      continue;
+    }
     final pattern = StudyDayPattern(studyWeekdays);
 
     // B2: a weekly pace = paceValue units per WEEK, spread across that week's

@@ -221,14 +221,31 @@ Future<PaceCalculator?> curriculumPaceStatus(
   // Split completions into bulk baseline (before trackStartDate) and live
   // (on or after trackStartDate). Bulk entries have sentinel date 2000-01-01
   // which is always before any real trackStartDate.
-  final bulkBaseline = allCompletions.where((c) {
+  //
+  // Count DISTINCT sefariaRefs, NOT raw completion_events rows: chazara-enabled
+  // tracks store one row per stage (learn + chazara1 + chazara2), so a row count
+  // over-counts live progress by the stage multiplier (up to 3x) while
+  // [totalItems] (scopedItemCountProvider) counts distinct leaf items. Mixing a
+  // row-based numerator with an item-based denominator drove a phantom "ahead"
+  // signal on multi-stage tracks (the same F2 class this provider already
+  // guards date-wise). Partition each ref by whether it has ANY live completion:
+  // a ref counts as live if any of its stages was completed on/after
+  // trackStartDate, otherwise it counts toward the bulk baseline.
+  final liveRefs = <String>{};
+  final bulkRefs = <String>{};
+  for (final c in allCompletions) {
     final local = DateUtils.extractLocalDate(c.completedAt);
-    return local.isBefore(trackStartDate);
-  }).length;
-  final liveProgress = allCompletions.where((c) {
-    final local = DateUtils.extractLocalDate(c.completedAt);
-    return !local.isBefore(trackStartDate);
-  }).length;
+    if (local.isBefore(trackStartDate)) {
+      bulkRefs.add(c.sefariaRef);
+    } else {
+      liveRefs.add(c.sefariaRef);
+    }
+  }
+  // A ref with any live completion is live, even if it also has a bulk-dated
+  // stage; remove such refs from the bulk baseline to avoid double-counting.
+  bulkRefs.removeAll(liveRefs);
+  final bulkBaseline = bulkRefs.length;
+  final liveProgress = liveRefs.length;
 
   // F5 — telemetry: detect bulk leakage (live completions dated before
   // trackStartDate slipping through). This should always fire zero; if it

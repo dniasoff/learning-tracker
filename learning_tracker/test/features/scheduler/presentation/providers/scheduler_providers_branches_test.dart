@@ -163,8 +163,11 @@ ProviderContainer _container(
 // ─────────────────────────────────────────────────────────────────────────────
 const _profileId = 1;
 
-/// Inserts a self-paced track with an explicit pace goal and all-study-day
-/// config.  Returns the inserted track id.
+/// Inserts a self-paced track with an explicit pace goal.  Returns the
+/// inserted track id.
+///
+/// [studyDaysType] controls the `dayType` written for all 7 day-of-week rows
+/// ('study' by default; pass 'review' to exercise the all-review pattern).
 Future<int> _seedPaceTrack(
   UserDatabase db, {
   required CurriculumId curriculum,
@@ -172,6 +175,7 @@ Future<int> _seedPaceTrack(
   DateTime? lastReorderAt,
   int paceValue = 1,
   String pacePeriod = 'day',
+  String studyDaysType = 'study',
 }) async {
   final trackId = await db
       .into(db.curriculumTracks)
@@ -213,14 +217,14 @@ Future<int> _seedPaceTrack(
     updatedAt: now,
   );
 
-  // All 7 days = study.
+  // All 7 days configured with [studyDaysType] ('study' by default).
   for (var d = 1; d <= 7; d++) {
     await db.studyDayConfigDao.upsertDayConfig(
       profileId: _profileId,
       curriculumId: curriculum.storageKey,
       trackId: trackId,
       dayOfWeek: d,
-      dayType: 'study',
+      dayType: studyDaysType,
     );
   }
 
@@ -522,54 +526,157 @@ void main() {
 
   // ── DL2: studyDaysInWindow==0 early-exit + fallback pace ─────────────────
   //
-  // When every day in [today, deadline] is configured as a rest day,
-  // countStudyDaysInInclusiveDateRangeForTrack returns 0. The provider
+  // When every day in [today, deadline] is configured as a non-study day,
+  // countStudyDaysInInclusiveDateRangeForTrack returns 0. The provider still
   // calls derivePaceFromDeadline(studyDaysInWindow=0, ...) which returns the
-  // fallback (1, 'per_week'). PaceCalculator.paceToDaily(1, 'per_week').ceil()
-  // == 1 so the provider generates tasks rather than bailing silently.
+  // fallback (1, 'per_week'), so a valid pace is always derivable.
   //
-  // This test verifies two things:
-  //   a) The provider does NOT return empty when studyDaysInWindow == 0.
-  //   b) The derived pace is the fallback (1/week → ceil(1/7) = 1/day).
-  test(
-    'DL2: deadline goal with all-rest-day config → studyDaysInWindow=0 → '
-    'derivePaceFromDeadline returns fallback (1/week) → tasks still generated',
-    () async {
-      final today = DateTime.utc(2026, 6, 4);
-      final deadline = today.add(const Duration(days: 30));
+  // BUT a config that exists with ZERO study days is a genuine
+  // zero-study-day pattern: the user explicitly marked every day as not-study.
+  // The projection must NOT collapse an empty study-weekday set to
+  // "study every day" (the bug fixed in scheduler_providers.dart) — so no
+  // new-learning tasks are scheduled, matching isStudyDayForTrack (which
+  // returns false for every day). The track is suppressed, not ghosted-by-
+  // accident: it correctly has no due-today/overdue work because the user
+  // configured no study days.
+  test('DL2: deadline goal with all-non-study-day config → pace is still '
+      'derivable (1/week fallback) but the zero-study-day pattern schedules '
+      'no new-learning tasks', () async {
+    final today = DateTime.utc(2026, 6, 4);
+    final deadline = today.add(const Duration(days: 30));
 
-      await _seedDeadlineTrack(
+    await _seedDeadlineTrack(
+      db,
+      curriculum: CurriculumId.mishnayos,
+      activatedAt: today,
+      targetDate: deadline,
+      studyDaysType: 'review', // ALL days non-study → studyDaysInWindow == 0
+    );
+
+    final c = _container(db, clock: today, contentCount: 30);
+    addTearDown(c.dispose);
+
+    c.listen<Set<String>>(skippedTasksProvider, (_, __) {});
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+
+    final tasks = await c.read(allDailyTasksProvider.future);
+    final newLearning = tasks
+        .where(
+          (t) =>
+              t.priority == DailyTaskPriority.newLearning ||
+              t.priority == DailyTaskPriority.overdueProgram ||
+              t.priority == DailyTaskPriority.todayProgram,
+        )
+        .toList();
+
+    // The derived fallback pace is valid, but with zero study days the
+    // projection schedules nothing — it does NOT treat an empty study-weekday
+    // set as "study every day".
+    expect(
+      newLearning,
+      isEmpty,
+      reason:
+          'DL2: a config that exists with zero study days is a genuine '
+          'zero-study-day pattern; new learning must NOT be scheduled '
+          '(must match isStudyDayForTrack, not collapse to study-every-day)',
+    );
+  });
+
+  // ── ZS1 (regression): all-review config must NOT collapse to study-every-day
+  //
+  // Bug-hunt round-2 (goals-scheduler): on a self-paced track where every day
+  // is toggled to review-only (dayType=='review' for all 7 days), the
+  // projection built studyWeekdays={} from the rows whose dayType=='study'.
+  // The projection's StudyDayPattern interprets an EMPTY weekday set as
+  // "study every day", so all-review collapsed to all-study and scheduled
+  // brand-new learning on days the user explicitly marked review-only —
+  // disagreeing with isStudyDayForTrack (which correctly reports those days
+  // are NOT study days).
+  //
+  // After the fix: when study_day_config rows EXIST but none is 'study',
+  // the self-paced path skips new-learning scheduling entirely for the track.
+  test('ZS1: all-review study-day config (explicit pace) schedules NO new '
+      'learning — does not collapse to study-every-day', () async {
+    final today = DateTime.utc(2026, 6, 4); // Wednesday
+    final anchor = today.subtract(const Duration(days: 3));
+
+    await _seedPaceTrack(
+      db,
+      curriculum: CurriculumId.mishnayos,
+      activatedAt: anchor,
+      paceValue: 1,
+      pacePeriod: 'day',
+      studyDaysType: 'review', // every day toggled to review-only
+    );
+
+    final c = _container(db, clock: today);
+    addTearDown(c.dispose);
+
+    c.listen<Set<String>>(skippedTasksProvider, (_, __) {});
+    await Future<void>.delayed(const Duration(milliseconds: 100));
+
+    final tasks = await c.read(allDailyTasksProvider.future);
+    final newLearning = tasks
+        .where(
+          (t) =>
+              t.priority == DailyTaskPriority.newLearning ||
+              t.priority == DailyTaskPriority.overdueProgram ||
+              t.priority == DailyTaskPriority.todayProgram,
+        )
+        .toList();
+
+    expect(
+      newLearning,
+      isEmpty,
+      reason:
+          'ZS1: with every day marked review-only there are zero study days; '
+          'the projection must schedule no new learning (would FAIL before '
+          'the fix — empty study-weekday set collapsed to study-every-day).',
+    );
+  });
+
+  // ── ZS2 (control): a track with at least one study day still schedules new
+  //     learning — confirms the fix does not over-suppress mixed configs.
+  test(
+    'ZS2 control: one study day + six review days still schedules new learning',
+    () async {
+      final today = DateTime.utc(2026, 6, 4); // Wednesday = ISO weekday 3
+      final anchor = today; // anchored today → today's unit due
+
+      // Seed an all-review track, then flip today's weekday to study.
+      final trackId = await _seedPaceTrack(
         db,
         curriculum: CurriculumId.mishnayos,
-        activatedAt: today,
-        targetDate: deadline,
-        studyDaysType: 'rest', // ALL days = rest → studyDaysInWindow == 0
+        activatedAt: anchor,
+        paceValue: 1,
+        pacePeriod: 'day',
+        studyDaysType: 'review',
+      );
+      await db.studyDayConfigDao.upsertDayConfig(
+        profileId: _profileId,
+        curriculumId: CurriculumId.mishnayos.storageKey,
+        trackId: trackId,
+        dayOfWeek: today.weekday, // Wednesday → study
+        dayType: 'study',
       );
 
-      final c = _container(db, clock: today, contentCount: 30);
+      final c = _container(db, clock: today);
       addTearDown(c.dispose);
 
       c.listen<Set<String>>(skippedTasksProvider, (_, __) {});
       await Future<void>.delayed(const Duration(milliseconds: 100));
 
       final tasks = await c.read(allDailyTasksProvider.future);
+      final newLearning = tasks
+          .where((t) => t.priority == DailyTaskPriority.newLearning)
+          .toList();
 
-      // derivePaceFromDeadline with studyDaysInWindow=0 returns (1, 'per_week').
-      // PaceCalculator.paceToDaily(1, 'per_week') = 1/7 ≈ 0.143 → ceil = 1.
-      // selfPacedSchedule with pace=1 and anchor=today produces 1 task today.
-      // The all-rest study pattern means today is a "rest" day from the pattern
-      // perspective — BUT the fallback pace (1/week) still schedules today
-      // because selfPacedSchedule skips non-study days only when there IS a
-      // study-day pattern. With all-rest pattern (no study days at all),
-      // the StudyDayPattern falls back to treating every day as a study day.
-      //
-      // Regardless: the critical assertion is that the track is NOT ghosted.
       expect(
-        tasks,
+        newLearning,
         isNotEmpty,
         reason:
-            'DL2: studyDaysInWindow==0 → derivePaceFromDeadline fallback (1/week) '
-            '→ track must not be silently skipped (pace is still derivable)',
+            'ZS2: at least one study day → the track is NOT suppressed; '
+            "today's new-learning task must appear.",
       );
     },
   );

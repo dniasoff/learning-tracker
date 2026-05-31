@@ -88,37 +88,60 @@ class StreakStateProvider {
         const StreakReducer().reduce(latest, today: _clock.today());
 
     controller.onListen = () async {
-      await _restorer.restoreIfEmpty(profileId: profileId);
-      eventsSub =
-          (_db.select(_db.streakEvents)
-                ..where((t) => t.profileId.equals(profileId)))
-              .watch()
-              .map(
-                (rows) => rows
-                    .map(
-                      (r) => StreakEvent(
-                        profileId: r.profileId,
-                        eventType: r.eventType,
-                        eventTimestamp: r.eventTimestamp,
-                        clientDeviceId: r.clientDeviceId,
-                      ),
-                    )
-                    .toList(),
-              )
-              .listen((events) {
-                latest = events;
-                if (!controller.isClosed) controller.add(compute());
-              });
-      tickSub = (rolloverTicks ?? _defaultRolloverTicks()).listen((_) {
-        if (!controller.isClosed) controller.add(compute());
-      });
+      // D17 fix: an exception thrown inside this async `onListen` body (e.g.
+      // `restoreIfEmpty` hitting a Drift handle that is closing during a
+      // profile/account swap — the D20 teardown window) is an UNHANDLED async
+      // error: it does NOT reach the listener's onError and the stream never
+      // emits or closes (perpetual loading). Forward the failure to the
+      // controller so the consumer can observe it, matching the pre-D17
+      // `async*` behaviour where the throw surfaced as a stream error.
+      try {
+        await _restorer.restoreIfEmpty(profileId: profileId);
+        eventsSub =
+            (_db.select(_db.streakEvents)
+                  ..where((t) => t.profileId.equals(profileId)))
+                .watch()
+                .map(
+                  (rows) => rows
+                      .map(
+                        (r) => StreakEvent(
+                          profileId: r.profileId,
+                          eventType: r.eventType,
+                          eventTimestamp: r.eventTimestamp,
+                          clientDeviceId: r.clientDeviceId,
+                        ),
+                      )
+                      .toList(),
+                )
+                .listen((events) {
+                  latest = events;
+                  if (!controller.isClosed) controller.add(compute());
+                });
+        tickSub = (rolloverTicks ?? _defaultRolloverTicks()).listen((_) {
+          if (!controller.isClosed) controller.add(compute());
+        });
+      } catch (e, st) {
+        if (!controller.isClosed) {
+          controller.addError(e, st);
+          // Close without awaiting: a `.first`/`take(1)` consumer cancels its
+          // subscription on the error, which re-enters `onCancel` (which also
+          // closes the controller). Awaiting `close()` here would deadlock
+          // against that cancel. The unawaited close still tears the controller
+          // down for long-lived `.listen` consumers that don't auto-cancel.
+          unawaited(controller.close());
+        }
+      }
     };
     controller.onCancel = () async {
       await eventsSub?.cancel();
       await tickSub?.cancel();
       eventsSub = null;
       tickSub = null;
-      await controller.close();
+      // D17: guard the close — onCancel also fires when a `.first` consumer
+      // cancels after the error path above already closed the controller.
+      // Closing an already-closed controller from within its own cancel
+      // deadlocks the consumer's cancel future, so it stays stuck.
+      if (!controller.isClosed) await controller.close();
     };
     return controller.stream;
   }

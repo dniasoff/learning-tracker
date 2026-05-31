@@ -173,6 +173,36 @@ void main() {
       expect(states.last, 1);
     });
 
+    // ── D17 regression: a throw inside onListen must surface as a stream ──
+    // error, not silently hang the stream (perpetual loading). Reproduces the
+    // D20 teardown window where restoreIfEmpty hits a closing Drift handle.
+    test(
+      'D17: error from restoreIfEmpty in onListen surfaces as a stream error '
+      'instead of hanging forever',
+      () async {
+        // Close the underlying DB so restoreIfEmpty (which does a Drift select)
+        // throws when the stream is listened to — exactly the closing-handle
+        // race during a profile/account swap. (tearDown closing again is a
+        // safe no-op.)
+        await db.close();
+
+        // Before the fix the unhandled async throw inside onListen meant the
+        // stream NEVER emitted or errored, so awaiting .first would hang until
+        // the timeout. The fix forwards the failure to the controller, so
+        // .first completes with the underlying error promptly (NOT a timeout).
+        await expectLater(
+          provider
+              .watch(profileId: profileId)
+              .first
+              .timeout(const Duration(seconds: 2)),
+          throwsA(isNot(isA<TimeoutException>())),
+          reason:
+              'a restore/DB failure must reach the consumer as a stream error, '
+              'not leave the stream stuck with no emission',
+        );
+      },
+    );
+
     // ── D17: a dashboard left open across local midnight lapses the streak ──
     test(
       'D17: advancing the clock past local midnight (no new events) lapses the '

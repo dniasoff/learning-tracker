@@ -412,8 +412,15 @@ final notificationSettingsCloudSyncEffectProvider = FutureProvider<void>((
 /// one-shots instead of a repeating notification. Sacred Time windows are
 /// checked per-fire-time by [NotificationScheduler.scheduleReminder].
 ///
-/// Also respects Shabbos quiet mode — cancels all notifications when Sacred
-/// Time is currently active (the live lock-screen guard).
+/// Shabbos quiet mode is enforced PER FIRE-TIME inside
+/// [NotificationScheduler.buildFireTimesForTest] — any fire-time that falls
+/// inside a Sacred Time window is dropped from the batch. We deliberately do
+/// NOT blanket-cancel the whole 14-day batch while a window is live: doing so
+/// would also drop the surrounding non-Shabbos weekday reminders, which only
+/// get re-scheduled when the app is next resumed (or the in-isolate window
+/// timer flips). If the app is closed over Shabbos, those weekday reminders
+/// would silently never fire. Always (re)scheduling the per-fire-time-filtered
+/// batch keeps Shabbos fire-times suppressed while weekday reminders survive.
 ///
 /// Kept alive so that time/enable changes always trigger a reschedule,
 /// even if no UI is watching this provider at the moment.
@@ -423,8 +430,12 @@ Future<void> reminderSyncEffect(Ref ref) async {
   // the authoritative values from SharedPreferences below.
   ref.watch(reminderEnabledProvider);
   ref.watch(reminderTimeProvider);
+  // Watch (but do not branch on) Sacred Time so that a window opening/closing
+  // re-runs this effect and rebuilds the per-fire-time-filtered batch: when a
+  // window opens the affected fire-times are dropped; when it closes they are
+  // restored — all without cancelling the surrounding weekday reminders.
+  ref.watch(isSacredTimeActiveProvider);
   final scheduler = ref.watch(notificationSchedulerProvider);
-  final sacredTimeActive = ref.watch(isSacredTimeActiveProvider);
   final profileId = ref.watch(activeProfileIdProvider);
 
   // M3 fix: the pref notifiers return defaults (enabled=true, 19:00)
@@ -456,11 +467,11 @@ Future<void> reminderSyncEffect(Ref ref) async {
     await scheduler.cancelForProfile(profileId);
     return;
   }
-  if (sacredTimeActive) {
-    // Story 27.14 (DNI-390): fire suppression event when sacred time blocks.
-    await scheduler.cancelForProfileSacredTime(profileId);
-    return;
-  }
+
+  // Note: we no longer blanket-cancel the batch when Sacred Time is active.
+  // Per-fire-time suppression inside the scheduler drops only the fire-times
+  // that actually fall inside a Sacred Time window, so non-Shabbos weekday
+  // reminders survive even if the app is closed over Shabbos.
 
   // Get daily tasks to determine counts for notification body.
   final tasks = await ref.watch(allDailyTasksProvider.future);
@@ -609,7 +620,11 @@ Future<void> allProfilesReminderBootstrap(Ref ref) async {
           NotificationPreferencesRepository.reminderEnabledKey(profileId),
         ) ??
         true;
-    if (!reminderEnabled || sacredTimeActive) {
+    // Do NOT blanket-cancel on sacredTimeActive: the batch path below filters
+    // each fire-time against the Sacred-Time window, so weekday reminders
+    // survive while Shabbos fire-times stay suppressed even if the app is
+    // closed over Shabbos.
+    if (!reminderEnabled) {
       await scheduler.cancelForProfile(profileId);
     } else {
       final hour =

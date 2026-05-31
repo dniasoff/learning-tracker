@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/domain/value_objects/program_starting_position.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
@@ -293,9 +294,19 @@ class TrackCreationService {
     if (offsetSource != null) {
       final offset = int.tryParse(offsetSource.substring('offset:'.length));
       if (offset != null) {
-        final clampedOffset = offset.clamp(-30, 30);
-        trackingStartDate = DateTimeFactory.nowUtc().add(
-          Duration(days: clampedOffset),
+        // Two producers feed this token with OPPOSITE sign conventions:
+        //  - the canonical typed grammar (ProgramStartingPosition.toLegacyGrammar)
+        //    emits a POSITIVE offset for a back-date ("offset:5" = 5 days ago);
+        //  - the live add-track calendar UI emits a NEGATIVE offset
+        //    ("offset:-5" = 5 days ago).
+        // Future start dates are never valid (B2: window is [today − 30, today]),
+        // so a back-date is unambiguously today minus the offset magnitude.
+        // Mirroring ProgramStartingPosition.fromLegacyGrammar (which uses
+        // today.subtract(offset.abs())), we resolve both conventions to the
+        // past, capped at the 30-day look-back window.
+        final lookBackDays = offset.abs().clamp(0, kMaxLookBackDays);
+        trackingStartDate = DateTimeFactory.nowUtc().subtract(
+          Duration(days: lookBackDays),
         );
       }
     }

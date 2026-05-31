@@ -8,6 +8,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/sefaria_ref.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_command.dart';
+import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 
 /// Result of a [CompletionWriter.commit] call.
 ///
@@ -197,9 +198,10 @@ class CompletionWriter {
                 sefariaRef: cmd.sefariaRef,
                 stageId: cmd.stageId,
                 trackType: cmd.trackType,
-                source: cmd.priorMarkOnly
-                    ? 'bulkInTrack'
-                    : 'live', // only priorMarkOnly=true reaches here
+                // Persist the command's real provenance so a lifetimeOnly
+                // import is stored as 'lifetimeOnly' (NOT mis-tagged
+                // 'bulkInTrack'), keeping it out of the trackAchievement tier.
+                source: _priorImportSource(cmd),
               ),
             )
             .toList();
@@ -679,7 +681,9 @@ class CompletionWriter {
             sefariaRef: cmd.sefariaRef,
             stageId: cmd.stageId,
             trackType: cmd.trackType,
-            source: 'bulkInTrack',
+            // Persist the command's real provenance (bulkInTrack vs
+            // lifetimeOnly) rather than hard-coding 'bulkInTrack'.
+            source: _priorImportSource(cmd),
           ),
         ]);
       }
@@ -716,6 +720,25 @@ class CompletionWriter {
     }
     return result;
   }
+
+  /// Resolves the `prior_completion_imports.source` string for a command.
+  ///
+  /// Both callers only reach this for `priorMarkOnly == true` commands, whose
+  /// provenance is either [CompletionSource.bulkInTrack] or
+  /// [CompletionSource.lifetimeOnly]. We persist the command's actual
+  /// [CompletionCommand.source] so a lifetimeOnly import is stored as
+  /// `'lifetimeOnly'` and therefore excluded from the trackAchievement tier
+  /// (`completion_dao.getCompletionsByTier`) per B1.
+  ///
+  /// `prior_completion_imports.source` only accepts `bulkInTrack` /
+  /// `lifetimeOnly`, so a defensively-passed [CompletionSource.live] (which
+  /// should never reach a priorMarkOnly write) is mapped to `'bulkInTrack'`.
+  static String _priorImportSource(CompletionCommand cmd) =>
+      switch (cmd.source) {
+        CompletionSource.lifetimeOnly => 'lifetimeOnly',
+        CompletionSource.bulkInTrack => 'bulkInTrack',
+        CompletionSource.live => 'bulkInTrack',
+      };
 
   static String _outboxEntityKey(CompletionCommand cmd) =>
       '${cmd.profileId}:${cmd.sefariaRef}:${cmd.stageId}:${cmd.trackType}:${cmd.curriculumId}';

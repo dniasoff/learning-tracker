@@ -160,6 +160,18 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
             ..orderBy([(t) => OrderingTerm.asc(t.curriculumId)]))
           .get();
 
+  /// Get all active tracks across every profile.
+  ///
+  /// Used by the device-restore path, which runs before any profile is
+  /// selected (the active profile id is the sentinel 0 at that point), so it
+  /// cannot scope to a single profile. Returns active tracks for ALL restored
+  /// profiles so content re-import covers each one.
+  Future<List<CurriculumTrack>> getAllActiveTracks() =>
+      (select(curriculumTracks)
+            ..where((t) => t.state.equals(TrackState.active))
+            ..orderBy([(t) => OrderingTerm.asc(t.curriculumId)]))
+          .get();
+
   /// Get a single track by its ID.
   Future<CurriculumTrack?> getTrackById(int trackId) => (select(
     curriculumTracks,
