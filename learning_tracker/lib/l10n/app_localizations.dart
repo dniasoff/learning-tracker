@@ -3857,6 +3857,150 @@ abstract class AppLocalizations {
   /// **'Choose city'**
   String get sacredTimeChooseCity;
 
+  /// No description provided for @textReaderTextUnavailableTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Text not available'**
+  String get textReaderTextUnavailableTitle;
+
+  /// No description provided for @textReaderCheckConnection.
+  ///
+  /// In en, this message translates to:
+  /// **'Check your internet connection and try again.'**
+  String get textReaderCheckConnection;
+
+  /// No description provided for @textReaderFailedToLoad.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load text'**
+  String get textReaderFailedToLoad;
+
+  /// No description provided for @sacredTimeCardDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'App is silenced and locked during Shabbos and Yom Tov. Times computed locally from your location with a 15-minute cushion.'**
+  String get sacredTimeCardDescription;
+
+  /// No description provided for @sacredTimeShabbosModeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'SHABBOS MODE'**
+  String get sacredTimeShabbosModeLabel;
+
+  /// No description provided for @sacredTimeAlwaysOn.
+  ///
+  /// In en, this message translates to:
+  /// **'Always on'**
+  String get sacredTimeAlwaysOn;
+
+  /// No description provided for @sacredTimeNoLocation.
+  ///
+  /// In en, this message translates to:
+  /// **'No location set'**
+  String get sacredTimeNoLocation;
+
+  /// No description provided for @sacredTimeSourceDetected.
+  ///
+  /// In en, this message translates to:
+  /// **'Detected automatically'**
+  String get sacredTimeSourceDetected;
+
+  /// No description provided for @sacredTimeSourceManualCity.
+  ///
+  /// In en, this message translates to:
+  /// **'Chosen from city list'**
+  String get sacredTimeSourceManualCity;
+
+  /// No description provided for @sacredTimeSourceManualCoords.
+  ///
+  /// In en, this message translates to:
+  /// **'Manual coordinates'**
+  String get sacredTimeSourceManualCoords;
+
+  /// No description provided for @sacredTimeInIsraelTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'I am in Israel'**
+  String get sacredTimeInIsraelTitle;
+
+  /// No description provided for @sacredTimeInIsraelSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'One-day chag if on. Auto-set when you detect or choose a city, flip if you are visiting.'**
+  String get sacredTimeInIsraelSubtitle;
+
+  /// No description provided for @sacredTimeLocationUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Location updated.'**
+  String get sacredTimeLocationUpdated;
+
+  /// No description provided for @sacredTimeLocationPermissionPermanentlyDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Location permission permanently denied. Open system settings to allow.'**
+  String get sacredTimeLocationPermissionPermanentlyDenied;
+
+  /// No description provided for @sacredTimeLocationPermissionDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'Location permission denied.'**
+  String get sacredTimeLocationPermissionDenied;
+
+  /// No description provided for @sacredTimeLocationServicesOff.
+  ///
+  /// In en, this message translates to:
+  /// **'Location services are turned off on this device.'**
+  String get sacredTimeLocationServicesOff;
+
+  /// No description provided for @sacredTimeLocationDetectError.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not detect location: {message}'**
+  String sacredTimeLocationDetectError(String message);
+
+  /// No description provided for @newPasswordLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'New Password'**
+  String get newPasswordLabel;
+
+  /// No description provided for @confirmNewPasswordLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm New Password'**
+  String get confirmNewPasswordLabel;
+
+  /// No description provided for @passwordMinLengthError.
+  ///
+  /// In en, this message translates to:
+  /// **'Password must be at least 6 characters'**
+  String get passwordMinLengthError;
+
+  /// No description provided for @passwordsDoNotMatchError.
+  ///
+  /// In en, this message translates to:
+  /// **'Passwords do not match'**
+  String get passwordsDoNotMatchError;
+
+  /// No description provided for @changePasswordFailedError.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to change password. Please try again.'**
+  String get changePasswordFailedError;
+
+  /// No description provided for @currentPasswordLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Current Password'**
+  String get currentPasswordLabel;
+
+  /// No description provided for @invalidPasswordError.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid password. Please try again.'**
+  String get invalidPasswordError;
+
   /// No description provided for @cityPickerTitle.
   ///
   /// In en, this message translates to:

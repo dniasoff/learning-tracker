@@ -40,6 +40,7 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
   }
 
   Future<void> _submit() async {
+    final l10n = AppLocalizations.of(context)!;
     if (!_formKey.currentState!.validate()) return;
 
     setState(() {
@@ -52,7 +53,7 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       setState(() {
-        _error = 'Failed to change password. Please try again.';
+        _error = l10n.changePasswordFailedError;
         _loading = false;
       });
     }
@@ -76,10 +77,12 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
               controller: _newPasswordController,
               obscureText: true,
               inputFormatters: const [NoSpaceFormatter()],
-              decoration: const InputDecoration(labelText: 'New Password'),
+              decoration: InputDecoration(
+                labelText: AppLocalizations.of(context)!.newPasswordLabel,
+              ),
               validator: (value) {
                 if (value == null || value.length < 6) {
-                  return 'Password must be at least 6 characters';
+                  return AppLocalizations.of(context)!.passwordMinLengthError;
                 }
                 return null;
               },
@@ -89,12 +92,14 @@ class _ChangePasswordDialogState extends State<_ChangePasswordDialog> {
               controller: _confirmPasswordController,
               obscureText: true,
               inputFormatters: const [NoSpaceFormatter()],
-              decoration: const InputDecoration(
-                labelText: 'Confirm New Password',
+              decoration: InputDecoration(
+                labelText: AppLocalizations.of(
+                  context,
+                )!.confirmNewPasswordLabel,
               ),
               validator: (value) {
                 if (value != _newPasswordController.text) {
-                  return 'Passwords do not match';
+                  return AppLocalizations.of(context)!.passwordsDoNotMatchError;
                 }
                 return null;
               },

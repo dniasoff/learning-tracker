@@ -1025,6 +1025,35 @@
 
   "sacredTimeDetect": "זיהוי אוטומטי",
   "sacredTimeChooseCity": "בחר עיר",
+  "textReaderTextUnavailableTitle": "הטקסט אינו זמין",
+  "textReaderCheckConnection": "בדקו את חיבור האינטרנט ונסו שוב.",
+  "textReaderFailedToLoad": "טעינת הטקסט נכשלה",
+  "sacredTimeCardDescription": "האפליקציה מושתקת ונעולה בשבת וביום טוב. הזמנים מחושבים מקומית לפי המיקום שלכם עם מרווח של 15 דקות.",
+  "sacredTimeShabbosModeLabel": "מצב שבת",
+  "sacredTimeAlwaysOn": "תמיד פעיל",
+  "sacredTimeNoLocation": "לא הוגדר מיקום",
+  "sacredTimeSourceDetected": "זוהה אוטומטית",
+  "sacredTimeSourceManualCity": "נבחר מרשימת ערים",
+  "sacredTimeSourceManualCoords": "קואורדינטות ידניות",
+  "sacredTimeInIsraelTitle": "אני בישראל",
+  "sacredTimeInIsraelSubtitle": "חג של יום אחד כאשר מופעל. נקבע אוטומטית כשמזהים או בוחרים עיר; שנו אם אתם מבקרים.",
+  "sacredTimeLocationUpdated": "המיקום עודכן.",
+  "sacredTimeLocationPermissionPermanentlyDenied": "הרשאת המיקום נדחתה לצמיתות. פתחו את הגדרות המערכת כדי לאפשר.",
+  "sacredTimeLocationPermissionDenied": "הרשאת המיקום נדחתה.",
+  "sacredTimeLocationServicesOff": "שירותי המיקום כבויים במכשיר זה.",
+  "sacredTimeLocationDetectError": "לא ניתן לזהות מיקום: {message}",
+  "@sacredTimeLocationDetectError": {
+    "placeholders": {
+      "message": { "type": "String" }
+    }
+  },
+  "newPasswordLabel": "סיסמה חדשה",
+  "confirmNewPasswordLabel": "אישור סיסמה חדשה",
+  "passwordMinLengthError": "הסיסמה חייבת להכיל לפחות 6 תווים",
+  "passwordsDoNotMatchError": "הסיסמאות אינן תואמות",
+  "changePasswordFailedError": "שינוי הסיסמה נכשל. אנא נסו שוב.",
+  "currentPasswordLabel": "סיסמה נוכחית",
+  "invalidPasswordError": "סיסמה שגויה. אנא נסו שוב.",
   "cityPickerTitle": "בחרו עיר",
   "cityPickerHint": "הקלד שם עיר…",
 

@@ -2444,8 +2444,8 @@ Route is registered at `/curriculum/:curriculumId/search`. The UI path from the 
 | 104 | Observe font size change — large | Settings → font size large | Hebrew text font = 26 * 1.25 (~32 pt); English = 16 * 1.25. | — | |
 | 105 | Observe segment numbers — Hebrew side | `_VerseNumberBadge` in Hebrew column | When multiple segments exist and have numbers, gematriya marker (alef, bet…) shown as a small badge before each segment (RTL: badge on right side of line). | Bilingual/RTL rule | |
 | 106 | Observe segment numbers — English side | `_VerseNumberBadge` in English column | Arabic numerals (1, 2…) shown as badge before each English segment. | — | |
-| 107 | Observe progress bar | Thin `LinearProgressIndicator` at top of content | Static blue progress bar at 15% fill (placeholder; not dynamic from content position). Executor: note if it ever changes. | UNKNOWN BEHAVIOUR — progress is static 0.15 | |
-| 108 | Observe insight chips | Below English text | 0–2 keyword chips (e.g. "Vocabulary: Priests", "Concept: Time") shown as rounded pill chips when matching keywords found in English text. Static heuristic. | — | |
+| 107 | Observe progress bar | ~~Thin `LinearProgressIndicator` at top of content~~ | **REMOVED (round-2 R4):** fake hardcoded 15% progress bar deleted; no progress bar present. | — | |
+| 108 | Observe insight chips | ~~Below English text~~ | **REMOVED (round-2 R2):** placeholder keyword-heuristic insight chips deleted; no chips present. | — | |
 | 109 | Observe `_CompletionSection` — no matching task | When `sefariaRef` not in `allDailyTasksProvider` | Completion section is `SizedBox.shrink()` — nothing shown. | — | |
 | 110 | Observe `_CompletionSection` — loading | While `allDailyTasksProvider` loading | Small spinner (20×20) centred in 44 px height box. | — | |
 | 111 | Observe `_CompletionSection` — error | When `allDailyTasksProvider` errors | Error icon + `unableToLoadCompletionContext(error.toString())` text. | — | |

@@ -2127,6 +2127,83 @@ class AppLocalizationsHe extends AppLocalizations {
   String get sacredTimeChooseCity => 'בחר עיר';
 
   @override
+  String get textReaderTextUnavailableTitle => 'הטקסט אינו זמין';
+
+  @override
+  String get textReaderCheckConnection => 'בדקו את חיבור האינטרנט ונסו שוב.';
+
+  @override
+  String get textReaderFailedToLoad => 'טעינת הטקסט נכשלה';
+
+  @override
+  String get sacredTimeCardDescription =>
+      'האפליקציה מושתקת ונעולה בשבת וביום טוב. הזמנים מחושבים מקומית לפי המיקום שלכם עם מרווח של 15 דקות.';
+
+  @override
+  String get sacredTimeShabbosModeLabel => 'מצב שבת';
+
+  @override
+  String get sacredTimeAlwaysOn => 'תמיד פעיל';
+
+  @override
+  String get sacredTimeNoLocation => 'לא הוגדר מיקום';
+
+  @override
+  String get sacredTimeSourceDetected => 'זוהה אוטומטית';
+
+  @override
+  String get sacredTimeSourceManualCity => 'נבחר מרשימת ערים';
+
+  @override
+  String get sacredTimeSourceManualCoords => 'קואורדינטות ידניות';
+
+  @override
+  String get sacredTimeInIsraelTitle => 'אני בישראל';
+
+  @override
+  String get sacredTimeInIsraelSubtitle =>
+      'חג של יום אחד כאשר מופעל. נקבע אוטומטית כשמזהים או בוחרים עיר; שנו אם אתם מבקרים.';
+
+  @override
+  String get sacredTimeLocationUpdated => 'המיקום עודכן.';
+
+  @override
+  String get sacredTimeLocationPermissionPermanentlyDenied =>
+      'הרשאת המיקום נדחתה לצמיתות. פתחו את הגדרות המערכת כדי לאפשר.';
+
+  @override
+  String get sacredTimeLocationPermissionDenied => 'הרשאת המיקום נדחתה.';
+
+  @override
+  String get sacredTimeLocationServicesOff => 'שירותי המיקום כבויים במכשיר זה.';
+
+  @override
+  String sacredTimeLocationDetectError(String message) {
+    return 'לא ניתן לזהות מיקום: $message';
+  }
+
+  @override
+  String get newPasswordLabel => 'סיסמה חדשה';
+
+  @override
+  String get confirmNewPasswordLabel => 'אישור סיסמה חדשה';
+
+  @override
+  String get passwordMinLengthError => 'הסיסמה חייבת להכיל לפחות 6 תווים';
+
+  @override
+  String get passwordsDoNotMatchError => 'הסיסמאות אינן תואמות';
+
+  @override
+  String get changePasswordFailedError => 'שינוי הסיסמה נכשל. אנא נסו שוב.';
+
+  @override
+  String get currentPasswordLabel => 'סיסמה נוכחית';
+
+  @override
+  String get invalidPasswordError => 'סיסמה שגויה. אנא נסו שוב.';
+
+  @override
   String get cityPickerTitle => 'בחרו עיר';
 
   @override

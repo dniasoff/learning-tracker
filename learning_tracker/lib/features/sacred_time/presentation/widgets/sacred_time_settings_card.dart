@@ -40,9 +40,7 @@ class SacredTimeSettingsCard extends ConsumerWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'App is silenced and locked during Shabbos and Yom Tov. '
-                  'Times computed locally from your location with a 15-minute '
-                  'cushion.',
+                  AppLocalizations.of(context)!.sacredTimeCardDescription,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                     height: 1.4,
@@ -81,9 +79,9 @@ class _Header extends StatelessWidget {
         children: [
           const Icon(Icons.lock_clock_outlined, color: Colors.white, size: 17),
           const SizedBox(width: 8),
-          const Text(
-            'SHABBOS MODE',
-            style: TextStyle(
+          Text(
+            AppLocalizations.of(context)!.sacredTimeShabbosModeLabel,
+            style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.w800,
               letterSpacing: 1.2,
@@ -92,7 +90,7 @@ class _Header extends StatelessWidget {
           ),
           const Spacer(),
           Text(
-            'Always on',
+            AppLocalizations.of(context)!.sacredTimeAlwaysOn,
             style: theme.textTheme.bodySmall?.copyWith(
               color: Colors.white.withValues(alpha: 0.7),
               fontWeight: FontWeight.w600,
@@ -112,17 +110,19 @@ class _LocationRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final label = location == null
-        ? 'No location set'
+        ? l10n.sacredTimeNoLocation
         : (location!.cityLabel ??
               '${location!.latitude.toStringAsFixed(3)}, '
                   '${location!.longitude.toStringAsFixed(3)}');
     final sourceLabel = location == null
         ? null
         : switch (location!.source) {
-            SacredLocationSource.detected => 'Detected automatically',
-            SacredLocationSource.manualCity => 'Chosen from city list',
-            SacredLocationSource.manualCoords => 'Manual coordinates',
+            SacredLocationSource.detected => l10n.sacredTimeSourceDetected,
+            SacredLocationSource.manualCity => l10n.sacredTimeSourceManualCity,
+            SacredLocationSource.manualCoords =>
+              l10n.sacredTimeSourceManualCoords,
           };
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -210,16 +210,17 @@ class _LocationActionsState extends ConsumerState<_LocationActions> {
 
   void _showOutcome(LocationFetchResult result) {
     final messenger = ScaffoldMessenger.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final message = switch (result) {
-      LocationFetchSuccess() => 'Location updated.',
+      LocationFetchSuccess() => l10n.sacredTimeLocationUpdated,
       LocationFetchPermissionDenied(:final permanentlyDenied) =>
         permanentlyDenied
-            ? 'Location permission permanently denied. Open system settings to allow.'
-            : 'Location permission denied.',
-      LocationFetchServiceDisabled() =>
-        'Location services are turned off on this device.',
-      LocationFetchError(:final message) =>
-        'Could not detect location: $message',
+            ? l10n.sacredTimeLocationPermissionPermanentlyDenied
+            : l10n.sacredTimeLocationPermissionDenied,
+      LocationFetchServiceDisabled() => l10n.sacredTimeLocationServicesOff,
+      LocationFetchError(:final message) => l10n.sacredTimeLocationDetectError(
+        message,
+      ),
     };
     messenger.showSnackBar(SnackBar(content: Text(message)));
   }
@@ -242,15 +243,14 @@ class _InIsraelRow extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'I am in Israel',
+                AppLocalizations.of(context)!.sacredTimeInIsraelTitle,
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w700,
                 ),
               ),
               const SizedBox(height: 2),
               Text(
-                'One-day chag if on. Auto-set when you detect or choose a city, '
-                'flip if you are visiting.',
+                AppLocalizations.of(context)!.sacredTimeInIsraelSubtitle,
                 style: theme.textTheme.bodySmall?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                 ),

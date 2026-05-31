@@ -2152,6 +2152,87 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sacredTimeChooseCity => 'Choose city';
 
   @override
+  String get textReaderTextUnavailableTitle => 'Text not available';
+
+  @override
+  String get textReaderCheckConnection =>
+      'Check your internet connection and try again.';
+
+  @override
+  String get textReaderFailedToLoad => 'Failed to load text';
+
+  @override
+  String get sacredTimeCardDescription =>
+      'App is silenced and locked during Shabbos and Yom Tov. Times computed locally from your location with a 15-minute cushion.';
+
+  @override
+  String get sacredTimeShabbosModeLabel => 'SHABBOS MODE';
+
+  @override
+  String get sacredTimeAlwaysOn => 'Always on';
+
+  @override
+  String get sacredTimeNoLocation => 'No location set';
+
+  @override
+  String get sacredTimeSourceDetected => 'Detected automatically';
+
+  @override
+  String get sacredTimeSourceManualCity => 'Chosen from city list';
+
+  @override
+  String get sacredTimeSourceManualCoords => 'Manual coordinates';
+
+  @override
+  String get sacredTimeInIsraelTitle => 'I am in Israel';
+
+  @override
+  String get sacredTimeInIsraelSubtitle =>
+      'One-day chag if on. Auto-set when you detect or choose a city, flip if you are visiting.';
+
+  @override
+  String get sacredTimeLocationUpdated => 'Location updated.';
+
+  @override
+  String get sacredTimeLocationPermissionPermanentlyDenied =>
+      'Location permission permanently denied. Open system settings to allow.';
+
+  @override
+  String get sacredTimeLocationPermissionDenied =>
+      'Location permission denied.';
+
+  @override
+  String get sacredTimeLocationServicesOff =>
+      'Location services are turned off on this device.';
+
+  @override
+  String sacredTimeLocationDetectError(String message) {
+    return 'Could not detect location: $message';
+  }
+
+  @override
+  String get newPasswordLabel => 'New Password';
+
+  @override
+  String get confirmNewPasswordLabel => 'Confirm New Password';
+
+  @override
+  String get passwordMinLengthError => 'Password must be at least 6 characters';
+
+  @override
+  String get passwordsDoNotMatchError => 'Passwords do not match';
+
+  @override
+  String get changePasswordFailedError =>
+      'Failed to change password. Please try again.';
+
+  @override
+  String get currentPasswordLabel => 'Current Password';
+
+  @override
+  String get invalidPasswordError => 'Invalid password. Please try again.';
+
+  @override
   String get cityPickerTitle => 'Choose a city';
 
   @override

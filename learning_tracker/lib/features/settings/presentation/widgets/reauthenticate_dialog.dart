@@ -40,6 +40,7 @@ class _ReauthenticateDialogState extends State<_ReauthenticateDialog> {
   }
 
   Future<void> _submit() async {
+    final l10n = AppLocalizations.of(context)!;
     setState(() {
       _error = null;
       _loading = true;
@@ -53,7 +54,7 @@ class _ReauthenticateDialogState extends State<_ReauthenticateDialog> {
       if (mounted) Navigator.pop(context, true);
     } catch (e) {
       setState(() {
-        _error = 'Invalid password. Please try again.';
+        _error = l10n.invalidPasswordError;
         _loading = false;
       });
     }
@@ -73,7 +74,7 @@ class _ReauthenticateDialogState extends State<_ReauthenticateDialog> {
             obscureText: true,
             inputFormatters: const [NoSpaceFormatter()],
             decoration: InputDecoration(
-              labelText: 'Current Password',
+              labelText: AppLocalizations.of(context)!.currentPasswordLabel,
               errorText: _error,
             ),
             onSubmitted: (_) => _submit(),

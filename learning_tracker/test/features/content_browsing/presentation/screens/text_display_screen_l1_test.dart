@@ -317,7 +317,9 @@ void main() {
     await tester.pump(Duration.zero);
   });
 
-  testWidgets('error — error string rendered in the view', (tester) async {
+  testWidgets('error — localized error view shown, raw error not surfaced', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       _buildApp(
         router: router,
@@ -328,7 +330,10 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 
-    expect(find.textContaining('DB corrupted'), findsOneWidget);
+    // R3: the error view now shows a localized title + generic guidance, and
+    // must NOT leak the raw error.toString() to end users.
+    expect(find.text('Failed to load text'), findsOneWidget);
+    expect(find.textContaining('DB corrupted'), findsNothing);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(Duration.zero);
@@ -1042,21 +1047,22 @@ void main() {
     },
   );
 
-  // ── Progress bar ────────────────────────────────────────────────────────────
+  // ── Progress bar (removed in round-2 R4 — was a fake fixed 15% bar) ──────────
 
-  testWidgets(
-    'data — LinearProgressIndicator (reading progress bar) rendered',
-    (tester) async {
-      await tester.pumpWidget(
-        _buildApp(router: router, textState: AsyncData(_content())),
-      );
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
+  testWidgets('data — no fake reading-progress bar (removed in round-2 R4)', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _buildApp(router: router, textState: AsyncData(_content())),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
 
-      expect(find.byType(LinearProgressIndicator), findsOneWidget);
+    // R4: the hardcoded `value: 0.15` LinearProgressIndicator was misleading
+    // (pinned at 15% regardless of position) and has been removed.
+    expect(find.byType(LinearProgressIndicator), findsNothing);
 
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump(Duration.zero);
-    },
-  );
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(Duration.zero);
+  });
 }

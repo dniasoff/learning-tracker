@@ -115,7 +115,7 @@ class TextDisplayScreen extends ConsumerWidget {
             );
           },
           loading: () => const _LoadingView(),
-          error: (error, stack) => _ErrorView(error: error),
+          error: (error, stack) => const _ErrorView(),
         ),
       ),
     );
@@ -161,14 +161,14 @@ class _OfflineMessage extends StatelessWidget {
             ),
             const SizedBox(height: 16),
             Text(
-              'Text not available',
+              AppLocalizations.of(context)!.textReaderTextUnavailableTitle,
               style: AppTextStyles.titleMedium.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             ),
             const SizedBox(height: 8),
             Text(
-              'Check your internet connection and try again.',
+              AppLocalizations.of(context)!.textReaderCheckConnection,
               style: AppTextStyles.bodySmall.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -183,9 +183,7 @@ class _OfflineMessage extends StatelessWidget {
 
 /// Error view.
 class _ErrorView extends StatelessWidget {
-  const _ErrorView({required this.error});
-
-  final Object error;
+  const _ErrorView();
 
   @override
   Widget build(BuildContext context) {
@@ -201,14 +199,14 @@ class _ErrorView extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            'Failed to load text',
+            AppLocalizations.of(context)!.textReaderFailedToLoad,
             style: AppTextStyles.titleMedium.copyWith(
               color: theme.colorScheme.error,
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            error.toString(),
+            AppLocalizations.of(context)!.textReaderCheckConnection,
             style: AppTextStyles.bodySmall.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
@@ -236,29 +234,12 @@ class _TextContentView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final segments = textContent.segments;
     final showSegmentNumbers =
         segments.length > 1 && segments.any((s) => s.number != null);
-    final insightChips = _buildInsightChips(textContent.englishText);
 
     return Column(
       children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 0, 16, 6),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(999),
-            child: LinearProgressIndicator(
-              value: 0.15,
-              minHeight: 5,
-              backgroundColor: AppTheme.brandOutline.withValues(alpha: 0.35),
-              valueColor: const AlwaysStoppedAnimation<Color>(
-                AppTheme.brandBlue,
-              ),
-            ),
-          ),
-        ),
-
         Expanded(
           child: SingleChildScrollView(
             padding: const EdgeInsets.fromLTRB(16, 8, 16, 18),
@@ -327,37 +308,6 @@ class _TextContentView extends StatelessWidget {
                             color: AppTheme.brandInk,
                           ),
                         ),
-                        if (insightChips.isNotEmpty) ...[
-                          const SizedBox(height: 14),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: insightChips
-                                .map(
-                                  (chip) => Container(
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 11,
-                                      vertical: 5,
-                                    ),
-                                    decoration: BoxDecoration(
-                                      color: AppTheme.brandBlueSoft.withValues(
-                                        alpha: 0.55,
-                                      ),
-                                      borderRadius: BorderRadius.circular(999),
-                                    ),
-                                    child: Text(
-                                      chip,
-                                      style: theme.textTheme.labelSmall
-                                          ?.copyWith(
-                                            color: AppTheme.brandBlueDeep,
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                    ),
-                                  ),
-                                )
-                                .toList(),
-                          ),
-                        ],
                       ],
                     ),
                   ),
@@ -382,16 +332,6 @@ class _TextContentView extends StatelessWidget {
       ],
     );
   }
-}
-
-List<String> _buildInsightChips(String englishText) {
-  final text = englishText.toLowerCase();
-  final chips = <String>[];
-  if (text.contains('priest')) chips.add('Vocabulary: Priests');
-  if (text.contains('time') || text.contains('watch')) {
-    chips.add('Concept: Time');
-  }
-  return chips.take(2).toList();
 }
 
 /// Renders a list of [TextSegment]s — one paragraph per segment with a
