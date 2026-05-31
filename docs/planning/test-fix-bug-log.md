@@ -99,10 +99,18 @@ a single delayed `Future.delayed(300ms, ctrl.dispose)` in `finally` (covers all 
 + error-path leak).
 *Test* — `add_profile_dialog_test.dart` (new): "createProfile failure surfaces an error snackbar (not a silent
 no-op)" (mock repo throws → asserts the snackbar) + a success-path sanity test (no error snackbar). 2/2 green.
-*Root cause (OPEN)* — WHY `createProfile` fails for this account (FK on a wrong `currentAccountId`, vs the dialog
-not invoking create at all) is still being pinned: `currentAccountId = authState.currentUser?.profileId ?? 1` and
-the `?? 1` fallback would FK-fail on a multi-account device. The now-visible snackbar + `profile_create_failed`
-log will confirm the exact error on the next on-device retry; the real accountId-resolution fix follows.
+*Root cause (FOUND + FIXED, D4b)* — `profile_switcher_sheet.dart` "Add Profile" row did
+`Navigator.of(context).pop(); unawaited(showAddProfileDialog(context, ref))` — popping the modal sheet FIRST
+unmounted both the sheet's `context` AND its `ref`. The dialog still opened (it uses `useRootNavigator`), but
+after the user tapped Create, `showAddProfileDialog`'s `if (result == null || !context.mounted) return null`
+saw the popped sheet context as **unmounted** and bailed *before* `createProfile` — a true silent no-op
+(createProfile was never called; not an FK throw after all). FIX: make the row `onTap` keep the sheet mounted
+while the dialog runs (`await showAddProfileDialog(context, ref)`) then close the sheet — context+ref stay valid
+through the async flow. *Test:* `profile_switcher_sheet_test.dart` — "keeps the sheet mounted and actually
+invokes createProfile" (modal-present the sheet → tap Add Profile → assert sheet still mounted + dialog shown →
+fill + Create → `verify(createProfile).called(1)`). **On-device VERIFIED** (2026-05-31): switcher → Add Profile →
+Child "TestKid" → Set Parent PIN → the profile now appears in the switcher Profiles list (was a silent no-op
+before). `make ci` green.
 
 ---
 

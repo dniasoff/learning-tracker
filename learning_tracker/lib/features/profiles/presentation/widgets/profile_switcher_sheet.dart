@@ -184,9 +184,15 @@ class ProfileSwitcherSheet extends ConsumerWidget {
                       color: AppTheme.brandBlueDeep,
                     ),
                   ),
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    unawaited(showAddProfileDialog(context, ref));
+                  onTap: () async {
+                    // D4 root cause: popping the sheet FIRST unmounted both
+                    // `context` and `ref`, so showAddProfileDialog's
+                    // `context.mounted` guard bailed out before createProfile —
+                    // Add Profile silently created nothing. Keep the sheet
+                    // mounted while the dialog runs (it sits behind the modal
+                    // dialog barrier), then close it afterwards.
+                    await showAddProfileDialog(context, ref);
+                    if (context.mounted) Navigator.of(context).pop();
                   },
                   contentPadding: EdgeInsets.zero,
                 ),

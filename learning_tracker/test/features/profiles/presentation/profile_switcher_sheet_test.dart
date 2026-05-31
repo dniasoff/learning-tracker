@@ -16,6 +16,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
@@ -23,15 +24,20 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_pr
     show authRepositoryProvider;
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/profile_switcher_sheet.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/user_profile_header_card.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
+import '../../../helpers/test_database.dart';
+
 class _MockStackRouter extends Mock implements StackRouter {}
 
 class _MockAuthRepository extends Mock implements AuthRepository {}
+
+class _MockProfileRepo extends Mock implements ProfileRepository {}
 
 ProfileModel _profile({
   required int id,
@@ -337,6 +343,109 @@ void main() {
 
       expect(find.text('Parent mode — viewing Beni'), findsOneWidget);
       expect(find.text('Exit parent mode'), findsOneWidget);
+    });
+  });
+
+  // D4 regression: tapping "Add Profile" used to pop the sheet first, unmounting
+  // its context/ref so showAddProfileDialog's mounted-guard bailed before
+  // createProfile — Add Profile silently created nothing. The fix keeps the
+  // sheet mounted while the dialog runs.
+  group('Add Profile from switcher (D4 regression)', () {
+    testWidgets('keeps the sheet mounted and actually invokes createProfile', (
+      tester,
+    ) async {
+      final db = createTestDatabase();
+      await seedProfileWithIds(db, profileId: 1, accountId: 1);
+      addTearDown(() => db.close());
+
+      final repo = _MockProfileRepo();
+      when(
+        () => repo.createProfile(
+          accountId: any(named: 'accountId'),
+          displayName: any(named: 'displayName'),
+          mode: any(named: 'mode'),
+          avatarIndex: any(named: 'avatarIndex'),
+        ),
+      ).thenAnswer((_) async => _profile(id: 9, name: 'Newbie', mode: 'adult'));
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            profileListStreamProvider.overrideWith(
+              (ref) =>
+                  Stream.value([_profile(id: 1, name: 'Avi', mode: 'adult')]),
+            ),
+            selectedProfileIdProvider.overrideWith(
+              () => _FixedSelectedProfileId(1),
+            ),
+            authStateProvider.overrideWithValue(
+              const AuthState.signedIn(
+                user: AuthUser(
+                  profileId: 1,
+                  email: 'avi@test.com',
+                  displayName: 'Avi',
+                ),
+                tier: Tier.localBorn,
+              ),
+            ),
+            userDatabaseProvider.overrideWithValue(db),
+            currentAccountIdProvider.overrideWithValue(1),
+            profileRepositoryProvider.overrideWithValue(repo),
+          ],
+          child: MaterialApp(
+            locale: const Locale('en'),
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Builder(
+              builder: (ctx) => Scaffold(
+                body: Center(
+                  child: ElevatedButton(
+                    key: const Key('open_switcher'),
+                    onPressed: () => showProfileSwitcherSheet(ctx),
+                    child: const Text('Open'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byKey(const Key('open_switcher')));
+      await tester.pumpAndSettle();
+      expect(find.byType(ProfileSwitcherSheet), findsOneWidget);
+
+      await tester.tap(find.text('Add Profile'));
+      await tester.pumpAndSettle();
+
+      // Sheet NOT popped before the dialog → dialog shown over a still-mounted
+      // sheet (the fix); both are present.
+      expect(find.byType(ProfileSwitcherSheet), findsOneWidget);
+      expect(find.text('Create Profile'), findsOneWidget);
+
+      await tester.enterText(find.byType(TextField).first, 'Newbie');
+      await tester.pump(const Duration(milliseconds: 400));
+      await tester.tap(find.text('Create Profile'));
+      await tester.pumpAndSettle();
+
+      // The actual regression guard: createProfile WAS invoked (not silent).
+      verify(
+        () => repo.createProfile(
+          accountId: any(named: 'accountId'),
+          displayName: any(named: 'displayName'),
+          mode: any(named: 'mode'),
+          avatarIndex: any(named: 'avatarIndex'),
+        ),
+      ).called(1);
+      expect(find.text('An unexpected error occurred.'), findsNothing);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
     });
   });
 }
