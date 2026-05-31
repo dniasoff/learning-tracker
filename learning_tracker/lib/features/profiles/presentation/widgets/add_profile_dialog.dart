@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/text_input_formatters.dart';
@@ -228,7 +229,6 @@ Future<ProfileModel?> showAddProfileDialog(
       displayName: result.n,
       mode: result.m,
     );
-    ctrl.dispose();
     if (context.mounted) ref.invalidate(profileListProvider);
     if (created.profileMode.isChild && context.mounted) {
       await showParentPinSetupDialog(
@@ -253,8 +253,31 @@ Future<ProfileModel?> showAddProfileDialog(
         context,
       ).showSnackBar(SnackBar(content: Text(l10n.maxProfilesReached)));
     }
+  } catch (e, st) {
+    // D4: previously, any non-(Duplicate/Max) failure here — e.g. an
+    // account_id FK violation when currentAccountId doesn't match the active
+    // DB's accounts row — was silently swallowed: the dialog just closed with
+    // no profile created and NO feedback. Surface it (log + snackbar) so a
+    // failed creation is never a silent no-op.
+    AppLogger.instance.error(
+      event: 'profile_create_failed',
+      fields: {'name': result.n, 'mode': result.m},
+      exception: e,
+      stackTrace: st,
+    );
+    if (context.mounted) {
+      final l10n = AppLocalizations.of(context)!;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.unexpectedError)));
+    }
   } finally {
-    // Ensure we always dispose (ctrl.dispose is idempotent).
+    // Dispose after the dialog has fully animated out — disposing immediately
+    // (while the dialog's TextField may still be mounted during teardown)
+    // triggers a "used after dispose" assertion. This single delayed dispose
+    // covers every try/catch path (success, Duplicate, Max, and generic error),
+    // replacing the prior immediate success-path dispose + error-path leak.
+    Future.delayed(const Duration(milliseconds: 300), ctrl.dispose);
   }
   return null;
 }

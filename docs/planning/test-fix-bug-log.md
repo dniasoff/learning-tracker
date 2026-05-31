@@ -79,6 +79,31 @@ English)" — pumps the panel (`PinKeypadDialogFrame`, lockedOut, 12 min) in `Lo
 title renders and the English title is absent. Existing English lockout assertions unchanged (EN value is the
 same string). ARB parity (DNI-389) + analyze green.
 
+**D4 (HIGH, silent failure — F6/profile creation):**
+*Symptom* — On-device: switcher → **Add Profile** → fill name + pick Child → **Create Profile** dismisses the
+dialog but **no profile is created and there is NO feedback** (3 attempts, the active account's Profiles list
+stayed empty). Found while setting up a test child profile for the F7/F8/F11 on-device pass.
+*Evidence* — Pulled the active account's Drift DB (`app_flutter/user_acc_65b3a433….sqlite`): account
+`dniasoff@gmail.com` is `accounts.id=2` with **zero** `learner_profiles`; no user-DB was written today (mtime
+unchanged). `learner_profiles.account_id` has `REFERENCES accounts(id)`; a test insert with `account_id=2`
+SUCCEEDS but `account_id=1` fails **FOREIGN KEY constraint**. "Tttt" in the switcher is a *tutored grant* from
+the OTHER account (familyniasoff, id=1), not an own profile.
+*Cause (symptom)* — `showAddProfileDialog` (`add_profile_dialog.dart`) caught only `DuplicateProfileNameException`
+/ `MaxProfilesExceededException`; ANY other failure (e.g. a `createProfile` account_id FK violation when
+`currentAccountId` doesn't match the active DB's accounts row) **propagated and was silently swallowed** — dialog
+just closed, no profile, no message. Separately, the success path disposed the `TextEditingController`
+*immediately* (use-after-dispose assertion while the dialog animates out) and the error paths leaked it.
+*Fix* — (1) Added a generic `catch (e, st)` → `AppLogger.error(event: 'profile_create_failed', …)` + a friendly
+`unexpectedError` snackbar, so a failed creation is never a silent no-op. (2) Consolidated controller disposal to
+a single delayed `Future.delayed(300ms, ctrl.dispose)` in `finally` (covers all paths; fixes the use-after-dispose
++ error-path leak).
+*Test* — `add_profile_dialog_test.dart` (new): "createProfile failure surfaces an error snackbar (not a silent
+no-op)" (mock repo throws → asserts the snackbar) + a success-path sanity test (no error snackbar). 2/2 green.
+*Root cause (OPEN)* — WHY `createProfile` fails for this account (FK on a wrong `currentAccountId`, vs the dialog
+not invoking create at all) is still being pinned: `currentAccountId = authState.currentUser?.profileId ?? 1` and
+the `?? 1` fallback would FK-fail on a multi-account device. The now-visible snackbar + `profile_create_failed`
+log will confirm the exact error on the next on-device retry; the real accountId-resolution fix follows.
+
 ---
 
 ## Phase 5b — Navigation guards (unit tests + SYSTEMIC LOCKOUT FIX)
