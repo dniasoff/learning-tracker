@@ -122,7 +122,14 @@ List<ScheduledUnit> selfPacedSchedule({
   // window=1 → [pace] refs every study day (legacy); window=N → [pace] refs
   // every N study days. Integer math avoids the float error a fractional
   // per-study-day rate would introduce (e.g. 1/7 × 7 = 0.9999…).
-  var accumulator = 0;
+  //
+  // Seed the accumulator at `window - 1` so each window's units land on its
+  // FIRST study day, not its last: a weekly (window=7) learner gets this
+  // week's unit immediately rather than seeing an empty queue until day 7
+  // (which also ghosted a freshly-created weekly track whose `today == anchor`
+  // — the DL2 deadline-fallback case). `window - 1` keeps the legacy window=1
+  // behaviour unchanged (seed 0) and preserves the per-window unit COUNT.
+  var accumulator = window - 1;
 
   while (!cursor.isAfter(todayDay)) {
     if (studyDayPattern.isStudyDay(cursor.weekday)) {
