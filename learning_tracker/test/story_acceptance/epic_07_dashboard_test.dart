@@ -662,12 +662,15 @@ void main() {
       final ch1 = await insertStage(1, 'Chazara 1');
       final ch2 = await insertStage(2, 'Chazara 2');
 
+      // D12: production writes completion.stageId = stage ORDER (not the PK),
+      // and the stage breakdown is keyed by stageOrder. Seed accordingly so the
+      // fixture matches production (the prior `.id` fixture masked the D12 bug).
       final completions = <Completion>[
-        await insertCompletion(sefariaRef: 'a', stageId: learn.id),
-        await insertCompletion(sefariaRef: 'a', stageId: ch1.id),
-        await insertCompletion(sefariaRef: 'b', stageId: learn.id),
-        await insertCompletion(sefariaRef: 'b', stageId: ch1.id),
-        await insertCompletion(sefariaRef: 'b', stageId: ch2.id),
+        await insertCompletion(sefariaRef: 'a', stageId: learn.stageOrder),
+        await insertCompletion(sefariaRef: 'a', stageId: ch1.stageOrder),
+        await insertCompletion(sefariaRef: 'b', stageId: learn.stageOrder),
+        await insertCompletion(sefariaRef: 'b', stageId: ch1.stageOrder),
+        await insertCompletion(sefariaRef: 'b', stageId: ch2.stageOrder),
       ];
 
       final result = CurriculumProgressService.compute(
