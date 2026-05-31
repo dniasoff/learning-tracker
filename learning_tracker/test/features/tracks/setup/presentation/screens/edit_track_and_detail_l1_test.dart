@@ -1087,6 +1087,86 @@ void main() {
     });
   });
 
+  // ── R5-4 regression: locale-aware day names in EditTrackScreen ───────────
+
+  group('EditTrackScreen — locale-aware day names (R5-4)', () {
+    testWidgets(
+      'Hebrew locale: study day names are Hebrew (no English day names)',
+      (tester) async {
+        _setTallViewport(tester);
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        final trackId = await seedTrack(db, profileId: 1);
+        await _seedGoal(db, profileId: 1, trackId: trackId);
+
+        await tester.pumpWidget(
+          _buildEditApp(
+            track: _track(id: trackId),
+            db: db,
+            mockService: mockService,
+            locale: const Locale('he'),
+          ),
+        );
+        await _pump(tester);
+
+        // Hebrew weekday names rendered by intl contain "יום" (day) for
+        // Mon–Fri and "שבת" for Shabbos; none contain the English day names.
+        expect(
+          find.text('Sunday'),
+          findsNothing,
+          reason: 'R5-4: English "Sunday" must not appear under Hebrew locale',
+        );
+        expect(
+          find.text('Monday'),
+          findsNothing,
+          reason: 'R5-4: English "Monday" must not appear under Hebrew locale',
+        );
+        // At least one Hebrew weekday label must be visible.
+        expect(
+          find.textContaining('יום'),
+          findsWidgets,
+          reason:
+              'R5-4: Hebrew weekday labels (containing "יום") must be present',
+        );
+
+        await _tearDown(tester);
+      },
+    );
+
+    testWidgets(
+      'English locale: study day names remain English (regression guard)',
+      (tester) async {
+        _setTallViewport(tester);
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        final trackId = await seedTrack(db, profileId: 1);
+        await _seedGoal(db, profileId: 1, trackId: trackId);
+
+        await tester.pumpWidget(
+          _buildEditApp(
+            track: _track(id: trackId),
+            db: db,
+            mockService: mockService,
+          ),
+        );
+        await _pump(tester);
+
+        // At least one English weekday should be visible.
+        expect(
+          find.textContaining('day'),
+          findsWidgets,
+          reason:
+              'R5-4: English weekday names (e.g. Monday, Sunday) must appear '
+              'under English locale',
+        );
+
+        await _tearDown(tester);
+      },
+    );
+  });
+
   // ════════════════════════════════════════════════════════════════════════════
   // TrackDetailScreen
   // ════════════════════════════════════════════════════════════════════════════

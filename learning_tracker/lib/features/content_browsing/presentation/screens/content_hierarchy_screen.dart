@@ -328,13 +328,25 @@ class _ContentHierarchyScreenState
     if (curriculum == null) return items;
     final currentDepth = _navigationStack.length;
     final maxBrowseDepth = CurriculumLabels.maxBrowseDepth(curriculum);
-    if (currentDepth >= maxBrowseDepth) return const [];
 
-    final nextLevel = currentDepth + 1;
+    // When the navigation stack is at or beyond the max browse depth (e.g. the
+    // user arrived via a deep-link URL with more levels set), we still need to
+    // render the browse-terminal rows — the items at maxBrowseDepth — rather
+    // than returning empty.  Clamp the effective grouping depth to
+    // (maxBrowseDepth - 1) so that we always produce the "chapter-level" rows
+    // whose `_isChapterLevelRef` is true and which open the reader on tap.
+    //
+    // The old `>= maxBrowseDepth → return []` conflated "don't drill further"
+    // with "show nothing"; this fixes R5-6.
+    final effectiveDepth = currentDepth >= maxBrowseDepth
+        ? maxBrowseDepth - 1
+        : currentDepth;
+
+    final nextLevel = effectiveDepth + 1;
     final uniqueItems = <String, ContentItem>{};
 
     for (final item in items) {
-      final nextLevelValue = _getNextLevelValue(item, currentDepth);
+      final nextLevelValue = _getNextLevelValue(item, effectiveDepth);
       if (nextLevelValue == null || uniqueItems.containsKey(nextLevelValue)) {
         continue;
       }
@@ -361,9 +373,9 @@ class _ContentHierarchyScreenState
       uniqueItems[nextLevelValue] = ContentItem(
         curriculumId: item.curriculumId,
         level1: item.level1,
-        level2: currentDepth >= 1 ? item.level2 : null,
-        level3: currentDepth >= 2 ? item.level3 : null,
-        level4: currentDepth >= 3 ? item.level4 : null,
+        level2: effectiveDepth >= 1 ? item.level2 : null,
+        level3: effectiveDepth >= 2 ? item.level3 : null,
+        level4: effectiveDepth >= 3 ? item.level4 : null,
         displayNameHe: renderedHe,
         displayNameEn: renderedEn,
         sefariaRef: item.sefariaRef,

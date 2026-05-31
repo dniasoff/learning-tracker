@@ -4007,6 +4007,18 @@ abstract class AppLocalizations {
   /// **'Today'**
   String get calendarOffsetToday;
 
+  /// No description provided for @dayNameShabbos.
+  ///
+  /// In en, this message translates to:
+  /// **'Shabbos'**
+  String get dayNameShabbos;
+
+  /// No description provided for @statusPendingTapToAccept.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending — tap to accept'**
+  String get statusPendingTapToAccept;
+
   /// No description provided for @calendarOffsetDay.
   ///
   /// In en, this message translates to:

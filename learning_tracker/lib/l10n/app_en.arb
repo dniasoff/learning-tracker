@@ -1070,6 +1070,8 @@
   "currentPasswordLabel": "Current Password",
   "invalidPasswordError": "Invalid password. Please try again.",
   "calendarOffsetToday": "Today",
+  "dayNameShabbos": "Shabbos",
+  "statusPendingTapToAccept": "Pending — tap to accept",
   "calendarOffsetDay": "Day {offset}",
   "@calendarOffsetDay": {
     "placeholders": {

@@ -2236,6 +2236,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get calendarOffsetToday => 'Today';
 
   @override
+  String get dayNameShabbos => 'Shabbos';
+
+  @override
+  String get statusPendingTapToAccept => 'Pending — tap to accept';
+
+  @override
   String calendarOffsetDay(String offset) {
     return 'Day $offset';
   }

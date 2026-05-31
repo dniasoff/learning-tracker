@@ -583,36 +583,42 @@ class _ParentalControlsSectionState
             },
           ),
         ),
-        const SizedBox(height: 12),
-        _SurfaceCard(
-          child: PreferenceListTile.withIcon(
-            icon: Icons.pin_outlined,
-            iconColor: AppTheme.brandInkMuted,
-            iconBackground: AppTheme.brandCreamSoft,
-            title: l10n.parentPin,
-            subtitle: l10n.parentPinSubtitle,
-            onTap: () async {
-              final profileId = ref.read(selectedProfileIdProvider);
-              final pinService = ref.read(pinServiceProvider);
-              if (profileId == null) return;
-              final bool ok;
-              if (_hasPin) {
-                ok = await showParentPinChangeDialog(
-                  context,
-                  profileId: profileId,
-                  pinService: pinService,
-                );
-              } else {
-                ok =
-                    (await context.pushRoute<bool>(
-                      const PinFlowSetupRoute(),
-                    )) ??
-                    false;
-              }
-              if (ok && mounted) await _load();
-            },
+        // PIN management is only exposed when the parent is already
+        // authenticated for this profile (inParentMode). Without this gate
+        // a child could see the tile in their own Settings and attempt to
+        // brute-force the parent PIN (R5-2).
+        if (inParentMode) ...[
+          const SizedBox(height: 12),
+          _SurfaceCard(
+            child: PreferenceListTile.withIcon(
+              icon: Icons.pin_outlined,
+              iconColor: AppTheme.brandInkMuted,
+              iconBackground: AppTheme.brandCreamSoft,
+              title: l10n.parentPin,
+              subtitle: l10n.parentPinSubtitle,
+              onTap: () async {
+                final profileId = ref.read(selectedProfileIdProvider);
+                final pinService = ref.read(pinServiceProvider);
+                if (profileId == null) return;
+                final bool ok;
+                if (_hasPin) {
+                  ok = await showParentPinChangeDialog(
+                    context,
+                    profileId: profileId,
+                    pinService: pinService,
+                  );
+                } else {
+                  ok =
+                      (await context.pushRoute<bool>(
+                        const PinFlowSetupRoute(),
+                      )) ??
+                      false;
+                }
+                if (ok && mounted) await _load();
+              },
+            ),
           ),
-        ),
+        ],
         const SizedBox(height: 24),
       ],
     );
@@ -649,6 +655,7 @@ class _PendingInvitesSection extends ConsumerWidget {
     }
 
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -656,7 +663,7 @@ class _PendingInvitesSection extends ConsumerWidget {
         Padding(
           padding: const EdgeInsets.only(bottom: 10),
           child: Text(
-            'TALMID PROFILES',
+            l10n.profilePickerTalmidProfiles,
             style: theme.textTheme.labelSmall?.copyWith(
               color: AppTheme.brandInkMuted,
               fontWeight: FontWeight.w700,
@@ -687,6 +694,7 @@ class _TutorGrantTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final childLabel = grant.childDisplayLabel;
 
     return Container(
@@ -719,7 +727,9 @@ class _TutorGrantTile extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  isPending ? 'Pending — tap to accept' : 'Tutoring',
+                  isPending
+                      ? l10n.statusPendingTapToAccept
+                      : l10n.tutoredChildrenStatusTutoring,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: isPending
                         ? const Color(0xFFF57F17)
@@ -741,7 +751,7 @@ class _TutorGrantTile extends StatelessWidget {
               ),
               onPressed: () =>
                   context.pushRoute(AcceptInviteRoute(token: grant.grantId)),
-              child: const Text('Accept'),
+              child: Text(l10n.acceptInviteAccept),
             ),
         ],
       ),

@@ -1,12 +1,16 @@
-/// Tests for TrackDao.deleteTrackAndData and initializeDefaultTracks —
-/// branches not yet exercised by existing track_dao tests.
+/// Tests for TrackDao.deleteTrackAndData, purgeHistory, and
+/// initializeDefaultTracks — branches not yet exercised by existing track_dao
+/// tests.
 library;
+
+import 'dart:convert';
 
 import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/exceptions/invalid_track_operation_exception.dart';
+import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 
 import '../../../helpers/drift_memory.dart' show inMemoryDb, seedProfile;
 
@@ -188,6 +192,115 @@ void main() {
       final bavliTracks = await db.trackDao.getAllTracks(CurriculumId.bavli);
       expect(bavliTracks, isEmpty);
     });
+  });
+
+  // ── purgeHistory — outbox tombstone (R5-3) ──────────────────────────────
+
+  group('TrackDao.purgeHistory — sync tombstone', () {
+    test(
+      'enqueues an OutboxEntityKind.track tombstone row inside the transaction',
+      () async {
+        final trackId = await insertTrack(curriculumId: 'mishnayos');
+
+        // Outbox must be empty before the purge.
+        final before = await db.outboxDao.getPendingByKind(
+          OutboxEntityKind.track,
+          1,
+        );
+        expect(before, isEmpty, reason: 'no outbox rows before purge');
+
+        await db.trackDao.purgeHistory(trackId);
+
+        final rows = await db.outboxDao.getPendingByKind(
+          OutboxEntityKind.track,
+          1,
+        );
+        expect(
+          rows,
+          hasLength(1),
+          reason: 'exactly one track outbox tombstone should be enqueued',
+        );
+
+        final row = rows.first;
+        expect(row.entityKind, OutboxEntityKind.track);
+        expect(
+          row.entityKey,
+          'track_purge:$trackId',
+          reason: 'entityKey must identify the purge tombstone',
+        );
+        expect(row.profileId, 1);
+
+        final payload = jsonDecode(row.payload) as Map<String, dynamic>;
+        expect(payload['track_id'], trackId);
+        expect(payload['curriculum_id'], 'mishnayos');
+        // state must be 'deleted' so the receiving _upsertTrack can apply it.
+        expect(
+          payload['state'],
+          'deleted',
+          reason: 'state must be deleted so remote track is removed',
+        );
+        expect(
+          payload['purged'],
+          isTrue,
+          reason: 'purged flag distinguishes a history-wipe from a soft-delete',
+        );
+        expect(
+          payload.containsKey('purged_at'),
+          isTrue,
+          reason: 'purged_at timestamp must be present in payload',
+        );
+        expect(payload['profile_id'], 1);
+      },
+    );
+
+    test(
+      'does NOT enqueue an outbox tombstone when the track does not exist',
+      () async {
+        await db.trackDao.purgeHistory(9999);
+
+        final rows = await db.outboxDao.getPendingByKind(
+          OutboxEntityKind.track,
+          1,
+        );
+        expect(
+          rows,
+          isEmpty,
+          reason: 'no-op for missing track — no outbox row',
+        );
+      },
+    );
+
+    test('hard-deletes the track row (not a soft-delete)', () async {
+      final trackId = await insertTrack(curriculumId: 'mishnayos');
+
+      await db.trackDao.purgeHistory(trackId);
+
+      final track = await db.trackDao.getTrackById(trackId);
+      expect(
+        track,
+        isNull,
+        reason: 'purgeHistory hard-deletes the row; it should not exist',
+      );
+    });
+
+    test(
+      'enqueued tombstone entityKey differs from deleteTrackAndData tombstone key pattern',
+      () async {
+        // Regression: purge and soft-delete must not share the same outbox key
+        // so that both can coexist in the outbox without conflict.
+        final trackId = await insertTrack(curriculumId: 'mishnayos');
+
+        await db.trackDao.purgeHistory(trackId);
+
+        final rows = await db.outboxDao.getPendingByKind(
+          OutboxEntityKind.track,
+          1,
+        );
+        expect(rows, hasLength(1));
+        expect(rows.first.entityKey, isNot('track_delete:$trackId'));
+        expect(rows.first.entityKey, 'track_purge:$trackId');
+      },
+    );
   });
 
   // ── deactivateTrack ──────────────────────────────────────────────────────

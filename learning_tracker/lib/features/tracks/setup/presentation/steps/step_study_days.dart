@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/services/track_creation_service.dart';
@@ -110,17 +111,21 @@ class _StudyDaysEditableState extends State<StudyDaysEditable> {
     );
   }
 
+  /// Returns the locale-aware full weekday name for [dayNum].
+  ///
+  /// Convention: [dayNum] follows Dart's [DateTime.weekday] values
+  /// (1 = Monday … 7 = Sunday), identical to [kStepStudyDayNumbers].
+  /// Day 6 (Saturday) renders the app's term "Shabbos" (en) / "שבת" (he) via
+  /// l10n — consistent with the sacred-time feature; other days are
+  /// locale-formatted via [DateFormat].
   String _dayName(int dayNum) {
-    return switch (dayNum) {
-      7 => 'Sunday',
-      1 => 'Monday',
-      2 => 'Tuesday',
-      3 => 'Wednesday',
-      4 => 'Thursday',
-      5 => 'Friday',
-      6 => 'Shabbos',
-      _ => 'Day',
-    };
+    if (dayNum == 6) return AppLocalizations.of(context)!.dayNameShabbos;
+    final locale = Localizations.localeOf(context).languageCode;
+    // Anchor: 2023-01-02 is a Monday (DateTime.weekday == 1).
+    // Adding (dayNum - 1) days yields a date whose weekday == dayNum.
+    final anchor = DateTime(2023, 1, 2);
+    final date = anchor.add(Duration(days: dayNum - 1));
+    return DateFormat('EEEE', locale).format(date);
   }
 }
 

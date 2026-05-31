@@ -298,5 +298,106 @@ void main() {
       // Perek row composed via renderer: "פרק" + gematriya("1") = "פרק א".
       expect(find.text('פרק א'), findsOneWidget);
     });
+
+    // Regression test for R5-6: browse tree showed "No content" at max
+    // browse depth when the navigation stack was initialised from deep-link
+    // URL params (level1+level2+level3 all set), i.e. currentDepth=3 which
+    // equals maxBrowseDepth(mishnayos)=3.
+    //
+    // The old guard `if (currentDepth >= maxBrowseDepth) return const []`
+    // returned an empty list before building the perek rows, so the screen
+    // rendered "No content available". The fix clamps effectiveDepth to
+    // maxBrowseDepth-1 so that the method still returns the correct
+    // chapter-level rows.
+    testWidgets(
+      'R5-6: renders perek items (not empty) when stack depth equals maxBrowseDepth',
+      (tester) async {
+        // Provider returns full leaf items (all 4 levels set) as it would when
+        // the app fetches Mishnayos items with level1/2/3 already selected.
+        // Two pereks so we can verify both render.
+        final testItems = [
+          const ContentItem(
+            curriculumId: 'mishnayos',
+            level1: 'Seder Zeraim',
+            level2: 'Berachos',
+            level3: '1',
+            level4: '1',
+            displayNameHe: 'משנה ברכות א:א',
+            displayNameEn: 'Mishnah Berakhot 1:1',
+            sefariaRef: 'Mishnah Berakhot 1.1',
+            sortOrder: 0,
+            isLeaf: true,
+          ),
+          const ContentItem(
+            curriculumId: 'mishnayos',
+            level1: 'Seder Zeraim',
+            level2: 'Berachos',
+            level3: '1',
+            level4: '2',
+            displayNameHe: 'משנה ברכות א:ב',
+            displayNameEn: 'Mishnah Berakhot 1:2',
+            sefariaRef: 'Mishnah Berakhot 1.2',
+            sortOrder: 1,
+            isLeaf: true,
+          ),
+          const ContentItem(
+            curriculumId: 'mishnayos',
+            level1: 'Seder Zeraim',
+            level2: 'Berachos',
+            level3: '2',
+            level4: '1',
+            displayNameHe: 'משנה ברכות ב:א',
+            displayNameEn: 'Mishnah Berakhot 2:1',
+            sefariaRef: 'Mishnah Berakhot 2.1',
+            sortOrder: 2,
+            isLeaf: true,
+          ),
+        ];
+
+        when(
+          () => mockRepo.filterByLevel(
+            curriculumId: CurriculumId.mishnayos,
+            level1: 'Seder Zeraim',
+            level2: 'Berachos',
+            level3: '1',
+            level4: null,
+          ),
+        ).thenAnswer((_) async => testItems);
+
+        when(
+          () => mockRepo.getHierarchyConfig(CurriculumId.mishnayos),
+        ).thenAnswer(
+          (_) async => const CurriculumHierarchyConfig(
+            curriculumId: 'mishnayos',
+            levelLabels: ['Seder', 'Masechta', 'Perek', 'Mishna'],
+            totalItems: 100,
+          ),
+        );
+
+        // Start at depth-3: currentDepth == maxBrowseDepth(mishnayos) == 3.
+        // Before the fix this rendered "No content available".
+        await tester.pumpWidget(
+          createTestWidget(
+            level1: 'Seder Zeraim',
+            level2: 'Berachos',
+            level3: '1',
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Must NOT show the empty-state copy.
+        expect(find.text('No content available'), findsNothing);
+
+        // Must show at least one perek row.  The renderer produces
+        // "פרק א" for level3='1' and "פרק ב" for level3='2'.
+        // With effectiveDepth clamped to 2 (maxBrowseDepth-1), the method
+        // groups by level3 so both unique pereks appear.
+        // Note: the breadcrumb also renders the current level label so
+        // "פרק א" may appear more than once in the tree — use
+        // findsAtLeastNWidgets rather than findsOneWidget.
+        expect(find.text('פרק א'), findsAtLeastNWidgets(1));
+        expect(find.text('פרק ב'), findsAtLeastNWidgets(1));
+      },
+    );
   });
 }

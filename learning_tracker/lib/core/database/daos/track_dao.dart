@@ -427,6 +427,37 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
       await (db.delete(
         curriculumTracks,
       )..where((t) => t.id.equals(trackId))).go();
+      // R5-3: push a purge tombstone so other devices replicate the wipe.
+      //
+      // purgeHistory hard-deletes the track row (unlike deleteTrackAndData which
+      // soft-deletes to 'deleted'). We use the same OutboxEntityKind.track kind
+      // so the existing pushTrack pipeline carries it to Firestore. The payload
+      // uses state = 'deleted' — the closest expressible state in the current
+      // track_config merge path — plus a 'purged: true' flag and 'purged_at'
+      // timestamp so a future purge-aware merger can distinguish a full history
+      // wipe from a simple soft-delete. Completion-level purgedAt stamps are
+      // NOT individually replicated here: the track tombstone ensures the track
+      // is removed on remote, preventing further completions against it; the
+      // orphaned completion documents (already stamped with purged_at locally)
+      // will be superseded if the remote ever re-syncs from this device's
+      // completion outbox rows (each completion push is idempotent via its
+      // natural-key doc ID).
+      await db.outboxDao.insertOutboxRow(
+        OutboxCompanion.insert(
+          profileId: track.profileId,
+          entityKind: OutboxEntityKind.track,
+          entityKey: 'track_purge:$trackId',
+          payload: jsonEncode({
+            'track_id': trackId,
+            'curriculum_id': track.curriculumId,
+            'state': TrackState.deleted,
+            'purged_at': purgedAt.toUtc().toIso8601String(),
+            'purged': true,
+            'profile_id': track.profileId,
+          }),
+          createdAt: purgedAt,
+        ),
+      );
     });
 
     final curriculum = CurriculumId.values

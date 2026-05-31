@@ -2207,6 +2207,12 @@ class AppLocalizationsHe extends AppLocalizations {
   String get calendarOffsetToday => 'היום';
 
   @override
+  String get dayNameShabbos => 'שבת';
+
+  @override
+  String get statusPendingTapToAccept => 'ממתין — הקישו לאישור';
+
+  @override
   String calendarOffsetDay(String offset) {
     return 'יום $offset';
   }
