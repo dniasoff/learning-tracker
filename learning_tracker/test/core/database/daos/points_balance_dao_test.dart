@@ -151,6 +151,30 @@ void main() {
       },
     );
 
+    test('fulfilRedemption is a no-op on an already-declined redemption '
+        '(D5: no fulfil-vs-decline race / no double benefit)', () async {
+      await db.pointsBalanceDao.creditCompletion(1, 100);
+      final redemption = await db.pointsBalanceDao.createRedemption(
+        profileId: 1,
+        rewardTitle: 'Toy',
+        iconIndex: 1,
+        pointsCost: 40,
+      );
+
+      // Parent declines first → refunded, status declined, balance back to 100.
+      await db.pointsBalanceDao.declineRedemption(redemption!.id);
+      expect(await db.pointsBalanceDao.getBalance(1), 100);
+
+      // A late/racing fulfil must NOT flip it to fulfilled or touch the
+      // balance (else the child keeps the refund AND gets the reward).
+      await db.pointsBalanceDao.fulfilRedemption(redemption.id);
+
+      final all = await db.pointsBalanceDao.getAllRedemptions(1);
+      final row = all.firstWhere((r) => r.id == redemption.id);
+      expect(row.status, 'declined');
+      expect(await db.pointsBalanceDao.getBalance(1), 100);
+    });
+
     // ── getPendingRedemptions / watchPendingRedemptions ───────────────────────
 
     test('getPendingRedemptions only returns pending rows', () async {

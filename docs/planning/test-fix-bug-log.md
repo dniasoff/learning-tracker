@@ -112,6 +112,19 @@ fill + Create → `verify(createProfile).called(1)`). **On-device VERIFIED** (20
 Child "TestKid" → Set Parent PIN → the profile now appears in the switcher Profiles list (was a silent no-op
 before). `make ci` green.
 
+**D5 (HIGH, correctness/race — F8 rewards):**
+*Symptom* — A parent's **Fulfil** could overwrite an already-**Declined** (and refunded) redemption, flipping
+it to `fulfilled` WITHOUT re-debiting → the child keeps the refund AND gets the reward; also double-fulfil and
+fulfil-vs-decline races (two parent devices / rapid taps after the pending list refreshes).
+*Cause* — `points_balance_dao.dart` `fulfilRedemption` was an **unconditional** status write (no guard), unlike
+`declineRedemption` which guards `status != 'pending_fulfilment'` and returns early.
+*Fix* — Added the same guard to `fulfilRedemption`: read the row first, return early unless
+`status == 'pending_fulfilment'`. Now idempotent and race-safe (a fulfil can't resurrect a declined/refunded row
+or double-fulfil).
+*Test* — `points_balance_dao_test.dart`: "fulfilRedemption is a no-op on an already-declined redemption (D5)" —
+decline (refund → balance restored, status declined), then a late fulfil → asserts status STAYS declined and
+balance unchanged. `make ci` green (8945).
+
 ---
 
 ## Phase 5b — Navigation guards (unit tests + SYSTEMIC LOCKOUT FIX)

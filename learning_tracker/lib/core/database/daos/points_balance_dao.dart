@@ -208,6 +208,16 @@ class PointsBalanceDao extends DatabaseAccessor<UserDatabase>
 
   /// Fulfil a pending redemption (parent approves).
   Future<void> fulfilRedemption(int redemptionId) async {
+    // D5: only a still-pending redemption may be fulfilled. Mirrors
+    // declineRedemption's guard so a late/concurrent fulfil cannot overwrite an
+    // already-declined (and refunded) row — which would grant the reward AND
+    // keep the refund — nor double-fulfil. Without this guard fulfil was an
+    // unconditional write (no status check, unlike decline).
+    final existing = await (select(
+      rewardRedemptions,
+    )..where((t) => t.id.equals(redemptionId))).getSingleOrNull();
+    if (existing == null || existing.status != 'pending_fulfilment') return;
+
     final now = DateTimeFactory.nowUtc();
     await (update(
       rewardRedemptions,
