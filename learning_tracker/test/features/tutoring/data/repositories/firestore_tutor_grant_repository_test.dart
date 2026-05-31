@@ -326,6 +326,48 @@ void main() {
       expect(result, isEmpty);
     });
 
+    // ── D18: listIncomingGrantsWithStatus distinguishes success from failure ─
+    test(
+      'D18: withStatus reports ok=true on a successful (even empty) call',
+      () async {
+        final repo = _buildRepo((_, __) async => _grantsResponse([]));
+        final result = await repo.listIncomingGrantsWithStatus();
+        expect(result.ok, isTrue);
+        expect(result.grants, isEmpty);
+      },
+    );
+
+    test('D18: withStatus reports ok=true with grants on success', () async {
+      final repo = _buildRepo(
+        (_, __) async =>
+            _grantsResponse([_grantMap(grantId: 'g1', state: 'active')]),
+      );
+      final result = await repo.listIncomingGrantsWithStatus();
+      expect(result.ok, isTrue);
+      expect(result.grants, hasLength(1));
+    });
+
+    test(
+      'D18: withStatus reports ok=false on FirebaseFunctionsException',
+      () async {
+        final repo = _buildRepo(
+          (_, __) async => throw FirebaseFunctionsException(
+            code: 'unavailable',
+            message: 'offline',
+          ),
+        );
+        final result = await repo.listIncomingGrantsWithStatus();
+        expect(result.ok, isFalse);
+        expect(result.grants, isEmpty);
+      },
+    );
+
+    test('D18: withStatus reports ok=false on a generic Exception', () async {
+      final repo = _buildRepo((_, __) async => throw Exception('boom'));
+      final result = await repo.listIncomingGrantsWithStatus();
+      expect(result.ok, isFalse);
+    });
+
     test(
       'skips malformed grant entries (null fields) without throwing',
       () async {

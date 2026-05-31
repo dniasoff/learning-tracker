@@ -148,7 +148,12 @@ class FirestoreTutorGrantRepository implements TutorGrantRepository {
   // ── List operations ──────────────────────────────────────────────────────────
 
   @override
-  Future<List<TutorGrant>> listIncomingGrants() async {
+  Future<List<TutorGrant>> listIncomingGrants() async =>
+      (await listIncomingGrantsWithStatus()).grants;
+
+  @override
+  Future<({List<TutorGrant> grants, bool ok})>
+  listIncomingGrantsWithStatus() async {
     try {
       final callable = _functions.httpsCallable('listTutorGrants');
       final result = await callable.call<Map<String, dynamic>>(
@@ -156,11 +161,15 @@ class FirestoreTutorGrantRepository implements TutorGrantRepository {
       );
       // ignore: avoid_dynamic_calls
       final data = result.data;
-      return _grantsFromCallableData(data);
+      // D18: a successful call is authoritative even when it returns zero
+      // grants (every prior grant was revoked).
+      return (grants: _grantsFromCallableData(data), ok: true);
     } on FirebaseFunctionsException {
-      return const [];
+      // Offline / transient / permission-denied — NOT authoritative. Keep the
+      // local mirror so a cached talmid is not hidden by a transient failure.
+      return (grants: const <TutorGrant>[], ok: false);
     } catch (_) {
-      return const [];
+      return (grants: const <TutorGrant>[], ok: false);
     }
   }
 

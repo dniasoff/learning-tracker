@@ -57,6 +57,16 @@ abstract interface class TutorGrantRepository {
   /// List active/pending grants where caller is the tutor.
   Future<List<TutorGrant>> listIncomingGrants();
 
+  /// Like [listIncomingGrants] but reports whether the underlying Cloud
+  /// Function call genuinely SUCCEEDED (online, authoritative) versus failed
+  /// (offline / transient / permission-denied — `grants` empty, `ok` false).
+  ///
+  /// D18: callers need this distinction to safely reconcile locally-mirrored
+  /// talmidim. On a confirmed success an empty/absent grant is authoritative
+  /// (the grant was revoked) and the mirror must be wiped; on a failure the
+  /// mirror must be retained so a cached talmid is not hidden offline.
+  Future<({List<TutorGrant> grants, bool ok})> listIncomingGrantsWithStatus();
+
   /// List all grants issued by the caller (as parent) for [childProfileId].
   Future<List<TutorGrant>> listOutgoingGrants({required String childProfileId});
 

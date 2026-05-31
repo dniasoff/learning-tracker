@@ -80,6 +80,12 @@ class ListIncomingTutorAccessUseCase {
   final TutorGrantRepository _repository;
 
   Future<List<TutorGrant>> call() => _repository.listIncomingGrants();
+
+  /// D18: variant that reports CF success vs offline failure so the caller can
+  /// reconcile locally-mirrored talmidim (wipe revoked ones on a real success,
+  /// retain them on an offline failure).
+  Future<({List<TutorGrant> grants, bool ok})> callWithStatus() =>
+      _repository.listIncomingGrantsWithStatus();
 }
 
 /// List all grants issued by the authenticated parent for a child profile.

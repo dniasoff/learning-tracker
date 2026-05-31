@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/email/transactional_email_service.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/sync/providers/tutored_pull_providers.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart'
     show currentAccountIdProvider;
@@ -15,6 +16,7 @@ import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissio
 import 'package:learning_tracker/features/tutoring/domain/services/tutor_notification_service.dart';
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_grant_use_cases.dart';
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_grant_providers.dart';
 
 // ── Repository provider ──────────────────────────────────────────────────────
@@ -89,19 +91,47 @@ final incomingTutorGrantsProvider = FutureProvider<List<TutorGrant>>((
   final accountId = ref.watch(currentAccountIdProvider);
   final db = ref.watch(userDatabaseProvider);
 
-  final cfGrants = await useCase();
-
-  // OFFLINE-FIRST: always union the CF result with the locally-mirrored active
-  // talmidim. The CF is network-only and returns [] whenever it can't reach the
-  // server — and `connectivity.isOnline` is unreliable on some networks (e.g. a
-  // VPN interface is "up" while DNS to Firestore fails), so we do NOT gate on
-  // it. The CF result is authoritative for any grant it returns (real state +
-  // permissions + denormalised names); the mirror only fills in active talmidim
-  // the CF did not return, so a cached talmid is never hidden by a transient or
-  // offline CF failure. A revoked grant's mirror is wiped on revoke, so it does
-  // not resurrect here.
+  // D18: distinguish an authoritative online success from an offline/transient
+  // failure. `listTutorGrants` returns only active/pending grants, so a grant
+  // revoked by the parent is ABSENT from a successful result — it must NOT be
+  // reconstructed from the still-present local mirror (that is the resurrection
+  // bug). Reconcile only on a confirmed success; on failure fall back to the
+  // offline-first mirror union so a cached talmid is never hidden.
+  final cfResult = await useCase.callWithStatus();
+  final cfGrants = cfResult.grants;
   final cfGrantIds = cfGrants.map((g) => g.grantId).toSet();
   final mirrors = await db.profileDao.getTutoredMirrorsForAccount(accountId);
+
+  if (cfResult.ok) {
+    // Authoritative: any mirror whose grant is no longer in the active/pending
+    // set was revoked or resigned server-side. Wipe it so a revoked talmid
+    // disappears (profile picker / manage-grants / Settings) instead of
+    // resurrecting as ACTIVE — and exit the tutored session if the wiped grant
+    // is the one currently selected.
+    final activeGrantId = ref
+        .read(activeTutoredProfileSelectionProvider)
+        ?.grantId;
+    final wipeService = buildTutoredMirrorWipeService(
+      ref: ref,
+      onWipe: (grantId) {
+        if (grantId == activeGrantId) {
+          ref.read(activeTutoredProfileSelectionProvider.notifier).exit();
+        }
+      },
+    );
+    for (final m in mirrors) {
+      final gid = m.tutorGrantId;
+      if (gid != null && !cfGrantIds.contains(gid)) {
+        await wipeService.wipeMirrorForGrant(gid);
+      }
+    }
+    // CF is authoritative for every active/pending grant — return it directly.
+    return cfGrants;
+  }
+
+  // CF failed (offline / transient): retain the mirror so a returning tutor
+  // still sees the talmidim they have already entered. Union the (empty) CF
+  // result with locally-mirrored active talmidim the CF did not return.
   final fromMirror = mirrors
       .where(
         (m) =>
