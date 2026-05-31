@@ -7,6 +7,7 @@ import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/navigation/router_provider.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
@@ -542,7 +543,31 @@ class _AccountTile extends ConsumerWidget {
     final service = AccountLifecycleService(
       registry: registry,
       databasesPath: docsDir.path,
+      authRepository: ref.read(authRepositoryProvider),
     );
+
+    // D20: the picker is reachable MID-SESSION (Profile Switcher → Switch
+    // Account). Removing the row of the CURRENTLY-ACTIVE account `deleteSync`s
+    // its SQLite file out from under the live Drift connection (writes go to an
+    // orphaned inode, reads can throw) while authState/selectedProfileId still
+    // point at it. Tear the session down FIRST — close the Drift handle, clear
+    // auth + selected profile + active-account pointer — then delete, then
+    // route away. Mirrors showDeleteLocalAccountFlow.
+    final isActive = ref.read(accountDbFileNameProvider) == account.dbFileName;
+    if (isActive) {
+      ref
+          .read(accountDbFileNameProvider.notifier)
+          .setFileName('learning_tracker');
+      ref.invalidate(userDatabaseProvider);
+      ref.read(authStateProvider.notifier).signOut();
+      ref.read(selectedProfileIdProvider.notifier).clear();
+      ref.read(routerProvider).pinGuard.lock();
+      final prefs = await SharedPreferences.getInstance();
+      await SessionPersistenceService(
+        prefs: prefs,
+        registry: registry,
+      ).clearActiveAccount();
+    }
 
     final isCloud = account.accountTier.isCloud;
     if (isCloud) {
@@ -550,5 +575,13 @@ class _AccountTile extends ConsumerWidget {
     } else {
       await service.deleteLocalAccount(account.accountId);
     }
+
+    if (!isActive || !context.mounted) return;
+    // Active account is gone — route away from the now-orphaned context.
+    final remaining = await registry.getAllAccounts();
+    final router = ref.read(routerProvider);
+    await router.replaceAll([
+      remaining.isNotEmpty ? const AccountPickerRoute() : const SignInRoute(),
+    ]);
   }
 }

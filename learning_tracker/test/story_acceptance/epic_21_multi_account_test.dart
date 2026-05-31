@@ -637,6 +637,49 @@ void main() {
         await tempDir.delete(recursive: true);
       });
 
+      test(
+        'D19/D20: removing the ACTIVE cloud account clears the registry row '
+        'AND lastActiveAccountId (no ghost row / dangling pointer)',
+        () async {
+          final tempDir = await Directory.systemTemp.createTemp('epic21_d19_');
+          final registry = DeviceRegistryDatabase(NativeDatabase.memory());
+
+          await registry.addAccount(
+            DeviceAccountsCompanion.insert(
+              accountId: 'acc-cloud',
+              email: 'cloud@test.local',
+              displayName: 'Cloud',
+              tier: 'cloudBorn',
+              firebaseUid: const Value('fb-uid-1'),
+              dbFileName: 'user_acc_cloud.db',
+              createdAt: DateTime.utc(2026, 1, 1),
+              lastUsedAt: DateTime.utc(2026, 1, 1),
+            ),
+          );
+          // This account is the active one.
+          await registry.setLastActiveAccountId('acc-cloud');
+          File('${tempDir.path}/user_acc_cloud.db').createSync();
+
+          await AccountLifecycleService(
+            registry: registry,
+            databasesPath: tempDir.path,
+          ).removeCloudFromDevice('acc-cloud');
+
+          // The Settings cloud-delete (D19) and the picker swipe (D20) both
+          // route through this cleanup for the active account.
+          expect(await registry.findById('acc-cloud'), isNull);
+          expect(await registry.getLastActiveAccountId(), isNull);
+          expect(
+            await registry.getAllAccounts(),
+            isEmpty,
+            reason: 'deleted account must not reappear in the picker',
+          );
+
+          await registry.close();
+          await tempDir.delete(recursive: true);
+        },
+      );
+
       test('AC5: local-born rejects removeCloudFromDevice', () async {
         final registry = DeviceRegistryDatabase(NativeDatabase.memory());
 

@@ -349,6 +349,31 @@ class _DeletingAccountOverlayState
       final service = ref.read(accountManagementServiceProvider);
       await service.deleteAccount(widget.accountId);
       if (!mounted) return;
+
+      // D19: deleteAccount wipes the cloud + local table rows + prefs, but
+      // leaves the DEVICE REGISTRY row and the per-account DB file intact, so
+      // the deleted account reappears in the Account Picker on next launch and
+      // tapping it activates an empty shell. Tear those down too: close the
+      // open Drift handle (reset to the default file) BEFORE deleting the file,
+      // then remove the file + registry row (which also clears
+      // lastActiveAccountId — D10).
+      final registry = ref.read(deviceRegistryProvider);
+      final account = await registry.findByFirebaseUid(widget.accountId);
+      if (account != null) {
+        if (ref.read(accountDbFileNameProvider) == account.dbFileName) {
+          ref
+              .read(accountDbFileNameProvider.notifier)
+              .setFileName('learning_tracker');
+          ref.invalidate(userDatabaseProvider);
+        }
+        final docsDir = await getApplicationDocumentsDirectory();
+        await AccountLifecycleService(
+          registry: registry,
+          databasesPath: docsDir.path,
+          authRepository: ref.read(authRepositoryProvider),
+        ).removeCloudFromDevice(account.accountId);
+      }
+      if (!mounted) return;
       // AuthStateNotifier is keepAlive — always clear so router guards see
       // signed-out state regardless of whether deleteAccount fully succeeded.
       ref.read(authStateProvider.notifier).signOut();
