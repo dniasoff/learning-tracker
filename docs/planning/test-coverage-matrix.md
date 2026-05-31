@@ -13,6 +13,37 @@ this surface · blank = TODO. **`cur`** = # of test files referencing the screen
 
 ---
 
+## On-device ADB sweep — session 2026-05-31 (real phone, `100.72.6.10:5555`)
+
+Drove the live app per `on-device-exhaustive-test-plan-2026-05-31.md`. **4 root-caused defects found + fixed +
+regression-tested + committed green to `dev`** (`make ci` green throughout; details in `test-fix-bug-log.md`):
+- **D1** `fix(shell)` — §5 persistent profile/role switcher was **absent from default Dashboard/Learn/Progress**
+  (only Settings had an entry). Added always-present `_ProfileSwitcherBar` → `showProfileSwitcherSheet`.
+  **On-device verified** on all 4 tabs + child context.
+- **D2** `fix(dashboard)` — child redemption debit / parent refund left the Dashboard **points counter stale**;
+  made `dashboardGlobalPointsProvider` a reactive `watchBalance` stream. Provider-test verified.
+- **D3** `fix(i18n)` — parent-PIN lockout panel was hard-coded English; localized (en+he). Test verified.
+- **D4** `fix(profiles)` — **Add Profile from the switcher silently created nothing**: the row popped the sheet
+  first, unmounting context/ref so `showAddProfileDialog` bailed before `createProfile`. Fixed (keep sheet
+  mounted) + surfaced errors + safe controller dispose. **On-device verified** (create child + PIN + delete).
+
+**Flows:** F6 (persistent switcher in every context) **PASS** — adult Dashboard/Learn/Progress/Settings + child;
+tap → switcher sheet (Account/Profiles/Talmid/Add); incidental passes: AddTrackFlow exit-guard, Set/Confirm
+Parent PIN, delete-only-profile. **Product rules confirmed:** no track-type label (AddTrackFlow steps 1–2,
+track cards); Hebrew curriculum terms in English UI (locale-independent); Settings header = account sheet (not
+switcher) distinct from the app-shell switcher. **Method:** `uiautomator dump` for exact coords/labels + pulled
+Drift DBs for ground truth (see `reference_phone_testing_adb`). **Device left clean** (test profile deleted).
+
+**NEXT (resume here):** full F7 (parent-mode gating; cheat-sheet predicts no forgot-PIN recovery path),
+F8 (rewards economy; cheat-sheet predicts the now-fixed D2 + a fulfil-vs-decline race with no status guard),
+F11 (chazara conditional, derived from stage count >1), F2 (tutor invite), F3 (offline sync), F13 (Hebrew/RTL),
+then the §1–§12 element-by-element sweep. Create a throwaway child profile via the switcher (now works) to
+unblock child/parent/rewards testing. Source-grounded watch-fors per flow: `on-device-preflight-cheatsheet.md`.
+§0 dead code to resolve: **ParentPortalBottomNav** + **ScopeSelectionScreen** provably-dead (delete);
+**TrackLearningOrderScreen** reachable via TrackDetail → "Reorder content" (document).
+
+---
+
 ## Phase 1 — Tutoring (16.7%) · WORST
 
 | Screen | cur | R | Lo | Em | Er | Off | Ch | Ad | Tu | Pa | He | Dk | L4 |
