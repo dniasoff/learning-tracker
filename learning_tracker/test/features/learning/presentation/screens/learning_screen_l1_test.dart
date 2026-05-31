@@ -722,4 +722,112 @@ void main() {
       await tester.pump(Duration.zero);
     },
   );
+
+  // ── 18. R6-4 regression: streak provider loading/error states ───────────────
+  //
+  // When dashboardStreakProvider is in AsyncLoading or AsyncError state,
+  // currentStreak/maxStreak must fall back to 0 and the screen must not throw.
+
+  testWidgets(
+    'R6-4 regression: streak provider in AsyncLoading — renders without NPE, streak defaults to 0',
+    (tester) async {
+      // Use a Completer so the stream never emits — provider stays in loading.
+      final ctrl = StreamController<({int currentStreak, int maxStreak})>();
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            useHebrewTermsProvider.overrideWith(_HebrewTermsOff.new),
+            currentTransliterationVariantProvider.overrideWithValue(
+              TransliterationVariant.ashkenazi,
+            ),
+            dashboardActiveCurriculaStreamProvider.overrideWith(
+              (ref) => Stream.value([CurriculumId.mishnayos]),
+            ),
+            // Streak provider stays in AsyncLoading — stream never emits.
+            dashboardStreakProvider.overrideWith((ref) => ctrl.stream),
+            allDailyTasksProvider.overrideWith((ref) => Future.value(const [])),
+            selectedProfileProvider.overrideWith(
+              (ref) => Future.value(_adultProfile()),
+            ),
+            activeTutoredProfileSelectionProvider.overrideWith(
+              _FakeNoTutorSession.new,
+            ),
+          ],
+          child: const MaterialApp(
+            localizationsDelegates: [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: LearningScreen()),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      // Screen must render without throwing.
+      expect(find.byType(Scaffold), findsWidgets);
+      // Streak card renders with fallback 0-day streak.
+      expect(find.text('0 Day Streak'), findsOneWidget);
+
+      await ctrl.close();
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    },
+  );
+
+  testWidgets(
+    'R6-4 regression: streak provider in AsyncError — renders without NPE, streak defaults to 0',
+    (tester) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          retry: (_, __) => null, // disable retry so error state persists
+          overrides: [
+            useHebrewTermsProvider.overrideWith(_HebrewTermsOff.new),
+            currentTransliterationVariantProvider.overrideWithValue(
+              TransliterationVariant.ashkenazi,
+            ),
+            dashboardActiveCurriculaStreamProvider.overrideWith(
+              (ref) => Stream.value([CurriculumId.mishnayos]),
+            ),
+            // Streak provider emits an error.
+            dashboardStreakProvider.overrideWith(
+              (ref) =>
+                  Stream.error(Exception('streak DB error'), StackTrace.empty),
+            ),
+            allDailyTasksProvider.overrideWith((ref) => Future.value(const [])),
+            selectedProfileProvider.overrideWith(
+              (ref) => Future.value(_adultProfile()),
+            ),
+            activeTutoredProfileSelectionProvider.overrideWith(
+              _FakeNoTutorSession.new,
+            ),
+          ],
+          child: const MaterialApp(
+            localizationsDelegates: [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: LearningScreen()),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      // Screen must render without throwing.
+      expect(find.byType(Scaffold), findsWidgets);
+      // Streak card renders with fallback 0-day streak.
+      expect(find.text('0 Day Streak'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    },
+  );
 }

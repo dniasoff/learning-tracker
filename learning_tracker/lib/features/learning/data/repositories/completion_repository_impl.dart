@@ -78,10 +78,14 @@ class CompletionRepositoryImpl implements CompletionRepository {
             _activeProfileId,
           );
 
-      // 2. Check for duplicate (idempotent)
+      // 2. Check for duplicate (idempotent) — match on the full natural key
+      //    including curriculumId so a completion for the same
+      //    (sefariaRef, stageId, trackType) in a DIFFERENT curriculum is not
+      //    mis-identified as a duplicate. R6-19.
       final existing = completions
           .where(
             (c) =>
+                c.curriculumId == request.curriculumId &&
                 c.stageId == request.stageId &&
                 c.trackType == request.trackType,
           )
@@ -492,6 +496,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
     );
 
     final existing = await _getExistingCompletion(
+      curriculumId: request.curriculumId,
       sefariaRef: request.sefariaRef,
       stageId: request.stageId,
       trackType: request.trackType,
@@ -590,7 +595,12 @@ class CompletionRepositoryImpl implements CompletionRepository {
 
   /// Check if this exact completion already exists (for idempotency),
   /// scoped to the active profile.
+  ///
+  /// [curriculumId] is included in the match so that a completion for the same
+  /// (sefariaRef, stageId, trackType) in a DIFFERENT curriculum is not
+  /// treated as a duplicate. R6-19.
   Future<Completion?> _getExistingCompletion({
+    required String curriculumId,
     required String sefariaRef,
     required int stageId,
     required String trackType,
@@ -600,7 +610,10 @@ class CompletionRepositoryImpl implements CompletionRepository {
         .getCompletionsForContentAndProfile(sefariaRef, profileId);
 
     final matches = completions.where(
-      (c) => c.stageId == stageId && c.trackType == trackType,
+      (c) =>
+          c.curriculumId == curriculumId &&
+          c.stageId == stageId &&
+          c.trackType == trackType,
     );
     return matches.isEmpty ? null : matches.first;
   }

@@ -1,5 +1,3 @@
-import 'dart:ui' as ui;
-
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
@@ -136,34 +134,30 @@ class AchievementTierCard extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 6),
-                Directionality(
-                  textDirection: ui.TextDirection.ltr,
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          _milestonePointsLine(context),
-                          style: Theme.of(context).textTheme.labelSmall
-                              ?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 0.3,
-                                color: row.isLegendTier
-                                    ? Colors.white.withValues(alpha: 0.9)
-                                    : AppColors.inkSlate,
-                              ),
-                        ),
-                      ),
-                      Text(
-                        l10n.achievementsProgressPercent(_percentRounded),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        _milestonePointsLine(context),
                         style: Theme.of(context).textTheme.labelSmall?.copyWith(
                           fontWeight: FontWeight.w800,
+                          letterSpacing: 0.3,
                           color: row.isLegendTier
                               ? Colors.white.withValues(alpha: 0.9)
                               : AppColors.inkSlate,
                         ),
                       ),
-                    ],
-                  ),
+                    ),
+                    Text(
+                      l10n.achievementsProgressPercent(_percentRounded),
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        fontWeight: FontWeight.w800,
+                        color: row.isLegendTier
+                            ? Colors.white.withValues(alpha: 0.9)
+                            : AppColors.inkSlate,
+                      ),
+                    ),
+                  ],
                 ),
                 if (row.isLegendTier) ...[
                   const SizedBox(height: 4),

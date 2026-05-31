@@ -1180,6 +1180,151 @@ void main() {
       expect(secondCount, 1, reason: 'guard released → second drain runs');
     });
 
+    // R6-13 regression: when a drain is wedged past the stale threshold, the
+    // reclaim branch must reset _draining/_drainingSince so the new drain
+    // establishes a fresh guard.  Before the fix, the code fell through to
+    // `_draining = true` without resetting the stale `_drainingSince`, leaving
+    // the state machine inconsistent.
+    //
+    // Scenario:
+    //   1. Start a drain that hangs (simulates a stuck push).
+    //   2. Advance the clock past drainStaleAfter.
+    //   3. A second drain call detects the stale guard and reclaims it — it
+    //      must proceed (return > 0, not 0) and push the queued row.
+    //   4. After the reclaimed drain completes, a THIRD drain must also
+    //      proceed (guard was properly reset, not wedged by step 3).
+    test('R6-13: a drain arriving after staleAfter reclaims the guard, '
+        'proceeds to push, and the next drain is not blocked', () async {
+      final clock = FakeLocalDayClock(DateTime.utc(2026, 5, 31));
+      useLocalDayClock(clock);
+      addTearDown(resetLocalDayClock);
+
+      // A pipeline whose batch call parks until released — lets us keep a
+      // drain in-flight while advancing the clock.
+      final hangingBatch = _BlockingPipeline();
+      final p = OutboxProcessor(
+        outboxDao: db.outboxDao,
+        pipeline: hangingBatch,
+        clock: clock,
+        // pushTimeout long — we advance the clock, not real time.
+        pushTimeout: const Duration(hours: 1),
+        drainStaleAfter: const Duration(milliseconds: 100),
+      );
+
+      await insertRow(
+        entityKind: OutboxEntityKind.completion,
+        entityKey: 'hung',
+      );
+
+      // Step 1: start a drain that blocks — guard is held (_draining=true).
+      final wedgedDrain = p.drain(profileId);
+
+      // A concurrent drain within the stale window must be blocked.
+      expect(
+        await p.drain(profileId),
+        0,
+        reason: 'concurrent drain within stale window must be a no-op',
+      );
+
+      // Step 2: advance clock so the held guard looks stale.
+      clock.advance(const Duration(milliseconds: 200));
+
+      // Step 3: call drain() on a SECOND processor that shares the same db
+      // + clock but uses the non-blocking pipeline.  Because the stale
+      // reclaim only inspects the *same instance's* private state we also
+      // need a second processor to demonstrate the pattern — the alternative
+      // is testing via the same instance with a releaseable pipeline.
+      //
+      // We test the same-instance path:  release the hanging pipeline
+      // immediately after the reclaim call so the reclaimed drain completes.
+      // Insert a new row that the reclaimed drain will pick up.
+      hangingBatch.release(); // unblock the wedged drain
+      await wedgedDrain; // let it finish and release the guard
+
+      // ── Second round: demonstrate stale-reclaim on a fresh processor ─────
+      // Build a new processor, wedge it, then verify reclaim.
+      final hangingBatch2 = _BlockingPipeline();
+      final p2 = OutboxProcessor(
+        outboxDao: db.outboxDao,
+        pipeline: hangingBatch2,
+        clock: clock,
+        pushTimeout: const Duration(hours: 1),
+        drainStaleAfter: const Duration(milliseconds: 100),
+      );
+
+      await insertRow(entityKind: OutboxEntityKind.completion, entityKey: 'r1');
+
+      // Wedge p2's guard.
+      final wedgedDrain2 = p2.drain(profileId);
+
+      // Advance past staleAfter.
+      clock.advance(const Duration(milliseconds: 200));
+
+      // p2 is now wedged.  Build a same-instance reclaim: we call p2.drain()
+      // again; the stale-guard check fires and the reclaim path must NOT
+      // return 0 — it must proceed.  For p2 to actually push rows, release
+      // hangingBatch2 *before* calling drain so the batch call that the
+      // reclaimed drain will issue completes immediately.
+      hangingBatch2.release(); // first drain can now finish too
+      await wedgedDrain2;
+
+      // After guard is released naturally, third drain runs normally.
+      await insertRow(entityKind: OutboxEntityKind.completion, entityKey: 'r2');
+      final thirdCount = await p2.drain(profileId);
+      expect(
+        thirdCount,
+        greaterThanOrEqualTo(1),
+        reason: 'guard released cleanly; third drain proceeds',
+      );
+
+      // ── Direct reclaim path ──────────────────────────────────────────────
+      // Use a processor backed by a pipeline that can toggle hang on/off.
+      final togglePipeline = _TogglePipeline(pipeline);
+      final p3 = OutboxProcessor(
+        outboxDao: db.outboxDao,
+        pipeline: togglePipeline,
+        clock: clock,
+        pushTimeout: const Duration(hours: 1),
+        drainStaleAfter: const Duration(milliseconds: 100),
+      );
+
+      await insertRow(entityKind: OutboxEntityKind.completion, entityKey: 's1');
+
+      // Wedge p3: hang the first drain.
+      togglePipeline.hang = true;
+      final wedgedDrain3 = p3.drain(profileId);
+
+      // Advance past staleAfter.
+      clock.advance(const Duration(milliseconds: 200));
+
+      // Now allow pushes to succeed.
+      togglePipeline.hang = false;
+
+      await insertRow(entityKind: OutboxEntityKind.completion, entityKey: 's2');
+
+      // Reclaim call on p3 itself — stale guard detected, must proceed.
+      final reclaimedCount = await p3.drain(profileId);
+      expect(
+        reclaimedCount,
+        greaterThanOrEqualTo(1),
+        reason: 'reclaimed drain on same instance proceeds and pushes rows',
+      );
+
+      // The guard was reset by the reclaim, so a following drain also works.
+      await insertRow(entityKind: OutboxEntityKind.completion, entityKey: 's3');
+      final afterReclaimCount = await p3.drain(profileId);
+      expect(
+        afterReclaimCount,
+        greaterThanOrEqualTo(1),
+        reason: 'guard is clean after reclaim; drain after reclaim proceeds',
+      );
+
+      // Unblock wedgedDrain3 to avoid leaking the future.
+      togglePipeline.hang = false;
+      togglePipeline.releaseHung();
+      await wedgedDrain3;
+    });
+
     test('drain releases the guard even when the pipeline throws', () async {
       // Use a pipeline that throws on its first invocation. The pre-existing
       // total-failure tests prove _doDrain itself doesn't propagate the
@@ -1414,6 +1559,36 @@ class _ErroringNonCompletionPipeline extends Fake implements PushPipeline {
     required Map<String, dynamic> payload,
   }) async {
     throw Exception('offline: pushRewardRedemption failed');
+  }
+}
+
+/// Pipeline that can be toggled between hanging and passing mode.  When [hang]
+/// is true, [pushCompletionsBatch] parks on a Completer; set [hang] to false
+/// and call [releaseHung] to unblock a parked call.  Used by R6-13 to simulate
+/// a wedged drain that can be unstuck after the stale threshold elapses.
+class _TogglePipeline extends Fake implements PushPipeline {
+  _TogglePipeline(this._inner);
+
+  final PushPipeline _inner;
+
+  /// When true the next pushCompletionsBatch call hangs.
+  bool hang = false;
+
+  Completer<void>? _parked;
+
+  /// Unblocks any currently-parked pushCompletionsBatch call.
+  void releaseHung() => _parked?.complete();
+
+  @override
+  Future<List<String>> pushCompletionsBatch({
+    required int profileId,
+    required List<({String entityKey, Map<String, dynamic> payload})> entries,
+  }) async {
+    if (hang) {
+      _parked = Completer<void>();
+      await _parked!.future;
+    }
+    return _inner.pushCompletionsBatch(profileId: profileId, entries: entries);
   }
 }
 

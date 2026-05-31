@@ -221,7 +221,8 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 
-      // tutorPinErrorPrefix is: 'Error: $error'
+      // tutorPinErrorPrefix('Failed to save. Please try again.') renders
+      // 'Error: Failed to save. Please try again.' — no raw exception.
       expect(
         find.textContaining('Error:'),
         findsAtLeastNWidgets(1),
@@ -230,6 +231,54 @@ void main() {
       expect(find.byType(TextField), findsNothing);
       await _teardown(tester);
     });
+
+    // R6-7 regression: raw exception must NOT leak to the user-facing text.
+    testWidgets(
+      'R6-7: error state does not expose raw exception string to user',
+      (tester) async {
+        setViewSize(tester);
+        final mockService = _MockTutorPinService();
+
+        await tester.pumpWidget(
+          ProviderScope(
+            retry: (_, __) => null,
+            overrides: [
+              tutorPinServiceProvider.overrideWithValue(mockService),
+              tutorPinIsSetProvider(
+                _kTutorProfileId,
+              ).overrideWith((_) async => throw Exception('SECRET_DB_DETAIL')),
+            ],
+            child: MaterialApp(
+              locale: const Locale('en'),
+              localizationsDelegates: const [
+                AppLocalizations.delegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: TutorPinEntryGate(
+                profileId: _kTutorProfileId,
+                onPinVerified: () {},
+                onCancel: () {},
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        expect(
+          find.textContaining('SECRET_DB_DETAIL'),
+          findsNothing,
+          reason:
+              'Raw exception message must not be visible to the user '
+              '(R6-7 regression guard)',
+        );
+
+        await _teardown(tester);
+      },
+    );
   });
 
   // ── No PIN set → delegates to setup screen ─────────────────────────────────

@@ -40,11 +40,17 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 /// Screen that handles the "accept tutor invite" deep-link.
 ///
 /// [token] is the grant ID / invite token extracted from the deep-link URI.
+/// The deep-link URL shape is `/invite?token=<grantId>` (query parameter, not
+/// a path segment), so the `@QueryParam('token')` annotation is required for
+/// auto_route's code generator to wire the query string into this field.
 @RoutePage()
 class AcceptInviteScreen extends ConsumerStatefulWidget {
-  const AcceptInviteScreen({required this.token, super.key});
+  const AcceptInviteScreen({@QueryParam('token') this.token, super.key});
 
-  final String token;
+  /// Invite token (grant id) from the `?token=` query param. Nullable because
+  /// auto_route requires @QueryParam fields to be nullable or defaulted; a
+  /// null/empty token means a malformed link and is handled as an error.
+  final String? token;
 
   @override
   ConsumerState<AcceptInviteScreen> createState() => _AcceptInviteScreenState();
@@ -86,6 +92,14 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
   }
 
   Future<void> _initialize() async {
+    // A null/empty token means the deep-link was malformed (no ?token=…).
+    final token = widget.token;
+    if (token == null || token.isEmpty) {
+      if (!mounted) return;
+      setState(() => _step = _AcceptStep.error);
+      return;
+    }
+
     // Auth check: if not signed in, redirect to sign-in and persist token.
     final authState = ref.read(authStateProvider);
     if (!authState.isSignedIn) {
@@ -112,7 +126,7 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
     try {
       final grants = await ref.read(incomingTutorGrantsProvider.future);
       _loadedGrant = grants
-          .where((g) => g.grantId == widget.token)
+          .where((g) => g.grantId == token)
           .cast<TutorGrant?>()
           .firstOrNull;
     } catch (_) {
@@ -132,7 +146,13 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
       // WS3.3b: use the real grant loaded from the provider if available;
       // fall back to a minimal stub that satisfies the canAccept precondition.
       // The Cloud Function validates ownership and state server-side.
-      final grant = _loadedGrant ?? _buildStubGrant(widget.token);
+      final token = widget.token;
+      if (token == null || token.isEmpty) {
+        if (!mounted) return;
+        setState(() => _step = _AcceptStep.error);
+        return;
+      }
+      final grant = _loadedGrant ?? _buildStubGrant(token);
 
       final result = await useCase(grant: grant);
       if (!mounted) return;

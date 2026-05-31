@@ -223,6 +223,31 @@ void main() {
       await _tearDown(tester);
     });
 
+    // R6-6 regression: raw exception must NOT leak to the user-facing text.
+    testWidgets(
+      'R6-6: error state does not expose raw exception string to user',
+      (tester) async {
+        await tester.pumpWidget(
+          _buildScreen(
+            tasksFactory: () =>
+                Future.error(Exception('SECRET_DB_DETAIL'), StackTrace.empty),
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        expect(
+          find.textContaining('SECRET_DB_DETAIL'),
+          findsNothing,
+          reason:
+              'Raw exception message must not be visible to the user '
+              '(R6-6 regression guard)',
+        );
+
+        await _tearDown(tester);
+      },
+    );
+
     testWidgets('no task cards shown in error state', (tester) async {
       await tester.pumpWidget(
         _buildScreen(

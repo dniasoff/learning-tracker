@@ -77,7 +77,9 @@ class _ActiveTracksCarouselSectionState
             ),
             const SizedBox(width: 8),
             ArrowButton(
-              icon: Icons.chevron_left_rounded,
+              icon: Directionality.of(context) == TextDirection.rtl
+                  ? Icons.chevron_right_rounded
+                  : Icons.chevron_left_rounded,
               isEnabled: _activeIndex > 0,
               onTap: _activeIndex > 0
                   ? () {
@@ -90,7 +92,9 @@ class _ActiveTracksCarouselSectionState
             ),
             const SizedBox(width: 6),
             ArrowButton(
-              icon: Icons.chevron_right_rounded,
+              icon: Directionality.of(context) == TextDirection.rtl
+                  ? Icons.chevron_left_rounded
+                  : Icons.chevron_right_rounded,
               isEnabled: _activeIndex < widget.activeTracks.length - 1,
               onTap: _activeIndex < widget.activeTracks.length - 1
                   ? () {

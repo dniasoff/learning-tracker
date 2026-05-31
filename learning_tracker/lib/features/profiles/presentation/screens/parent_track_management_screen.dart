@@ -48,6 +48,10 @@ class _ParentTrackManagementScreenState
 
     final activeAsync = ref.watch(tm.activeTracksProvider);
 
+    // asData?.value.isNotEmpty: the `?.` on asData short-circuits the entire
+    // value.isNotEmpty chain when asData is null (loading/error), so `?? false`
+    // correctly falls back.  No NPE is possible here (AsyncData.value is T,
+    // non-nullable).
     final showAddTrackFab = activeAsync.asData?.value.isNotEmpty ?? false;
 
     return Scaffold(

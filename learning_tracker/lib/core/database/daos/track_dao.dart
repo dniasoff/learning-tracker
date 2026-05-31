@@ -404,7 +404,8 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
                   t.profileId.equals(c.profileId) &
                   t.sefariaRef.equals(c.sefariaRef) &
                   t.stageId.equals(c.stageId) &
-                  t.trackType.equals(c.trackType),
+                  t.trackType.equals(c.trackType) &
+                  t.curriculumId.equals(c.curriculumId),
             ))
             .write(CompletionEventsCompanion(purgedAt: Value(purgedAt)));
       }

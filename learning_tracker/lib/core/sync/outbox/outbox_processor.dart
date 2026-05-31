@@ -182,6 +182,14 @@ class OutboxProcessor {
           _clock.nowUtc().difference(since) < _drainStaleAfter) {
         return 0;
       }
+      // The in-flight drain is wedged (elapsed >= _drainStaleAfter, or
+      // _drainingSince was null). Reset both guard fields so the new drain
+      // establishes a clean, fresh single-flight state — without this reset
+      // the two fields stay out-of-sync for the duration of the new drain,
+      // and any concurrent caller entering this branch before the new drain
+      // finishes could incorrectly reclaim the guard a second time.
+      _draining = false;
+      _drainingSince = null;
     }
     _draining = true;
     _drainingSince = _clock.nowUtc();

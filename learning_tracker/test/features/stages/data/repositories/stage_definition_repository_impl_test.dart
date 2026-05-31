@@ -238,12 +238,13 @@ void main() {
       expect(captured.schedule.value, contains('"delay_days":3'));
     });
 
-    // Scenario 6: resetToDefaults deletes all and inserts 3 defaults
+    // Scenario 6: resetToDefaults deletes only the track's stages and inserts 3 defaults
+    // R6-12: must call deleteStagesForTrack (track-scoped), NOT deleteAllForCurriculum.
     test(
-      'resetToDefaults deletes all and inserts exactly 3 defaults',
+      'resetToDefaults deletes track stages only and inserts exactly 3 defaults',
       () async {
         when(
-          () => mockStageDao.deleteAllForCurriculum(curriculumKey),
+          () => mockStageDao.deleteStagesForTrack(1),
         ).thenAnswer((_) async => 3);
         when(
           () => mockStageDao.insertStageDefinition(any()),
@@ -260,9 +261,9 @@ void main() {
 
         await repository.resetToDefaults(curriculum, profileId: 1, trackId: 1);
 
-        verify(
-          () => mockStageDao.deleteAllForCurriculum(curriculumKey),
-        ).called(1);
+        // R6-12: track-scoped delete must be called; curriculum-wide must NOT be.
+        verify(() => mockStageDao.deleteStagesForTrack(1)).called(1);
+        verifyNever(() => mockStageDao.deleteAllForCurriculum(any()));
         verify(() => mockStageDao.insertStageDefinition(any())).called(3);
       },
     );
@@ -397,7 +398,7 @@ void main() {
 
     test('resetToDefaults calls pushSettings', () async {
       when(
-        () => mockStageDao.deleteAllForCurriculum(curriculumKey),
+        () => mockStageDao.deleteStagesForTrack(1),
       ).thenAnswer((_) async => 3);
       when(
         () => mockStageDao.insertStageDefinition(any()),

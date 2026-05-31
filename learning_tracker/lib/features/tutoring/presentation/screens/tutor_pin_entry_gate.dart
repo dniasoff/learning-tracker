@@ -13,6 +13,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/pin_entry_widget.dart';
 import 'package:learning_tracker/features/tutoring/domain/services/tutor_pin_service.dart';
@@ -86,11 +87,19 @@ class _TutorPinEntryGateState extends ConsumerState<TutorPinEntryGate> {
     return pinIsSetAsync.when(
       loading: () =>
           const Scaffold(body: Center(child: CircularProgressIndicator())),
-      error: (e, _) => Scaffold(
-        body: Center(
-          child: Text(AppLocalizations.of(context)!.tutorPinErrorPrefix('$e')),
-        ),
-      ),
+      error: (e, st) {
+        AppLogger.instance.error(
+          event: 'tutor_pin_is_set_check_failed',
+          exception: e,
+          stackTrace: st,
+        );
+        final l10n = AppLocalizations.of(context)!;
+        return Scaffold(
+          body: Center(
+            child: Text(l10n.tutorPinErrorPrefix(l10n.errorSaveFailed)),
+          ),
+        );
+      },
       data: (pinIsSet) {
         if (!pinIsSet || _showSetupScreen) {
           return TutorPinSetupScreen(

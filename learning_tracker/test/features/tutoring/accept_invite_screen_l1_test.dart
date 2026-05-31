@@ -988,6 +988,107 @@ void main() {
     });
   });
 
+  // ── @QueryParam token regression ─────────────────────────────────────────────
+  //
+  // Verifies that the `token` constructor parameter is wired correctly and that
+  // the screen actually uses the supplied token value (widget.token) rather than
+  // ignoring it.  This is the regression guard for R6-8: without
+  // @QueryParam('token') on the constructor param, auto_route's builder never
+  // passes the deep-link query value, leaving token unpopulated.
+  //
+  // A full router/deep-link integration test would require build_runner to
+  // regenerate the router with the new annotation; these widget-level tests
+  // confirm the screen's internal logic uses widget.token correctly, so that
+  // once the router is regenerated the end-to-end path is complete.
+
+  group('@QueryParam token — screen uses widget.token correctly', () {
+    testWidgets('token value is used to match against incoming grant list', (
+      tester,
+    ) async {
+      // We supply two grants; only the one whose grantId matches the token
+      // should be picked up as _loadedGrant, and only that grant's id is
+      // forwarded to the use case.
+      const targetToken = 'deep-link-token-xyz';
+      final matchingGrant = _makePendingGrant(grantId: targetToken);
+      final otherGrant = _makePendingGrant(grantId: 'unrelated-grant');
+
+      when(
+        () => mockUseCase(grant: any(named: 'grant')),
+      ).thenAnswer((_) async => const TutorGrantSuccess());
+
+      final pinService = _StubTutorPinService(hasPinResult: true);
+      await tester.pumpWidget(
+        _buildHarness(
+          token: targetToken,
+          useCase: mockUseCase,
+          pinService: pinService,
+          router: mockRouter,
+          incomingGrants: [otherGrant, matchingGrant],
+        ),
+      );
+      await _pump(tester);
+
+      // Accept the invite to trigger use-case call.
+      await tester.tap(find.text('Accept invite'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      // The use case must be called with the grant whose grantId equals the
+      // token, proving widget.token was read and used for the look-up.
+      final captured = verify(
+        () => mockUseCase(grant: captureAny(named: 'grant')),
+      ).captured;
+      final passedGrant = captured.first as TutorGrant;
+      expect(
+        passedGrant.grantId,
+        targetToken,
+        reason:
+            'widget.token must be used to look up the correct grant; '
+            'if @QueryParam annotation is missing, the router will not '
+            'populate token from the deep-link query string',
+      );
+
+      await _tearDown(tester);
+    });
+
+    testWidgets('distinct token values produce distinct grant look-ups', (
+      tester,
+    ) async {
+      // Re-run the same scenario with a *different* token to confirm there is
+      // no hard-coded id: the screen must read widget.token dynamically.
+      const distinctToken = 'another-distinct-token-456';
+      final grant = _makePendingGrant(grantId: distinctToken);
+
+      when(
+        () => mockUseCase(grant: any(named: 'grant')),
+      ).thenAnswer((_) async => const TutorGrantSuccess());
+
+      final pinService = _StubTutorPinService(hasPinResult: true);
+      await tester.pumpWidget(
+        _buildHarness(
+          token: distinctToken,
+          useCase: mockUseCase,
+          pinService: pinService,
+          router: mockRouter,
+          incomingGrants: [grant],
+        ),
+      );
+      await _pump(tester);
+
+      await tester.tap(find.text('Accept invite'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      final captured = verify(
+        () => mockUseCase(grant: captureAny(named: 'grant')),
+      ).captured;
+      final passedGrant = captured.first as TutorGrant;
+      expect(passedGrant.grantId, distinctToken);
+
+      await _tearDown(tester);
+    });
+  });
+
   // ── Hardcoded string audit ───────────────────────────────────────────────────
 
   group('Hardcoded string audit', () {

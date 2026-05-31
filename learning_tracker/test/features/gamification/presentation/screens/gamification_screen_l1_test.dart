@@ -31,6 +31,7 @@ import 'package:learning_tracker/features/gamification/domain/models/reward_mile
 import 'package:learning_tracker/features/gamification/presentation/providers/achievements_overview_provider.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/points_providers.dart';
 import 'package:learning_tracker/features/gamification/presentation/screens/gamification_screen.dart';
+import 'package:learning_tracker/features/gamification/presentation/widgets/achievement_tier_card.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/points_display_widget.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/progress_summary_card.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/streak_widget.dart';
@@ -592,6 +593,80 @@ void main() {
       expect(find.byType(ProgressSummaryCard), findsOneWidget);
 
       await _teardown(tester);
+    },
+  );
+
+  // ── R6-15 regression: ProgressSummaryCard Row not forced LTR ────────────────
+
+  testWidgets(
+    'R6-15: ProgressSummaryCard under RTL has no Directionality(ltr) wrapper',
+    (tester) async {
+      final l10n = await AppLocalizations.delegate.load(const Locale('he'));
+      await tester.pumpWidget(
+        Directionality(
+          textDirection: TextDirection.rtl,
+          child: ProgressSummaryCard(l10n: l10n, unlocked: 3, total: 10),
+        ),
+      );
+
+      // No descendant Directionality should force TextDirection.ltr inside
+      // the card — numbers render LTR within Text regardless.
+      final ltrDirectionalities = tester
+          .widgetList<Directionality>(find.byType(Directionality))
+          .where((d) => d.textDirection == TextDirection.ltr)
+          .toList();
+      expect(
+        ltrDirectionalities,
+        isEmpty,
+        reason:
+            'ProgressSummaryCard must not contain any Directionality(ltr) '
+            'that would break RTL row alignment (R6-16 fix)',
+      );
+    },
+  );
+
+  // ── R6-16 regression: AchievementTierCard Row not forced LTR ────────────────
+
+  testWidgets(
+    'R6-16: AchievementTierCard under RTL has no Directionality(ltr) wrapper',
+    (tester) async {
+      final l10n = await AppLocalizations.delegate.load(const Locale('he'));
+      final rowVm = _row(trackPoints: 50, isUnlocked: false, isNextUp: true);
+
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('he'),
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: AchievementTierCard(
+              l10n: l10n,
+              row: rowVm,
+              trackTag: 'Mishnayos',
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+
+      // No descendant Directionality should force TextDirection.ltr inside
+      // the card — the metrics Row must honour the ambient RTL direction.
+      final ltrDirectionalities = tester
+          .widgetList<Directionality>(find.byType(Directionality))
+          .where((d) => d.textDirection == TextDirection.ltr)
+          .toList();
+      expect(
+        ltrDirectionalities,
+        isEmpty,
+        reason:
+            'AchievementTierCard must not contain any Directionality(ltr) '
+            'that would break RTL row alignment (R6-15 fix)',
+      );
     },
   );
 }

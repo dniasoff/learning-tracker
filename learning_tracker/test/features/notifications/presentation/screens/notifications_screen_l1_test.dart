@@ -936,5 +936,42 @@ void main() {
 
       await _tearDown(tester);
     });
+
+    // ── R6-14 regression: chevron mirrors in RTL ──────────────────────────────
+
+    testWidgets(
+      'RTL: time-row trailing chevron is chevron_left (forward = left in RTL)',
+      (tester) async {
+        await _pump(
+          tester,
+          _buildApp(
+            gateway: _gateway,
+            locale: const Locale('he'),
+            reminderEnabled: true,
+          ),
+        );
+
+        // In RTL the _SettingsTimeRow trailing icon must be chevron_left_rounded.
+        expect(find.byIcon(Icons.chevron_left_rounded), findsWidgets);
+        expect(find.byIcon(Icons.chevron_right_rounded), findsNothing);
+
+        await _tearDown(tester);
+      },
+    );
+
+    testWidgets(
+      'LTR: time-row trailing chevron is chevron_right (forward = right in LTR)',
+      (tester) async {
+        await _pump(
+          tester,
+          _buildApp(gateway: _gateway, reminderEnabled: true),
+        );
+
+        expect(find.byIcon(Icons.chevron_right_rounded), findsWidgets);
+        expect(find.byIcon(Icons.chevron_left_rounded), findsNothing);
+
+        await _tearDown(tester);
+      },
+    );
   });
 }

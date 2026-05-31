@@ -64,33 +64,29 @@ class ProgressSummaryCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 6),
-              Directionality(
-                textDirection: TextDirection.ltr,
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.baseline,
-                  textBaseline: TextBaseline.alphabetic,
-                  children: [
-                    Text(
-                      l10n.achievementsRewardsFraction(unlocked, total),
-                      style: Theme.of(context).textTheme.headlineMedium
-                          ?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w800,
-                            height: 1.1,
-                          ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
+                    l10n.achievementsRewardsFraction(unlocked, total),
+                    style: Theme.of(context).textTheme.headlineMedium?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w800,
+                      height: 1.1,
                     ),
-                    Text(
-                      ' ${l10n.achievementsRewardsLabelWord}',
-                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                        fontStyle: FontStyle.italic,
-                        height: 1.1,
-                      ),
+                  ),
+                  Text(
+                    ' ${l10n.achievementsRewardsLabelWord}',
+                    style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                      fontStyle: FontStyle.italic,
+                      height: 1.1,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
               const SizedBox(height: 6),
               Text(

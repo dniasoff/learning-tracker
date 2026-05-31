@@ -283,4 +283,130 @@ void main() {
       },
     );
   });
+
+  // ── R6-11: purgeHistory WHERE must include curriculumId ──────────────────
+
+  group('R6-11: purgeHistory curriculumId isolation', () {
+    /// Inserts a bare track row for the given profile + curriculum and returns
+    /// its auto-generated id.
+    Future<int> insertTrackFor(
+      UserDatabase db, {
+      required int profileId,
+      required String curriculumId,
+    }) async {
+      final now = DateTime.now().toUtc();
+      return db
+          .into(db.curriculumTracks)
+          .insert(
+            CurriculumTracksCompanion.insert(
+              profileId: profileId,
+              curriculumId: curriculumId,
+              stateChangedAt: now,
+              activatedAt: now,
+            ),
+          );
+    }
+
+    /// Inserts a completion_event row that belongs to [trackId], [profileId],
+    /// and [curriculumId], keyed on the given [sefariaRef]+[stageId]+[trackType].
+    Future<void> insertCompletion(
+      UserDatabase db, {
+      required int trackId,
+      required int profileId,
+      required String curriculumId,
+      required String sefariaRef,
+      required int stageId,
+      required String trackType,
+    }) async {
+      await seedCompletion(
+        db,
+        CompletionEventsCompanion.insert(
+          profileId: profileId,
+          curriculumId: curriculumId,
+          sefariaRef: sefariaRef,
+          stageId: stageId,
+          trackType: trackType,
+          trackId: Value(trackId),
+          eventTimestamp: DateTime.now().toUtc(),
+        ),
+      );
+    }
+
+    test(
+      'purgeHistory for one curriculum does not stamp purgedAt on the same '
+      '(profile, sefariaRef, stageId, trackType) under a different curriculum',
+      () async {
+        // Seed two tracks for the same profile, different curricula.
+        final bavliTrackId = await insertTrackFor(
+          database,
+          profileId: 1,
+          curriculumId: 'bavli',
+        );
+        final mishnayosTrackId = await insertTrackFor(
+          database,
+          profileId: 1,
+          curriculumId: 'mishnayos',
+        );
+
+        // Insert a completion for EACH curriculum using an identical
+        // (sefariaRef, stageId, trackType) tuple — the collision case.
+        await insertCompletion(
+          database,
+          trackId: bavliTrackId,
+          profileId: 1,
+          curriculumId: 'bavli',
+          sefariaRef: 'Berakhot.2a',
+          stageId: 1,
+          trackType: 'personal',
+        );
+        await insertCompletion(
+          database,
+          trackId: mishnayosTrackId,
+          profileId: 1,
+          curriculumId: 'mishnayos',
+          sefariaRef: 'Berakhot.2a',
+          stageId: 1,
+          trackType: 'personal',
+        );
+
+        // Purge only the bavli track.
+        await database.trackDao.purgeHistory(bavliTrackId);
+
+        // The bavli completion should be tombstoned (purgedAt IS NOT NULL).
+        final bavliEvents =
+            await (database.select(database.completionEvents)..where(
+                  (t) =>
+                      t.profileId.equals(1) &
+                      t.curriculumId.equals('bavli') &
+                      t.sefariaRef.equals('Berakhot.2a'),
+                ))
+                .get();
+        expect(bavliEvents, hasLength(1));
+        expect(
+          bavliEvents.first.purgedAt,
+          isNotNull,
+          reason:
+              'bavli completion must be tombstoned after purging bavli track',
+        );
+
+        // The mishnayos completion MUST remain untouched (purgedAt IS NULL).
+        final mishnayosEvents =
+            await (database.select(database.completionEvents)..where(
+                  (t) =>
+                      t.profileId.equals(1) &
+                      t.curriculumId.equals('mishnayos') &
+                      t.sefariaRef.equals('Berakhot.2a'),
+                ))
+                .get();
+        expect(mishnayosEvents, hasLength(1));
+        expect(
+          mishnayosEvents.first.purgedAt,
+          isNull,
+          reason:
+              'mishnayos completion must NOT be tombstoned when only bavli '
+              'track is purged — curriculumId must be in the WHERE clause',
+        );
+      },
+    );
+  });
 }

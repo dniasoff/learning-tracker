@@ -125,6 +125,80 @@ Widget _buildApp({
   );
 }
 
+/// Builds the app with the [activeTracksProvider] overridden to stay in the
+/// loading state (stream never emits).
+Widget _buildAppLoading({
+  required _MockStackRouter router,
+  Locale locale = const Locale('en'),
+}) {
+  final database = inMemoryDb();
+
+  return ProviderScope(
+    overrides: [
+      activeProfileIdProvider.overrideWithValue(_kProfileId),
+      userDatabaseProvider.overrideWith((ref) => database),
+      activeTracksProvider.overrideWith(
+        // A stream that never emits keeps the provider in the loading state.
+        (ref) => const Stream<List<CurriculumTrack>>.empty(),
+      ),
+      useHebrewTermsProvider.overrideWith(() => _HebrewTermsOff()),
+    ],
+    child: MaterialApp(
+      locale: locale,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: StackRouterScope(
+        controller: router,
+        stateHash: 0,
+        child: const ParentTrackManagementScreen(),
+      ),
+    ),
+  );
+}
+
+/// Builds the app with the [activeTracksProvider] overridden to immediately
+/// emit an error.
+Widget _buildAppError({
+  required _MockStackRouter router,
+  Locale locale = const Locale('en'),
+}) {
+  final database = inMemoryDb();
+
+  return ProviderScope(
+    overrides: [
+      activeProfileIdProvider.overrideWithValue(_kProfileId),
+      userDatabaseProvider.overrideWith((ref) => database),
+      activeTracksProvider.overrideWith(
+        (ref) => Stream<List<CurriculumTrack>>.error(
+          Exception('db error'),
+          StackTrace.empty,
+        ),
+      ),
+      useHebrewTermsProvider.overrideWith(() => _HebrewTermsOff()),
+    ],
+    child: MaterialApp(
+      locale: locale,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: StackRouterScope(
+        controller: router,
+        stateHash: 0,
+        child: const ParentTrackManagementScreen(),
+      ),
+    ),
+  );
+}
+
 // ─── Pump helpers ────────────────────────────────────────────────────────────
 
 /// Pump until async stream providers resolve without pumpAndSettle on open
@@ -465,6 +539,46 @@ void main() {
         await _settle(tester);
 
         expect(find.text('Active Tracks'), findsOneWidget);
+        await _teardown(tester);
+      },
+    );
+  });
+
+  // ── R6-5 regression: loading + error states must not throw ───────────────
+  //
+  // Before the fix, `activeAsync.asData?.value.isNotEmpty` would evaluate
+  // `.value` as null when asData was null (loading/error), causing a
+  // NullPointerException on line 51.  The fix adds `?.` before `.isNotEmpty`.
+
+  group('R6-5 — activeTracksProvider in loading/error state', () {
+    testWidgets(
+      'loading state: screen renders without throwing (shows spinner, no FAB)',
+      (tester) async {
+        await tester.pumpWidget(_buildAppLoading(router: router));
+        // One pump materialises the ProviderScope; the loading indicator
+        // should appear and the FAB must be absent (showAddTrackFab = false).
+        await tester.pump();
+
+        expect(tester.takeException(), isNull);
+        expect(find.byType(CircularProgressIndicator), findsOneWidget);
+        // FAB must not be present while loading
+        expect(find.text('ADD TRACK'), findsNothing);
+        await _teardown(tester);
+      },
+    );
+
+    testWidgets(
+      'error state: screen renders without throwing (shows error view, no FAB)',
+      (tester) async {
+        await tester.pumpWidget(_buildAppError(router: router));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        expect(tester.takeException(), isNull);
+        // FAB must not be present on error
+        expect(find.text('ADD TRACK'), findsNothing);
+        // Scaffold must still be present (screen didn't crash)
+        expect(find.byType(Scaffold), findsOneWidget);
         await _teardown(tester);
       },
     );

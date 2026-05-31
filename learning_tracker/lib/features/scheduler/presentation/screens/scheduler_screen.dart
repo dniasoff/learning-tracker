@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/empty_state.dart';
@@ -112,23 +113,27 @@ class SchedulerScreen extends ConsumerWidget {
             );
           },
           loading: () => const Center(child: CircularProgressIndicator()),
-          error: (error, stack) => Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  AppLocalizations.of(
-                    context,
-                  )!.errorLoadingTasks(error.toString()),
-                ),
-                const SizedBox(height: 16),
-                ElevatedButton(
-                  onPressed: () => ref.invalidate(allDailyTasksProvider),
-                  child: Text(AppLocalizations.of(context)!.actionRetry),
-                ),
-              ],
-            ),
-          ),
+          error: (error, stack) {
+            AppLogger.instance.error(
+              event: 'scheduler_tasks_load_failed',
+              exception: error,
+              stackTrace: stack,
+            );
+            final l10n = AppLocalizations.of(context)!;
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(l10n.errorLoadingTasks(l10n.errorSaveFailed)),
+                  const SizedBox(height: 16),
+                  ElevatedButton(
+                    onPressed: () => ref.invalidate(allDailyTasksProvider),
+                    child: Text(l10n.actionRetry),
+                  ),
+                ],
+              ),
+            );
+          },
         ),
       ),
     );

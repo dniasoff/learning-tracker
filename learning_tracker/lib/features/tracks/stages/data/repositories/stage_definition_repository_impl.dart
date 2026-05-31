@@ -288,7 +288,9 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
     required int profileId,
     required int trackId,
   }) async {
-    await _stageDao.deleteAllForCurriculum(curriculumId.storageKey);
+    // R6-12: use track-scoped delete so other profiles' stage definitions for
+    // the same curriculum are not affected.
+    await _stageDao.deleteStagesForTrack(trackId);
     for (final d in _defaults) {
       await _stageDao.insertStageDefinition(
         db.StageDefinitionsCompanion.insert(

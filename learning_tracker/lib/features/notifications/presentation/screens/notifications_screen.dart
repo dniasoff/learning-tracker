@@ -316,7 +316,12 @@ class _SettingsTimeRow extends StatelessWidget {
             ),
           ),
           const SizedBox(width: 4),
-          Icon(Icons.chevron_right_rounded, color: textColor),
+          Icon(
+            Directionality.of(context) == TextDirection.rtl
+                ? Icons.chevron_left_rounded
+                : Icons.chevron_right_rounded,
+            color: textColor,
+          ),
         ],
       ),
       onTap: onTap,

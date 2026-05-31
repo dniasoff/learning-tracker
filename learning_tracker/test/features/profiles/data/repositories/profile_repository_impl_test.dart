@@ -1,10 +1,61 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/sync/codec/learner_profile_codec.dart';
+import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/profiles/data/repositories/profile_repository_impl.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 
 import '../../../../helpers/test_database.dart';
+
+/// [SyncWriteFacade] that captures the payload passed to [pushLearnerProfile].
+///
+/// All other operations are no-ops so the test only exercises the profile push.
+class _CapturingProfileFacade implements SyncWriteFacade {
+  final List<Map<String, dynamic>> capturedPayloads = [];
+
+  @override
+  Future<void> pushLearnerProfile(Map<String, dynamic> profile) async {
+    capturedPayloads.add(Map<String, dynamic>.from(profile));
+  }
+
+  @override
+  Future<void> deleteLearnerProfile(int profileId) async {}
+  @override
+  Future<void> pushGamificationSettingsSnapshot() async {}
+  @override
+  Future<void> pushUiPreferencesSnapshot() async {}
+  @override
+  Future<void> pushBookmark(Map<String, dynamic> bookmark) async {}
+  @override
+  Future<void> pushSettings(Map<String, dynamic> settings) async {}
+  @override
+  Future<void> pushGoal(Map<String, dynamic> goal) async {}
+  @override
+  Future<void> deleteGoal(Map<String, dynamic> payload) async {}
+  @override
+  Future<void> pushCurriculumTrack(Map<String, dynamic> trackData) async {}
+  @override
+  Future<void> pushLearningOrder({
+    required int profileId,
+    required String curriculumId,
+    required List<Map<String, dynamic>> items,
+    required DateTime updatedAt,
+  }) async {}
+  @override
+  Future<void> pushStageDefinitions({
+    required int trackId,
+    required String curriculumId,
+    required List<Map<String, dynamic>> stages,
+    required DateTime updatedAt,
+  }) async {}
+  @override
+  Future<void> pushStudyDayConfig(Map<String, dynamic> payload) async {}
+  @override
+  Future<void> deleteCompletion(String completionId) async {}
+  @override
+  Future<void> pushProfileProgram(Map<String, dynamic> payload) async {}
+}
 
 void main() {
   late UserDatabase db;
@@ -300,4 +351,115 @@ void main() {
       expect(profile.displayName, 'Trimmed');
     });
   });
+
+  // ── R6-18 regression: _toFirestorePayload key alignment ──────────────────
+  //
+  // ProfileRepositoryImpl._toFirestorePayload previously wrote the profile id
+  // under the key `'id'`, but LearnerProfileCodec.decode() reads `'profile_id'`.
+  // The mismatch caused decode() to return null, silently dropping the profile
+  // from every pull-merge.  This test verifies the full write→decode round-trip.
+
+  group(
+    'R6-18 regression: _toFirestorePayload round-trips through LearnerProfileCodec',
+    () {
+      late UserDatabase db;
+      late _CapturingProfileFacade facade;
+      late ProfileRepositoryImpl repoWithSync;
+
+      setUp(() async {
+        db = createTestDatabase();
+        facade = _CapturingProfileFacade();
+        repoWithSync = ProfileRepositoryImpl(db, syncEngine: facade);
+        await db
+            .into(db.accounts)
+            .insert(
+              AccountsCompanion.insert(
+                email: 'sync@test.com',
+                tier: 'cloudBorn',
+                displayName: 'Sync Account',
+                createdAt: DateTimeFactory.nowUtc(),
+                updatedAt: DateTimeFactory.nowUtc(),
+              ),
+            );
+      });
+
+      tearDown(() => db.close());
+
+      test(
+        'createProfile payload decodes back to the same profile id',
+        () async {
+          const codec = LearnerProfileCodec();
+
+          final created = await repoWithSync.createProfile(
+            accountId: 1,
+            displayName: 'Alice',
+            mode: 'child',
+            avatarIndex: 2,
+          );
+
+          expect(
+            facade.capturedPayloads,
+            hasLength(1),
+            reason: 'pushLearnerProfile should have been called once',
+          );
+
+          final payload = facade.capturedPayloads.first;
+          final decoded = codec.decode(payload);
+
+          expect(
+            decoded,
+            isNotNull,
+            reason:
+                'LearnerProfileCodec.decode() must not return null — '
+                'if it does the payload key for the profile id is wrong',
+          );
+          expect(
+            decoded!.profileId,
+            equals(created.id),
+            reason: 'decoded profileId must match the created profile id',
+          );
+          expect(decoded.accountId, equals(created.accountId));
+          expect(decoded.displayName, equals(created.displayName));
+          expect(decoded.mode, equals(created.mode));
+          expect(decoded.avatarIndex, equals(created.avatarIndex));
+        },
+      );
+
+      test('updateProfile payload decodes back to the same profile id', () async {
+        const codec = LearnerProfileCodec();
+
+        final created = await repoWithSync.createProfile(
+          accountId: 1,
+          displayName: 'Bob',
+          mode: 'adult',
+        );
+        facade.capturedPayloads.clear(); // ignore the create push
+
+        await repoWithSync.updateProfile(
+          id: created.id,
+          displayName: 'Bobby',
+          avatarIndex: 5,
+        );
+
+        expect(
+          facade.capturedPayloads,
+          hasLength(1),
+          reason: 'pushLearnerProfile should have been called once on update',
+        );
+
+        final payload = facade.capturedPayloads.first;
+        final decoded = codec.decode(payload);
+
+        expect(
+          decoded,
+          isNotNull,
+          reason:
+              'LearnerProfileCodec.decode() must not return null on update payload',
+        );
+        expect(decoded!.profileId, equals(created.id));
+        expect(decoded.displayName, equals('Bobby'));
+        expect(decoded.avatarIndex, equals(5));
+      });
+    },
+  );
 }

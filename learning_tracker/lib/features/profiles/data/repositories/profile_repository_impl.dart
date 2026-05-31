@@ -24,7 +24,7 @@ class ProfileRepositoryImpl implements ProfileRepository {
   static const int maxProfilesPerAccount = 10;
 
   Map<String, dynamic> _toFirestorePayload(ProfileModel profile) => {
-    'id': profile.id,
+    'profile_id': profile.id,
     'account_id': profile.accountId,
     'display_name': profile.displayName,
     'mode': profile.mode,
