@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
@@ -243,4 +244,85 @@ class ProfileRepositoryImpl implements ProfileRepository {
   @override
   Future<int> countProfilesForAccount(int accountId) =>
       _db.profileDao.countProfilesForAccount(accountId);
+
+  @override
+  Future<int> ensureDefaultProfile({
+    required int accountId,
+    required String defaultDisplayName,
+  }) async {
+    // Fast path: account already owns a profile — nothing to heal.
+    final existing = await _db.profileDao.getProfilesByAccount(accountId);
+    if (existing.isNotEmpty) return existing.first.id;
+
+    _log.warning(
+      event: 'profile_self_heal_start',
+      fields: {'accountId': accountId},
+    );
+
+    final now = DateTimeFactory.nowUtc();
+    final trimmedName = defaultDisplayName.trim();
+    final displayName = trimmedName.isEmpty ? 'Me' : trimmedName;
+
+    // Single transaction: create the profile, then re-parent any orphaned
+    // `profile_id = 0` rows that were written before a profile existed (e.g. a
+    // track created on a profile-less account). These tables have no FK on
+    // `learner_profiles`, so `profile_id = 0` rows are physically present and
+    // must be adopted by the new profile rather than left stranded. The
+    // FK-enforced tables (stage_definitions, goals, completion_events, …) can
+    // never hold a `profile_id = 0` row, so they need no re-parenting.
+    final newProfileId = await _db.transaction<int>(() async {
+      final id = await _db.profileDao.insertProfile(
+        LearnerProfilesCompanion.insert(
+          accountId: accountId,
+          displayName: displayName,
+          mode: ProfileMode.adult.storageKey,
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+
+      await (_db.update(_db.curriculumTracks)
+            ..where((t) => t.profileId.equals(0)))
+          .write(CurriculumTracksCompanion(profileId: Value(id)));
+      await (_db.update(_db.pointConfigs)..where((t) => t.profileId.equals(0)))
+          .write(PointConfigsCompanion(profileId: Value(id)));
+      await (_db.update(_db.studyDayConfigs)
+            ..where((t) => t.profileId.equals(0)))
+          .write(StudyDayConfigsCompanion(profileId: Value(id)));
+      await (_db.update(_db.profilePrograms)
+            ..where((t) => t.profileId.equals(0)))
+          .write(ProfileProgramsCompanion(profileId: Value(id)));
+      await (_db.update(_db.dailyPlans)..where((t) => t.profileId.equals(0)))
+          .write(DailyPlansCompanion(profileId: Value(id)));
+
+      return id;
+    });
+
+    _log.info(
+      event: 'profile_self_heal_done',
+      fields: {'accountId': accountId, 'profileId': newProfileId},
+    );
+
+    // Mirror to the cloud so the healed profile survives re-install / sync.
+    // Offline-first: a push failure is non-fatal — the local write stands.
+    try {
+      await _syncEngine?.pushLearnerProfile(
+        _toFirestorePayload(
+          ProfileModel(
+            id: newProfileId,
+            accountId: accountId,
+            displayName: displayName,
+            mode: ProfileMode.adult.storageKey,
+            avatarIndex: 0,
+            createdAt: now,
+            updatedAt: now,
+          ),
+        ),
+      );
+    } catch (_) {
+      // no-op: cloud push failure is non-fatal; local write already succeeded.
+    }
+
+    return newProfileId;
+  }
 }

@@ -96,20 +96,22 @@ Widget _buildHarness({
   );
 }
 
-/// Types one digit into the PIN field at [index] (0-based).
-Future<void> _enterDigit(WidgetTester tester, int index, String digit) async {
-  final field = find.byType(TextField).at(index);
-  await tester.tap(field);
-  await tester.pump();
-  await tester.enterText(field, digit);
+/// Taps a single digit key on the on-screen numpad.
+///
+/// The gate uses a custom numpad (NOT TextFields / the device soft-keyboard),
+/// so digits are entered by tapping the rendered digit keys.
+Future<void> _tapDigit(WidgetTester tester, String digit) async {
+  // The numpad key renders the digit as Text inside an InkWell. There is
+  // exactly one such Text per digit in the entry UI.
+  await tester.tap(find.widgetWithText(InkWell, digit));
   await tester.pump();
 }
 
-/// Enters a 4-digit PIN via the 4 TextField slots.
+/// Enters a 4-digit PIN by tapping the numpad keys in order.
 Future<void> _enterPin(WidgetTester tester, String pin) async {
   assert(pin.length == 4, 'pin must be exactly 4 digits');
   for (var i = 0; i < 4; i++) {
-    await _enterDigit(tester, i, pin[i]);
+    await _tapDigit(tester, pin[i]);
   }
   await tester.pump(const Duration(milliseconds: 100));
 }
@@ -391,7 +393,9 @@ void main() {
       await _teardown(tester);
     });
 
-    testWidgets('shows 4 PIN digit TextField slots', (tester) async {
+    testWidgets('renders an on-screen numpad (digits 0-9) — no soft keyboard', (
+      tester,
+    ) async {
       setViewSize(tester);
       final mockService = _MockTutorPinService();
 
@@ -406,11 +410,23 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 
+      // The gate must NOT rely on TextFields / the device soft-keyboard —
+      // that was the BUG-1 root cause (taps summoned no keyboard on device).
       expect(
         find.byType(TextField),
-        findsNWidgets(4),
-        reason: 'PinEntryWidget must render 4 digit slots',
+        findsNothing,
+        reason: 'Gate must use a custom numpad, not soft-keyboard TextFields',
       );
+      // All ten digit keys must be tappable on the custom numpad.
+      for (var d = 0; d <= 9; d++) {
+        expect(
+          find.widgetWithText(InkWell, '$d'),
+          findsOneWidget,
+          reason: 'Numpad must render a tappable key for digit $d',
+        );
+      }
+      // Backspace key present.
+      expect(find.byIcon(Icons.backspace_outlined), findsOneWidget);
       await _teardown(tester);
     });
 
@@ -587,6 +603,116 @@ void main() {
         await _teardown(tester);
       },
     );
+  });
+
+  // ── BUG-1 regression: numpad input registers and verifies ────────────────
+
+  group('TutorPinEntryGate — BUG-1: numpad input drives verification', () {
+    testWidgets(
+      'tapping numpad keys fills the dots and a complete PIN triggers '
+      'verifyTutorPin (no soft keyboard required)',
+      (tester) async {
+        setViewSize(tester);
+        final mockService = _MockTutorPinService();
+        var verifiedCalled = false;
+        final captured = <String>[];
+
+        when(
+          () => mockService.verifyTutorPin(
+            profileId: any(named: 'profileId'),
+            rawPin: any(named: 'rawPin'),
+          ),
+        ).thenAnswer((invocation) async {
+          captured.add(invocation.namedArguments[#rawPin] as String);
+          return const TutorPinSuccess();
+        });
+
+        await tester.pumpWidget(
+          _buildHarness(
+            pinIsSet: const AsyncValue.data(true),
+            mockService: mockService,
+            onPinVerified: () => verifiedCalled = true,
+            onCancel: () {},
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        // Tap 3 of 4 digits — verification must NOT fire yet.
+        await _tapDigit(tester, '2');
+        await _tapDigit(tester, '2');
+        await _tapDigit(tester, '2');
+        await tester.pump();
+        expect(
+          captured,
+          isEmpty,
+          reason: 'verifyTutorPin must not fire before 4 digits are entered',
+        );
+
+        // Tap the 4th digit — now verification fires with the entered PIN.
+        await _tapDigit(tester, '2');
+        await tester.pump(const Duration(seconds: 1));
+
+        expect(
+          captured,
+          equals(['2222']),
+          reason:
+              'BUG-1: tapping the numpad keys must register input and submit '
+              'the assembled PIN to verifyTutorPin',
+        );
+        expect(
+          verifiedCalled,
+          isTrue,
+          reason:
+              'A correct PIN (2222) must advance the gate via onPinVerified',
+        );
+        await _teardown(tester);
+      },
+    );
+
+    testWidgets('backspace removes the last entered digit', (tester) async {
+      setViewSize(tester);
+      final mockService = _MockTutorPinService();
+      final captured = <String>[];
+
+      when(
+        () => mockService.verifyTutorPin(
+          profileId: any(named: 'profileId'),
+          rawPin: any(named: 'rawPin'),
+        ),
+      ).thenAnswer((invocation) async {
+        captured.add(invocation.namedArguments[#rawPin] as String);
+        return const TutorPinSuccess();
+      });
+
+      await tester.pumpWidget(
+        _buildHarness(
+          pinIsSet: const AsyncValue.data(true),
+          mockService: mockService,
+          onPinVerified: () {},
+          onCancel: () {},
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      // Enter 1, 2, 3 then backspace once and enter 4, 5 → final PIN '1245'.
+      await _tapDigit(tester, '1');
+      await _tapDigit(tester, '2');
+      await _tapDigit(tester, '3');
+      await tester.tap(find.byIcon(Icons.backspace_outlined));
+      await tester.pump();
+      await _tapDigit(tester, '4');
+      await _tapDigit(tester, '5');
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(
+        captured,
+        equals(['1245']),
+        reason: 'Backspace must drop the last digit before completion',
+      );
+      await _teardown(tester);
+    });
   });
 
   // ── Wrong PIN → error + remains gated ─────────────────────────────────────
@@ -980,7 +1106,7 @@ void main() {
 
       // No RenderFlex overflow exceptions — just assert key structural widgets.
       expect(find.byType(Scaffold), findsAtLeastNWidgets(1));
-      expect(find.byType(TextField), findsNWidgets(4));
+      expect(find.widgetWithText(InkWell, '5'), findsOneWidget);
       expect(find.byIcon(Icons.close_rounded), findsOneWidget);
 
       await _teardown(tester);

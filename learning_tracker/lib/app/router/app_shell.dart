@@ -396,7 +396,19 @@ class ProfileSwitcherBar extends ConsumerWidget {
       type: MaterialType.transparency,
       child: InkWell(
         key: const Key('appShellProfileSwitcherBar'),
-        onTap: () => showProfileSwitcherSheet(context),
+        // The switcher sheet is a modal bottom sheet, which needs a Navigator
+        // ancestor of the context it's opened from. On the four shell tabs this
+        // bar renders inside AutoTabsScaffold's appBar — below the router's
+        // Navigator — so the local `context` works. But the SAME bar is also
+        // rendered by PersistentSwitcherScaffold in the MaterialApp.router
+        // builder slot, which sits ABOVE the router's Navigator; there the local
+        // `context` has no Navigator ancestor and showModalBottomSheet would
+        // throw (swallowed → tap does nothing). Routing through the root
+        // navigator's context — which always sits at the router's Navigator —
+        // makes the tap open the sheet identically on tabs AND every pushed
+        // sub-route. Fall back to the local context if the key isn't mounted.
+        onTap: () =>
+            showProfileSwitcherSheet(navigatorKey.currentContext ?? context),
         child: Container(
           height: 44,
           decoration: BoxDecoration(

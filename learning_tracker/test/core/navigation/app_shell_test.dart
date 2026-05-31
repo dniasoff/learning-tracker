@@ -50,7 +50,9 @@ class _FixedActiveProfileId extends ActiveProfileId {
   int build() => 1;
 }
 
-Future<AppRouter> _createAuthenticatedRouter() async {
+Future<AppRouter> _createAuthenticatedRouter({
+  GlobalKey<NavigatorState>? navigatorKey,
+}) async {
   final mockPinService = MockPinService();
   when(() => mockPinService.hasParentPin()).thenAnswer((_) async => false);
 
@@ -66,6 +68,11 @@ Future<AppRouter> _createAuthenticatedRouter() async {
   restoreGuard.markRestoreComplete();
 
   return AppRouter(
+    // BUG E3 follow-up: the persistent switcher bar (rendered above the
+    // router's Navigator in the builder slot) opens the sheet through the root
+    // navigator's context (rp.navigatorKey). Tests that exercise the tap must
+    // bind the router to that same global key, mirroring production.
+    navigatorKey: navigatorKey,
     authGuard: AuthGuard(),
     restoreGuard: restoreGuard,
     profileGuard: ProfileGuard(
@@ -750,6 +757,90 @@ void main() {
           findsOneWidget,
         );
         expect(find.byIcon(Icons.unfold_more_rounded), findsOneWidget);
+
+        await _cleanUpWidgets(tester);
+      },
+    );
+
+    testWidgets(
+      'tapping the switcher bar on a pushed sub-route opens the sheet',
+      (tester) async {
+        // BUG E3 follow-up root cause: the builder-slot ProfileSwitcherBar sits
+        // ABOVE the router's Navigator, so opening the modal sheet from its
+        // local context (no Navigator ancestor) silently failed — the bar
+        // SHOWED on sub-routes but TAPPING it did nothing. The fix routes the
+        // tap through the root navigator's context. This test taps the bar on a
+        // pushed sub-route and asserts the sheet appears, which fails on the
+        // pre-fix behaviour.
+        final router = await _createAuthenticatedRouter(
+          navigatorKey: rp.navigatorKey,
+        );
+
+        // Opening the sheet pulls in the tutored-children section, which reads
+        // tutoring/Firestore providers not wired here; suppress those expected
+        // ProviderExceptions/overflows — we only assert the sheet was shown.
+        final originalOnError = FlutterError.onError;
+        FlutterError.onError = (details) {
+          final msg = details.exception.toString();
+          if (msg.contains('ProviderException') || msg.contains('overflowed')) {
+            return;
+          }
+          originalOnError?.call(details);
+        };
+        addTearDown(() => FlutterError.onError = originalOnError);
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              appDatabaseProvider.overrideWithValue(db),
+              userDatabaseProvider.overrideWithValue(db),
+              authStateProvider.overrideWithValue(_authOverride),
+              profileListStreamProvider.overrideWith(
+                (ref) => Stream.value(_seededProfiles),
+              ),
+              activeProfileIdProvider.overrideWith(_FixedActiveProfileId.new),
+              dashboardActiveCurriculaStreamProvider.overrideWith(
+                (ref) => Stream.value(<CurriculumId>[]),
+              ),
+              dashboardStreakProvider.overrideWith(
+                (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
+              ),
+              dashboardStreakRecoveryProvider.overrideWith(
+                (ref) => Future.value(
+                  const StreakRecoveryInfo(
+                    wasRecovered: false,
+                    currentStreak: 0,
+                  ),
+                ),
+              ),
+              rp.routerProvider.overrideWithValue(router),
+            ],
+            child: _wrapAppWithPersistentSwitcher(
+              router.config(
+                deepLinkBuilder: (_) =>
+                    const DeepLink.path('/sacred-time/city'),
+              ),
+            ),
+          ),
+        );
+        await _pumpDashboard(tester);
+
+        // We are on the pushed sub-route (no shell tabs), and the persistent
+        // switcher bar is present.
+        expect(find.text('DASHBOARD'), findsNothing);
+        expect(
+          find.byKey(const Key('appShellProfileSwitcherBar')),
+          findsOneWidget,
+        );
+        expect(find.byType(ProfileSwitcherSheet), findsNothing);
+
+        // Tapping the bar opens the canonical switcher sheet — the behaviour
+        // that was broken on sub-routes before the fix.
+        await tester.tap(find.byKey(const Key('appShellProfileSwitcherBar')));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+
+        expect(find.byType(ProfileSwitcherSheet), findsOneWidget);
 
         await _cleanUpWidgets(tester);
       },

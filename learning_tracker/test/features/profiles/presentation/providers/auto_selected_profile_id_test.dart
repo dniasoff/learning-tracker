@@ -8,10 +8,14 @@
 /// `profile_id`-FK'd tables (e.g. `stage_definitions` during track creation)
 /// fail with `SqliteException(787): FOREIGN KEY constraint failed`.
 ///
-/// Fix: `autoSelectedProfileIdProvider` selects the account's first profile
-/// whenever auth is signed-in and no profile is selected yet. These tests pin
-/// that behaviour: after an auth-valid startup, `selectedProfileIdProvider` is
-/// non-null and holds a valid profile id.
+/// Fix (round 2 — the real crux): the account that actually hit this had ZERO
+/// rows in `learner_profiles` (a cloud account whose profiles never
+/// materialised locally), so "select the first profile" was a no-op and the id
+/// stayed 0. `autoSelectedProfileIdProvider` now self-heals: when a signed-in
+/// account has no profile it creates a default adult profile (via
+/// `ensureDefaultProfile`) and selects it. These tests pin that behaviour:
+/// after an auth-valid startup, `selectedProfileIdProvider` is always non-null
+/// and holds a valid (non-zero) profile id.
 library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -42,6 +46,10 @@ class _FakeProfileRepository implements ProfileRepository {
   _FakeProfileRepository(this._profiles);
   final List<ProfileModel> _profiles;
 
+  /// Records how many times the self-heal path ran and the name it was given.
+  int ensureCalls = 0;
+  String? lastEnsureName;
+
   @override
   Future<List<ProfileModel>> getProfilesByAccount(int accountId) async =>
       _profiles;
@@ -52,6 +60,20 @@ class _FakeProfileRepository implements ProfileRepository {
 
   @override
   Future<int> countProfilesForAccount(int accountId) async => _profiles.length;
+
+  @override
+  Future<int> ensureDefaultProfile({
+    required int accountId,
+    required String defaultDisplayName,
+  }) async {
+    ensureCalls++;
+    lastEnsureName = defaultDisplayName;
+    if (_profiles.isNotEmpty) return _profiles.first.id;
+    // Simulate the heal creating + adopting profile id 1.
+    final healed = _profile(id: 1);
+    _profiles.add(healed);
+    return healed.id;
+  }
 
   @override
   Future<ProfileModel> createProfile({
@@ -79,21 +101,20 @@ const _signedIn = AuthState.signedIn(
   tier: Tier.localBorn,
 );
 
-ProviderContainer _container({
+({ProviderContainer container, _FakeProfileRepository repo}) _container({
   required AuthState authState,
   required List<ProfileModel> profiles,
 }) {
+  final repo = _FakeProfileRepository(profiles);
   final container = ProviderContainer(
     overrides: [
       authStateProvider.overrideWithValue(authState),
-      profileRepositoryProvider.overrideWithValue(
-        _FakeProfileRepository(profiles),
-      ),
+      profileRepositoryProvider.overrideWithValue(repo),
       currentAccountIdProvider.overrideWithValue(1),
     ],
   );
   addTearDown(container.dispose);
-  return container;
+  return (container: container, repo: repo);
 }
 
 void main() {
@@ -104,7 +125,7 @@ void main() {
         final container = _container(
           authState: _signedIn,
           profiles: [_profile(id: 7), _profile(id: 8)],
-        );
+        ).container;
 
         // Pre-condition: nothing selected (simulates the force-stop cold start
         // where the sign-in flow never ran).
@@ -127,7 +148,7 @@ void main() {
       final container = _container(
         authState: _signedIn,
         profiles: [_profile(id: 7), _profile(id: 8)],
-      );
+      ).container;
 
       // The picker / sign-in flow already chose profile 8.
       container.read(selectedProfileIdProvider.notifier).select(8);
@@ -144,7 +165,7 @@ void main() {
       final container = _container(
         authState: const AuthState.signedOut(),
         profiles: [_profile(id: 7)],
-      );
+      ).container;
 
       final selected = await container.read(
         autoSelectedProfileIdProvider.future,
@@ -154,15 +175,28 @@ void main() {
       expect(container.read(selectedProfileIdProvider), isNull);
     });
 
-    test('signed-in account with no profiles leaves selection null', () async {
-      final container = _container(authState: _signedIn, profiles: const []);
+    test('signed-in account with NO profiles self-heals: creates + selects a '
+        'valid non-zero profile (the BUG D1 crux)', () async {
+      final result = _container(authState: _signedIn, profiles: []);
+      final container = result.container;
+
+      // Pre-condition: nothing selected and the account owns no profile —
+      // the exact state that made createTrack insert profile_id=0 and
+      // FK-fail.
+      expect(container.read(selectedProfileIdProvider), isNull);
 
       final selected = await container.read(
         autoSelectedProfileIdProvider.future,
       );
 
-      expect(selected, isNull);
-      expect(container.read(selectedProfileIdProvider), isNull);
+      // The self-heal ran exactly once and created a profile.
+      expect(result.repo.ensureCalls, 1);
+      // A valid, non-zero profile id is now selected.
+      expect(selected, isNotNull);
+      expect(selected, isNot(0));
+      expect(container.read(selectedProfileIdProvider), selected);
+      // Default display name was derived from the signed-in account.
+      expect(result.repo.lastEnsureName, 'Test');
     });
   });
 }

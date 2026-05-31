@@ -47,7 +47,7 @@ class SelectedProfileId extends _$SelectedProfileId {
   }
 }
 
-/// Auto-selects the account's first profile on an auth-valid startup.
+/// Auto-selects (or self-heals) the account's profile on an auth-valid startup.
 ///
 /// BUG D1: on a force-stop + cold start with a still-valid Firebase/local
 /// session, the app skips the interactive sign-in flow (which is the only
@@ -58,18 +58,22 @@ class SelectedProfileId extends _$SelectedProfileId {
 /// `stage_definitions` during track creation) fails with
 /// `SqliteException(787): FOREIGN KEY constraint failed`.
 ///
-/// Mirrors the single-profile branch of `_finishOnboardingRouting` (line ~536
-/// of sign_in_controller): whenever auth transitions to signed-in AND no
-/// profile is selected yet, select the account's first profile. Multi-profile
-/// accounts route through the picker, which selects explicitly — so we only
-/// auto-select when exactly one profile is the unambiguous choice; for >1 we
-/// leave the selection null (the picker owns it). When there is exactly one we
-/// select it; when there are several we pick the first as a safe non-null
-/// default so cold-start writes never hit `profile_id=0`.
+/// Mirrors the single-profile branch of `_navigateAfterSignIn` (line ~536 of
+/// sign_in_controller): whenever auth transitions to signed-in AND no profile
+/// is selected yet, select the account's first profile.
+///
+/// BUG D1 (round 2 — the real crux): the previous fix only handled the case
+/// where ≥1 profile already existed. This account (a cloud account whose
+/// profiles never materialised locally — restored / skipped-onboarding) has
+/// ZERO rows in `learner_profiles`, so `profiles.first` had nothing to select
+/// and `profileId` stayed `0`. An authenticated account must NEVER operate at
+/// `profile_id = 0`. So when the account has no profile we self-heal by
+/// creating a default adult profile (and adopting any orphaned `profile_id = 0`
+/// rows, e.g. a pre-existing track) and select it. After this an authenticated
+/// account always has ≥1 profile selected.
 ///
 /// Watched by the app shell so it runs on every auth-valid mount. Returns the
-/// id that was (or already had been) selected, or null when signed-out / no
-/// profiles exist yet.
+/// id that was selected (existing or newly healed), or null when signed-out.
 @Riverpod(keepAlive: true)
 Future<int?> autoSelectedProfileId(Ref ref) async {
   final authState = ref.watch(authStateProvider);
@@ -82,9 +86,24 @@ Future<int?> autoSelectedProfileId(Ref ref) async {
   final repo = ref.read(profileRepositoryProvider);
   final accountId = ref.read(currentAccountIdProvider);
   final profiles = await repo.getProfilesByAccount(accountId);
-  if (profiles.isEmpty) return null;
 
-  final id = profiles.first.id;
+  final int id;
+  if (profiles.isNotEmpty) {
+    id = profiles.first.id;
+  } else {
+    // Self-heal: an authenticated account with no local profile. Create a
+    // default adult profile (named from the account) and adopt any orphaned
+    // profile_id=0 rows so existing tracks survive.
+    final fallbackName = authState.currentUser?.displayName.trim() ?? '';
+    id = await repo.ensureDefaultProfile(
+      accountId: accountId,
+      defaultDisplayName: fallbackName.isNotEmpty ? fallbackName : 'Me',
+    );
+    // The freshly created profile changed the account's profile set; refresh
+    // any list/stream consumers so the new profile is visible immediately.
+    ref.invalidate(profileListProvider);
+  }
+
   // Re-check after the await: the picker / sign-in flow may have selected
   // a profile while we were fetching. Don't clobber an explicit choice.
   if (ref.read(selectedProfileIdProvider) == null) {

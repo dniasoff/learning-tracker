@@ -462,4 +462,86 @@ void main() {
       });
     },
   );
+
+  // ── BUG D1: ensureDefaultProfile self-heal ─────────────────────────────────
+  //
+  // Crux of the bug: a signed-in account had ZERO rows in `learner_profiles`,
+  // yet an orphaned track existed at `profile_id = 0` (curriculum_tracks has no
+  // FK so the row was physically present). Any `stage_definitions` insert at
+  // profile 0 then fails with SqliteException(787). `ensureDefaultProfile` must
+  // create a real profile, adopt the orphaned profile_id=0 rows, and leave the
+  // DB in a state where a stage_definitions insert succeeds.
+  group('ensureDefaultProfile (BUG D1)', () {
+    test('no-op when the account already has a profile', () async {
+      final existing = await repo.createProfile(
+        accountId: 1,
+        displayName: 'Existing',
+        mode: 'adult',
+      );
+
+      final healedId = await repo.ensureDefaultProfile(
+        accountId: 1,
+        defaultDisplayName: 'Ignored',
+      );
+
+      expect(healedId, existing.id);
+      expect(await repo.countProfilesForAccount(1), 1);
+    });
+
+    test('creates a default adult profile, adopts the orphaned profile_id=0 '
+        'track, and makes a stage_definitions insert succeed', () async {
+      final now = DateTimeFactory.nowUtc();
+
+      // Simulate the broken state: a track was created while no profile
+      // existed, so it sits at profile_id = 0.
+      final orphanTrackId = await db
+          .into(db.curriculumTracks)
+          .insert(
+            CurriculumTracksCompanion.insert(
+              profileId: 0,
+              curriculumId: 'mishnayos',
+              stateChangedAt: now,
+              activatedAt: now,
+            ),
+          );
+
+      // Pre-condition: account owns no profile.
+      expect(await repo.countProfilesForAccount(1), 0);
+
+      final healedId = await repo.ensureDefaultProfile(
+        accountId: 1,
+        defaultDisplayName: 'Daniel',
+      );
+
+      // A real, non-zero profile now exists for the account.
+      expect(healedId, isPositive);
+      expect(healedId, isNot(0));
+      expect(await repo.countProfilesForAccount(1), 1);
+      final healed = await repo.getProfileById(healedId);
+      expect(healed, isNotNull);
+      expect(healed!.mode, 'adult');
+      expect(healed.displayName, 'Daniel');
+
+      // The orphaned profile_id=0 track was re-parented onto the new profile.
+      final adoptedTrack = await (db.select(
+        db.curriculumTracks,
+      )..where((t) => t.id.equals(orphanTrackId))).getSingle();
+      expect(adoptedTrack.profileId, healedId);
+
+      // The original failing operation now succeeds: a stage_definitions
+      // insert under the healed (non-zero) profile id no longer FK-fails.
+      final stageId = await db
+          .into(db.stageDefinitions)
+          .insert(
+            StageDefinitionsCompanion.insert(
+              profileId: healedId,
+              curriculumId: 'mishnayos',
+              trackId: orphanTrackId,
+              stageOrder: 1,
+              stageName: 'לימוד',
+            ),
+          );
+      expect(stageId, isPositive);
+    });
+  });
 }

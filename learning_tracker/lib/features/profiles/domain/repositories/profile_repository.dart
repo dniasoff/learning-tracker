@@ -37,6 +37,24 @@ abstract class ProfileRepository {
 
   /// Count profiles for an account.
   Future<int> countProfilesForAccount(int accountId);
+
+  /// Self-healing guarantee (BUG D1): ensure [accountId] owns at least one
+  /// learner profile, returning the id that should be selected.
+  ///
+  /// When the account already has ≥1 (non-tutored) profile this is a no-op and
+  /// the first profile's id is returned. When the account has ZERO profiles —
+  /// the broken state that makes `activeProfileId` resolve to `0` and any
+  /// `profile_id`-FK insert fail with `SqliteException(787)` — a default adult
+  /// profile is created (named [defaultDisplayName]) and its id returned.
+  ///
+  /// As part of the heal, any orphaned `profile_id = 0` rows already present in
+  /// this per-account database (e.g. a track created before a profile existed)
+  /// are re-parented onto the new profile so existing data is preserved rather
+  /// than stranded. Runs in a single transaction.
+  Future<int> ensureDefaultProfile({
+    required int accountId,
+    required String defaultDisplayName,
+  });
 }
 
 /// Thrown when attempting to create more than 10 profiles per account.
