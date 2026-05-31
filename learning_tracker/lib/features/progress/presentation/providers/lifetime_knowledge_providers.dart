@@ -79,6 +79,12 @@ final priorImportsByProfileProvider = FutureProvider.autoDispose
       name: 'priorImportsByProfileProvider',
       (ref, profileId) async {
         ref.watch(progressLensRefreshTickProvider);
+        // D9: also recompute on every completion commit so the dashboard
+        // lifetime card (which reads lifetimeTotalsAcrossAllCurricula → this
+        // chain) stays live. progressLensRefreshTick is bumped ONLY by the
+        // Progress-hub pull-to-refresh, so without this a dashboard/reader mark
+        // left the lifetime totals stale until the user pulled to refresh.
+        ref.watch<int>(completionCommittedProvider);
         final db = ref.watch(userDatabaseProvider);
         final rows = await (db.select(
           db.priorCompletionImports,
@@ -118,6 +124,8 @@ final completionsByProfileForLifetimeProvider = FutureProvider.autoDispose
       name: 'completionsByProfileForLifetimeProvider',
       (ref, profileId) async {
         ref.watch(progressLensRefreshTickProvider);
+        // D9: recompute on every completion commit (see priorImportsByProfile).
+        ref.watch<int>(completionCommittedProvider);
         final db = ref.watch(userDatabaseProvider);
         final all = await db.completionDao.getCompletionsByProfile(profileId);
         final out = <String, List<Completion>>{};

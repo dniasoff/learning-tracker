@@ -131,6 +131,17 @@ A 26-agent find→adversarially-verify workflow over sync/gamification/tracks/tu
 surfaced **16 confirmed defects** (of 20 reported) — full list with file:line + fix + verifier reasoning in
 `docs/planning/bug-hunt-findings-2026-05-31.md`. Fixing in priority order; B1 done below.
 
+**D9 (MEDIUM, correctness — fixed; D2-class staleness):** The dashboard **lifetime-knowledge card**
+(cumulative %, "X / Y sections learned") did NOT update after a completion — only after a Progress-hub
+pull-to-refresh. *Cause:* the lifetime chain's leaf providers `completionsByProfileForLifetimeProvider` +
+`priorImportsByProfileProvider` (`lifetime_knowledge_providers.dart`) watched ONLY `progressLensRefreshTickProvider`
+(bumped only by the Progress pull-to-refresh), never `completionCommittedProvider` (the canonical commit signal
+the sibling `trackDualProgressMetricsProvider` already uses). *Fix:* added `ref.watch<int>(completionCommittedProvider)`
+to both leaf providers → the whole chain (→ `lifetimeTotalsAcrossAllCurricula` → dashboard card) recomputes on
+every commit, while pull-to-refresh still works. *Test:* `lifetime_knowledge_providers_test.dart` — new D9 group:
+real provider + test DB, append a completion + `completionCommittedProvider.increment()`, assert the provider
+re-queries (0 → 1). Bug-hunt finding. `make ci` green.
+
 **D8 (MEDIUM, l10n — fixed):** The dashboard skipped-onboarding CTA banner (the "Get started / Add a learning
 track / Dismiss" empty-state, `skipped_onboarding_cta_banner.dart:104/115/125/146`) hard-coded English in the
 non-tutor branch → Hebrew UI leak. *Fix:* added `ctaGetStartedTitle` / `ctaGetStartedBody` /

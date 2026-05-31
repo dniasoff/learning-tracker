@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 
 import '../../../../helpers/drift_memory.dart' as db_helper;
@@ -534,5 +536,62 @@ void main() {
       expect(totals.learnedSections, 1);
       expect(totals.percentage, closeTo(1 / 3, 0.001));
     });
+  });
+
+  // D9: the lifetime chain (dashboard lifetime card) must recompute on a
+  // completion commit, not only on the Progress-hub pull-to-refresh.
+  group('D9 — lifetime chain reactivity to completionCommitted', () {
+    test(
+      'completionsByProfileForLifetimeProvider rebuilds after a commit',
+      () async {
+        final db = db_helper.inMemoryDb();
+        await db_helper.seedProfile(db); // profileId = 1
+        addTearDown(db.close);
+
+        final container = ProviderContainer(
+          overrides: [userDatabaseProvider.overrideWithValue(db)],
+        );
+        addTearDown(container.dispose);
+
+        // Keep the provider alive (mirrors the mounted dashboard).
+        final sub = container.listen(
+          completionsByProfileForLifetimeProvider(1),
+          (_, __) {},
+        );
+        addTearDown(sub.close);
+
+        final before = (await container.read(
+          completionsByProfileForLifetimeProvider(1).future,
+        )).values.fold<int>(0, (a, l) => a + l.length);
+        expect(before, 0);
+
+        // A new completion lands AND a commit is signalled.
+        await db.completionEventDao.appendEvent(
+          CompletionEventsCompanion.insert(
+            profileId: 1,
+            curriculumId: CurriculumId.mishnayos.storageKey,
+            sefariaRef: 'Berakhot 2a',
+            stageId: 1,
+            trackType: 'personal',
+            eventTimestamp: DateTime.utc(2026, 5, 31, 10),
+          ),
+        );
+        container.read(completionCommittedProvider.notifier).increment();
+
+        // D9: the provider re-queries on commit — without the completionCommitted
+        // watch it would stay cached at zero until a pull-to-refresh.
+        await container.read(completionsByProfileForLifetimeProvider(1).future);
+        final after = container
+            .read(completionsByProfileForLifetimeProvider(1))
+            .value!
+            .values
+            .fold<int>(0, (a, l) => a + l.length);
+        expect(
+          after,
+          1,
+          reason: 'lifetime completions must reflect the new commit (D9)',
+        );
+      },
+    );
   });
 }
