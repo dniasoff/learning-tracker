@@ -46,6 +46,15 @@ class ParentPendingRedemptionsScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.surfaceF4b,
       appBar: AppBar(
+        // #32: explicit back button wired to the router pop (the SAME nav the
+        // hardware back uses). Without an explicit leading the auto-generated
+        // back affordance was mis-handled and the tap fell through to the
+        // persistent profile-switcher bar instead of popping to ParentSettings.
+        leading: IconButton(
+          key: const Key('parentPendingRedemptionsBackButton'),
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () => context.router.maybePop(),
+        ),
         title: Text(l10n.pendingRedemptionsTitle),
         backgroundColor: AppColors.surfaceF4b,
         elevation: 0,

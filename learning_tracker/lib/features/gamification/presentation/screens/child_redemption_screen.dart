@@ -70,6 +70,15 @@ class ChildRedemptionScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.surfaceF4b,
       appBar: AppBar(
+        // #31: explicit back button wired to the router pop (the SAME nav the
+        // hardware back uses). Without an explicit leading the auto-generated
+        // back affordance was mis-handled and the tap fell through to the
+        // persistent profile-switcher bar instead of popping to the Dashboard.
+        leading: IconButton(
+          key: const Key('childRedemptionBackButton'),
+          icon: const Icon(Icons.arrow_back_rounded),
+          onPressed: () => context.router.maybePop(),
+        ),
         title: Text(l10n.redeemScreenTitle),
         backgroundColor: AppColors.surfaceF4b,
         elevation: 0,
@@ -314,6 +323,12 @@ class _RewardCard extends StatelessWidget {
                 children: [
                   Text(
                     reward.title,
+                    // #39: wrap at word boundaries (max 2 lines) and ellipsize
+                    // on overflow so a long single-token title like "BronzeStar"
+                    // never breaks mid-character ("BronzeS\ntar").
+                    softWrap: true,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w700,
                     ),

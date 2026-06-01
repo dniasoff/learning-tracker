@@ -1236,7 +1236,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get rewardConfigurationSubtitle =>
-      'Set prizes for one track or for total points across all tracks.';
+      'Set prizes your child can redeem with their points.';
 
   @override
   String get rewardConfigPerTrackTab => 'Per track';
@@ -3040,6 +3040,28 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tierLensLifetimeKnowledge => 'Lifetime Knowledge';
 
   @override
+  String streakWidgetDayStreak(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count day streak!',
+      one: '1 day streak!',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String streakWidgetBest(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Best: $count days',
+      one: 'Best: 1 day',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String tierCounterStreakDays(int count) {
     return '$count-day streak';
   }
@@ -3363,6 +3385,17 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pendingRedemptionsEmpty => 'No pending prize requests.';
+
+  @override
+  String pendingRedemptionsCountSubtitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count prize requests waiting',
+      one: '1 prize request waiting',
+    );
+    return '$_temp0';
+  }
 
   @override
   String pendingRedemptionsCost(int points) {

@@ -803,6 +803,62 @@ void main() {
     await db.close();
   });
 
+  // ── #33: Pending Prizes subtitle is reactive ──────────────────────────────
+  //
+  // Regression: the subtitle was hard-wired to pendingRedemptionsEmpty and
+  // never reflected a pending redemption. It is now backed by the reactive
+  // pendingRedemptionsCountProvider (watchPendingRedemptions stream).
+
+  testWidgets(
+    'Pending Prizes subtitle shows empty copy when no pending redemptions',
+    (tester) async {
+      _useTallViewport(tester);
+      final db = inMemoryDb();
+      await seedProfile(db);
+      await tester.pumpWidget(
+        _buildApp(router: router, tutorPerms: null, db: db),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text('No pending prize requests.'), findsOneWidget);
+
+      await _tearDown(tester);
+      await db.close();
+    },
+  );
+
+  testWidgets(
+    'Pending Prizes subtitle reflects a pending redemption count reactively',
+    (tester) async {
+      _useTallViewport(tester);
+      final db = inMemoryDb();
+      await seedProfile(db);
+      // Give the child a balance, then redeem → one pending_fulfilment row.
+      await db.pointsBalanceDao.parentAdjust(1, 100);
+      final redemption = await db.pointsBalanceDao.createRedemption(
+        profileId: 1,
+        rewardTitle: 'Prize',
+        iconIndex: 0,
+        pointsCost: 50,
+      );
+      expect(redemption, isNotNull);
+
+      await tester.pumpWidget(
+        _buildApp(router: router, tutorPerms: null, db: db),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      // Reactive subtitle now reflects the pending request (count = 1).
+      expect(find.text('1 prize request waiting'), findsOneWidget);
+      expect(find.text('No pending prize requests.'), findsNothing);
+
+      await _tearDown(tester);
+      await db.close();
+    },
+  );
+
   testWidgets('Adjust Points: Deduct applies a negative delta', (tester) async {
     final db = inMemoryDb();
     await seedProfile(db); // satisfies points_balance.profile_id FK

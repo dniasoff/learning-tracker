@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Displays the current streak count and max streak.
 ///
@@ -95,6 +96,7 @@ class _AnimatedStreakDisplayState extends State<_AnimatedStreakDisplay>
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -122,14 +124,14 @@ class _AnimatedStreakDisplayState extends State<_AnimatedStreakDisplay>
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  '${widget.currentStreak} day streak!',
+                  l10n.streakWidgetDayStreak(widget.currentStreak),
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Best: ${widget.maxStreak} days',
+                  l10n.streakWidgetBest(widget.maxStreak),
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),

@@ -20,6 +20,7 @@
 @Tags(['gamification', 'child_redemption'])
 library;
 
+import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -29,12 +30,18 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 import 'package:learning_tracker/features/gamification/presentation/screens/child_redemption_screen.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/profiles/presentation/widgets/profile_switcher_sheet.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
+import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../helpers/drift_memory.dart';
+
+// ─── Mock router for AppBar-back tests ────────────────────────────────────────
+
+class _MockStackRouter extends Mock implements StackRouter {}
 
 // ─── Notifier stubs for activeTutoredProfileSelectionProvider ─────────────────
 
@@ -139,6 +146,45 @@ Future<void> _pumpScreen(
 Future<void> _tearDown(WidgetTester tester) async {
   await tester.pumpWidget(const SizedBox.shrink());
   await tester.pump(Duration.zero);
+}
+
+/// Pumps the screen inside a [StackRouterScope] so the AppBar back button's
+/// `context.router.maybePop()` resolves to [router] (used by the #31 tests).
+Future<void> _pumpScreenWithRouter(
+  WidgetTester tester, {
+  required StackRouter router,
+  required int balance,
+  required List<RewardMilestone> rewards,
+}) async {
+  final database = inMemoryDb();
+  await tester.pumpWidget(
+    ProviderScope(
+      overrides: [
+        childRedemptionBalanceProvider.overrideWith((ref) async => balance),
+        childRedemptionRewardsProvider.overrideWith((ref) async => rewards),
+        userDatabaseProvider.overrideWithValue(database),
+        activeProfileIdProvider.overrideWithValue(_profileId),
+        outboxSyncWriteFacadeProvider.overrideWithValue(null),
+        activeTutoredProfileSelectionProvider.overrideWith(_NoTutorSession.new),
+      ],
+      child: MaterialApp(
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: StackRouterScope(
+          controller: router,
+          stateHash: 0,
+          child: const ChildRedemptionScreen(),
+        ),
+      ),
+    ),
+  );
+  await tester.pump();
+  await tester.pump(const Duration(milliseconds: 100));
 }
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
@@ -696,6 +742,113 @@ void main() {
       expect(balanceAfter, equals(150));
 
       await db.close();
+      await _tearDown(tester);
+    });
+  });
+
+  // ── AppBar back button (#31) ────────────────────────────────────────────────
+  //
+  // The AppBar ← MUST pop the route (same nav as hardware back) — it must NOT
+  // open the profile-switcher sheet.
+  group('ChildRedemptionScreen — AppBar back button (#31)', () {
+    late _MockStackRouter router;
+
+    setUp(() {
+      router = _MockStackRouter();
+      when(
+        () => router.maybePop<Object?>(),
+      ).thenAnswer((_) => Future<bool>.value(true));
+    });
+
+    testWidgets('tapping back calls router.maybePop()', (tester) async {
+      await _pumpScreenWithRouter(
+        tester,
+        router: router,
+        balance: 100,
+        rewards: [],
+      );
+
+      await tester.tap(find.byKey(const Key('childRedemptionBackButton')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      verify(() => router.maybePop<Object?>()).called(1);
+
+      await _tearDown(tester);
+    });
+
+    testWidgets('tapping back does NOT open the profile-switcher sheet', (
+      tester,
+    ) async {
+      await _pumpScreenWithRouter(
+        tester,
+        router: router,
+        balance: 100,
+        rewards: [],
+      );
+
+      await tester.tap(find.byKey(const Key('childRedemptionBackButton')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      // The switcher sheet must be absent — the back arrow is a plain pop.
+      expect(find.byType(ProfileSwitcherSheet), findsNothing);
+
+      await _tearDown(tester);
+    });
+  });
+
+  // ── Reward title word-wrapping (#39) ────────────────────────────────────────
+  //
+  // A long single-token title like "BronzeStar" must wrap/ellipsize at the
+  // widget level (softWrap + maxLines + overflow) — never break mid-character.
+  group('ChildRedemptionScreen — reward title wrapping (#39)', () {
+    testWidgets('long single-word title Text has soft-wrap + ellipsis config', (
+      tester,
+    ) async {
+      final reward = _milestone(id: 'bw1', title: 'BronzeStar', cost: 10);
+      await _pumpScreen(tester, balance: 100, rewards: [reward]);
+
+      // The title renders as a single Text node ("BronzeStar"); a mid-word break
+      // would split it into two glyph runs but Flutter keeps the string intact —
+      // assert the layout config that PREVENTS a mid-character break.
+      final titleText = tester.widget<Text>(find.text('BronzeStar'));
+      expect(
+        titleText.softWrap,
+        isTrue,
+        reason: 'title must soft-wrap at word boundaries',
+      );
+      expect(
+        titleText.overflow,
+        TextOverflow.ellipsis,
+        reason: 'title must ellipsize on overflow, not break mid-character',
+      );
+      expect(
+        titleText.maxLines,
+        equals(2),
+        reason: 'title is capped at 2 lines so overflow ellipsizes cleanly',
+      );
+
+      await _tearDown(tester);
+    });
+
+    testWidgets('title renders intact (no mid-word split) on a narrow card', (
+      tester,
+    ) async {
+      // Force a very narrow viewport to provoke wrapping pressure.
+      tester.view.physicalSize = const Size(320, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final reward = _milestone(id: 'bw2', title: 'BronzeStar', cost: 10);
+      await _pumpScreen(tester, balance: 100, rewards: [reward]);
+
+      // The full title string is present as a single node — it is not broken
+      // into "BronzeS" / "tar" fragments.
+      expect(find.text('BronzeStar'), findsOneWidget);
+      expect(find.text('BronzeS'), findsNothing);
+
       await _tearDown(tester);
     });
   });

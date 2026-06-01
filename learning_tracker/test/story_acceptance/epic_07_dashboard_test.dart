@@ -27,6 +27,7 @@ import 'package:learning_tracker/features/scheduler/domain/services/pace_calcula
 import 'package:learning_tracker/features/tracks/stages/domain/models/schedule_type.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart'
     as domain_stage;
+import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:test/test.dart' hide isNotNull, isNull;
 
@@ -507,6 +508,8 @@ void main() {
     ) async {
       await tester.pumpWidget(
         const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: StreakWidget(
               currentStreak: 7,
@@ -516,6 +519,7 @@ void main() {
           ),
         ),
       );
+      await tester.pump();
 
       expect(find.text('7 day streak!'), findsOneWidget);
       expect(find.text('Best: 14 days'), findsOneWidget);

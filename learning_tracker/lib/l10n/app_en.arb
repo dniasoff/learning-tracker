@@ -596,7 +596,7 @@
   "pointConfiguration": "Point Configuration",
   "pointConfigurationSubtitle": "Set how many points activities are worth",
   "rewardConfigurationTitle": "Reward configuration",
-  "rewardConfigurationSubtitle": "Set prizes for one track or for total points across all tracks.",
+  "rewardConfigurationSubtitle": "Set prizes your child can redeem with their points.",
   "rewardConfigPerTrackTab": "Per track",
   "rewardConfigTotalPointsTab": "Total points",
   "rewardConfigPerTrackHelper": "These rewards use points earned on the selected track only.",
@@ -1508,6 +1508,16 @@
     "description": "Lens label for the lifetime tier (all sources — live + bulkInTrack + lifetimeOnly) — Lifetime Knowledge screen and Progress hub tile."
   },
 
+  "streakWidgetDayStreak": "{count, plural, =1{1 day streak!} other{{count} day streak!}}",
+  "@streakWidgetDayStreak": {
+    "description": "Child-mode StreakWidget headline showing the current streak length. ICU plural so 1 reads '1 day streak!' not '1 days'.",
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "streakWidgetBest": "{count, plural, =1{Best: 1 day} other{Best: {count} days}}",
+  "@streakWidgetBest": {
+    "description": "Child-mode StreakWidget sub-line showing the longest streak. ICU plural so 1 reads 'Best: 1 day' not 'Best: 1 days'.",
+    "placeholders": { "count": { "type": "int" } }
+  },
   "tierCounterStreakDays": "{count}-day streak",
   "@tierCounterStreakDays": {
     "description": "Engagement-tier counter — current consecutive-day streak. Appears in the three-counter header row on Dashboard and Progress hub.",
@@ -1913,6 +1923,11 @@
 
   "pendingRedemptionsTitle": "Pending Prizes",
   "pendingRedemptionsEmpty": "No pending prize requests.",
+  "pendingRedemptionsCountSubtitle": "{count, plural, =1{1 prize request waiting} other{{count} prize requests waiting}}",
+  "@pendingRedemptionsCountSubtitle": {
+    "description": "Subtitle on the Pending Prizes settings row showing how many redemption requests are awaiting the parent. Reactive — updates live as requests arrive/clear. Shows pendingRedemptionsEmpty when count is 0.",
+    "placeholders": { "count": { "type": "int" } }
+  },
   "pendingRedemptionsCost": "{points} points",
   "@pendingRedemptionsCost": {
     "placeholders": { "points": { "type": "int" } }

@@ -2270,7 +2270,7 @@ abstract class AppLocalizations {
   /// No description provided for @rewardConfigurationSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Set prizes for one track or for total points across all tracks.'**
+  /// **'Set prizes your child can redeem with their points.'**
   String get rewardConfigurationSubtitle;
 
   /// No description provided for @rewardConfigPerTrackTab.
@@ -5363,6 +5363,18 @@ abstract class AppLocalizations {
   /// **'Lifetime Knowledge'**
   String get tierLensLifetimeKnowledge;
 
+  /// Child-mode StreakWidget headline showing the current streak length. ICU plural so 1 reads '1 day streak!' not '1 days'.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 day streak!} other{{count} day streak!}}'**
+  String streakWidgetDayStreak(int count);
+
+  /// Child-mode StreakWidget sub-line showing the longest streak. ICU plural so 1 reads 'Best: 1 day' not 'Best: 1 days'.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Best: 1 day} other{Best: {count} days}}'**
+  String streakWidgetBest(int count);
+
   /// Engagement-tier counter — current consecutive-day streak. Appears in the three-counter header row on Dashboard and Progress hub.
   ///
   /// In en, this message translates to:
@@ -5896,6 +5908,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No pending prize requests.'**
   String get pendingRedemptionsEmpty;
+
+  /// Subtitle on the Pending Prizes settings row showing how many redemption requests are awaiting the parent. Reactive — updates live as requests arrive/clear. Shows pendingRedemptionsEmpty when count is 0.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 prize request waiting} other{{count} prize requests waiting}}'**
+  String pendingRedemptionsCountSubtitle(int count);
 
   /// No description provided for @pendingRedemptionsCost.
   ///

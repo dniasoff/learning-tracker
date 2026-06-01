@@ -20,6 +20,19 @@ import 'package:learning_tracker/features/settings/presentation/widgets/user_pro
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
+/// Reactive count of pending reward-redemption requests for the active profile.
+///
+/// Backed by [PointsBalanceDao.watchPendingRedemptions] so the "Pending Prizes"
+/// row subtitle updates live as requests arrive or are fulfilled/declined —
+/// rather than reflecting only the count at screen-build time (#33).
+final pendingRedemptionsCountProvider = StreamProvider.autoDispose<int>((ref) {
+  final db = ref.watch(userDatabaseProvider);
+  final profileId = ref.watch(activeProfileIdProvider);
+  return db.pointsBalanceDao
+      .watchPendingRedemptions(profileId)
+      .map((list) => list.length);
+});
+
 /// Configuration hub shown to a parent when their child profile is active.
 ///
 /// Includes the same profile header as Settings (avatar, name, account email;
@@ -55,6 +68,14 @@ class ParentSettingsScreen extends ConsumerWidget {
     // non-null → tutored mode: only tiles with true permissions shown.
     final tutorPerms = ref.watch(activeTutorPermissionsProvider);
     final isTutoredContext = tutorPerms != null;
+
+    // #33: reactive pending-redemption count → live subtitle on the
+    // "Pending Prizes" row (0 → empty copy, N → "N prize requests waiting").
+    final pendingCount =
+        ref.watch(pendingRedemptionsCountProvider).asData?.value ?? 0;
+    final pendingSubtitle = pendingCount > 0
+        ? l10n.pendingRedemptionsCountSubtitle(pendingCount)
+        : l10n.pendingRedemptionsEmpty;
 
     // Ownership gate helpers — whether each category tile should be shown.
     // Owners always see every tile; tutors see only what they're permitted.
@@ -191,7 +212,7 @@ class ParentSettingsScreen extends ConsumerWidget {
                       icon: Icons.redeem_rounded,
                       iconColor: const Color(0xFF388E3C),
                       title: l10n.pendingRedemptionsTitle,
-                      subtitle: l10n.pendingRedemptionsEmpty,
+                      subtitle: pendingSubtitle,
                       trailing: const Icon(
                         Icons.chevron_right_rounded,
                         color: _chevronMuted,

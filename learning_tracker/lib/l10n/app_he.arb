@@ -581,7 +581,7 @@
   "pointConfiguration": "הגדרת נקודות",
   "pointConfigurationSubtitle": "כמה נקודות שווה כל פעילות",
   "rewardConfigurationTitle": "הגדרת פרסים",
-  "rewardConfigurationSubtitle": "פרסים לפי מסלול או לפי סך נקודות מכל המסלולים.",
+  "rewardConfigurationSubtitle": "הגדירו פרסים שהילד יוכל לממש עם הנקודות שצבר.",
   "rewardConfigPerTrackTab": "לפי מסלול",
   "rewardConfigTotalPointsTab": "סך נקודות",
   "rewardConfigPerTrackHelper": "הפרסים מבוססים על נקודות במסלול הנבחר בלבד.",
@@ -1483,6 +1483,16 @@
     "description": "Lens label for the lifetime tier (all sources)."
   },
 
+  "streakWidgetDayStreak": "{count, plural, one{רצף של יום אחד!} other{רצף של {count} ימים!}}",
+  "@streakWidgetDayStreak": {
+    "description": "Child-mode StreakWidget headline showing the current streak length.",
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "streakWidgetBest": "{count, plural, one{שיא: יום אחד} other{שיא: {count} ימים}}",
+  "@streakWidgetBest": {
+    "description": "Child-mode StreakWidget sub-line showing the longest streak.",
+    "placeholders": { "count": { "type": "int" } }
+  },
   "tierCounterStreakDays": "רצף של {count} ימים",
   "@tierCounterStreakDays": {
     "description": "Engagement-tier counter — current consecutive-day streak.",
@@ -1888,6 +1898,11 @@
 
   "pendingRedemptionsTitle": "פרסים ממתינים",
   "pendingRedemptionsEmpty": "אין בקשות פרס ממתינות.",
+  "pendingRedemptionsCountSubtitle": "{count, plural, one{בקשת פרס אחת ממתינה} other{{count} בקשות פרס ממתינות}}",
+  "@pendingRedemptionsCountSubtitle": {
+    "description": "Subtitle on the Pending Prizes settings row showing how many redemption requests are awaiting the parent.",
+    "placeholders": { "count": { "type": "int" } }
+  },
   "pendingRedemptionsCost": "{points} נקודות",
   "@pendingRedemptionsCost": {
     "placeholders": { "points": { "type": "int" } }

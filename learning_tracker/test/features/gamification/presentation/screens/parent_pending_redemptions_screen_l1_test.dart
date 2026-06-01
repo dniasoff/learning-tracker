@@ -19,6 +19,7 @@ library;
 
 import 'dart:async';
 
+import 'package:auto_route/auto_route.dart';
 import 'package:drift/drift.dart' hide Column, isNotNull;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -30,8 +31,10 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/gamification/presentation/screens/parent_pending_redemptions_screen.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/profiles/presentation/widgets/profile_switcher_sheet.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
+import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/drift_memory.dart';
 
@@ -43,6 +46,8 @@ class _ProfileIdOverride extends ActiveProfileId {
   @override
   int build() => 1;
 }
+
+class _MockStackRouter extends Mock implements StackRouter {}
 
 /// Seeds a pending-fulfilment redemption row directly (bypasses balance
 /// debit — the screen only needs the row to exist for its list).
@@ -640,6 +645,82 @@ void main() {
       expect(find.text('מלא'), findsOneWidget);
       // l10n pendingRedemptionsDecline in Hebrew: 'דחה'
       expect(find.text('דחה'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    });
+  });
+
+  // ── 9. AppBar back button (#32) ─────────────────────────────────────────────
+  //
+  // The AppBar ← MUST pop the route (same nav as hardware back) — it must NOT
+  // open the profile-switcher sheet.
+  group('ParentPendingRedemptionsScreen — AppBar back button (#32)', () {
+    late UserDatabase db;
+    late _MockStackRouter router;
+
+    setUp(() async {
+      db = inMemoryDb();
+      await seedProfile(db);
+      router = _MockStackRouter();
+      when(
+        () => router.maybePop<Object?>(),
+      ).thenAnswer((_) => Future<bool>.value(true));
+    });
+
+    tearDown(() async {
+      await db.close();
+    });
+
+    Widget buildWithRouter() => ProviderScope(
+      overrides: [
+        userDatabaseProvider.overrideWithValue(db),
+        activeProfileIdProvider.overrideWith(_ProfileIdOverride.new),
+        outboxSyncWriteFacadeProvider.overrideWithValue(null),
+      ],
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: StackRouterScope(
+          controller: router,
+          stateHash: 0,
+          child: const ParentPendingRedemptionsScreen(),
+        ),
+      ),
+    );
+
+    testWidgets('tapping back calls router.maybePop()', (tester) async {
+      await tester.pumpWidget(buildWithRouter());
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      await tester.tap(
+        find.byKey(const Key('parentPendingRedemptionsBackButton')),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      verify(() => router.maybePop<Object?>()).called(1);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    });
+
+    testWidgets('tapping back does NOT open the profile-switcher sheet', (
+      tester,
+    ) async {
+      await tester.pumpWidget(buildWithRouter());
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      await tester.tap(
+        find.byKey(const Key('parentPendingRedemptionsBackButton')),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      // The switcher sheet must be absent — the back arrow is a plain pop.
+      expect(find.byType(ProfileSwitcherSheet), findsNothing);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(Duration.zero);

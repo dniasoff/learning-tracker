@@ -1222,7 +1222,7 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get rewardConfigurationSubtitle =>
-      'פרסים לפי מסלול או לפי סך נקודות מכל המסלולים.';
+      'הגדירו פרסים שהילד יוכל לממש עם הנקודות שצבר.';
 
   @override
   String get rewardConfigPerTrackTab => 'לפי מסלול';
@@ -3004,6 +3004,28 @@ class AppLocalizationsHe extends AppLocalizations {
   String get tierLensLifetimeKnowledge => 'ידע כולל';
 
   @override
+  String streakWidgetDayStreak(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'רצף של $count ימים!',
+      one: 'רצף של יום אחד!',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String streakWidgetBest(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'שיא: $count ימים',
+      one: 'שיא: יום אחד',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String tierCounterStreakDays(int count) {
     return 'רצף של $count ימים';
   }
@@ -3329,6 +3351,17 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get pendingRedemptionsEmpty => 'אין בקשות פרס ממתינות.';
+
+  @override
+  String pendingRedemptionsCountSubtitle(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count בקשות פרס ממתינות',
+      one: 'בקשת פרס אחת ממתינה',
+    );
+    return '$_temp0';
+  }
 
   @override
   String pendingRedemptionsCost(int points) {

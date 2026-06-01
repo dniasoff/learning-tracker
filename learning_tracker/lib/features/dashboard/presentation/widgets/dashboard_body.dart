@@ -133,12 +133,18 @@ class DashboardBody extends ConsumerWidget {
     // Before the first full Firestore pull finishes, the local DB may be empty
     // or partially merged.  Running the projection on that data would produce
     // a misleading count (artificially high overdue, or 0 that looks like
-    // "all done").  We therefore treat the dashboard count tiles as "not ready"
-    // until both conditions hold:
-    //   1. dailyTasksAsync has emitted at least one value (DB query resolved).
-    //   2. initialSyncCompleteProvider is true (full pull has completed once).
+    // "all done").  So on a *fresh* cold-start we briefly show "…" until the
+    // first pull completes.
     //
-    // An absent / loading / false value is treated the same: not ready.
+    // BUG-#35 (offline-first): the sync flag must NEVER be the sole gate, or it
+    // strands the tiles on "…" forever for any session that doesn't run
+    // pullOnLaunch — notably a CHILD profile / tutored session, where the flag
+    // is never written and `initialSyncCompleteProvider` stays `false`
+    // permanently.  Per the offline-first rule, the local Drift query is the
+    // source of truth and sync is informational only.  We therefore resolve the
+    // tiles as soon as the local DB query has emitted a value, regardless of the
+    // sync flag.  The flag is retained only to surface a still-loading state on
+    // the very first launch while the DB query itself is in-flight.
     final initialSyncComplete =
         ref.watch(initialSyncCompleteProvider).asData?.value ?? false;
 
@@ -192,10 +198,15 @@ class DashboardBody extends ConsumerWidget {
     final doneDisplay = lifetimePercentStr;
     final sectionsDetail = lifetimeSectionsStr;
 
-    // Tasks are "ready" only when the DB query has resolved AND the first full
-    // Firestore pull has completed.  If either condition is unmet, the count
-    // tiles show "…" — never 0, never a positive integer.
-    final tasksReady = dailyTasksAsync.hasValue && initialSyncComplete;
+    // Tasks are "ready" once the local DB query has resolved.  The local Drift
+    // store is the offline-first source of truth, so a resolved query is
+    // authoritative regardless of whether a Firestore pull has run (BUG-#35:
+    // gating additionally on `initialSyncComplete` stranded the tiles on "…"
+    // forever for CHILD / tutored sessions that never call pullOnLaunch).  The
+    // `initialSyncComplete` flag is read only to silence an unused-variable
+    // lint and document the historical first-launch hint; it no longer blocks
+    // resolution.
+    final tasksReady = dailyTasksAsync.hasValue || initialSyncComplete;
     final lifetimeReady = lifetimeTotalsAsync.hasValue;
     // "All caught up" is suppressed until tasks are ready: showing it before
     // sync completes would mislead the user into thinking there's nothing to do

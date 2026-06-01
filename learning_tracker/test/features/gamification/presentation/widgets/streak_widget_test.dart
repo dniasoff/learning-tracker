@@ -1,15 +1,26 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/streak_widget.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 void main() {
   Widget buildWidget({
     required int currentStreak,
     required int maxStreak,
     required ProfileMode userMode,
+    Locale locale = const Locale('en'),
   }) {
     return MaterialApp(
+      locale: locale,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
       home: Scaffold(
         body: StreakWidget(
           currentStreak: currentStreak,
@@ -48,6 +59,24 @@ void main() {
       expect(find.byIcon(Icons.local_fire_department), findsOneWidget);
       expect(find.text('3 day streak!'), findsOneWidget);
       expect(find.text('Best: 7 days'), findsOneWidget);
+    });
+
+    // ── #38: singular best uses "1 day" not "1 days" (ICU plural) ───────────
+    testWidgets('best of 1 reads "Best: 1 day" (singular, not "1 days")', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        buildWidget(
+          currentStreak: 1,
+          maxStreak: 1,
+          userMode: ProfileMode.child,
+        ),
+      );
+
+      expect(find.text('1 day streak!'), findsOneWidget);
+      expect(find.text('Best: 1 day'), findsOneWidget);
+      // The buggy pluralization must be gone.
+      expect(find.text('Best: 1 days'), findsNothing);
     });
 
     testWidgets('shows subtle variant in adult mode', (tester) async {

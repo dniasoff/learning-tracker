@@ -6,7 +6,12 @@ const Color _kFieldFill = Color(0xFFF2F4F8);
 const Color _kMutedLabel = Color(0xFF6B7280);
 
 /// Horizontal scrollable row of icon tiles used to select a reward icon.
-class AvatarPickerRow extends StatelessWidget {
+///
+/// Auto-scrolls so the [selectedIndex] tile is visible. This matters in edit
+/// mode: when an existing reward's icon lives past the first few visible tiles
+/// (e.g. index 6+ in the 17-icon list), the highlighted tile would otherwise
+/// sit off-screen and the picker would look as if nothing is selected.
+class AvatarPickerRow extends StatefulWidget {
   const AvatarPickerRow({
     super.key,
     required this.selectedIndex,
@@ -17,21 +22,71 @@ class AvatarPickerRow extends StatelessWidget {
   final void Function(int index) onSelect;
 
   @override
+  State<AvatarPickerRow> createState() => _AvatarPickerRowState();
+}
+
+class _AvatarPickerRowState extends State<AvatarPickerRow> {
+  static const double _tileWidth = 64;
+  static const double _tileGap = 10;
+
+  final ScrollController _controller = ScrollController();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _revealSelected());
+  }
+
+  @override
+  void didUpdateWidget(AvatarPickerRow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.selectedIndex != widget.selectedIndex) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _revealSelected());
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  /// Scrolls so the selected tile sits within the visible viewport.
+  void _revealSelected() {
+    if (!_controller.hasClients) return;
+    final index = widget.selectedIndex;
+    if (index <= 0) {
+      _controller.jumpTo(0);
+      return;
+    }
+    const stride = _tileWidth + _tileGap;
+    final tileStart = index * stride;
+    final tileEnd = tileStart + _tileWidth;
+    final viewportEnd =
+        _controller.offset + _controller.position.viewportDimension;
+    if (tileEnd > viewportEnd || tileStart < _controller.offset) {
+      final target = tileStart.clamp(0.0, _controller.position.maxScrollExtent);
+      _controller.jumpTo(target);
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return SizedBox(
       height: 76,
       child: ListView.separated(
+        controller: _controller,
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 2),
         itemCount: RewardMilestoneIcons.choices.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 10),
+        separatorBuilder: (_, __) => const SizedBox(width: _tileGap),
         itemBuilder: (context, i) {
           return SizedBox(
-            width: 64,
+            width: _tileWidth,
             child: AvatarTile(
               icon: RewardMilestoneIcons.choices[i],
-              selected: selectedIndex == i,
-              onTap: () => onSelect(i),
+              selected: widget.selectedIndex == i,
+              onTap: () => widget.onSelect(i),
             ),
           );
         },

@@ -36,6 +36,7 @@ import 'package:learning_tracker/features/gamification/domain/models/reward_mile
 import 'package:learning_tracker/features/gamification/presentation/providers/achievements_overview_provider.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/reward_config_controller.dart';
 import 'package:learning_tracker/features/gamification/presentation/screens/reward_configuration_screen.dart';
+import 'package:learning_tracker/features/gamification/presentation/widgets/avatar_picker_row.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/reward_form.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
@@ -50,6 +51,7 @@ RewardMilestone _fakeMs({
   String id = 'ms-1',
   String title = 'Test Reward',
   int thresholdPoints = 100,
+  int iconIndex = 0,
 }) => RewardMilestone(
   id: id,
   profileId: 1,
@@ -57,6 +59,7 @@ RewardMilestone _fakeMs({
   title: title,
   thresholdPoints: thresholdPoints,
   isEnabled: true,
+  iconIndex: iconIndex,
   createdAt: DateTime.utc(2026),
   updatedAt: DateTime.utc(2026),
 );
@@ -594,6 +597,57 @@ void main() {
       await _tearDown(tester);
     },
   );
+
+  // ── #40. Edit-mode preselects the existing reward's icon tile ─────────────
+  //
+  // Regression (#40): opening Edit on an existing reward loaded name+points
+  // but the avatar picker showed no tile selected — the existing icon was not
+  // surfaced (highlighted + scrolled into view). applyMilestoneToForm seeds
+  // form.iconIndex, and AvatarPickerRow now scrolls so the selected tile is
+  // visible even when its index sits past the first few on-screen tiles.
+
+  testWidgets('edit existing reward → its icon tile is selected', (
+    tester,
+  ) async {
+    _useTallViewport(tester);
+    // iconIndex 6 sits past the first visible tiles in the horizontal row.
+    final prize = _fakeMs(
+      id: 'ms-prize',
+      title: 'Prize',
+      thresholdPoints: 50,
+      iconIndex: 6,
+    );
+    final fake = _FakeControllerWithMilestones(milestones: [prize]);
+    await tester.pumpWidget(_buildFake(fake: fake));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    // Open the Manage rewards sheet.
+    await tester.tap(find.byIcon(Icons.more_vert_rounded));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
+    await tester.tap(find.text('Manage rewards'));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    // Tap the RewardCard's edit button. The name TextField also carries an
+    // edit_outlined suffix icon, so the card's edit is the LAST one.
+    await tester.tap(find.byIcon(Icons.edit_outlined).last);
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    // Exactly one tile is selected, and it is the existing reward's icon (6).
+    final tiles = tester
+        .widgetList<AvatarTile>(find.byType(AvatarTile))
+        .toList();
+    final selected = <int>[
+      for (var i = 0; i < tiles.length; i++)
+        if (tiles[i].selected) i,
+    ];
+    expect(selected, equals([6]));
+
+    await _tearDown(tester);
+  });
 
   // ── 16. He-RTL smoke ──────────────────────────────────────────────────────
 

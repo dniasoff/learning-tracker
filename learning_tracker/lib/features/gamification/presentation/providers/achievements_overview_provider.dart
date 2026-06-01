@@ -100,12 +100,10 @@ final achievementsOverviewProvider =
       }
 
       // R4o-C1 / DEC-32: the auto-unlock achievement ladder was replaced by the
-      // spend economy. Rewards are priced spend-items, NOT cumulative
-      // auto-unlocks crossing the debitable balance, so no unlock evaluation
-      // runs here. Any historical unlock records are ignored — every reward is
-      // shown as a redeemable priced item.
-      final unlockedIds = <String>{};
-
+      // spend economy. Rewards are priced spend-items; a reward is "unlocked"
+      // (affordable / achievable) when the relevant points total has reached or
+      // crossed its threshold. Classification is derived purely from
+      // threshold <= points — no historical unlock records are consulted.
       final rows = <AchievementRowVm>[];
       final filterOptions = <AchievementTrackFilterVm>[];
 
@@ -133,14 +131,14 @@ final achievementsOverviewProvider =
 
         RewardMilestone? firstLocked;
         for (final m in enabled) {
-          if (!unlockedIds.contains(m.id)) {
+          if (trackPoints < m.thresholdPoints) {
             firstLocked = m;
             break;
           }
         }
 
         for (final m in enabled) {
-          final unlocked = unlockedIds.contains(m.id);
+          final unlocked = trackPoints >= m.thresholdPoints;
           final isNext = !unlocked && firstLocked?.id == m.id;
           rows.add(
             AchievementRowVm(
@@ -174,14 +172,14 @@ final achievementsOverviewProvider =
         final globalPoints = await service.getGlobalPointsForRewards();
         RewardMilestone? firstLockedGlobal;
         for (final m in enabledGlobal) {
-          if (!unlockedIds.contains(m.id)) {
+          if (globalPoints < m.thresholdPoints) {
             firstLockedGlobal = m;
             break;
           }
         }
 
         for (final m in enabledGlobal) {
-          final unlocked = unlockedIds.contains(m.id);
+          final unlocked = globalPoints >= m.thresholdPoints;
           final isNext = !unlocked && firstLockedGlobal?.id == m.id;
           rows.add(
             AchievementRowVm(
