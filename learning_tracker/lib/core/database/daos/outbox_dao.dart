@@ -124,4 +124,37 @@ class OutboxDao extends DatabaseAccessor<UserDatabase> with _$OutboxDaoMixin {
             .getSingle();
     return row.read(countExpr) ?? 0;
   }
+
+  /// Revive rows for [profileId] that dead-lettered with an identity/permission
+  /// failure, by resetting their retry budget so the next drain attempts them
+  /// again under the current Firebase identity.
+  ///
+  /// A row that hit the dead-letter ceiling ([minAttempts], mirrors
+  /// `OutboxProcessor._maxAttempts`) with a `permission-denied` or
+  /// `unauthenticated` error failed under a condition that may since have been
+  /// resolved — the wrong cloud account was signed in, or the Firestore rules
+  /// for that collection had not been deployed. Once the correct identity is
+  /// active, those writes deserve a fresh attempt instead of being silently
+  /// stranded forever. Rows that dead-lettered for ANY other reason (malformed
+  /// payload, etc.) are left untouched.
+  ///
+  /// Callers MUST bound how often this runs (e.g. once per app launch) so a
+  /// genuinely-doomed row does not churn through its retry budget every drain.
+  /// Returns the number of rows revived.
+  Future<int> reviveIdentityDeadLetters(int profileId, {int minAttempts = 10}) {
+    return (update(outbox)..where(
+          (t) =>
+              t.profileId.equals(profileId) &
+              t.attempts.isBiggerOrEqualValue(minAttempts) &
+              (t.lastError.like('%permission-denied%') |
+                  t.lastError.like('%nauthenticated%')),
+        ))
+        .write(
+          const OutboxCompanion(
+            attempts: Value(0),
+            lastError: Value<String?>(null),
+            lastAttemptAt: Value<DateTime?>(null),
+          ),
+        );
+  }
 }

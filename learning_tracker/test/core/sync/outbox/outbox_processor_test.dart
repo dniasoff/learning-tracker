@@ -956,6 +956,80 @@ void main() {
     });
   });
 
+  group('OutboxDao.reviveIdentityDeadLetters', () {
+    Future<void> insertDead({
+      required String entityKey,
+      required int attempts,
+      String? lastError,
+    }) async {
+      await db.outboxDao.insertOutboxRow(
+        OutboxCompanion(
+          profileId: const Value(profileId),
+          entityKind: const Value(OutboxEntityKind.profileProgram),
+          entityKey: Value(entityKey),
+          payload: const Value('{}'),
+          createdAt: Value(DateTime.utc(2026, 5, 14)),
+          attempts: Value(attempts),
+          lastError: Value(lastError),
+        ),
+      );
+    }
+
+    test('resets ONLY dead-lettered rows that failed with an identity/'
+        'permission error; leaves others untouched', () async {
+      await insertDead(
+        entityKey: 'permdenied',
+        attempts: 10,
+        lastError:
+            '[cloud_firestore/permission-denied] The caller does not have '
+            'permission to execute the specified operation.',
+      );
+      await insertDead(
+        entityKey: 'unauth',
+        attempts: 10,
+        lastError: '[firebase_functions/unauthenticated] UNAUTHENTICATED',
+      );
+      // Dead-lettered but for a DIFFERENT reason — must stay dead.
+      await insertDead(
+        entityKey: 'badpayload',
+        attempts: 10,
+        lastError: 'FormatException: malformed payload',
+      );
+      // Identity error but NOT yet dead-lettered — left alone (still retries
+      // on its own backoff schedule).
+      await insertDead(
+        entityKey: 'notyetdead',
+        attempts: 2,
+        lastError: '[cloud_firestore/permission-denied] denied',
+      );
+
+      final revived = await db.outboxDao.reviveIdentityDeadLetters(profileId);
+      expect(revived, 2, reason: 'only the 2 identity-class dead-letters');
+
+      Future<int> attemptsOf(String key) async {
+        final rows = await db.outboxDao.getPendingByKind(
+          OutboxEntityKind.profileProgram,
+          profileId,
+          limit: 100,
+        );
+        return rows.firstWhere((r) => r.entityKey == key).attempts;
+      }
+
+      expect(await attemptsOf('permdenied'), 0);
+      expect(await attemptsOf('unauth'), 0);
+      expect(
+        await attemptsOf('badpayload'),
+        10,
+        reason: 'non-identity stays dead',
+      );
+      expect(
+        await attemptsOf('notyetdead'),
+        2,
+        reason: 'sub-threshold untouched',
+      );
+    });
+  });
+
   group('OutboxProcessor.drain — isIdentityMismatched guard', () {
     test(
       'mismatched identity skips the whole drain — drain returns 0, no push, '

@@ -324,6 +324,12 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
   Future<void> _drainOutbox(String trigger) async {
     final processor = _outboxProcessor;
     if (processor == null) return;
+    // One-shot per launch: give rows that dead-lettered under a since-resolved
+    // condition (wrong account signed in, or Firestore rules not yet deployed)
+    // one fresh attempt under the now-current identity — otherwise they remain
+    // stranded forever and the Backup & Sync banner shows a permanent "stuck"
+    // even after the underlying problem is fixed.
+    await _maybeReviveIdentityDeadLetters();
     final profileId = _profileId;
     _logger?.info(
       event: LogEvents.sync.outboxDrainStarted,
@@ -924,6 +930,56 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
   /// dashboards can graph backlog age. Safe to call after [dispose] —
   /// the status-controller closed-check guards against use-after-dispose.
   Future<void> recordDrainAttempt() => _recomputeOutboxStatus();
+
+  /// One-shot guard for [_maybeReviveIdentityDeadLetters]. Lives on the
+  /// orchestrator singleton (NOT the outbox processor, which is rebuilt on
+  /// every account switch / sign-in — i.e. across the very transition we care
+  /// about), so the revive fires exactly once per app launch.
+  bool _identityDeadLettersRevived = false;
+
+  /// Give identity/permission dead-letters one fresh attempt under the current
+  /// identity — once per launch, and only while the identity matches (when it
+  /// does NOT, the processor guard skips the drain anyway, so reviving would be
+  /// pointless and we leave the flag unset to retry once it matches).
+  Future<void> _maybeReviveIdentityDeadLetters() async {
+    if (_identityDeadLettersRevived) return;
+
+    final identity = _resolveIdentityStatus?.call();
+    if (identity != null && identity.isMismatch) return; // wait until matched
+
+    final resolveDao = _resolveOutboxDao;
+    if (resolveDao == null) return;
+
+    OutboxDao dao;
+    try {
+      dao = resolveDao();
+    } catch (_) {
+      return; // DB swap mid-flight — try again on the next drain.
+    }
+
+    _identityDeadLettersRevived = true;
+    try {
+      var revived = await dao.reviveIdentityDeadLetters(_profileId);
+      if (_profileId != 0) {
+        revived += await dao.reviveIdentityDeadLetters(0);
+      }
+      if (revived > 0) {
+        _logger?.info(
+          event: 'sync_outbox_identity_deadletters_revived',
+          fields: {'count': revived},
+        );
+      }
+    } catch (e, st) {
+      // Reset the flag so a transient DB error doesn't permanently skip the
+      // one-shot revive for this launch.
+      _identityDeadLettersRevived = false;
+      _logger?.warning(
+        event: 'sync_outbox_identity_deadletters_revive_failed',
+        exception: e,
+        stackTrace: st,
+      );
+    }
+  }
 
   Future<void> _recomputeOutboxStatus() async {
     if (_statusController.isClosed) return;

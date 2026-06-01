@@ -13,6 +13,7 @@ library;
 
 import 'dart:async';
 
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
@@ -21,6 +22,7 @@ import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 import 'package:learning_tracker/core/sync/merge/merge_router.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 import 'package:learning_tracker/core/sync/outbox/push_pipeline.dart';
+import 'package:learning_tracker/core/sync/sync_identity_status.dart';
 import 'package:learning_tracker/core/sync/sync_orchestrator.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 
@@ -129,13 +131,20 @@ class _Setup {
   }
 }
 
-_Setup _buildSetup({Duration periodic = const Duration(seconds: 60)}) {
+_Setup _buildSetup({
+  Duration periodic = const Duration(seconds: 60),
+  SyncIdentityStatus Function()? resolveIdentityStatus,
+  bool wireOutboxDao = false,
+}) {
   final db = inMemoryDb();
   final pipeline = _CountingPipeline();
   final processor = OutboxProcessor(
     outboxDao: db.outboxDao,
     pipeline: pipeline,
     clock: FakeLocalDayClock(DateTime.utc(2026, 5, 21)),
+    isIdentityMismatched: resolveIdentityStatus == null
+        ? null
+        : () => resolveIdentityStatus().isMismatch,
   );
   final mergeRouter = MergeRouter(mergers: const <String, EntityMerger>{});
   // ignore: close_sinks — closed via [_Setup.close] in addTearDown.
@@ -150,6 +159,8 @@ _Setup _buildSetup({Duration periodic = const Duration(seconds: 60)}) {
     resetFirestoreNetworkOverride: () async {},
     outboxProcessor: processor,
     periodicDrainInterval: periodic,
+    resolveIdentityStatus: resolveIdentityStatus,
+    resolveOutboxDao: wireOutboxDao ? () => db.outboxDao : null,
   );
   return _Setup(
     orchestrator: orchestrator,
@@ -309,5 +320,83 @@ void main() {
       );
       expect(remaining, hasLength(1), reason: 'row is still queued');
     });
+  });
+
+  group('SyncOrchestrator — identity dead-letter revive (once per launch)', () {
+    Future<void> seedIdentityDeadLetter(UserDatabase db) async {
+      await db.outboxDao.insertOutboxRow(
+        OutboxCompanion(
+          profileId: const Value(1),
+          entityKind: const Value(OutboxEntityKind.completion),
+          entityKey: const Value('c_dead'),
+          payload: const Value('{"ref":"Berakhot.2a"}'),
+          createdAt: Value(DateTime.utc(2026, 5, 21)),
+          attempts: const Value(10), // dead-lettered
+          lastError: const Value('[cloud_firestore/permission-denied] denied'),
+        ),
+      );
+    }
+
+    test(
+      'matched identity → a drain revives the dead-letter and pushes it',
+      () async {
+        final setup = _buildSetup(
+          wireOutboxDao: true,
+          resolveIdentityStatus: () => const SyncIdentityStatus.matched(),
+        );
+        addTearDown(setup.close);
+
+        setup.orchestrator.start();
+        await seedIdentityDeadLetter(setup.db);
+
+        // pullOnLaunch chains a drain → revive runs first, resetting attempts,
+        // then the drain pushes the now-eligible row.
+        await setup.orchestrator.pullOnLaunch();
+
+        final remaining = await setup.db.outboxDao.getPendingByKind(
+          OutboxEntityKind.completion,
+          1,
+          limit: 10,
+        );
+        expect(
+          remaining,
+          isEmpty,
+          reason:
+              'revived dead-letter was retried and pushed under the '
+              'matched identity',
+        );
+      },
+    );
+
+    test(
+      'mismatched identity → dead-letter is NOT revived (guard skips drain)',
+      () async {
+        final setup = _buildSetup(
+          wireOutboxDao: true,
+          resolveIdentityStatus: () => const SyncIdentityStatus.mismatched(
+            activeAccountEmail: 'dniasoff@gmail.com',
+            signedInEmail: 'familyniasoff@gmail.com',
+          ),
+        );
+        addTearDown(setup.close);
+
+        setup.orchestrator.start();
+        await seedIdentityDeadLetter(setup.db);
+
+        await setup.orchestrator.pullOnLaunch();
+
+        final rows = await setup.db.outboxDao.getPendingByKind(
+          OutboxEntityKind.completion,
+          1,
+          limit: 10,
+        );
+        expect(rows, hasLength(1), reason: 'row preserved while mismatched');
+        expect(
+          rows.single.attempts,
+          10,
+          reason: 'not revived while the wrong account is signed in',
+        );
+      },
+    );
   });
 }
