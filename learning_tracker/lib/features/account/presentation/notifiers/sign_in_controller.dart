@@ -92,8 +92,13 @@ class SignInController extends Notifier<SignInState> {
         return l10n.authErrUserNotFound;
       case 'wrong-password':
         return l10n.authErrWrongPassword;
+      // Firebase projects with email-enumeration protection enabled (the
+      // current default) return `invalid-credential` instead of
+      // `wrong-password` for a bad password. Map it to the same clear
+      // "Incorrect password" copy so a wrong-password attempt never degrades
+      // to the generic "Sign-in failed" message.
       case 'invalid-credential':
-        return l10n.authErrInvalidCredential;
+        return l10n.authErrWrongPassword;
       case 'user-disabled':
         return l10n.authErrUserDisabled;
       case 'too-many-requests':
@@ -115,7 +120,14 @@ class SignInController extends Notifier<SignInState> {
 
   String? _extractFirebaseCode(Object e) {
     final str = e.toString();
-    final match = RegExp(r'\[([a-z-]+)\]').firstMatch(str);
+    // FirebaseException.toString() renders as `[firebase_auth/wrong-password]
+    // message` — the bare error code lives AFTER the `<plugin>/` prefix and
+    // the plugin segment itself contains an underscore. The previous pattern
+    // (`\[([a-z-]+)\]`) matched neither the slash nor the underscore, so every
+    // real Firebase auth error fell through to the generic "Sign-in failed"
+    // copy (e.g. a wrong password never showed "Incorrect password"). Capture
+    // the optional plugin prefix and return only the trailing code segment.
+    final match = RegExp(r'\[(?:[a-z_]+/)?([a-z-]+)\]').firstMatch(str);
     return match?.group(1);
   }
 

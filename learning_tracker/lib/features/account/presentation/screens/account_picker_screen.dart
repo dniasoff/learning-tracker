@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
@@ -17,6 +16,7 @@ import 'package:learning_tracker/features/account/domain/services/session_persis
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
     hide authStateProvider;
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
+import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart'
     show kOnboardingComplete;
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart'
@@ -398,7 +398,15 @@ class _AccountTile extends ConsumerWidget {
 
       await _activateCloudAccountFromLocalData(context, ref);
     } else if (isCloud && !hasValidSession) {
-      final isOnline = await InternetConnectionChecker.instance.hasConnection;
+      // Use the same configured/overridable checker the rest of the app reads
+      // (the provider instance), NOT the package's static singleton — the
+      // singleton is unconfigured and untestable, and on an offline device it
+      // could mis-probe and push the user to SignInRoute (a network sign-in)
+      // instead of restoring local data. Offline-first requires the local data
+      // activate without any network round-trip.
+      final isOnline = await ref
+          .read(internetConnectionCheckerProvider)
+          .hasConnection;
       if (isOnline) {
         // Online with invalid/expired session — route to sign-in.
         if (context.mounted) {

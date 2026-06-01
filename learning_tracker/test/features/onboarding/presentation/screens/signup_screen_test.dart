@@ -39,7 +39,14 @@ void main() {
     when(() => mockAuthRepo.currentUser).thenReturn(null);
     when(() => mockRouter.push(any())).thenAnswer((_) async => null);
     when(() => mockRouter.replace(any())).thenAnswer((_) async => null);
+    // These tests assert the ONLINE signup variant (Sign Up CTA, Google button,
+    // OR divider). The screen seeds its connectivity loading-window from the
+    // process-wide lastKnownOnline cache (default offline); a stream override
+    // alone doesn't update it, so seed it online here.
+    debugSetLastKnownOnline(true);
   });
+
+  tearDown(debugResetLastKnownOnline);
 
   Widget createTestWidget() {
     return ProviderScope(

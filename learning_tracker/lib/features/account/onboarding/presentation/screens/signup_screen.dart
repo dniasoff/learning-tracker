@@ -478,7 +478,15 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final connectivity = ref.watch(connectivityStreamProvider);
-    final isOnline = connectivity.maybeWhen(data: (v) => v, orElse: () => true);
+    // Offline-first: while the first probe is in flight, fall back to the last
+    // observed reading (offline until proven online) rather than optimistically
+    // assuming online — otherwise an offline device renders the cloud-blue
+    // "backed up" card, the Google button, the OR divider and the "Sign Up"
+    // label instead of the coral offline warning + offline-acknowledge flow.
+    final isOnline = connectivity.maybeWhen(
+      data: (v) => v,
+      orElse: () => lastKnownOnline,
+    );
 
     return Scaffold(
       backgroundColor: AppColors.surfaceF3,

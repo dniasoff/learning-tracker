@@ -299,6 +299,201 @@ void main() {
       expect(find.text('פרק א'), findsOneWidget);
     });
 
+    // Regression: tapping the curriculum-root chip (the leftmost "ancestor"
+    // crumb, e.g. "חומש"/"Mishnayos") must navigate back to the curriculum
+    // root. Previously that chip was a dead Container with no onTap, so when
+    // drilled exactly one level deep — where the root chip is the ONLY visible
+    // ancestor affordance (the breadcrumb row shows just the drill segment) —
+    // tapping the ancestor did nothing. Only the AppBar back button worked.
+    testWidgets(
+      'tapping the curriculum-root chip navigates back to the root level',
+      (tester) async {
+        // Depth-1 view (Seder Zeraim selected): masechta rows.
+        final depth1Items = [
+          const ContentItem(
+            curriculumId: 'mishnayos',
+            level1: 'Seder Zeraim',
+            level2: 'Berachos',
+            displayNameHe: 'ברכות',
+            displayNameEn: 'Berachos',
+            sefariaRef: 'Berachos',
+            sortOrder: 0,
+            isLeaf: false,
+          ),
+        ];
+
+        // Root view (no filters): seder rows.
+        final rootItems = [
+          const ContentItem(
+            curriculumId: 'mishnayos',
+            level1: 'Seder Zeraim',
+            displayNameHe: 'סדר זרעים',
+            displayNameEn: 'Seder Zeraim',
+            sefariaRef: 'Seder Zeraim',
+            sortOrder: 0,
+            isLeaf: false,
+          ),
+          const ContentItem(
+            curriculumId: 'mishnayos',
+            level1: 'Seder Moed',
+            displayNameHe: 'סדר מועד',
+            displayNameEn: 'Seder Moed',
+            sefariaRef: 'Seder Moed',
+            sortOrder: 1,
+            isLeaf: false,
+          ),
+        ];
+
+        when(
+          () => mockRepo.getHierarchyConfig(CurriculumId.mishnayos),
+        ).thenAnswer(
+          (_) async => const CurriculumHierarchyConfig(
+            curriculumId: 'mishnayos',
+            levelLabels: ['Seder', 'Masechta', 'Perek', 'Mishna'],
+            totalItems: 100,
+          ),
+        );
+
+        when(
+          () => mockRepo.filterByLevel(
+            curriculumId: CurriculumId.mishnayos,
+            level1: 'Seder Zeraim',
+            level2: null,
+            level3: null,
+            level4: null,
+          ),
+        ).thenAnswer((_) async => depth1Items);
+
+        when(
+          () => mockRepo.filterByLevel(
+            curriculumId: CurriculumId.mishnayos,
+            level1: null,
+            level2: null,
+            level3: null,
+            level4: null,
+          ),
+        ).thenAnswer((_) async => rootItems);
+
+        await tester.pumpWidget(createTestWidget(level1: 'Seder Zeraim'));
+        await tester.pumpAndSettle();
+
+        // Sanity: depth-1, the root-level "מועד" row is not yet shown.
+        expect(find.text('מועד'), findsNothing);
+
+        // The root chip must be present and interactive when drilled in.
+        final rootChip = find.byKey(const Key('content_hierarchy_root_chip'));
+        expect(rootChip, findsOneWidget);
+
+        await tester.tap(rootChip);
+        await tester.pumpAndSettle();
+
+        // Now back at the root level: both seder rows visible (Hebrew titles
+        // with the structural prefix stripped by the renderer).
+        expect(find.text('זרעים'), findsOneWidget);
+        expect(find.text('מועד'), findsOneWidget);
+      },
+    );
+
+    // Regression: tapping an intermediate ancestor crumb WITHIN the breadcrumb
+    // row (not the root chip) must drop the view to that ancestor's level.
+    testWidgets(
+      'tapping an ancestor breadcrumb crumb navigates the view up to that level',
+      (tester) async {
+        // Depth-2 view (Seder Zeraim > Berachos): perek rows.
+        final depth2Items = [
+          const ContentItem(
+            curriculumId: 'mishnayos',
+            level1: 'Seder Zeraim',
+            level2: 'Berachos',
+            level3: '1',
+            level4: '1',
+            displayNameHe: 'משנה ברכות א:א',
+            displayNameEn: 'Mishnah Berakhot 1:1',
+            sefariaRef: 'Mishnah Berakhot 1.1',
+            sortOrder: 0,
+            isLeaf: true,
+          ),
+        ];
+
+        // Depth-1 view (Seder Zeraim): masechta rows.
+        final depth1Items = [
+          const ContentItem(
+            curriculumId: 'mishnayos',
+            level1: 'Seder Zeraim',
+            level2: 'Berachos',
+            displayNameHe: 'ברכות',
+            displayNameEn: 'Berachos',
+            sefariaRef: 'Berachos',
+            sortOrder: 0,
+            isLeaf: false,
+          ),
+          const ContentItem(
+            curriculumId: 'mishnayos',
+            level1: 'Seder Zeraim',
+            level2: 'Peah',
+            displayNameHe: 'פאה',
+            displayNameEn: 'Peah',
+            sefariaRef: 'Peah',
+            sortOrder: 1,
+            isLeaf: false,
+          ),
+        ];
+
+        when(
+          () => mockRepo.getHierarchyConfig(CurriculumId.mishnayos),
+        ).thenAnswer(
+          (_) async => const CurriculumHierarchyConfig(
+            curriculumId: 'mishnayos',
+            levelLabels: ['Seder', 'Masechta', 'Perek', 'Mishna'],
+            totalItems: 100,
+          ),
+        );
+
+        when(
+          () => mockRepo.filterByLevel(
+            curriculumId: CurriculumId.mishnayos,
+            level1: 'Seder Zeraim',
+            level2: 'Berachos',
+            level3: null,
+            level4: null,
+          ),
+        ).thenAnswer((_) async => depth2Items);
+
+        when(
+          () => mockRepo.filterByLevel(
+            curriculumId: CurriculumId.mishnayos,
+            level1: 'Seder Zeraim',
+            level2: null,
+            level3: null,
+            level4: null,
+          ),
+        ).thenAnswer((_) async => depth1Items);
+
+        await tester.pumpWidget(
+          createTestWidget(level1: 'Seder Zeraim', level2: 'Berachos'),
+        );
+        await tester.pumpAndSettle();
+
+        // Sanity: depth-2, the depth-1 sibling "פאה" is not yet shown.
+        expect(find.text('פאה'), findsNothing);
+
+        // In test mode (no cached Hebrew names) the ancestor crumb renders the
+        // raw English value "Seder Zeraim" inside the breadcrumb row. It is the
+        // first (non-last) crumb, so it is clickable.
+        final ancestorCrumb = find.descendant(
+          of: find.byType(BreadcrumbNavigation),
+          matching: find.text('Seder Zeraim'),
+        );
+        expect(ancestorCrumb, findsOneWidget);
+
+        await tester.tap(ancestorCrumb);
+        await tester.pumpAndSettle();
+
+        // Back at depth-1: the depth-1 masechta sibling is now visible.
+        expect(find.text('פאה'), findsOneWidget);
+      },
+    );
+
     // Regression test for R5-6: browse tree showed "No content" at max
     // browse depth when the navigation stack was initialised from deep-link
     // URL params (level1+level2+level3 all set), i.e. currentDepth=3 which

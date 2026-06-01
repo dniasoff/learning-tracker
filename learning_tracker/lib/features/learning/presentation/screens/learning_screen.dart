@@ -463,28 +463,10 @@ class _LearnTaskCard extends ConsumerWidget {
                         fontSize: 22,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.history_rounded,
-                          size: 14,
-                          color: Color(0xFF6A7282),
-                        ),
-                        const SizedBox(width: 3),
-                        Expanded(
-                          child: Text(
-                            task.trackLabel,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: const Color(0xFF586170),
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+                    // Rule-7 (no track types): the task card never renders a
+                    // track-type label (e.g. "personal"/"אישי"). The stage chip
+                    // above and the title breadcrumb already carry all the
+                    // context the learner needs.
                   ],
                 ),
               ),

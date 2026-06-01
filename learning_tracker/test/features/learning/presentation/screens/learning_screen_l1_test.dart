@@ -18,7 +18,8 @@
 //  10.  Daily tasks loading — inner CircularProgressIndicator shown.
 //  11.  Daily tasks error — AppErrorView shown inside tasks section.
 //  12.  Daily tasks empty — 'All caught up' info card rendered.
-//  13.  Daily tasks populated — task cards render with track label.
+//  13.  Daily tasks populated — task cards render WITHOUT a track-label row
+//       (Rule-7 no-track-types); 13b: a TrackType storageKey never surfaces.
 //  14.  Chazara task icon — scheduledChazara priority → Icons.history_rounded.
 //  15.  New-learning task icon — newLearning priority → Icons.auto_stories_rounded.
 //  16.  No track-type labels anywhere (no 'Personal'/'Standard'/'Custom'/'אישי').
@@ -566,26 +567,69 @@ void main() {
   });
 
   // ── 13. Daily tasks populated ───────────────────────────────────────────────
+  //
+  // Rule-7 (no track types): the task card MUST NOT render a track label row.
+  // Earlier the card rendered `task.trackLabel` verbatim — which, for the
+  // scheduler's projection/fresh-plan tasks, was the literal TrackType storage
+  // key "personal" (a track-type label, forbidden by the product rule). The fix
+  // removes the label row entirely; the stage chip + title carry all context.
 
-  testWidgets('daily tasks populated: task card track label is rendered', (
-    tester,
-  ) async {
-    final task = _task(
-      ref: 'Mishnah_Berakhot_1.1',
-      priority: DailyTaskPriority.newLearning,
-    );
-    await tester.pumpWidget(
-      _buildScreen(curricula: [CurriculumId.mishnayos], tasks: [task]),
-    );
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
+  testWidgets(
+    'daily tasks populated: task card renders WITHOUT a track-label row',
+    (tester) async {
+      final task = _task(
+        ref: 'Mishnah_Berakhot_1.1',
+        priority: DailyTaskPriority.newLearning,
+      );
+      await tester.pumpWidget(
+        _buildScreen(curricula: [CurriculumId.mishnayos], tasks: [task]),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
 
-    // Track label is shown in the task card.
-    expect(find.text('Test Track'), findsOneWidget);
+      // The trackLabel value must NOT appear anywhere on the card.
+      expect(find.text('Test Track'), findsNothing);
+      // The stage chip (top row of the card) still renders.
+      expect(find.text('Learn'), findsOneWidget);
 
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pump(Duration.zero);
-  });
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    },
+  );
+
+  // ── 13b. Track-type storage keys must never reach the card ──────────────────
+  //
+  // Regression for the on-device P1: the scheduler set trackLabel to
+  // `TrackType.personal.storageKey` ("personal"), which rendered verbatim as the
+  // card's bottom row. Even if a stray task carried that raw value, the card —
+  // having no track-label row — must never surface it.
+
+  testWidgets(
+    'task card never renders a TrackType storageKey (e.g. "personal"/"אישי")',
+    (tester) async {
+      // Simulate the pre-fix data leak: a task still carrying the raw storage
+      // key. The card must not render it under any locale.
+      final leakyTask = _task(
+        ref: 'Mishnah_Berakhot_1.1',
+        priority: DailyTaskPriority.newLearning,
+      ).copyWith(trackLabel: 'personal');
+
+      await tester.pumpWidget(
+        _buildScreen(curricula: [CurriculumId.mishnayos], tasks: [leakyTask]),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      // No TrackType storage key (raw or display form) may appear on the card.
+      expect(find.text('personal'), findsNothing);
+      expect(find.textContaining('personal'), findsNothing);
+      expect(find.text('Personal'), findsNothing);
+      expect(find.text('אישי'), findsNothing);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    },
+  );
 
   // ── 14. Chazara task icon ───────────────────────────────────────────────────
   //
@@ -615,7 +659,7 @@ void main() {
   );
 
   testWidgets(
-    'overdueChazara priority task renders Icons.history_rounded (review icon)',
+    'overdueChazara (isOverdue) task renders Icons.priority_high_rounded',
     (tester) async {
       final overdueChazara = _task(
         priority: DailyTaskPriority.overdueChazara,
@@ -631,8 +675,11 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 
-      // The task card uses Icons.history_rounded for overdueChazara priority.
-      expect(find.byIcon(Icons.history_rounded), findsWidgets);
+      // An overdue task's circle icon is the priority-high marker (the
+      // isOverdue branch in the card precedes the priority-based icon). The
+      // decorative history icon that previously lived in the track-label row
+      // was removed with that row (Rule-7 no-track-types fix).
+      expect(find.byIcon(Icons.priority_high_rounded), findsWidgets);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(Duration.zero);
@@ -660,10 +707,9 @@ void main() {
       // auto_stories_rounded appears as both the task circle icon (size 24) and
       // the Browse section card icon (size 20).
       expect(find.byIcon(Icons.auto_stories_rounded), findsWidgets);
-      // Note: Icons.history_rounded (size 14) appears in the track-label row of
-      // every task card as a decorative history marker — it is NOT the task's
-      // priority icon. The chazara-priority icon (size 24, in the circle) would
-      // appear ONLY for chazara-priority tasks. We don't assert its absence here.
+      // Note: the decorative size-14 history icon that used to sit in the
+      // track-label row was removed together with that row (Rule-7 no-track-types
+      // fix). The history icon now appears ONLY as a chazara-priority circle icon.
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(Duration.zero);

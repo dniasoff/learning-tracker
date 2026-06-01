@@ -198,7 +198,14 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final connectivity = ref.watch(connectivityStreamProvider);
-    final isOnline = connectivity.maybeWhen(data: (v) => v, orElse: () => true);
+    // Offline-first: while the first probe is in flight, fall back to the last
+    // observed reading (offline until proven online) rather than optimistically
+    // assuming online — otherwise an offline device renders the cloud-blue
+    // "backed up" card and a tappable Google button for the whole probe window.
+    final isOnline = connectivity.maybeWhen(
+      data: (v) => v,
+      orElse: () => lastKnownOnline,
+    );
     final signInState = ref.watch(signInControllerProvider);
     final isLoading = signInState is SignInSubmitting;
     final signInMode = _effectiveSignInMode(isOnline: isOnline);

@@ -33,6 +33,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
@@ -44,6 +45,7 @@ import 'package:learning_tracker/features/account/domain/repositories/auth_repos
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
+import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
 import 'package:learning_tracker/features/account/presentation/screens/account_picker_screen.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart'
     show SelectedProfileId, selectedProfileIdProvider;
@@ -56,6 +58,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 class _MockAuthRepository extends Mock implements AuthRepository {}
 
 class _MockStackRouter extends Mock implements StackRouter {}
+
+class _MockInternetConnectionChecker extends Mock
+    implements InternetConnectionChecker {}
 
 class _FakePageRouteInfo extends Fake implements PageRouteInfo {}
 
@@ -175,13 +180,20 @@ class _Fixture {
         );
   }
 
-  Widget buildSubject({Locale locale = const Locale('en')}) {
+  Widget buildSubject({
+    Locale locale = const Locale('en'),
+    InternetConnectionChecker? connectivityChecker,
+  }) {
     return ProviderScope(
       retry: (_, __) => null,
       overrides: [
         deviceRegistryProvider.overrideWithValue(registry),
         authRepositoryProvider.overrideWithValue(auth),
         userDatabaseProvider.overrideWith((ref) => userDb),
+        if (connectivityChecker != null)
+          internetConnectionCheckerProvider.overrideWithValue(
+            connectivityChecker,
+          ),
         // Provide a neutral AuthState so AuthStateNotifier.build() doesn't
         // call authRepo.reloadCurrentUser() (which would hit Firebase).
         // Use overrideWith (not overrideWithValue) so .notifier access works.
@@ -721,6 +733,63 @@ void main() {
 
     await _tearDown(tester, fixture);
   });
+
+  // ── 15. Offline tap of expired-session cloud tile restores locally ──────────
+  //
+  // Offline-first regression: tapping a "SIGN IN AGAIN" (expired-session) cloud
+  // tile WHILE OFFLINE must restore the local data and land on AppShellRoute —
+  // never push SignInRoute (which would gate the user behind a network sign-in
+  // they cannot complete offline).
+
+  testWidgets(
+    '15. tapping an expired-session cloud tile WHILE OFFLINE restores local '
+    'data and routes to AppShell (never SignInRoute)',
+    (tester) async {
+      final fixture = await _buildFixture();
+      await fixture.registry.addAccount(_cloudAccount(firebaseUid: 'fb-uid-1'));
+      // Seed the matching cloud-born profile row so the local restore resolves
+      // a profile without any network call.
+      await fixture.seedCloudUserDbRow(firebaseUid: 'fb-uid-1');
+
+      // Expired session — Firebase currentUser is null → "SIGN IN AGAIN".
+      when(() => fixture.auth.currentUser).thenReturn(null);
+
+      // Offline.
+      final checker = _MockInternetConnectionChecker();
+      when(() => checker.hasConnection).thenAnswer((_) async => false);
+
+      await tester.pumpWidget(
+        fixture.buildSubject(connectivityChecker: checker),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text('SIGN IN AGAIN'), findsOneWidget);
+
+      await tester.tap(find.text('Cloud User'));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      final calls = verify(
+        () => fixture.router.replaceAll(captureAny<List<PageRouteInfo>>()),
+      ).captured;
+      expect(
+        calls,
+        isNotEmpty,
+        reason: 'offline restore must navigate via replaceAll',
+      );
+      final routes = (calls.last as List).cast<PageRouteInfo>();
+      expect(
+        routes.any((r) => r is AppShellRoute),
+        isTrue,
+        reason: 'offline expired-session restore must land on AppShellRoute',
+      );
+      // The offline path must NOT push the network sign-in screen.
+      verifyNever(() => fixture.router.push(any<PageRouteInfo>()));
+
+      await _tearDown(tester, fixture);
+    },
+  );
 }
 
 // ── Fake DeviceRegistryDatabase for loading state test ───────────────────────

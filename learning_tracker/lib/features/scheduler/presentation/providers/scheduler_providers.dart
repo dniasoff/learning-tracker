@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
+import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/providers/calendar_providers.dart';
@@ -294,6 +294,7 @@ Future<List<DailyTask>> allDailyTasks(Ref ref) async {
   // today buckets (architecture §4).  It is re-derived on demand from
   // synced inputs and is never persisted as a flag.
   final projectionTasks = await _buildProjectionTasks(
+    ref: ref,
     db: db,
     stageRepository: stageRepository,
     engine: engine,
@@ -315,6 +316,7 @@ Future<List<DailyTask>> allDailyTasks(Ref ref) async {
     profileId: profileId,
     now: now,
     buildPlan: () => _buildFreshPlan(
+      ref: ref,
       db: db,
       stageRepository: stageRepository,
       generator: generator,
@@ -434,6 +436,7 @@ DateTime _amnestyDayCutoffUtc(DateTime lastReorderAt) {
 /// pace; the projection enforces it via [MissingPaceError]
 /// (architecture §10.3).
 Future<List<DailyTask>> _buildProjectionTasks({
+  required Ref ref,
   required UserDatabase db,
   required StageDefinitionRepository stageRepository,
   required SchedulerEngine engine,
@@ -468,7 +471,12 @@ Future<List<DailyTask>> _buildProjectionTasks({
     // W3.22: trackType dropped — one track per curriculum per profile.
     final preferred = tracksForCurriculum.first;
     trackIds[curriculum] = preferred.id;
-    trackLabels[curriculum] = TrackType.personal.storageKey;
+    // Rule-7 (no track types): the track label is the curriculum's localized
+    // display name (never a TrackType storage key like "personal").
+    trackLabels[curriculum] = curriculumLabelTextFromRef(
+      ref,
+      curriculum: curriculum,
+    );
     trackStartedAtMap[curriculum] = preferred.activatedAt;
     trackLastReorderAtMap[curriculum] =
         preferred.lastReorderAt ?? DateTime.fromMillisecondsSinceEpoch(0);
@@ -647,9 +655,7 @@ Future<List<DailyTask>> _buildProjectionTasks({
                       reason: 'Program day pending from previous days',
                       stageName: firstStage.stageName,
                       trackId: trackId,
-                      trackLabel:
-                          trackLabels[curriculum] ??
-                          TrackType.personal.storageKey,
+                      trackLabel: trackLabels[curriculum] ?? '',
                       estimatedEffortMinutes: 5,
                       unitDisplayHe: dayLabel?.he,
                       unitDisplayEn: dayLabel?.en,
@@ -676,9 +682,7 @@ Future<List<DailyTask>> _buildProjectionTasks({
                       reason: 'Program assignment for today',
                       stageName: firstStage.stageName,
                       trackId: trackId,
-                      trackLabel:
-                          trackLabels[curriculum] ??
-                          TrackType.personal.storageKey,
+                      trackLabel: trackLabels[curriculum] ?? '',
                       estimatedEffortMinutes: 5,
                       unitDisplayHe: dayLabel?.he,
                       unitDisplayEn: dayLabel?.en,
@@ -841,7 +845,7 @@ Future<List<DailyTask>> _buildProjectionTasks({
           reason: 'Behind pace',
           stageName: firstStage.stageName,
           trackId: trackId,
-          trackLabel: trackLabels[curriculum] ?? TrackType.personal.storageKey,
+          trackLabel: trackLabels[curriculum] ?? '',
           estimatedEffortMinutes: 5,
         ),
       );
@@ -859,7 +863,7 @@ Future<List<DailyTask>> _buildProjectionTasks({
           reason: 'Due today',
           stageName: firstStage.stageName,
           trackId: trackId,
-          trackLabel: trackLabels[curriculum] ?? TrackType.personal.storageKey,
+          trackLabel: trackLabels[curriculum] ?? '',
           estimatedEffortMinutes: 5,
         ),
       );
@@ -872,6 +876,7 @@ Future<List<DailyTask>> _buildProjectionTasks({
 /// Runs the scheduler across all active curricula to produce a fresh plan.
 /// Called only when no snapshot exists for the current local day.
 Future<List<DailyTask>> _buildFreshPlan({
+  required Ref ref,
   required UserDatabase db,
   required StageDefinitionRepository stageRepository,
   required DailyTaskGenerator generator,
@@ -905,7 +910,12 @@ Future<List<DailyTask>> _buildFreshPlan({
     // W3.22: trackType dropped — one track per curriculum per profile.
     final preferred = tracksForCurriculum.first;
     trackIds[curriculum] = preferred.id;
-    trackLabels[curriculum] = TrackType.personal.storageKey;
+    // Rule-7 (no track types): the track label is the curriculum's localized
+    // display name (never a TrackType storage key like "personal").
+    trackLabels[curriculum] = curriculumLabelTextFromRef(
+      ref,
+      curriculum: curriculum,
+    );
     trackStartedAtMap[curriculum] = preferred.activatedAt;
   }
 
@@ -1245,8 +1255,7 @@ Future<List<DailyTask>> _applyProgramCalendarOverrides({
             reason: reason,
             stageName: firstStage.stageName,
             trackId: trackId,
-            trackLabel:
-                trackLabels[curriculum] ?? TrackType.personal.storageKey,
+            trackLabel: trackLabels[curriculum] ?? '',
             estimatedEffortMinutes: 5,
             unitDisplayHe: unitDisplayHe,
             unitDisplayEn: unitDisplayEn,

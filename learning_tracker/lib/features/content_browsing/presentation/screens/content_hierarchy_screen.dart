@@ -173,23 +173,17 @@ class _ContentHierarchyScreenState
             padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
             child: Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 12,
-                    vertical: 6,
-                  ),
-                  decoration: BoxDecoration(
-                    color: curriculumColor.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: CurriculumLabel.curriculum(
-                    curriculum,
-                    style: TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      color: curriculumColor,
-                    ),
-                  ),
+                // The curriculum root chip. When the user has drilled in
+                // (navigation stack non-empty) this chip is the only visible
+                // affordance for the *root* level — the breadcrumb below shows
+                // only the drill segments. Tapping it must navigate back to the
+                // curriculum root (clear the stack); previously it was a dead,
+                // non-interactive Container, so tapping the leftmost ancestor
+                // crumb did nothing.
+                _RootCurriculumChip(
+                  curriculum: curriculum,
+                  color: curriculumColor,
+                  onTap: _navigationStack.isNotEmpty ? _navigateToRoot : null,
                 ),
                 if (_navigationStack.isNotEmpty) ...[
                   Padding(
@@ -467,6 +461,19 @@ class _ContentHierarchyScreenState
     }
   }
 
+  /// Navigate back to the curriculum root, clearing the entire drill path.
+  ///
+  /// Bound to the curriculum root chip. The breadcrumb row only renders the
+  /// drill segments, so this chip is the sole tap target for returning to the
+  /// top of the hierarchy in a single tap.
+  void _navigateToRoot() {
+    if (_navigationStack.isNotEmpty) {
+      setState(() {
+        _navigationStack = const [];
+      });
+    }
+  }
+
   /// For each entry in [_navigationStack], find the container ContentItem
   /// (matching levels 1..N and no deeper) so the renderer can use its
   /// `displayNameHe` instead of falling back to the raw English value.
@@ -516,5 +523,50 @@ class _ContentHierarchyScreenState
       result.add(CurriculumLabelRenderer.hebrewNameOf(match));
     }
     return result;
+  }
+}
+
+/// The leftmost breadcrumb chip showing the curriculum root (e.g. "חומש").
+///
+/// When [onTap] is non-null (i.e. the user has drilled in) the chip is
+/// interactive and navigates back to the curriculum root. When null it renders
+/// as a static label (at the root there is nowhere further up to go).
+class _RootCurriculumChip extends StatelessWidget {
+  const _RootCurriculumChip({
+    required this.curriculum,
+    required this.color,
+    required this.onTap,
+  });
+
+  final CurriculumId curriculum;
+  final Color color;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final chip = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(
+        color: color.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: CurriculumLabel.curriculum(
+        curriculum,
+        style: TextStyle(
+          fontSize: 13,
+          fontWeight: FontWeight.w600,
+          color: color,
+        ),
+      ),
+    );
+
+    if (onTap == null) return chip;
+
+    return InkWell(
+      key: const Key('content_hierarchy_root_chip'),
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: chip,
+    );
   }
 }

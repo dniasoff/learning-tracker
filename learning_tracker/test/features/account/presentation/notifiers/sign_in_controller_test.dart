@@ -388,8 +388,47 @@ void main() {
       await assertCode('wrong-password', (l) => l.authErrWrongPassword);
     });
 
-    test('invalid-credential maps to authErrInvalidCredential', () async {
-      await assertCode('invalid-credential', (l) => l.authErrInvalidCredential);
+    test('invalid-credential maps to authErrWrongPassword '
+        '(email-enumeration-protected projects return invalid-credential '
+        'for a bad password)', () async {
+      await assertCode('invalid-credential', (l) => l.authErrWrongPassword);
+    });
+
+    test('plugin-prefixed wrong-password ([firebase_auth/wrong-password]) '
+        'is decoded and maps to authErrWrongPassword (regression: the prefix '
+        'previously broke code extraction → generic error)', () async {
+      final mockAuth = _MockAuthRepository();
+      when(
+        () => mockAuth.signInWithGoogle(),
+      ).thenThrow(Exception('[firebase_auth/wrong-password] bad password'));
+      final container = _makeContainer(authRepo: mockAuth);
+      addTearDown(container.dispose);
+
+      final l10n = await _stubL10n();
+      await container
+          .read(signInControllerProvider.notifier)
+          .signInWithGoogle(router: _StubRouter(), l10n: l10n);
+
+      final state = container.read(signInControllerProvider);
+      expect((state as SignInError).message, l10n.authErrWrongPassword);
+    });
+
+    test('plugin-prefixed invalid-credential is decoded and maps to '
+        'authErrWrongPassword', () async {
+      final mockAuth = _MockAuthRepository();
+      when(
+        () => mockAuth.signInWithGoogle(),
+      ).thenThrow(Exception('[firebase_auth/invalid-credential] bad creds'));
+      final container = _makeContainer(authRepo: mockAuth);
+      addTearDown(container.dispose);
+
+      final l10n = await _stubL10n();
+      await container
+          .read(signInControllerProvider.notifier)
+          .signInWithGoogle(router: _StubRouter(), l10n: l10n);
+
+      final state = container.read(signInControllerProvider);
+      expect((state as SignInError).message, l10n.authErrWrongPassword);
     });
 
     test('user-disabled maps to authErrUserDisabled', () async {

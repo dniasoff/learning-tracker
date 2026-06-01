@@ -295,6 +295,64 @@ void main() {
     await tester.pump(Duration.zero);
   });
 
+  testWidgets('loading (probe in flight): defaults to the offline variant — '
+      'coral warning + checkbox, no Google button / OR divider '
+      '(offline-until-proven-online)', (tester) async {
+    // A never-emitting stream keeps connectivity in its loading state so we
+    // exercise the orElse fallback (lastKnownOnline, default false).
+    debugResetLastKnownOnline();
+    addTearDown(debugResetLastKnownOnline);
+
+    final auth = _MockAuthRepository();
+    when(() => auth.currentUser).thenReturn(null);
+    final router = _MockStackRouter();
+    when(() => router.replace(any())).thenAnswer((_) async => null);
+    when(
+      () => router.push<Object?>(any(), onFailure: any(named: 'onFailure')),
+    ).thenAnswer((_) async => null);
+    when(() => router.replaceAll(any())).thenAnswer((_) async => []);
+    when(() => router.canPop()).thenReturn(false);
+
+    await tester.pumpWidget(
+      ProviderScope(
+        retry: (_, __) => null,
+        overrides: [
+          authRepositoryProvider.overrideWithValue(auth),
+          connectivityStreamProvider.overrideWith(
+            (ref) => const Stream<bool>.empty(),
+          ),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: StackRouterScope(
+            controller: router,
+            stateHash: 0,
+            child: const Scaffold(body: SignupScreen()),
+          ),
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(
+      find.widgetWithText(FilledButton, 'Create Offline Account'),
+      findsOneWidget,
+    );
+    expect(find.byType(Checkbox), findsOneWidget);
+    expect(find.text('Sign Up with Google'), findsNothing);
+    expect(find.text('OR'), findsNothing);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(Duration.zero);
+  });
+
   // ── Prefilled args ─────────────────────────────────────────────────────────
 
   testWidgets('prefilledName populates Display Name field on init', (
