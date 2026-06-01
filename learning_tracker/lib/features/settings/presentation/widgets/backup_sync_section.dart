@@ -2,6 +2,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/sync/providers/outbox_providers.dart';
 import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
 import 'package:learning_tracker/core/sync/providers/sync_status_providers.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
@@ -71,14 +72,42 @@ class BackupSyncSection extends ConsumerWidget {
         onTap: () => ref.read(syncOrchestratorProvider)?.retryPull(),
       ),
       SyncStatusDegraded(:final pendingChanges, :final reason) =>
-        _buildCloudStatusCard(
-          theme,
-          icon: Icons.sync_problem_rounded,
-          subtitle: pendingChanges > 0
-              ? 'Sync paused — $pendingChanges queued. $reason'
-              : 'Sync paused. $reason',
-        ),
+        _buildDegradedCard(context, ref, theme, pendingChanges, reason),
     };
+  }
+
+  /// Degraded card. When the degradation is an account-identity mismatch (the
+  /// device is signed into Firebase as a different account than the active
+  /// one), render an actionable "Sign in as <email>" affordance that routes to
+  /// the sign-in screen — once the matching Google account is signed in, the
+  /// identity guard clears and the queued rows flush. Otherwise show the plain
+  /// "sync paused" subtitle.
+  Widget _buildDegradedCard(
+    BuildContext context,
+    WidgetRef ref,
+    ThemeData theme,
+    int pendingChanges,
+    String reason,
+  ) {
+    final identity = ref.watch(syncIdentityStatusProvider);
+    if (identity.isMismatch) {
+      return _buildCloudStatusCard(
+        theme,
+        icon: Icons.person_off_rounded,
+        subtitle: pendingChanges > 0
+            ? '$reason ($pendingChanges queued)'
+            : reason,
+        actionLabel: 'Sign in to back up',
+        onTap: () => context.pushRoute(const SignInRoute()),
+      );
+    }
+    return _buildCloudStatusCard(
+      theme,
+      icon: Icons.sync_problem_rounded,
+      subtitle: pendingChanges > 0
+          ? 'Sync paused — $pendingChanges queued. $reason'
+          : 'Sync paused. $reason',
+    );
   }
 
   Widget _buildLocalOnlyCard(
@@ -277,6 +306,7 @@ class BackupSyncSection extends ConsumerWidget {
     required IconData icon,
     required String subtitle,
     VoidCallback? onTap,
+    String? actionLabel,
   }) {
     final card = DecoratedBox(
       decoration: BoxDecoration(
@@ -292,44 +322,73 @@ class BackupSyncSection extends ConsumerWidget {
       ),
       child: Padding(
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 14),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            CircleAvatar(
-              radius: 16,
-              backgroundColor: const Color(0x3A8EA4ED),
-              child: Icon(icon, size: 17, color: Colors.white),
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 16,
+                  backgroundColor: const Color(0x3A8EA4ED),
+                  child: Icon(icon, size: 17, color: Colors.white),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Backup & Sync',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 25,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        subtitle,
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: Colors.white.withValues(alpha: 0.88),
+                          height: 1.3,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 15.5,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Backup & Sync',
-                    style: TextStyle(
-                      color: Colors.white,
+            if (actionLabel != null) ...[
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.peachMid,
+                    foregroundColor: const Color(0xFF2C2A26),
+                    minimumSize: const Size.fromHeight(44),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    textStyle: theme.textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w700,
-                      fontSize: 25,
+                      fontSize: 17,
+                      color: const Color(0xFF2C2A26),
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.88),
-                      height: 1.3,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 15.5,
-                    ),
-                  ),
-                ],
+                  onPressed: onTap,
+                  child: Text(actionLabel),
+                ),
               ),
-            ),
+            ],
           ],
         ),
       ),
     );
-    if (onTap == null) return card;
+    // A standalone action button owns the tap; don't also wrap the whole card.
+    if (onTap == null || actionLabel != null) return card;
     return Material(
       color: Colors.transparent,
       borderRadius: BorderRadius.circular(24),

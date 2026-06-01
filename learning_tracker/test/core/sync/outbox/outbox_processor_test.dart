@@ -956,6 +956,90 @@ void main() {
     });
   });
 
+  group('OutboxProcessor.drain — isIdentityMismatched guard', () {
+    test(
+      'mismatched identity skips the whole drain — drain returns 0, no push, '
+      'rows preserved and attempts NOT incremented',
+      () async {
+        final mismatchedProcessor = OutboxProcessor(
+          outboxDao: db.outboxDao,
+          pipeline: pipeline,
+          clock: FakeLocalDayClock(DateTime.utc(2026, 5, 14)),
+          // Live Firebase token belongs to a different account than the active
+          // one — every push would be permission-denied / unauthenticated.
+          isIdentityMismatched: () => true,
+        );
+
+        await insertRow(
+          entityKind: OutboxEntityKind.completion,
+          entityKey: 'c1',
+        );
+        await insertRow(
+          entityKind: OutboxEntityKind.profileProgram,
+          entityKey: 'mishnayos_6',
+          payload: {'profile_id': 1},
+        );
+
+        final count = await mismatchedProcessor.drain(profileId);
+        expect(count, 0, reason: 'identity mismatch must skip the drain');
+        expect(pipeline.calls, isEmpty, reason: 'no push attempted');
+        // Rows preserved AND untouched — the whole point is to not burn the
+        // retry budget toward dead-lettering while the wrong account is signed
+        // in. attempts must remain 0.
+        final rows = await db.outboxDao.getPendingByKind(
+          OutboxEntityKind.profileProgram,
+          profileId,
+          limit: 10,
+        );
+        expect(rows.single.attempts, 0, reason: 'no retry must accrue');
+      },
+    );
+
+    test('matched identity (guard false) drains normally', () async {
+      final matchedProcessor = OutboxProcessor(
+        outboxDao: db.outboxDao,
+        pipeline: pipeline,
+        clock: FakeLocalDayClock(DateTime.utc(2026, 5, 14)),
+        isIdentityMismatched: () => false,
+      );
+
+      await insertRow(entityKind: OutboxEntityKind.completion, entityKey: 'c1');
+
+      final count = await matchedProcessor.drain(profileId);
+      expect(count, 1);
+      expect(pipeline.calls, [('completion', 'c1')]);
+    });
+
+    test(
+      'guard re-evaluated each drain — resumes once identity matches',
+      () async {
+        var mismatched = true;
+        final processor = OutboxProcessor(
+          outboxDao: db.outboxDao,
+          pipeline: pipeline,
+          clock: FakeLocalDayClock(DateTime.utc(2026, 5, 14)),
+          isIdentityMismatched: () => mismatched,
+        );
+
+        await insertRow(
+          entityKind: OutboxEntityKind.completion,
+          entityKey: 'c1',
+        );
+
+        // First drain: wrong account → skipped, row retained untouched.
+        expect(await processor.drain(profileId), 0);
+        expect(pipeline.calls, isEmpty);
+        expect(await db.outboxDao.depth(profileId), 1);
+
+        // User signs in as the correct account → next drain flushes the backlog.
+        mismatched = false;
+        expect(await processor.drain(profileId), 1);
+        expect(pipeline.calls, [('completion', 'c1')]);
+        expect(await db.outboxDao.depth(profileId), 0);
+      },
+    );
+  });
+
   // ── Drain-while-offline behaviour ─────────────────────────────────────────
   group('OutboxProcessor.drain — drain-while-offline (network failure)', () {
     late FakeLocalDayClock clock;

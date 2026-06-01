@@ -161,6 +161,11 @@ final syncOrchestratorProvider = Provider<SyncOrchestrator?>((ref) {
     // Resolved lazily via ref.read so a DB swap (multi-account flow) is
     // picked up without rebuilding the orchestrator singleton.
     resolveOutboxDao: () => ref.read(userDatabaseProvider).outboxDao,
+    // Identity guard: when the device is signed into Firebase as a different
+    // account than the one active in the app, surface an actionable "sign in
+    // as <email>" status instead of "rows stuck after N attempts" (the drain
+    // is skipped at the processor layer so nothing actually retries).
+    resolveIdentityStatus: () => ref.read(syncIdentityStatusProvider),
   );
 
   // Idempotent: registers the lifecycle observer + Firestore listeners once.

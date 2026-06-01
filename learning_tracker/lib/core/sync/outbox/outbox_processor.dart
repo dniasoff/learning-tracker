@@ -88,13 +88,23 @@ class OutboxProcessor {
     // the tutor's own Firestore namespace.  Defaults to always-false (no
     // tutored profiles exist) when omitted.
     Future<bool> Function(int profileId)? isTutoredProfile,
+    // Identity guard: returns true when the live Firebase token belongs to a
+    // DIFFERENT account than the active one (the user switched into a second
+    // cloud account on this device without re-authenticating). Every push
+    // would be denied by Firestore rules / Cloud Functions, so the whole
+    // drain is skipped — doomed rows must NOT burn their retry budget and
+    // dead-letter. Defaults to always-matched when omitted. Wired for ALL
+    // drain triggers (orchestrator + write-tee facade kicks) by injecting it
+    // at the single processor construction site.
+    bool Function()? isIdentityMismatched,
   }) : _dao = outboxDao,
        _pipeline = pipeline,
        _clock = clock,
        _analytics = analytics,
        _pushTimeout = pushTimeout,
        _drainStaleAfter = drainStaleAfter,
-       _isTutoredProfile = isTutoredProfile;
+       _isTutoredProfile = isTutoredProfile,
+       _isIdentityMismatched = isIdentityMismatched;
 
   final OutboxDao _dao;
   final PushPipeline _pipeline;
@@ -103,6 +113,9 @@ class OutboxProcessor {
 
   // T1.isolation — tutored-profile guard injected at construction time.
   final Future<bool> Function(int profileId)? _isTutoredProfile;
+
+  // Identity guard injected at construction time — see constructor doc.
+  final bool Function()? _isIdentityMismatched;
 
   /// Maximum number of push attempts before a row is dead-lettered.
   static const int _maxAttempts = 10;
@@ -173,6 +186,14 @@ class OutboxProcessor {
   /// pull-complete all coinciding on app launch); this guard collapses them
   /// to one push round.
   Future<int> drain(int profileId) async {
+    // Identity guard: when the live Firebase token belongs to a different
+    // account than the active one, EVERY push is denied by Firestore rules
+    // (UID ≠ auth.uid) and every Cloud Function call returns UNAUTHENTICATED.
+    // Skip the entire drain so these permanently-doomed rows do not increment
+    // their attempt count toward [_maxAttempts] and dead-letter — they would
+    // wedge sync forever. The Backup & Sync banner prompts a re-auth instead;
+    // once the matching account is signed in, the next drain flushes them.
+    if (_isIdentityMismatched?.call() ?? false) return 0;
     if (_draining) {
       final since = _drainingSince;
       // Reclaim a wedged guard: if the in-flight drain has been held past the

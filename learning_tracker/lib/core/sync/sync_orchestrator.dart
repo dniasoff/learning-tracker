@@ -18,6 +18,7 @@ import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 import 'package:learning_tracker/core/sync/providers/firestore_instance_provider.dart'
     show resetFirestoreNetwork;
 import 'package:learning_tracker/core/sync/pull_pipeline.dart';
+import 'package:learning_tracker/core/sync/sync_identity_status.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -196,6 +197,15 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
     /// compute pending/offline/degraded status and to log the
     /// `outbox_depth` observability gauge.
     OutboxDao Function()? resolveOutboxDao,
+
+    /// Reports whether the live Firebase auth identity matches the active
+    /// account. When it returns a mismatched [SyncIdentityStatus], the
+    /// outbox-derived status surfaces an actionable "sign in as <email>"
+    /// `degraded` state instead of the misleading "rows stuck after N
+    /// attempts" — the drain itself is skipped at the [OutboxProcessor] layer
+    /// so no retries accrue. Optional: when null (tests / legacy wiring) the
+    /// status path behaves exactly as before.
+    SyncIdentityStatus Function()? resolveIdentityStatus,
   }) : _resolveMergeRouter = resolveMergeRouter,
        _resolveGateway = resolveGateway,
        _resolveProfileId = resolveProfileId,
@@ -210,6 +220,7 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
        _outboxProcessor = outboxProcessor,
        _periodicDrainInterval = periodicDrainInterval,
        _resolveOutboxDao = resolveOutboxDao,
+       _resolveIdentityStatus = resolveIdentityStatus,
        parkAfterBackgroundDuration =
            parkAfterBackgroundDuration ?? const Duration(seconds: 60);
 
@@ -221,6 +232,9 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
   /// to compute pending / degraded / offline sync-status counts. See
   /// constructor doc.
   final OutboxDao Function()? _resolveOutboxDao;
+
+  /// Resolves the live-vs-active identity match — see constructor doc.
+  final SyncIdentityStatus Function()? _resolveIdentityStatus;
 
   /// Minimum attempt count before a stuck outbox row pushes the orchestrator
   /// into the [SyncStatus.degraded] state. Matches Plan §F Phase 4.
@@ -992,9 +1006,25 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
     // pull's own _safeEmitStatus(syncing→synced) chain owns that window.
     if (_currentStatus is SyncStatusSyncing) return;
 
+    // Identity mismatch takes precedence over the generic stuck/pending states
+    // whenever there is queued data and the device is online: the rows are not
+    // "stuck after N attempts" (the drain is skipped before they ever retry) —
+    // they are blocked on the wrong Firebase identity. Surface the actionable
+    // "sign in as <email>" message so the user can resolve it.
+    final identity = _resolveIdentityStatus?.call();
+
     final SyncStatus next;
     if (!isOnline) {
       next = SyncStatus.offline(pendingChanges: depth);
+    } else if (identity != null && identity.isMismatch && depth > 0) {
+      final activeEmail = identity.activeAccountEmail;
+      next = SyncStatus.degraded(
+        pendingChanges: depth,
+        reason: activeEmail != null
+            ? 'Signed in as ${identity.signedInEmail ?? 'a different account'}'
+                  ' — sign in as $activeEmail to back up this account.'
+            : 'Signed in as the wrong account — sign in again to back up.',
+      );
     } else if (stuck > 0) {
       next = SyncStatus.degraded(
         pendingChanges: depth,

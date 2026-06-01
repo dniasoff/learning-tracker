@@ -34,8 +34,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/sync/providers/outbox_providers.dart';
 import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
 import 'package:learning_tracker/core/sync/providers/sync_status_providers.dart';
+import 'package:learning_tracker/core/sync/sync_identity_status.dart';
 import 'package:learning_tracker/core/sync/sync_orchestrator.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
@@ -86,6 +88,11 @@ Widget _buildHarness({
   SyncOrchestrator? orchestrator,
   bool heroLayout = false,
   Locale locale = const Locale('en'),
+  // Defaults to matched so the degraded card does not transitively touch
+  // FirebaseAuth via the real syncIdentityStatusProvider (which reads
+  // authRepositoryProvider). Pass a mismatched value to exercise the re-auth
+  // banner branch.
+  SyncIdentityStatus identityStatus = const SyncIdentityStatus.matched(),
 }) {
   final mockRouter = _MockStackRouter();
   when(() => mockRouter.push(any())).thenAnswer((_) async => null);
@@ -96,6 +103,7 @@ Widget _buildHarness({
     overrides: [
       authStateProvider.overrideWithValue(authState),
       syncStatusProvider.overrideWith((_) => syncStatus),
+      syncIdentityStatusProvider.overrideWithValue(identityStatus),
       if (orchestrator != null)
         syncOrchestratorProvider.overrideWith((_) => orchestrator),
     ],
@@ -378,6 +386,69 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(Duration.zero);
     });
+
+    testWidgets(
+      'identity mismatch → re-auth banner with "Sign in to back up" button '
+      'that routes to SignInRoute',
+      (tester) async {
+        final mockRouter = _MockStackRouter();
+        when(() => mockRouter.push(any())).thenAnswer((_) async => null);
+        when(() => mockRouter.navigate(any())).thenAnswer((_) async {});
+        when(() => mockRouter.canPop()).thenReturn(false);
+
+        await _pump(
+          tester,
+          ProviderScope(
+            overrides: [
+              authStateProvider.overrideWithValue(_kCloudUser),
+              syncStatusProvider.overrideWith(
+                (_) => const SyncStatus.degraded(
+                  pendingChanges: 5,
+                  reason:
+                      'Signed in as familyniasoff@gmail.com — sign in as '
+                      'dniasoff@gmail.com to back up this account.',
+                ),
+              ),
+              syncIdentityStatusProvider.overrideWithValue(
+                const SyncIdentityStatus.mismatched(
+                  activeAccountEmail: 'dniasoff@gmail.com',
+                  signedInEmail: 'familyniasoff@gmail.com',
+                ),
+              ),
+            ],
+            child: MaterialApp(
+              localizationsDelegates: const [
+                AppLocalizations.delegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: StackRouterScope(
+                controller: mockRouter,
+                stateHash: 0,
+                child: const Scaffold(body: BackupSyncSection()),
+              ),
+            ),
+          ),
+        );
+
+        // The actionable account name + the re-auth button are shown.
+        expect(find.textContaining('dniasoff@gmail.com'), findsOneWidget);
+        expect(find.text('Sign in to back up'), findsOneWidget);
+
+        await tester.tap(find.text('Sign in to back up'));
+        await tester.pump();
+
+        // Routes to the sign-in screen so the user can authenticate as the
+        // active account.
+        final pushed = verify(() => mockRouter.push(captureAny())).captured;
+        expect(pushed.single.runtimeType.toString(), 'SignInRoute');
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(Duration.zero);
+      },
+    );
   });
 
   group('BackupSyncSection — local-born user', () {

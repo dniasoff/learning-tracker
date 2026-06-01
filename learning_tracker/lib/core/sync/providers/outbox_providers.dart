@@ -5,6 +5,7 @@ import 'package:learning_tracker/core/sync/firestore_gateway_impl.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 import 'package:learning_tracker/core/sync/providers/firestore_instance_provider.dart';
 import 'package:learning_tracker/core/sync/push_pipeline_impl.dart';
+import 'package:learning_tracker/core/sync/sync_identity_status.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
@@ -33,6 +34,39 @@ final firestoreGatewayProvider = Provider<FirestoreGatewayImpl?>((ref) {
     authRepository: auth,
     activeAccountUid: () =>
         ref.read(authStateProvider).currentUser?.firebaseUid,
+  );
+});
+
+/// Reports whether the live Firebase auth identity matches the active account.
+///
+/// See [SyncIdentityStatus]. Returns `matched` for non-cloud sessions, when no
+/// active-account uid is known (legacy fallback to `currentUser`), or when the
+/// live token's uid equals the active account's uid. Otherwise `mismatched`,
+/// carrying the email the user must sign in as.
+///
+/// Reactive via [authStateProvider] (the unified auth notifier), which rebuilds
+/// on every account switch and sign-in — the two events that can create or
+/// clear a mismatch. The live `currentUser` is read at recompute time.
+final syncIdentityStatusProvider = Provider<SyncIdentityStatus>((ref) {
+  final authState = ref.watch(authStateProvider);
+  if (!authState.isCloudBorn) return const SyncIdentityStatus.matched();
+
+  final activeUid = authState.currentUser?.firebaseUid;
+  // No active-account uid → the gateway falls back to `currentUser`, so there
+  // is nothing to mismatch against (legacy / placeholder session).
+  if (activeUid == null) return const SyncIdentityStatus.matched();
+
+  final live = ref.watch(authRepositoryProvider).currentUser;
+  final liveUid = live?.uid;
+  // No live token (signed out / token not yet restored) is NOT a mismatch —
+  // that is the offline/connecting path handled by the normal status flow.
+  if (liveUid == null || liveUid == activeUid) {
+    return const SyncIdentityStatus.matched();
+  }
+
+  return SyncIdentityStatus.mismatched(
+    activeAccountEmail: authState.currentUser?.email,
+    signedInEmail: live?.email,
   );
 });
 
@@ -69,5 +103,11 @@ final outboxProcessorProvider = Provider<OutboxProcessor?>((ref) {
     // T1.isolation — guard: never drain tutored-mirror profiles into the
     // tutor's own Firestore namespace.
     isTutoredProfile: database.profileDao.isProfileTutored,
+    // Identity guard: skip the drain entirely when the live Firebase token
+    // belongs to a different account than the active one — otherwise every
+    // permission-denied push burns its retry budget and dead-letters,
+    // permanently wedging sync. Read (not watched) so each drain re-evaluates
+    // against the current session.
+    isIdentityMismatched: () => ref.read(syncIdentityStatusProvider).isMismatch,
   );
 });

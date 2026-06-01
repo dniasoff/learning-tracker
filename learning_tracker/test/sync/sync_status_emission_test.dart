@@ -23,6 +23,7 @@ import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 import 'package:learning_tracker/core/sync/merge/merge_router.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
+import 'package:learning_tracker/core/sync/sync_identity_status.dart';
 import 'package:learning_tracker/core/sync/sync_orchestrator.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
@@ -60,6 +61,7 @@ class _EmptyGateway implements FirestoreGateway {
 SyncOrchestratorImpl _buildOrchestrator({
   required UserDatabase db,
   Stream<bool>? connectivityStream,
+  SyncIdentityStatus Function()? resolveIdentityStatus,
 }) {
   final mergeRouter = MergeRouter(mergers: const <String, EntityMerger>{});
   return SyncOrchestratorImpl(
@@ -69,6 +71,7 @@ SyncOrchestratorImpl _buildOrchestrator({
     resolvePushAllLocalData: () async {},
     connectivityStream: connectivityStream,
     resolveOutboxDao: () => db.outboxDao,
+    resolveIdentityStatus: resolveIdentityStatus,
   );
 }
 
@@ -267,6 +270,83 @@ void main() {
       expect(emissions.whereType<SyncStatusOffline>(), isNotEmpty);
       expect(emissions.whereType<SyncStatusDegraded>(), isEmpty);
     });
+
+    test(
+      'identity mismatch + online + queued rows → degraded with an actionable '
+      '"sign in as <email>" reason (NOT the "stuck after N attempts" message)',
+      () async {
+        final controller = StreamController<bool>();
+        addTearDown(controller.close);
+
+        final orchestrator = _buildOrchestrator(
+          db: db,
+          connectivityStream: controller.stream,
+          resolveIdentityStatus: () => const SyncIdentityStatus.mismatched(
+            activeAccountEmail: 'dniasoff@gmail.com',
+            signedInEmail: 'familyniasoff@gmail.com',
+          ),
+        );
+        addTearDown(orchestrator.dispose);
+        orchestrator.start();
+
+        controller.add(true);
+        await Future<void>.delayed(Duration.zero);
+
+        // A row stuck at the retry ceiling — without the identity branch this
+        // would surface as "outbox has 1 row(s) stuck after 3+ attempts".
+        await _enqueue(db, attempts: 10);
+
+        SyncStatus? observed;
+        final sub = orchestrator.statusStream.listen((s) => observed = s);
+        addTearDown(sub.cancel);
+
+        await orchestrator.recordDrainAttempt();
+        await Future<void>.delayed(Duration.zero);
+
+        expect(observed, isA<SyncStatusDegraded>());
+        final degraded = observed! as SyncStatusDegraded;
+        expect(degraded.pendingChanges, 1);
+        expect(degraded.reason, contains('dniasoff@gmail.com'));
+        expect(degraded.reason, contains('familyniasoff@gmail.com'));
+        expect(
+          degraded.reason,
+          isNot(contains('stuck')),
+          reason:
+              'identity mismatch must override the generic stuck-attempts '
+              'message with the actionable re-auth prompt',
+        );
+      },
+    );
+
+    test(
+      'matched identity → ordinary stuck-attempts degraded message is unchanged',
+      () async {
+        final controller = StreamController<bool>();
+        addTearDown(controller.close);
+
+        final orchestrator = _buildOrchestrator(
+          db: db,
+          connectivityStream: controller.stream,
+          resolveIdentityStatus: () => const SyncIdentityStatus.matched(),
+        );
+        addTearDown(orchestrator.dispose);
+        orchestrator.start();
+
+        controller.add(true);
+        await Future<void>.delayed(Duration.zero);
+        await _enqueue(db, attempts: 5);
+
+        SyncStatus? observed;
+        final sub = orchestrator.statusStream.listen((s) => observed = s);
+        addTearDown(sub.cancel);
+
+        await orchestrator.recordDrainAttempt();
+        await Future<void>.delayed(Duration.zero);
+
+        expect(observed, isA<SyncStatusDegraded>());
+        expect((observed! as SyncStatusDegraded).reason, contains('stuck'));
+      },
+    );
 
     test('syncing status is NOT overwritten while a pull is in progress — '
         'the post-pull recompute owns the transition out of syncing', () async {
