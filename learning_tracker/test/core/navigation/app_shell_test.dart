@@ -696,71 +696,91 @@ void main() {
   // re-renders the SAME ProfileSwitcherBar above the sub-route. This guards
   // against regressing to a switcher-less sub-screen.
   group('Persistent switcher on pushed sub-routes (BUG E3)', () {
-    testWidgets(
-      'switcher bar is present on a pushed sub-route above the shell',
-      (tester) async {
-        final router = await _createAuthenticatedRouter();
+    testWidgets('switcher bar is present on a pushed sub-route above the shell', (
+      tester,
+    ) async {
+      final router = await _createAuthenticatedRouter();
 
-        await tester.pumpWidget(
-          ProviderScope(
-            overrides: [
-              appDatabaseProvider.overrideWithValue(db),
-              userDatabaseProvider.overrideWithValue(db),
-              authStateProvider.overrideWithValue(_authOverride),
-              profileListStreamProvider.overrideWith(
-                (ref) => Stream.value(_seededProfiles),
-              ),
-              activeProfileIdProvider.overrideWith(_FixedActiveProfileId.new),
-              // Override the dashboard streak providers so the underlying
-              // dashboard route (resolved before the push) doesn't spawn the
-              // 15-min rollover timer that trips the test timer-invariant.
-              dashboardActiveCurriculaStreamProvider.overrideWith(
-                (ref) => Stream.value(<CurriculumId>[]),
-              ),
-              dashboardStreakProvider.overrideWith(
-                (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
-              ),
-              dashboardStreakRecoveryProvider.overrideWith(
-                (ref) => Future.value(
-                  const StreakRecoveryInfo(
-                    wasRecovered: false,
-                    currentStreak: 0,
-                  ),
-                ),
-              ),
-              // The PersistentSwitcherScaffold resolves the active router via
-              // routerProvider; point it at the same test router instance so it
-              // observes the real navigation stack.
-              rp.routerProvider.overrideWithValue(router),
-            ],
-            child: _wrapAppWithPersistentSwitcher(
-              router.config(
-                // Land directly on a PUSHED sub-route (City picker), which is a
-                // top-level sibling of the shell — not a shell tab. Chosen as a
-                // lightweight sub-route with no DB/plugin/timer dependencies.
-                deepLinkBuilder: (_) =>
-                    const DeepLink.path('/sacred-time/city'),
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            appDatabaseProvider.overrideWithValue(db),
+            userDatabaseProvider.overrideWithValue(db),
+            authStateProvider.overrideWithValue(_authOverride),
+            profileListStreamProvider.overrideWith(
+              (ref) => Stream.value(_seededProfiles),
+            ),
+            activeProfileIdProvider.overrideWith(_FixedActiveProfileId.new),
+            // Override the dashboard streak providers so the underlying
+            // dashboard route (resolved before the push) doesn't spawn the
+            // 15-min rollover timer that trips the test timer-invariant.
+            dashboardActiveCurriculaStreamProvider.overrideWith(
+              (ref) => Stream.value(<CurriculumId>[]),
+            ),
+            dashboardStreakProvider.overrideWith(
+              (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
+            ),
+            dashboardStreakRecoveryProvider.overrideWith(
+              (ref) => Future.value(
+                const StreakRecoveryInfo(wasRecovered: false, currentStreak: 0),
               ),
             ),
+            // The PersistentSwitcherScaffold resolves the active router via
+            // routerProvider; point it at the same test router instance so it
+            // observes the real navigation stack.
+            rp.routerProvider.overrideWithValue(router),
+          ],
+          child: _wrapAppWithPersistentSwitcher(
+            router.config(
+              // Land directly on a PUSHED sub-route (City picker), which is a
+              // top-level sibling of the shell — not a shell tab. Chosen as a
+              // lightweight sub-route with no DB/plugin/timer dependencies.
+              deepLinkBuilder: (_) => const DeepLink.path('/sacred-time/city'),
+            ),
           ),
-        );
-        await _pumpDashboard(tester);
+        ),
+      );
+      await _pumpDashboard(tester);
 
-        // We are on the sub-route, NOT a shell tab — the bottom-nav tab labels
-        // are absent here.
-        expect(find.text('DASHBOARD'), findsNothing);
+      // We are on the sub-route, NOT a shell tab — the bottom-nav tab labels
+      // are absent here.
+      expect(find.text('DASHBOARD'), findsNothing);
 
-        // Yet the persistent profile/role switcher bar is still rendered at the
-        // top, supplied by the global builder-slot layer.
+      // Yet the persistent profile/role switcher bar is still rendered at the
+      // top, supplied by the global builder-slot layer.
+      expect(
+        find.byKey(const Key('appShellProfileSwitcherBar')),
+        findsOneWidget,
+      );
+      expect(find.byIcon(Icons.unfold_more_rounded), findsOneWidget);
+
+      // Visibility guard (feedback_profile_switcher_top): the persistent bar
+      // must sit ABOVE the sub-route's own AppBar — genuinely visible at the
+      // top, not behind/overlaid by it. The switcher bar's bottom edge must be
+      // at or above the sub-route AppBar's top edge (no vertical overlap), and
+      // its top edge must be the topmost of the two.
+      final switcherRect = tester.getRect(
+        find.byKey(const Key('appShellProfileSwitcherBar')),
+      );
+      final appBarFinder = find.byType(AppBar);
+      if (appBarFinder.evaluate().isNotEmpty) {
+        final appBarRect = tester.getRect(appBarFinder.first);
         expect(
-          find.byKey(const Key('appShellProfileSwitcherBar')),
-          findsOneWidget,
+          switcherRect.top,
+          lessThanOrEqualTo(appBarRect.top),
+          reason: 'switcher bar must be the topmost element',
         );
-        expect(find.byIcon(Icons.unfold_more_rounded), findsOneWidget);
+        expect(
+          switcherRect.bottom,
+          lessThanOrEqualTo(appBarRect.top + 0.5),
+          reason:
+              'switcher bar must sit above the sub-route AppBar without '
+              'being overlaid by it',
+        );
+      }
 
-        await _cleanUpWidgets(tester);
-      },
-    );
+      await _cleanUpWidgets(tester);
+    });
 
     testWidgets(
       'tapping the switcher bar on a pushed sub-route opens the sheet',

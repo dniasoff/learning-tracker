@@ -178,5 +178,59 @@ void main() {
         expect(parent, isNot(equals(tutor)));
       },
     );
+
+    // ── BUG-1 UX follow-up: switcher sheet must not linger after PIN success ──
+    //
+    // Root cause: the talmid row pushed the TutorPinEntryGate ON TOP of the
+    // still-mounted profile-switcher modal sheet. On PIN success it popped only
+    // the gate and then called router.replaceAll([AppShellRoute]); replaceAll
+    // rebuilds auto_route's MANAGED page stack but does NOT clear the
+    // imperatively-pushed modal sheet, so the sheet lingered on top of the
+    // talmid dashboard. The fix explicitly dismisses the sheet (via the global
+    // root navigator key) immediately before each successful navigation.
+
+    test('BUG-1: entry navigation dismisses the lingering switcher sheet', () {
+      expect(
+        sectionSrc,
+        contains('dismissSwitcherSheet'),
+        reason:
+            'On successful talmid entry the profile-switcher modal sheet must '
+            'be explicitly dismissed (replaceAll does not clear it), so the '
+            'tutor lands cleanly on the talmid dashboard with no leftover '
+            'sheet.',
+      );
+    });
+
+    test('BUG-1: sheet dismissal uses the stable root navigator key', () {
+      // The widget context dies when the sheet pops, so the dismissal must go
+      // through the global navigatorKey (root navigator), not the dying
+      // widget context.
+      expect(
+        sectionSrc,
+        contains('navigatorKey.currentState'),
+        reason:
+            'Sheet dismissal must use navigatorKey.currentState so it survives '
+            'the row widget unmounting when the sheet is popped.',
+      );
+    });
+
+    test('BUG-1: success path navigates via the captured router, not '
+        'context.router', () {
+      // After the sheet is popped the widget is unmounted, so context.router
+      // is no longer usable. The fix captures the AppRouter via
+      // ref.read(routerProvider) before popping and replaces the stack on it.
+      expect(
+        sectionSrc,
+        contains('final router = ref.read(routerProvider)'),
+        reason:
+            'The post-pull navigation must use a captured AppRouter instance '
+            'that survives the widget unmounting, not context.router.',
+      );
+      expect(
+        sectionSrc,
+        contains('router.replaceAll([const AppShellRoute()])'),
+        reason: 'Talmid entry must replace the stack on the captured router.',
+      );
+    });
   });
 }

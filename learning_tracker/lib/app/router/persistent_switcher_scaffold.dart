@@ -90,7 +90,8 @@ class _PersistentSwitcherScaffoldState
     final showHeader = isAuthenticated && !_shellIsOnTop();
     if (!showHeader) return widget.child;
 
-    final topInset = MediaQuery.of(context).padding.top;
+    final mediaQuery = MediaQuery.of(context);
+    final topInset = mediaQuery.padding.top;
     return Material(
       type: MaterialType.transparency,
       child: Column(
@@ -103,7 +104,22 @@ class _PersistentSwitcherScaffoldState
             padding: EdgeInsets.only(top: topInset),
             child: const ProfileSwitcherBar(),
           ),
-          Expanded(child: widget.child),
+          // The persistent bar above has already consumed the system status-bar
+          // inset. If we hand the child the unmodified MediaQuery, its own
+          // Scaffold/AppBar would re-apply `padding.top` and insert a SECOND
+          // status-bar gap directly beneath our bar — a ~status-bar-tall band of
+          // AppBar-coloured dead space that makes the faint switcher strip blend
+          // into the status-bar zone and read as "not visible / overlaid by the
+          // sub-screen's AppBar" (the tester's report). Removing the top padding
+          // from the child's MediaQuery makes the sub-route's AppBar sit FLUSH
+          // beneath the switcher bar, so the bar is unambiguously the topmost
+          // visible, tappable element on every pushed sub-route.
+          Expanded(
+            child: MediaQuery(
+              data: mediaQuery.removePadding(removeTop: true),
+              child: widget.child,
+            ),
+          ),
         ],
       ),
     );

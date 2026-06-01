@@ -1,6 +1,5 @@
 import 'dart:async';
 
-import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/router_provider.dart';
@@ -192,13 +191,25 @@ class _ViewInvitationsRow extends ConsumerWidget {
           builder: (_) => TutorPinEntryGate(
             profileId: tutorOwnProfileId,
             onPinVerified: () {
+              // Capture the stable AppRouter before popping: popping the
+              // switcher sheet unmounts this row, so `context.pushRoute` would
+              // fail — but the router singleton survives.
+              final router = ref.read(routerProvider);
               // Prime the tutor scope so the route guard does not re-prompt.
-              ref
-                  .read(routerProvider)
-                  .pinGuard
-                  .markScopeAuthenticated(PinScope.tutor(tutorOwnProfileId));
-              Navigator.of(context).pop();
-              unawaited(context.pushRoute(const ManageGrantsRoute()));
+              router.pinGuard.markScopeAuthenticated(
+                PinScope.tutor(tutorOwnProfileId),
+              );
+              // Pop the PIN gate AND the profile-switcher sheet beneath it
+              // before pushing the grants screen. Both were pushed onto the
+              // same (root) navigator; popping only the gate would leave the
+              // modal sheet lingering on top once the grants screen is later
+              // dismissed. Pop both so we land cleanly on the grants screen.
+              final navigator = Navigator.of(context);
+              navigator.pop(); // PIN gate
+              if (navigator.canPop()) {
+                navigator.pop(); // switcher sheet
+              }
+              unawaited(router.push(const ManageGrantsRoute()));
             },
             onCancel: () => Navigator.of(context).pop(),
           ),
@@ -338,7 +349,14 @@ class _TutoredChildRow extends ConsumerWidget {
                   .read(routerProvider)
                   .pinGuard
                   .markScopeAuthenticated(PinScope.tutor(tutorOwnProfileId));
-              // Pop the gate, then fire the pull + navigate (T2.entry-pull).
+              // Pop the PIN gate, then fire the pull + navigate
+              // (T2.entry-pull). The profile-switcher sheet is intentionally
+              // left mounted for now: `_fireEntryPullAndNavigate` runs async
+              // work keyed off this widget's `context`/`ref`, and popping the
+              // sheet here would unmount the row (disposing them) before the
+              // pull completes. The sheet is dismissed at navigation time
+              // inside `_fireEntryPullAndNavigate` (via the root navigator),
+              // immediately before the shell is rebuilt.
               Navigator.of(context).pop();
               unawaited(_fireEntryPullAndNavigate(context, ref, selection));
             },
@@ -364,6 +382,23 @@ class _TutoredChildRow extends ConsumerWidget {
     TutoredProfileSelection selection,
   ) async {
     final accountId = ref.read(currentAccountIdProvider);
+    // Capture the stable AppRouter up front: once the switcher sheet is popped
+    // (see dismissSwitcherSheet) this widget unmounts, so `context.router` is
+    // no longer usable — but the router singleton survives.
+    final router = ref.read(routerProvider);
+
+    // Dismiss the profile-switcher sheet that was left mounted beneath the PIN
+    // gate. `router.replaceAll` only rebuilds auto_route's managed page stack;
+    // the imperatively-pushed modal sheet is NOT cleared by it, so without this
+    // explicit pop the sheet lingers on top of the talmid dashboard. Popping it
+    // via the global root navigator key (not the dying widget context) makes
+    // the dismissal robust against the widget unmounting.
+    void dismissSwitcherSheet() {
+      final navigator = navigatorKey.currentState;
+      if (navigator != null && navigator.canPop()) {
+        navigator.pop();
+      }
+    }
 
     // Offline-first: check for a cached mirror before touching the network.
     final cachedProfile = await ref
@@ -403,9 +438,8 @@ class _TutoredChildRow extends ConsumerWidget {
           stackTrace: st,
         );
       }
-      if (context.mounted) {
-        unawaited(context.router.replaceAll([const AppShellRoute()]));
-      }
+      dismissSwitcherSheet();
+      unawaited(router.replaceAll([const AppShellRoute()]));
       return;
     }
 
@@ -489,9 +523,8 @@ class _TutoredChildRow extends ConsumerWidget {
             );
           }
           dismissLoading();
-          if (context.mounted) {
-            unawaited(context.router.replaceAll([const AppShellRoute()]));
-          }
+          dismissSwitcherSheet();
+          unawaited(router.replaceAll([const AppShellRoute()]));
         case TutoredPullResult.permissionDenied:
           AppLogger.instance.warning(
             event: 'tutored_pull_permission_denied',

@@ -277,6 +277,11 @@ class DashboardBody extends ConsumerWidget {
             ),
             const SizedBox(width: 10),
             GestureDetector(
+              // E1: register taps across the whole chip (incl. padding/gaps),
+              // not just where the icon/text render objects sit. Without
+              // `opaque`, GestureDetector defers to its children and taps on
+              // the transparent padding area are a dead no-op on-device.
+              behavior: HitTestBehavior.opaque,
               onTap: () => context.router.push(const GamificationRoute()),
               child: Container(
                 padding: const EdgeInsets.symmetric(

@@ -118,13 +118,19 @@ class DashboardLevelPointsCard extends ConsumerWidget {
                 ),
               ),
               const Spacer(),
-              Text(
-                l10n.pointsAbbrev(totalPoints),
-                style: theme.textTheme.titleSmall?.copyWith(
-                  color: Colors.white.withValues(alpha: 0.92),
-                  fontWeight: FontWeight.w700,
+              // BUG-7: points are a child-only concept (product rule: adults
+              // have no points). For an adult this would always read "0 pts",
+              // which violates the rule — so the points label is suppressed
+              // entirely in adult mode. The rest of the card (task bubbles,
+              // lifetime progress) is mode-agnostic and stays visible.
+              if (userMode == ProfileMode.child)
+                Text(
+                  l10n.pointsAbbrev(totalPoints),
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    color: Colors.white.withValues(alpha: 0.92),
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
-              ),
             ],
           ),
           const SizedBox(height: 10),
