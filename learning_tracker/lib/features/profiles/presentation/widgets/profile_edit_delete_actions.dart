@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/profile_avatar.dart';
 import 'package:learning_tracker/features/tutoring/tutoring.dart';
@@ -102,10 +103,26 @@ Future<void> deleteProfileFlow(
   await repo.deleteProfile(profile.id, allowLast: isLast);
 
   if (selectedId == profile.id) {
-    ref.read(selectedProfileIdProvider.notifier).clear();
+    // Bug B: deleting the ACTIVE profile previously cleared the selection to
+    // null. The dashboard greeting and top-bar then resolved through
+    // activeProfile (id == 0 → null) and fell back to the generic "Learner"
+    // label until a tile was re-tapped. Instead, auto-switch to a remaining
+    // profile so the greeting/role re-derive to the now-active profile's name
+    // reactively. clear() only when nothing remains (last-profile delete).
+    final remainingProfiles = await repo.getProfilesByAccount(accountId);
+    final next = remainingProfiles.where((p) => p.id != profile.id).firstOrNull;
+    if (next != null) {
+      ref.read(selectedProfileIdProvider.notifier).select(next.id);
+    } else {
+      ref.read(selectedProfileIdProvider.notifier).clear();
+    }
   }
   ref.invalidate(profileListProvider);
   ref.invalidate(profileListStreamProvider);
+  // The active profile changed identity (or was cleared): re-resolve the
+  // display-name/greeting source so the dashboard greeting updates immediately.
+  ref.invalidate(activeProfileProvider);
+  ref.invalidate(selectedProfileProvider);
 }
 
 /// Shared profile edit form (name, mode display, avatar picker).

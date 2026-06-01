@@ -619,8 +619,76 @@ void main() {
         // Resolved active-profile name + role badge + the unfold affordance
         // that signals it opens the switcher.
         expect(find.text('Test'), findsWidgets);
-        expect(find.text('SELF-LEARNER'), findsOneWidget);
+        // Bug A: the role badge must reflect the profile MODE — the seeded
+        // profile is an ADULT, so it reads "ADULT MODE", NOT the generic
+        // "SELF-LEARNER" that previously rendered for every mode.
+        expect(find.text('ADULT MODE'), findsOneWidget);
+        expect(find.text('SELF-LEARNER'), findsNothing);
         expect(find.byIcon(Icons.unfold_more_rounded), findsOneWidget);
+
+        await _cleanUpWidgets(tester);
+      },
+    );
+
+    // Bug A regression: a CHILD learner profile must NOT read identically to an
+    // adult — the persistent switcher chip must show the child mode badge.
+    testWidgets(
+      'child profile shows the CHILD MODE badge (not SELF-LEARNER / ADULT MODE)',
+      (tester) async {
+        final router = await _createAuthenticatedRouter();
+        final childProfiles = [
+          ProfileModel(
+            id: 1,
+            accountId: 1,
+            displayName: 'Test',
+            mode: 'child',
+            avatarIndex: 0,
+            createdAt: DateTime(2024),
+            updatedAt: DateTime(2024),
+          ),
+        ];
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              appDatabaseProvider.overrideWithValue(db),
+              userDatabaseProvider.overrideWithValue(db),
+              authStateProvider.overrideWithValue(_authOverride),
+              profileListStreamProvider.overrideWith(
+                (ref) => Stream.value(childProfiles),
+              ),
+              activeProfileIdProvider.overrideWith(_FixedActiveProfileId.new),
+              dashboardActiveCurriculaStreamProvider.overrideWith(
+                (ref) => Stream.value(<CurriculumId>[]),
+              ),
+              dashboardStreakProvider.overrideWith(
+                (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
+              ),
+              dashboardStreakRecoveryProvider.overrideWith(
+                (ref) => Future.value(
+                  const StreakRecoveryInfo(
+                    wasRecovered: false,
+                    currentStreak: 0,
+                  ),
+                ),
+              ),
+            ],
+            child: _wrapApp(
+              router.config(
+                deepLinkBuilder: (_) => const DeepLink.path('/dashboard'),
+              ),
+            ),
+          ),
+        );
+        await _pumpDashboard(tester);
+
+        expect(
+          find.byKey(const Key('appShellProfileSwitcherBar')),
+          findsOneWidget,
+        );
+        expect(find.text('CHILD MODE'), findsOneWidget);
+        expect(find.text('ADULT MODE'), findsNothing);
+        expect(find.text('SELF-LEARNER'), findsNothing);
 
         await _cleanUpWidgets(tester);
       },

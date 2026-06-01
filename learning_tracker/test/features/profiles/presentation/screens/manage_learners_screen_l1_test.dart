@@ -676,6 +676,12 @@ void main() {
         when(
           () => repo.deleteProfile(any(), allowLast: any(named: 'allowLast')),
         ).thenAnswer((_) async {});
+        // Bug B: deleting the active profile now re-queries remaining profiles
+        // to auto-switch the selection. id=1 is the only profile, so none
+        // remain after delete and the flow clears the selection.
+        when(
+          () => repo.getProfilesByAccount(any()),
+        ).thenAnswer((_) async => <ProfileModel>[]);
         // Simulate offline.
         when(() => connectivity.isOnline).thenAnswer((_) async => false);
 

@@ -382,9 +382,16 @@ Future<void> _showAdjustPointsDialog(
             onPressed: () => Navigator.pop(ctx, false),
             child: Text(l10n.cancel),
           ),
-          FilledButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: Text(l10n.parentPointsAdjustConfirm),
+          ValueListenableBuilder<TextEditingValue>(
+            valueListenable: amountController,
+            builder: (ctx, value, _) {
+              final amount = int.tryParse(value.text.trim()) ?? 0;
+              final isValid = amount > 0;
+              return FilledButton(
+                onPressed: isValid ? () => Navigator.pop(ctx, true) : null,
+                child: Text(l10n.parentPointsAdjustConfirm),
+              );
+            },
           ),
         ],
       ),

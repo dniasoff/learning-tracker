@@ -388,6 +388,23 @@ class ProfileSwitcherBar extends ConsumerWidget {
         accountName ??
         l10n.userFallbackDisplayName;
     final trimmed = displayName.trim();
+
+    // Bug A: the role badge must distinguish the profile MODE — a child learner
+    // must NOT read identically to an adult. Per product Rule 3 the role label
+    // is the Learner/Adult/Tutor switcher: derive it from the active profile's
+    // mode, and surface TUTOR when a tutored-child selection is active (the
+    // signed-in adult is sitting in a talmid's context). Falls back to the adult
+    // badge while the profile stream is still resolving (account-only identity).
+    final isTutoredContext =
+        ref.watch(activeTutoredProfileSelectionProvider) != null;
+    final String roleBadge;
+    if (isTutoredContext) {
+      roleBadge = l10n.tutorContextBadge;
+    } else if (activeProfile?.profileMode == ProfileMode.child) {
+      roleBadge = l10n.profileBadgeChildMode;
+    } else {
+      roleBadge = l10n.profileBadgeAdultMode;
+    }
     final initial = trimmed.isEmpty
         ? 'U'
         : trimmed.substring(0, 1).toUpperCase();
@@ -456,7 +473,7 @@ class ProfileSwitcherBar extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  l10n.selfLearnerBadge,
+                  roleBadge,
                   style: TextStyle(
                     color: primary,
                     fontSize: 11,

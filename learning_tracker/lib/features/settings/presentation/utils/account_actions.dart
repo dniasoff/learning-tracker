@@ -155,6 +155,16 @@ Future<void> showSignOutConfirmation(
 
   if (confirmed != true || !context.mounted) return;
 
+  // Capture the root router + registry BEFORE mutating auth state. Signing out
+  // flips authStateProvider to signed-out, which trips the router's authGuard
+  // and tears down the AppShell (and the Settings page whose context/ref were
+  // passed in here). After that teardown, reading providers off the disposed
+  // widget's `ref` throws and the navigation below would be skipped silently —
+  // leaving the user stranded on Settings. Capturing first makes navigation
+  // independent of the caller widget's lifecycle.
+  final router = ref.read(routerProvider);
+  final registry = ref.read(deviceRegistryProvider);
+
   try {
     // T5.lifecycle — wipe tutored mirrors before clearing auth state so we
     // still have the accountId and the DB handle.
@@ -175,13 +185,12 @@ Future<void> showSignOutConfirmation(
     // on next launch rather than being silently resumed via cached token.
     await ref.read(authRepositoryProvider).signOut();
     ref.read(authStateProvider.notifier).signOut();
-    ref.read(routerProvider).pinGuard.lock();
+    router.pinGuard.lock();
 
-    final registry = ref.read(deviceRegistryProvider);
     final accounts = await registry.getAllAccounts();
     // Use root AppRouter — context.router inside a tab's StackRouter cannot
-    // navigate to root-level routes (SignInRoute, AccountPickerRoute).
-    final router = ref.read(routerProvider);
+    // navigate to root-level routes (SignInRoute, AccountPickerRoute). Both
+    // router + registry were captured above, before auth-state teardown.
     if (accounts.isNotEmpty) {
       await router.replaceAll([const AccountPickerRoute()]);
     } else {

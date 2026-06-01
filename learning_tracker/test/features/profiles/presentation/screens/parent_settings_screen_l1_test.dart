@@ -40,6 +40,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/sync/providers/sync_status_providers.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
@@ -103,13 +104,14 @@ Widget _buildApp({
   TutorPermissions? tutorPerms,
   Locale locale = const Locale('en'),
   AuthState? authState,
+  UserDatabase? db,
 }) {
   final auth = _MockAuthRepository();
   when(() => auth.currentUser).thenReturn(null);
 
   final resolvedAuthState = authState ?? const AuthState.signedOut();
 
-  final db = inMemoryDb();
+  final resolvedDb = db ?? inMemoryDb();
 
   return ProviderScope(
     retry: (_, __) => null,
@@ -131,7 +133,7 @@ Widget _buildApp({
       syncStatusProvider.overrideWithValue(const SyncStatus.localOnly()),
 
       // In-memory DB for the points-adjust dialog path (userDatabaseProvider)
-      userDatabaseProvider.overrideWithValue(db),
+      userDatabaseProvider.overrideWithValue(resolvedDb),
     ],
     child: MaterialApp(
       locale: locale,
@@ -712,4 +714,120 @@ void main() {
       await _tearDown(tester);
     },
   );
+
+  // ── 5. Adjust Points dialog: empty/0 must NOT silently no-op ────────────────
+  //
+  // Regression: Apply previously always popped(true); the amount guard ran
+  // AFTER dismissal, so an empty/0 amount closed the dialog and adjusted
+  // nothing. Apply is now disabled until a positive integer is entered, and a
+  // valid amount applies the delta to the points balance.
+
+  // Opens the Adjust Points dialog from the owner-context settings list.
+  Future<void> openAdjustPointsDialog(WidgetTester tester) async {
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+    // Tap the settings tile (the first "Adjust Points" — the dialog title
+    // renders the same string once open).
+    await tester.tap(find.text('Adjust Points').first);
+    await tester.pumpAndSettle();
+  }
+
+  // Resolves the Apply FilledButton inside the open dialog.
+  FilledButton applyButton(WidgetTester tester) =>
+      tester.widget<FilledButton>(find.widgetWithText(FilledButton, 'Apply'));
+
+  // Taps Apply and lets the async parentAdjust DB write complete WITHOUT
+  // driving the dialog exit transition.
+  //
+  // Driving the AlertDialog dismissal/snackbar frames in the synthetic test
+  // viewport produces a benign RenderFlex overflow (the `mainAxisSize.min`
+  // content Column briefly gets a collapsing constraint) which then cascades
+  // into framework element-tree assertions and fails the test. Since the
+  // behaviour under test is "a valid amount is persisted", we fire the tap and
+  // drain real microtasks via [WidgetTester.runAsync] instead of pumping the
+  // animation.
+  Future<void> applyAndDrainDialog(WidgetTester tester) async {
+    await tester.tap(find.widgetWithText(FilledButton, 'Apply'));
+    // Let the awaited `showDialog` future resolve and `parentAdjust` run.
+    await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+  }
+
+  testWidgets('Adjust Points: Apply is disabled when amount is empty', (
+    tester,
+  ) async {
+    _useTallViewport(tester);
+    await tester.pumpWidget(_buildApp(router: router, tutorPerms: null));
+    await openAdjustPointsDialog(tester);
+
+    expect(find.widgetWithText(FilledButton, 'Apply'), findsOneWidget);
+    expect(applyButton(tester).onPressed, isNull); // disabled
+
+    await _tearDown(tester);
+  });
+
+  testWidgets('Adjust Points: Apply is disabled when amount is 0', (
+    tester,
+  ) async {
+    _useTallViewport(tester);
+    await tester.pumpWidget(_buildApp(router: router, tutorPerms: null));
+    await openAdjustPointsDialog(tester);
+
+    await tester.enterText(find.widgetWithText(TextField, 'Amount'), '0');
+    await tester.pump();
+
+    expect(applyButton(tester).onPressed, isNull); // still disabled
+
+    await _tearDown(tester);
+  });
+
+  testWidgets('Adjust Points: Apply enables and applies a valid amount', (
+    tester,
+  ) async {
+    final db = inMemoryDb();
+    await seedProfile(db); // satisfies points_balance.profile_id FK
+    await tester.pumpWidget(
+      _buildApp(router: router, tutorPerms: null, db: db),
+    );
+    await openAdjustPointsDialog(tester);
+
+    await tester.enterText(find.widgetWithText(TextField, 'Amount'), '25');
+    await tester.pump();
+
+    expect(applyButton(tester).onPressed, isNotNull); // enabled
+
+    await applyAndDrainDialog(tester);
+
+    expect(await db.pointsBalanceDao.getBalance(1), 25);
+
+    await _tearDown(tester);
+    await db.close();
+  });
+
+  testWidgets('Adjust Points: Deduct applies a negative delta', (tester) async {
+    final db = inMemoryDb();
+    await seedProfile(db); // satisfies points_balance.profile_id FK
+    // Seed a starting balance so a deduction has something to subtract from.
+    await db.pointsBalanceDao.parentAdjust(1, 40);
+
+    await tester.pumpWidget(
+      _buildApp(router: router, tutorPerms: null, db: db),
+    );
+    await openAdjustPointsDialog(tester);
+
+    // Switch to Deduct mode.
+    await tester.tap(find.text('Deduct points'));
+    await tester.pump();
+
+    await tester.enterText(find.widgetWithText(TextField, 'Amount'), '15');
+    await tester.pump();
+
+    expect(applyButton(tester).onPressed, isNotNull);
+
+    await applyAndDrainDialog(tester);
+
+    expect(await db.pointsBalanceDao.getBalance(1), 25);
+
+    await _tearDown(tester);
+    await db.close();
+  });
 }

@@ -1,10 +1,10 @@
 import 'dart:async';
 
-import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/navigation/router_provider.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
@@ -157,7 +157,13 @@ class _AccountActionsSheet extends ConsumerWidget {
                   color: AppColors.inkMidGrey,
                 ),
                 onTap: () => closeThen(() async {
-                  await pageContext.pushRoute(const AccountPickerRoute());
+                  // Use the ROOT router (not pageContext.pushRoute). AccountPicker
+                  // is a root-level route; pageContext lives inside the Settings
+                  // tab whose nested StackRouter cannot navigate to root routes —
+                  // pushing via the tab router silently no-ops.
+                  await pageRef
+                      .read(routerProvider)
+                      .push(const AccountPickerRoute());
                 }),
               ),
               if (showAddAccount)
@@ -181,7 +187,9 @@ class _AccountActionsSheet extends ConsumerWidget {
                     ),
                   ),
                   onTap: () => closeThen(() async {
-                    await pageContext.pushRoute(SignupRoute());
+                    // Root router — Signup is a root-level route (see Switch
+                    // account note above); the tab's nested router can't push it.
+                    await pageRef.read(routerProvider).push(SignupRoute());
                   }),
                 ),
               if (hasPasswordProvider)

@@ -133,6 +133,73 @@ void main() {
   );
 
   test(
+    'Bug B: after deleting the ACTIVE profile, re-selecting the remaining '
+    'profile (what deleteProfileFlow does) makes activeProfile resolve to that '
+    'profile — the greeting shows "Daniel", not the generic "Learner" fallback',
+    () async {
+      final container = ProviderContainer(
+        overrides: [
+          profileRepositoryProvider.overrideWithValue(_FakeProfileRepository()),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      // Active profile was the just-created child mirror (deleted below).
+      container
+          .read(selectedProfileIdProvider.notifier)
+          .select(_talmidMirrorProfileId);
+
+      // deleteProfileFlow, on deleting the active profile, auto-switches the
+      // selection to a REMAINING profile (here the "Daniel" adult) rather than
+      // clearing to null. Emulate that selection move.
+      container
+          .read(selectedProfileIdProvider.notifier)
+          .select(_tutorOwnProfileId);
+
+      expect(container.read(activeProfileIdProvider), _tutorOwnProfileId);
+      final profile = await container.read(activeProfileProvider.future);
+      expect(profile, isNotNull);
+      expect(
+        profile!.displayName,
+        'Daniel Niasoff',
+        reason:
+            'greeting must show the now-active profile name immediately, not '
+            'the generic "Learner" fallback (id 0 → null)',
+      );
+    },
+  );
+
+  test(
+    'Bug B regression: if the active-profile delete clears the selection to '
+    'null (old behaviour), activeProfile resolves to null → the greeting falls '
+    'back to the generic label; the auto-switch above is what avoids that',
+    () async {
+      final container = ProviderContainer(
+        overrides: [
+          profileRepositoryProvider.overrideWithValue(_FakeProfileRepository()),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      container
+          .read(selectedProfileIdProvider.notifier)
+          .select(_talmidMirrorProfileId);
+      // Old (buggy) delete behaviour: clear instead of selecting next.
+      container.read(selectedProfileIdProvider.notifier).clear();
+
+      expect(container.read(activeProfileIdProvider), 0);
+      final profile = await container.read(activeProfileProvider.future);
+      expect(
+        profile,
+        isNull,
+        reason:
+            'documents the failure mode the deleteProfileFlow fix prevents: a '
+            'null active profile forces the generic "Learner" greeting',
+      );
+    },
+  );
+
+  test(
     'BUG-NEW-2 guard: while the tutored mirror pull is still in progress '
     '(resolved id null), activeProfileId is the 0 sentinel, never the tutor',
     () {

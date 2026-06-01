@@ -169,8 +169,8 @@ void main() {
     });
 
     testWidgets(
-      'deleting the selected cloud-account profile while offline clears '
-      'selectedProfileId',
+      'deleting the active cloud-account profile auto-switches the selection '
+      'to a remaining profile (Bug B — not cleared to null)',
       (tester) async {
         tester.view.physicalSize = const Size(1080, 2340);
         tester.view.devicePixelRatio = 1.0;
@@ -180,6 +180,9 @@ void main() {
         await seedProfileWithIds(db, profileId: 1, accountId: 1);
         addTearDown(() => db.close());
 
+        // One sibling profile (id=1) remains after deleting the active id=2.
+        final remainingProfile = _cloudProfile(id: 1, name: 'Daniel');
+
         final repo = _MockProfileRepository();
         when(
           () => repo.countProfilesForAccount(any()),
@@ -187,6 +190,11 @@ void main() {
         when(
           () => repo.deleteProfile(any(), allowLast: any(named: 'allowLast')),
         ).thenAnswer((_) async {});
+        // Bug B: after delete the flow looks up remaining profiles to pick the
+        // next active one. id=2 was deleted, so only id=1 ("Daniel") is left.
+        when(
+          () => repo.getProfilesByAccount(any()),
+        ).thenAnswer((_) async => [remainingProfile]);
 
         // The profile being deleted IS the currently selected one (id=2).
         final profileToDelete = _cloudProfile(id: 2, name: 'ActiveProfile');
@@ -246,17 +254,115 @@ void main() {
           () => repo.deleteProfile(profileToDelete.id, allowLast: false),
         ).called(1);
 
-        // selectedProfileId was cleared because the deleted profile was active.
+        // Bug B: selectedProfileId auto-switched to the remaining profile (id=1)
+        // instead of clearing to null — so the dashboard greeting / top-bar
+        // immediately re-derive to that profile rather than the generic
+        // "Learner" fallback.
         expect(
           container.read(selectedProfileIdProvider),
-          isNull,
+          1,
           reason:
-              'selectedProfileId should be cleared after deleting the active profile',
+              'deleting the active profile must auto-switch to a remaining '
+              'profile, not clear the selection (Bug B)',
         );
 
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump(Duration.zero);
       },
     );
+  });
+
+  // ── Mode-seeding regression ──────────────────────────────────────────────
+  //
+  // P2 (low-confidence on-device observation): opening the edit dialog on a
+  // CHILD profile reportedly showed "Adult" pre-selected. Code review shows the
+  // dialog correctly seeds its initial selection from widget.initialMode
+  // (defaulting to 'child', never 'adult'). These tests lock that in so the
+  // initial selection always reflects the profile's actual mode.
+
+  group('ProfileEditFormDialog — initial mode seeding', () {
+    Future<void> pumpDialog(WidgetTester tester, String? initialMode) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: ProfileEditFormDialog(
+              title: 'Edit Learner',
+              initialName: 'Sample',
+              initialMode: initialMode,
+              initialAvatar: 0,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+    }
+
+    Set<String> selectedSegments(WidgetTester tester) {
+      final button = tester.widget<SegmentedButton<String>>(
+        find.byType(SegmentedButton<String>),
+      );
+      return button.selected;
+    }
+
+    testWidgets('child profile pre-selects Child', (tester) async {
+      tester.view.physicalSize = const Size(1080, 2340);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await pumpDialog(tester, 'child');
+
+      expect(
+        selectedSegments(tester),
+        {'child'},
+        reason: 'Editing a child profile must pre-select the Child segment',
+      );
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    });
+
+    testWidgets('adult profile pre-selects Adult', (tester) async {
+      tester.view.physicalSize = const Size(1080, 2340);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await pumpDialog(tester, 'adult');
+
+      expect(
+        selectedSegments(tester),
+        {'adult'},
+        reason: 'Editing an adult profile must pre-select the Adult segment',
+      );
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    });
+
+    testWidgets('null/unknown mode falls back to Child (never Adult)', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(1080, 2340);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      await pumpDialog(tester, null);
+
+      expect(
+        selectedSegments(tester),
+        {'child'},
+        reason: 'Missing mode must default to Child, not Adult',
+      );
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    });
   });
 }
