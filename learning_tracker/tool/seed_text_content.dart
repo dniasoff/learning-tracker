@@ -188,8 +188,14 @@ Future<({String he, String en})> _fetchBothLanguages(
   String sefariaRef,
 ) async {
   final encodedRef = Uri.encodeComponent(sefariaRef);
+  // Sefaria v3 returns ONLY the primary (Hebrew) version unless versions are
+  // explicitly requested. The params MUST serialise as repeated keys
+  // (`version=hebrew&version=english`); Dio's default list format emits
+  // `version[]=…` which v3 ignores, leaving English empty (which would wipe the
+  // English translation column on re-seed). Embed the query string directly to
+  // guarantee the correct repeated-key form.
   final response = await dio.get<Map<String, dynamic>>(
-    '/api/v3/texts/$encodedRef',
+    '/api/v3/texts/$encodedRef?version=hebrew&version=english',
   );
 
   final data = response.data;
