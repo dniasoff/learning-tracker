@@ -88,6 +88,18 @@ class TutoredChildrenSection extends ConsumerWidget {
               _TutoredChildRow(grant: grant),
               const SizedBox(height: 8),
             ],
+
+            // INFO/MED: when the tutor has ONLY active grants (no pending
+            // invitations) the "View invitations" row above is absent, leaving
+            // no UI path to ManageGrants (resign / review). Surface a dedicated
+            // "Manage tutoring grants" entry whenever there is ≥1 active grant
+            // so an active tutor can always reach ManageGrants. (When pending
+            // invites exist the View-invitations row already routes there, but
+            // this row remains useful as the explicit management entry point.)
+            if (activeGrants.isNotEmpty) ...[
+              const _ManageGrantsRow(),
+              const SizedBox(height: 8),
+            ],
           ],
         );
       },
@@ -204,6 +216,93 @@ class _ViewInvitationsRow extends ConsumerWidget {
               // same (root) navigator; popping only the gate would leave the
               // modal sheet lingering on top once the grants screen is later
               // dismissed. Pop both so we land cleanly on the grants screen.
+              final navigator = Navigator.of(context);
+              navigator.pop(); // PIN gate
+              if (navigator.canPop()) {
+                navigator.pop(); // switcher sheet
+              }
+              unawaited(router.push(const ManageGrantsRoute()));
+            },
+            onCancel: () => Navigator.of(context).pop(),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── "Manage tutoring grants" row ──────────────────────────────────────────────
+
+/// Tappable row that navigates to [ManageGrantsRoute] so a tutor with active
+/// grants can resign or review them. Reuses the same Tutor-PIN-gated path as
+/// [_ViewInvitationsRow]; surfaced for active grants because the
+/// invitations row only renders when PENDING invites exist.
+class _ManageGrantsRow extends ConsumerWidget {
+  const _ManageGrantsRow();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
+    return Card(
+      margin: EdgeInsets.zero,
+      elevation: 1,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: const Color(0xFFEDEAF7),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: const Center(
+            child: Icon(
+              Icons.manage_accounts_rounded,
+              color: Color(0xFF6B3FA0),
+              size: 24,
+            ),
+          ),
+        ),
+        title: Text(
+          l10n.tutoredChildrenManageGrants,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        subtitle: Text(
+          l10n.tutoredChildrenManageGrantsSubtitle,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: AppTheme.brandInkMuted,
+          ),
+        ),
+        trailing: const Icon(
+          Icons.chevron_right_rounded,
+          color: Color(0xFFC2C9D3),
+        ),
+        // H3: same Tutor-PIN gate as the invitations entry — never show grant
+        // data without the Tutor PIN, regardless of entry path.
+        onTap: () => _openManageGrants(context, ref),
+      ),
+    );
+  }
+
+  /// Present the [TutorPinEntryGate] before navigating to ManageGrants. Mirrors
+  /// [_ViewInvitationsRow._openInvitations].
+  void _openManageGrants(BuildContext context, WidgetRef ref) {
+    final tutorOwnProfileId = ref.read(selectedProfileIdProvider) ?? 0;
+    unawaited(
+      Navigator.of(context).push<void>(
+        MaterialPageRoute<void>(
+          fullscreenDialog: true,
+          builder: (_) => TutorPinEntryGate(
+            profileId: tutorOwnProfileId,
+            onPinVerified: () {
+              final router = ref.read(routerProvider);
+              router.pinGuard.markScopeAuthenticated(
+                PinScope.tutor(tutorOwnProfileId),
+              );
               final navigator = Navigator.of(context);
               navigator.pop(); // PIN gate
               if (navigator.canPop()) {

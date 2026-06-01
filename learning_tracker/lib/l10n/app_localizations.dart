@@ -1961,6 +1961,18 @@ abstract class AppLocalizations {
   /// **'View invitations'**
   String get tutoredChildrenViewInvitations;
 
+  /// No description provided for @tutoredChildrenManageGrants.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage tutoring grants'**
+  String get tutoredChildrenManageGrants;
+
+  /// No description provided for @tutoredChildrenManageGrantsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Resign or review your tutoring access'**
+  String get tutoredChildrenManageGrantsSubtitle;
+
   /// No description provided for @tutoredChildrenPendingInvitations.
   ///
   /// In en, this message translates to:
@@ -6410,7 +6422,7 @@ abstract class AppLocalizations {
   /// No description provided for @manageTutorsActiveSection.
   ///
   /// In en, this message translates to:
-  /// **'Active ({count})'**
+  /// **'ACTIVE ({count})'**
   String manageTutorsActiveSection(int count);
 
   /// No description provided for @manageTutorsPendingSection.

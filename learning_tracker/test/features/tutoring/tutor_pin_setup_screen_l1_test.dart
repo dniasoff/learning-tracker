@@ -96,20 +96,18 @@ Widget _buildHarness({
   );
 }
 
-/// Types a 4-digit PIN into the PinEntryWidget text fields.
+/// Enters a 4-digit PIN by tapping the always-visible custom numpad (TUT-07).
 ///
-/// Finds the 4 [TextField] widgets that make up the PIN entry row, enters
-/// one digit each, and waits for Flutter to propagate the changes.
+/// The setup screen uses a custom on-screen numpad (NOT TextFields / the device
+/// soft-keyboard), matching the TutorPinEntryGate — so digits are entered by
+/// tapping the rendered digit keys.
 Future<void> _enterPin(WidgetTester tester, String pin) async {
   assert(pin.length == 4, 'PIN must be 4 digits');
   for (var i = 0; i < 4; i++) {
-    final fieldFinder = find.byType(TextField).at(i);
-    await tester.tap(fieldFinder);
-    await tester.pump();
-    await tester.enterText(fieldFinder, pin[i]);
+    await tester.tap(find.widgetWithText(InkWell, pin[i]));
     await tester.pump();
   }
-  // Give PinEntryWidget time to call onPinComplete.
+  // Give the screen time to advance steps / call setTutorPin.
   await tester.pump(const Duration(milliseconds: 100));
 }
 
@@ -274,7 +272,7 @@ void main() {
       await _teardown(tester);
     });
 
-    testWidgets('shows PinEntryWidget with "Enter New PIN" label', (
+    testWidgets('shows the custom numpad with "Enter New PIN" label', (
       tester,
     ) async {
       tester.view.physicalSize = const Size(800, 1600);
@@ -291,12 +289,16 @@ void main() {
       );
       await tester.pump();
 
-      // PinEntryWidget renders its title as Text — "Enter New PIN"
+      // The numpad step label renders as Text — "Enter New PIN"
       expect(find.text('Enter New PIN'), findsOneWidget);
       await _teardown(tester);
     });
 
-    testWidgets('4 digit text fields are rendered', (tester) async {
+    // TUT-07: setup uses an always-visible custom numpad (no soft-keyboard
+    // TextFields), matching the TutorPinEntryGate.
+    testWidgets('renders an always-visible numpad (0-9) — no TextFields', (
+      tester,
+    ) async {
       tester.view.physicalSize = const Size(800, 1600);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(tester.view.resetPhysicalSize);
@@ -311,7 +313,17 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.byType(TextField), findsNWidgets(4));
+      // No soft-keyboard TextFields (TUT-07 — the old PinEntryWidget was dead).
+      expect(find.byType(TextField), findsNothing);
+      // All ten digit keys are tappable on the custom numpad.
+      for (var d = 0; d <= 9; d++) {
+        expect(
+          find.widgetWithText(InkWell, '$d'),
+          findsOneWidget,
+          reason: 'Numpad must render a tappable key for digit $d',
+        );
+      }
+      expect(find.byIcon(Icons.backspace_outlined), findsOneWidget);
       await _teardown(tester);
     });
   });

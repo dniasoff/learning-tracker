@@ -515,6 +515,8 @@
   "profilePickerTalmidProfiles": "פרופילי תלמידים",
   "profilePickerTutoredChildren": "ילדים מוּדרכים",
   "tutoredChildrenViewInvitations": "צפייה בהזמנות",
+  "tutoredChildrenManageGrants": "ניהול הרשאות הדרכה",
+  "tutoredChildrenManageGrantsSubtitle": "התפטרות או סקירת גישת ההדרכה שלכם",
   "tutoredChildrenPendingInvitations": "{count, plural, =1{הזמנת הדרכה אחת ממתינה} other{{count} הזמנות הדרכה ממתינות}}",
   "@tutoredChildrenPendingInvitations": {
     "placeholders": {

@@ -1058,6 +1058,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get tutoredChildrenViewInvitations => 'View invitations';
 
   @override
+  String get tutoredChildrenManageGrants => 'Manage tutoring grants';
+
+  @override
+  String get tutoredChildrenManageGrantsSubtitle =>
+      'Resign or review your tutoring access';
+
+  @override
   String tutoredChildrenPendingInvitations(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,
@@ -3678,7 +3685,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String manageTutorsActiveSection(int count) {
-    return 'Active ($count)';
+    return 'ACTIVE ($count)';
   }
 
   @override

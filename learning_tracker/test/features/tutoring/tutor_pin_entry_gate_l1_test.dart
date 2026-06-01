@@ -1137,4 +1137,147 @@ void main() {
       },
     );
   });
+
+  // ── TUT-01: set-then-immediately-verify on the SAME gate instance ──────────
+  //
+  // Regression for the post-reset race: after setting a new PIN inline, the
+  // gate must clear its entry state and show PIN entry immediately so the
+  // freshly-set PIN verifies on the FIRST re-entry — NOT only after a second,
+  // fresh gate open.
+
+  group('TutorPinEntryGate — TUT-01: set then immediately verify', () {
+    testWidgets(
+      'after inline PIN setup, the new PIN verifies on the first entry '
+      '(no spurious "Incorrect PIN")',
+      (tester) async {
+        setViewSize(tester);
+
+        // Stateful stub: starts with NO pin set (forces the setup screen),
+        // setTutorPin flips the flag, hasTutorPin / tutorPinIsSetProvider read
+        // it, and verifyTutorPin returns success only when the entered PIN
+        // matches the one that was just set.
+        final stub = _StatefulTutorPinStub();
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              tutorPinServiceProvider.overrideWithValue(stub),
+              // Resolve from the stub so an invalidate() after setTutorPin
+              // reflects the new (true) state — mirroring production.
+              tutorPinIsSetProvider(
+                _kTutorProfileId,
+              ).overrideWith((_) => stub.hasTutorPin(_kTutorProfileId)),
+            ],
+            child: MaterialApp(
+              locale: const Locale('en'),
+              localizationsDelegates: const [
+                AppLocalizations.delegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: TutorPinEntryGate(
+                profileId: _kTutorProfileId,
+                onPinVerified: () => stub.verifiedCalled = true,
+                onCancel: () {},
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        // No PIN set → setup screen is shown.
+        expect(
+          find.text('Set Tutor PIN'),
+          findsAtLeastNWidgets(1),
+          reason: 'With no PIN set the gate must show the setup screen first',
+        );
+
+        // Enter the new PIN (2222) then confirm (2222) on the custom numpad.
+        await _enterPin(tester, '2222'); // create step
+        await tester.pump(const Duration(milliseconds: 100));
+        await _enterPin(
+          tester,
+          '2222',
+        ); // confirm step → setTutorPin + onPinSet
+        await tester.pump(const Duration(seconds: 1));
+
+        // The gate must now show PIN ENTRY (not loop back to setup) with a
+        // clean state (no error, empty dots).
+        expect(
+          find.text('Enter your Tutor PIN'),
+          findsOneWidget,
+          reason:
+              'TUT-01: after setting the PIN the gate must show entry on the '
+              'same instance, not route back to setup',
+        );
+        expect(
+          find.text('Incorrect PIN. Please try again.'),
+          findsNothing,
+          reason: 'TUT-01: no spurious incorrect-PIN error before any entry',
+        );
+
+        // Enter the freshly-set PIN — it must verify on the FIRST attempt.
+        await _enterPin(tester, '2222');
+        await tester.pump(const Duration(seconds: 1));
+
+        expect(
+          find.text('Incorrect PIN. Please try again.'),
+          findsNothing,
+          reason:
+              'TUT-01 root cause: the just-set PIN must NOT report incorrect '
+              'on the first re-entry',
+        );
+        expect(
+          stub.verifiedCalled,
+          isTrue,
+          reason:
+              'TUT-01: onPinVerified must fire on the first correct entry of '
+              'the freshly-set PIN',
+        );
+
+        await _teardown(tester);
+      },
+    );
+  });
+}
+
+/// Stateful in-memory TutorPinService stub for the TUT-01 set-then-verify test.
+///
+/// Tracks a single stored PIN per profile so that:
+///   • hasTutorPin reflects whether a PIN was set (drives tutorPinIsSetProvider)
+///   • verifyTutorPin succeeds only for the exact PIN that was set
+class _StatefulTutorPinStub implements TutorPinService {
+  final Map<int, String> _pins = {};
+  bool verifiedCalled = false;
+
+  @override
+  Future<TutorPinResult> setTutorPin({
+    required int profileId,
+    required String rawPin,
+  }) async {
+    _pins[profileId] = rawPin;
+    return const TutorPinSuccess();
+  }
+
+  @override
+  Future<TutorPinResult> verifyTutorPin({
+    required int profileId,
+    required String rawPin,
+  }) async {
+    return _pins[profileId] == rawPin
+        ? const TutorPinSuccess()
+        : const TutorPinIncorrect();
+  }
+
+  @override
+  Future<bool> hasTutorPin(int profileId) async => _pins.containsKey(profileId);
+
+  @override
+  Future<void> clearTutorPin(int profileId) async => _pins.remove(profileId);
+
+  @override
+  Future<int> lockoutRemainingMinutes(int profileId) async => 0;
 }

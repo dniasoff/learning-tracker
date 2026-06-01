@@ -74,6 +74,12 @@ class SettingsScreen extends ConsumerWidget {
               user: user,
               activeProfile: activeProfile,
               surface: UserProfileHeaderSurface.settings,
+              // TUT-05: in a tutored session the header must reflect the
+              // tutored-CHILD context (talmid name + TUTOR badge, account email
+              // hidden) — not the tutor's own "SELF-LEARNER" account.
+              contextRole: isTutoredSession
+                  ? UserProfileContextRole.tutor
+                  : UserProfileContextRole.selfLearner,
             ),
             // ── Pending tutor invitations ──────────────────────────────────────
             // Shown automatically when a parent has sent an invite addressed to
@@ -108,37 +114,61 @@ class SettingsScreen extends ConsumerWidget {
             // notifications (reminder schedules), and parental controls.
             _SectionHeader(title: l10n.sectionProfile),
             const SizedBox(height: 10),
+            // TUT-06: in a tutored session the tutor has FULL parent-equivalent
+            // management over the talmid (manage tracks, points, rewards, goals,
+            // bulk/lifetime marking — only LIVE marking is barred). Surface the
+            // single entry into the parent-management hub (ParentSettingsScreen),
+            // which already renders every management tile gated by the active
+            // TutorPermissions. Without this, a tutor session showed only the bare
+            // learner shell with no management access at all (TUT-02/TUT-06).
+            //
+            // Shown whenever the tutor has ANY management permission. canEditStages
+            // (track/stage config) is the broadest of the parent-equivalent edit
+            // flags; the hub itself re-gates each individual tile.
+            if (isTutorElevated &&
+                (tutorPerms == null ||
+                    tutorPerms.canEditStages ||
+                    tutorPerms.canEditPoints ||
+                    tutorPerms.canEditRewards ||
+                    tutorPerms.canBulkPriorCompletion)) ...[
+              _SurfaceCard(
+                child: PreferenceListTile.withIcon(
+                  icon: Icons.admin_panel_settings_outlined,
+                  iconColor: AppTheme.brandBlueBright,
+                  iconBackground: AppTheme.brandBlueSoft,
+                  title: l10n.parentSettingsTitle,
+                  subtitle: l10n.manageTracksForChildSubtitle,
+                  onTap: () => context.pushRoute(const ParentSettingsRoute()),
+                ),
+              ),
+              const SizedBox(height: 12),
+            ],
             // Own adult: Manage Tracks + Manage Profiles.
-            // Tutor elevated (talmid context): Manage Tracks gated by canEditStages;
-            //   Manage Profiles is owner-only (hidden for tutors).
-            if (!isChildProfile ||
-                (isTutorElevated && (tutorPerms?.canEditStages ?? false))) ...[
+            // Tutored sessions reach tracks via the parent-management hub tile
+            // above, so the standalone Manage Tracks / Manage Profiles card is
+            // own-profile (non-tutored) only.
+            if (!isTutoredSession && !isChildProfile) ...[
               _SurfaceCard(
                 child: Column(
                   children: [
-                    if (!isTutorElevated ||
-                        (tutorPerms?.canEditStages ?? false))
-                      PreferenceListTile.withIcon(
-                        icon: Icons.route_rounded,
-                        iconColor: AppTheme.brandBlueBright,
-                        iconBackground: AppTheme.brandBlueSoft,
-                        title: l10n.manageTracks,
-                        subtitle: l10n.manageTracksDetail,
-                        onTap: () =>
-                            context.pushRoute(TrackManagementHubRoute()),
-                      ),
-                    if (!isTutorElevated) ...[
-                      _tileDivider(theme),
-                      PreferenceListTile.withIcon(
-                        icon: Icons.people_alt_rounded,
-                        iconColor: AppTheme.brandBlueBright,
-                        iconBackground: AppTheme.brandBlueSoft,
-                        title: l10n.manageProfiles,
-                        subtitle: l10n.manageProfilesSubtitle,
-                        onTap: () =>
-                            context.pushRoute(const ManageLearnersRoute()),
-                      ),
-                    ],
+                    PreferenceListTile.withIcon(
+                      icon: Icons.route_rounded,
+                      iconColor: AppTheme.brandBlueBright,
+                      iconBackground: AppTheme.brandBlueSoft,
+                      title: l10n.manageTracks,
+                      subtitle: l10n.manageTracksDetail,
+                      onTap: () => context.pushRoute(TrackManagementHubRoute()),
+                    ),
+                    _tileDivider(theme),
+                    PreferenceListTile.withIcon(
+                      icon: Icons.people_alt_rounded,
+                      iconColor: AppTheme.brandBlueBright,
+                      iconBackground: AppTheme.brandBlueSoft,
+                      title: l10n.manageProfiles,
+                      subtitle: l10n.manageProfilesSubtitle,
+                      onTap: () =>
+                          context.pushRoute(const ManageLearnersRoute()),
+                    ),
                   ],
                 ),
               ),

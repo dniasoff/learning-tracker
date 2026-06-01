@@ -193,7 +193,7 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
                 children: [
                   OfflineTopBanner(visible: offlineBannerVisible),
                   // Tutor mode bar — tappable to open profile switcher.
-                  if (hasActiveTutoredProfiles) const _TutorModeIndicatorBar(),
+                  if (hasActiveTutoredProfiles) const TutorModeIndicatorBar(),
                   // WS4.banner (DEC-25): "Viewing [child]" banner for the
                   // parent/child-mode path. Only shown when a child profile is
                   // active and no tutor bar is already displayed.
@@ -343,7 +343,7 @@ class _ShellNavItem extends StatelessWidget {
 // Product rule: a tappable role label must sit at the TOP of EVERY context
 // (Dashboard / Learn / Progress / Settings — AND every pushed sub-route),
 // opening the profile + mode switcher. The tutor and parent-child contexts have
-// their own tappable bars (_TutorModeIndicatorBar / _ChildViewBanner, both →
+// their own tappable bars (TutorModeIndicatorBar / _ChildViewBanner, both →
 // showProfileSwitcherSheet); this bar covers the default own-profile context,
 // which previously had no switcher entry at all. Shows the active profile name +
 // role badge + an unfold affordance, and opens the canonical switcher sheet on
@@ -594,8 +594,13 @@ class _ChildViewBanner extends ConsumerWidget {
 // a tutored profile context. Shows the talmid's name and a one-tap Exit button.
 // Tapping Exit clears the active tutored context and navigates back to the
 // AppShell (which resolves to the tutor's own profile).
-class _TutorModeIndicatorBar extends ConsumerWidget {
-  const _TutorModeIndicatorBar();
+//
+// TUT-04: public so the global [PersistentSwitcherScaffold] can render the SAME
+// amber tutor bar above pushed sub-routes (e.g. Manage Tracks), where the
+// shell's own appBar no longer applies — keeping the "Tutor mode" banner present
+// for the whole tutor session, not just on the four tab views.
+class TutorModeIndicatorBar extends ConsumerWidget {
+  const TutorModeIndicatorBar({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

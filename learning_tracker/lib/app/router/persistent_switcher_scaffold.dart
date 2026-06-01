@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_shell.dart';
 import 'package:learning_tracker/app/router/router_provider.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 
 /// Global persistent profile/role switcher layer.
 ///
@@ -90,6 +91,14 @@ class _PersistentSwitcherScaffoldState
     final showHeader = isAuthenticated && !_shellIsOnTop();
     if (!showHeader) return widget.child;
 
+    // TUT-04: when a tutor has entered a talmid's context, the amber "Tutor
+    // mode" banner must persist across the WHOLE session — including pushed
+    // sub-routes (Manage Tracks, etc.) where the shell's own appBar no longer
+    // applies. Render the SAME TutorModeIndicatorBar the shell shows, above the
+    // identity switcher bar, so the tutor context is never lost on a sub-screen.
+    final isTutoredSession =
+        ref.watch(activeTutoredProfileSelectionProvider) != null;
+
     final mediaQuery = MediaQuery.of(context);
     final topInset = mediaQuery.padding.top;
     return Material(
@@ -102,7 +111,13 @@ class _PersistentSwitcherScaffoldState
               context,
             ).colorScheme.primary.withValues(alpha: 0.06),
             padding: EdgeInsets.only(top: topInset),
-            child: const ProfileSwitcherBar(),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (isTutoredSession) const TutorModeIndicatorBar(),
+                const ProfileSwitcherBar(),
+              ],
+            ),
           ),
           // The persistent bar above has already consumed the system status-bar
           // inset. If we hand the child the unmodified MediaQuery, its own

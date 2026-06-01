@@ -1047,6 +1047,13 @@ class AppLocalizationsHe extends AppLocalizations {
   String get tutoredChildrenViewInvitations => 'צפייה בהזמנות';
 
   @override
+  String get tutoredChildrenManageGrants => 'ניהול הרשאות הדרכה';
+
+  @override
+  String get tutoredChildrenManageGrantsSubtitle =>
+      'התפטרות או סקירת גישת ההדרכה שלכם';
+
+  @override
   String tutoredChildrenPendingInvitations(int count) {
     String _temp0 = intl.Intl.pluralLogic(
       count,

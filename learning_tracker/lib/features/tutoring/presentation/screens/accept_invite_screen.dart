@@ -32,6 +32,15 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_st
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart';
+// The grant list the tutored-children UI (profile-picker / Settings /
+// ManageGrants) actually watches is the offline-first FutureProvider in
+// manage_tutors_providers — NOT the @riverpod `incomingTutorGrants` codegen
+// provider in tutor_grant_providers (which is a distinct provider with the
+// same name). Use the manage_tutors one so loading + invalidation here drive
+// the SAME provider those surfaces read, otherwise the accepted row never
+// flips in-session.
+import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart'
+    as manage_tutors;
 import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_grant_providers.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_pin_providers.dart';
 import 'package:learning_tracker/features/tutoring/presentation/screens/tutor_pin_setup_screen.dart';
@@ -124,7 +133,9 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
     // Falls back to a minimal grant object if not yet in the cached list
     // (the Cloud Function validates ownership and state server-side anyway).
     try {
-      final grants = await ref.read(incomingTutorGrantsProvider.future);
+      final grants = await ref.read(
+        manage_tutors.incomingTutorGrantsProvider.future,
+      );
       _loadedGrant = grants
           .where((g) => g.grantId == token)
           .cast<TutorGrant?>()
@@ -158,6 +169,16 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
       if (!mounted) return;
       switch (result) {
         case TutorGrantSuccess():
+          // SEV-2: the CF has flipped this grant pending → active server-side.
+          // Invalidate the grant-list providers NOW so every surface that reads
+          // them (profile-picker / Settings "TALMID PROFILES" / ManageGrants)
+          // re-fetches and the row flips from "Pending — tap to accept" to
+          // "Tutoring" IN-SESSION — without requiring a force-stop + cold
+          // restart. This is the single funnel all accept entry points pass
+          // through (deep link, Settings, profile-picker), so invalidating here
+          // fixes the stale row regardless of how acceptance was initiated.
+          ref.invalidate(manage_tutors.incomingTutorGrantsProvider);
+          ref.invalidate(pendingTutorInvitesProvider);
           // C4: check whether the tutor has provisioned a Tutor PIN yet, keyed
           // on their OWN profile id (resolved in _initialize). If not, route to
           // Tutor PIN setup before completing.
@@ -271,83 +292,103 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
 
   Widget _buildReadyToAccept(ThemeData theme) {
     final l10n = AppLocalizations.of(context)!;
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const SizedBox(height: 16),
-          const CircleAvatar(
-            radius: 36,
-            backgroundColor: Color(0xFFE8E0FF),
-            child: Icon(
-              Icons.handshake_rounded,
-              size: 36,
-              color: Color(0xFF6B3FA0),
+    // TUT-03: wrap in LayoutBuilder + SingleChildScrollView + ConstrainedBox so
+    // the layout scrolls (instead of overflowing with a RenderFlex error) on
+    // short / keyboard-visible viewports. A flexible (not fixed) spacer pushes
+    // the actions to the bottom only when there is spare room; under
+    // ConstrainedBox(minHeight) it collapses to zero so the content stays
+    // intrinsically sized and scrollable. (IntrinsicHeight cannot be used here
+    // because it cannot measure an Expanded/Spacer child.)
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: constraints.maxHeight.isFinite
+                  ? (constraints.maxHeight - 48).clamp(0.0, double.infinity)
+                  : 0,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const SizedBox(height: 16),
+                const CircleAvatar(
+                  radius: 36,
+                  backgroundColor: Color(0xFFE8E0FF),
+                  child: Icon(
+                    Icons.handshake_rounded,
+                    size: 36,
+                    color: Color(0xFF6B3FA0),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                Text(
+                  l10n.acceptInviteHeading,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: AppTheme.brandInk,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  l10n.acceptInviteBody,
+                  textAlign: TextAlign.center,
+                  style: theme.textTheme.bodyLarge?.copyWith(
+                    color: AppTheme.brandInkMuted,
+                    height: 1.4,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                _PermissionRow(
+                  icon: Icons.check_circle_rounded,
+                  text: l10n.acceptInvitePermissionViewData,
+                ),
+                // WS3.3h: corrected copy — reflects actual default permission
+                // set. Default grant allows bulk-mark + optional
+                // track/point/reward editing (canBulkPriorCompletion: true per
+                // G3/DEC-33; edit flags set by parent).
+                _PermissionRow(
+                  icon: Icons.check_circle_rounded,
+                  text: l10n.acceptInvitePermissionConfigure,
+                ),
+                _PermissionRow(
+                  icon: Icons.check_circle_rounded,
+                  text: l10n.acceptInvitePermissionBulkMark,
+                ),
+                _PermissionRow(
+                  icon: Icons.cancel_rounded,
+                  color: Colors.red.shade600,
+                  text: l10n.acceptInvitePermissionNoLive,
+                ),
+                const SizedBox(height: 24),
+                FilledButton(
+                  onPressed: _acceptInvite,
+                  style: FilledButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    shape: const StadiumBorder(),
+                  ),
+                  child: Text(l10n.acceptInviteAccept),
+                ),
+                const SizedBox(height: 10),
+                TextButton(
+                  // C3: route to the real decline flow — DeclineInviteScreen
+                  // calls DeclineTutorInviteUseCase (changes server state) and
+                  // fires the DEC-23 parent-notification path. Pass the loaded
+                  // grant when available; otherwise fall back to the raw token.
+                  onPressed: () => unawaited(_openDecline(context)),
+                  child: Text(
+                    l10n.acceptInviteDecline,
+                    style: const TextStyle(color: AppTheme.brandInkMuted),
+                  ),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 20),
-          Text(
-            l10n.acceptInviteHeading,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: AppTheme.brandInk,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            l10n.acceptInviteBody,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.bodyLarge?.copyWith(
-              color: AppTheme.brandInkMuted,
-              height: 1.4,
-            ),
-          ),
-          const SizedBox(height: 16),
-          _PermissionRow(
-            icon: Icons.check_circle_rounded,
-            text: l10n.acceptInvitePermissionViewData,
-          ),
-          // WS3.3h: corrected copy — reflects actual default permission set.
-          // Default grant allows bulk-mark + optional track/point/reward editing
-          // (canBulkPriorCompletion: true per G3/DEC-33; edit flags set by parent).
-          _PermissionRow(
-            icon: Icons.check_circle_rounded,
-            text: l10n.acceptInvitePermissionConfigure,
-          ),
-          _PermissionRow(
-            icon: Icons.check_circle_rounded,
-            text: l10n.acceptInvitePermissionBulkMark,
-          ),
-          _PermissionRow(
-            icon: Icons.cancel_rounded,
-            color: Colors.red.shade600,
-            text: l10n.acceptInvitePermissionNoLive,
-          ),
-          const Spacer(),
-          FilledButton(
-            onPressed: _acceptInvite,
-            style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: const StadiumBorder(),
-            ),
-            child: Text(l10n.acceptInviteAccept),
-          ),
-          const SizedBox(height: 10),
-          TextButton(
-            // C3: route to the real decline flow — DeclineInviteScreen calls
-            // DeclineTutorInviteUseCase (changes server state) and fires the
-            // DEC-23 parent-notification path. Pass the loaded grant when
-            // available; otherwise fall back to the raw token.
-            onPressed: () => unawaited(_openDecline(context)),
-            child: Text(
-              l10n.acceptInviteDecline,
-              style: const TextStyle(color: AppTheme.brandInkMuted),
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 

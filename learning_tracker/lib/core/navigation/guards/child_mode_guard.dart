@@ -17,11 +17,24 @@ class ChildModeGuard extends AutoRouteGuard {
   ChildModeGuard({
     required UserDatabase Function() getDatabase,
     required int? Function() getSelectedProfileId,
+    int? Function()? getActiveProfileId,
+    bool Function()? isTutoredSession,
   }) : _getDatabase = getDatabase,
-       _getSelectedProfileId = getSelectedProfileId;
+       _getSelectedProfileId = getSelectedProfileId,
+       _getActiveProfileId = getActiveProfileId,
+       _isTutoredSession = isTutoredSession;
 
   final UserDatabase Function() _getDatabase;
   final int? Function() _getSelectedProfileId;
+
+  /// Resolves the *active* profile id — in a tutored session this is the
+  /// synthetic talmid mirror (a child profile), which is NOT tracked by
+  /// [_getSelectedProfileId] (that stays null while tutoring). Optional so
+  /// tests that don't wire tutoring can omit it.
+  final int? Function()? _getActiveProfileId;
+
+  /// True when a tutor has entered a talmid's context. Optional.
+  final bool Function()? _isTutoredSession;
 
   @override
   Future<void> onNavigation(
@@ -36,7 +49,16 @@ class ChildModeGuard extends AutoRouteGuard {
     // completer un-completed forever — a permanent hang on every child-gated
     // route. This is a gate, so on any unexpected error we fail CLOSED.
     try {
-      final profileId = _getSelectedProfileId();
+      // Tutored session: a tutor has FULL parent-equivalent management of the
+      // talmid (authoritative permission model 2026-06-02). The talmid is a
+      // child profile, so the child-mode-gated parent-management routes
+      // (ParentSettings/Tracks/PointConfig/RewardConfig/Lifetime) must open.
+      // The active profile is the synthetic mirror — resolve it via the active
+      // id, NOT selectedProfileId (which stays null while tutoring).
+      final isTutored = _isTutoredSession?.call() ?? false;
+      final profileId = isTutored
+          ? _getActiveProfileId?.call()
+          : _getSelectedProfileId();
       if (profileId == null) {
         resolver.next(false);
         return;

@@ -38,7 +38,13 @@ import 'package:learning_tracker/features/profiles/presentation/providers/profil
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_grant_aggregate.dart';
 import 'package:learning_tracker/features/tutoring/domain/services/tutor_pin_service.dart';
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart';
-import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_grant_providers.dart';
+// The screen reads the offline-first grant list from manage_tutors_providers
+// (a same-named provider also exists in tutor_grant_providers). Override the
+// manage_tutors one so harness-supplied grants reach the screen.
+import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart'
+    show incomingTutorGrantsProvider;
+import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_grant_providers.dart'
+    show acceptTutorInviteUseCaseProvider, pendingTutorInvitesProvider;
 import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_pin_providers.dart';
 import 'package:learning_tracker/features/tutoring/presentation/screens/accept_invite_screen.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -157,10 +163,17 @@ Widget _buildHarness({
       acceptTutorInviteUseCaseProvider.overrideWithValue(useCase),
       tutorPinServiceProvider.overrideWithValue(pinService),
       incomingTutorGrantsProvider.overrideWith(
-        (ref) => incomingGrantsThrow
-            ? Future.error(Exception('network error'))
-            : Future.value(incomingGrants ?? []),
+        // Offline-first: the manage_tutors incomingTutorGrants provider never
+        // throws — on a failed/offline CF call it returns an empty list (the
+        // mirror union). So the "offline" scenario is modelled as an empty
+        // result, which drives the screen's _loadedGrant == null stub-grant
+        // fallback exactly as a true offline session would.
+        (ref) async =>
+            incomingGrantsThrow ? <TutorGrant>[] : (incomingGrants ?? []),
       ),
+      // The success path invalidates pendingTutorInvitesProvider; override it
+      // so the re-fetch does not hit the real CF-backed body.
+      pendingTutorInvitesProvider.overrideWith((ref) => []),
     ],
     child: MaterialApp(
       locale: locale,
@@ -244,6 +257,7 @@ void main() {
             acceptTutorInviteUseCaseProvider.overrideWithValue(mockUseCase),
             tutorPinServiceProvider.overrideWithValue(pinService),
             incomingTutorGrantsProvider.overrideWith((ref) => completer.future),
+            pendingTutorInvitesProvider.overrideWith((ref) => []),
           ],
           child: MaterialApp(
             locale: const Locale('en'),
@@ -767,10 +781,10 @@ void main() {
 
   group('Offline stub-grant fallback', () {
     testWidgets(
-      'incomingTutorGrants throws: screen still reaches readyToAccept',
+      'incomingTutorGrants empty (offline): screen still reaches readyToAccept',
       (tester) async {
-        // When the grants provider throws (offline), the screen catches the
-        // error and continues with _loadedGrant = null, building a stub grant.
+        // Offline-first: the grants provider returns an empty list, so the
+        // screen continues with _loadedGrant = null and builds a stub grant.
         when(
           () => mockUseCase(grant: any(named: 'grant')),
         ).thenAnswer((_) async => const TutorGrantSuccess());
@@ -988,6 +1002,52 @@ void main() {
     });
   });
 
+  // ── TUT-03: no RenderFlex overflow on short / keyboard-visible viewport ──────
+
+  group('TUT-03: readyToAccept layout does not overflow', () {
+    testWidgets(
+      'short viewport (keyboard visible) scrolls instead of overflowing',
+      (tester) async {
+        // Simulate a small / keyboard-shrunk viewport. The previous fixed
+        // Column + Spacer layout overflowed ("RenderFlex overflowed by N px on
+        // the bottom"); the SingleChildScrollView wrap must absorb it.
+        tester.view.physicalSize = const Size(360, 420);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        when(
+          () => mockUseCase(grant: any(named: 'grant')),
+        ).thenAnswer((_) async => const TutorGrantSuccess());
+
+        final pinService = _StubTutorPinService(hasPinResult: true);
+        await tester.pumpWidget(
+          _buildHarness(
+            token: 'test-token',
+            useCase: mockUseCase,
+            pinService: pinService,
+            router: mockRouter,
+          ),
+        );
+        await _pump(tester);
+
+        // No RenderFlex overflow exception on the cramped viewport.
+        expect(
+          tester.takeException(),
+          isNull,
+          reason:
+              'TUT-03: the accept-invite layout must scroll, not overflow, on '
+              'a short / keyboard-visible viewport',
+        );
+        // The actions remain reachable: the layout is scrollable.
+        expect(find.byType(Scrollable), findsAtLeastNWidgets(1));
+        expect(find.text('Accept invite'), findsOneWidget);
+
+        await _tearDown(tester);
+      },
+    );
+  });
+
   // ── @QueryParam token regression ─────────────────────────────────────────────
   //
   // Verifies that the `token` constructor parameter is wired correctly and that
@@ -1087,6 +1147,117 @@ void main() {
 
       await _tearDown(tester);
     });
+  });
+
+  // ── SEV-2: grant-list refresh after accept ───────────────────────────────────
+  //
+  // After acceptInvite succeeds the CF has flipped the grant pending → active.
+  // The screen MUST invalidate the grant-list providers so the tutored-children
+  // surfaces re-fetch and the row flips from "Pending — tap to accept" to
+  // "Tutoring" IN-SESSION (without a force-stop + cold restart). We assert the
+  // override factories are RE-RUN after a successful accept (proving the
+  // providers were invalidated).
+
+  group('SEV-2: incoming-grants + pending-invites refreshed after accept', () {
+    testWidgets(
+      'incomingTutorGrantsProvider is re-fetched after acceptInvite success',
+      (tester) async {
+        var incomingBuilds = 0;
+        var pendingBuilds = 0;
+
+        when(
+          () => mockUseCase(grant: any(named: 'grant')),
+        ).thenAnswer((_) async => const TutorGrantSuccess());
+
+        final pinService = _StubTutorPinService(hasPinResult: true);
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              authStateProvider.overrideWithValue(_signedInState),
+              selectedProfileIdProvider.overrideWith(
+                () => _FixedSelectedProfileId(1),
+              ),
+              acceptTutorInviteUseCaseProvider.overrideWithValue(mockUseCase),
+              tutorPinServiceProvider.overrideWithValue(pinService),
+              incomingTutorGrantsProvider.overrideWith((ref) {
+                incomingBuilds++;
+                return Future.value(<TutorGrant>[]);
+              }),
+              pendingTutorInvitesProvider.overrideWith((ref) {
+                pendingBuilds++;
+                return Future.value(<TutorGrant>[]);
+              }),
+            ],
+            child: MaterialApp(
+              locale: const Locale('en'),
+              localizationsDelegates: const [
+                AppLocalizations.delegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: StackRouterScope(
+                controller: mockRouter,
+                stateHash: 0,
+                // A sibling consumer watches both grant-list providers so they
+                // stay alive — `invalidate` only eagerly re-runs a provider that
+                // currently has a listener. This mirrors the real app, where the
+                // tutored-children surfaces watch these providers continuously.
+                child: Column(
+                  children: [
+                    Consumer(
+                      builder: (context, ref, _) {
+                        ref.watch(incomingTutorGrantsProvider);
+                        ref.watch(pendingTutorInvitesProvider);
+                        return const SizedBox.shrink();
+                      },
+                    ),
+                    const Expanded(
+                      child: AcceptInviteScreen(token: 'test-token'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        );
+        await _pump(tester);
+
+        // Both providers have built once (the sibling consumer + _initialize
+        // share the same provider instance).
+        expect(incomingBuilds, 1);
+        expect(pendingBuilds, 1);
+        final incomingBefore = incomingBuilds;
+        final pendingBefore = pendingBuilds;
+
+        // Accept the invite — success must invalidate BOTH grant-list providers.
+        await tester.tap(find.text('Accept invite'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        // Allow Riverpod's auto-dispose / re-resolve microtasks to flush.
+        await tester.pump(const Duration(milliseconds: 50));
+
+        expect(find.text('Invite accepted!'), findsOneWidget);
+        expect(
+          incomingBuilds,
+          greaterThan(incomingBefore),
+          reason:
+              'incomingTutorGrantsProvider must be invalidated + re-fetched '
+              'after a successful acceptInvite so the row flips in-session',
+        );
+        expect(
+          pendingBuilds,
+          greaterThan(pendingBefore),
+          reason:
+              'pendingTutorInvitesProvider must be invalidated + re-fetched '
+              'after a successful acceptInvite so the pending invite drops off',
+        );
+
+        await _tearDown(tester);
+      },
+    );
   });
 
   // ── Hardcoded string audit ───────────────────────────────────────────────────

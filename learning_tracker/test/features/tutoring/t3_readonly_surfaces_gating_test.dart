@@ -52,13 +52,13 @@ void main() {
 
   group('T3.readonly-state — Tutor mode indicator bar', () {
     test(
-      'AC7: _TutorModeIndicatorBar is a ConsumerWidget (not StatelessWidget)',
+      'AC7: TutorModeIndicatorBar is a ConsumerWidget (not StatelessWidget)',
       () {
         expect(
           appShellSrc,
-          contains('_TutorModeIndicatorBar extends ConsumerWidget'),
+          contains('TutorModeIndicatorBar extends ConsumerWidget'),
           reason:
-              '_TutorModeIndicatorBar must extend ConsumerWidget so it can '
+              'TutorModeIndicatorBar must extend ConsumerWidget so it can '
               'call activeTutoredProfileSelectionProvider.notifier.exit()',
         );
       },
@@ -110,6 +110,28 @@ void main() {
         reason:
             'app_shell.dart must import active_tutored_profile_provider.dart '
             'to access the notifier for the exit action',
+      );
+    });
+
+    // TUT-04: the amber Tutor banner must persist on pushed sub-routes too.
+    test('TUT-04: PersistentSwitcherScaffold renders the tutor bar on '
+        'sub-routes when a tutored session is active', () {
+      final persistentSrc = File(
+        'lib/app/router/persistent_switcher_scaffold.dart',
+      ).readAsStringSync();
+      expect(
+        persistentSrc,
+        contains('TutorModeIndicatorBar'),
+        reason:
+            'persistent_switcher_scaffold.dart must render TutorModeIndicatorBar '
+            'so the tutor banner persists across pushed sub-routes (TUT-04)',
+      );
+      expect(
+        persistentSrc,
+        contains('activeTutoredProfileSelectionProvider'),
+        reason:
+            'the tutor bar must be gated on activeTutoredProfileSelectionProvider '
+            '(only shown while a talmid context is active)',
       );
     });
   });
@@ -166,15 +188,58 @@ void main() {
     test(
       'AC2: Manage Profiles is hidden in tutored sessions (owner-only admin)',
       () {
+        // The standalone Manage Tracks / Manage Profiles card is own-profile
+        // only — gated on `!isTutoredSession && !isChildProfile`. In a tutored
+        // session the tutor reaches tracks via the parent-management hub tile
+        // instead (which re-gates each surface by TutorPermissions).
         expect(
           settingsSrc,
-          contains('!isTutorElevated'),
+          contains('!isTutoredSession && !isChildProfile'),
           reason:
-              'Manage Profiles must be wrapped in !isTutorElevated — '
-              'it is an owner-only admin surface hidden from tutors (FR-3)',
+              'Manage Profiles/Tracks card must be gated on '
+              '!isTutoredSession && !isChildProfile — Manage Profiles is an '
+              'owner-only admin surface hidden from tutors (FR-3)',
         );
       },
     );
+
+    test(
+      'AC2: tutored session exposes the parent-management hub entry (TUT-06)',
+      () {
+        expect(
+          settingsSrc,
+          contains('ParentSettingsRoute'),
+          reason:
+              'In a tutored session Settings must surface an entry into the '
+              'parent-management hub (ParentSettingsScreen) so the tutor can '
+              'manage the talmid tracks/points/rewards/goals (TUT-06)',
+        );
+        // The hub tile must be gated on isTutorElevated (tutored session).
+        final hubIdx = settingsSrc.indexOf('ParentSettingsRoute');
+        final gatedBefore = settingsSrc
+            .substring(0, hubIdx)
+            .contains('isTutorElevated');
+        expect(
+          gatedBefore,
+          isTrue,
+          reason:
+              'The parent-management hub tile must be gated on isTutorElevated',
+        );
+      },
+    );
+
+    test('AC2: tutored Settings header reflects the tutored-child context', () {
+      // TUT-05: the header must NOT show the tutor own "SELF-LEARNER" account
+      // in a tutored session — it shows the talmid + TUTOR badge.
+      expect(
+        settingsSrc,
+        contains('UserProfileContextRole.tutor'),
+        reason:
+            'settings_screen.dart must pass UserProfileContextRole.tutor to the '
+            'header in a tutored session so it reflects the talmid context '
+            '(TUT-05), not the tutor own account',
+      );
+    });
 
     test('AC2: Backup/Sync section gated on !isTutoredSession', () {
       expect(

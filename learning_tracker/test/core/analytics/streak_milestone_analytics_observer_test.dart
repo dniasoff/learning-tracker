@@ -122,8 +122,16 @@ void main() {
       final db = inMemoryDb();
       await seedProfile(db);
 
-      // Seed 7 consecutive streak events so currentStreak == 7.
-      final base = DateTime.utc(2026, 5, 25);
+      // Seed 7 consecutive streak events ENDING TODAY so currentStreak == 7.
+      // Anchored relative to "now" — a hardcoded past date silently breaks the
+      // moment the calendar advances past it (the days stop being a *current*
+      // streak), which is exactly what made this test flaky across a midnight.
+      final todayUtc = DateTime.now().toUtc();
+      final base = DateTime.utc(
+        todayUtc.year,
+        todayUtc.month,
+        todayUtc.day,
+      ).subtract(const Duration(days: 6));
       for (var i = 0; i < 7; i++) {
         final day = base.add(Duration(days: i));
         await db.streakEventDao.appendEvent(
@@ -153,8 +161,14 @@ void main() {
       );
       addTearDown(sub.close);
 
-      // Give the stream a full event loop cycle to emit + process.
-      await Future<void>.delayed(const Duration(milliseconds: 50));
+      // Poll until the milestone event fires. The streak-state stream restores
+      // + emits asynchronously; a fixed 50ms delay is order/timing-flaky (it
+      // happened to pass when warmer tests ran first, failed in isolation).
+      final deadline = DateTime.now().add(const Duration(seconds: 5));
+      while (DateTime.now().isBefore(deadline) &&
+          analytics.countOf(AnalyticsEvent.streakMilestoneReached) < 1) {
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+      }
 
       expect(
         analytics.countOf(AnalyticsEvent.streakMilestoneReached),

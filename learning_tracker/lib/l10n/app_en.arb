@@ -520,6 +520,8 @@
   "profilePickerTalmidProfiles": "TALMID PROFILES",
   "profilePickerTutoredChildren": "TUTORED CHILDREN",
   "tutoredChildrenViewInvitations": "View invitations",
+  "tutoredChildrenManageGrants": "Manage tutoring grants",
+  "tutoredChildrenManageGrantsSubtitle": "Resign or review your tutoring access",
   "tutoredChildrenPendingInvitations": "{count, plural, =1{{count} pending tutor invitation} other{{count} pending tutor invitations}}",
   "@tutoredChildrenPendingInvitations": {
     "placeholders": {
@@ -2054,7 +2056,7 @@
     }
   },
   "manageTutorsNoTutors": "No tutors invited.",
-  "manageTutorsActiveSection": "Active ({count})",
+  "manageTutorsActiveSection": "ACTIVE ({count})",
   "@manageTutorsActiveSection": {
     "placeholders": {
       "count": { "type": "int" }

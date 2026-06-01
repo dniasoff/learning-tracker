@@ -194,6 +194,90 @@ void main() {
     );
   });
 
+  // ── Tutored session: resolve the talmid MIRROR, not selectedProfileId ────
+  //
+  // TUT-02/TUT-06: in a tutored session selectedProfileId stays null while the
+  // active profile is the synthetic talmid mirror (a child profile). The guard
+  // must resolve the mirror via getActiveProfileId so the child-mode-gated
+  // parent-management routes (ParentSettings/Tracks/PointConfig/...) open for
+  // the tutor — who has full parent-equivalent management over the talmid.
+
+  group('tutored session', () {
+    test('resolves the active talmid mirror (child) → next(true) even when '
+        'selectedProfileId is null', () async {
+      final accountId = await seedAccount(db);
+      final mirrorId = await _insertProfileWithMode(
+        db,
+        accountId: accountId,
+        mode: 'child',
+      );
+
+      final guard = ChildModeGuard(
+        getDatabase: () => db,
+        // Tutor sessions leave selectedProfileId null.
+        getSelectedProfileId: () => null,
+        getActiveProfileId: () => mirrorId,
+        isTutoredSession: () => true,
+      );
+
+      await guard.onNavigation(resolver, router);
+
+      verify(() => resolver.next(true)).called(1);
+      verifyNever(() => resolver.next(false));
+    });
+
+    test('tutored adult talmid mirror → next(false)', () async {
+      final accountId = await seedAccount(db);
+      final mirrorId = await _insertProfileWithMode(
+        db,
+        accountId: accountId,
+        mode: 'adult',
+      );
+
+      final guard = ChildModeGuard(
+        getDatabase: () => db,
+        getSelectedProfileId: () => null,
+        getActiveProfileId: () => mirrorId,
+        isTutoredSession: () => true,
+      );
+
+      await guard.onNavigation(resolver, router);
+
+      verify(() => resolver.next(false)).called(1);
+      verifyNever(() => resolver.next(true));
+    });
+
+    test(
+      'non-tutored session ignores getActiveProfileId, uses selectedProfileId',
+      () async {
+        final accountId = await seedAccount(db);
+        final childId = await _insertProfileWithMode(
+          db,
+          accountId: accountId,
+          mode: 'child',
+        );
+        // An adult mirror id that must be IGNORED when not tutoring.
+        final adultId = await _insertProfileWithMode(
+          db,
+          accountId: accountId,
+          mode: 'adult',
+        );
+
+        final guard = ChildModeGuard(
+          getDatabase: () => db,
+          getSelectedProfileId: () => childId,
+          getActiveProfileId: () => adultId,
+          isTutoredSession: () => false,
+        );
+
+        await guard.onNavigation(resolver, router);
+
+        verify(() => resolver.next(true)).called(1);
+        verifyNever(() => resolver.next(false));
+      },
+    );
+  });
+
   // ── Branch 5 (REGRESSION GUARD): unexpected throw — fail CLOSED, no hang ──
   //
   // Any throw inside onNavigation (a disposed userDatabaseProvider lambda, a DB

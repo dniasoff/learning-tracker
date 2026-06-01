@@ -53,6 +53,13 @@ class _TutorPinEntryGateState extends ConsumerState<TutorPinEntryGate> {
   String? _errorMessage;
   bool _isVerifying = false;
   bool _showSetupScreen = false;
+  // TUT-01: set true the moment a PIN is (re)set from the inline setup screen.
+  // It forces the gate to render PIN entry immediately — independent of the
+  // async tutorPinIsSetProvider re-resolving — so a freshly-set PIN verifies
+  // on the FIRST entry rather than after a second, fresh gate open. (When the
+  // provider had a cached `false` from the reset flow, `.when(data:)` could
+  // momentarily route back to setup or leave stale entry state behind.)
+  bool _pinJustSet = false;
 
   void _appendDigit(String d) {
     if (_isVerifying) return;
@@ -134,12 +141,32 @@ class _TutorPinEntryGateState extends ConsumerState<TutorPinEntryGate> {
         );
       },
       data: (pinIsSet) {
-        if (!pinIsSet || _showSetupScreen) {
+        // TUT-01: once a PIN was just set inline, render entry immediately and
+        // ignore a possibly-stale `pinIsSet == false` (the provider may still
+        // be refreshing after invalidate). _pinJustSet is cleared as soon as
+        // the provider re-resolves to true (see below).
+        if (_pinJustSet && pinIsSet) {
+          _pinJustSet = false;
+        }
+        final showSetup = (!pinIsSet && !_pinJustSet) || _showSetupScreen;
+        if (showSetup) {
           return TutorPinSetupScreen(
             profileId: widget.profileId,
             onPinSet: () {
-              setState(() => _showSetupScreen = false);
-              // After PIN is set, re-enter the gate (now shows PIN entry).
+              // TUT-01: enter a clean entry state. Clearing _digits /
+              // _errorMessage / _isVerifying guarantees no stale input or
+              // premature verify carries over from a prior entry attempt, and
+              // _pinJustSet forces the entry screen so the new PIN verifies on
+              // the FIRST re-entry. The PIN hash is already flushed to secure
+              // storage by setTutorPin() before onPinSet fires.
+              setState(() {
+                _showSetupScreen = false;
+                _pinJustSet = true;
+                _digits = '';
+                _errorMessage = null;
+                _isVerifying = false;
+              });
+              // Refresh the is-set provider so its cached value catches up.
               ref.invalidate(tutorPinIsSetProvider(widget.profileId));
             },
           );

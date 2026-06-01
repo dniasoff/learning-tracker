@@ -12,6 +12,7 @@ import 'package:learning_tracker/core/navigation/pin_scope.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/parent_pin_keypad_dialog.dart';
@@ -52,6 +53,12 @@ final routerProvider = Provider<AppRouter>((ref) {
     childModeGuard: ChildModeGuard(
       getDatabase: getDb,
       getSelectedProfileId: () => ref.read(selectedProfileIdProvider),
+      // In a tutored session the active profile is the synthetic talmid mirror
+      // (a child profile) — resolve it so the child-mode-gated parent-
+      // management routes open for tutors (TUT-02/TUT-06).
+      getActiveProfileId: () => ref.read(activeProfileIdProvider),
+      isTutoredSession: () =>
+          ref.read(activeTutoredProfileSelectionProvider) != null,
     ),
     pinGuard: PinGuard(
       pinService: pinSvc,

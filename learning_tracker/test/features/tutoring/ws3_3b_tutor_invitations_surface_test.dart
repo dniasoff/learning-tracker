@@ -96,5 +96,78 @@ void main() {
         );
       },
     );
+
+    // ── INFO/MED: ManageGrants reachable for active-only tutors ──────────────
+    test(
+      'AC5: Section renders a Manage-grants entry when active grants exist',
+      () {
+        // The "View invitations" row only renders for PENDING grants, so a
+        // tutor with ONLY active grants previously had no UI path to
+        // ManageGrants (resign / review). A dedicated row must surface for
+        // active grants.
+        expect(
+          sectionSrc,
+          contains('_ManageGrantsRow'),
+          reason:
+              'Section must render a _ManageGrantsRow so an active-only tutor '
+              'can reach ManageGrants (resign / review)',
+        );
+        expect(
+          sectionSrc,
+          contains('if (activeGrants.isNotEmpty) ...['),
+          reason:
+              'The Manage-grants entry must be gated on activeGrants.isNotEmpty '
+              'so it appears whenever the tutor has ≥1 active grant',
+        );
+        expect(
+          sectionSrc,
+          contains('tutoredChildrenManageGrants'),
+          reason: 'Manage-grants row title must use the l10n key',
+        );
+      },
+    );
+
+    test(
+      'AC6: Manage-grants row routes to ManageGrantsRoute via the PIN gate',
+      () {
+        // It must reuse the same Tutor-PIN-gated navigation as the invitations
+        // row (never expose grant data without the Tutor PIN).
+        expect(
+          sectionSrc,
+          contains('TutorPinEntryGate'),
+          reason:
+              'Manage-grants navigation must pass through the TutorPinEntryGate',
+        );
+        // ManageGrantsRoute appears for both the invitations row and the
+        // manage-grants row — at least one push must exist.
+        expect(sectionSrc, contains('ManageGrantsRoute'));
+      },
+    );
+
+    // ── SEV-2: grant list refreshed after acceptInvite ──────────────────────
+    test(
+      'AC7: AcceptInviteScreen invalidates grant-list providers on success',
+      () {
+        // After acceptInvite succeeds the CF has flipped pending → active. The
+        // screen must invalidate the providers the tutored-children surfaces
+        // watch so the row flips in-session (no force-stop + cold restart).
+        expect(
+          acceptInviteSrc,
+          contains('ref.invalidate(manage_tutors.incomingTutorGrantsProvider)'),
+          reason:
+              'AcceptInviteScreen must invalidate the (manage_tutors) '
+              'incomingTutorGrantsProvider on success — the SAME provider the '
+              'tutored-children UI watches — so the accepted row flips '
+              'in-session',
+        );
+        expect(
+          acceptInviteSrc,
+          contains('ref.invalidate(pendingTutorInvitesProvider)'),
+          reason:
+              'AcceptInviteScreen must invalidate pendingTutorInvitesProvider '
+              'on success so the accepted invite drops off the pending list',
+        );
+      },
+    );
   });
 }
