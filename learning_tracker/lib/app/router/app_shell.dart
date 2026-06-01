@@ -383,7 +383,21 @@ class ProfileSwitcherBar extends ConsumerWidget {
         accountName = authUser.email.split('@').first;
       }
     }
+    // TUT-05: in a TUTOR session the active profile is the talmid's synthetic
+    // local MIRROR, which lives outside the signed-in account's own profile set
+    // — so it is NEVER in `profileListStreamProvider` (own profiles only) and
+    // the `activeProfile` lookup above resolves to null, leaking the TUTOR's own
+    // account name into the header. Resolve the name through `activeProfileProvider`
+    // instead (it loads by id via the repository, so it finds the mirror) so the
+    // header shows whose data the tutor is managing — the talmid — keeping the
+    // TUTOR badge below. Non-tutored sessions keep the own-profile resolution.
+    final isTutoredContext =
+        ref.watch(activeTutoredProfileSelectionProvider) != null;
+    final tutoredProfileName = isTutoredContext
+        ? ref.watch(activeProfileProvider).asData?.value?.displayName
+        : null;
     final displayName =
+        tutoredProfileName ??
         activeProfile?.displayName ??
         accountName ??
         l10n.userFallbackDisplayName;
@@ -395,8 +409,6 @@ class ProfileSwitcherBar extends ConsumerWidget {
     // mode, and surface TUTOR when a tutored-child selection is active (the
     // signed-in adult is sitting in a talmid's context). Falls back to the adult
     // badge while the profile stream is still resolving (account-only identity).
-    final isTutoredContext =
-        ref.watch(activeTutoredProfileSelectionProvider) != null;
     final String roleBadge;
     if (isTutoredContext) {
       roleBadge = l10n.tutorContextBadge;

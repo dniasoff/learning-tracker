@@ -31,6 +31,9 @@ import 'package:learning_tracker/features/profiles/domain/services/pin_service.d
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/profile_switcher_sheet.dart';
+import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
+import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -48,6 +51,26 @@ class MockPinService extends Mock implements PinService {}
 class _FixedActiveProfileId extends ActiveProfileId {
   @override
   int build() => 1;
+}
+
+/// TUT-05: pins the active profile id to the talmid's synthetic local MIRROR id
+/// (a profile id that is NOT in the signed-in tutor account's own profile set),
+/// modelling a live tutor session where the mirror was resolved by the pull.
+class _MirrorActiveProfileId extends ActiveProfileId {
+  @override
+  int build() => 99;
+}
+
+/// TUT-05: a fixed non-null tutored selection so the switcher bar treats the
+/// session as an active tutor context (TUTOR badge + name from the mirror).
+class _ActiveTutoredSelection extends ActiveTutoredProfileSelection {
+  @override
+  TutoredProfileSelection? build() => const TutoredProfileSelection(
+    profileId: 'talmid-remote-id',
+    ownerUid: 'owner-uid',
+    grantId: 'grant-id',
+    permissions: TutorPermissions(),
+  );
 }
 
 Future<AppRouter> _createAuthenticatedRouter({
@@ -929,6 +952,113 @@ void main() {
         await tester.pump(const Duration(milliseconds: 400));
 
         expect(find.byType(ProfileSwitcherSheet), findsOneWidget);
+
+        await _cleanUpWidgets(tester);
+      },
+    );
+  });
+
+  // TUT-05: in a TUTOR session the persistent switcher header must show the
+  // TUTORED CHILD's name (the talmid mirror) WITH the TUTOR badge — so the tutor
+  // always sees whose data they are managing — NOT the tutor's own account name.
+  // The active profile is the talmid's synthetic local MIRROR, which lives
+  // outside the signed-in account's own profile set, so it is never in
+  // `profileListStreamProvider`; the header must resolve the name via
+  // `activeProfileProvider` (loads by id, finds the mirror).
+  group('Tutor session header name (TUT-05)', () {
+    testWidgets(
+      'shows the talmid child name + TUTOR badge, not the tutor own account name',
+      (tester) async {
+        final router = await _createAuthenticatedRouter(
+          navigatorKey: rp.navigatorKey,
+        );
+
+        // The signed-in TUTOR account's own profile (would be the wrong name to
+        // show). Note its name differs from both the account "Test" and the
+        // talmid "Kid".
+        final tutorOwnProfiles = [
+          ProfileModel(
+            id: 1,
+            accountId: 1,
+            displayName: 'Family Niasoff',
+            mode: 'adult',
+            avatarIndex: 0,
+            createdAt: DateTime(2024),
+            updatedAt: DateTime(2024),
+          ),
+        ];
+
+        // The talmid mirror profile (id 99) — what the header SHOULD display.
+        final talmidMirror = ProfileModel(
+          id: 99,
+          accountId: 1,
+          displayName: 'Kid',
+          mode: 'child',
+          avatarIndex: 0,
+          createdAt: DateTime(2024),
+          updatedAt: DateTime(2024),
+        );
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              appDatabaseProvider.overrideWithValue(db),
+              userDatabaseProvider.overrideWithValue(db),
+              authStateProvider.overrideWithValue(_authOverride),
+              // Own profiles never contain the talmid mirror.
+              profileListStreamProvider.overrideWith(
+                (ref) => Stream.value(tutorOwnProfiles),
+              ),
+              // Active profile resolves to the mirror id (99), not own id (1).
+              activeProfileIdProvider.overrideWith(_MirrorActiveProfileId.new),
+              // The mirror is resolvable by id via activeProfileProvider.
+              activeProfileProvider.overrideWith(
+                (ref) => Future.value(talmidMirror),
+              ),
+              // An active tutored selection → TUTOR context.
+              activeTutoredProfileSelectionProvider.overrideWith(
+                _ActiveTutoredSelection.new,
+              ),
+              dashboardActiveCurriculaStreamProvider.overrideWith(
+                (ref) => Stream.value(<CurriculumId>[]),
+              ),
+              dashboardStreakProvider.overrideWith(
+                (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
+              ),
+              dashboardStreakRecoveryProvider.overrideWith(
+                (ref) => Future.value(
+                  const StreakRecoveryInfo(
+                    wasRecovered: false,
+                    currentStreak: 0,
+                  ),
+                ),
+              ),
+              rp.routerProvider.overrideWithValue(router),
+            ],
+            // Use the persistent-switcher wrapper: in a tutored session the
+            // shell appBar suppresses ProfileSwitcherBar, but the global layer
+            // renders it (this is the header the tester sees).
+            child: _wrapAppWithPersistentSwitcher(
+              router.config(
+                deepLinkBuilder: (_) =>
+                    const DeepLink.path('/sacred-time/city'),
+              ),
+            ),
+          ),
+        );
+        await _pumpDashboard(tester);
+
+        // The switcher header is present, showing the TUTOR badge…
+        expect(
+          find.byKey(const Key('appShellProfileSwitcherBar')),
+          findsOneWidget,
+        );
+        expect(find.text('TUTOR'), findsOneWidget);
+
+        // …and the TALMID's name — not the tutor's own profile / account name.
+        expect(find.text('Kid'), findsWidgets);
+        expect(find.text('Family Niasoff'), findsNothing);
+        expect(find.text('Test'), findsNothing);
 
         await _cleanUpWidgets(tester);
       },
