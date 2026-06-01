@@ -1,6 +1,7 @@
 import 'package:dio/dio.dart';
 
 import 'package:learning_tracker/core/network/sefaria/curriculum_content_fetcher.dart';
+import 'package:learning_tracker/core/utils/hebrew_utils.dart';
 
 /// Base class for curriculum fetchers providing shared Sefaria API logic.
 abstract class SefariaFetcherBase implements CurriculumContentFetcher {
@@ -115,8 +116,14 @@ abstract class SefariaFetcherBase implements CurriculumContentFetcher {
     return '';
   }
 
-  /// Strips basic HTML tags from Sefaria text content.
+  /// Cleans Sefaria text content for storage/display.
+  ///
+  /// Delegates to [HebrewUtils.cleanSefariaText] so the seed pipeline and the
+  /// runtime reader share one canonical cleaner. Critically this removes
+  /// footnote markup (`<sup class="footnote-marker">` + `<i class="footnote">`)
+  /// *whole* — a naive `<[^>]*>` strip left the marker letter glued to the
+  /// preceding word and dumped the footnote body inline (BUG-5).
   static String _stripHtml(String html) {
-    return html.replaceAll(RegExp('<[^>]*>'), '');
+    return HebrewUtils.cleanSefariaText(html);
   }
 }

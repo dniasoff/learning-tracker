@@ -2,6 +2,7 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:dio/dio.dart'; // Used in tool/ only (dev_dependency)
+import 'package:learning_tracker/core/utils/hebrew_utils.dart';
 
 /// Fetches text content (Hebrew with nikud + English) from Sefaria API
 /// for all leaf items in each curriculum's hierarchy JSON.
@@ -227,7 +228,10 @@ String _extractText(dynamic text) {
 }
 
 String _stripHtml(String html) {
-  return html.replaceAll(RegExp('<[^>]*>'), '').trim();
+  // Shares the runtime canonical cleaner so footnote markup
+  // (<sup class="footnote-marker"> + <i class="footnote">) is removed whole
+  // rather than leaving the marker letter and footnote body inline (BUG-5).
+  return HebrewUtils.cleanSefariaText(html).trim();
 }
 
 void _flushProgress(

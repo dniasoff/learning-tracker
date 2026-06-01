@@ -99,7 +99,7 @@ class TextCacheRepository {
           TextSegment(
             sefariaRef: cached.sefariaRef,
             hebrewText: HebrewUtils.decodeHtmlEntities(cached.hebrewText),
-            englishText: cached.englishText,
+            englishText: HebrewUtils.cleanSefariaText(cached.englishText),
             number: _verseNumberOrNull(cached.sefariaRef),
           ),
         ],
@@ -126,7 +126,7 @@ class TextCacheRepository {
           TextSegment(
             sefariaRef: c.sefariaRef,
             hebrewText: he,
-            englishText: c.englishText,
+            englishText: HebrewUtils.cleanSefariaText(c.englishText),
             number: _verseNumberOrNull(c.sefariaRef),
           ),
         );
@@ -146,7 +146,7 @@ class TextCacheRepository {
           TextSegment(
             sefariaRef: daily.sefariaRef,
             hebrewText: HebrewUtils.decodeHtmlEntities(daily.hebrewText),
-            englishText: daily.englishText,
+            englishText: HebrewUtils.cleanSefariaText(daily.englishText),
             number: _verseNumberOrNull(daily.sefariaRef),
           ),
         ],
