@@ -129,6 +129,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "10.5.0"
+  basic_utils:
+    dependency: transitive
+    description:
+      name: basic_utils
+      sha256: "548047bef0b3b697be19fa62f46de54d99c9019a69fb7db92c69e19d87f633c7"
+      url: "https://pub.dev"
+    source: hosted
+    version: "5.8.2"
   bcrypt:
     dependency: "direct main"
     description:
@@ -145,6 +153,22 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.2"
+  bson:
+    dependency: transitive
+    description:
+      name: bson
+      sha256: "6e322cdf827db905ca48b018deed1804934840bce8ff6b3c2f5b2f81f99d8344"
+      url: "https://pub.dev"
+    source: hosted
+    version: "5.0.8"
+  buffer:
+    dependency: transitive
+    description:
+      name: buffer
+      sha256: "389da2ec2c16283c8787e0adaede82b1842102f8c8aae2f49003a766c5c6b3d1"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.2.3"
   build:
     dependency: transitive
     description:
@@ -449,6 +473,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.7.12"
+  decimal:
+    dependency: transitive
+    description:
+      name: decimal
+      sha256: fc706a5618b81e5b367b01dd62621def37abc096f2b46a9bd9068b64c1fa36d0
+      url: "https://pub.dev"
+    source: hosted
+    version: "3.2.4"
   dio:
     dependency: "direct main"
     description:
@@ -1291,6 +1323,22 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.5"
+  mongo_dart:
+    dependency: "direct dev"
+    description:
+      name: mongo_dart
+      sha256: b74caa4d135a89642fafbe5247213d8b261ff9ee4ae3c613a993b41bf6a8fdbc
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.10.8"
+  mongo_dart_query:
+    dependency: transitive
+    description:
+      name: mongo_dart_query
+      sha256: "8810bfc216a74f7a25e296ab7b052e318e83c49c487fd31ac7a1e336dc42cc04"
+      url: "https://pub.dev"
+    source: hosted
+    version: "5.0.3"
   more:
     dependency: transitive
     description:
@@ -1355,6 +1403,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.2.1"
+  packages_extensions:
+    dependency: transitive
+    description:
+      name: packages_extensions
+      sha256: a2e207f3345fc5cbea60155842e71be1c3059b427a61ed1c5d7c41f5d03264e7
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.1.2"
   path:
     dependency: transitive
     description:
@@ -1435,6 +1491,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.1.8"
+  pointycastle:
+    dependency: transitive
+    description:
+      name: pointycastle
+      sha256: "92aa3841d083cc4b0f4709b5c74fd6409a3e6ba833ffc7dc6a8fee096366acf5"
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.0.0"
   pool:
     dependency: transitive
     description:
@@ -1451,6 +1515,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.5.0"
+  power_extensions:
+    dependency: transitive
+    description:
+      name: power_extensions
+      sha256: ad4e27d040f80bb7e566d96399b6419343d946d7c37912e1bce56c9f2b32e525
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.2.4"
   process:
     dependency: transitive
     description:
@@ -1475,6 +1547,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.5.0"
+  rational:
+    dependency: transitive
+    description:
+      name: rational
+      sha256: cb808fb6f1a839e6fc5f7d8cb3b0a10e1db48b3be102de73938c627f0b636336
+      url: "https://pub.dev"
+    source: hosted
+    version: "2.2.3"
   recase:
     dependency: transitive
     description:
@@ -1539,6 +1619,22 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.28.0"
+  sasl_scram:
+    dependency: transitive
+    description:
+      name: sasl_scram
+      sha256: "5c27fd6058d53075c032539ba3cc7fa95006bb1d51a0db63a81b05756c265a83"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.1.2"
+  saslprep:
+    dependency: transitive
+    description:
+      name: saslprep
+      sha256: "3d421d10be9513bf4459c17c5e70e7b8bc718c9fc5ad4ba5eb4f5fd27396f740"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.0.3"
   share_plus:
     dependency: transitive
     description:
@@ -1856,6 +1952,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "2.3.1"
+  unorm_dart:
+    dependency: transitive
+    description:
+      name: unorm_dart
+      sha256: "0c69186b03ca6addab0774bcc0f4f17b88d4ce78d9d4d8f0619e30a99ead58e7"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.3.2"
   url_launcher:
     dependency: "direct main"
     description:
@@ -1944,6 +2048,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "15.2.0"
+  vy_string_utils:
+    dependency: transitive
+    description:
+      name: vy_string_utils
+      sha256: e70b180e900f4e252086d6045a919203451bfbc3862b83af86a7f272d190447d
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.4.7"
   watcher:
     dependency: transitive
     description:

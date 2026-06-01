@@ -36,6 +36,7 @@ import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:learning_tracker/core/database/content/content_database.dart';
 import 'package:learning_tracker/core/database/seed_version.dart';
+import 'package:learning_tracker/core/utils/hebrew_utils.dart';
 
 import 'lib/sequences/halakhah_yomit_seq.dart';
 
@@ -579,8 +580,15 @@ Future<int> _mergeBookTextCache(ContentDatabase db) async {
         final entry = entries[j];
         final ref = entry.key;
         final v = entry.value as Map<String, dynamic>;
-        final en = (v['en'] as String?) ?? '';
-        final he = (v['he'] as String?) ?? '';
+        // Defensive clean: route every fragment through the canonical
+        // footnote-aware cleaner so no build can ship BUG-5 markup even if
+        // an upstream cache file was produced by an older/dirty extractor.
+        final en = HebrewUtils.cleanSefariaText(
+          (v['en'] as String?) ?? '',
+        ).trim();
+        final he = HebrewUtils.cleanSefariaText(
+          (v['he'] as String?) ?? '',
+        ).trim();
         if (en.isEmpty && he.isEmpty) continue;
         await db.customInsert(
           'INSERT OR REPLACE INTO text_cache '
@@ -640,8 +648,13 @@ Future<int> _populateDailyContent(ContentDatabase db) async {
           (sefariaProgs[program] as Map<String, dynamic>?);
       final refStr = refMap?['en'] as String?;
       if (refStr == null || refStr.isEmpty) continue;
-      final en = (text['en'] as String?) ?? '';
-      final he = (text['he'] as String?) ?? '';
+      // Defensive clean (see Phase 3): never ship footnote markup.
+      final en = HebrewUtils.cleanSefariaText(
+        (text['en'] as String?) ?? '',
+      ).trim();
+      final he = HebrewUtils.cleanSefariaText(
+        (text['he'] as String?) ?? '',
+      ).trim();
       if (en.isEmpty && he.isEmpty) continue;
       byRef[refStr] = (en: en, he: he);
     }

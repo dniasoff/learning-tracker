@@ -150,6 +150,7 @@ dev_dependencies:
   custom_lint: ^0.8.1
   learning_tracker_lints:
     path: ../packages/custom_lints
+  mongo_dart: ^0.10.8
 
 # Pin analyzer to 9.0.x so json_serializable >=9 and riverpod_generator ^4.0.3
 # resolve. custom_lint 0.8.1 requires analyzer ^8 but runs as a separate process

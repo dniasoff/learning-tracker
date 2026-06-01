@@ -1,0 +1,32 @@
+# Local Sefaria MongoDB for the from-zero content-DB seed build.
+#
+# Brings up an official mongo image with the Sefaria mongodump mounted
+# read-only. `make seed` restores the needed collections into it and the Dart
+# build tool reads text + calendar data from it — NO public Sefaria API calls.
+#
+# Usage (via Makefile): `make seed` / `make seed-down`.
+# Direct: `docker compose -f tool/seed/docker-compose.yml up -d`
+#
+# The dump path is overridable with SEFARIA_DUMP_DIR (defaults to Daniel's
+# checkout). It is mounted read-only at /dump inside the container.
+
+services:
+  sefaria-mongo:
+    image: mongo:7
+    container_name: learning-tracker-sefaria-mongo
+    # Bind to localhost only; the build tool connects on 127.0.0.1:27117.
+    ports:
+      - "127.0.0.1:27117:27017"
+    volumes:
+      - sefaria_mongo_data:/data/db
+      - ${SEFARIA_DUMP_DIR:-/home/daniel/repos/sefaria_dump/dump}:/dump:ro
+    # No auth — local-only, ephemeral build database.
+    command: ["mongod", "--bind_ip_all"]
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+volumes:
+  sefaria_mongo_data:
