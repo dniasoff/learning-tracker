@@ -187,7 +187,7 @@ abstract class _$SelectedProfileId extends $Notifier<int?> {
   }
 }
 
-/// Auto-selects the account's first profile on an auth-valid startup.
+/// Auto-selects (or self-heals) the account's profile on an auth-valid startup.
 ///
 /// BUG D1: on a force-stop + cold start with a still-valid Firebase/local
 /// session, the app skips the interactive sign-in flow (which is the only
@@ -198,23 +198,27 @@ abstract class _$SelectedProfileId extends $Notifier<int?> {
 /// `stage_definitions` during track creation) fails with
 /// `SqliteException(787): FOREIGN KEY constraint failed`.
 ///
-/// Mirrors the single-profile branch of `_finishOnboardingRouting` (line ~536
-/// of sign_in_controller): whenever auth transitions to signed-in AND no
-/// profile is selected yet, select the account's first profile. Multi-profile
-/// accounts route through the picker, which selects explicitly — so we only
-/// auto-select when exactly one profile is the unambiguous choice; for >1 we
-/// leave the selection null (the picker owns it). When there is exactly one we
-/// select it; when there are several we pick the first as a safe non-null
-/// default so cold-start writes never hit `profile_id=0`.
+/// Mirrors the single-profile branch of `_navigateAfterSignIn` (line ~536 of
+/// sign_in_controller): whenever auth transitions to signed-in AND no profile
+/// is selected yet, select the account's first profile.
+///
+/// BUG D1 (round 2 — the real crux): the previous fix only handled the case
+/// where ≥1 profile already existed. This account (a cloud account whose
+/// profiles never materialised locally — restored / skipped-onboarding) has
+/// ZERO rows in `learner_profiles`, so `profiles.first` had nothing to select
+/// and `profileId` stayed `0`. An authenticated account must NEVER operate at
+/// `profile_id = 0`. So when the account has no profile we self-heal by
+/// creating a default adult profile (and adopting any orphaned `profile_id = 0`
+/// rows, e.g. a pre-existing track) and select it. After this an authenticated
+/// account always has ≥1 profile selected.
 ///
 /// Watched by the app shell so it runs on every auth-valid mount. Returns the
-/// id that was (or already had been) selected, or null when signed-out / no
-/// profiles exist yet.
+/// id that was selected (existing or newly healed), or null when signed-out.
 
 @ProviderFor(autoSelectedProfileId)
 final autoSelectedProfileIdProvider = AutoSelectedProfileIdProvider._();
 
-/// Auto-selects the account's first profile on an auth-valid startup.
+/// Auto-selects (or self-heals) the account's profile on an auth-valid startup.
 ///
 /// BUG D1: on a force-stop + cold start with a still-valid Firebase/local
 /// session, the app skips the interactive sign-in flow (which is the only
@@ -225,23 +229,27 @@ final autoSelectedProfileIdProvider = AutoSelectedProfileIdProvider._();
 /// `stage_definitions` during track creation) fails with
 /// `SqliteException(787): FOREIGN KEY constraint failed`.
 ///
-/// Mirrors the single-profile branch of `_finishOnboardingRouting` (line ~536
-/// of sign_in_controller): whenever auth transitions to signed-in AND no
-/// profile is selected yet, select the account's first profile. Multi-profile
-/// accounts route through the picker, which selects explicitly — so we only
-/// auto-select when exactly one profile is the unambiguous choice; for >1 we
-/// leave the selection null (the picker owns it). When there is exactly one we
-/// select it; when there are several we pick the first as a safe non-null
-/// default so cold-start writes never hit `profile_id=0`.
+/// Mirrors the single-profile branch of `_navigateAfterSignIn` (line ~536 of
+/// sign_in_controller): whenever auth transitions to signed-in AND no profile
+/// is selected yet, select the account's first profile.
+///
+/// BUG D1 (round 2 — the real crux): the previous fix only handled the case
+/// where ≥1 profile already existed. This account (a cloud account whose
+/// profiles never materialised locally — restored / skipped-onboarding) has
+/// ZERO rows in `learner_profiles`, so `profiles.first` had nothing to select
+/// and `profileId` stayed `0`. An authenticated account must NEVER operate at
+/// `profile_id = 0`. So when the account has no profile we self-heal by
+/// creating a default adult profile (and adopting any orphaned `profile_id = 0`
+/// rows, e.g. a pre-existing track) and select it. After this an authenticated
+/// account always has ≥1 profile selected.
 ///
 /// Watched by the app shell so it runs on every auth-valid mount. Returns the
-/// id that was (or already had been) selected, or null when signed-out / no
-/// profiles exist yet.
+/// id that was selected (existing or newly healed), or null when signed-out.
 
 final class AutoSelectedProfileIdProvider
     extends $FunctionalProvider<AsyncValue<int?>, int?, FutureOr<int?>>
     with $FutureModifier<int?>, $FutureProvider<int?> {
-  /// Auto-selects the account's first profile on an auth-valid startup.
+  /// Auto-selects (or self-heals) the account's profile on an auth-valid startup.
   ///
   /// BUG D1: on a force-stop + cold start with a still-valid Firebase/local
   /// session, the app skips the interactive sign-in flow (which is the only
@@ -252,18 +260,22 @@ final class AutoSelectedProfileIdProvider
   /// `stage_definitions` during track creation) fails with
   /// `SqliteException(787): FOREIGN KEY constraint failed`.
   ///
-  /// Mirrors the single-profile branch of `_finishOnboardingRouting` (line ~536
-  /// of sign_in_controller): whenever auth transitions to signed-in AND no
-  /// profile is selected yet, select the account's first profile. Multi-profile
-  /// accounts route through the picker, which selects explicitly — so we only
-  /// auto-select when exactly one profile is the unambiguous choice; for >1 we
-  /// leave the selection null (the picker owns it). When there is exactly one we
-  /// select it; when there are several we pick the first as a safe non-null
-  /// default so cold-start writes never hit `profile_id=0`.
+  /// Mirrors the single-profile branch of `_navigateAfterSignIn` (line ~536 of
+  /// sign_in_controller): whenever auth transitions to signed-in AND no profile
+  /// is selected yet, select the account's first profile.
+  ///
+  /// BUG D1 (round 2 — the real crux): the previous fix only handled the case
+  /// where ≥1 profile already existed. This account (a cloud account whose
+  /// profiles never materialised locally — restored / skipped-onboarding) has
+  /// ZERO rows in `learner_profiles`, so `profiles.first` had nothing to select
+  /// and `profileId` stayed `0`. An authenticated account must NEVER operate at
+  /// `profile_id = 0`. So when the account has no profile we self-heal by
+  /// creating a default adult profile (and adopting any orphaned `profile_id = 0`
+  /// rows, e.g. a pre-existing track) and select it. After this an authenticated
+  /// account always has ≥1 profile selected.
   ///
   /// Watched by the app shell so it runs on every auth-valid mount. Returns the
-  /// id that was (or already had been) selected, or null when signed-out / no
-  /// profiles exist yet.
+  /// id that was selected (existing or newly healed), or null when signed-out.
   AutoSelectedProfileIdProvider._()
     : super(
         from: null,
@@ -290,7 +302,7 @@ final class AutoSelectedProfileIdProvider
 }
 
 String _$autoSelectedProfileIdHash() =>
-    r'52e25b8778a2e9e41d785c0297ab734719264df9';
+    r'fc440350742743f450e4f2c74d3d82f51948e488';
 
 /// Profiles for the current account.
 

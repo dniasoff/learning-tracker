@@ -8,7 +8,6 @@ import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/dashboard_body.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
-import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 
@@ -21,8 +20,12 @@ class DashboardScreen extends ConsumerWidget {
     final activeTracksAsync = ref.watch(dashboardActiveTracksStreamProvider);
     final userModeAsync = ref.watch(dashboardUserModeProvider);
     final streakAsync = ref.watch(dashboardStreakProvider);
-    final selectedProfileAsync = ref.watch(selectedProfileProvider);
-    final profileName = selectedProfileAsync.asData?.value?.displayName;
+    // BUG-NEW-2: the greeting identity must reflect the ACTIVE profile, not the
+    // signed-in user's own selected profile. In a tutored session the active
+    // profile is the talmid's mirror, so the dashboard greets the talmid (e.g.
+    // "Tttt") with the talmid's data — never the tutor's name.
+    final activeProfileAsync = ref.watch(activeProfileProvider);
+    final profileName = activeProfileAsync.asData?.value?.displayName;
     return Scaffold(
       body: DecoratedBox(
         decoration: BoxDecoration(

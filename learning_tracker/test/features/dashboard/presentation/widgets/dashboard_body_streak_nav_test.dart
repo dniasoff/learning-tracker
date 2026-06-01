@@ -83,7 +83,11 @@ JourneyViewModel _journey() => const JourneyViewModel(
 
 // ── Build helper ──────────────────────────────────────────────────────────────
 
-Widget _buildApp({required _MockStackRouter router, int currentStreak = 7}) {
+Widget _buildApp({
+  required _MockStackRouter router,
+  int currentStreak = 7,
+  ProfileMode userMode = ProfileMode.child,
+}) {
   final track = _track();
   return ProviderScope(
     overrides: [
@@ -102,9 +106,7 @@ Widget _buildApp({required _MockStackRouter router, int currentStreak = 7}) {
       dashboardActiveTracksStreamProvider.overrideWith(
         (ref) => Stream.value([track]),
       ),
-      dashboardUserModeProvider.overrideWith(
-        (ref) => Future.value(ProfileMode.adult),
-      ),
+      dashboardUserModeProvider.overrideWith((ref) => Future.value(userMode)),
       dashboardStreakProvider.overrideWith(
         (ref) => Stream.value((
           currentStreak: currentStreak,
@@ -150,7 +152,7 @@ Widget _buildApp({required _MockStackRouter router, int currentStreak = 7}) {
         child: Scaffold(
           body: DashboardBody(
             activeTracks: [_track()],
-            userMode: ProfileMode.adult,
+            userMode: userMode,
             currentStreak: currentStreak,
           ),
         ),
@@ -181,36 +183,68 @@ void main() {
     ).thenAnswer((_) async {});
   });
 
-  testWidgets('E1: tapping the streak chip calls router.push(GamificationRoute)', (
-    tester,
-  ) async {
-    await tester.pumpWidget(_buildApp(router: router, currentStreak: 7));
+  testWidgets(
+    'E1: tapping the streak chip in CHILD mode pushes GamificationRoute',
+    (tester) async {
+      await tester.pumpWidget(
+        _buildApp(
+          router: router,
+          currentStreak: 7,
+          userMode: ProfileMode.child,
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      // Locate the streak chip via its fire icon (local_fire_department_rounded)
+      // in the header row (not the compact mission card, which uses the same
+      // icon but is further down the list and may be scrolled out).
+      final fireIcons = find.byIcon(Icons.local_fire_department_rounded);
+      expect(fireIcons, findsWidgets);
+
+      // Tap the first fire icon — the streak chip in the dashboard header.
+      await tester.tap(fireIcons.first);
+      await tester.pump();
+
+      // Verify router.push was called with a GamificationRoute.
+      final captured = verify(
+        () => router.push<Object?>(
+          captureAny(),
+          onFailure: any(named: 'onFailure'),
+        ),
+      ).captured;
+      expect(
+        captured.any(
+          (arg) => arg is PageRouteInfo && arg.routeName == 'GamificationRoute',
+        ),
+        isTrue,
+        reason: 'Tapping the streak chip must push GamificationRoute (E1 fix)',
+      );
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    },
+  );
+
+  testWidgets('E1: tapping the streak chip in ADULT mode does NOT navigate '
+      '(GamificationRoute is childModeGuard-gated, so the push would be a '
+      'silently-rejected dead no-op)', (tester) async {
+    await tester.pumpWidget(
+      _buildApp(router: router, currentStreak: 7, userMode: ProfileMode.adult),
+    );
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 
-    // Locate the streak chip via its fire icon (local_fire_department_rounded)
-    // in the header row (not the compact mission card, which uses the same icon
-    // but is further down the list and may be scrolled out).
     final fireIcons = find.byIcon(Icons.local_fire_department_rounded);
     expect(fireIcons, findsWidgets);
 
-    // Tap the first fire icon — that's the streak chip in the dashboard header.
     await tester.tap(fireIcons.first);
     await tester.pump();
 
-    // Verify router.push was called with a GamificationRoute.
-    final captured = verify(
-      () => router.push<Object?>(
-        captureAny(),
-        onFailure: any(named: 'onFailure'),
-      ),
-    ).captured;
-    expect(
-      captured.any(
-        (arg) => arg is PageRouteInfo && arg.routeName == 'GamificationRoute',
-      ),
-      isTrue,
-      reason: 'Tapping the streak chip must push GamificationRoute (E1 fix)',
+    // No navigation should be attempted in adult mode — the chip is a passive
+    // streak indicator, not a dead link into a guard that rejects it.
+    verifyNever(
+      () => router.push<Object?>(any(), onFailure: any(named: 'onFailure')),
     );
 
     await tester.pumpWidget(const SizedBox.shrink());

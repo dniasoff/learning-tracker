@@ -282,7 +282,17 @@ class DashboardBody extends ConsumerWidget {
               // `opaque`, GestureDetector defers to its children and taps on
               // the transparent padding area are a dead no-op on-device.
               behavior: HitTestBehavior.opaque,
-              onTap: () => context.router.push(const GamificationRoute()),
+              // E1 (real root cause): GamificationRoute is gated by
+              // `childModeGuard`, which silently rejects (`resolver.next(false)`)
+              // navigation whenever the active profile is NOT in child mode. The
+              // streak chip is rendered for every mode, so in adult / tutor mode
+              // the tap fired but the guard swallowed it — "tapping does
+              // nothing". Gamification is child-only (adults have no points), so
+              // only route to it in child mode; for other modes the chip is a
+              // passive streak indicator with no dead navigation.
+              onTap: userMode == ProfileMode.child
+                  ? () => context.router.push(const GamificationRoute())
+                  : null,
               child: Container(
                 padding: const EdgeInsets.symmetric(
                   horizontal: 12,

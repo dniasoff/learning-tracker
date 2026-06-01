@@ -97,3 +97,71 @@ abstract class _$ActiveProfileId extends $Notifier<int> {
     element.handleCreate(ref, build);
   }
 }
+
+/// The *active* profile model — the identity the UI is currently rendering.
+///
+/// BUG-NEW-2: unlike [selectedProfileProvider] (which always tracks the
+/// signed-in user's own chosen profile = the tutor in a tutored session), this
+/// resolves through [activeProfileIdProvider]. In a tutored session that id is
+/// the talmid's synthetic local mirror, so this returns the TALMID's profile —
+/// the dashboard greeting must show the talmid's name and identity, not the
+/// tutor's. Outside a tutored session it resolves to the same profile as
+/// [selectedProfileProvider].
+
+@ProviderFor(activeProfile)
+final activeProfileProvider = ActiveProfileProvider._();
+
+/// The *active* profile model — the identity the UI is currently rendering.
+///
+/// BUG-NEW-2: unlike [selectedProfileProvider] (which always tracks the
+/// signed-in user's own chosen profile = the tutor in a tutored session), this
+/// resolves through [activeProfileIdProvider]. In a tutored session that id is
+/// the talmid's synthetic local mirror, so this returns the TALMID's profile —
+/// the dashboard greeting must show the talmid's name and identity, not the
+/// tutor's. Outside a tutored session it resolves to the same profile as
+/// [selectedProfileProvider].
+
+final class ActiveProfileProvider
+    extends
+        $FunctionalProvider<
+          AsyncValue<ProfileModel?>,
+          ProfileModel?,
+          FutureOr<ProfileModel?>
+        >
+    with $FutureModifier<ProfileModel?>, $FutureProvider<ProfileModel?> {
+  /// The *active* profile model — the identity the UI is currently rendering.
+  ///
+  /// BUG-NEW-2: unlike [selectedProfileProvider] (which always tracks the
+  /// signed-in user's own chosen profile = the tutor in a tutored session), this
+  /// resolves through [activeProfileIdProvider]. In a tutored session that id is
+  /// the talmid's synthetic local mirror, so this returns the TALMID's profile —
+  /// the dashboard greeting must show the talmid's name and identity, not the
+  /// tutor's. Outside a tutored session it resolves to the same profile as
+  /// [selectedProfileProvider].
+  ActiveProfileProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'activeProfileProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$activeProfileHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<ProfileModel?> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<ProfileModel?> create(Ref ref) {
+    return activeProfile(ref);
+  }
+}
+
+String _$activeProfileHash() => r'2cc33760c30e87d3f44166ceb5dd45fc61a3a848';
