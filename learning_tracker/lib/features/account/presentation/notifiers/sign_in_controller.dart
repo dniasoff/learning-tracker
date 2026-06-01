@@ -446,15 +446,28 @@ class SignInController extends Notifier<SignInState> {
 
     var cloudAccountHasProfiles = false;
     if (profileCount == 0) {
-      final remoteProfiles =
-          await _ref
-              .read(firestoreGatewayProvider)
-              ?.fetchLearnerProfiles()
-              .timeout(
-                const Duration(seconds: 8),
-                onTimeout: () => const <Map<String, dynamic>>[],
-              ) ??
-          const <Map<String, dynamic>>[];
+      // Wrap in try/catch: a new uid that has no Firestore user document yet
+      // will get permission-denied from fetchLearnerProfiles (the rules
+      // require the document to exist). Treat any error as "no remote profiles"
+      // so sign-in is never blocked by a Firestore permission error here.
+      var remoteProfiles = const <Map<String, dynamic>>[];
+      try {
+        remoteProfiles =
+            await _ref
+                .read(firestoreGatewayProvider)
+                ?.fetchLearnerProfiles()
+                .timeout(
+                  const Duration(seconds: 8),
+                  onTimeout: () => const <Map<String, dynamic>>[],
+                ) ??
+            const <Map<String, dynamic>>[];
+      } catch (e, stackTrace) {
+        AppLogger.instance.warning(
+          event: 'navigate_after_sign_in_fetch_profiles_failed',
+          exception: e,
+          stackTrace: stackTrace,
+        );
+      }
       cloudAccountHasProfiles = remoteProfiles.isNotEmpty;
 
       if (cloudAccountHasProfiles && orchestrator != null) {
@@ -732,7 +745,11 @@ class SignInController extends Notifier<SignInState> {
   }) async {
     state = const SignInSubmitting();
 
-    final watchdog = Timer(const Duration(seconds: 15), () {
+    // 45 s: Google's account-picker round-trip + Firebase token exchange can
+    // take 20–30 s on a slow network. 15 s was too short and caused the
+    // watchdog to fire mid-auth, surfacing a spurious "Sign-in failed" toast
+    // even though Firebase auth succeeded.
+    final watchdog = Timer(const Duration(seconds: 45), () {
       if (state is SignInSubmitting) {
         state = SignInError(l10n.authSignInTimeout);
         _showError?.call(l10n.authSignInTimeout);
