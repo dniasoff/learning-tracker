@@ -328,7 +328,13 @@ service cloud.firestore {
               'state_changed_at', 'activated_at',
               'pace_reset_date', 'progress_schema_version',
               'progress_computed_at', 'progress_model', 'program_progress',
-              'self_paced_progress', 'synced_at'
+              'self_paced_progress', 'synced_at',
+              // Track tombstone fields — a hard purge stamps `purged: true` +
+              // `purged_at` so the deletion propagates to other devices
+              // (track_dao.dart `track_purge:<id>` payload). Omitting these
+              // from the allowlist denied every purge push with
+              // permission-denied even for the legitimate owner.
+              'purged', 'purged_at'
             ]);
           allow delete: if false;
         }
@@ -401,7 +407,13 @@ service cloud.firestore {
           allow create, update: if isOwner(uid)
             && request.resource.data.keys().hasOnly([
               'profile_id', 'curriculum_id', 'program_id',
-              'tracking_start_date', 'tracking_start_ref', 'synced_at'
+              'tracking_start_date', 'tracking_start_ref', 'synced_at',
+              // `updated_at` is the LWW ordering field: the realtime listener
+              // orders profile_programs by it (firestore_listener_source.dart)
+              // and the merger uses it for last-write-wins. The client always
+              // writes it, so omitting it from the allowlist denied every
+              // enrolment push with permission-denied even for the owner.
+              'updated_at'
             ]);
           allow delete: if isOwner(uid);
         }
