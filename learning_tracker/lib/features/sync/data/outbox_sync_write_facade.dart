@@ -116,6 +116,14 @@ class OutboxSyncWriteFacade implements SyncWriteFacade, PointsSyncSink {
     OutboxEntityKind.learnerProfileDelete,
     profileId.toString(),
     {'profile_id': profileId},
+    // Account-level op: enqueue under profile 0 (the account-level sweep that
+    // _doDrain always runs alongside the active profile), NOT under the
+    // profile being deleted. Stamping it with the target profile id orphans
+    // the row — the drain only sweeps the ACTIVE profile + 0, so a delete
+    // enqueued while that profile is active is never drained once the user
+    // switches away (it never will be, since it's being deleted). The CF
+    // still targets payload['profile_id'], so the correct profile is deleted.
+    outboxProfileId: 0,
   );
 
   /// Build the gamification snapshot map from local DB + [RewardMilestoneService].
@@ -257,11 +265,15 @@ class OutboxSyncWriteFacade implements SyncWriteFacade, PointsSyncSink {
   Future<void> _enqueue(
     String kind,
     String entityKey,
-    Map<String, dynamic> payload,
-  ) async {
+    Map<String, dynamic> payload, {
+    // Outbox row's profile_id. Defaults to the active profile; pass 0 for
+    // account-level operations that must drain regardless of which profile is
+    // active (the processor's _doDrain sweeps the active profile AND 0).
+    int? outboxProfileId,
+  }) async {
     await _dao.insertOutboxRow(
       OutboxCompanion(
-        profileId: Value(_profileId),
+        profileId: Value(outboxProfileId ?? _profileId),
         entityKind: Value(kind),
         entityKey: Value(entityKey),
         payload: Value(jsonEncode(payload)),
