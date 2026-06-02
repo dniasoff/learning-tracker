@@ -114,6 +114,11 @@ Future<ProfileModel?> showAddProfileDialog(
               TextField(
                 controller: ctrl,
                 autofocus: true,
+                // Profile names are stored verbatim; soft-keyboard autocorrect
+                // was mangling typed names (e.g. "Talmid1" -> "Talmid16").
+                keyboardType: TextInputType.text,
+                autocorrect: false,
+                enableSuggestions: false,
                 textCapitalization: TextCapitalization.words,
                 inputFormatters: const [TrimLeadingSpaceFormatter()],
                 style: theme.textTheme.bodyLarge?.copyWith(

@@ -199,6 +199,39 @@ void main() {
     },
   );
 
+  test('on-device repro (tutor HAS own profile): with a non-null tutor '
+      'selectedProfileId AND an active tutored selection, activeProfileId/'
+      'activeProfile resolve to the talmid mirror — driving the dashboard '
+      'greeting, the projection/carousel scope (activeProfileIdProvider) and the '
+      'TutorModeIndicatorBar name (activeProfileProvider.displayName) to the '
+      'CHILD, never the tutor', () async {
+    // This is the exact failing on-device state: the tutor has selected
+    // their OWN profile (_tutorOwnProfileId is non-null), then entered a
+    // tutored session. Previously the view stayed pointed at the tutor.
+    final container = _container(tutored: true);
+
+    // selectedProfileIdProvider still tracks the tutor's own profile…
+    expect(
+      container.read(selectedProfileIdProvider),
+      _tutorOwnProfileId,
+      reason: 'the tutor own selection is untouched (non-tutored path safe)',
+    );
+
+    // …but every dashboard/projection provider scopes on activeProfileId,
+    // which now resolves to the child's mirror id.
+    expect(container.read(activeProfileIdProvider), _talmidMirrorProfileId);
+
+    // The banner + greeting both read activeProfileProvider.displayName.
+    final active = await container.read(activeProfileProvider.future);
+    expect(active, isNotNull);
+    expect(
+      active!.displayName,
+      'Tttt',
+      reason: 'banner "Tutor mode · <name>" + greeting name the CHILD',
+    );
+    expect(active.id, _talmidMirrorProfileId);
+  });
+
   test(
     'BUG-NEW-2 guard: while the tutored mirror pull is still in progress '
     '(resolved id null), activeProfileId is the 0 sentinel, never the tutor',

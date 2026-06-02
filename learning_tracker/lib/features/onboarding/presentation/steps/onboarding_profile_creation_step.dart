@@ -312,6 +312,11 @@ class _OnboardingProfileCreationStepState
             const SizedBox(height: 8),
             TextField(
               controller: _nameController,
+              // Profile names are stored verbatim; soft-keyboard autocorrect
+              // was mangling typed names (e.g. "Talmid1" -> "Talmid16").
+              keyboardType: TextInputType.text,
+              autocorrect: false,
+              enableSuggestions: false,
               inputFormatters: const [TrimLeadingSpaceFormatter()],
               decoration: InputDecoration(
                 hintText: 'Enter name',

@@ -105,6 +105,67 @@ void main() {
     },
   );
 
+  // Autocorrect regression: typing a profile name like "Talmid1" was being
+  // mangled by the soft-keyboard autocorrect (e.g. into "Talmid16"). The name
+  // field must store the typed text verbatim — autocorrect and keyboard
+  // suggestions disabled.
+  testWidgets('name field disables autocorrect and keyboard suggestions', (
+    tester,
+  ) async {
+    tester.view.physicalSize = const Size(1080, 2340);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.resetPhysicalSize);
+
+    final db = createTestDatabase();
+    await seedProfileWithIds(db, profileId: 1, accountId: 1);
+    addTearDown(() => db.close());
+
+    final repo = _MockProfileRepository();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          userDatabaseProvider.overrideWithValue(db),
+          currentAccountIdProvider.overrideWithValue(1),
+          profileRepositoryProvider.overrideWithValue(repo),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Consumer(
+            builder: (ctx, ref, _) => Scaffold(
+              body: Center(
+                child: ElevatedButton(
+                  key: const Key('open'),
+                  onPressed: () => showAddProfileDialog(ctx, ref),
+                  child: const Text('Open'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+
+    await tester.tap(find.byKey(const Key('open')));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 100));
+
+    final field = tester.widget<TextField>(find.byType(TextField).first);
+    expect(field.autocorrect, isFalse);
+    expect(field.enableSuggestions, isFalse);
+
+    // Close the dialog and flush the delayed controller-dispose timer.
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.pump(Duration.zero);
+  });
+
   // Sanity: a successful create returns the model and does NOT show the error.
   testWidgets('successful createProfile shows no error snackbar', (
     tester,
