@@ -39,6 +39,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
+import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
@@ -190,6 +191,9 @@ class _Fixture {
         deviceRegistryProvider.overrideWithValue(registry),
         authRepositoryProvider.overrideWithValue(auth),
         userDatabaseProvider.overrideWith((ref) => userDb),
+        // No real Firestore orchestrator in widget tests — the cloud-switch
+        // path reads it to kick a best-effort launch pull.
+        syncOrchestratorProvider.overrideWithValue(null),
         if (connectivityChecker != null)
           internetConnectionCheckerProvider.overrideWithValue(
             connectivityChecker,

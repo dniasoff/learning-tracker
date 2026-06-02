@@ -35,6 +35,7 @@ import 'package:learning_tracker/features/account/domain/models/auth_state.dart'
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_resume_store.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart';
+import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -550,6 +551,89 @@ void main() {
 
       await _tearDown(tester);
     });
+
+    // Regression (cycle-3 P2): on a fresh single-profile signup, tapping
+    // "Start Learning" must land directly on the dashboard (AppShellRoute) AND
+    // select the just-created profile in-memory first, so the AppShellRoute
+    // guard chain (AuthGuard / ProfileGuard) does NOT bounce the brand-new user
+    // to the "Choose an Account" picker as an extra confusing step.
+    testWidgets(
+      '"Start Learning" selects the created profile + replaces to AppShellRoute',
+      (tester) async {
+        // Single profile on the account → the direct-to-dashboard branch.
+        final repo = _MockProfileRepository();
+        final now = DateTime(2026, 1, 1);
+        when(() => repo.getProfilesByAccount(any())).thenAnswer(
+          (_) async => [
+            ProfileModel(
+              id: 4, // matches onboarding_profile_id in this group's prefs
+              accountId: 1,
+              displayName: 'Yitzchak',
+              mode: 'child',
+              avatarIndex: 0,
+              createdAt: now,
+              updatedAt: now,
+            ),
+          ],
+        );
+
+        // Hold a container so we can read the selected-profile state after the
+        // navigation runs. Use the real SelectedProfileId notifier (not the
+        // null stub) so select() actually mutates state.
+        final container = ProviderContainer(
+          overrides: [
+            authStateProvider.overrideWith(
+              () => _FakeAuthStateNotifier(_kSignedIn),
+            ),
+            profileRepositoryProvider.overrideWithValue(repo),
+            currentAccountIdProvider.overrideWithValue(1),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp(
+              localizationsDelegates: const [
+                AppLocalizations.delegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: StackRouterScope(
+                controller: router,
+                stateHash: 0,
+                child: const OnboardingScreen(),
+              ),
+            ),
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        // Sanity: no profile selected yet at the handoff screen.
+        expect(container.read(selectedProfileIdProvider), isNull);
+
+        await tester.tap(find.text('Start Learning'));
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        // The created profile is now selected — ProfileGuard short-circuits
+        // (profile_guard_already_selected) instead of bouncing to a picker.
+        expect(container.read(selectedProfileIdProvider), 4);
+
+        // And navigation lands directly on the dashboard, NOT the account/profile
+        // picker.
+        final captured = verify(() => router.replaceAll(captureAny())).captured;
+        expect(captured.isNotEmpty, isTrue);
+        final routes = captured.last as List<dynamic>;
+        expect(routes.first, isA<AppShellRoute>());
+
+        await _tearDown(tester);
+      },
+    );
   });
 
   // ── done phase ────────────────────────────────────────────────────────────

@@ -249,8 +249,23 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     );
     if (!mounted) return;
     if (profiles.length >= 2) {
+      // Multiple profiles on this account: let the user pick which learner to
+      // open. Clear any stale in-memory selection so ProfileGuard surfaces the
+      // picker rather than short-circuiting onto a leftover id.
+      ref.read(selectedProfileIdProvider.notifier).clear();
       unawaited(context.router.replaceAll([const ProfilePickerRoute()]));
     } else {
+      // Single profile (the normal fresh-signup case): select the just-created
+      // profile in-memory BEFORE navigating so the AppShellRoute guard chain
+      // lets the dashboard through directly. Without this the guards re-resolve
+      // against unset session state and AuthGuard bounces a brand-new user to
+      // the "Choose an Account" picker — an extra, confusing tap right after
+      // "Start Learning". Mirrors the account-picker / sign-in landing paths,
+      // which all assert the active profile before replaceAll([AppShellRoute]).
+      final landingProfileId = _createdProfileId ?? profiles.firstOrNull?.id;
+      if (landingProfileId != null) {
+        ref.read(selectedProfileIdProvider.notifier).select(landingProfileId);
+      }
       unawaited(context.router.replaceAll([const AppShellRoute()]));
     }
   }

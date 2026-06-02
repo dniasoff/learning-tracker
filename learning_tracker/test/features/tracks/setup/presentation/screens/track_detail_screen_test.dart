@@ -18,6 +18,7 @@
 @Tags(['tracks', 'track_detail'])
 library;
 
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -31,6 +32,7 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
+import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/screens/track_detail_screen.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -90,6 +92,11 @@ List<Override> _overridesFor({
 }) {
   return [
     userDatabaseProvider.overrideWith((ref) => db),
+    // Goal writes go through goalRepositoryProvider, which watches
+    // syncWriteFacadeProvider → authStateProvider → Firebase. Stub the sync
+    // facade to null (the local-born no-op path) so the repo persists to the
+    // in-memory Drift DB without touching Firebase.
+    syncWriteFacadeProvider.overrideWith((ref) => null),
     useHebrewTermsProvider.overrideWith(
       () => _UseHebrewTermsOverride(useHebrew: false),
     ),
@@ -206,6 +213,106 @@ void main() {
       // so the dual-progress contract is the same in empty state.
       expect(find.text('Track progress: 0%'), findsOneWidget);
       expect(find.text('Lifetime: 0%'), findsOneWidget);
+    });
+  });
+
+  group('Track Detail — goal add/edit affordance', () {
+    testWidgets('exposes a "Set Goal" tile when the track has no goal', (
+      tester,
+    ) async {
+      final track = _track();
+      await tester.pumpWidget(
+        _wrap(
+          track: track,
+          overrides: _overridesFor(
+            db: db,
+            track: track,
+            curriculum: CurriculumId.mishnayos,
+            currentCycle: 0.0,
+            lifetime: 0.0,
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(
+        find.byKey(const ValueKey('trackDetail.goalTile')),
+        findsOneWidget,
+        reason:
+            'Track detail must surface a goal add/edit affordance so a goal '
+            'can be set post-creation without re-running the add-track wizard.',
+      );
+      expect(
+        find.text('Set Goal'),
+        findsOneWidget,
+        reason: 'With no existing goal the tile reads "Set Goal".',
+      );
+    });
+
+    testWidgets('tapping the goal tile and submitting persists a goal', (
+      tester,
+    ) async {
+      final track = _track();
+      await tester.pumpWidget(
+        _wrap(
+          track: track,
+          overrides: _overridesFor(
+            db: db,
+            track: track,
+            curriculum: CurriculumId.mishnayos,
+            currentCycle: 0.0,
+            lifetime: 0.0,
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // The goal row FK-references curriculum_tracks(id); insert the track
+      // row so the goal INSERT satisfies the foreign-key constraint.
+      await db
+          .into(db.curriculumTracks)
+          .insert(
+            CurriculumTracksCompanion.insert(
+              id: Value(track.id),
+              profileId: track.profileId,
+              curriculumId: track.curriculumId,
+              state: Value(track.state),
+              stateChangedAt: track.stateChangedAt,
+              activatedAt: track.activatedAt,
+            ),
+          );
+
+      // No goal exists yet for this track.
+      expect(await db.goalDao.getGoalByTrack(track.id), isNull);
+
+      // Open the goal-setup form.
+      await tester.tap(find.byKey(const ValueKey('trackDetail.goalTile')));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // The goal-setup form renders its mode toggle + submit button.
+      expect(find.text('Create Goal'), findsOneWidget);
+
+      // Submit the default goal (pace mode default), then let the write +
+      // navigation pop settle.
+      await tester.tap(find.text('Create Goal'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+      await tester.pump(const Duration(milliseconds: 200));
+
+      final persisted = await db.goalDao.getGoalByTrack(track.id);
+      expect(
+        persisted,
+        isNotNull,
+        reason:
+            'Submitting the goal form must persist a goal row for this track '
+            'via the goal repository write path.',
+      );
+      expect(persisted!.trackId, track.id);
+      expect(persisted.profileId, track.profileId);
+      expect(persisted.curriculumId, CurriculumId.mishnayos.storageKey);
     });
   });
 

@@ -2645,6 +2645,21 @@ class AppLocalizationsHe extends AppLocalizations {
   String get goalCreateButton => 'צור יעד';
 
   @override
+  String get trackSetGoalLabel => 'הגדרת יעד';
+
+  @override
+  String get trackEditGoalLabel => 'עריכת יעד';
+
+  @override
+  String get goalSavedSnack => 'היעד נשמר';
+
+  @override
+  String get goalRemovedSnack => 'היעד הוסר';
+
+  @override
+  String get goalRemoveButton => 'הסרת יעד';
+
+  @override
   String get unitPerakim => 'פרקים';
 
   @override

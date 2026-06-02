@@ -1277,6 +1277,11 @@
   "goalNewTitle": "יעד חדש",
   "goalUpdateButton": "עדכן יעד",
   "goalCreateButton": "צור יעד",
+  "trackSetGoalLabel": "הגדרת יעד",
+  "trackEditGoalLabel": "עריכת יעד",
+  "goalSavedSnack": "היעד נשמר",
+  "goalRemovedSnack": "היעד הוסר",
+  "goalRemoveButton": "הסרת יעד",
 
   "unitPerakim": "פרקים",
   "unitPesukim": "פסוקים",

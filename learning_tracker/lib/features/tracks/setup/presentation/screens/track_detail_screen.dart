@@ -15,15 +15,19 @@ import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
+import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/bulk_mark_screen.dart';
 import 'package:learning_tracker/features/progress/domain/services/pace_calculator.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
+import 'package:learning_tracker/features/scheduler/presentation/screens/goal_setup_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/after_track_change_invalidation.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/screens/edit_track_screen.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/widgets/track_info_card.dart';
 import 'package:learning_tracker/features/tracks/track_order/presentation/screens/track_learning_order_screen.dart';
+import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 final _trackGoalProvider = FutureProvider.autoDispose.family<Goal?, int>(
@@ -536,14 +540,44 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
               ),
               const Divider(height: 1, indent: 56),
             ],
+            if (curriculum != null) ...[
+              Builder(
+                builder: (context) {
+                  final tutorPerms = ref.watch(activeTutorPermissionsProvider);
+                  final canEditGoals =
+                      tutorPerms == null || tutorPerms.canEditGoals;
+                  final hasGoal =
+                      ref.watch(_trackGoalProvider(track.id)).asData?.value !=
+                      null;
+                  return ListTile(
+                    key: const ValueKey('trackDetail.goalTile'),
+                    shape: hasProgramEnrollment
+                        ? const RoundedRectangleBorder(
+                            borderRadius: BorderRadius.vertical(
+                              top: Radius.circular(24),
+                            ),
+                          )
+                        : null,
+                    enabled: canEditGoals,
+                    leading: const Icon(
+                      Icons.flag_outlined,
+                      color: AppColors.blueMedium,
+                    ),
+                    title: Text(
+                      hasGoal
+                          ? AppLocalizations.of(context)!.trackEditGoalLabel
+                          : AppLocalizations.of(context)!.trackSetGoalLabel,
+                    ),
+                    trailing: const Icon(Icons.chevron_right_rounded),
+                    onTap: canEditGoals
+                        ? () => _openGoalEdit(track, curriculum)
+                        : null,
+                  );
+                },
+              ),
+              const Divider(height: 1, indent: 56),
+            ],
             ListTile(
-              shape: hasProgramEnrollment
-                  ? const RoundedRectangleBorder(
-                      borderRadius: BorderRadius.vertical(
-                        top: Radius.circular(24),
-                      ),
-                    )
-                  : null,
               leading: const Icon(
                 Icons.edit_outlined,
                 color: AppColors.blueMedium,
@@ -582,6 +616,98 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
           ],
         ),
       ),
+    );
+  }
+
+  /// Opens the shared goal-setup form to add or edit the goal for [track],
+  /// then persists via [goalRepositoryProvider] so the write reaches Drift and
+  /// is queued for Firestore sync.
+  Future<void> _openGoalEdit(
+    CurriculumTrack track,
+    CurriculumId curriculum,
+  ) async {
+    final l10n = AppLocalizations.of(context)!;
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+
+    final existingGoal = await ref.read(_trackGoalProvider(track.id).future);
+    final existingEntity = existingGoal == null
+        ? null
+        : _goalRowToEntity(existingGoal);
+    final totalItems = await ref.read(
+      scopedItemCountProvider(curriculum).future,
+    );
+
+    if (!mounted) return;
+
+    final result = await navigator.push<GoalEntity>(
+      MaterialPageRoute(
+        builder: (_) => GoalSetupScreen(
+          curriculumId: curriculum,
+          existingGoal: existingEntity,
+          totalItems: totalItems,
+        ),
+      ),
+    );
+
+    if (result == null || !mounted) return;
+
+    final repo = ref.read(goalRepositoryProvider);
+    final paceTarget = result.paceTarget;
+
+    if (existingGoal == null) {
+      await repo.createGoal(
+        profileId: track.profileId,
+        curriculumId: curriculum,
+        trackId: track.id,
+        targetPercent: result.targetPercent,
+        paceTarget: paceTarget,
+        description: result.description,
+        dateType: result.dateType,
+        paceGranularity: result.paceGranularityKey,
+      );
+    } else {
+      await repo.updateGoal(
+        goalId: existingGoal.id,
+        targetPercent: result.targetPercent,
+        paceTarget: paceTarget,
+        // 'none' goals clear the pace target entirely.
+        clearPaceTarget: paceTarget == null,
+        description: result.description,
+        paceGranularity: result.paceGranularity,
+        clearLearningUnit: result.paceGranularityKey == null,
+      );
+    }
+
+    await onTrackChanged(ref, track.profileId);
+    ref.invalidate(_trackGoalProvider(track.id));
+    ref.invalidate(_trackPaceCalcProvider(track));
+
+    if (mounted) {
+      messenger.showSnackBar(SnackBar(content: Text(l10n.goalSavedSnack)));
+    }
+  }
+
+  /// Maps a Drift [Goal] row to the [GoalEntity] the goal-setup form consumes.
+  GoalEntity _goalRowToEntity(Goal goal) {
+    final granularity = PaceGranularity.fromStorageKey(goal.paceGranularity);
+    return GoalEntity(
+      id: goal.id,
+      curriculumId: CurriculumId.values.firstWhere(
+        (c) => c.storageKey == goal.curriculumId,
+      ),
+      trackId: goal.trackId,
+      targetPercent: goal.targetPercent,
+      targetDate: goal.targetDate?.toUtc(),
+      description: goal.description,
+      dateType: goal.dateType,
+      goalType: goal.goalType,
+      paceValue: goal.paceValue,
+      pacePeriod: goal.pacePeriod,
+      paceGranularity: granularity,
+      rawLearningUnit: granularity == null ? goal.paceGranularity : null,
+      createdAt: goal.createdAt.toUtc(),
+      updatedAt: goal.updatedAt.toUtc(),
     );
   }
 

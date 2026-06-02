@@ -1302,6 +1302,11 @@
   "goalNewTitle": "New Goal",
   "goalUpdateButton": "Update Goal",
   "goalCreateButton": "Create Goal",
+  "trackSetGoalLabel": "Set Goal",
+  "trackEditGoalLabel": "Edit Goal",
+  "goalSavedSnack": "Goal saved",
+  "goalRemovedSnack": "Goal removed",
+  "goalRemoveButton": "Remove Goal",
 
   "unitPerakim": "Perakim",
   "unitPesukim": "Pesukim",

@@ -3,12 +3,15 @@ import 'dart:async';
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:google_sign_in/google_sign_in.dart'
+    show GoogleSignInException, GoogleSignInExceptionCode;
 import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/navigation/router_provider.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
+import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/account/domain/services/account_lifecycle_service.dart';
@@ -408,10 +411,16 @@ class _AccountTile extends ConsumerWidget {
           .read(internetConnectionCheckerProvider)
           .hasConnection;
       if (isOnline) {
-        // Online with invalid/expired session — route to sign-in.
-        if (context.mounted) {
-          unawaited(context.router.push(const SignInRoute()));
-        }
+        // Online but the live Firebase session belongs to a DIFFERENT account
+        // (one auth slot; currentUser still points at the previously-active
+        // account) or no session at all. The device has ONE Firebase
+        // currentUser slot, so to read/write THIS account's Firestore space we
+        // must re-authenticate to its identity. google_sign_in shows the native
+        // account picker; both accounts already live on the device so it's a
+        // one-tap, no-password re-auth. Supersedes the old DEC-34 "route to
+        // SignInRoute" behaviour for the cloud→cloud switch case.
+        if (!context.mounted) return;
+        await _reauthAndActivateCloudAccount(context, ref);
       } else {
         // Offline-first cloud behavior: allow local access and queue sync ops.
         if (!context.mounted) return;
@@ -421,6 +430,81 @@ class _AccountTile extends ConsumerWidget {
       // Local-born — instant local activation (no modal password dialog).
       await _activateLocalAccountFromLocalData(context, ref);
     }
+  }
+
+  /// Re-authenticate Firebase to THIS cloud account's Google identity, then
+  /// activate it. The device holds a single Firebase `currentUser` slot, so a
+  /// cloud→cloud switch must align the live session with the target account or
+  /// every Firestore read/write into `users/{uid}/…` is permission-denied
+  /// (and tutoring breaks — the tutor can't read the child's data).
+  ///
+  /// Flow:
+  ///   1. `signInWithGoogle()` → native account picker (one-tap, no password).
+  ///   2. Verify the re-authed uid == the target account's `firebaseUid`. If
+  ///      the user picked a different Google account, or the uid drifted from a
+  ///      server-side account re-creation, ABORT — do not activate the wrong
+  ///      account; surface an error and leave the previous session intact.
+  ///   3. On match: activate via the normal local-DB-swap + session path. The
+  ///      `authStateProvider` rebuild flips `syncIdentityStatusProvider` back to
+  ///      `matched` and the orchestrator/listeners re-resolve; we also kick a
+  ///      best-effort launch pull so sync drains for the new identity.
+  ///   4. On user-cancel / re-auth failure: fall back GRACEFULLY to local
+  ///      activation (offline-first) and let the identity guard show the
+  ///      "sign in to back up" state — never crash, never half-switch.
+  Future<void> _reauthAndActivateCloudAccount(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final authRepo = ref.read(authRepositoryProvider);
+    final l10n = AppLocalizations.of(context)!;
+    final messenger = ScaffoldMessenger.of(context);
+    final targetUid = account.firebaseUid;
+
+    try {
+      await authRepo.signInWithGoogle();
+    } on GoogleSignInException catch (e) {
+      // User cancelled or interrupted the native picker → fall back to local
+      // activation (current offline-first behaviour); no error toast.
+      if (e.code == GoogleSignInExceptionCode.canceled ||
+          e.code == GoogleSignInExceptionCode.interrupted) {
+        if (!context.mounted) return;
+        await _activateCloudAccountFromLocalData(context, ref);
+        return;
+      }
+      // Any other Google failure → graceful local fallback; the identity guard
+      // will surface the "sign in to back up" state in Settings.
+      if (!context.mounted) return;
+      await _activateCloudAccountFromLocalData(context, ref);
+      return;
+    } catch (_) {
+      // Firebase token exchange / network failure → graceful local fallback.
+      if (!context.mounted) return;
+      await _activateCloudAccountFromLocalData(context, ref);
+      return;
+    }
+
+    // Verify the re-authed identity matches the account the user tapped.
+    final liveUid = authRepo.currentUser?.uid;
+    if (targetUid == null || liveUid == null || liveUid != targetUid) {
+      // Wrong Google account picked (or uid churn). Do NOT activate the wrong
+      // account. Restore the prior live session is not possible without its
+      // credential, so we sign the mis-picked session out (best-effort) and
+      // abort the switch — the previously-active account's LOCAL data is in its
+      // own DB file and is untouched.
+      try {
+        await authRepo.signOut();
+      } catch (_) {
+        // Sign-out best-effort; ignore.
+      }
+      messenger
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(l10n.authGoogleSignInFailed)));
+      return;
+    }
+
+    // Identity matched — activate the account locally + restart sync.
+    if (!context.mounted) return;
+    await _activateCloudAccountFromLocalData(context, ref);
   }
 
   Future<void> _activateCloudAccountFromLocalData(
@@ -468,6 +552,22 @@ class _AccountTile extends ConsumerWidget {
     ref.read(selectedProfileIdProvider.notifier).clear();
 
     ref.read(authStateProvider.notifier).setCloudBornSession(profile: profile);
+
+    // Restart sync for the now-active identity. The authStateProvider rebuild
+    // above already re-resolves syncIdentityStatusProvider (→ matched when the
+    // live Firebase uid equals this account's uid after re-auth) and rebuilds
+    // the Firestore gateway/orchestrator. Kick a best-effort launch pull so the
+    // outbox drains and listeners re-resolve immediately; offline-first means
+    // this must never block or throw out of the switch.
+    final orchestrator = ref.read(syncOrchestratorProvider);
+    if (orchestrator != null) {
+      unawaited(
+        orchestrator.pullOnLaunch().timeout(
+          const Duration(seconds: 8),
+          onTimeout: () {},
+        ),
+      );
+    }
 
     if (context.mounted) {
       unawaited(context.router.replaceAll([const AppShellRoute()]));

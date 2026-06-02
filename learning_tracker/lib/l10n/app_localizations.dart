@@ -4799,6 +4799,36 @@ abstract class AppLocalizations {
   /// **'Create Goal'**
   String get goalCreateButton;
 
+  /// No description provided for @trackSetGoalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Set Goal'**
+  String get trackSetGoalLabel;
+
+  /// No description provided for @trackEditGoalLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit Goal'**
+  String get trackEditGoalLabel;
+
+  /// No description provided for @goalSavedSnack.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal saved'**
+  String get goalSavedSnack;
+
+  /// No description provided for @goalRemovedSnack.
+  ///
+  /// In en, this message translates to:
+  /// **'Goal removed'**
+  String get goalRemovedSnack;
+
+  /// No description provided for @goalRemoveButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Remove Goal'**
+  String get goalRemoveButton;
+
   /// No description provided for @unitPerakim.
   ///
   /// In en, this message translates to:

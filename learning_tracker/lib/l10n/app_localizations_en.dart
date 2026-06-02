@@ -2676,6 +2676,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get goalCreateButton => 'Create Goal';
 
   @override
+  String get trackSetGoalLabel => 'Set Goal';
+
+  @override
+  String get trackEditGoalLabel => 'Edit Goal';
+
+  @override
+  String get goalSavedSnack => 'Goal saved';
+
+  @override
+  String get goalRemovedSnack => 'Goal removed';
+
+  @override
+  String get goalRemoveButton => 'Remove Goal';
+
+  @override
   String get unitPerakim => 'Perakim';
 
   @override
