@@ -217,18 +217,24 @@ void main() {
             reason: 'point_configs should be seeded after track creation',
           );
 
-          // Verify fallback defaults: stage 1=10, stage 2=5, stage 3=3
+          // A track created without configuring chazara is learn-only — a
+          // single לימוד stage (stageOrder 1) — so exactly one point config is
+          // seeded, worth the default 10 points. Chazara stages (and their
+          // point configs) only exist when the chazara wizard added them, per
+          // the per-track chazara rule. (The 3-stage fallback in
+          // PointConfigDao.seedDefaults is now only reachable defensively, when
+          // a track somehow has zero stage_definitions.)
           final stage1 = after.where((c) => c.stageOrder == 1).firstOrNull;
           expect(stage1, isNotNull);
           expect(stage1!.points, 10);
 
-          final stage2 = after.where((c) => c.stageOrder == 2).firstOrNull;
-          expect(stage2, isNotNull);
-          expect(stage2!.points, 5);
-
-          final stage3 = after.where((c) => c.stageOrder == 3).firstOrNull;
-          expect(stage3, isNotNull);
-          expect(stage3!.points, 3);
+          expect(
+            after.where((c) => c.stageOrder > 1),
+            isEmpty,
+            reason:
+                'a learn-only track has no chazara stages, so no stage 2/3 '
+                'point configs are seeded',
+          );
         });
 
         test('creating a second track for the same curriculum '
@@ -248,14 +254,17 @@ void main() {
           );
           final countAfterFirst = afterFirst.length;
 
-          // Create second track for same curriculum
+          // Re-add the same curriculum for the same profile (there is one track
+          // per curriculum per profile — no track types). restoreOrCreate
+          // returns the same track, and _seedPointConfigsIfNeeded skips seeding
+          // when configs already exist — so the count must not grow.
           await service.createTrack(
             result: const AddTrackResult(
               curriculumId: CurriculumId.mishnayos,
               label: 'Track 2',
               studyDays: {1: 'study'},
             ),
-            profileId: 2,
+            profileId: 1,
           );
 
           final afterSecond = await db.pointConfigDao.getConfigsByCurriculum(

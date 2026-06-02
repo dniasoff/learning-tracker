@@ -91,14 +91,27 @@ class TrackCreationService {
         curriculumId: curriculum,
       );
 
+      // Clear any prior stage rows for this (possibly soft-deleted then
+      // restored) track before reseeding below.
       await _stageRepository.deleteStagesForTrack(trackId);
-      if (result.wizardResult != null) {
-        await _wizardService.applyWizardResult(
-          result.wizardResult!.wizardResult,
-          profileId: profileId,
-          trackId: trackId,
-        );
-      }
+      // Stages are seeded from the learning-process (chazara) wizard. When the
+      // add-track flow skipped that step (wizardResult == null — e.g. a track
+      // created without configuring chazara), fall back to a לימוד-only
+      // ("no review") configuration. Every track MUST carry at least the
+      // primary learning stage: the scheduler's projection does
+      // `if (stages.isEmpty) continue;`, so a stage-less track is skipped
+      // entirely and the dashboard shows "No projection" / 0 due despite a
+      // valid goal + computed pace. A noReview result seeds ONLY the learn
+      // stage — no chazara rounds — honouring the per-track chazara rule.
+      // applyWizardResult clears existing stages first (clearFirst: true).
+      final wizardResult =
+          result.wizardResult?.wizardResult ??
+          WizardResult(curriculumId: curriculum, choice: WizardChoice.noReview);
+      await _wizardService.applyWizardResult(
+        wizardResult,
+        profileId: profileId,
+        trackId: trackId,
+      );
 
       await _saveStudyDaysLocal(
         profileId: profileId,

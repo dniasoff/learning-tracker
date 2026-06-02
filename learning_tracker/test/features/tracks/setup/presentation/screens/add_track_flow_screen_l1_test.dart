@@ -256,6 +256,15 @@ void main() {
         studyDays: {1: 'study'},
       ),
     );
+    // createTrack now always seeds stages via applyWizardResult (falling back
+    // to a noReview/לימוד-only config when no wizard result is supplied), so
+    // the positional WizardResult arg needs a mocktail fallback.
+    registerFallbackValue(
+      const WizardResult(
+        curriculumId: CurriculumId.mishnayos,
+        choice: WizardChoice.noReview,
+      ),
+    );
   });
 
   setUp(() => SharedPreferences.setMockInitialValues({}));
@@ -1028,8 +1037,16 @@ void main() {
 
       // ignore: deprecated_member_use
       final programRepo = LearningProgramRepository.instance;
-      // wizardResult is null in this test so applyWizardResult is never called.
+      // wizardResult is null, so createTrack now seeds stages via a synthesized
+      // noReview wizard result — stub applyWizardResult so it is a no-op here.
       final wizardSvc = MockLearningProcessWizardService();
+      when(
+        () => wizardSvc.applyWizardResult(
+          any(),
+          profileId: any(named: 'profileId'),
+          trackId: any(named: 'trackId'),
+        ),
+      ).thenAnswer((_) async {});
 
       final svc = TrackCreationService(
         database: db,
@@ -1103,8 +1120,16 @@ void main() {
 
         // ignore: deprecated_member_use
         final programRepo = LearningProgramRepository.instance;
-        // wizardResult is null in this test so applyWizardResult is never called.
+        // wizardResult is null, so createTrack now seeds stages via a
+        // synthesized noReview wizard result — stub it as a no-op here.
         final wizardSvc = MockLearningProcessWizardService();
+        when(
+          () => wizardSvc.applyWizardResult(
+            any(),
+            profileId: any(named: 'profileId'),
+            trackId: any(named: 'trackId'),
+          ),
+        ).thenAnswer((_) async {});
 
         final svc = TrackCreationService(
           database: db,

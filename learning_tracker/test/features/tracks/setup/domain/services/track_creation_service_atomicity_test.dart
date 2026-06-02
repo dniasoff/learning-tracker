@@ -31,6 +31,15 @@ void main() {
     // The B3 back-date tests stub activateForProfile(any(), any()); mocktail
     // needs a fallback for the non-primitive CurriculumId argument.
     registerFallbackValue(CurriculumId.bavli);
+    // createTrack now always seeds stages via applyWizardResult (falling back
+    // to a noReview/לימוד-only config when no wizard result is supplied), so
+    // the positional WizardResult arg needs a mocktail fallback.
+    registerFallbackValue(
+      const WizardResult(
+        curriculumId: CurriculumId.bavli,
+        choice: WizardChoice.noReview,
+      ),
+    );
   });
 
   setUp(() async {
@@ -96,10 +105,19 @@ void main() {
       () => activation.activateForProfile(any(), any()),
     ).thenAnswer((_) async {});
 
+    final wizard = _MockWizard();
+    when(
+      () => wizard.applyWizardResult(
+        any(),
+        profileId: any(named: 'profileId'),
+        trackId: any(named: 'trackId'),
+      ),
+    ).thenAnswer((_) async {});
+
     final service = TrackCreationService(
       database: db,
       activationService: activation,
-      wizardService: _MockWizard(),
+      wizardService: wizard,
       goalRepository: _MockGoalRepo(),
       stageRepository: stageRepo,
     );
@@ -145,10 +163,19 @@ void main() {
       () => activation.activateForProfile(any(), any()),
     ).thenAnswer((_) async {});
 
+    final wizard = _MockWizard();
+    when(
+      () => wizard.applyWizardResult(
+        any(),
+        profileId: any(named: 'profileId'),
+        trackId: any(named: 'trackId'),
+      ),
+    ).thenAnswer((_) async {});
+
     final service = TrackCreationService(
       database: db,
       activationService: activation,
-      wizardService: _MockWizard(),
+      wizardService: wizard,
       goalRepository: _MockGoalRepo(),
       stageRepository: stageRepo,
     );
