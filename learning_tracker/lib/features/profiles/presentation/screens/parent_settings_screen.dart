@@ -33,6 +33,18 @@ final pendingRedemptionsCountProvider = StreamProvider.autoDispose<int>((ref) {
       .map((list) => list.length);
 });
 
+/// Reactive debitable points balance for the active (child / talmid) profile.
+///
+/// Backed by [PointsBalanceDao.watchBalance] so the Adjust Points dialog shows
+/// the live current balance and reflects any adjustment immediately.
+final activeProfilePointsBalanceProvider = StreamProvider.autoDispose<int>((
+  ref,
+) {
+  final db = ref.watch(userDatabaseProvider);
+  final profileId = ref.watch(activeProfileIdProvider);
+  return db.pointsBalanceDao.watchBalance(profileId);
+});
+
 /// Configuration hub shown to a parent when their child profile is active.
 ///
 /// Includes the same profile header as Settings (avatar, name, account email;
@@ -364,6 +376,23 @@ Future<void> _showAdjustPointsDialog(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
+            Consumer(
+              builder: (context, ref, _) {
+                final balance =
+                    ref
+                        .watch(activeProfilePointsBalanceProvider)
+                        .asData
+                        ?.value ??
+                    0;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 16),
+                  child: Text(
+                    l10n.parentPointsAdjustCurrentBalance(balance),
+                    style: Theme.of(ctx).textTheme.bodyMedium,
+                  ),
+                );
+              },
+            ),
             SegmentedButton<bool>(
               segments: [
                 ButtonSegment(

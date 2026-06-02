@@ -40,9 +40,23 @@ class _PinFlowScreenState extends ConsumerState<PinFlowScreen> {
   @override
   void initState() {
     super.initState();
-    // Reset controller state whenever the screen first mounts so that
-    // switching between modes doesn't carry stale step state.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
+    // Reset controller state whenever the screen first mounts so that a
+    // re-pushed screen doesn't carry stale step/digit state from a previous
+    // session. The controller is keepAlive: true, so without this the next
+    // mount would inherit the prior `digits` — and if those were already at the
+    // 4-digit cap, the `digits.length >= 4` guard in appendDigit would swallow
+    // every keypress, freezing the keypad until a force-stop.
+    //
+    // The reset is scheduled as a microtask rather than a postFrameCallback:
+    //  * Riverpod forbids mutating a provider synchronously inside initState
+    //    (it would fire "modify a provider while the widget tree is building"),
+    //    so it must be deferred.
+    //  * A microtask drains at the end of the current event-loop turn — after
+    //    this build completes but BEFORE the next frame and, critically, before
+    //    any user gesture (a keypress is a separate event-loop turn). So the
+    //    reset is guaranteed to run before the user's first digit, deterministly
+    //    closing the race that a postFrameCallback left open.
+    Future.microtask(() {
       if (!mounted) return;
       ref.read(pinFlowControllerProvider.notifier).reset(widget.mode);
     });

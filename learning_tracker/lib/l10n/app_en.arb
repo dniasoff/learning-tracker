@@ -1958,6 +1958,10 @@
   "parentPointsAdjustNoteHint": "Reason (optional)",
   "parentPointsAdjustConfirm": "Apply",
   "parentPointsAdjustAppliedSnackbar": "Balance updated.",
+  "parentPointsAdjustCurrentBalance": "Current balance: {count} pts",
+  "@parentPointsAdjustCurrentBalance": {
+    "placeholders": { "count": { "type": "int" } }
+  },
 
   "profileTypeChild": "Child",
   "profileTypeAdult": "Adult",

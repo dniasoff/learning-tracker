@@ -3434,6 +3434,11 @@ class AppLocalizationsHe extends AppLocalizations {
   String get parentPointsAdjustAppliedSnackbar => 'היתרה עודכנה.';
 
   @override
+  String parentPointsAdjustCurrentBalance(int count) {
+    return 'יתרה נוכחית: $count נק׳';
+  }
+
+  @override
   String get profileTypeChild => 'ילד';
 
   @override

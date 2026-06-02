@@ -1173,11 +1173,13 @@ void main() {
     });
   });
 
-  // ── R3-1: tutor session overrides dashboardUserMode to adult ─────────────
-  //
-  // Product rule: a tutor ALWAYS sees the adult/management view of the child —
-  // never child-mode gamification UI — regardless of the tutored profile's own
-  // mode value in the database.
+  // ── R3-1 (UPDATED 2026-06-02): tutor dashboard follows the tutored profile's
+  // mode — a tutor viewing a CHILD sees the child's view (incl. points/rewards),
+  // because "a tutor sees everything the child sees" (owner ruling). Parent/
+  // management access is gated separately by route + PIN guards, not by
+  // dashboardUserMode, so showing child gamification does not remove management.
+  // (Supersedes the original R3-1 "tutor always adult" rule, which wrongly hid
+  // the child's points from the tutor.)
 
   group('dashboardUserModeProvider — tutor session (R3-1)', () {
     /// Returns a [TutoredProfileSelection] stub suitable for overriding the
@@ -1191,8 +1193,8 @@ void main() {
           permissions: TutorPermissions(),
         );
 
-    test('returns ProfileMode.adult when tutor session is active '
-        'and the tutored profile is a child', () async {
+    test('returns ProfileMode.child when tutor session is active '
+        'and the tutored profile is a child (sees the child view)', () async {
       // Seed a child profile (id=2) that the tutor is viewing.
       await _seedChildProfile(db); // id=2, mode='child'
 
@@ -1216,10 +1218,10 @@ void main() {
       final mode = await container.read(dashboardUserModeProvider.future);
       expect(
         mode,
-        ProfileMode.adult,
+        ProfileMode.child,
         reason:
-            'R3-1: tutor must always see adult/management view, '
-            'never child-mode gamification',
+            'R3-1 (updated): tutor viewing a child sees the child view '
+            '(incl. points); management is route/PIN-gated, not mode-gated',
       );
     });
 

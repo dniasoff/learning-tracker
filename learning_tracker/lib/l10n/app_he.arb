@@ -1933,6 +1933,10 @@
   "parentPointsAdjustNoteHint": "סיבה (אופציונלי)",
   "parentPointsAdjustConfirm": "החל",
   "parentPointsAdjustAppliedSnackbar": "היתרה עודכנה.",
+  "parentPointsAdjustCurrentBalance": "יתרה נוכחית: {count} נק׳",
+  "@parentPointsAdjustCurrentBalance": {
+    "placeholders": { "count": { "type": "int" } }
+  },
 
   "profileTypeChild": "ילד",
   "profileTypeAdult": "מבוגר",

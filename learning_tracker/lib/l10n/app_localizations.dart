@@ -6041,6 +6041,12 @@ abstract class AppLocalizations {
   /// **'Balance updated.'**
   String get parentPointsAdjustAppliedSnackbar;
 
+  /// No description provided for @parentPointsAdjustCurrentBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'Current balance: {count} pts'**
+  String parentPointsAdjustCurrentBalance(int count);
+
   /// No description provided for @profileTypeChild.
   ///
   /// In en, this message translates to:

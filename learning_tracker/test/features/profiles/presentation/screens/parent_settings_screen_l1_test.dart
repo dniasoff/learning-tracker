@@ -803,6 +803,50 @@ void main() {
     await db.close();
   });
 
+  // ── Bug 2: Adjust Points dialog shows the child's current balance ──────────
+  //
+  // Regression: the dialog previously showed only Add/Deduct + Amount + Reason,
+  // with no indication of how many points the child currently has. It must now
+  // surface a "Current balance: N pts" line read from the points balance DAO.
+
+  testWidgets('Adjust Points: dialog shows the current balance', (
+    tester,
+  ) async {
+    _useTallViewport(tester);
+    final db = inMemoryDb();
+    await seedProfile(db);
+    await db.pointsBalanceDao.parentAdjust(1, 70);
+
+    await tester.pumpWidget(
+      _buildApp(router: router, tutorPerms: null, db: db),
+    );
+    await openAdjustPointsDialog(tester);
+
+    expect(find.text('Current balance: 70 pts'), findsOneWidget);
+
+    await _tearDown(tester);
+    await db.close();
+  });
+
+  testWidgets(
+    'Adjust Points: dialog shows zero balance when child has no points',
+    (tester) async {
+      _useTallViewport(tester);
+      final db = inMemoryDb();
+      await seedProfile(db);
+
+      await tester.pumpWidget(
+        _buildApp(router: router, tutorPerms: null, db: db),
+      );
+      await openAdjustPointsDialog(tester);
+
+      expect(find.text('Current balance: 0 pts'), findsOneWidget);
+
+      await _tearDown(tester);
+      await db.close();
+    },
+  );
+
   // ── #33: Pending Prizes subtitle is reactive ──────────────────────────────
   //
   // Regression: the subtitle was hard-wired to pendingRedemptionsEmpty and

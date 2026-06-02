@@ -25,7 +25,6 @@ import 'package:learning_tracker/features/settings/presentation/providers/curric
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/features/tracks/domain/services/track_progress_service.dart';
 import 'package:learning_tracker/features/tracks/stages/presentation/providers/stage_providers.dart';
-import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'dashboard_providers.g.dart';
@@ -65,12 +64,17 @@ CrossCurriculumAggregator crossCurriculumAggregator(Ref ref) {
 /// directly. [UserMode] enum has been deleted.
 @riverpod
 Future<ProfileMode> dashboardUserMode(Ref ref) async {
-  // Product rule: a tutor ALWAYS sees the adult/management view of the child.
-  // Check this before reading the profile so child-mode gamification UI is
-  // never shown to a tutor, regardless of the tutored profile's own mode.
-  final tutoredSelection = ref.watch(activeTutoredProfileSelectionProvider);
-  if (tutoredSelection != null) return ProfileMode.adult;
-
+  // This provider gates child-only gamification UI (points, streaks, rewards,
+  // celebrations). Per the tutor product model ("a tutor sees everything the
+  // child sees"), the gating must follow the ACTIVE PROFILE's mode — which in
+  // a tutored session is the synthetic talmid mirror (a child). Resolving via
+  // [activeProfileIdProvider] therefore yields:
+  //   - own adult profile  -> adult (points hidden)
+  //   - own child profile   -> child (points shown)
+  //   - tutored child mirror -> child (talmid's points/rewards shown to tutor)
+  // Management access (parent portal, adjust points) is gated independently by
+  // route/PIN guards, so showing the child's gamification UI here does NOT
+  // grant or revoke any management capability.
   final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
   final profile = await db.profileDao.getProfileById(profileId);

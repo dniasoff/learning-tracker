@@ -49,6 +49,8 @@
 @Tags(['l1', 'profiles', 'pin_flow'])
 library;
 
+import 'dart:async';
+
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -59,6 +61,7 @@ import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/router_provider.dart';
 import 'package:learning_tracker/core/navigation/guards/pin_guard.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/pin_flow_controller.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/screens/pin_flow_screen.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/parent_pin_setup_dialog.dart';
@@ -1102,6 +1105,117 @@ void main() {
           findsNothing,
           reason: 'No plain "parent" profile-type label must appear',
         );
+        await _teardown(tester);
+      },
+    );
+  });
+
+  // ── F. keepAlive remount regression (on-device freeze) ────────────────────
+  //
+  // Repro: PinFlowController is keepAlive: true. A prior session left
+  // digits.length == 4. When the screen is popped and re-pushed, the new mount
+  // inherited those stale 4 digits, so appendDigit hit the `digits.length >= 4`
+  // guard and silently dropped every keypress — the keypad appeared frozen.
+  // The fix resets the controller on mount via a microtask (runs before any
+  // user gesture), so a freshly-mounted screen always starts empty and accepts
+  // input immediately.
+  group('F. keepAlive remount regression', () {
+    testWidgets(
+      'F1: remounting after a 4-digit session starts empty and accepts input',
+      (tester) async {
+        tester.view.physicalSize = const Size(800, 1600);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+
+        final ps = _MockPinService();
+        // verifyProfilePin never resolves (a bare Completer — no pending Timer),
+        // so the first session can sit at the 4-digit cap without the async
+        // cascade clearing the buffer — mirroring the keepAlive carry-over seen
+        // on device.
+        when(
+          () => ps.verifyProfilePin(any(), any()),
+        ).thenAnswer((_) => Completer<bool>().future);
+        final router = _MockStackRouter();
+        final appRouter = _MockAppRouter();
+        _stubRouter(router);
+
+        // A SINGLE container shared across both mounts so the keepAlive
+        // controller's state genuinely survives the remount (auto-dispose
+        // would mask the bug).
+        final container = ProviderContainer(
+          retry: (_, __) => null,
+          overrides: [
+            pinServiceProvider.overrideWithValue(ps),
+            routerProvider.overrideWithValue(appRouter),
+            selectedProfileIdProvider.overrideWith(
+              () => _FixedSelectedProfileId(_kProfileId),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        Widget app(Key key) => UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: StackRouterScope(
+              controller: router,
+              stateHash: 0,
+              child: PinFlowScreen(key: key, mode: PinFlowMode.verify),
+            ),
+          ),
+        );
+
+        // ── First session: fill to the 4-digit cap. ──
+        await tester.pumpWidget(app(const ValueKey('first')));
+        await tester.pump(const Duration(seconds: 1));
+        await _enterPin(tester, '1234');
+        await tester.pump();
+        expect(
+          container.read(pinFlowControllerProvider).digits.length,
+          4,
+          reason: 'Precondition: prior session left a full 4-digit buffer',
+        );
+
+        // ── Pop + re-push: tear the screen down, then mount a fresh one in the
+        //    SAME container (keepAlive controller persists with stale digits).
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump();
+        await tester.pumpWidget(app(const ValueKey('second')));
+        await tester.pump(const Duration(seconds: 1));
+
+        // Integration check: after a remount sharing the same keepAlive
+        // controller, the screen starts with an EMPTY buffer (the stale 4
+        // digits from the prior session were cleared by the mount reset) …
+        //
+        // NB: the precise sub-frame gesture-vs-reset ordering that froze the
+        // keypad on device cannot be reproduced in the widget-test binding —
+        // tester.pump always completes a full frame incl. postFrame callbacks,
+        // so postFrame and microtask resets look identical here. The
+        // deterministic race coverage lives in the controller unit test
+        // (pin_flow_controller_test.dart, "keepAlive stale-digit reset").
+        expect(
+          container.read(pinFlowControllerProvider).digits,
+          isEmpty,
+          reason: 'Re-mounted PIN screen must reset stale digits on mount',
+        );
+
+        // … and the keypad accepts input again (no permanent >=4 block).
+        await _tapDigit(tester, '7');
+        expect(
+          container.read(pinFlowControllerProvider).digits,
+          '7',
+          reason:
+              'Keypress on a re-mounted screen must register '
+              '(no stale >=4 block)',
+        );
+
         await _teardown(tester);
       },
     );

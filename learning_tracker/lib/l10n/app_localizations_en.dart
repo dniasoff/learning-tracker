@@ -3469,6 +3469,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get parentPointsAdjustAppliedSnackbar => 'Balance updated.';
 
   @override
+  String parentPointsAdjustCurrentBalance(int count) {
+    return 'Current balance: $count pts';
+  }
+
+  @override
   String get profileTypeChild => 'Child';
 
   @override

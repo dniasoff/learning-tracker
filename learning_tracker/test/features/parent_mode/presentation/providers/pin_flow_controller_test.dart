@@ -132,6 +132,80 @@ void main() {
     });
   });
 
+  group('PinFlowController — keepAlive stale-digit reset (regression)', () {
+    // Reproduces the on-device freeze: a keepAlive controller retained
+    // digits.length == 4 from a prior session, so on re-mount appendDigit was
+    // blocked by the `digits.length >= 4` guard and the screen appeared frozen.
+    // reset() on mount must synchronously clear digits so input works again.
+    test(
+      'reset() clears stale 4-length digits and appendDigit works immediately',
+      () async {
+        // A verify that never resolves so the first session can sit at 4 digits
+        // without the async cascade clearing them for us.
+        final ps = _MockPinService();
+        when(() => ps.verifyProfilePin(any(), any())).thenAnswer(
+          (_) => Future.delayed(const Duration(days: 1), () => false),
+        );
+
+        final container = _makeContainer(pinService: ps);
+        addTearDown(container.dispose);
+        final ctrl = container.read(pinFlowControllerProvider.notifier);
+
+        // Prior session: fill to 4 digits (busy may be set by the pending
+        // verify, mirroring the real keepAlive carry-over).
+        ctrl.reset(PinFlowMode.verify);
+        _enterDigits(ctrl, '1234');
+        expect(container.read(pinFlowControllerProvider).digits.length, 4);
+
+        // Screen re-mounts -> reset() runs synchronously.
+        ctrl.reset(PinFlowMode.verify);
+        expect(
+          container.read(pinFlowControllerProvider).digits,
+          isEmpty,
+          reason: 'reset must clear stale digits on mount',
+        );
+        expect(
+          container.read(pinFlowControllerProvider).busy,
+          isFalse,
+          reason: 'reset must clear any carried-over busy flag',
+        );
+
+        // Input must be accepted immediately (no >=4 block, no race).
+        ctrl.appendDigit('9');
+        expect(container.read(pinFlowControllerProvider).digits, '9');
+      },
+    );
+
+    test('screen dispose clears digits so the next mount accepts input '
+        'immediately (no >=4 block before the postFrame reset)', () {
+      // Mirrors the screen lifecycle: dispose() calls reset() on the keepAlive
+      // controller, so when the screen is re-pushed the very first keypress
+      // lands on empty digits even before initState's deferred reset fires.
+      final ps = _MockPinService();
+      when(
+        () => ps.verifyProfilePin(any(), any()),
+      ).thenAnswer((_) => Future.delayed(const Duration(days: 1), () => false));
+
+      final container = _makeContainer(pinService: ps);
+      addTearDown(container.dispose);
+
+      // Prior session leaves digits at the 4-cap.
+      final ctrl = container.read(pinFlowControllerProvider.notifier);
+      ctrl.reset(PinFlowMode.verify);
+      _enterDigits(ctrl, '1234');
+      expect(container.read(pinFlowControllerProvider).digits.length, 4);
+
+      // Screen dispose -> controller cleared (what _PinFlowScreenState.dispose
+      // now does via the captured notifier).
+      ctrl.reset(PinFlowMode.verify);
+      expect(container.read(pinFlowControllerProvider).digits, isEmpty);
+
+      // Re-pushed screen: first keypress is accepted (no >=4 block, no race).
+      ctrl.appendDigit('7');
+      expect(container.read(pinFlowControllerProvider).digits, '7');
+    });
+  });
+
   group('PinFlowController.appendDigit / backspace', () {
     test('appendDigit accumulates digits', () {
       final container = _makeContainer(pinService: _MockPinService());
