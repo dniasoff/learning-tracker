@@ -441,6 +441,12 @@ class _AccountTile extends ConsumerWidget {
   /// (and tutoring breaks — the tutor can't read the child's data).
   ///
   /// Flow:
+  ///   0. SILENT-FIRST: try `reauthWithGoogleSilently()` (no UI). If it
+  ///      resolves the cached Google session AND its uid == the target's
+  ///      `firebaseUid`, activate with NO picker. (Limitation: silent only
+  ///      returns the last-authorized Google account, so a cross-account
+  ///      switch to a not-cached account yields null / wrong uid and falls
+  ///      through to the interactive picker below.)
   ///   1. `signInWithGoogle()` → native account picker (one-tap, no password).
   ///   2. Verify the re-authed uid == the target account's `firebaseUid`. If
   ///      the user picked a different Google account, or the uid drifted from a
@@ -461,6 +467,25 @@ class _AccountTile extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final messenger = ScaffoldMessenger.of(context);
     final targetUid = account.firebaseUid;
+
+    // SILENT-FIRST: attempt a no-UI re-auth to the cached Google session. If it
+    // resolves the TARGET account's uid, activate with no picker. A null result
+    // (no cached session) or a uid mismatch (silent resolved a different cached
+    // account) falls through to the interactive picker below — unchanged
+    // behaviour. Silent only ever surfaces the last-authorized Google account,
+    // so cross-account switches to a not-cached account still need the picker.
+    if (targetUid != null) {
+      try {
+        final silentUser = await authRepo.reauthWithGoogleSilently();
+        if (silentUser != null && silentUser.uid == targetUid) {
+          if (!context.mounted) return;
+          await _activateCloudAccountFromLocalData(context, ref);
+          return;
+        }
+      } catch (_) {
+        // Silent attempt failed (never shows UI) → fall through to interactive.
+      }
+    }
 
     try {
       await authRepo.signInWithGoogle();

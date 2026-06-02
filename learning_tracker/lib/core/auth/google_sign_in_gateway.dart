@@ -35,6 +35,20 @@ abstract class GoogleSignInGateway {
   /// inspect that type via its own import.
   Future<GoogleSignInResult> authenticate();
 
+  /// Attempt a SILENT (no-UI) Google sign-in.
+  ///
+  /// Returns a [GoogleSignInResult] if a previously-authorized Google session
+  /// can be resolved without showing any UI, or `null` if no such session is
+  /// available (in which case the caller should fall back to the interactive
+  /// [authenticate]).
+  ///
+  /// Limitation: this resolves the *last-authorized* Google account only
+  /// (`google_sign_in` v7 `attemptLightweightAuthentication`). It will NOT
+  /// silently switch to a different, not-currently-cached Google account — that
+  /// still requires the interactive picker. Never shows UI; never throws for
+  /// the cancel / interrupt / ui-unavailable cases (returns `null` instead).
+  Future<GoogleSignInResult?> authenticateSilently();
+
   /// Sign out from Google. Safe to call when not signed in.
   Future<void> signOut();
 }

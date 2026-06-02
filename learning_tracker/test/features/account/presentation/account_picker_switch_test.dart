@@ -190,6 +190,9 @@ void main() {
       when(
         () => auth.reloadCurrentUser(),
       ).thenAnswer((_) async => auth.currentUser);
+      // Default: no silent session available → the switch falls through to the
+      // interactive picker. Individual silent-path tests override this.
+      when(() => auth.reauthWithGoogleSilently()).thenAnswer((_) async => null);
 
       await registry.addAccount(
         DeviceAccountsCompanion.insert(
@@ -288,6 +291,122 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(Duration.zero);
     });
+
+    // ── Silent-first re-auth (no picker) ─────────────────────────────────
+    testWidgets(
+      'silent re-auth resolves the target uid → activate with NO picker',
+      (tester) async {
+        await seedCloudAccount();
+        final online = _MockInternetConnectionChecker();
+        when(() => online.hasConnection).thenAnswer((_) async => true);
+
+        // Silent re-auth resolves the TARGET account's identity (no UI).
+        when(() => auth.reauthWithGoogleSilently()).thenAnswer((_) async {
+          when(
+            () => auth.currentUser,
+          ).thenReturn(_user(targetUid, targetEmail));
+          return _user(targetUid, targetEmail);
+        });
+
+        await tester.pumpWidget(buildApp(connectivity: online));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 200));
+
+        await tester.tap(find.text('Cloud A'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        // Silent path was attempted and succeeded for the target uid.
+        verify(() => auth.reauthWithGoogleSilently()).called(1);
+        // The interactive picker was NEVER shown.
+        verifyNever(() => auth.signInWithGoogle());
+
+        // Switch landed on the app shell.
+        final replaced = verify(() => router.replaceAll(captureAny())).captured;
+        final routes = (replaced.last as List).cast<PageRouteInfo>();
+        expect(routes.any((r) => r is AppShellRoute), isTrue);
+        expect(routes.any((r) => r is SignInRoute), isFalse);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(Duration.zero);
+      },
+    );
+
+    testWidgets(
+      'silent re-auth returns null → falls back to interactive picker',
+      (tester) async {
+        await seedCloudAccount();
+        final online = _MockInternetConnectionChecker();
+        when(() => online.hasConnection).thenAnswer((_) async => true);
+
+        // No cached silent session.
+        when(
+          () => auth.reauthWithGoogleSilently(),
+        ).thenAnswer((_) async => null);
+        // Interactive picker then resolves the target identity.
+        when(() => auth.signInWithGoogle()).thenAnswer((_) async {
+          when(
+            () => auth.currentUser,
+          ).thenReturn(_user(targetUid, targetEmail));
+        });
+
+        await tester.pumpWidget(buildApp(connectivity: online));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 200));
+
+        await tester.tap(find.text('Cloud A'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        verify(() => auth.reauthWithGoogleSilently()).called(1);
+        // Fell back to the interactive picker.
+        verify(() => auth.signInWithGoogle()).called(1);
+        final replaced = verify(() => router.replaceAll(captureAny())).captured;
+        final routes = (replaced.last as List).cast<PageRouteInfo>();
+        expect(routes.any((r) => r is AppShellRoute), isTrue);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(Duration.zero);
+      },
+    );
+
+    testWidgets(
+      'silent re-auth resolves the WRONG uid → falls back to interactive picker',
+      (tester) async {
+        await seedCloudAccount();
+        final online = _MockInternetConnectionChecker();
+        when(() => online.hasConnection).thenAnswer((_) async => true);
+
+        // Silent resolves a DIFFERENT cached account — must not activate it.
+        when(
+          () => auth.reauthWithGoogleSilently(),
+        ).thenAnswer((_) async => _user('fb-uid-OTHER', 'other@test.cloud'));
+        // Interactive picker then resolves the correct target identity.
+        when(() => auth.signInWithGoogle()).thenAnswer((_) async {
+          when(
+            () => auth.currentUser,
+          ).thenReturn(_user(targetUid, targetEmail));
+        });
+
+        await tester.pumpWidget(buildApp(connectivity: online));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 200));
+
+        await tester.tap(find.text('Cloud A'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        verify(() => auth.reauthWithGoogleSilently()).called(1);
+        // Wrong silent uid → did NOT short-circuit; the picker was shown.
+        verify(() => auth.signInWithGoogle()).called(1);
+        final replaced = verify(() => router.replaceAll(captureAny())).captured;
+        final routes = (replaced.last as List).cast<PageRouteInfo>();
+        expect(routes.any((r) => r is AppShellRoute), isTrue);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(Duration.zero);
+      },
+    );
 
     testWidgets('re-auth user-cancel → graceful local fallback activation', (
       tester,

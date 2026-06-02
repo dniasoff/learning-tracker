@@ -14,6 +14,18 @@ abstract class AuthRepository {
   /// Signs in with Google Sign-In.
   Future<void> signInWithGoogle();
 
+  /// Attempts a SILENT (no-UI) Google re-authentication into Firebase.
+  ///
+  /// Resolves the last-authorized Google session without showing the account
+  /// picker, exchanges its credential into Firebase, and returns the resulting
+  /// [AppUser] — or `null` when no silent session is available (caller should
+  /// then fall back to interactive [signInWithGoogle]).
+  ///
+  /// Limitation: `attemptLightweightAuthentication` only returns the
+  /// *currently-cached* Google account, so switching to a different,
+  /// not-cached account still needs the interactive picker. Never shows UI.
+  Future<AppUser?> reauthWithGoogleSilently();
+
   /// Creates a new account with email, password, and display name.
   Future<void> signUp(String email, String password, String displayName);
 

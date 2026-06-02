@@ -49,6 +49,20 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<AppUser?> reauthWithGoogleSilently() async {
+    // No-UI silent path: resolve the cached Google session, exchange its
+    // idToken into Firebase, and return the resulting user. Returns null when
+    // no silent session is available so the caller can fall back to the
+    // interactive picker. NOTE: only the last-authorized Google account can be
+    // resolved silently — a cross-account switch to a not-cached account will
+    // yield null (or the wrong uid) and require the interactive picker.
+    final result = await _google.authenticateSilently();
+    if (result?.idToken == null) return null;
+    await _auth.signInWithGoogleIdToken(idToken: result!.idToken);
+    return _toAppUserOrNull(_auth.currentUser);
+  }
+
+  @override
   Future<void> signUp(String email, String password, String displayName) async {
     await _auth.createUserWithEmailAndPassword(
       email: email,

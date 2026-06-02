@@ -55,6 +55,8 @@ class _StubAuthRepository implements AuthRepository {
   @override
   Future<void> signInWithGoogle() => throw UnimplementedError();
   @override
+  Future<AppUser?> reauthWithGoogleSilently() => throw UnimplementedError();
+  @override
   Future<void> signUp(String e, String p, String n) =>
       throw UnimplementedError();
   @override

@@ -36,5 +36,20 @@ class GoogleSignInGatewayImpl implements GoogleSignInGateway {
   }
 
   @override
+  Future<GoogleSignInResult?> authenticateSilently() async {
+    await _ensureInitialized();
+    // v7 silent path. `attemptLightweightAuthentication` resolves the
+    // last-authorized Google session WITHOUT any UI, and returns null (rather
+    // than throwing) for canceled / interrupted / ui-unavailable cases.
+    final future = _googleSignIn.attemptLightweightAuthentication();
+    if (future == null) return null;
+    final account = await future;
+    if (account == null) return null;
+    final auth = account.authentication;
+    if (auth.idToken == null) return null;
+    return GoogleSignInResult(idToken: auth.idToken);
+  }
+
+  @override
   Future<void> signOut() => _googleSignIn.signOut();
 }

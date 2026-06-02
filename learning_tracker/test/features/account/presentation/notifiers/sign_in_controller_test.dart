@@ -105,6 +105,9 @@ class _ThrowingAuthRepository implements AuthRepository {
   Future<void> signInWithGoogle() => throw UnimplementedError();
 
   @override
+  Future<AppUser?> reauthWithGoogleSilently() => throw UnimplementedError();
+
+  @override
   Future<void> signOut() async {}
 
   @override

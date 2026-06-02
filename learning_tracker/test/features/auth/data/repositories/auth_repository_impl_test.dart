@@ -126,6 +126,68 @@ void main() {
     );
   });
 
+  group('reauthWithGoogleSilently', () {
+    test('silent session resolves → exchanges id-token and returns the AppUser '
+        '(no interactive authenticate)', () async {
+      when(
+        () => mockGoogle.authenticateSilently(),
+      ).thenAnswer((_) async => const GoogleSignInResult(idToken: 'tok-s'));
+      when(
+        () => mockAuth.signInWithGoogleIdToken(idToken: 'tok-s'),
+      ).thenAnswer((_) async {});
+      when(
+        () => mockAuth.currentUser,
+      ).thenReturn(_sampleUser(uid: 'fb-silent'));
+
+      final user = await repository.reauthWithGoogleSilently();
+
+      expect(user, isNotNull);
+      expect(user!.uid, 'fb-silent');
+      verify(() => mockGoogle.authenticateSilently()).called(1);
+      verify(
+        () => mockAuth.signInWithGoogleIdToken(idToken: 'tok-s'),
+      ).called(1);
+      // Silent path must NEVER fall through to the interactive picker.
+      verifyNever(() => mockGoogle.authenticate());
+    });
+
+    test(
+      'no silent session (null) → returns null, no Firebase exchange',
+      () async {
+        when(
+          () => mockGoogle.authenticateSilently(),
+        ).thenAnswer((_) async => null);
+
+        final user = await repository.reauthWithGoogleSilently();
+
+        expect(user, isNull);
+        verify(() => mockGoogle.authenticateSilently()).called(1);
+        verifyNever(
+          () =>
+              mockAuth.signInWithGoogleIdToken(idToken: any(named: 'idToken')),
+        );
+        verifyNever(() => mockGoogle.authenticate());
+      },
+    );
+
+    test(
+      'silent result with null id-token → returns null, no exchange',
+      () async {
+        when(
+          () => mockGoogle.authenticateSilently(),
+        ).thenAnswer((_) async => const GoogleSignInResult(idToken: null));
+
+        final user = await repository.reauthWithGoogleSilently();
+
+        expect(user, isNull);
+        verifyNever(
+          () =>
+              mockAuth.signInWithGoogleIdToken(idToken: any(named: 'idToken')),
+        );
+      },
+    );
+  });
+
   group('sendSignInLinkToEmail', () {
     test('forwards the email + standard continue-url to the gateway', () async {
       when(
