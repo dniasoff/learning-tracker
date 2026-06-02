@@ -197,6 +197,48 @@ class ProfileSwitcherSheet extends ConsumerWidget {
                   contentPadding: EdgeInsets.zero,
                 ),
               ),
+              // FIX#8: "Skip to Settings" — mirrors the affordance on the full
+              // ProfilePickerScreen. A user with no own profile (or who simply
+              // wants Settings) can reach it directly from the mid-session
+              // switcher sheet. Pop the sheet first, then route to SettingsRoute
+              // (a shell child the ProfileGuard lets through even with no own
+              // profile), via the root navigator so it works regardless of which
+              // surface opened the sheet.
+              Material(
+                color: Colors.transparent,
+                child: ListTile(
+                  key: const Key('switcherSheetSkipToSettings'),
+                  leading: Container(
+                    width: 40,
+                    height: 40,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppTheme.brandBlueSoft,
+                    ),
+                    child: const Icon(
+                      Icons.settings_rounded,
+                      color: AppTheme.brandBlueDeep,
+                      size: 20,
+                    ),
+                  ),
+                  title: Text(
+                    l10n.profilePickerSkipToSettings,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      color: AppTheme.brandBlueDeep,
+                    ),
+                  ),
+                  trailing: const Icon(
+                    Icons.chevron_right_rounded,
+                    color: AppColors.inkMidGrey,
+                  ),
+                  onTap: () {
+                    Navigator.of(context).pop();
+                    unawaited(context.pushRoute(const SettingsRoute()));
+                  },
+                  contentPadding: EdgeInsets.zero,
+                ),
+              ),
             ],
           ),
         ),

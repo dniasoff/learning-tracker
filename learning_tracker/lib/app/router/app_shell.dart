@@ -372,6 +372,20 @@ class ProfileSwitcherBar extends ConsumerWidget {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
     final primary = theme.colorScheme.primary;
+    // Bug 7 (re-fix): the bar previously painted a 6%-alpha translucent
+    // background and relied on the ambient (forced-light) surface showing
+    // through. On pushed sub-routes the route below — or, under a dark device
+    // theme, the system surface — bled through the near-transparent strip,
+    // leaving the dark `primary` ink on a near-black background (measured
+    // 1.29:1 on Track Detail). Paint a fully OPAQUE background and pin the
+    // foreground to a fixed high-contrast ink so the bar is readable on EVERY
+    // route, independent of whatever renders behind it.
+    //   bg  = primary @6% composited over white  → opaque pale blue
+    //   fg  = brandBlueDeep (0xFF002A80) on pale blue ≈ 11:1 (AA/AAA)
+    const barBackground = Color(0xFFF1F3FA); // opaque pale blue
+    const barBorder = Color(0xFFD7DEF0);
+    const barForeground = AppTheme.brandBlueDeep;
+    const barInk = AppTheme.brandInk;
 
     final activeProfileId = ref.watch(activeProfileIdProvider);
     final profiles =
@@ -451,11 +465,9 @@ class ProfileSwitcherBar extends ConsumerWidget {
             showProfileSwitcherSheet(navigatorKey.currentContext ?? context),
         child: Container(
           height: 44,
-          decoration: BoxDecoration(
-            color: primary.withValues(alpha: 0.06),
-            border: Border(
-              bottom: BorderSide(color: primary.withValues(alpha: 0.10)),
-            ),
+          decoration: const BoxDecoration(
+            color: barBackground,
+            border: Border(bottom: BorderSide(color: barBorder)),
           ),
           padding: const EdgeInsets.symmetric(horizontal: 14),
           child: Row(
@@ -466,12 +478,12 @@ class ProfileSwitcherBar extends ConsumerWidget {
                 alignment: Alignment.center,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: primary.withValues(alpha: 0.14),
+                  color: barForeground.withValues(alpha: 0.14),
                 ),
                 child: Text(
                   initial,
-                  style: TextStyle(
-                    color: primary,
+                  style: const TextStyle(
+                    color: barForeground,
                     fontSize: 14,
                     fontWeight: FontWeight.w800,
                   ),
@@ -484,6 +496,7 @@ class ProfileSwitcherBar extends ConsumerWidget {
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.titleSmall?.copyWith(
+                    color: barInk,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -497,8 +510,8 @@ class ProfileSwitcherBar extends ConsumerWidget {
                 ),
                 child: Text(
                   roleBadge,
-                  style: TextStyle(
-                    color: primary,
+                  style: const TextStyle(
+                    color: barForeground,
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.5,
@@ -506,7 +519,11 @@ class ProfileSwitcherBar extends ConsumerWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              Icon(Icons.unfold_more_rounded, size: 20, color: primary),
+              const Icon(
+                Icons.unfold_more_rounded,
+                size: 20,
+                color: barForeground,
+              ),
             ],
           ),
         ),

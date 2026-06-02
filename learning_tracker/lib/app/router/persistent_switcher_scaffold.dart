@@ -111,6 +111,15 @@ class _PersistentSwitcherScaffoldState
     // profile picker, …). Force the LIGHT theme around the bars so they always
     // render on their intended light background with high-contrast ink,
     // matching every other surface.
+    //
+    // Bug 7 (re-fix): the earlier light-theme wrap was NOT enough on its own.
+    // The wrapper container and the bar inside both painted a 6%-alpha
+    // TRANSLUCENT background, so the route below (or, under a dark device theme,
+    // the system surface) bled THROUGH the strip — leaving dark ink on a
+    // near-black background (measured 1.29:1 on Track Detail, 1.00:1 on Parent
+    // Settings). The bar now paints its own OPAQUE background with fixed
+    // high-contrast ink (see [ProfileSwitcherBar]); the status-bar inset band
+    // above it must also be OPAQUE so nothing shows through there either.
     final lightTheme = AppTheme.lightTheme();
     return Material(
       type: MaterialType.transparency,
@@ -123,8 +132,10 @@ class _PersistentSwitcherScaffoldState
           Theme(
             data: lightTheme,
             // Inset below the system status bar, matching the shell's appBar.
+            // Opaque background (Bug 7 re-fix) so the dark route/system surface
+            // never bleeds through the status-bar inset band above the bar.
             child: Container(
-              color: lightTheme.colorScheme.primary.withValues(alpha: 0.06),
+              color: const Color(0xFFF1F3FA),
               padding: EdgeInsets.only(top: topInset),
               child: Column(
                 mainAxisSize: MainAxisSize.min,

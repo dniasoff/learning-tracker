@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:auto_route/auto_route.dart';
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:flutter/material.dart';
@@ -6,6 +8,8 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:learning_tracker/app/router/app_shell.dart'
+    show ProfileSwitcherBar;
 import 'package:learning_tracker/app/router/persistent_switcher_scaffold.dart';
 import 'package:learning_tracker/app/router/router_provider.dart' as rp;
 import 'package:learning_tracker/core/database/user/user_database.dart';
@@ -19,6 +23,7 @@ import 'package:learning_tracker/core/navigation/guards/restore_guard.dart';
 import 'package:learning_tracker/core/navigation/pin_scope.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
@@ -1138,5 +1143,110 @@ void main() {
         await _cleanUpWidgets(tester);
       },
     );
+  });
+
+  // FIX#7 (re-fix): the persistent switcher header must be readable on EVERY
+  // route regardless of the AMBIENT theme. On-device cycle-2 measured dark-on-
+  // dark failures (Track Detail 1.29:1, Parent Settings 1.00:1) because the bar
+  // painted a 6%-alpha TRANSLUCENT background and the dark route/system surface
+  // bled through. The bar now paints a FIXED OPAQUE light background with FIXED
+  // high-contrast ink, independent of inheritance. These tests render the bar
+  // under a forced DARK ambient theme (the worst case) and assert the colours
+  // are the fixed, deterministic, high-contrast values.
+  group('FIX#7 — switcher header has fixed, readable colours', () {
+    // Relative luminance per WCAG; used to assert a real contrast ratio.
+    double luminance(Color c) {
+      // c.r/g/b are already normalised 0..1 doubles in this Flutter version.
+      double channel(double v) => v <= 0.03928
+          ? v / 12.92
+          : math.pow((v + 0.055) / 1.055, 2.4) as double;
+
+      return 0.2126 * channel(c.r) +
+          0.7152 * channel(c.g) +
+          0.0722 * channel(c.b);
+    }
+
+    double contrast(Color a, Color b) {
+      final la = luminance(a);
+      final lb = luminance(b);
+      final hi = la > lb ? la : lb;
+      final lo = la > lb ? lb : la;
+      return (hi + 0.05) / (lo + 0.05);
+    }
+
+    Widget barUnderDarkAmbient() => ProviderScope(
+      overrides: [
+        profileListStreamProvider.overrideWith(
+          (ref) => Stream.value(<ProfileModel>[
+            ProfileModel(
+              id: 1,
+              accountId: 1,
+              displayName: 'Talmid1',
+              mode: 'adult',
+              avatarIndex: 0,
+              createdAt: DateTime(2024),
+              updatedAt: DateTime(2024),
+            ),
+          ]),
+        ),
+        activeProfileIdProvider.overrideWith(_FixedActiveProfileId.new),
+        authStateProvider.overrideWithValue(_authOverride),
+      ],
+      child: MaterialApp(
+        locale: const Locale('en'),
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+        // Force a DARK ambient theme: models a device in dark mode, which is
+        // exactly what flipped the bar dark-on-dark before the re-fix.
+        theme: ThemeData.dark(),
+        home: const Scaffold(body: ProfileSwitcherBar()),
+      ),
+    );
+
+    testWidgets(
+      'bar paints an OPAQUE light background even under dark ambient',
+      (tester) async {
+        await tester.pumpWidget(barUnderDarkAmbient());
+        await tester.pump();
+
+        final container = tester.widget<Container>(
+          find
+              .descendant(
+                of: find.byKey(const Key('appShellProfileSwitcherBar')),
+                matching: find.byType(Container),
+              )
+              .first,
+        );
+        final decoration = container.decoration! as BoxDecoration;
+        // Fully opaque (alpha 255) — nothing behind it can bleed through.
+        expect(decoration.color!.a, 1.0);
+        expect(decoration.color, const Color(0xFFF1F3FA));
+      },
+    );
+
+    testWidgets('name + badge ink meets WCAG AA (>= 4.5:1) on the bar bg', (
+      tester,
+    ) async {
+      await tester.pumpWidget(barUnderDarkAmbient());
+      await tester.pump();
+
+      const barBg = Color(0xFFF1F3FA);
+      // The profile name uses brandInk; the badge/affordance use brandBlueDeep.
+      expect(contrast(AppTheme.brandInk, barBg), greaterThanOrEqualTo(4.5));
+      expect(
+        contrast(AppTheme.brandBlueDeep, barBg),
+        greaterThanOrEqualTo(4.5),
+      );
+
+      // And the name actually renders with the fixed dark ink (not a theme
+      // colour that could resolve light against the bar).
+      final nameText = tester.widget<Text>(find.text('Talmid1'));
+      expect(nameText.style?.color, AppTheme.brandInk);
+    });
   });
 }

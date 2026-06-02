@@ -16,6 +16,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
@@ -103,6 +104,12 @@ class _FixedSelectedProfileId extends SelectedProfileId {
 }
 
 void main() {
+  setUpAll(() {
+    // mocktail needs a concrete fallback for the PageRouteInfo arg used by
+    // StackRouter.push(any()) in the FIX#8 Skip-to-Settings test.
+    registerFallbackValue(const SettingsRoute());
+  });
+
   group('Profile header tap → switcher sheet', () {
     testWidgets('tapping the Settings profile header opens the account sheet', (
       tester,
@@ -210,6 +217,36 @@ void main() {
       // Per-row edit + delete affordances (one each per profile row).
       expect(find.byIcon(Icons.edit_outlined), findsNWidgets(2));
       expect(find.byIcon(Icons.delete_outline_rounded), findsNWidgets(2));
+    });
+
+    testWidgets('FIX#8: exposes a "Skip to Settings" affordance that routes to '
+        'SettingsRoute', (tester) async {
+      final mockRouter = _MockStackRouter();
+      when(() => mockRouter.push(any())).thenAnswer((_) async => null);
+
+      final profiles = [_profile(id: 1, name: 'Avi', mode: 'adult')];
+
+      await tester.pumpWidget(
+        _wrap(
+          profiles: profiles,
+          selectedProfileId: 1,
+          router: mockRouter,
+          child: const ProfileSwitcherSheet(),
+        ),
+      );
+      await tester.pump();
+
+      // The Settings affordance is present (keyed + localized label).
+      final skip = find.byKey(const Key('switcherSheetSkipToSettings'));
+      expect(skip, findsOneWidget);
+      expect(find.text('Skip to Settings'), findsOneWidget);
+
+      await tester.tap(skip);
+      await tester.pump();
+
+      // Routes to the Settings shell tab.
+      final pushed = verify(() => mockRouter.push(captureAny())).captured;
+      expect(pushed.single, isA<SettingsRoute>());
     });
 
     testWidgets(
