@@ -150,6 +150,9 @@ class HebrewTerms {
   /// "Chumash" (one of the five books of Torah) → Hebrew script.
   static const String uiChumash = 'חומש';
 
+  /// "Shabbos" / "Shabbat" (the Sabbath) → Hebrew script.
+  static const String uiShabbos = 'שבת';
+
   // ── Scholar tier / honorific terms ──────────────────────────────────────
 
   /// "Talmid Chochom" (highest scholar tier) → Hebrew script.

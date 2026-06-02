@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/constants/hebrew_terms.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 
@@ -100,6 +101,21 @@ class DomainTermLabels {
   /// "Chumash" (one of the five books of Torah).
   /// ARB en: termChumash  |  he: termChumash
   String get chumash => _useHebrew ? HebrewTerms.uiChumash : 'Chumash';
+
+  /// "Shabbos" / "Shabbat" (the Sabbath).
+  ///
+  /// English-mode spelling is nusach-dependent: Ashkenazi "Shabbos",
+  /// Sephardi "Shabbat". [DomainTermLabels] only holds the Hebrew-Terms
+  /// toggle (not the nusach), so the variant is passed in by the caller —
+  /// resolved from `currentTransliterationVariantProvider` at the call site.
+  /// Hebrew mode is nusach-independent ("שבת").
+  /// ARB en: termShabbos  |  he: termShabbos
+  String shabbos({
+    TransliterationVariant variant = TransliterationVariant.ashkenazi,
+  }) {
+    if (_useHebrew) return HebrewTerms.uiShabbos;
+    return variant == TransliterationVariant.sephardi ? 'Shabbat' : 'Shabbos';
+  }
 
   // ── Scholar tier / honorific ─────────────────────────────────────────────
 

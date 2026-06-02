@@ -122,10 +122,47 @@ class LevelLabels {
   /// "מסכת • Masechta" — for singular inline display.
   String get bilingualSingular => '$he • $en';
 
-  /// Returns [en] or [he] based on [useHebrew].
-  String inLanguage({required bool useHebrew, bool plural = false}) {
+  /// Curated Ashkenazi → Sephardi overrides for English-mode UNIT words.
+  ///
+  /// Most unit words are identical across nuschaos; only these differ. The
+  /// `en`/`enPlural` fields hold the Ashkenazi form (Mishnayos, Masechtos,
+  /// Dafim, Halachos…); when the renderer is in Sephardi mode the word is
+  /// mapped through this table. Words absent here (Daf, Amud, Perek, Pasuk,
+  /// Seder, Siman, Seif, Sefer, Mishnah, Shaar…) are identical in both
+  /// nuschaos and pass through unchanged.
+  static const Map<String, String> _sephardiUnitOverrides = {
+    'Mishnayos': 'Mishnayot',
+    'Masechta': 'Masekhet',
+    'Masechtos': 'Masekhtot',
+    'Dafim': 'Dapim',
+    'Halacha': 'Halakha',
+    'Halachos': 'Halakhot',
+    'Seforim': 'Sefarim',
+    'Seferim': 'Sefarim',
+  };
+
+  /// Maps an Ashkenazi English unit word to its Sephardi form, falling back
+  /// to the Ashkenazi form when no override exists.
+  static String _toSephardi(String ashkenazi) =>
+      _sephardiUnitOverrides[ashkenazi] ?? ashkenazi;
+
+  /// Returns the localized unit word for [useHebrew] / [variant].
+  ///
+  /// When [useHebrew] is true the [variant] is irrelevant (Hebrew script is
+  /// nusach-independent here). In English mode [variant] selects the
+  /// transliteration dialect: [TransliterationVariant.ashkenazi] (default)
+  /// returns the bare `en`/`enPlural`; [TransliterationVariant.sephardi] maps
+  /// it through [_sephardiUnitOverrides].
+  String inLanguage({
+    required bool useHebrew,
+    bool plural = false,
+    TransliterationVariant variant = TransliterationVariant.ashkenazi,
+  }) {
     if (useHebrew) return plural ? hePlural : he;
-    return plural ? enPlural : en;
+    final ashkenazi = plural ? enPlural : en;
+    return variant == TransliterationVariant.sephardi
+        ? _toSephardi(ashkenazi)
+        : ashkenazi;
   }
 }
 
@@ -681,21 +718,27 @@ class CurriculumLabels {
   }
 
   /// Toggle-aware variant of [primaryUnitLabelPlural].
-  static String primaryUnitLabel(CurriculumId id, {required bool useHebrew}) {
+  static String primaryUnitLabel(
+    CurriculumId id, {
+    required bool useHebrew,
+    TransliterationVariant variant = TransliterationVariant.ashkenazi,
+  }) {
     return switch (id) {
       CurriculumId.bavli => level(
         id,
         3,
-      ).inLanguage(useHebrew: useHebrew, plural: true),
+      ).inLanguage(useHebrew: useHebrew, plural: true, variant: variant),
       CurriculumId.yerushalmi => level(
         id,
         2,
-      ).inLanguage(useHebrew: useHebrew, plural: true),
+      ).inLanguage(useHebrew: useHebrew, plural: true, variant: variant),
       CurriculumId.chumash => level(
         id,
         2,
-      ).inLanguage(useHebrew: useHebrew, plural: true),
-      _ => leaf(id).inLanguage(useHebrew: useHebrew, plural: true),
+      ).inLanguage(useHebrew: useHebrew, plural: true, variant: variant),
+      _ => leaf(
+        id,
+      ).inLanguage(useHebrew: useHebrew, plural: true, variant: variant),
     };
   }
 
@@ -716,6 +759,7 @@ class CurriculumLabels {
   static String containerCountLabel(
     CurriculumId id, {
     required bool useHebrew,
+    TransliterationVariant variant = TransliterationVariant.ashkenazi,
   }) {
     return switch (id) {
       CurriculumId.yerushalmi ||
@@ -723,13 +767,44 @@ class CurriculumLabels {
       CurriculumId.mishnehTorah => level(
         id,
         1,
-      ).inLanguage(useHebrew: useHebrew, plural: true),
+      ).inLanguage(useHebrew: useHebrew, plural: true, variant: variant),
       CurriculumId.mishnayos || CurriculumId.bavli => level(
         id,
         2,
-      ).inLanguage(useHebrew: useHebrew, plural: true),
+      ).inLanguage(useHebrew: useHebrew, plural: true, variant: variant),
       _ => useHebrew ? 'חלקים' : 'Sections',
     };
+  }
+
+  /// Variant-aware rendered level WORD for one 1-indexed [level].
+  ///
+  /// Returns the localized unit word (e.g. "Masechtos" / "Masekhtot" /
+  /// "מסכתות") for the scope screen and other callers that need a single
+  /// level word honouring both the Hebrew Terms toggle and the nusach.
+  static String levelLabel(
+    CurriculumId id,
+    int level, {
+    required bool useHebrew,
+    TransliterationVariant variant = TransliterationVariant.ashkenazi,
+    bool plural = false,
+  }) {
+    return CurriculumLabels.level(
+      id,
+      level,
+    ).inLanguage(useHebrew: useHebrew, plural: plural, variant: variant);
+  }
+
+  /// Variant-aware per-level singular words (top → leaf). The nusach-aware
+  /// companion to [labelsEn] / [labelsHe] for callers (e.g. the scope screen)
+  /// that need the full ordered list rendered for the current toggle + nusach.
+  static List<String> labelsForVariant(
+    CurriculumId id, {
+    required bool useHebrew,
+    required TransliterationVariant variant,
+  }) {
+    return _levels[id]!
+        .map((l) => l.inLanguage(useHebrew: useHebrew, variant: variant))
+        .toList();
   }
 
   /// Plural label for the level-1 reorder section ("סדרים" in Hebrew

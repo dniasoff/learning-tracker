@@ -63,13 +63,13 @@ class CurriculumLabelRenderer {
                 variant: transliterationVariant,
               );
         return labels.prefixLabelInDisplay
-            ? '${labels.inLanguage(useHebrew: useHebrew)} $name'
+            ? '${labels.inLanguage(useHebrew: useHebrew, variant: transliterationVariant)} $name'
             : name;
 
       case LevelValueKind.ordinal:
         final localizedValue = _localizeOrdinalValue(rawValue, useHebrew);
         return labels.prefixLabelInDisplay
-            ? '${labels.inLanguage(useHebrew: useHebrew)} $localizedValue'
+            ? '${labels.inLanguage(useHebrew: useHebrew, variant: transliterationVariant)} $localizedValue'
             : localizedValue;
     }
   }
