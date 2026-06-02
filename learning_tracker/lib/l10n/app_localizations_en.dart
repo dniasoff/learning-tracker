@@ -441,15 +441,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get joinCalendarProgram => 'Join a Calendar Program';
 
   @override
-  String get customTrack => 'Custom Track';
-
-  @override
   String get joinCalendarDesc =>
       'Follow a daily learning schedule like Daf Yomi';
-
-  @override
-  String get customTrackDesc =>
-      'Create your own learning plan at your own pace';
 
   @override
   String get availablePrograms => 'Available Programs';
@@ -1052,6 +1045,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profilePickerTalmidProfiles => 'TALMID PROFILES';
 
   @override
+  String get profilePickerSkipToSettings => 'Skip to Settings';
+
+  @override
   String get profilePickerTutoredChildren => 'TUTORED CHILDREN';
 
   @override
@@ -1083,6 +1079,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get tutorModeIndicator => 'Tutor mode';
+
+  @override
+  String tutorModeIndicatorNamed(String name) {
+    return 'Tutor mode · $name';
+  }
 
   @override
   String get tutorModeExit => 'Exit';
@@ -1230,6 +1231,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get manageTracksForChildSubtitle =>
       'Add, edit, or archive your child\'s tracks';
+
+  @override
+  String get manageChildLearningSubtitle =>
+      'Manage tracks, points, rewards, and goals';
 
   @override
   String get pointConfiguration => 'Point Configuration';
@@ -3612,22 +3617,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String inviteTutorSentSnackbar(String email) {
     return 'Invite sent to $email!';
   }
-
-  @override
-  String get inviteTutorLinkCopied => 'Link copied to clipboard!';
-
-  @override
-  String get inviteTutorShareLinkHeading => 'Share link (backup delivery)';
-
-  @override
-  String get inviteTutorShareLinkBody =>
-      'If the email is not received, share this link directly with the tutor.';
-
-  @override
-  String get inviteTutorCopyLinkTooltip => 'Copy link';
-
-  @override
-  String get inviteTutorCopyShareLink => 'Copy share link';
 
   @override
   String get manageGrantsAppBarTitle => 'My Tutoring Grants';

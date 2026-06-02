@@ -1,5 +1,4 @@
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/features/progress/domain/models/journey_view_model.dart';
 import 'package:test/test.dart';
 
@@ -33,7 +32,6 @@ void main() {
                 entryScope: 'masechta',
                 entryKey: 'Berakhot',
                 parentL1Key: 'Zeraim',
-                trackType: TrackType.personal,
                 completedAt: DateTime(2026, 1, 1),
                 completionNumber: 1,
                 isManual: false,
@@ -43,7 +41,6 @@ void main() {
                 entryScope: 'masechta',
                 entryKey: 'Berakhot',
                 parentL1Key: 'Zeraim',
-                trackType: TrackType.personal,
                 completedAt: DateTime(2026, 2, 1),
                 completionNumber: 2,
                 isManual: false,
@@ -172,7 +169,6 @@ void main() {
         entryScope: 'masechta',
         entryKey: 'Shabbat',
         parentL1Key: 'Moed',
-        trackType: TrackType.personal,
         completedAt: DateTime(2026, 3, 15),
         completionNumber: 1,
         isManual: true,
@@ -182,7 +178,6 @@ void main() {
       expect(completion.entryScope, 'masechta');
       expect(completion.entryKey, 'Shabbat');
       expect(completion.parentL1Key, 'Moed');
-      expect(completion.trackType, TrackType.personal);
       expect(completion.isManual, isTrue);
       expect(completion.completionNumber, 1);
     });
@@ -193,7 +188,6 @@ void main() {
         entryScope: 'masechta',
         entryKey: 'Berakhot',
         parentL1Key: 'Zeraim',
-        trackType: TrackType.personal,
         completedAt: DateTime(2026, 1, 1),
         completionNumber: 1,
         isManual: false,
@@ -203,7 +197,6 @@ void main() {
         entryScope: 'masechta',
         entryKey: 'Berakhot',
         parentL1Key: 'Zeraim',
-        trackType: TrackType.personal,
         completedAt: DateTime(2026, 1, 1),
         completionNumber: 1,
         isManual: false,
@@ -216,7 +209,6 @@ void main() {
         unitIdentifier: 'Zeraim',
         entryScope: 'seder',
         entryKey: 'Zeraim',
-        trackType: TrackType.personal,
         completedAt: DateTime(2026, 1, 1),
         completionNumber: 1,
         isManual: false,

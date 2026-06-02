@@ -4,7 +4,6 @@ import 'package:learning_tracker/core/database/daos/completion_dao.dart'
     show Completion;
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/learning/domain/entities/bookmark.dart';
@@ -93,7 +92,6 @@ void main() {
       ),
     );
     registerFallbackValue(CurriculumId.mishnayos);
-    registerFallbackValue(TrackType.personal);
   });
 
   setUp(() {
@@ -229,7 +227,6 @@ void main() {
       when(
         () => bookmarkRepo.setBookmark(
           curriculumId: any(named: 'curriculumId'),
-          trackType: any(named: 'trackType'),
           sefariaRef: any(named: 'sefariaRef'),
         ),
       ).thenAnswer((_) async => _fakeBookmarkEntity());
@@ -262,7 +259,6 @@ void main() {
       when(
         () => bookmarkRepo.setBookmark(
           curriculumId: any(named: 'curriculumId'),
-          trackType: any(named: 'trackType'),
           sefariaRef: any(named: 'sefariaRef'),
         ),
       ).thenAnswer((_) async => _fakeBookmarkEntity());
@@ -278,7 +274,6 @@ void main() {
       verify(
         () => bookmarkRepo.setBookmark(
           curriculumId: curriculum,
-          trackType: TrackType.personal,
           sefariaRef: 'ref_2',
         ),
       ).called(1);
@@ -306,7 +301,6 @@ void main() {
       verifyNever(
         () => bookmarkRepo.setBookmark(
           curriculumId: any(named: 'curriculumId'),
-          trackType: any(named: 'trackType'),
           sefariaRef: any(named: 'sefariaRef'),
         ),
       );
@@ -355,7 +349,6 @@ void main() {
         when(
           () => bookmarkRepo.setBookmark(
             curriculumId: any(named: 'curriculumId'),
-            trackType: any(named: 'trackType'),
             sefariaRef: any(named: 'sefariaRef'),
           ),
         ).thenAnswer((_) async => _fakeBookmarkEntity());
@@ -405,7 +398,6 @@ void main() {
       when(
         () => bookmarkRepo.setBookmark(
           curriculumId: any(named: 'curriculumId'),
-          trackType: any(named: 'trackType'),
           sefariaRef: any(named: 'sefariaRef'),
         ),
       ).thenAnswer((_) async => _fakeBookmarkEntity());
@@ -453,7 +445,6 @@ void main() {
         when(
           () => bookmarkRepo.setBookmark(
             curriculumId: any(named: 'curriculumId'),
-            trackType: any(named: 'trackType'),
             sefariaRef: any(named: 'sefariaRef'),
           ),
         ).thenAnswer((_) async => _fakeBookmarkEntity());
@@ -488,7 +479,6 @@ void main() {
         when(
           () => bookmarkRepo.setBookmark(
             curriculumId: any(named: 'curriculumId'),
-            trackType: any(named: 'trackType'),
             sefariaRef: any(named: 'sefariaRef'),
           ),
         ).thenAnswer((_) async => _fakeBookmarkEntity());
@@ -538,7 +528,6 @@ void main() {
         when(
           () => bookmarkRepo.setBookmark(
             curriculumId: any(named: 'curriculumId'),
-            trackType: any(named: 'trackType'),
             sefariaRef: any(named: 'sefariaRef'),
           ),
         ).thenAnswer((_) async => _fakeBookmarkEntity());
@@ -583,7 +572,6 @@ Completion _fakeCompletion(String ref) {
 BookmarkEntity _fakeBookmarkEntity() {
   return BookmarkEntity(
     curriculumId: CurriculumId.mishnayos,
-    trackType: TrackType.personal,
     sefariaRef: 'ref',
     updatedAt: DateTime.now(),
   );

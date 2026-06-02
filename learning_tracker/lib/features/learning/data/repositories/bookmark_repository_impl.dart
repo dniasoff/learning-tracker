@@ -4,7 +4,6 @@ import 'package:drift/drift.dart' as drift;
 import 'package:learning_tracker/core/content/content_index.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
@@ -17,9 +16,9 @@ import 'package:learning_tracker/features/learning/domain/repositories/bookmark_
 /// Scoped to a single profile so bookmarks on the same curriculum+track
 /// are independent across profiles on the account.
 ///
-/// Schema v1 (DNI-322): Bookmarks now reference curriculumTracks by trackId
-/// (integer FK) rather than trackType (TEXT). The [_resolveTrackId] helper
-/// looks up the track row when only a TrackType enum is available.
+/// Schema v1 (DNI-322): Bookmarks reference curriculumTracks by trackId
+/// (integer FK). The [_resolveTrackId] helper looks up the single active track
+/// row for the curriculum + profile.
 ///
 /// Story 26.14 (DNI-357): accepts an optional [ContentIndex] for O(1)
 /// prev/next leaf lookups in [advanceBookmark] and [initializeBookmark],
@@ -50,13 +49,10 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
        _profileId = profileId,
        _contentIndex = contentIndex;
 
-  /// Resolve the integer track ID for a (curriculumId, trackType) pair
-  /// scoped to [_profileId]. Returns null if no matching track exists.
-  Future<int?> _resolveTrackId(
-    CurriculumId curriculumId,
-    TrackType trackType,
-  ) async {
-    // W3.22: trackType dropped — one active track per curriculum per profile.
+  /// Resolve the integer track ID for [curriculumId] scoped to [_profileId].
+  /// Returns null if no matching track exists. One active track per curriculum
+  /// per profile.
+  Future<int?> _resolveTrackId(CurriculumId curriculumId) async {
     final tracks = await _database.trackDao.getActiveTracks(curriculumId);
     final match = tracks.where((t) => t.profileId == _profileId).firstOrNull;
     return match?.id;
@@ -65,9 +61,8 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
   @override
   Future<BookmarkEntity?> getBookmark({
     required CurriculumId curriculumId,
-    required TrackType trackType,
   }) async {
-    final trackId = await _resolveTrackId(curriculumId, trackType);
+    final trackId = await _resolveTrackId(curriculumId);
     if (trackId == null) return null;
 
     final bookmark = await _database.bookmarkDao
@@ -79,21 +74,20 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
 
     if (bookmark == null) return null;
 
-    return _bookmarkFromDb(bookmark, trackType);
+    return _bookmarkFromDb(bookmark);
   }
 
   @override
   Future<BookmarkEntity> setBookmark({
     required CurriculumId curriculumId,
-    required TrackType trackType,
     required String sefariaRef,
   }) async {
     final now = DateTimeFactory.nowUtc(); // P5: UTC timestamps
 
-    final trackId = await _resolveTrackId(curriculumId, trackType);
+    final trackId = await _resolveTrackId(curriculumId);
     if (trackId == null) {
       throw StateError(
-        'No active track found for $curriculumId / $trackType / profile $_profileId',
+        'No active track found for $curriculumId / profile $_profileId',
       );
     }
 
@@ -120,7 +114,6 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
 
       bookmark = BookmarkEntity(
         curriculumId: curriculumId,
-        trackType: trackType,
         sefariaRef: sefariaRef,
         updatedAt: now,
       );
@@ -137,7 +130,6 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
 
       bookmark = BookmarkEntity(
         curriculumId: curriculumId,
-        trackType: trackType,
         sefariaRef: sefariaRef,
         updatedAt: now,
       );
@@ -152,10 +144,9 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
   @override
   Future<void> advanceBookmark({
     required CurriculumId curriculumId,
-    required TrackType trackType,
     required String completedSefariaRef,
   }) async {
-    final trackId = await _resolveTrackId(curriculumId, trackType);
+    final trackId = await _resolveTrackId(curriculumId);
     if (trackId == null) return;
 
     final bookmark = await _database.bookmarkDao
@@ -175,7 +166,6 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
       if (nextSefariaRef != null) {
         await setBookmark(
           curriculumId: curriculumId,
-          trackType: trackType,
           sefariaRef: nextSefariaRef,
         );
       }
@@ -189,7 +179,6 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
       if (nextSefariaRef != null) {
         await setBookmark(
           curriculumId: curriculumId,
-          trackType: trackType,
           sefariaRef: nextSefariaRef,
         );
       }
@@ -200,7 +189,6 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
   @override
   Future<BookmarkEntity> initializeBookmark({
     required CurriculumId curriculumId,
-    required TrackType trackType,
   }) async {
     // Get the first item in learning order
     final firstItemId = await _getFirstItemId(curriculumId: curriculumId);
@@ -213,7 +201,6 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
 
     return await setBookmark(
       curriculumId: curriculumId,
-      trackType: trackType,
       sefariaRef: firstItemId,
     );
   }
@@ -323,10 +310,7 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
   }
 
   /// Convert database model to domain entity.
-  ///
-  /// Since the Bookmark row no longer stores trackType as text, the caller
-  /// must supply the [TrackType] that was used to look up the bookmark.
-  BookmarkEntity _bookmarkFromDb(Bookmark bookmark, TrackType trackType) {
+  BookmarkEntity _bookmarkFromDb(Bookmark bookmark) {
     return BookmarkEntity(
       curriculumId: CurriculumId.values.firstWhere(
         (c) => c.storageKey == bookmark.curriculumId,
@@ -334,7 +318,6 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
           'Unknown curriculumId: ${bookmark.curriculumId}',
         ),
       ),
-      trackType: trackType,
       sefariaRef: bookmark.sefariaRef,
       updatedAt: bookmark.updatedAt,
     );
@@ -348,17 +331,11 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
     final remote = BookmarkEntity.fromFirestore(remoteData);
 
     // Get local bookmark
-    final local = await getBookmark(
-      curriculumId: remote.curriculumId,
-      trackType: remote.trackType,
-    );
+    final local = await getBookmark(curriculumId: remote.curriculumId);
 
     if (local == null) {
       // No local bookmark for this profile — need to resolve trackId first.
-      final trackId = await _resolveTrackId(
-        remote.curriculumId,
-        remote.trackType,
-      );
+      final trackId = await _resolveTrackId(remote.curriculumId);
       if (trackId == null) return; // Track not yet set up for this profile
 
       await _database.bookmarkDao.insertBookmark(
@@ -372,10 +349,7 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
       );
     } else {
       if (remote.updatedAt.isAfter(local.updatedAt)) {
-        final trackId = await _resolveTrackId(
-          remote.curriculumId,
-          remote.trackType,
-        );
+        final trackId = await _resolveTrackId(remote.curriculumId);
         if (trackId == null) return;
 
         await _database.bookmarkDao.upsertBookmarkByProfile(

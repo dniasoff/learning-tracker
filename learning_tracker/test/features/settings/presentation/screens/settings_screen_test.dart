@@ -12,14 +12,38 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_pr
     show authRepositoryProvider;
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/learning/data/repositories/track_repository_impl.dart';
+import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/settings_screen.dart';
 import 'package:learning_tracker/features/tracks/domain/services/curriculum_activation_service.dart';
+import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
+import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
+import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
 class MockAuthRepository extends Mock implements AuthRepository {}
+
+/// Pins the active profile id to the talmid's synthetic local mirror (id 99).
+class _MirrorActiveProfileId extends ActiveProfileId {
+  @override
+  int build() => 99;
+}
+
+/// A fixed non-null tutored selection → the screen treats this as a live tutor
+/// session (full parent-equivalent permissions; only live-marking barred).
+class _ActiveTutoredSelection extends ActiveTutoredProfileSelection {
+  @override
+  TutoredProfileSelection? build() => const TutoredProfileSelection(
+    profileId: 'talmid-remote-id',
+    ownerUid: 'owner-uid',
+    grantId: 'grant-id',
+    permissions: TutorPermissions(),
+  );
+}
 
 void main() {
   setUpAll(() {
@@ -46,7 +70,19 @@ void main() {
     await database.close();
   });
 
-  Widget createTestWidget({List<CurriculumId> initialActive = const []}) {
+  Widget createTestWidget({
+    List<CurriculumId> initialActive = const [],
+    bool tutoredSession = false,
+  }) {
+    final talmidMirror = ProfileModel(
+      id: 99,
+      accountId: 1,
+      displayName: 'Kid',
+      mode: 'child',
+      avatarIndex: 0,
+      createdAt: DateTime(2024),
+      updatedAt: DateTime(2024),
+    );
     return FutureBuilder(
       future: Future(() async {
         for (final curriculum in initialActive) {
@@ -82,6 +118,18 @@ void main() {
                 trackRepository: TrackRepositoryImpl(database: database),
               );
             }),
+            if (tutoredSession) ...[
+              activeTutoredProfileSelectionProvider.overrideWith(
+                _ActiveTutoredSelection.new,
+              ),
+              activeProfileIdProvider.overrideWith(_MirrorActiveProfileId.new),
+              activeProfileProvider.overrideWith(
+                (ref) => Future.value(talmidMirror),
+              ),
+              profileListStreamProvider.overrideWith(
+                (ref) => Stream.value(<ProfileModel>[]),
+              ),
+            ],
           ],
           child: const MaterialApp(
             localizationsDelegates: [
@@ -243,5 +291,69 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(Duration.zero);
     });
+  });
+
+  group('Tutored (talmid) session — scope filtering', () {
+    // Bug 12: a tutored session shows ONLY student/profile-scope items and
+    // hides everything tied to the tutor's own account/device.
+    testWidgets('hides the DEVICE section (App Permissions / Sacred Time)', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        createTestWidget(
+          initialActive: [CurriculumId.mishnayos],
+          tutoredSession: true,
+        ),
+      );
+      await pumpUntilSettled(tester);
+
+      await tester.drag(find.byType(ListView), const Offset(0, -5000));
+      await tester.pumpAndSettle();
+
+      // The whole DEVICE section — the tutor's own device/account scope — is
+      // gone: no section header, no App Permissions tile.
+      expect(find.text('DEVICE'), findsNothing);
+      expect(find.text('App Permissions'), findsNothing);
+      // The diagnostic-logs tile (tutor's own account/device) is hidden too.
+      expect(find.text('Send Diagnostic Logs'), findsNothing);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    });
+
+    // Bug 10: a tutor has full parent-equivalent powers — the management hub
+    // entry must advertise the broader scope (tracks, points, rewards, goals),
+    // not tracks only, and route into the parent-management hub.
+    testWidgets(
+      'shows the parent-management hub with the broad-scope subtitle',
+      (tester) async {
+        await tester.pumpWidget(
+          createTestWidget(
+            initialActive: [CurriculumId.mishnayos],
+            tutoredSession: true,
+          ),
+        );
+        await pumpUntilSettled(tester);
+
+        await tester.scrollUntilVisible(
+          find.text('Parent Settings'),
+          300,
+          scrollable: find.byType(Scrollable).first,
+        );
+        expect(find.text('Parent Settings'), findsOneWidget);
+        // Broadened subtitle (not the tracks-only one).
+        expect(
+          find.text('Manage tracks, points, rewards, and goals'),
+          findsOneWidget,
+        );
+        expect(
+          find.text("Add, edit, or archive your child's tracks"),
+          findsNothing,
+        );
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(Duration.zero);
+      },
+    );
   });
 }

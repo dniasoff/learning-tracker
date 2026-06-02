@@ -12,11 +12,9 @@ library;
 import 'package:drift/native.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/learning/data/repositories/track_repository_impl.dart';
-import 'package:learning_tracker/features/learning/domain/repositories/track_repository.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/data/repositories/learning_order_repository_impl.dart';
 import 'package:learning_tracker/features/tracks/whole_curriculum_order/domain/models/learning_order_item.dart';
 import 'package:mocktail/mocktail.dart';
@@ -55,41 +53,7 @@ void main() {
 
         tearDown(() => db.close());
 
-        test('activateTrack pushes curriculum track to sync facade', () async {
-          await db
-              .into(db.curriculumTracks)
-              .insert(
-                CurriculumTracksCompanion.insert(
-                  profileId: 1,
-                  curriculumId: CurriculumId.mishnayos.storageKey,
-                  stateChangedAt: DateTime.utc(2026, 1, 1),
-                  activatedAt: DateTime.utc(2026, 1, 1),
-                ),
-              );
-
-          await repo.activateTrack(CurriculumId.mishnayos, TrackType.personal);
-
-          verify(() => mockFacade.pushCurriculumTrack(any())).called(1);
-        });
-
-        test(
-          'deactivateTrack is a no-op for personal track (guard preserved)',
-          () async {
-            await repo.initializeDefaultTracks(CurriculumId.mishnayos);
-            clearInteractions(mockFacade);
-
-            await expectLater(
-              () => repo.deactivateTrack(
-                CurriculumId.mishnayos,
-                TrackType.personal,
-              ),
-              throwsA(isA<InvalidTrackOperationException>()),
-            );
-            verifyNever(() => mockFacade.pushCurriculumTrack(any()));
-          },
-        );
-
-        test('initializeDefaultTracks pushes personal track', () async {
+        test('initializeDefaultTracks pushes the track', () async {
           await repo.initializeDefaultTracks(CurriculumId.mishnayos);
           verify(() => mockFacade.pushCurriculumTrack(any())).called(1);
         });

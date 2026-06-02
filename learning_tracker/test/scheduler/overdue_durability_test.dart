@@ -9,7 +9,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/sync/initial_sync_state.dart';
 import 'package:learning_tracker/features/scheduler/domain/projection/projection.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -35,7 +34,7 @@ Future<void> _seedCompletion(
       curriculumId: curriculumId,
       sefariaRef: sefariaRef,
       stageId: 1,
-      trackType: TrackType.personal.storageKey,
+      trackType: 'personal',
       trackId: Value(trackId),
       points: const Value(0),
       eventTimestamp: completedAt,

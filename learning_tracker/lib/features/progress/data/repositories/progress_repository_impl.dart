@@ -1,6 +1,5 @@
 import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/features/progress/domain/repositories/progress_repository.dart';
 
 /// Implementation of [ProgressRepository] using Drift database.
@@ -17,25 +16,11 @@ class ProgressRepositoryImpl implements ProgressRepository {
       _profileId = profileId;
 
   @override
-  Future<Map<TrackType, int>> getTrackBreakdown(String curriculumId) async {
-    final rawBreakdown = await _database.completionDao
-        .getTrackBreakdownByProfile(curriculumId, _profileId);
-
-    final result = <TrackType, int>{};
-    for (final trackType in TrackType.values) {
-      result[trackType] = 0;
-    }
-
-    for (final entry in rawBreakdown.entries) {
-      try {
-        final trackType = TrackType.fromStorageKey(entry.key);
-        result[trackType] = entry.value;
-      } on ArgumentError {
-        continue;
-      }
-    }
-
-    return result;
+  Future<Map<String, int>> getTrackBreakdown(String curriculumId) async {
+    return _database.completionDao.getTrackBreakdownByProfile(
+      curriculumId,
+      _profileId,
+    );
   }
 
   @override

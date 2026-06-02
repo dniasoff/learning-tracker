@@ -52,11 +52,10 @@ extension type NaturalKey(String value) implements String {
 
   // ── Track config ────────────────────────────────────────────────────────────
 
-  /// Natural key for a curriculum track: `(curriculumId, trackType)`.
-  factory NaturalKey.forTrackConfig({
-    required String curriculumId,
-    required String trackType,
-  }) => NaturalKey('$curriculumId|$trackType');
+  /// Natural key for a curriculum track: `curriculumId` (one track per
+  /// profile + curriculum).
+  factory NaturalKey.forTrackConfig({required String curriculumId}) =>
+      NaturalKey(curriculumId);
 
   // ── Stage definition ────────────────────────────────────────────────────────
 
@@ -75,11 +74,10 @@ extension type NaturalKey(String value) implements String {
 
   // ── Bookmark ────────────────────────────────────────────────────────────────
 
-  /// Natural key for a bookmark: `(curriculumId, trackType)`.
-  factory NaturalKey.forBookmark({
-    required String curriculumId,
-    required String trackType,
-  }) => NaturalKey('$curriculumId|$trackType');
+  /// Natural key for a bookmark: `curriculumId` (one track per profile +
+  /// curriculum).
+  factory NaturalKey.forBookmark({required String curriculumId}) =>
+      NaturalKey(curriculumId);
 
   // ── Learner profile ─────────────────────────────────────────────────────────
 

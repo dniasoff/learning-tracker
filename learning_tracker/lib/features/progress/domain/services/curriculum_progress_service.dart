@@ -1,5 +1,4 @@
 import 'package:learning_tracker/core/database/daos/completion_dao.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/features/progress/domain/models/curriculum_progress_data.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart'
@@ -235,18 +234,11 @@ class CurriculumProgressService {
       );
     }).toList();
 
-    // Track breakdown
-    final trackBreakdown = <TrackType, int>{};
-    for (final t in TrackType.values) {
-      trackBreakdown[t] = 0;
-    }
+    // Completion count keyed by the internal track storage key (one track per
+    // curriculum, so this is a single-entry map).
+    final trackBreakdown = <String, int>{};
     for (final c in completions) {
-      try {
-        final tt = TrackType.fromStorageKey(c.trackType);
-        trackBreakdown[tt] = (trackBreakdown[tt] ?? 0) + 1;
-      } on ArgumentError {
-        continue;
-      }
+      trackBreakdown[c.trackType] = (trackBreakdown[c.trackType] ?? 0) + 1;
     }
 
     return HierarchyLevelProgress(

@@ -73,7 +73,6 @@ void main() {
         rows: [
           {
             'curriculum_id': 'bavli',
-            'track_type': 'personal',
             'sefaria_ref': 'Berakhot 1',
             'updated_at': _ts.toIso8601String(),
             'synced_at': _syncedAt.toIso8601String(),
@@ -84,12 +83,12 @@ void main() {
       final updatedAt = await store.currentUpdatedAt(
         kind: EntityKind.bookmark,
         profileId: _profileId,
-        naturalKey: 'bavli|personal',
+        naturalKey: 'bavli',
       );
       final syncedAt = await store.currentSyncedAt(
         kind: EntityKind.bookmark,
         profileId: _profileId,
-        naturalKey: 'bavli|personal',
+        naturalKey: 'bavli',
       );
       expect(updatedAt, _ts);
       expect(syncedAt, _syncedAt);

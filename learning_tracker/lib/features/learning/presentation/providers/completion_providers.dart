@@ -1,6 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/analytics/analytics_provider.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/learning/data/repositories/completion_repository_impl.dart';
@@ -19,12 +18,12 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'completion_providers.g.dart';
 
-/// Storage key for the track type (always [TrackType.personal.storageKey]).
-///
-/// W3.22: `trackType` column dropped — all tracks are implicitly 'personal'.
+/// Internal storage key written to the `track_type` column of the completion
+/// event log. There is exactly one track per (profile, curriculum), so this is
+/// a fixed constant — it is never surfaced as a user-facing "track type" label.
 final trackStorageKeyForTrackIdProvider = FutureProvider.autoDispose
     .family<String, int>((ref, trackId) async {
-      return TrackType.personal.storageKey;
+      return 'personal';
     });
 
 /// Provider family to check whether a specific stage is already completed.

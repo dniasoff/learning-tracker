@@ -1,4 +1,5 @@
 import 'package:cloud_functions/cloud_functions.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/onboarding_screen.dart'
@@ -11,11 +12,19 @@ class AccountManagementService {
   AccountManagementService({
     required AuthRepository authRepository,
     required UserDatabase database,
+    FlutterSecureStorage? secureStorage,
   }) : _authRepository = authRepository,
-       _database = database;
+       _database = database,
+       _secureStorage = secureStorage ?? const FlutterSecureStorage();
 
   final AuthRepository _authRepository;
   final UserDatabase _database;
+
+  /// Device-scoped secure storage — holds parent/profile/tutor PIN hashes and
+  /// lockout state. These are NOT in SharedPreferences and survive a
+  /// `prefs.clear()`, so account teardown must wipe them explicitly
+  /// (otherwise an old tutor PIN keeps verifying after a fresh sign-up).
+  final FlutterSecureStorage _secureStorage;
 
   /// Soft sign-out — clears the in-app session so the user sees the
   /// account picker on next launch, but leaves Firebase's cached
@@ -83,12 +92,46 @@ class AccountManagementService {
     //    race-write the profiles back between this call and step 3.
     await _deleteFirestoreUserData(uid);
 
-    // 3. Delete Firebase Auth account
-    await _authRepository.deleteAccount();
+    // 3. Delete Firebase Auth account.
+    //
+    //    This can throw (e.g. `requires-recent-login`, transient network) AFTER
+    //    the cloud/local DB wipe. The deletion overlay treats the account as
+    //    gone regardless and routes the user back to sign-in/sign-up, so if we
+    //    let the throw skip the local-state teardown below, the stale
+    //    onboarding-complete flag and tutor PIN survive into the next sign-up
+    //    (Bug 5 / Bug 6). Run the local teardown in `finally` so it ALWAYS
+    //    happens, then rethrow so the caller still surfaces the auth error.
+    try {
+      await _authRepository.deleteAccount();
+    } finally {
+      // 4. Wipe ALL device-local per-account state. Pre-launch: aggressive
+      //    clearing is safe — nothing here should survive a delete.
+      await clearLocalDeviceState();
+    }
+  }
 
-    // 4. Clear all local preferences (onboarding state, settings, etc.)
+  /// Wipes every piece of device-local per-account state that must NOT survive
+  /// an account deletion or hard sign-out:
+  ///
+  /// - SharedPreferences in full (onboarding-complete flag, onboarding/add-track
+  ///   resume state, last-active-account pointer, selected-profile, cached
+  ///   settings).
+  /// - Secure storage in full (parent/profile/tutor PIN hashes + lockout state)
+  ///   — `prefs.clear()` does not touch secure storage, so an old tutor PIN
+  ///   would otherwise keep verifying after a fresh sign-up (Bug 6).
+  Future<void> clearLocalDeviceState() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
+    // Belt-and-suspenders: even after clear(), make sure the onboarding-complete
+    // flag is explicitly false so a fresh sign-up always routes through the
+    // wizard (Bug 5).
+    await prefs.remove(kOnboardingComplete);
+    try {
+      await _secureStorage.deleteAll();
+    } catch (_) {
+      // Secure storage may be unavailable in some environments (tests without
+      // the platform channel). Swallow so DB/prefs teardown is not undone.
+    }
   }
 
   /// Changes the password for the current email/password user.

@@ -343,7 +343,7 @@ service cloud.firestore {
           allow read: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);
           allow create, update: if isOwner(uid)
             && request.resource.data.keys().hasOnly([
-              'profile_id', 'curriculum_id', 'track_type',
+              'profile_id', 'curriculum_id',
               'content_item_id', 'sefaria_ref', 'stage_id', 'updated_at',
               'synced_at'
             ]);
@@ -377,7 +377,8 @@ service cloud.firestore {
               'curriculumId', 'description', 'target_percent',
               'targetPercent', 'target_date', 'targetDate', 'date_type',
               'dateType', 'goal_type', 'goalType', 'pace_value', 'paceValue',
-              'pace_unit', 'pacePeriod', 'paceGranularity', 'created_at',
+              'pace_unit', 'pacePeriod', 'paceGranularity', 'pace_granularity',
+              'created_at',
               'createdAt', 'updated_at', 'updatedAt', 'synced_at'
             ]);
           allow delete: if false;

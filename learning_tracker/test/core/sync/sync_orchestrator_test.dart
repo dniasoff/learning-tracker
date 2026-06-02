@@ -23,6 +23,7 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/sync/exceptions/firestore_permission_denied_exception.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
+import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 import 'package:learning_tracker/core/sync/merge/merge_router.dart';
 import 'package:learning_tracker/core/sync/pull_pipeline.dart';
 import 'package:learning_tracker/core/sync/sync_orchestrator.dart';
@@ -323,6 +324,46 @@ class _FakeMergeRouter extends MergeRouter {
   }
 }
 
+/// Gateway whose learner_profiles pull returns ONE row (so the merge router is
+/// actually invoked for that kind); every other pull is empty. Used to drive a
+/// single-step merge failure in the Bug-1 resilience test.
+class _LearnerProfileRowGateway extends _FakeGateway {
+  @override
+  Future<List<Map<String, dynamic>>> fetchLearnerProfiles() async {
+    fetchedCollections.add('learner_profiles');
+    return [
+      {
+        'profile_id': 1,
+        'account_id': 999,
+        'display_name': 'Family',
+        'mode': 'adult',
+        'updated_at': '2026-05-15T00:00:00.000Z',
+      },
+    ];
+  }
+}
+
+/// MergeRouter that throws [error] only when dispatching [throwForKind], and
+/// succeeds (continueNext) for every other kind. Mimics a single-row DB error
+/// (e.g. FK 787) confined to one entity kind.
+class _ThrowForKindMergeRouter extends MergeRouter {
+  _ThrowForKindMergeRouter({required this.throwForKind, required this.error})
+    : super(mergers: const {});
+
+  final String throwForKind;
+  final Exception error;
+
+  @override
+  Future<MergeOutcome> dispatch({
+    required int profileId,
+    required String kind,
+    required List<Map<String, dynamic>> rows,
+  }) async {
+    if (kind == throwForKind) throw error;
+    return MergeOutcome.continueNext;
+  }
+}
+
 // ── Test factory ──────────────────────────────────────────────────────────────
 
 const int _testProfileId = 1;
@@ -334,7 +375,7 @@ const int _testProfileId = 1;
 /// [pushAllLocalData] defaults to a no-op. [onFirstSyncComplete] is optional.
 SyncOrchestratorImpl _makeOrchestrator({
   _FakeGateway? gateway,
-  _FakeMergeRouter? mergeRouter,
+  MergeRouter? mergeRouter,
   Future<void> Function()? pushAllLocalData,
   void Function()? onFirstSyncComplete,
 }) {
@@ -407,6 +448,38 @@ void main() {
       expect(emitted, hasLength(2));
       expect(emitted[0], isA<SyncStatusSyncing>());
       expect(emitted[1], isA<SyncStatusError>());
+    });
+
+    test('Bug 1: a single-row merge error during one pull step does NOT reset '
+        'the session — pull still completes with synced', () async {
+      // The learner_profiles page returns a row; the merge router throws an
+      // FK-style error for that one kind (mimicking SqliteException 787 on a
+      // learner_profiles row referencing a missing account). Before the fix
+      // this propagated to the catch block, emitted error, and rethrew —
+      // bouncing the user to the splash. Now the step swallows it and the
+      // pull finishes synced.
+      final gw = _LearnerProfileRowGateway();
+      final mr = _ThrowForKindMergeRouter(
+        throwForKind: EntityKind.learnerProfile,
+        error: Exception('FOREIGN KEY constraint failed (787)'),
+      );
+      final orchestrator = _makeOrchestrator(gateway: gw, mergeRouter: mr);
+
+      final emitted = <SyncStatus>[];
+      final sub = orchestrator.statusStream.listen(emitted.add);
+
+      // Must NOT throw.
+      await orchestrator.pullOnLaunch();
+
+      await Future<void>.value();
+      await sub.cancel();
+
+      expect(emitted.last, isA<SyncStatusSynced>());
+      expect(
+        emitted.whereType<SyncStatusError>(),
+        isEmpty,
+        reason: 'a single bad row must never emit an error status',
+      );
     });
 
     test('emits error with timeout message when TimeoutException', () async {

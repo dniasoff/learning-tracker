@@ -1,14 +1,51 @@
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/domain/services/account_management_service.dart';
+import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
+import 'package:learning_tracker/features/tutoring/domain/services/tutor_pin_service.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../helpers/test_database.dart';
 
 class MockAuthRepository extends Mock implements AuthRepository {}
+
+class MockFlutterSecureStorage extends Mock implements FlutterSecureStorage {}
+
+/// In-memory [FlutterSecureStorage] backed by a Map, including [deleteAll].
+MockFlutterSecureStorage createMockSecureStorage() {
+  final mock = MockFlutterSecureStorage();
+  final store = <String, String>{};
+
+  when(
+    () => mock.write(
+      key: any(named: 'key'),
+      value: any(named: 'value'),
+    ),
+  ).thenAnswer((invocation) async {
+    final key = invocation.namedArguments[#key] as String;
+    final value = invocation.namedArguments[#value] as String?;
+    if (value == null) {
+      store.remove(key);
+    } else {
+      store[key] = value;
+    }
+  });
+  when(() => mock.read(key: any(named: 'key'))).thenAnswer((invocation) async {
+    return store[invocation.namedArguments[#key] as String];
+  });
+  when(() => mock.delete(key: any(named: 'key'))).thenAnswer((
+    invocation,
+  ) async {
+    store.remove(invocation.namedArguments[#key] as String);
+  });
+  when(() => mock.deleteAll()).thenAnswer((_) async => store.clear());
+
+  return mock;
+}
 
 /// Returns a minimal [AppUser] with the given [uid].
 AppUser _makeUser(String uid) => AppUser(
@@ -22,6 +59,7 @@ AppUser _makeUser(String uid) => AppUser(
 void main() {
   late MockAuthRepository mockAuthRepo;
   late UserDatabase db;
+  late MockFlutterSecureStorage secureStorage;
   late AccountManagementService service;
 
   setUp(() {
@@ -29,9 +67,11 @@ void main() {
     SharedPreferences.setMockInitialValues({});
     mockAuthRepo = MockAuthRepository();
     db = createTestDatabase();
+    secureStorage = createMockSecureStorage();
     service = AccountManagementService(
       authRepository: mockAuthRepo,
       database: db,
+      secureStorage: secureStorage,
     );
   });
 
@@ -182,6 +222,74 @@ void main() {
         await service.deleteAccount('test-uid');
 
         verify(() => mockAuthRepo.deleteAccount()).called(1);
+      },
+    );
+
+    // ── Bug 5 regression: onboarding-complete flag must not survive ─────────
+    test(
+      'clears the onboarding-complete flag so a fresh sign-up re-onboards',
+      () async {
+        SharedPreferences.setMockInitialValues({
+          'onboarding_complete': true,
+          'last_active_account_id': 'test-uid',
+          'onboarding_phase': 'profile',
+        });
+
+        await service.deleteAccount('test-uid');
+
+        final prefs = await SharedPreferences.getInstance();
+        expect(
+          prefs.getBool('onboarding_complete') ?? false,
+          isFalse,
+          reason: 'a stale onboarding-complete flag would skip the wizard',
+        );
+        expect(prefs.containsKey('last_active_account_id'), isFalse);
+        expect(prefs.containsKey('onboarding_phase'), isFalse);
+      },
+    );
+
+    // ── Bug 6 regression: tutor PIN must not survive ───────────────────────
+    test('clears the tutor PIN so the old PIN no longer verifies', () async {
+      final pinService = PinService(secureStorage);
+      final tutorPinService = TutorPinService(pinService);
+      await tutorPinService.setTutorPin(profileId: 7, rawPin: '1234');
+      expect(await tutorPinService.hasTutorPin(7), isTrue);
+
+      await service.deleteAccount('test-uid');
+
+      expect(
+        await tutorPinService.hasTutorPin(7),
+        isFalse,
+        reason: 'the tutor PIN must be wiped on account deletion',
+      );
+      expect(
+        await tutorPinService.verifyTutorPin(profileId: 7, rawPin: '1234'),
+        isA<TutorPinIncorrect>(),
+        reason: 'the old PIN must no longer verify after deletion',
+      );
+    });
+
+    // ── Bug 5/6 regression: teardown must run even if auth delete throws ────
+    test(
+      'wipes onboarding flag + tutor PIN even when Firebase Auth delete throws',
+      () async {
+        SharedPreferences.setMockInitialValues({'onboarding_complete': true});
+        when(
+          () => mockAuthRepo.deleteAccount(),
+        ).thenThrow(StateError('requires-recent-login'));
+        final pinService = PinService(secureStorage);
+        final tutorPinService = TutorPinService(pinService);
+        await tutorPinService.setTutorPin(profileId: 7, rawPin: '1234');
+
+        await expectLater(
+          () => service.deleteAccount('test-uid'),
+          throwsA(isA<StateError>()),
+        );
+
+        // Local teardown ran in `finally` despite the auth failure.
+        final prefs = await SharedPreferences.getInstance();
+        expect(prefs.getBool('onboarding_complete') ?? false, isFalse);
+        expect(await tutorPinService.hasTutorPin(7), isFalse);
       },
     );
   });

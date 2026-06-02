@@ -1,6 +1,5 @@
 import 'package:freezed_annotation/freezed_annotation.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 
 part 'journey_view_model.freezed.dart';
 
@@ -67,7 +66,6 @@ abstract class UnitCompletion with _$UnitCompletion {
     required String entryScope,
     required String entryKey,
     String? parentL1Key,
-    required TrackType trackType,
     required DateTime completedAt,
     required int completionNumber,
     required bool isManual,

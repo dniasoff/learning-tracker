@@ -79,7 +79,6 @@ void main() {
         DateTime? syncedAt,
       }) => {
         'curriculum_id': 'bavli',
-        'track_type': 'personal',
         'sefaria_ref': 'Berakhot 1',
         'updated_at': updatedAt.toIso8601String(),
         if (syncedAt != null) 'synced_at': syncedAt.toIso8601String(),
@@ -103,7 +102,7 @@ void main() {
         await store.persistUpdatedAt(
           kind: EntityKind.bookmark,
           profileId: profileId,
-          naturalKey: 'bavli|personal',
+          naturalKey: 'bavli',
           updatedAt: _local,
         );
 
@@ -115,7 +114,7 @@ void main() {
         final after = await store.currentUpdatedAt(
           kind: EntityKind.bookmark,
           profileId: profileId,
-          naturalKey: 'bavli|personal',
+          naturalKey: 'bavli',
         );
         expect(after, _remoteNewer);
       });
@@ -125,7 +124,7 @@ void main() {
         await store.persistUpdatedAt(
           kind: EntityKind.bookmark,
           profileId: profileId,
-          naturalKey: 'bavli|personal',
+          naturalKey: 'bavli',
           updatedAt: _local,
         );
 
@@ -137,7 +136,7 @@ void main() {
         final after = await store.currentUpdatedAt(
           kind: EntityKind.bookmark,
           profileId: profileId,
-          naturalKey: 'bavli|personal',
+          naturalKey: 'bavli',
         );
         expect(after, _local);
       });
@@ -147,7 +146,7 @@ void main() {
         await store.persistUpdatedAt(
           kind: EntityKind.bookmark,
           profileId: profileId,
-          naturalKey: 'bavli|personal',
+          naturalKey: 'bavli',
           updatedAt: _localSkew,
           syncedAt: _localSynced,
         );
@@ -160,7 +159,7 @@ void main() {
         final after = await store.currentUpdatedAt(
           kind: EntityKind.bookmark,
           profileId: profileId,
-          naturalKey: 'bavli|personal',
+          naturalKey: 'bavli',
         );
         expect(after, _remoteSkew);
       });
@@ -170,7 +169,7 @@ void main() {
         await store.persistUpdatedAt(
           kind: EntityKind.bookmark,
           profileId: profileId,
-          naturalKey: 'bavli|personal',
+          naturalKey: 'bavli',
           updatedAt: _localSkew,
           syncedAt: _localSynced,
         );
@@ -183,7 +182,7 @@ void main() {
         final after = await store.currentUpdatedAt(
           kind: EntityKind.bookmark,
           profileId: profileId,
-          naturalKey: 'bavli|personal',
+          naturalKey: 'bavli',
         );
         expect(after, _remoteSkew);
       });

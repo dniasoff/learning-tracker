@@ -1,8 +1,8 @@
 /// LWW merger for bookmark rows.
 ///
-/// Natural key: `(curriculum_id, track_type)`. Remote wins iff its
-/// `updated_at` is strictly newer than local; within ±5 s clock skew the
-/// Firestore server timestamp (`synced_at`) decides.
+/// Natural key: `curriculum_id` (one track per profile + curriculum). Remote
+/// wins iff its `updated_at` is strictly newer than local; within ±5 s clock
+/// skew the Firestore server timestamp (`synced_at`) decides.
 ///
 /// Phase 3: after a successful apply the merger persists the remote
 /// `updated_at` via [MergeStore.persistUpdatedAt] so subsequent pulls
@@ -30,7 +30,7 @@ class BookmarkMerger implements EntityMerger {
       final decoded = _codec.decode(row);
       if (decoded == null) continue; // Malformed row — skip.
 
-      final naturalKey = '${decoded.curriculumId}|${decoded.trackType}';
+      final naturalKey = decoded.curriculumId;
       final localUpdatedAt = await _store.currentUpdatedAt(
         kind: kind,
         profileId: profileId,

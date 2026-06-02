@@ -12,7 +12,6 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/navigation/guards/auth_guard.dart';
@@ -131,7 +130,7 @@ void main() {
           curriculumId: CurriculumId.mishnayos.storageKey,
           sefariaRef: 'Mishnah Berachos 1.1',
           stageId: 1,
-          trackType: TrackType.personal.storageKey,
+          trackType: 'personal',
           trackId: Value(trackId),
           eventTimestamp: DateTime.now(),
           points: const Value(10),
@@ -231,11 +230,6 @@ void main() {
           'chumash',
         ]),
       );
-    });
-
-    test('TrackType has 1 value (v1: personal only)', () {
-      expect(TrackType.values, hasLength(1));
-      expect(TrackType.values.map((t) => t.storageKey), ['personal']);
     });
 
     // WS9.enum: UserMode deleted — ProfileMode is the canonical mode enum.

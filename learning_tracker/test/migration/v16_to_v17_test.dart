@@ -13,7 +13,6 @@ import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 
 import '../helpers/drift_memory.dart';
@@ -114,7 +113,7 @@ void main() {
               curriculumId: CurriculumId.mishnayos.storageKey,
               sefariaRef: 'Berakhot 1:1',
               stageId: 1,
-              trackType: TrackType.personal.storageKey,
+              trackType: 'personal',
               trackId: Value(trackId),
               eventTimestamp: DateTimeFactory.nowUtc(),
             ),
@@ -141,7 +140,7 @@ void main() {
           curriculumId: CurriculumId.mishnayos.storageKey,
           sefariaRef: 'Berakhot 1:1',
           stageId: 1,
-          trackType: TrackType.personal.storageKey,
+          trackType: 'personal',
           trackId: Value(seed.trackId),
           eventTimestamp: DateTimeFactory.nowUtc(),
           // W3.22: derivedFromEvents removed from schema

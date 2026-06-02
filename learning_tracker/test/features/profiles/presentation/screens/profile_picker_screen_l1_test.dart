@@ -506,6 +506,67 @@ void main() {
     await tester.pump(Duration.zero);
   });
 
+  // ── Skip to Settings (Bug 8) ──────────────────────────────────────────────
+
+  testWidgets(
+    'Skip to Settings affordance is shown when there are no own profiles',
+    (tester) async {
+      await tester.pumpWidget(_buildApp(router: router, profiles: []));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text('Skip to Settings'), findsOneWidget);
+      expect(find.byIcon(Icons.settings_rounded), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    },
+  );
+
+  testWidgets('Skip to Settings is also available when own profiles exist', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _buildApp(
+        router: router,
+        profiles: [_adult(name: 'Avi')],
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.text('Skip to Settings'), findsOneWidget);
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(Duration.zero);
+  });
+
+  testWidgets('tapping Skip to Settings routes to SettingsRoute', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_buildApp(router: router, profiles: []));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    await tester.ensureVisible(find.text('Skip to Settings'));
+    await tester.tap(find.text('Skip to Settings'));
+    await tester.pump();
+
+    // The picker pushes a route (SettingsRoute) onto the stack rather than
+    // forcing profile creation.
+    final pushed = verify(
+      () => router.push<Object?>(
+        captureAny(),
+        onFailure: any(named: 'onFailure'),
+      ),
+    ).captured;
+    expect(pushed, isNotEmpty);
+    expect(pushed.first.runtimeType.toString(), 'SettingsRoute');
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(Duration.zero);
+  });
+
   // ── Segmented view: YOUR PROFILES header ─────────────────────────────────
 
   testWidgets(

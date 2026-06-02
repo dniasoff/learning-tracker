@@ -1,4 +1,3 @@
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 
 /// Progress data for an entire curriculum, broken down by hierarchy level.
@@ -33,7 +32,10 @@ class HierarchyLevelProgress {
   final int totalItems;
   final int completedItems;
   final List<StageBreakdownEntry> stageBreakdown;
-  final Map<TrackType, int> trackBreakdown;
+
+  /// Completion count keyed by the internal track storage key. One track per
+  /// curriculum, so this is a single-entry map — not a user-facing concept.
+  final Map<String, int> trackBreakdown;
   final List<HierarchyLevelProgress>? subLevels;
 
   double get completionPercentage =>

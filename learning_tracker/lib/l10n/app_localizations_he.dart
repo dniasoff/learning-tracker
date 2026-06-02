@@ -439,13 +439,7 @@ class AppLocalizationsHe extends AppLocalizations {
   String get joinCalendarProgram => 'הצטרף לתוכנית לוח שנה';
 
   @override
-  String get customTrack => 'מסלול מותאם אישית';
-
-  @override
   String get joinCalendarDesc => 'עקוב אחרי לוח לימוד יומי כמו דף יומי';
-
-  @override
-  String get customTrackDesc => 'צור תוכנית לימוד משלך בקצב שלך';
 
   @override
   String get availablePrograms => 'תוכניות זמינות';
@@ -1041,6 +1035,9 @@ class AppLocalizationsHe extends AppLocalizations {
   String get profilePickerTalmidProfiles => 'פרופילי תלמידים';
 
   @override
+  String get profilePickerSkipToSettings => 'מעבר להגדרות';
+
+  @override
   String get profilePickerTutoredChildren => 'ילדים מוּדרכים';
 
   @override
@@ -1072,6 +1069,11 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get tutorModeIndicator => 'מצב מדריך';
+
+  @override
+  String tutorModeIndicatorNamed(String name) {
+    return 'מצב מדריך · $name';
+  }
 
   @override
   String get tutorModeExit => 'יציאה';
@@ -1217,6 +1219,10 @@ class AppLocalizationsHe extends AppLocalizations {
   @override
   String get manageTracksForChildSubtitle =>
       'הוספה, עריכה או ארכיון של מסלולי הילד';
+
+  @override
+  String get manageChildLearningSubtitle =>
+      'ניהול מסלולים, נקודות, פרסים ומטרות';
 
   @override
   String get pointConfiguration => 'הגדרת נקודות';
@@ -3573,22 +3579,6 @@ class AppLocalizationsHe extends AppLocalizations {
   String inviteTutorSentSnackbar(String email) {
     return 'ההזמנה נשלחה אל $email!';
   }
-
-  @override
-  String get inviteTutorLinkCopied => 'הקישור הועתק!';
-
-  @override
-  String get inviteTutorShareLinkHeading => 'קישור לשיתוף (מסירה חלופית)';
-
-  @override
-  String get inviteTutorShareLinkBody =>
-      'אם האימייל לא התקבל, שתפו את הקישור הזה ישירות עם המדריך.';
-
-  @override
-  String get inviteTutorCopyLinkTooltip => 'העתקת קישור';
-
-  @override
-  String get inviteTutorCopyShareLink => 'העתקת קישור השיתוף';
 
   @override
   String get manageGrantsAppBarTitle => 'ההדרכות שלי';

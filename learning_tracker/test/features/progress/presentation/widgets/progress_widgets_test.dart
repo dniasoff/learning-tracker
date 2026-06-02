@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/progress/domain/models/curriculum_progress_data.dart';
@@ -181,7 +180,7 @@ void main() {
         totalItems: 10,
         completedItems: 5,
         stageBreakdown: [StageBreakdownEntry(stageName: 'Learned', count: 5)],
-        trackBreakdown: {TrackType.personal: 5},
+        trackBreakdown: {'personal': 5},
       );
 
       await tester.pumpWidget(_wrap(const HierarchyProgressCard(level: level)));
@@ -207,7 +206,7 @@ void main() {
           StageBreakdownEntry(stageName: 'Learned', count: 5),
           StageBreakdownEntry(stageName: 'Chazara 1', count: 3),
         ],
-        trackBreakdown: {TrackType.personal: 5},
+        trackBreakdown: {'personal': 5},
       );
 
       await tester.pumpWidget(_wrap(const HierarchyProgressCard(level: level)));
@@ -225,7 +224,7 @@ void main() {
         totalItems: 4,
         completedItems: 2,
         stageBreakdown: [StageBreakdownEntry(stageName: 'Learned', count: 2)],
-        trackBreakdown: {TrackType.personal: 2},
+        trackBreakdown: {'personal': 2},
         subLevels: [
           HierarchyLevelProgress(
             levelName: 'Berachos',
@@ -235,7 +234,7 @@ void main() {
             stageBreakdown: [
               StageBreakdownEntry(stageName: 'Learned', count: 2),
             ],
-            trackBreakdown: {TrackType.personal: 2},
+            trackBreakdown: {'personal': 2},
           ),
           HierarchyLevelProgress(
             levelName: 'Peah',
@@ -245,7 +244,7 @@ void main() {
             stageBreakdown: [
               StageBreakdownEntry(stageName: 'Learned', count: 0),
             ],
-            trackBreakdown: {TrackType.personal: 0},
+            trackBreakdown: {'personal': 0},
           ),
         ],
       );

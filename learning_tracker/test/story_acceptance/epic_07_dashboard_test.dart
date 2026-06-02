@@ -13,7 +13,6 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/curriculum_summary_card.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/points_summary_widget.dart';
@@ -727,7 +726,7 @@ void main() {
 
       final tb = result.hierarchyLevels[0].trackBreakdown;
       // V1 only has personal tracks; all 4 completions are personal
-      expect(tb[TrackType.personal], equals(4));
+      expect(tb['personal'], equals(4));
     });
 
     test(
@@ -882,7 +881,7 @@ void main() {
             scope: CrossProfileScope.parentAnalytics,
           );
       final personalCompletions = allCompletions
-          .where((c) => c.trackType == TrackType.personal.storageKey)
+          .where((c) => c.trackType == 'personal')
           .toList();
 
       final dailyCounts = <DateTime, int>{};

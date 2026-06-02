@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_shell.dart';
 import 'package:learning_tracker/app/router/router_provider.dart';
+import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
 
@@ -101,22 +102,37 @@ class _PersistentSwitcherScaffoldState
 
     final mediaQuery = MediaQuery.of(context);
     final topInset = mediaQuery.padding.top;
+    // Bug 7: this overlay is rendered in the MaterialApp.router builder slot, so
+    // it inherits the AMBIENT theme — which, under `ThemeMode.system` on a device
+    // set to dark mode, is the DARK theme. The rest of the app is designed
+    // light-only (hardcoded white surfaces), so the switcher bar was the one
+    // surface that flipped: dark navy background + dark-theme greyed text =
+    // unreadable dark-on-dark header on every pushed sub-route (Parent Settings,
+    // profile picker, …). Force the LIGHT theme around the bars so they always
+    // render on their intended light background with high-contrast ink,
+    // matching every other surface.
+    final lightTheme = AppTheme.lightTheme();
     return Material(
       type: MaterialType.transparency,
       child: Column(
         children: [
-          // Inset below the system status bar, matching the shell's appBar.
-          Container(
-            color: Theme.of(
-              context,
-            ).colorScheme.primary.withValues(alpha: 0.06),
-            padding: EdgeInsets.only(top: topInset),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (isTutoredSession) const TutorModeIndicatorBar(),
-                const ProfileSwitcherBar(),
-              ],
+          // The header bar is wrapped in a forced LIGHT [Theme] (Bug 7) so every
+          // `Theme.of(context)` lookup inside the bars resolves to light colours,
+          // regardless of the ambient (possibly dark) theme. The child route
+          // below stays under the ambient theme.
+          Theme(
+            data: lightTheme,
+            // Inset below the system status bar, matching the shell's appBar.
+            child: Container(
+              color: lightTheme.colorScheme.primary.withValues(alpha: 0.06),
+              padding: EdgeInsets.only(top: topInset),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  if (isTutoredSession) const TutorModeIndicatorBar(),
+                  const ProfileSwitcherBar(),
+                ],
+              ),
             ),
           ),
           // The persistent bar above has already consumed the system status-bar

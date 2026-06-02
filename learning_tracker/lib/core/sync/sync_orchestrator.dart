@@ -691,14 +691,38 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
         analytics: _analytics,
       );
 
-      Future<void> step(String label, Future<void> Function() op) {
-        return op().timeout(
-          _perStepTimeout,
-          onTimeout: () => throw TimeoutException(
-            'sync_pull_step_timeout: $label',
+      Future<void> step(String label, Future<void> Function() op) async {
+        try {
+          await op().timeout(
             _perStepTimeout,
-          ),
-        );
+            onTimeout: () => throw TimeoutException(
+              'sync_pull_step_timeout: $label',
+              _perStepTimeout,
+            ),
+          );
+        } catch (e, stackTrace) {
+          // Bug 1 resilience (defence-in-depth): a single collection's local
+          // DATABASE error — most importantly a SqliteException(787) FK
+          // violation while merging one row (e.g. a learner_profiles row
+          // referencing a missing account) — must NEVER abort the launch pull
+          // or tear down the session / active profile (which bounced the user
+          // to the first-launch splash). The per-row merger try/catch is the
+          // primary guard; this catches anything that still escapes a merger.
+          //
+          // Network / gateway / rules / timeout failures are NOT swallowed —
+          // those are genuine pull failures that must surface as an error
+          // status so the UI can offer a retry.
+          if (_isLocalDatabaseError(e)) {
+            _logger?.warning(
+              event: 'sync_pull_step_db_error_nonfatal',
+              fields: {'step': label},
+              exception: e,
+              stackTrace: stackTrace,
+            );
+            return;
+          }
+          rethrow;
+        }
       }
 
       await Future<void>(() async {
@@ -1348,4 +1372,22 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
       fields: {'collection': channel, 'size': size, 'is_at_limit': isAtLimit},
     );
   }
+}
+
+/// True when [error] originated in the local SQLite / Drift layer (e.g. an FK
+/// constraint violation during a merge upsert), as opposed to a network /
+/// gateway / rules failure.
+///
+/// Detected by runtime type name so the orchestrator does not have to import
+/// the `drift` / `sqlite3` packages (and so it is robust across the whole Drift
+/// exception hierarchy — `SqliteException`, `DriftWrappedException`,
+/// `DriftRemoteException`, …). Used by the launch-pull step guard so a single
+/// row's DB error cannot tear down the session (Bug 1).
+bool _isLocalDatabaseError(Object error) {
+  final name = error.runtimeType.toString();
+  if (name.contains('Sqlite') || name.contains('Drift')) return true;
+  // Some drift builds surface FK violations as a plain message string.
+  final msg = error.toString().toLowerCase();
+  return msg.contains('foreign key constraint failed') ||
+      msg.contains('sqliteexception');
 }

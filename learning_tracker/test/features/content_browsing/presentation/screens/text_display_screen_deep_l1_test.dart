@@ -66,7 +66,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/exceptions/permission_exception.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
@@ -223,7 +222,7 @@ Widget _buildApp({
         return Future.value(tasks);
       }),
       trackStorageKeyForTrackIdProvider.overrideWith(
-        (ref, trackId) async => TrackType.personal.storageKey,
+        (ref, trackId) async => 'personal',
       ),
       isStageCompletedProvider.overrideWith((ref, params) async => isCompleted),
       completionCommittedProvider.overrideWith(

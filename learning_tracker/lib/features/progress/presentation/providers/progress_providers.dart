@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
@@ -38,32 +37,15 @@ ProgressRepository progressRepository(Ref ref) {
   return ProgressRepositoryImpl(database: database, profileId: profileId);
 }
 
-/// Provider for track breakdown by curriculum, scoped to the active profile.
+/// Provider for completion counts by curriculum, scoped to the active profile.
 ///
-/// Returns a map of TrackType to completion counts for the given curriculum.
+/// Returns a map keyed by the internal track storage key. One track per
+/// curriculum, so this is a single-entry map — not a user-facing concept.
 @riverpod
-Future<Map<TrackType, int>> trackBreakdown(Ref ref, String curriculumId) async {
+Future<Map<String, int>> trackBreakdown(Ref ref, String curriculumId) async {
   final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
-  final rawBreakdown = await db.completionDao.getTrackBreakdownByProfile(
-    curriculumId,
-    profileId,
-  );
-
-  // Convert string keys to TrackType enum keys
-  final result = <TrackType, int>{};
-  for (final trackType in TrackType.values) {
-    result[trackType] = 0;
-  }
-  for (final entry in rawBreakdown.entries) {
-    try {
-      final trackType = TrackType.fromStorageKey(entry.key);
-      result[trackType] = entry.value;
-    } on ArgumentError {
-      continue;
-    }
-  }
-  return result;
+  return db.completionDao.getTrackBreakdownByProfile(curriculumId, profileId);
 }
 
 /// Provider for aggregate completion count by curriculum, scoped to the active profile.

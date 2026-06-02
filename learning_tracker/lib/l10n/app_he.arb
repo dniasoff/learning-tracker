@@ -218,9 +218,7 @@
   "continueButton": "המשך",
   "skip": "דלג",
   "joinCalendarProgram": "הצטרף לתוכנית לוח שנה",
-  "customTrack": "מסלול מותאם אישית",
   "joinCalendarDesc": "עקוב אחרי לוח לימוד יומי כמו דף יומי",
-  "customTrackDesc": "צור תוכנית לימוד משלך בקצב שלך",
   "availablePrograms": "תוכניות זמינות",
   "todaysAssignment": "המשימה של היום",
   "startTrackingFrom": "התחל מעקב מ",
@@ -513,6 +511,7 @@
   "profilePickerMyChildren": "הילדים שלי",
   "profilePickerYourProfiles": "הפרופילים שלך",
   "profilePickerTalmidProfiles": "פרופילי תלמידים",
+  "profilePickerSkipToSettings": "מעבר להגדרות",
   "profilePickerTutoredChildren": "ילדים מוּדרכים",
   "tutoredChildrenViewInvitations": "צפייה בהזמנות",
   "tutoredChildrenManageGrants": "ניהול הרשאות הדרכה",
@@ -526,6 +525,12 @@
   "tutoredChildrenStatusTutoring": "מדריך",
   "tutoredChildrenRoleBadge": "מדריך",
   "tutorModeIndicator": "מצב מדריך",
+  "tutorModeIndicatorNamed": "מצב מדריך · {name}",
+  "@tutorModeIndicatorNamed": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
   "tutorModeExit": "יציאה",
   "tutoredEntryPermissionDenied": "הגישה נדחתה — ייתכן שההרשאה בוטלה.",
   "tutoredEntryError": "לא ניתן לטעון את נתוני התלמיד. אנא נסה שנית.",
@@ -580,6 +585,7 @@
   "manageTutors": "ניהול מדריכים",
   "manageTutorsSubtitle": "הזמנה או הסרה של מדריכים לילד זה",
   "manageTracksForChildSubtitle": "הוספה, עריכה או ארכיון של מסלולי הילד",
+  "manageChildLearningSubtitle": "ניהול מסלולים, נקודות, פרסים ומטרות",
   "pointConfiguration": "הגדרת נקודות",
   "pointConfigurationSubtitle": "כמה נקודות שווה כל פעילות",
   "rewardConfigurationTitle": "הגדרת פרסים",
@@ -1984,11 +1990,6 @@
       "email": { "type": "String" }
     }
   },
-  "inviteTutorLinkCopied": "הקישור הועתק!",
-  "inviteTutorShareLinkHeading": "קישור לשיתוף (מסירה חלופית)",
-  "inviteTutorShareLinkBody": "אם האימייל לא התקבל, שתפו את הקישור הזה ישירות עם המדריך.",
-  "inviteTutorCopyLinkTooltip": "העתקת קישור",
-  "inviteTutorCopyShareLink": "העתקת קישור השיתוף",
 
   "manageGrantsAppBarTitle": "ההדרכות שלי",
   "manageGrantsActiveSection": "פעילות ({count})",

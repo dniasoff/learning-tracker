@@ -15,7 +15,6 @@ import 'package:auto_route/auto_route.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/navigation/guards/restore_guard.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:mocktail/mocktail.dart';
@@ -61,7 +60,7 @@ Future<void> _insertCompletionEvent(
       curriculumId: 'talmud_bavli',
       sefariaRef: 'Berakhot.1.1',
       stageId: 1,
-      trackType: TrackType.personal.storageKey,
+      trackType: 'personal',
       trackId: Value(trackId),
       points: const Value(0),
       eventTimestamp: DateTimeFactory.nowUtc(),

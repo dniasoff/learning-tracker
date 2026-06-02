@@ -82,7 +82,6 @@ void main() {
       'lib/features/scheduler/domain/labels/program_label_resolver.dart',
       // Enum getters live on these types.
       'lib/core/enums/curriculum_id.dart',
-      'lib/core/enums/track_type.dart',
       // Shared dual-form constants.
       'lib/core/constants/hebrew_terms.dart',
       'lib/core/constants/curriculum_defaults.dart',

@@ -472,7 +472,7 @@ Future<List<DailyTask>> _buildProjectionTasks({
     final preferred = tracksForCurriculum.first;
     trackIds[curriculum] = preferred.id;
     // Rule-7 (no track types): the track label is the curriculum's localized
-    // display name (never a TrackType storage key like "personal").
+    // display name (never an internal track storage key like "personal").
     trackLabels[curriculum] = curriculumLabelTextFromRef(
       ref,
       curriculum: curriculum,
@@ -911,7 +911,7 @@ Future<List<DailyTask>> _buildFreshPlan({
     final preferred = tracksForCurriculum.first;
     trackIds[curriculum] = preferred.id;
     // Rule-7 (no track types): the track label is the curriculum's localized
-    // display name (never a TrackType storage key like "personal").
+    // display name (never an internal track storage key like "personal").
     trackLabels[curriculum] = curriculumLabelTextFromRef(
       ref,
       curriculum: curriculum,

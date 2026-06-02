@@ -19,7 +19,6 @@ import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
@@ -248,7 +247,6 @@ void main() {
 
   setUpAll(() {
     registerFallbackValue(CurriculumId.mishnayos);
-    registerFallbackValue(TrackType.personal);
   });
 
   setUp(() async {
@@ -274,7 +272,6 @@ void main() {
       when(
         () => bookmarkRepo.setBookmark(
           curriculumId: any(named: 'curriculumId'),
-          trackType: any(named: 'trackType'),
           sefariaRef: any(named: 'sefariaRef'),
         ),
       ).thenAnswer((_) async => _fakeBookmark());
@@ -347,7 +344,6 @@ void main() {
         when(
           () => bookmarkRepo.setBookmark(
             curriculumId: any(named: 'curriculumId'),
-            trackType: any(named: 'trackType'),
             sefariaRef: any(named: 'sefariaRef'),
           ),
         ).thenAnswer((_) async => _fakeBookmark());
@@ -409,7 +405,6 @@ void main() {
       when(
         () => bookmarkRepo.setBookmark(
           curriculumId: any(named: 'curriculumId'),
-          trackType: any(named: 'trackType'),
           sefariaRef: any(named: 'sefariaRef'),
         ),
       ).thenAnswer((_) async => _fakeBookmark());
@@ -931,7 +926,6 @@ void main() {
         when(
           () => bookmarkRepo.setBookmark(
             curriculumId: any(named: 'curriculumId'),
-            trackType: any(named: 'trackType'),
             sefariaRef: any(named: 'sefariaRef'),
           ),
         ).thenAnswer((_) async => _fakeBookmark());
@@ -1107,7 +1101,6 @@ void main() {
         when(
           () => bookmarkRepo.setBookmark(
             curriculumId: any(named: 'curriculumId'),
-            trackType: any(named: 'trackType'),
             sefariaRef: any(named: 'sefariaRef'),
           ),
         ).thenAnswer((_) async => _fakeBookmark());
@@ -1163,7 +1156,7 @@ void main() {
             curriculumId: 'mishnayos',
             sefariaRef: 'Berakhot 4',
             stageId: 1,
-            trackType: TrackType.personal.storageKey,
+            trackType: 'personal',
             trackId: trackId,
             completedAt: realDate,
             points: 10,
@@ -1227,7 +1220,6 @@ void main() {
 
 BookmarkEntity _fakeBookmark() => BookmarkEntity(
   curriculumId: CurriculumId.mishnayos,
-  trackType: TrackType.personal,
   sefariaRef: 'ref',
   updatedAt: DateTime.now(),
 );

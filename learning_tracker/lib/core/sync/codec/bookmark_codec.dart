@@ -9,14 +9,12 @@ import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 class BookmarkRow {
   const BookmarkRow({
     required this.curriculumId,
-    required this.trackType,
     required this.sefariaRef,
     required this.updatedAt,
     this.syncedAt,
   });
 
   final String curriculumId;
-  final String trackType;
   final String sefariaRef;
   final DateTime updatedAt;
 
@@ -27,7 +25,7 @@ class BookmarkRow {
 
 /// Codec for the `bookmarks` Firestore collection.
 ///
-/// Natural key: `(curriculumId, trackType)`.
+/// Natural key: `curriculumId` (one track per profile + curriculum).
 /// LWW: remote wins when `updated_at` is strictly newer.
 class BookmarkCodec extends EntityCodec<BookmarkRow> {
   const BookmarkCodec();
@@ -38,20 +36,15 @@ class BookmarkCodec extends EntityCodec<BookmarkRow> {
   @override
   BookmarkRow? decode(Map<String, dynamic> raw) {
     final curriculumId = raw['curriculum_id'] as String?;
-    final trackType = raw['track_type'] as String?;
     final sefariaRef = raw['sefaria_ref'] as String?;
     final updatedAt = FirestoreCodec.parseDateTime(raw['updated_at']);
 
-    if (curriculumId == null ||
-        trackType == null ||
-        sefariaRef == null ||
-        updatedAt == null) {
+    if (curriculumId == null || sefariaRef == null || updatedAt == null) {
       return null;
     }
 
     return BookmarkRow(
       curriculumId: curriculumId,
-      trackType: trackType,
       sefariaRef: sefariaRef,
       updatedAt: updatedAt,
       syncedAt: FirestoreCodec.parseDateTime(raw['synced_at']),
@@ -61,7 +54,6 @@ class BookmarkCodec extends EntityCodec<BookmarkRow> {
   @override
   Map<String, dynamic> encode(BookmarkRow model) => {
     'curriculum_id': model.curriculumId,
-    'track_type': model.trackType,
     'sefaria_ref': model.sefariaRef,
     'updated_at': FirestoreCodec.encodeDateTime(model.updatedAt),
   };

@@ -5,19 +5,18 @@
 //   • Send button disabled when email field is empty.
 //   • Send button disabled while loading (prevents double-submit).
 //   • Inline validation error shown when tapping Send with an invalid email.
-//   • Success path: use case returns TutorGrantSuccess → snackbar + share-link
-//     section rendered; outgoingTutorGrantsProvider is invalidated.
+//   • Success path: use case returns TutorGrantSuccess → snackbar shown;
+//     outgoingTutorGrantsProvider is invalidated.
 //   • Failure path: use case returns TutorGrantFailure → inline error message.
 //   • PreconditionError path: use case returns TutorGrantPreconditionError →
 //     inline error message.
-//   • Copy link button: clipboard populated + "Link copied" snackbar.
+//   • Copy-link invite method removed: no share-link section or copy buttons.
 //   • Hardcoded string audit: all user-facing strings are l10n-sourced.
 
 @Tags(['tutoring', 'invite_tutor'])
 library;
 
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -111,27 +110,6 @@ Future<void> _pumpScreen(
   // First pump triggers the build; second settles the Future.value micro-task.
   await tester.pump();
   await tester.pump();
-}
-
-// ── Clipboard mock ────────────────────────────────────────────────────────────
-
-/// Registers a platform-channel mock for [SystemChannels.platform] that
-/// handles `Clipboard.setData` calls and returns immediately.
-///
-/// The mock is replaced at the end of each test by [_clearClipboardMock].
-void _setUpClipboardMock() {
-  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-      .setMockMethodCallHandler(SystemChannels.platform, (
-        MethodCall call,
-      ) async {
-        // Accept any clipboard call silently and return null (void result).
-        return null;
-      });
-}
-
-void _clearClipboardMock() {
-  TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
-      .setMockMethodCallHandler(SystemChannels.platform, null);
 }
 
 // ── Teardown helper ───────────────────────────────────────────────────────────
@@ -308,7 +286,7 @@ void main() {
 
   group('InviteTutorScreen — success path', () {
     testWidgets(
-      'success: snackbar shown and share-link section appears after send',
+      'success: snackbar shown after send; no share-link section appears',
       (tester) async {
         when(
           () => mockUseCase(
@@ -338,16 +316,12 @@ void main() {
           reason: 'Success snackbar must show the invited email address',
         );
 
-        // Share-link section revealed
-        expect(find.text('Share link (backup delivery)'), findsOneWidget);
-        expect(find.text('Copy share link'), findsOneWidget);
-
-        // The link contains the grant ID
-        expect(
-          find.textContaining('grant-abc-123'),
-          findsOneWidget,
-          reason: 'Share link must embed the grant ID',
-        );
+        // Bug 4: the copy-link invite method is removed — no share-link section,
+        // no copy buttons, and the grant ID is never surfaced as a link.
+        expect(find.text('Share link (backup delivery)'), findsNothing);
+        expect(find.text('Copy share link'), findsNothing);
+        expect(find.textContaining('grant-abc-123'), findsNothing);
+        expect(find.byIcon(Icons.copy_rounded), findsNothing);
 
         // Verify use case was called with the correct args
         verify(
@@ -421,7 +395,7 @@ void main() {
       },
     );
 
-    testWidgets('success with null grantId uses "pending" in link', (
+    testWidgets('success with null grantId still shows snackbar, no link', (
       tester,
     ) async {
       when(
@@ -440,11 +414,9 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 
-      expect(
-        find.textContaining('pending'),
-        findsOneWidget,
-        reason: 'Share link must contain "pending" when grantId is null',
-      );
+      // No share-link surface regardless of grantId value.
+      expect(find.textContaining('pending'), findsNothing);
+      expect(find.byIcon(Icons.copy_rounded), findsNothing);
 
       await _tearDown(tester);
     });
@@ -557,64 +529,12 @@ void main() {
     });
   });
 
-  // ── Copy link ───────────────────────────────────────────────────────────────
+  // ── Copy-link invite method removed (Bug 4) ─────────────────────────────────
 
-  group('InviteTutorScreen — copy link', () {
-    testWidgets('copy icon button in link box shows "Link copied" snackbar', (
-      tester,
-    ) async {
-      // Register a platform-channel mock so Clipboard.setData completes.
-      _setUpClipboardMock();
-      addTearDown(_clearClipboardMock);
-
-      // Use a taller viewport so all share-link section elements are on-screen.
-      tester.view.physicalSize = const Size(800, 1200);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(tester.view.resetPhysicalSize);
-      addTearDown(tester.view.resetDevicePixelRatio);
-
-      when(
-        () => mockUseCase(
-          tutorEmail: any(named: 'tutorEmail'),
-          childProfileId: any(named: 'childProfileId'),
-          childName: any(named: 'childName'),
-          parentName: any(named: 'parentName'),
-        ),
-      ).thenAnswer(
-        (_) async => const TutorGrantSuccess(grantId: 'copy-test-id'),
-      );
-
-      await _pumpScreen(tester, useCase: mockUseCase);
-      await tester.enterText(find.byType(TextFormField), 'copy@example.com');
-      await tester.pump();
-      await tester.tap(find.byType(FilledButton));
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
-
-      // Share link section is visible.
-      expect(find.text('Share link (backup delivery)'), findsOneWidget);
-
-      // Advance past the "Invite sent" snackbar's default 4s display so it
-      // dismisses before the copy snackbar can show.
-      await tester.pump(const Duration(seconds: 4));
-
-      // Tap the IconButton (only one on-screen: the copy icon in the link box).
-      await tester.tap(find.byType(IconButton));
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
-
-      // "Link copied" snackbar must appear.
-      expect(find.text('Link copied to clipboard!'), findsOneWidget);
-
-      await _tearDown(tester);
-    });
-
+  group('InviteTutorScreen — copy-link method removed', () {
     testWidgets(
-      '"Copy share link" OutlinedButton shows "Link copied" snackbar',
+      'no copy-link affordance appears even after a successful invite',
       (tester) async {
-        _setUpClipboardMock();
-        addTearDown(_clearClipboardMock);
-
         tester.view.physicalSize = const Size(800, 1200);
         tester.view.devicePixelRatio = 1.0;
         addTearDown(tester.view.resetPhysicalSize);
@@ -628,34 +548,32 @@ void main() {
             parentName: any(named: 'parentName'),
           ),
         ).thenAnswer(
-          (_) async => const TutorGrantSuccess(grantId: 'outlined-test'),
+          (_) async => const TutorGrantSuccess(grantId: 'copy-test-id'),
         );
 
         await _pumpScreen(tester, useCase: mockUseCase);
-        await tester.enterText(find.byType(TextFormField), 'copy2@example.com');
+        await tester.enterText(find.byType(TextFormField), 'copy@example.com');
         await tester.pump();
         await tester.tap(find.byType(FilledButton));
         await tester.pump();
         await tester.pump(const Duration(seconds: 1));
 
-        // Advance past the "Invite sent" snackbar's 4s display.
-        await tester.pump(const Duration(seconds: 4));
-
-        // Tap the "Copy share link" OutlinedButton.
-        await tester.tap(find.text('Copy share link'));
-        await tester.pump();
-        await tester.pump(const Duration(seconds: 1));
-
-        expect(find.text('Link copied to clipboard!'), findsOneWidget);
+        // The copy-link invite method is gone: no share-link section, no copy
+        // icon/button, and no IconButton at all on the screen.
+        expect(find.text('Share link (backup delivery)'), findsNothing);
+        expect(find.text('Copy share link'), findsNothing);
+        expect(find.byIcon(Icons.copy_rounded), findsNothing);
+        expect(find.byType(IconButton), findsNothing);
+        expect(find.byType(OutlinedButton), findsNothing);
 
         await _tearDown(tester);
       },
     );
   });
 
-  // ── Share-link section hidden initially ────────────────────────────────────
+  // ── Share-link section never shown ──────────────────────────────────────────
 
-  group('InviteTutorScreen — share-link section initially hidden', () {
+  group('InviteTutorScreen — share-link section never shown', () {
     testWidgets('share-link section is NOT shown before any invite is sent', (
       tester,
     ) async {

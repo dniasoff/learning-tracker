@@ -3,6 +3,7 @@ import 'dart:convert';
 
 import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
+import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/logging/log_events.dart';
 import 'package:learning_tracker/core/sync/codec/firestore_codec.dart';
@@ -18,7 +19,7 @@ import 'package:learning_tracker/core/utils/date_utils.dart';
 /// Kind → DAO mapping:
 ///   completion      → [CompletionEventDao]      (insertOrIgnore on natural key)
 ///   learner_profile → [ProfileDao]               (upsert by id)
-///   track_config    → [TrackDao]                 (upsert by curriculum_id + track_type)
+///   track_config    → [TrackDao]                 (upsert by curriculum_id)
 ///   bookmark        → [BookmarkDao]              (upsert by curriculum_id + track_id)
 ///   settings        → [StageDao]                 (replace stages for curriculum)
 ///   stage_definition → [StageDao]               (upsert by curriculum_id + track_id + stage_order)
@@ -281,7 +282,7 @@ class DriftMergeStore implements MergeStore {
         fields['profile_id'] as int? ??
         int.tryParse(fields['profile_id']?.toString() ?? '') ??
         profileId;
-    final accountId =
+    final remoteAccountId =
         fields['account_id'] as int? ??
         int.tryParse(fields['account_id']?.toString() ?? '') ??
         0;
@@ -297,6 +298,18 @@ class DriftMergeStore implements MergeStore {
 
     final existing = await _db.profileDao.getProfileById(remoteId);
     if (existing == null) {
+      // Bug 1: the remote `account_id` is the cloud account row id and almost
+      // never matches the local autoincrement `accounts.id` (they are minted
+      // independently per device). Inserting the profile with the raw remote
+      // id violates the learner_profiles → accounts FK → SqliteException(787),
+      // which previously aborted the whole launch pull and bounced the user
+      // to the first-launch splash. Resolve the FK to a LOCAL account row that
+      // is guaranteed to exist before inserting.
+      final accountId = await _resolveLocalAccountId(
+        remoteAccountId: remoteAccountId,
+        createdAt: createdAt,
+        updatedAt: updatedAt,
+      );
       await _db
           .into(_db.learnerProfiles)
           .insertOnConflictUpdate(
@@ -322,6 +335,83 @@ class DriftMergeStore implements MergeStore {
         ),
       );
     }
+  }
+
+  /// Resolve a LOCAL `accounts.id` that is guaranteed to exist, so the
+  /// learner_profiles → accounts FK can never fail (Bug 1).
+  ///
+  /// Resolution order:
+  ///   1. The referenced [remoteAccountId] already exists locally → use it.
+  ///   2. Exactly one local account exists → remap the profile onto it. This is
+  ///      the common case: a device hosts a single signed-in account whose
+  ///      autoincrement id differs from the cloud account id.
+  ///   3. No usable account exists yet (the accounts row has not been seeded /
+  ///      restored) → seed a placeholder `accounts` row carrying
+  ///      [remoteAccountId] so the FK is satisfiable. The real account row
+  ///      (email/tier/firebaseUid) is reconciled by the auth/bootstrap path;
+  ///      this seed only exists to keep the profile insert from crashing the
+  ///      launch pull. When [remoteAccountId] is 0/absent, a fresh
+  ///      autoincrement id is minted instead.
+  Future<int> _resolveLocalAccountId({
+    required int remoteAccountId,
+    required DateTime createdAt,
+    required DateTime updatedAt,
+  }) async {
+    // 1. Exact match — the FK target already exists.
+    if (remoteAccountId > 0) {
+      final exact = await _db.userProfileDao.getUserProfileById(
+        remoteAccountId,
+      );
+      if (exact != null) return exact.id;
+    }
+
+    // 2. Single local account — remap onto it (autoincrement id ≠ cloud id).
+    final accounts = await _db.userProfileDao.getAllUserProfiles();
+    if (accounts.length == 1) return accounts.first.id;
+    if (accounts.isNotEmpty) {
+      // Multiple accounts on the device and no exact match: prefer a cloud-born
+      // row (sync only happens for cloud accounts) to avoid binding the synced
+      // profile to an unrelated local-born account.
+      final cloudBorn = accounts.where(
+        (a) => a.accountTier == UserTier.cloudBorn,
+      );
+      return (cloudBorn.isNotEmpty ? cloudBorn.first : accounts.first).id;
+    }
+
+    // 3. No account row at all — seed a placeholder so the FK holds. Carry the
+    // remote id when present so a later exact match reuses it; otherwise let
+    // SQLite mint a fresh autoincrement id.
+    final seed = AccountsCompanion.insert(
+      id: remoteAccountId > 0 ? Value(remoteAccountId) : const Value.absent(),
+      email: 'account-$remoteAccountId@sync.placeholder',
+      tier: UserTier.cloudBorn.dbValue,
+      displayName: '',
+      createdAt: createdAt,
+      updatedAt: updatedAt,
+    );
+    return _db.into(_db.accounts).insert(seed);
+  }
+
+  /// Resolve the LOCAL `curriculum_tracks.id` for `(profileId, curriculumId)`,
+  /// falling back to [fallbackTrackId] (the remote id) when no local track has
+  /// been merged yet (Bug 3).
+  ///
+  /// Child rows (stage_definitions / goals / study_day_configs) carry the
+  /// REMOTE track id. For own-data sync that id IS the local id, so the lookup
+  /// returns the same row and nothing changes. For a tutored mirror the track
+  /// was re-inserted with a fresh local autoincrement id, so the remote id is
+  /// stale; resolving by (profile, curriculum) rebinds the child row to the
+  /// mirror's local track and lets the scheduler projection compute.
+  Future<int> _resolveLocalTrackId({
+    required int profileId,
+    required String curriculumId,
+    required int fallbackTrackId,
+  }) async {
+    final local = await _db.trackDao.getTrackByProfileAndCurriculum(
+      profileId,
+      curriculumId,
+    );
+    return local?.id ?? fallbackTrackId;
   }
 
   Future<void> _upsertTrack(int profileId, Map<String, dynamic> fields) async {
@@ -396,22 +486,17 @@ class DriftMergeStore implements MergeStore {
     Map<String, dynamic> fields,
   ) async {
     final curriculumId = fields['curriculum_id'] as String?;
-    final trackType = fields['track_type'] as String?;
     final sefariaRef = fields['sefaria_ref'] as String?;
     final updatedAt = _parseDateTime(fields['updated_at']);
 
-    if (curriculumId == null ||
-        trackType == null ||
-        sefariaRef == null ||
-        updatedAt == null) {
+    if (curriculumId == null || sefariaRef == null || updatedAt == null) {
       // W7.5
       _fireSkipped(kind: EntityKind.bookmark, reason: 'malformed_fields');
       return;
     }
 
-    // Bookmarks in the DB are keyed by trackId (FK).
-    // W3.22: trackType dropped; UNIQUE is {profileId, curriculumId}.
-    // Find the active track row to get the trackId.
+    // Bookmarks in the DB are keyed by trackId (FK). One track per
+    // {profileId, curriculumId}. Find the track row to get the trackId.
     final track =
         await (_db.select(_db.curriculumTracks)..where(
               (t) =>
@@ -458,8 +543,17 @@ class DriftMergeStore implements MergeStore {
 
     final defaultTrackId = fields['track_id'] as int? ?? 0;
 
+    // Bug 3: resolve the LOCAL track id from (profile, curriculum) so stage
+    // rows under a tutored mirror bind to the mirror's local track id rather
+    // than the remote id (which never matches). No-op for own-data sync.
+    final localTrack = await _db.trackDao.getTrackByProfileAndCurriculum(
+      profileId,
+      curriculumId,
+    );
+
     final companions = stagesList.cast<Map<String, dynamic>>().map((s) {
-      final trackId = s['track_id'] as int? ?? defaultTrackId;
+      final trackId =
+          localTrack?.id ?? (s['track_id'] as int? ?? defaultTrackId);
       final stageOrder = s['stage_order'] as int? ?? 0;
       final stageName = s['stage_name'] as String? ?? '';
       final isDefault = s['is_default'] as bool? ?? false;
@@ -488,7 +582,7 @@ class DriftMergeStore implements MergeStore {
     Map<String, dynamic> fields,
   ) async {
     final curriculumId = fields['curriculum_id'] as String?;
-    final trackId =
+    final remoteTrackId =
         fields['track_id'] as int? ??
         int.tryParse(fields['track_id']?.toString() ?? '');
     final stageOrder =
@@ -496,7 +590,7 @@ class DriftMergeStore implements MergeStore {
         int.tryParse(fields['stage_order']?.toString() ?? '');
     final stageName = fields['stage_name'] as String? ?? '';
 
-    if (curriculumId == null || trackId == null || stageOrder == null) {
+    if (curriculumId == null || remoteTrackId == null || stageOrder == null) {
       // W7.5
       _fireSkipped(
         kind: EntityKind.stageDefinition,
@@ -504,6 +598,18 @@ class DriftMergeStore implements MergeStore {
       );
       return;
     }
+
+    // Bug 3: resolve the LOCAL track id from (profile, curriculum). The stored
+    // track_id is the remote id; under a tutored mirror the track row was
+    // re-inserted with a different local autoincrement id, so binding stages
+    // to the remote id leaves getStagesByTrack(localTrackId) empty and the
+    // scheduler projection computes nothing. Resolving by (profile, curriculum)
+    // realigns the FK and is a no-op for own-data sync.
+    final trackId = await _resolveLocalTrackId(
+      profileId: profileId,
+      curriculumId: curriculumId,
+      fallbackTrackId: remoteTrackId,
+    );
 
     final isDefault = fields['is_default'] as bool? ?? false;
     // W3.27: prefer pre-encoded JSON schedule; fall back to quartet fields.

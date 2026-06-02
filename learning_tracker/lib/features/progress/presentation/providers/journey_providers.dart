@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
@@ -134,7 +133,6 @@ Future<JourneyViewModel> journeyViewModel(Ref ref, int profileId) async {
             entryScope: _entryScope(e),
             entryKey: _entryKey(e),
             parentL1Key: _parentL1Key(e, content),
-            trackType: TrackType.fromStorageKey(e.trackType),
             completedAt: e.completedAt,
             completionNumber: e.completionNumber,
             isManual: e.isManual,

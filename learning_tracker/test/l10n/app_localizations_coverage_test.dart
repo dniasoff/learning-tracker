@@ -120,9 +120,7 @@ void main() {
       ignore = en.continueButton;
       ignore = en.skip;
       ignore = en.joinCalendarProgram;
-      ignore = en.customTrack;
       ignore = en.joinCalendarDesc;
-      ignore = en.customTrackDesc;
       ignore = en.availablePrograms;
       ignore = en.todaysAssignment;
       ignore = en.startTrackingFrom;
@@ -855,9 +853,7 @@ void main() {
       ignore = he.continueButton;
       ignore = he.skip;
       ignore = he.joinCalendarProgram;
-      ignore = he.customTrack;
       ignore = he.joinCalendarDesc;
-      ignore = he.customTrackDesc;
       ignore = he.availablePrograms;
       ignore = he.todaysAssignment;
       ignore = he.startTrackingFrom;

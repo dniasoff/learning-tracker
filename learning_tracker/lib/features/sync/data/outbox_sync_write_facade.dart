@@ -297,13 +297,9 @@ class OutboxSyncWriteFacade implements SyncWriteFacade, PointsSyncSink {
   /// `id`, `curriculum_id`, nor `track_id` is present so that the outbox
   /// never silently drops rows.
   ///
-  /// **Bookmark payloads** carry `track_type` instead of `track_id` (see
-  /// [BookmarkEntity.toFirestore]).  The Firestore gateway constructs the
-  /// bookmark doc-id as `${curriculumId}_${trackType}` (firestore_gateway_impl
-  /// line 371).  We therefore append `track_type` after `curriculum_id` so
-  /// that two bookmarks for the same curriculum but different track types
-  /// produce distinct outbox entity keys and the processor does not
-  /// de-duplicate them as the same document.
+  /// **Bookmark payloads** carry neither `track_id` nor a track type — one
+  /// track per curriculum means `curriculum_id` alone is the natural key,
+  /// mirroring the gateway's deterministic bookmark doc-id.
   String _key(Map<String, dynamic> payload) {
     final parts = <String>[];
     if (payload['curriculum_id'] != null) {
@@ -311,10 +307,6 @@ class OutboxSyncWriteFacade implements SyncWriteFacade, PointsSyncSink {
     }
     if (payload['track_id'] != null) {
       parts.add(payload['track_id'].toString());
-    } else if (payload['track_type'] != null) {
-      // Bookmark payloads use track_type, not track_id.  The key must mirror
-      // the gateway's deterministic doc-id: `${curriculumId}_${trackType}`.
-      parts.add(payload['track_type'].toString());
     }
     if (parts.isEmpty) {
       parts.add(DateTimeFactory.nowUtc().millisecondsSinceEpoch.toString());

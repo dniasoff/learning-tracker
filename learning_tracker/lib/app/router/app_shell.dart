@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/router_provider.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
 import 'package:learning_tracker/features/account/presentation/widgets/offline_top_banner.dart';
@@ -183,41 +184,51 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
                   childViewHeight +
                   switcherHeight,
             ),
-            child: Padding(
-              // Push our custom appBar content below the system status bar.
-              // Unlike Material's AppBar, raw PreferredSize doesn't inset
-              // automatically, so we add the inset ourselves.
-              padding: EdgeInsets.only(top: topInset),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  OfflineTopBanner(visible: offlineBannerVisible),
-                  // Tutor mode bar — tappable to open profile switcher.
-                  if (hasActiveTutoredProfiles) const TutorModeIndicatorBar(),
-                  // WS4.banner (DEC-25): "Viewing [child]" banner for the
-                  // parent/child-mode path. Only shown when a child profile is
-                  // active and no tutor bar is already displayed.
-                  // Now tappable → profile switcher (Fix 1).
-                  // Default context (own profile, not tutor, not parent-mode):
-                  // the always-present profile/role switcher bar.
-                  if (showSwitcherBar) const ProfileSwitcherBar(),
-                  if (isViewingChildProfile && viewingChildName != null)
-                    _ChildViewBanner(
-                      childName: viewingChildName,
-                      profiles: profiles,
-                      onExit: () {
-                        // Exiting parent mode drops the elevation only — the
-                        // CHILD profile stays active and we land back in the
-                        // child's learning view. Locking the PIN guard clears
-                        // the parent-auth flag (via onSessionLocked), so the
-                        // banner disappears and the next parent-gated action
-                        // re-prompts. We do NOT switch to the adult profile;
-                        // the adult's own profile is reached via the switcher.
-                        ref.read(routerProvider).pinGuard.lock();
-                        innerContext.router.replaceAll([const AppShellRoute()]);
-                      },
-                    ),
-                ],
+            // Bug 7: force the LIGHT theme around the shell's top bars. Under
+            // `ThemeMode.system` on a dark-mode device the ambient theme is dark,
+            // which flipped the switcher bar to a dark-navy, low-contrast strip
+            // while the rest of the (light-only) app stayed light. Pinning the
+            // light theme keeps the bar readable on every tab.
+            child: Theme(
+              data: AppTheme.lightTheme(),
+              child: Padding(
+                // Push our custom appBar content below the system status bar.
+                // Unlike Material's AppBar, raw PreferredSize doesn't inset
+                // automatically, so we add the inset ourselves.
+                padding: EdgeInsets.only(top: topInset),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    OfflineTopBanner(visible: offlineBannerVisible),
+                    // Tutor mode bar — tappable to open profile switcher.
+                    if (hasActiveTutoredProfiles) const TutorModeIndicatorBar(),
+                    // WS4.banner (DEC-25): "Viewing [child]" banner for the
+                    // parent/child-mode path. Only shown when a child profile is
+                    // active and no tutor bar is already displayed.
+                    // Now tappable → profile switcher (Fix 1).
+                    // Default context (own profile, not tutor, not parent-mode):
+                    // the always-present profile/role switcher bar.
+                    if (showSwitcherBar) const ProfileSwitcherBar(),
+                    if (isViewingChildProfile && viewingChildName != null)
+                      _ChildViewBanner(
+                        childName: viewingChildName,
+                        profiles: profiles,
+                        onExit: () {
+                          // Exiting parent mode drops the elevation only — the
+                          // CHILD profile stays active and we land back in the
+                          // child's learning view. Locking the PIN guard clears
+                          // the parent-auth flag (via onSessionLocked), so the
+                          // banner disappears and the next parent-gated action
+                          // re-prompts. We do NOT switch to the adult profile;
+                          // the adult's own profile is reached via the switcher.
+                          ref.read(routerProvider).pinGuard.lock();
+                          innerContext.router.replaceAll([
+                            const AppShellRoute(),
+                          ]);
+                        },
+                      ),
+                  ],
+                ),
               ),
             ),
           );
@@ -617,6 +628,20 @@ class TutorModeIndicatorBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
+    // Bug 11: name the talmid being managed in the banner itself — not just a
+    // bare "Tutor mode". The active profile in a tutored session resolves to the
+    // talmid's synthetic mirror, so its displayName is the child's name. While
+    // the mirror is still resolving (name null/empty), fall back to the bare
+    // "Tutor mode" label so the banner is never blank.
+    final talmidName = ref
+        .watch(activeProfileProvider)
+        .asData
+        ?.value
+        ?.displayName
+        .trim();
+    final label = (talmidName != null && talmidName.isNotEmpty)
+        ? l10n.tutorModeIndicatorNamed(talmidName)
+        : l10n.tutorModeIndicator;
     return GestureDetector(
       onTap: () => showProfileSwitcherSheet(context),
       child: Container(
@@ -629,7 +654,7 @@ class TutorModeIndicatorBar extends ConsumerWidget {
             const SizedBox(width: 6),
             Expanded(
               child: Text(
-                l10n.tutorModeIndicator,
+                label,
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 11,

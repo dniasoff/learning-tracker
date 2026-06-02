@@ -1063,5 +1063,80 @@ void main() {
         await _cleanUpWidgets(tester);
       },
     );
+
+    testWidgets(
+      'Bug 11: the amber Tutor-mode banner names the talmid being managed',
+      (tester) async {
+        final router = await _createAuthenticatedRouter(
+          navigatorKey: rp.navigatorKey,
+        );
+
+        final tutorOwnProfiles = [
+          ProfileModel(
+            id: 1,
+            accountId: 1,
+            displayName: 'Family Niasoff',
+            mode: 'adult',
+            avatarIndex: 0,
+            createdAt: DateTime(2024),
+            updatedAt: DateTime(2024),
+          ),
+        ];
+        final talmidMirror = ProfileModel(
+          id: 99,
+          accountId: 1,
+          displayName: 'Kid',
+          mode: 'child',
+          avatarIndex: 0,
+          createdAt: DateTime(2024),
+          updatedAt: DateTime(2024),
+        );
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              appDatabaseProvider.overrideWithValue(db),
+              userDatabaseProvider.overrideWithValue(db),
+              authStateProvider.overrideWithValue(_authOverride),
+              profileListStreamProvider.overrideWith(
+                (ref) => Stream.value(tutorOwnProfiles),
+              ),
+              activeProfileIdProvider.overrideWith(_MirrorActiveProfileId.new),
+              activeProfileProvider.overrideWith(
+                (ref) => Future.value(talmidMirror),
+              ),
+              activeTutoredProfileSelectionProvider.overrideWith(
+                _ActiveTutoredSelection.new,
+              ),
+              dashboardActiveCurriculaStreamProvider.overrideWith(
+                (ref) => Stream.value(<CurriculumId>[]),
+              ),
+              dashboardStreakProvider.overrideWith(
+                (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
+              ),
+              dashboardStreakRecoveryProvider.overrideWith(
+                (ref) => Future.value(
+                  const StreakRecoveryInfo(
+                    wasRecovered: false,
+                    currentStreak: 0,
+                  ),
+                ),
+              ),
+              rp.routerProvider.overrideWithValue(router),
+            ],
+            child: _wrapAppWithPersistentSwitcher(
+              router.config(deepLinkBuilder: (_) => DeepLink.defaultPath),
+            ),
+          ),
+        );
+        await _pumpDashboard(tester);
+
+        // The amber banner must NAME the talmid, not say a bare "Tutor mode".
+        expect(find.text('Tutor mode · Kid'), findsWidgets);
+        expect(find.text('Tutor mode'), findsNothing);
+
+        await _cleanUpWidgets(tester);
+      },
+    );
   });
 }

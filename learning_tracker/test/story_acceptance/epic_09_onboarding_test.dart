@@ -12,7 +12,6 @@ import 'package:learning_tracker/core/database/daos/completion_dao.dart'
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
@@ -172,7 +171,6 @@ void main() {
 
   setUpAll(() {
     registerFallbackValue(CurriculumId.mishnayos);
-    registerFallbackValue(TrackType.personal);
     registerFallbackValue(
       const BulkCompletionRequest(
         curriculumId: 'mishnayos',
@@ -673,13 +671,11 @@ void main() {
       when(
         () => mockBookmarkRepo.setBookmark(
           curriculumId: any(named: 'curriculumId'),
-          trackType: any(named: 'trackType'),
           sefariaRef: any(named: 'sefariaRef'),
         ),
       ).thenAnswer(
         (_) async => BookmarkEntity(
           curriculumId: CurriculumId.mishnayos,
-          trackType: TrackType.personal,
           sefariaRef: 'ref',
           updatedAt: DateTime.now(),
         ),
@@ -752,7 +748,6 @@ void main() {
         verify(
           () => mockBookmarkRepo.setBookmark(
             curriculumId: CurriculumId.mishnayos,
-            trackType: TrackType.personal,
             sefariaRef: 'Mishnah Yevamos 1:1',
           ),
         ).called(1);

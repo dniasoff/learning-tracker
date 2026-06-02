@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/content/content_index.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/sync/providers/outbox_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
@@ -36,17 +35,11 @@ final bookmarkRepositoryProvider = Provider<BookmarkRepository>((ref) {
   );
 });
 
-/// Provider family for a specific bookmark (curriculum + track).
+/// Provider family for a specific bookmark (one track per curriculum).
 final bookmarkProvider = FutureProvider.autoDispose
-    .family<
-      BookmarkEntity?,
-      ({CurriculumId curriculumId, TrackType trackType})
-    >((ref, params) async {
+    .family<BookmarkEntity?, CurriculumId>((ref, curriculumId) async {
       final repository = ref.watch(bookmarkRepositoryProvider);
-      return await repository.getBookmark(
-        curriculumId: params.curriculumId,
-        trackType: params.trackType,
-      );
+      return await repository.getBookmark(curriculumId: curriculumId);
     });
 
 /// Actions for bookmark operations.
@@ -58,37 +51,25 @@ class BookmarkActions {
   /// Set bookmark to a specific content item (manual jump).
   Future<void> setBookmark({
     required CurriculumId curriculumId,
-    required TrackType trackType,
     required String sefariaRef,
   }) async {
     final repository = ref.read(bookmarkRepositoryProvider);
     await repository.setBookmark(
       curriculumId: curriculumId,
-      trackType: trackType,
       sefariaRef: sefariaRef,
     );
 
     // Invalidate the bookmark provider to refresh UI
-    ref.invalidate(
-      bookmarkProvider((curriculumId: curriculumId, trackType: trackType)),
-    );
+    ref.invalidate(bookmarkProvider(curriculumId));
   }
 
-  /// Initialize bookmark for a new curriculum/track.
-  Future<void> initializeBookmark({
-    required CurriculumId curriculumId,
-    required TrackType trackType,
-  }) async {
+  /// Initialize bookmark for a new curriculum.
+  Future<void> initializeBookmark({required CurriculumId curriculumId}) async {
     final repository = ref.read(bookmarkRepositoryProvider);
-    await repository.initializeBookmark(
-      curriculumId: curriculumId,
-      trackType: trackType,
-    );
+    await repository.initializeBookmark(curriculumId: curriculumId);
 
     // Invalidate the bookmark provider to refresh UI
-    ref.invalidate(
-      bookmarkProvider((curriculumId: curriculumId, trackType: trackType)),
-    );
+    ref.invalidate(bookmarkProvider(curriculumId));
   }
 }
 

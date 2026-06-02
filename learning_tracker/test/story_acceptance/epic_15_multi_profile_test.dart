@@ -7,7 +7,6 @@ import 'package:drift/drift.dart' hide isNotNull, isNull;
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 // ContentVersionCheckService removed — content is now bundled
 import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
 import 'package:learning_tracker/features/learning/data/repositories/track_repository_impl.dart';
@@ -3041,7 +3040,6 @@ void main() {
             entryScope: 'masechta',
             entryKey: 'Berakhot',
             parentL1Key: 'Zeraim',
-            trackType: TrackType.personal,
             completedAt: DateTime(2026, 1, 1),
             completionNumber: 1,
             isManual: false,
@@ -3051,7 +3049,6 @@ void main() {
             entryScope: 'masechta',
             entryKey: 'Berakhot',
             parentL1Key: 'Zeraim',
-            trackType: TrackType.personal,
             completedAt: DateTime(2026, 6, 1),
             completionNumber: 2,
             isManual: false,
@@ -3107,21 +3104,6 @@ void main() {
       expect(seder.level, MilestoneLevel.aggregate);
       expect(curriculum.type, 'curriculum_complete');
       expect(curriculum.level, MilestoneLevel.curriculum);
-    });
-
-    // AC 7: Track type badge on each entry
-    test('UnitCompletion carries track type', () {
-      final completion = UnitCompletion(
-        unitIdentifier: 'Shabbat',
-        entryScope: 'masechta',
-        entryKey: 'Shabbat',
-        parentL1Key: 'Moed',
-        trackType: TrackType.personal,
-        completedAt: DateTime(2026, 3, 15),
-        completionNumber: 1,
-        isManual: false,
-      );
-      expect(completion.trackType, TrackType.personal);
     });
 
     // AC 8: Parent/tutor can view any child profile's journey

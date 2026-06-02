@@ -738,7 +738,7 @@ final class AllDailyTasksProvider
   }
 }
 
-String _$allDailyTasksHash() => r'387c881ebc08643a42b1c122555dc722031e4be5';
+String _$allDailyTasksHash() => r'a327f58128914b0ae6a882d820ce1e70240a772e';
 
 /// Overdue task count for a single curriculum.
 ///

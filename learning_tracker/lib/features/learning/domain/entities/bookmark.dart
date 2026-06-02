@@ -1,19 +1,16 @@
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 
-/// Domain entity representing a user's current position in a curriculum track.
+/// Domain entity representing a user's current position in a curriculum.
 ///
 /// Each bookmark points to a specific content item and is uniquely identified
-/// by the combination of curriculum and track type.
+/// by the curriculum (there is exactly one track per profile + curriculum).
 class BookmarkEntity {
   final CurriculumId curriculumId;
-  final TrackType trackType;
   final String sefariaRef;
   final DateTime updatedAt;
 
   const BookmarkEntity({
     required this.curriculumId,
-    required this.trackType,
     required this.sefariaRef,
     required this.updatedAt,
   });
@@ -22,21 +19,19 @@ class BookmarkEntity {
   BookmarkEntity copyWith({String? sefariaRef, DateTime? updatedAt}) {
     return BookmarkEntity(
       curriculumId: curriculumId,
-      trackType: trackType,
       sefariaRef: sefariaRef ?? this.sefariaRef,
       updatedAt: updatedAt ?? this.updatedAt,
     );
   }
 
-  /// Firestore document ID (deterministic per P4).
-  String get firestoreId =>
-      '${curriculumId.storageKey}_${trackType.storageKey}';
+  /// Firestore document ID (deterministic per P4). One track per curriculum,
+  /// so the curriculum storage key alone is the natural key.
+  String get firestoreId => curriculumId.storageKey;
 
   /// Convert to Firestore document map.
   Map<String, dynamic> toFirestore() {
     return {
       'curriculum_id': curriculumId.storageKey,
-      'track_type': trackType.storageKey,
       'content_item_id': sefariaRef,
       'updated_at': updatedAt.toIso8601String(),
     };
@@ -51,7 +46,6 @@ class BookmarkEntity {
           'Unknown curriculumId: ${data['curriculum_id']}',
         ),
       ),
-      trackType: TrackType.fromStorageKey(data['track_type'] as String),
       sefariaRef: data['content_item_id'] as String,
       updatedAt: DateTime.parse(data['updated_at'] as String),
     );

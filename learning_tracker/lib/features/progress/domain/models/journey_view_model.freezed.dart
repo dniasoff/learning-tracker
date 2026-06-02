@@ -573,7 +573,7 @@ as List<MilestoneAchievement>,
 /// @nodoc
 mixin _$UnitCompletion {
 
- String get unitIdentifier; String get entryScope; String get entryKey; String? get parentL1Key; TrackType get trackType; DateTime get completedAt; int get completionNumber; bool get isManual;
+ String get unitIdentifier; String get entryScope; String get entryKey; String? get parentL1Key; DateTime get completedAt; int get completionNumber; bool get isManual;
 /// Create a copy of UnitCompletion
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -584,16 +584,16 @@ $UnitCompletionCopyWith<UnitCompletion> get copyWith => _$UnitCompletionCopyWith
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is UnitCompletion&&(identical(other.unitIdentifier, unitIdentifier) || other.unitIdentifier == unitIdentifier)&&(identical(other.entryScope, entryScope) || other.entryScope == entryScope)&&(identical(other.entryKey, entryKey) || other.entryKey == entryKey)&&(identical(other.parentL1Key, parentL1Key) || other.parentL1Key == parentL1Key)&&(identical(other.trackType, trackType) || other.trackType == trackType)&&(identical(other.completedAt, completedAt) || other.completedAt == completedAt)&&(identical(other.completionNumber, completionNumber) || other.completionNumber == completionNumber)&&(identical(other.isManual, isManual) || other.isManual == isManual));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is UnitCompletion&&(identical(other.unitIdentifier, unitIdentifier) || other.unitIdentifier == unitIdentifier)&&(identical(other.entryScope, entryScope) || other.entryScope == entryScope)&&(identical(other.entryKey, entryKey) || other.entryKey == entryKey)&&(identical(other.parentL1Key, parentL1Key) || other.parentL1Key == parentL1Key)&&(identical(other.completedAt, completedAt) || other.completedAt == completedAt)&&(identical(other.completionNumber, completionNumber) || other.completionNumber == completionNumber)&&(identical(other.isManual, isManual) || other.isManual == isManual));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,unitIdentifier,entryScope,entryKey,parentL1Key,trackType,completedAt,completionNumber,isManual);
+int get hashCode => Object.hash(runtimeType,unitIdentifier,entryScope,entryKey,parentL1Key,completedAt,completionNumber,isManual);
 
 @override
 String toString() {
-  return 'UnitCompletion(unitIdentifier: $unitIdentifier, entryScope: $entryScope, entryKey: $entryKey, parentL1Key: $parentL1Key, trackType: $trackType, completedAt: $completedAt, completionNumber: $completionNumber, isManual: $isManual)';
+  return 'UnitCompletion(unitIdentifier: $unitIdentifier, entryScope: $entryScope, entryKey: $entryKey, parentL1Key: $parentL1Key, completedAt: $completedAt, completionNumber: $completionNumber, isManual: $isManual)';
 }
 
 
@@ -604,7 +604,7 @@ abstract mixin class $UnitCompletionCopyWith<$Res>  {
   factory $UnitCompletionCopyWith(UnitCompletion value, $Res Function(UnitCompletion) _then) = _$UnitCompletionCopyWithImpl;
 @useResult
 $Res call({
- String unitIdentifier, String entryScope, String entryKey, String? parentL1Key, TrackType trackType, DateTime completedAt, int completionNumber, bool isManual
+ String unitIdentifier, String entryScope, String entryKey, String? parentL1Key, DateTime completedAt, int completionNumber, bool isManual
 });
 
 
@@ -621,14 +621,13 @@ class _$UnitCompletionCopyWithImpl<$Res>
 
 /// Create a copy of UnitCompletion
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? unitIdentifier = null,Object? entryScope = null,Object? entryKey = null,Object? parentL1Key = freezed,Object? trackType = null,Object? completedAt = null,Object? completionNumber = null,Object? isManual = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? unitIdentifier = null,Object? entryScope = null,Object? entryKey = null,Object? parentL1Key = freezed,Object? completedAt = null,Object? completionNumber = null,Object? isManual = null,}) {
   return _then(_self.copyWith(
 unitIdentifier: null == unitIdentifier ? _self.unitIdentifier : unitIdentifier // ignore: cast_nullable_to_non_nullable
 as String,entryScope: null == entryScope ? _self.entryScope : entryScope // ignore: cast_nullable_to_non_nullable
 as String,entryKey: null == entryKey ? _self.entryKey : entryKey // ignore: cast_nullable_to_non_nullable
 as String,parentL1Key: freezed == parentL1Key ? _self.parentL1Key : parentL1Key // ignore: cast_nullable_to_non_nullable
-as String?,trackType: null == trackType ? _self.trackType : trackType // ignore: cast_nullable_to_non_nullable
-as TrackType,completedAt: null == completedAt ? _self.completedAt : completedAt // ignore: cast_nullable_to_non_nullable
+as String?,completedAt: null == completedAt ? _self.completedAt : completedAt // ignore: cast_nullable_to_non_nullable
 as DateTime,completionNumber: null == completionNumber ? _self.completionNumber : completionNumber // ignore: cast_nullable_to_non_nullable
 as int,isManual: null == isManual ? _self.isManual : isManual // ignore: cast_nullable_to_non_nullable
 as bool,
@@ -716,10 +715,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String unitIdentifier,  String entryScope,  String entryKey,  String? parentL1Key,  TrackType trackType,  DateTime completedAt,  int completionNumber,  bool isManual)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String unitIdentifier,  String entryScope,  String entryKey,  String? parentL1Key,  DateTime completedAt,  int completionNumber,  bool isManual)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _UnitCompletion() when $default != null:
-return $default(_that.unitIdentifier,_that.entryScope,_that.entryKey,_that.parentL1Key,_that.trackType,_that.completedAt,_that.completionNumber,_that.isManual);case _:
+return $default(_that.unitIdentifier,_that.entryScope,_that.entryKey,_that.parentL1Key,_that.completedAt,_that.completionNumber,_that.isManual);case _:
   return orElse();
 
 }
@@ -737,10 +736,10 @@ return $default(_that.unitIdentifier,_that.entryScope,_that.entryKey,_that.paren
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String unitIdentifier,  String entryScope,  String entryKey,  String? parentL1Key,  TrackType trackType,  DateTime completedAt,  int completionNumber,  bool isManual)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String unitIdentifier,  String entryScope,  String entryKey,  String? parentL1Key,  DateTime completedAt,  int completionNumber,  bool isManual)  $default,) {final _that = this;
 switch (_that) {
 case _UnitCompletion():
-return $default(_that.unitIdentifier,_that.entryScope,_that.entryKey,_that.parentL1Key,_that.trackType,_that.completedAt,_that.completionNumber,_that.isManual);case _:
+return $default(_that.unitIdentifier,_that.entryScope,_that.entryKey,_that.parentL1Key,_that.completedAt,_that.completionNumber,_that.isManual);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -757,10 +756,10 @@ return $default(_that.unitIdentifier,_that.entryScope,_that.entryKey,_that.paren
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String unitIdentifier,  String entryScope,  String entryKey,  String? parentL1Key,  TrackType trackType,  DateTime completedAt,  int completionNumber,  bool isManual)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String unitIdentifier,  String entryScope,  String entryKey,  String? parentL1Key,  DateTime completedAt,  int completionNumber,  bool isManual)?  $default,) {final _that = this;
 switch (_that) {
 case _UnitCompletion() when $default != null:
-return $default(_that.unitIdentifier,_that.entryScope,_that.entryKey,_that.parentL1Key,_that.trackType,_that.completedAt,_that.completionNumber,_that.isManual);case _:
+return $default(_that.unitIdentifier,_that.entryScope,_that.entryKey,_that.parentL1Key,_that.completedAt,_that.completionNumber,_that.isManual);case _:
   return null;
 
 }
@@ -772,14 +771,13 @@ return $default(_that.unitIdentifier,_that.entryScope,_that.entryKey,_that.paren
 
 
 class _UnitCompletion implements UnitCompletion {
-  const _UnitCompletion({required this.unitIdentifier, required this.entryScope, required this.entryKey, this.parentL1Key, required this.trackType, required this.completedAt, required this.completionNumber, required this.isManual});
+  const _UnitCompletion({required this.unitIdentifier, required this.entryScope, required this.entryKey, this.parentL1Key, required this.completedAt, required this.completionNumber, required this.isManual});
   
 
 @override final  String unitIdentifier;
 @override final  String entryScope;
 @override final  String entryKey;
 @override final  String? parentL1Key;
-@override final  TrackType trackType;
 @override final  DateTime completedAt;
 @override final  int completionNumber;
 @override final  bool isManual;
@@ -794,16 +792,16 @@ _$UnitCompletionCopyWith<_UnitCompletion> get copyWith => __$UnitCompletionCopyW
 
 @override
 bool operator ==(Object other) {
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is _UnitCompletion&&(identical(other.unitIdentifier, unitIdentifier) || other.unitIdentifier == unitIdentifier)&&(identical(other.entryScope, entryScope) || other.entryScope == entryScope)&&(identical(other.entryKey, entryKey) || other.entryKey == entryKey)&&(identical(other.parentL1Key, parentL1Key) || other.parentL1Key == parentL1Key)&&(identical(other.trackType, trackType) || other.trackType == trackType)&&(identical(other.completedAt, completedAt) || other.completedAt == completedAt)&&(identical(other.completionNumber, completionNumber) || other.completionNumber == completionNumber)&&(identical(other.isManual, isManual) || other.isManual == isManual));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is _UnitCompletion&&(identical(other.unitIdentifier, unitIdentifier) || other.unitIdentifier == unitIdentifier)&&(identical(other.entryScope, entryScope) || other.entryScope == entryScope)&&(identical(other.entryKey, entryKey) || other.entryKey == entryKey)&&(identical(other.parentL1Key, parentL1Key) || other.parentL1Key == parentL1Key)&&(identical(other.completedAt, completedAt) || other.completedAt == completedAt)&&(identical(other.completionNumber, completionNumber) || other.completionNumber == completionNumber)&&(identical(other.isManual, isManual) || other.isManual == isManual));
 }
 
 
 @override
-int get hashCode => Object.hash(runtimeType,unitIdentifier,entryScope,entryKey,parentL1Key,trackType,completedAt,completionNumber,isManual);
+int get hashCode => Object.hash(runtimeType,unitIdentifier,entryScope,entryKey,parentL1Key,completedAt,completionNumber,isManual);
 
 @override
 String toString() {
-  return 'UnitCompletion(unitIdentifier: $unitIdentifier, entryScope: $entryScope, entryKey: $entryKey, parentL1Key: $parentL1Key, trackType: $trackType, completedAt: $completedAt, completionNumber: $completionNumber, isManual: $isManual)';
+  return 'UnitCompletion(unitIdentifier: $unitIdentifier, entryScope: $entryScope, entryKey: $entryKey, parentL1Key: $parentL1Key, completedAt: $completedAt, completionNumber: $completionNumber, isManual: $isManual)';
 }
 
 
@@ -814,7 +812,7 @@ abstract mixin class _$UnitCompletionCopyWith<$Res> implements $UnitCompletionCo
   factory _$UnitCompletionCopyWith(_UnitCompletion value, $Res Function(_UnitCompletion) _then) = __$UnitCompletionCopyWithImpl;
 @override @useResult
 $Res call({
- String unitIdentifier, String entryScope, String entryKey, String? parentL1Key, TrackType trackType, DateTime completedAt, int completionNumber, bool isManual
+ String unitIdentifier, String entryScope, String entryKey, String? parentL1Key, DateTime completedAt, int completionNumber, bool isManual
 });
 
 
@@ -831,14 +829,13 @@ class __$UnitCompletionCopyWithImpl<$Res>
 
 /// Create a copy of UnitCompletion
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? unitIdentifier = null,Object? entryScope = null,Object? entryKey = null,Object? parentL1Key = freezed,Object? trackType = null,Object? completedAt = null,Object? completionNumber = null,Object? isManual = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? unitIdentifier = null,Object? entryScope = null,Object? entryKey = null,Object? parentL1Key = freezed,Object? completedAt = null,Object? completionNumber = null,Object? isManual = null,}) {
   return _then(_UnitCompletion(
 unitIdentifier: null == unitIdentifier ? _self.unitIdentifier : unitIdentifier // ignore: cast_nullable_to_non_nullable
 as String,entryScope: null == entryScope ? _self.entryScope : entryScope // ignore: cast_nullable_to_non_nullable
 as String,entryKey: null == entryKey ? _self.entryKey : entryKey // ignore: cast_nullable_to_non_nullable
 as String,parentL1Key: freezed == parentL1Key ? _self.parentL1Key : parentL1Key // ignore: cast_nullable_to_non_nullable
-as String?,trackType: null == trackType ? _self.trackType : trackType // ignore: cast_nullable_to_non_nullable
-as TrackType,completedAt: null == completedAt ? _self.completedAt : completedAt // ignore: cast_nullable_to_non_nullable
+as String?,completedAt: null == completedAt ? _self.completedAt : completedAt // ignore: cast_nullable_to_non_nullable
 as DateTime,completionNumber: null == completionNumber ? _self.completionNumber : completionNumber // ignore: cast_nullable_to_non_nullable
 as int,isManual: null == isManual ? _self.isManual : isManual // ignore: cast_nullable_to_non_nullable
 as bool,

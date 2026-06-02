@@ -1,13 +1,12 @@
 // W6.7 — Invite tutor screen (parent side) (FR-2.1, FR-2.2)
 //
-// Parent enters the tutor's email address, then either:
-//   (a) Taps "Send invite" → calls InviteTutorUseCase
-//   (b) Taps "Generate share link" → shows a copyable deep-link as fallback
+// Parent enters the tutor's email address and taps "Send invite", which calls
+// InviteTutorUseCase.
 //
 // The invite flow:
 //   1. Validate email
 //   2. Call InviteTutorUseCase → repository → Cloud Function
-//   3. On success: show the share link + "Copy link" button
+//   3. On success: show a confirmation snackbar
 //   4. On error: show inline error message
 //
 // Wire to InviteTutorUseCase (W4.31). The grant repository implementation
@@ -18,7 +17,6 @@ import 'dart:async';
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
@@ -46,7 +44,6 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
   final _emailController = TextEditingController();
   bool _isLoading = false;
   String? _errorMessage;
-  String? _shareLink; // populated after successful invite
 
   @override
   void dispose() {
@@ -72,7 +69,6 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
-      _shareLink = null;
     });
     try {
       // Snapshot human-readable names onto the grant so the tutor sees the
@@ -97,11 +93,7 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
       );
       if (!mounted) return;
       switch (result) {
-        case TutorGrantSuccess(:final grantId):
-          // Build the share link. The token is embedded in the grantId for now;
-          // the Cloud Function will generate a real invite URL in production.
-          final link = _buildShareLink(grantId ?? 'pending');
-          setState(() => _shareLink = link);
+        case TutorGrantSuccess():
           // Refresh the (non-autoDispose, cached) outgoing-grants list so the
           // new pending invite shows up immediately on Manage Tutors instead
           // of serving the stale empty result fetched before this invite.
@@ -121,23 +113,6 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  String _buildShareLink(String grantId) {
-    // Production: replace with the real deep-link URL from the Cloud Function.
-    return 'https://app.learningtracker.app/invite?token=$grantId';
-  }
-
-  Future<void> _copyLink() async {
-    if (_shareLink == null) return;
-    await Clipboard.setData(ClipboardData(text: _shareLink!));
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(AppLocalizations.of(context)!.inviteTutorLinkCopied),
-        ),
-      );
     }
   }
 
@@ -242,70 +217,6 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
                 ),
                 onPressed: (_isLoading || !_emailValid) ? null : _sendInvite,
               ),
-              // Share link section (shown after invite is sent)
-              if (_shareLink != null) ...[
-                const SizedBox(height: 28),
-                const Divider(),
-                const SizedBox(height: 16),
-                Text(
-                  l10n.inviteTutorShareLinkHeading,
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: AppTheme.brandInk,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  l10n.inviteTutorShareLinkBody,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: AppTheme.brandInkMuted,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFC8CCD8)),
-                  ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          _shareLink!,
-                          style: theme.textTheme.bodySmall?.copyWith(
-                            color: AppTheme.brandInk,
-                            fontFamily: 'monospace',
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.copy_rounded),
-                        tooltip: l10n.inviteTutorCopyLinkTooltip,
-                        onPressed: _copyLink,
-                        color: AppTheme.brandBlue,
-                      ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  icon: const Icon(Icons.copy_rounded),
-                  label: Text(l10n.inviteTutorCopyShareLink),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppTheme.brandBlueDeep,
-                    side: const BorderSide(color: AppTheme.brandBlue),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: const StadiumBorder(),
-                  ),
-                  onPressed: _copyLink,
-                ),
-              ],
             ],
           ),
         ),

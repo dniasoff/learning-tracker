@@ -21,7 +21,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
@@ -108,17 +107,14 @@ class _NoopBookmarkRepository implements BookmarkRepository {
   @override
   Future<BookmarkEntity?> getBookmark({
     required CurriculumId curriculumId,
-    required TrackType trackType,
   }) async => null;
 
   @override
   Future<BookmarkEntity> setBookmark({
     required CurriculumId curriculumId,
-    required TrackType trackType,
     required String sefariaRef,
   }) async => BookmarkEntity(
     curriculumId: curriculumId,
-    trackType: trackType,
     sefariaRef: sefariaRef,
     updatedAt: DateTime.utc(2026, 5, 13),
   );
@@ -126,17 +122,14 @@ class _NoopBookmarkRepository implements BookmarkRepository {
   @override
   Future<void> advanceBookmark({
     required CurriculumId curriculumId,
-    required TrackType trackType,
     required String completedSefariaRef,
   }) async {}
 
   @override
   Future<BookmarkEntity> initializeBookmark({
     required CurriculumId curriculumId,
-    required TrackType trackType,
   }) async => BookmarkEntity(
     curriculumId: curriculumId,
-    trackType: trackType,
     sefariaRef: '',
     updatedAt: DateTime.utc(2026, 5, 13),
   );

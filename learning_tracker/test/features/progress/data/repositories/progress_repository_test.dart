@@ -2,7 +2,6 @@ import 'package:drift/drift.dart' as drift;
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/features/progress/data/repositories/progress_repository_impl.dart';
 import 'package:learning_tracker/features/progress/domain/repositories/progress_repository.dart';
 
@@ -42,57 +41,54 @@ void main() {
 
   group('ProgressRepository', () {
     group('getTrackBreakdown', () {
-      test(
-        'returns Map<TrackType, int> with correct counts per track',
-        () async {
-          // Arrange: Insert completions for different tracks
-          await seedCompletion(
-            database,
-            CompletionEventsCompanion.insert(
-              profileId: profileId,
-              curriculumId: 'bavli',
-              trackId: Value(trackId),
-              sefariaRef: 'Berakhot.2a',
-              stageId: 1,
-              trackType: TrackType.personal.storageKey,
-              eventTimestamp: DateTime.now(),
-              points: const drift.Value(10),
-            ),
-          );
-          await seedCompletion(
-            database,
-            CompletionEventsCompanion.insert(
-              profileId: profileId,
-              curriculumId: 'bavli',
-              trackId: Value(trackId),
-              sefariaRef: 'Berakhot.2b',
-              stageId: 1,
-              trackType: TrackType.personal.storageKey,
-              eventTimestamp: DateTime.now(),
-              points: const drift.Value(10),
-            ),
-          );
-          await seedCompletion(
-            database,
-            CompletionEventsCompanion.insert(
-              profileId: profileId,
-              curriculumId: 'bavli',
-              trackId: Value(trackId),
-              sefariaRef: 'Berakhot.3a',
-              stageId: 1,
-              trackType: TrackType.personal.storageKey,
-              eventTimestamp: DateTime.now(),
-              points: const drift.Value(10),
-            ),
-          );
+      test('returns Map<String, int> with correct counts per track', () async {
+        // Arrange: Insert completions for different tracks
+        await seedCompletion(
+          database,
+          CompletionEventsCompanion.insert(
+            profileId: profileId,
+            curriculumId: 'bavli',
+            trackId: Value(trackId),
+            sefariaRef: 'Berakhot.2a',
+            stageId: 1,
+            trackType: 'personal',
+            eventTimestamp: DateTime.now(),
+            points: const drift.Value(10),
+          ),
+        );
+        await seedCompletion(
+          database,
+          CompletionEventsCompanion.insert(
+            profileId: profileId,
+            curriculumId: 'bavli',
+            trackId: Value(trackId),
+            sefariaRef: 'Berakhot.2b',
+            stageId: 1,
+            trackType: 'personal',
+            eventTimestamp: DateTime.now(),
+            points: const drift.Value(10),
+          ),
+        );
+        await seedCompletion(
+          database,
+          CompletionEventsCompanion.insert(
+            profileId: profileId,
+            curriculumId: 'bavli',
+            trackId: Value(trackId),
+            sefariaRef: 'Berakhot.3a',
+            stageId: 1,
+            trackType: 'personal',
+            eventTimestamp: DateTime.now(),
+            points: const drift.Value(10),
+          ),
+        );
 
-          // Act
-          final breakdown = await repository.getTrackBreakdown('bavli');
+        // Act
+        final breakdown = await repository.getTrackBreakdown('bavli');
 
-          // Assert: 3 personal completions inserted
-          expect(breakdown[TrackType.personal], 3);
-        },
-      );
+        // Assert: 3 personal completions inserted
+        expect(breakdown['personal'], 3);
+      });
 
       test(
         'returns zero counts for inactive tracks that have no completions',
@@ -106,7 +102,7 @@ void main() {
               trackId: Value(trackId),
               sefariaRef: 'Berakhot.2a',
               stageId: 1,
-              trackType: TrackType.personal.storageKey,
+              trackType: 'personal',
               eventTimestamp: DateTime.now(),
               points: const drift.Value(10),
             ),
@@ -116,7 +112,7 @@ void main() {
           final breakdown = await repository.getTrackBreakdown('bavli');
 
           // Assert: 1 personal completion, no school/tutor (V1 only has personal)
-          expect(breakdown[TrackType.personal], 1);
+          expect(breakdown['personal'], 1);
         },
       );
 
@@ -133,7 +129,7 @@ void main() {
               trackId: Value(trackId),
               sefariaRef: 'Berakhot.2a',
               stageId: 1,
-              trackType: TrackType.personal.storageKey,
+              trackType: 'personal',
               eventTimestamp: DateTime.now(),
               points: const drift.Value(10),
             ),
@@ -146,7 +142,7 @@ void main() {
               trackId: Value(trackId),
               sefariaRef: 'Berakhot.2b',
               stageId: 1,
-              trackType: TrackType.personal.storageKey,
+              trackType: 'personal',
               eventTimestamp: DateTime.now(),
               points: const drift.Value(10),
             ),
@@ -156,7 +152,7 @@ void main() {
           final breakdown = await repository.getTrackBreakdown('bavli');
 
           // Assert: School completions are still included even if track is deactivated
-          expect(breakdown[TrackType.personal], 2);
+          expect(breakdown['personal'], 2);
         },
       );
 
@@ -164,10 +160,8 @@ void main() {
         // Act
         final breakdown = await repository.getTrackBreakdown('bavli');
 
-        // Assert
-        expect(breakdown[TrackType.personal], 0);
-        expect(breakdown[TrackType.personal], 0);
-        expect(breakdown[TrackType.personal], 0);
+        // Assert: no completions → no entries.
+        expect(breakdown, isEmpty);
       });
 
       test('filters by curriculum correctly', () async {
@@ -180,7 +174,7 @@ void main() {
             trackId: Value(trackId),
             sefariaRef: 'Berakhot.2a',
             stageId: 1,
-            trackType: TrackType.personal.storageKey,
+            trackType: 'personal',
             eventTimestamp: DateTime.now(),
             points: const drift.Value(10),
           ),
@@ -193,7 +187,7 @@ void main() {
             trackId: Value(trackId),
             sefariaRef: 'Berakhot.1.1',
             stageId: 1,
-            trackType: TrackType.personal.storageKey,
+            trackType: 'personal',
             eventTimestamp: DateTime.now(),
             points: const drift.Value(10),
           ),
@@ -204,8 +198,8 @@ void main() {
         final mishnaBreakdown = await repository.getTrackBreakdown('mishnayos');
 
         // Assert
-        expect(bavliBreakdown[TrackType.personal], 1);
-        expect(mishnaBreakdown[TrackType.personal], 1);
+        expect(bavliBreakdown['personal'], 1);
+        expect(mishnaBreakdown['personal'], 1);
       });
     });
 
@@ -222,7 +216,7 @@ void main() {
               trackId: Value(trackId),
               sefariaRef: 'Berakhot.2a',
               stageId: 1,
-              trackType: TrackType.personal.storageKey,
+              trackType: 'personal',
               eventTimestamp: DateTime.now(),
               points: const drift.Value(10),
             ),
@@ -235,7 +229,7 @@ void main() {
               trackId: Value(trackId),
               sefariaRef: 'Berakhot.2b',
               stageId: 1,
-              trackType: TrackType.personal.storageKey,
+              trackType: 'personal',
               eventTimestamp: DateTime.now(),
               points: const drift.Value(10),
             ),
@@ -248,7 +242,7 @@ void main() {
               trackId: Value(trackId),
               sefariaRef: 'Berakhot.3a',
               stageId: 1,
-              trackType: TrackType.personal.storageKey,
+              trackType: 'personal',
               eventTimestamp: DateTime.now(),
               points: const drift.Value(10),
             ),
@@ -286,7 +280,7 @@ void main() {
             trackId: Value(trackId),
             sefariaRef: 'Berakhot.2a',
             stageId: 1,
-            trackType: TrackType.personal.storageKey,
+            trackType: 'personal',
             eventTimestamp: DateTime.now(),
             points: const drift.Value(10),
           ),
@@ -299,7 +293,7 @@ void main() {
             trackId: Value(trackId),
             sefariaRef: 'Berakhot.1.1',
             stageId: 1,
-            trackType: TrackType.personal.storageKey,
+            trackType: 'personal',
             eventTimestamp: DateTime.now(),
             points: const drift.Value(10),
           ),

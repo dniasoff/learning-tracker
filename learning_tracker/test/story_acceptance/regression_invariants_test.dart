@@ -23,7 +23,6 @@ import 'dart:io';
 import 'package:drift/drift.dart' show Value;
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/learning/data/completion_writer.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_command.dart';
@@ -145,7 +144,7 @@ void main() {
               curriculumId: CurriculumId.mishnayos.storageKey,
               sefariaRef: 'Berakhot 1:${i + 1}',
               stageId: 1,
-              trackType: TrackType.personal.storageKey,
+              trackType: 'personal',
               trackId: Value(originalId),
               eventTimestamp: DateTime.utc(2026, 5, 1),
             ),
@@ -290,7 +289,7 @@ void main() {
               curriculumId: CurriculumId.mishnayos.storageKey,
               sefariaRef: 'Berakhot 1:1',
               stageId: 1,
-              trackType: TrackType.personal.storageKey,
+              trackType: 'personal',
               trackId: Value(trackId),
               eventTimestamp: DateTime.utc(2026, 5, 1),
             ),
@@ -302,7 +301,7 @@ void main() {
               curriculumId: CurriculumId.mishnayos.storageKey,
               sefariaRef: 'Berakhot 1:1',
               stageId: 2,
-              trackType: TrackType.personal.storageKey,
+              trackType: 'personal',
               trackId: Value(trackId),
               eventTimestamp: DateTime.utc(2026, 5, 2),
             ),
@@ -352,7 +351,7 @@ void main() {
                 curriculumId: CurriculumId.mishnayos.storageKey,
                 sefariaRef: 'Berakhot $i:1',
                 stageId: 1,
-                trackType: TrackType.personal.storageKey,
+                trackType: 'personal',
                 trackId: trackId,
                 completedAt: DateTimeFactory.nowUtc(),
                 points: 5,

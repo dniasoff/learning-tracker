@@ -516,6 +516,74 @@ void main() {
         expect(all, hasLength(1));
       },
     );
+
+    // ── Bug 1 — FK-safe account resolution ───────────────────────────────────
+
+    test('Bug 1: remote account_id != local account id does NOT throw and '
+        'remaps the profile onto the single local account', () async {
+      // The remote row references account_id=999 (the cloud account id),
+      // but the only local account has the autoincrement id minted in setUp.
+      // Inserting the profile with 999 verbatim would violate the
+      // learner_profiles → accounts FK (SqliteException 787). The merge must
+      // remap onto the single local account instead.
+      expect(accountId, isNot(equals(999)));
+
+      await store.upsert(
+        kind: EntityKind.learnerProfile,
+        profileId: 1,
+        fields: {
+          'profile_id': 1,
+          'account_id': 999, // remote id, absent locally
+          'display_name': 'Family',
+          'mode': 'adult',
+          'updated_at': DateTime.utc(2026, 5, 15).toIso8601String(),
+          'created_at': DateTime.utc(2026, 1, 1).toIso8601String(),
+        },
+      );
+
+      final row = await db.profileDao.getProfileById(1);
+      expect(row, isNotNull);
+      expect(row!.displayName, equals('Family'));
+      // Remapped onto the existing local account — never the missing 999.
+      expect(row.accountId, equals(accountId));
+    });
+
+    test(
+      'Bug 1: with NO local account, the merge seeds a placeholder account so '
+      'the FK holds instead of crashing',
+      () async {
+        // Fresh DB with zero accounts — reproduces the on-device state right
+        // after a (re)created account whose accounts row has not landed yet.
+        final freshDb = UserDatabase(NativeDatabase.memory());
+        addTearDown(freshDb.close);
+        final freshStore = DriftMergeStore(freshDb);
+
+        final accountsBefore = await freshDb.userProfileDao
+            .getAllUserProfiles();
+        expect(accountsBefore, isEmpty);
+
+        await freshStore.upsert(
+          kind: EntityKind.learnerProfile,
+          profileId: 1,
+          fields: {
+            'profile_id': 1,
+            'account_id': 1,
+            'display_name': 'Family',
+            'mode': 'adult',
+            'updated_at': DateTime.utc(2026, 5, 15).toIso8601String(),
+            'created_at': DateTime.utc(2026, 1, 1).toIso8601String(),
+          },
+        );
+
+        final row = await freshDb.profileDao.getProfileById(1);
+        expect(row, isNotNull);
+        // The seeded account row exists, satisfying the FK.
+        final acct = await freshDb.userProfileDao.getUserProfileById(
+          row!.accountId,
+        );
+        expect(acct, isNotNull);
+      },
+    );
   });
 
   // ── upsert(track_config) ─────────────────────────────────────────────────
@@ -1000,6 +1068,39 @@ void main() {
       expect(stages.single.stageName, equals('learning'));
       expect(stages.single.isDefault, isTrue);
     });
+
+    test(
+      'Bug 3: stage with a REMOTE track_id binds to the LOCAL track '
+      '(resolved by profile+curriculum) so getStagesByTrack finds it',
+      () async {
+        // Simulate the tutored-mirror case: the synced stage row carries the
+        // parent device's track id (a large value that does not match the
+        // mirror's local autoincrement track id).
+        const remoteTrackId = 987654;
+        expect(remoteTrackId, isNot(equals(trackId)));
+
+        await store.upsert(
+          kind: EntityKind.stageDefinition,
+          profileId: profileId,
+          fields: {
+            'curriculum_id': 'mishnayos',
+            'track_id': remoteTrackId, // stale remote id
+            'stage_order': 0,
+            'stage_name': 'learning',
+            'is_default': true,
+            'schedule': '{"type":"delay","delay_days":0}',
+            'updated_at': DateTime.utc(2026, 5, 10).toIso8601String(),
+          },
+        );
+
+        // The projection reads stages via getStagesByTrack(localTrackId).
+        // Before the fix the stage was bound to remoteTrackId and this was
+        // empty → "No projection". Now it is realigned to the local track.
+        final byLocalTrack = await db.stageDao.getStagesByTrack(trackId);
+        expect(byLocalTrack, hasLength(1));
+        expect(byLocalTrack.single.trackId, equals(trackId));
+      },
+    );
 
     test(
       'update: overwrites stage_name, schedule for existing stage',

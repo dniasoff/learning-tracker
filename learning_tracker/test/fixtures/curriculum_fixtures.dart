@@ -25,13 +25,6 @@ class CurriculumFixtures {
       CurriculumId.values.map((c) => c.storageKey).toList();
 }
 
-/// Track type constants for testing. V1 has one track type.
-class TrackTypeFixtures {
-  static const String personal = 'personal';
-
-  static List<String> get allTrackTypes => [personal];
-}
-
 /// Stage constants for testing
 class StageFixtures {
   /// Default stage IDs (match stage_definitions seed data)

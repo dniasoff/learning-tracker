@@ -93,8 +93,15 @@ class TutoredPullService {
     // T1.pull-decouple — read parent namespace, merge under synthetic local id.
     final pipeline = PullPipeline(gateway: _gateway, dispatcher: _dispatcher);
 
+    final int failureCount;
     try {
-      await pipeline.pullForTutoredProfile(
+      // Bug 3: pullForTutoredProfile is now per-collection resilient — one
+      // collection's merge/DB error (e.g. a point_configs FK violation) no
+      // longer aborts the whole pull, so the remaining collections still land
+      // and the scheduler projection can compute. It returns the count of
+      // collections that failed; a non-zero count is a SOFT error (partial
+      // refresh) that must NOT wipe the mirror.
+      failureCount = await pipeline.pullForTutoredProfile(
         parentUid: parentUid,
         remoteProfileId: remoteProfileId,
         localProfileId: localId,
@@ -108,6 +115,14 @@ class TutoredPullService {
         result: TutoredPullResult.permissionDenied,
       );
     } on Exception {
+      // A failure outside the per-collection guards (e.g. the synthetic-profile
+      // upsert) — surface as a soft error; do NOT wipe (not a revocation).
+      return (localProfileId: localId, result: TutoredPullResult.error);
+    }
+
+    if (failureCount > 0) {
+      // Partial refresh — report soft error so the caller can hint "couldn't
+      // fully refresh", but keep the (partial) mirror.
       return (localProfileId: localId, result: TutoredPullResult.error);
     }
 

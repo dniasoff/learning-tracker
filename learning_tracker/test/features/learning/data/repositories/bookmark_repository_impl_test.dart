@@ -2,7 +2,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
@@ -115,12 +114,10 @@ void main() {
       () async {
         final bookmark = await repository.initializeBookmark(
           curriculumId: CurriculumId.mishnayos,
-          trackType: TrackType.personal,
         );
 
         expect(bookmark.sefariaRef, _ref1);
         expect(bookmark.curriculumId, CurriculumId.mishnayos);
-        expect(bookmark.trackType, TrackType.personal);
         expect(bookmark.updatedAt.isUtc, isTrue);
       },
     );
@@ -132,19 +129,16 @@ void main() {
       () async {
         await repository.setBookmark(
           curriculumId: CurriculumId.mishnayos,
-          trackType: TrackType.personal,
           sefariaRef: _ref1,
         );
 
         await repository.advanceBookmark(
           curriculumId: CurriculumId.mishnayos,
-          trackType: TrackType.personal,
           completedSefariaRef: _ref1,
         );
 
         final updated = await repository.getBookmark(
           curriculumId: CurriculumId.mishnayos,
-          trackType: TrackType.personal,
         );
         expect(updated?.sefariaRef, _ref2);
       },
@@ -182,19 +176,16 @@ void main() {
         // Start at ref3 (first in custom order)
         await repository.setBookmark(
           curriculumId: CurriculumId.mishnayos,
-          trackType: TrackType.personal,
           sefariaRef: _ref3,
         );
 
         await repository.advanceBookmark(
           curriculumId: CurriculumId.mishnayos,
-          trackType: TrackType.personal,
           completedSefariaRef: _ref3,
         );
 
         final updated = await repository.getBookmark(
           curriculumId: CurriculumId.mishnayos,
-          trackType: TrackType.personal,
         );
         expect(updated?.sefariaRef, _ref1); // Next in custom order
       },
@@ -203,19 +194,16 @@ void main() {
     test('advanceBookmark keeps bookmark at last item (no overflow)', () async {
       await repository.setBookmark(
         curriculumId: CurriculumId.mishnayos,
-        trackType: TrackType.personal,
         sefariaRef: _ref3,
       );
 
       await repository.advanceBookmark(
         curriculumId: CurriculumId.mishnayos,
-        trackType: TrackType.personal,
         completedSefariaRef: _ref3,
       );
 
       final updated = await repository.getBookmark(
         curriculumId: CurriculumId.mishnayos,
-        trackType: TrackType.personal,
       );
       expect(updated?.sefariaRef, _ref3); // Unchanged — already at last item
     });
@@ -227,7 +215,6 @@ void main() {
 
       final bookmark = await repository.setBookmark(
         curriculumId: CurriculumId.mishnayos,
-        trackType: TrackType.personal,
         sefariaRef: _ref2,
       );
 
@@ -246,20 +233,18 @@ void main() {
   });
 
   group('Firestore document ID', () {
-    test('firestoreId follows {curriculumId}_{trackType} pattern', () async {
+    test('firestoreId is the curriculum storage key', () async {
       final bookmark = await repository.setBookmark(
         curriculumId: CurriculumId.mishnayos,
-        trackType: TrackType.personal,
         sefariaRef: _ref1,
       );
-      expect(bookmark.firestoreId, 'mishnayos_personal');
+      expect(bookmark.firestoreId, 'mishnayos');
 
       final bookmark2 = await repository.setBookmark(
         curriculumId: CurriculumId.bavli,
-        trackType: TrackType.personal,
         sefariaRef: _ref1,
       );
-      expect(bookmark2.firestoreId, 'bavli_personal');
+      expect(bookmark2.firestoreId, 'bavli');
     });
   });
 
@@ -285,14 +270,13 @@ void main() {
         final remoteTime = DateTime.now().toUtc();
         await repository.mergeRemoteBookmark({
           'curriculum_id': CurriculumId.mishnayos.storageKey,
-          'track_type': TrackType.personal.storageKey,
+          'track_type': 'personal',
           'content_item_id': _ref2,
           'updated_at': remoteTime.toIso8601String(),
         });
 
         final result = await repository.getBookmark(
           curriculumId: CurriculumId.mishnayos,
-          trackType: TrackType.personal,
         );
         expect(result?.sefariaRef, _ref2); // Remote won
       },
@@ -304,7 +288,6 @@ void main() {
         // Set local bookmark to ref2 — just now
         await repository.setBookmark(
           curriculumId: CurriculumId.mishnayos,
-          trackType: TrackType.personal,
           sefariaRef: _ref2,
         );
 
@@ -314,14 +297,13 @@ void main() {
         );
         await repository.mergeRemoteBookmark({
           'curriculum_id': CurriculumId.mishnayos.storageKey,
-          'track_type': TrackType.personal.storageKey,
+          'track_type': 'personal',
           'content_item_id': _ref3,
           'updated_at': olderRemoteTime.toIso8601String(),
         });
 
         final result = await repository.getBookmark(
           curriculumId: CurriculumId.mishnayos,
-          trackType: TrackType.personal,
         );
         expect(result?.sefariaRef, _ref2); // Local won
       },

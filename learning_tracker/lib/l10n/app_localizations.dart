@@ -876,23 +876,11 @@ abstract class AppLocalizations {
   /// **'Join a Calendar Program'**
   String get joinCalendarProgram;
 
-  /// No description provided for @customTrack.
-  ///
-  /// In en, this message translates to:
-  /// **'Custom Track'**
-  String get customTrack;
-
   /// No description provided for @joinCalendarDesc.
   ///
   /// In en, this message translates to:
   /// **'Follow a daily learning schedule like Daf Yomi'**
   String get joinCalendarDesc;
-
-  /// No description provided for @customTrackDesc.
-  ///
-  /// In en, this message translates to:
-  /// **'Create your own learning plan at your own pace'**
-  String get customTrackDesc;
 
   /// No description provided for @availablePrograms.
   ///
@@ -1949,6 +1937,12 @@ abstract class AppLocalizations {
   /// **'TALMID PROFILES'**
   String get profilePickerTalmidProfiles;
 
+  /// No description provided for @profilePickerSkipToSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip to Settings'**
+  String get profilePickerSkipToSettings;
+
   /// No description provided for @profilePickerTutoredChildren.
   ///
   /// In en, this message translates to:
@@ -1996,6 +1990,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Tutor mode'**
   String get tutorModeIndicator;
+
+  /// No description provided for @tutorModeIndicatorNamed.
+  ///
+  /// In en, this message translates to:
+  /// **'Tutor mode · {name}'**
+  String tutorModeIndicatorNamed(String name);
 
   /// No description provided for @tutorModeExit.
   ///
@@ -2260,6 +2260,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Add, edit, or archive your child\'s tracks'**
   String get manageTracksForChildSubtitle;
+
+  /// No description provided for @manageChildLearningSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage tracks, points, rewards, and goals'**
+  String get manageChildLearningSubtitle;
 
   /// No description provided for @pointConfiguration.
   ///
@@ -6304,36 +6310,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Invite sent to {email}!'**
   String inviteTutorSentSnackbar(String email);
-
-  /// No description provided for @inviteTutorLinkCopied.
-  ///
-  /// In en, this message translates to:
-  /// **'Link copied to clipboard!'**
-  String get inviteTutorLinkCopied;
-
-  /// No description provided for @inviteTutorShareLinkHeading.
-  ///
-  /// In en, this message translates to:
-  /// **'Share link (backup delivery)'**
-  String get inviteTutorShareLinkHeading;
-
-  /// No description provided for @inviteTutorShareLinkBody.
-  ///
-  /// In en, this message translates to:
-  /// **'If the email is not received, share this link directly with the tutor.'**
-  String get inviteTutorShareLinkBody;
-
-  /// No description provided for @inviteTutorCopyLinkTooltip.
-  ///
-  /// In en, this message translates to:
-  /// **'Copy link'**
-  String get inviteTutorCopyLinkTooltip;
-
-  /// No description provided for @inviteTutorCopyShareLink.
-  ///
-  /// In en, this message translates to:
-  /// **'Copy share link'**
-  String get inviteTutorCopyShareLink;
 
   /// No description provided for @manageGrantsAppBarTitle.
   ///

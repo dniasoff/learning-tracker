@@ -16,7 +16,6 @@ import 'package:learning_tracker/core/auth/auth_providers.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart'
     show TransliterationVariant;
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
 import 'package:learning_tracker/core/preferences/app_locale_preference.dart';
 import 'package:learning_tracker/core/preferences/hebrew_date_preference.dart';
@@ -224,28 +223,6 @@ void main() {
     test('trackRepositoryProvider init and debugGetCreateSourceHash', () {
       // covers lines 14, 23-24, 34-35
       expect(trackRepositoryProvider.debugGetCreateSourceHash(), isNotEmpty);
-    });
-
-    test('activeTracksProvider family and instance toString/==/hash', () {
-      // covers lines 61, 74-92, 124, 135-139
-      expect(activeTracksProvider.toString(), contains('activeTracks'));
-      final p1 = activeTracksProvider(CurriculumId.bavli);
-      final p2 = activeTracksProvider(CurriculumId.bavli);
-      expect(p1.toString(), contains('bavli'));
-      expect(p1, equals(p2));
-      expect(p1.hashCode, equals(p2.hashCode));
-      expect(p1.debugGetCreateSourceHash(), isNotEmpty);
-    });
-
-    test('isTrackActiveProvider family and instance toString/==/hash', () {
-      // covers lines 145, 153-195, 202-217
-      expect(isTrackActiveProvider.toString(), contains('isTrackActive'));
-      final p1 = isTrackActiveProvider(CurriculumId.bavli, TrackType.personal);
-      final p2 = isTrackActiveProvider(CurriculumId.bavli, TrackType.personal);
-      expect(p1.toString(), contains('bavli'));
-      expect(p1, equals(p2));
-      expect(p1.hashCode, equals(p2.hashCode));
-      expect(p1.debugGetCreateSourceHash(), isNotEmpty);
     });
   });
 

@@ -7,7 +7,6 @@ import 'package:learning_tracker/core/content/hierarchy_selection.dart';
 import 'package:learning_tracker/core/database/daos/outbox_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
@@ -246,7 +245,7 @@ class BulkPriorCompletionService {
         curriculumId: curriculumId.storageKey,
         sefariaRefs: sefariaRefs,
         stageId: stageId,
-        trackType: TrackType.personal.storageKey,
+        trackType: 'personal',
         profileId: profileId,
         // Engagement gate: prior-mark NEVER credits streak or points.
         awardGamificationPoints: false,
@@ -289,7 +288,6 @@ class BulkPriorCompletionService {
           : _bookmarkRepository;
       await bookmarkRepo.setBookmark(
         curriculumId: curriculumId,
-        trackType: TrackType.personal,
         sefariaRef: bookmarkRef,
       );
     }
@@ -337,7 +335,7 @@ class BulkPriorCompletionService {
     required CurriculumId curriculumId,
   }) async {
     final purgedAt = DateTimeFactory.nowUtc();
-    final trackType = TrackType.personal.storageKey;
+    const trackType = 'personal';
     final curriculumKey = curriculumId.storageKey;
 
     // ── 1. Identify the stage IDs that have prior-import records ─────────────

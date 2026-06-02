@@ -274,14 +274,14 @@ void main() {
       },
     );
 
-    test('pushBookmark doc ID is curriculum_id_track_type', () async {
+    test('pushBookmark doc ID is the curriculum_id', () async {
       final fs = createFakeFirestore(authenticatedUid: _uid);
       await _gw(fs).pushBookmark(
         profileId: _profileId,
-        data: {'curriculum_id': 'mishnayos', 'track_type': 'personal'},
+        data: {'curriculum_id': 'mishnayos'},
       );
       final snap = await _subcollection(fs, _uid, _profileId, 'bookmarks');
-      expect(snap.docs.first.id, equals('mishnayos_personal'));
+      expect(snap.docs.first.id, equals('mishnayos'));
     });
 
     test('pushStreak uses ULID from payload as doc ID', () async {

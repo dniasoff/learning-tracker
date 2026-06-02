@@ -13,7 +13,6 @@ import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/learning/data/completion_writer.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_command.dart';
@@ -57,7 +56,7 @@ void main() {
                   curriculumId: CurriculumId.mishnayos.storageKey,
                   sefariaRef: 'Berakhot 1:1',
                   stageId: 1,
-                  trackType: TrackType.personal.storageKey,
+                  trackType: 'personal',
                   trackId: Value(trackId),
                   eventTimestamp: DateTime.utc(2026, 5, 1),
                   // derivedFromEvents not provided → uses default (false)
@@ -101,7 +100,7 @@ void main() {
               curriculumId: CurriculumId.mishnayos.storageKey,
               sefariaRef: 'Berakhot 2:1',
               stageId: 1,
-              trackType: TrackType.personal.storageKey,
+              trackType: 'personal',
               trackId: trackId,
               completedAt: DateTimeFactory.nowUtc(),
               points: 5,
@@ -143,7 +142,7 @@ void main() {
             curriculumId: CurriculumId.mishnayos.storageKey,
             sefariaRef: 'Berakhot 3:1',
             stageId: 1,
-            trackType: TrackType.personal.storageKey,
+            trackType: 'personal',
             trackId: trackId,
             completedAt: DateTimeFactory.nowUtc(),
             points: 5,

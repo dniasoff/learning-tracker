@@ -11,7 +11,6 @@ import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
 import 'package:learning_tracker/core/preferences/text_display_preferences.dart';
@@ -410,7 +409,7 @@ void main() {
             curriculumId: CurriculumId.bavli.storageKey,
             sefariaRef: 'Berakhot.2a',
             stageId: 1,
-            trackType: TrackType.personal.storageKey,
+            trackType: 'personal',
             trackId: Value(bavliTrackId),
             eventTimestamp: DateTime.now(),
             points: const Value(10),
@@ -457,7 +456,7 @@ void main() {
             curriculumId: CurriculumId.bavli.storageKey,
             sefariaRef: 'Berakhot.2a',
             stageId: 1,
-            trackType: TrackType.personal.storageKey,
+            trackType: 'personal',
             trackId: Value(trackId),
             eventTimestamp: DateTime.now(),
             points: const Value(10),

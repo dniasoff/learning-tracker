@@ -3,7 +3,6 @@ import 'package:learning_tracker/core/database/daos/completion_dao.dart'
     show Completion;
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/features/progress/domain/services/curriculum_progress_service.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/models/schedule_type.dart';
@@ -271,7 +270,7 @@ void main() {
       );
 
       final seder = result.hierarchyLevels[0];
-      expect(seder.trackBreakdown[TrackType.personal], 3);
+      expect(seder.trackBreakdown['personal'], 3);
     });
 
     test('overall stats categorize items correctly', () async {

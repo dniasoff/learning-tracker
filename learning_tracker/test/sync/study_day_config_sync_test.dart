@@ -320,6 +320,72 @@ void main() {
       },
     );
 
+    test(
+      'Bug 3: remote row with a STALE remote track_id is remapped onto the '
+      'local track (tutored mirror) so the schedule pattern is not lost',
+      () async {
+        // Mirror scenario: the parent device pushed the config with ITS track
+        // id; the tutor mirror re-created the same logical track under a
+        // different local autoincrement id. The merger must resolve the local
+        // track by (profile, curriculum) and bind the config to it — otherwise
+        // getConfigsByTrack(localTrackId) is empty and the scheduler projection
+        // shows 0 due / "No projection" for the tutor.
+        const staleRemoteTrackId = 555555;
+        expect(staleRemoteTrackId, isNot(equals(trackId)));
+
+        final merger = StudyDayConfigMerger(db);
+        await merger.merge(
+          profileId: profileId,
+          rows: [
+            {
+              'profile_id': profileId,
+              'curriculum_id': 'mishnayos',
+              'track_id': staleRemoteTrackId,
+              'day_of_week': 2,
+              'day_type': 'study',
+              'updated_at': '2026-05-21T10:00:00.000Z',
+            },
+          ],
+        );
+
+        // Stored under the LOCAL track id, not the stale remote one.
+        final byLocal = await db.studyDayConfigDao.getConfigsByTrack(trackId);
+        expect(byLocal.any((c) => c.dayOfWeek == 2), isTrue);
+        final byRemote = await (db.select(
+          db.studyDayConfigs,
+        )..where((t) => t.trackId.equals(staleRemoteTrackId))).get();
+        expect(byRemote, isEmpty);
+      },
+    );
+
+    test(
+      'Bug 3 guard: with NO local track for the curriculum, the row is skipped '
+      '(no FK throw)',
+      () async {
+        // A curriculum the mirror has no track for → cannot resolve a local
+        // track → must skip rather than violate the FK.
+        final merger = StudyDayConfigMerger(db);
+        await merger.merge(
+          profileId: profileId,
+          rows: [
+            {
+              'profile_id': profileId,
+              'curriculum_id': 'tehillim', // no local track seeded
+              'track_id': 42,
+              'day_of_week': 1,
+              'day_type': 'study',
+              'updated_at': '2026-05-21T10:00:00.000Z',
+            },
+          ],
+        );
+
+        final rows = await (db.select(
+          db.studyDayConfigs,
+        )..where((t) => t.curriculumId.equals('tehillim'))).get();
+        expect(rows, isEmpty);
+      },
+    );
+
     test('malformed remote row is silently skipped', () async {
       final merger = StudyDayConfigMerger(db);
       await merger.merge(

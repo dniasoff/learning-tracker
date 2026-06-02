@@ -5,7 +5,6 @@ import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/core/time/ulid.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
@@ -173,7 +172,6 @@ class CompletionRepositoryImpl implements CompletionRepository {
       // 6. Advance bookmark (outside transaction — uses content repo cache)
       await _advanceBookmark(
         curriculumId: request.curriculumId,
-        trackType: request.trackType,
         completedSefariaRef: request.sefariaRef,
       );
 
@@ -277,7 +275,6 @@ class CompletionRepositoryImpl implements CompletionRepository {
     if (completions.isNotEmpty) {
       await _advanceBookmark(
         curriculumId: request.curriculumId,
-        trackType: request.trackType,
         completedSefariaRef: request.sefariaRefs.last,
         bookmarkProfileId: effectiveProfileId,
       );
@@ -392,7 +389,6 @@ class CompletionRepositoryImpl implements CompletionRepository {
     if (ordered.isNotEmpty) {
       await _advanceBookmark(
         curriculumId: request.curriculumId,
-        trackType: request.trackType,
         completedSefariaRef: request.sefariaRefs.last,
         bookmarkProfileId: effectiveProfileId,
       );
@@ -787,7 +783,6 @@ class CompletionRepositoryImpl implements CompletionRepository {
   /// the correct bookmark.
   Future<void> _advanceBookmark({
     required String curriculumId,
-    required String trackType,
     required String completedSefariaRef,
     int? bookmarkProfileId,
   }) async {
@@ -810,10 +805,8 @@ class CompletionRepositoryImpl implements CompletionRepository {
       (c) => c.storageKey == curriculumId,
       orElse: () => throw ArgumentError('Unknown curriculumId: $curriculumId'),
     );
-    final track = TrackType.fromStorageKey(trackType);
     await bookmarkRepo.advanceBookmark(
       curriculumId: curriculum,
-      trackType: track,
       completedSefariaRef: completedSefariaRef,
     );
   }

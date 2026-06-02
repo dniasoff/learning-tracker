@@ -106,19 +106,32 @@ class GamificationSettingsMerger implements EntityMerger {
         final curriculumId = map['curriculum_id'] as String?;
         final stageOrder = (map['stage_order'] as num?)?.toInt();
         final points = (map['points'] as num?)?.toInt();
-        final trackId = (map['track_id'] as num?)?.toInt();
+        final remoteTrackId = (map['track_id'] as num?)?.toInt();
         if (curriculumId == null ||
             stageOrder == null ||
             points == null ||
-            trackId == null) {
+            remoteTrackId == null) {
           continue;
         }
+
+        // Bug 3: point_configs.trackId FKs into curriculum_tracks. The stored
+        // track_id is the REMOTE id; under a tutored mirror the track was
+        // re-inserted with a different local autoincrement id, so inserting the
+        // remote id throws a FK violation (this is the tutored_pull_error /
+        // tutored_listener_merge_error for gamification_settings). Resolve the
+        // LOCAL track by (profile, curriculum); skip the row when no local
+        // track exists yet (it re-merges on the next pull). No-op for own-data.
+        final localTrack = await _db.trackDao.getTrackByProfileAndCurriculum(
+          profileId,
+          curriculumId,
+        );
+        if (localTrack == null) continue;
 
         await _db.pointConfigDao.upsertConfig(
           PointConfigsCompanion.insert(
             profileId: profileId,
             curriculumId: curriculumId,
-            trackId: trackId,
+            trackId: localTrack.id,
             stageOrder: stageOrder,
             points: points,
           ),

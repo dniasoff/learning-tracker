@@ -8,13 +8,19 @@
 /// `updated_at` via [MergeStore.persistUpdatedAt].
 library;
 
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/codec/learner_profile_codec.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 
 class LearnerProfileMerger implements EntityMerger {
-  LearnerProfileMerger({required MergeStore store}) : _store = store;
+  LearnerProfileMerger({required MergeStore store, AppLogger? logger})
+    : _store = store,
+      _logger = logger;
 
   final MergeStore _store;
+  // Bug 1: optional logger so a per-row merge failure is observable instead of
+  // silently swallowed.
+  final AppLogger? _logger;
   static const _codec = LearnerProfileCodec();
 
   @override
@@ -26,39 +32,51 @@ class LearnerProfileMerger implements EntityMerger {
     required List<Map<String, dynamic>> rows,
   }) async {
     for (final row in rows) {
-      final decoded = _codec.decode(row);
-      // Fall back to caller's profileId when profile_id is absent.
-      final naturalKey = decoded != null
-          ? decoded.profileId.toString()
-          : profileId.toString();
+      // Bug 1: isolate each row. A single malformed/FK-violating profile row
+      // must never abort the whole page (and, upstream, the whole launch pull
+      // that bounces the user to the splash). Catch, log, and move on.
+      try {
+        final decoded = _codec.decode(row);
+        // Fall back to caller's profileId when profile_id is absent.
+        final naturalKey = decoded != null
+            ? decoded.profileId.toString()
+            : profileId.toString();
 
-      final localUpdatedAt = await _store.currentUpdatedAt(
-        kind: kind,
-        profileId: profileId,
-        naturalKey: naturalKey,
-      );
-      final localSyncedAt = await _store.currentSyncedAt(
-        kind: kind,
-        profileId: profileId,
-        naturalKey: naturalKey,
-      );
-      final remoteUpdatedAt = decoded?.updatedAt;
-      if (!_store.remoteIsNewer(
-        localUpdatedAt: localUpdatedAt,
-        remoteUpdatedAt: remoteUpdatedAt,
-        localSyncedAt: localSyncedAt,
-        remoteSyncedAt: decoded?.syncedAt,
-      )) {
-        continue;
-      }
-      await _store.upsert(kind: kind, profileId: profileId, fields: row);
-      if (remoteUpdatedAt != null) {
-        await _store.persistUpdatedAt(
+        final localUpdatedAt = await _store.currentUpdatedAt(
           kind: kind,
           profileId: profileId,
           naturalKey: naturalKey,
-          updatedAt: remoteUpdatedAt,
-          syncedAt: decoded?.syncedAt,
+        );
+        final localSyncedAt = await _store.currentSyncedAt(
+          kind: kind,
+          profileId: profileId,
+          naturalKey: naturalKey,
+        );
+        final remoteUpdatedAt = decoded?.updatedAt;
+        if (!_store.remoteIsNewer(
+          localUpdatedAt: localUpdatedAt,
+          remoteUpdatedAt: remoteUpdatedAt,
+          localSyncedAt: localSyncedAt,
+          remoteSyncedAt: decoded?.syncedAt,
+        )) {
+          continue;
+        }
+        await _store.upsert(kind: kind, profileId: profileId, fields: row);
+        if (remoteUpdatedAt != null) {
+          await _store.persistUpdatedAt(
+            kind: kind,
+            profileId: profileId,
+            naturalKey: naturalKey,
+            updatedAt: remoteUpdatedAt,
+            syncedAt: decoded?.syncedAt,
+          );
+        }
+      } catch (e, stackTrace) {
+        _logger?.warning(
+          event: 'sync_learner_profile_merge_row_failed',
+          fields: {'profile_id': profileId},
+          exception: e,
+          stackTrace: stackTrace,
         );
       }
     }

@@ -61,30 +61,31 @@ final class ProgressRepositoryProvider
 String _$progressRepositoryHash() =>
     r'94d461758ffc9ecb6e10559f92a5f5ab8a3a8435';
 
-/// Provider for track breakdown by curriculum, scoped to the active profile.
+/// Provider for completion counts by curriculum, scoped to the active profile.
 ///
-/// Returns a map of TrackType to completion counts for the given curriculum.
+/// Returns a map keyed by the internal track storage key. One track per
+/// curriculum, so this is a single-entry map — not a user-facing concept.
 
 @ProviderFor(trackBreakdown)
 final trackBreakdownProvider = TrackBreakdownFamily._();
 
-/// Provider for track breakdown by curriculum, scoped to the active profile.
+/// Provider for completion counts by curriculum, scoped to the active profile.
 ///
-/// Returns a map of TrackType to completion counts for the given curriculum.
+/// Returns a map keyed by the internal track storage key. One track per
+/// curriculum, so this is a single-entry map — not a user-facing concept.
 
 final class TrackBreakdownProvider
     extends
         $FunctionalProvider<
-          AsyncValue<Map<TrackType, int>>,
-          Map<TrackType, int>,
-          FutureOr<Map<TrackType, int>>
+          AsyncValue<Map<String, int>>,
+          Map<String, int>,
+          FutureOr<Map<String, int>>
         >
-    with
-        $FutureModifier<Map<TrackType, int>>,
-        $FutureProvider<Map<TrackType, int>> {
-  /// Provider for track breakdown by curriculum, scoped to the active profile.
+    with $FutureModifier<Map<String, int>>, $FutureProvider<Map<String, int>> {
+  /// Provider for completion counts by curriculum, scoped to the active profile.
   ///
-  /// Returns a map of TrackType to completion counts for the given curriculum.
+  /// Returns a map keyed by the internal track storage key. One track per
+  /// curriculum, so this is a single-entry map — not a user-facing concept.
   TrackBreakdownProvider._({
     required TrackBreakdownFamily super.from,
     required String super.argument,
@@ -108,12 +109,12 @@ final class TrackBreakdownProvider
 
   @$internal
   @override
-  $FutureProviderElement<Map<TrackType, int>> $createElement(
+  $FutureProviderElement<Map<String, int>> $createElement(
     $ProviderPointer pointer,
   ) => $FutureProviderElement(pointer);
 
   @override
-  FutureOr<Map<TrackType, int>> create(Ref ref) {
+  FutureOr<Map<String, int>> create(Ref ref) {
     final argument = this.argument as String;
     return trackBreakdown(ref, argument);
   }
@@ -129,14 +130,15 @@ final class TrackBreakdownProvider
   }
 }
 
-String _$trackBreakdownHash() => r'ca265ceca574217987cb113e78ce06027302283b';
+String _$trackBreakdownHash() => r'4a6ba080922a04515796c7f97d1738631e2d51d2';
 
-/// Provider for track breakdown by curriculum, scoped to the active profile.
+/// Provider for completion counts by curriculum, scoped to the active profile.
 ///
-/// Returns a map of TrackType to completion counts for the given curriculum.
+/// Returns a map keyed by the internal track storage key. One track per
+/// curriculum, so this is a single-entry map — not a user-facing concept.
 
 final class TrackBreakdownFamily extends $Family
-    with $FunctionalFamilyOverride<FutureOr<Map<TrackType, int>>, String> {
+    with $FunctionalFamilyOverride<FutureOr<Map<String, int>>, String> {
   TrackBreakdownFamily._()
     : super(
         retry: null,
@@ -146,9 +148,10 @@ final class TrackBreakdownFamily extends $Family
         isAutoDispose: true,
       );
 
-  /// Provider for track breakdown by curriculum, scoped to the active profile.
+  /// Provider for completion counts by curriculum, scoped to the active profile.
   ///
-  /// Returns a map of TrackType to completion counts for the given curriculum.
+  /// Returns a map keyed by the internal track storage key. One track per
+  /// curriculum, so this is a single-entry map — not a user-facing concept.
 
   TrackBreakdownProvider call(String curriculumId) =>
       TrackBreakdownProvider._(argument: curriculumId, from: this);

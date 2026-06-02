@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/providers/talker_provider.dart';
 import 'package:learning_tracker/core/sync/merge/bookmark_merger.dart';
 import 'package:learning_tracker/core/sync/merge/completion_event_merger.dart';
 import 'package:learning_tracker/core/sync/merge/drift_merge_store.dart';
@@ -62,7 +63,10 @@ final mergeRouterProvider = Provider<MergeRouter>((ref) {
     mergers: <String, EntityMerger>{
       EntityKind.completion: CompletionEventMerger(store: store),
       EntityKind.streak: StreakEventMerger(database),
-      EntityKind.learnerProfile: LearnerProfileMerger(store: store),
+      EntityKind.learnerProfile: LearnerProfileMerger(
+        store: store,
+        logger: ref.watch(appLoggerProvider),
+      ),
       EntityKind.trackConfig: TrackConfigMerger(store: store),
       EntityKind.bookmark: BookmarkMerger(store: store),
       EntityKind.settings: SettingsMerger(store: store),

@@ -91,24 +91,33 @@ class SettingsScreen extends ConsumerWidget {
             // every login and profile on it (OS permissions, location access).
             // WS4.login-sect: Login scope is omitted — the only Login-scoped
             // datum (debug toggle) does not yet exist, so no empty heading is shown.
-            _SectionHeader(title: l10n.sectionDevice),
-            const SizedBox(height: 10),
-            _SurfaceCard(
-              child: PreferenceListTile.withIcon(
-                icon: Icons.security_rounded,
-                iconColor: const Color(0xFF1E7B5A),
-                iconBackground: const Color(0xFFDDF3EB),
-                title: l10n.settingsAppPermissions,
-                subtitle: l10n.settingsAppPermissionsSubtitle,
-                onTap: () => context.pushRoute(PermissionPromptRoute()),
+            //
+            // Bug 12: in a tutored (talmid) session every item here is tied to
+            // the TUTOR's own device/account — App Permissions (OS prompts) and
+            // Sacred Time / location ("I am in Israel", Shabbos Mode). The owner
+            // ruling is to show ONLY student/profile-scope items and HIDE the
+            // tutor's own account/device items, so the entire DEVICE section is
+            // omitted when viewing a talmid.
+            if (!isTutoredSession) ...[
+              _SectionHeader(title: l10n.sectionDevice),
+              const SizedBox(height: 10),
+              _SurfaceCard(
+                child: PreferenceListTile.withIcon(
+                  icon: Icons.security_rounded,
+                  iconColor: const Color(0xFF1E7B5A),
+                  iconBackground: const Color(0xFFDDF3EB),
+                  title: l10n.settingsAppPermissions,
+                  subtitle: l10n.settingsAppPermissionsSubtitle,
+                  onTap: () => context.pushRoute(PermissionPromptRoute()),
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            // DEC-26: Sacred Time / location is DEVICE-scoped, so its card lives
-            // under the DEVICE section (it was previously mis-placed under
-            // PROFILE).
-            const SacredTimeSettingsCard(),
-            const SizedBox(height: 24),
+              const SizedBox(height: 16),
+              // DEC-26: Sacred Time / location is DEVICE-scoped, so its card lives
+              // under the DEVICE section (it was previously mis-placed under
+              // PROFILE).
+              const SacredTimeSettingsCard(),
+              const SizedBox(height: 24),
+            ],
             // ── PROFILE section (D2/WS4.settings) ─────────────────────────────
             // Profile-scoped settings: per-learner preferences, tracks,
             // notifications (reminder schedules), and parental controls.
@@ -137,7 +146,11 @@ class SettingsScreen extends ConsumerWidget {
                   iconColor: AppTheme.brandBlueBright,
                   iconBackground: AppTheme.brandBlueSoft,
                   title: l10n.parentSettingsTitle,
-                  subtitle: l10n.manageTracksForChildSubtitle,
+                  // Bug 10: a tutor has full parent-equivalent powers — the hub
+                  // surfaces tracks, points, rewards and goals (each re-gated by
+                  // the tutor's permissions inside ParentSettingsScreen), so the
+                  // subtitle must advertise the broader scope, not tracks only.
+                  subtitle: l10n.manageChildLearningSubtitle,
                   onTap: () => context.pushRoute(const ParentSettingsRoute()),
                 ),
               ),
@@ -234,22 +247,27 @@ class SettingsScreen extends ConsumerWidget {
             // top of this screen (tap the header card). It is intentionally NOT
             // duplicated here so there is a single home for account actions.
             const SizedBox(height: 24),
-            _SurfaceCard(
-              child: PreferenceListTile.withIcon(
-                icon: Icons.bug_report_outlined,
-                iconColor: AppTheme.brandInkMuted,
-                iconBackground: const Color(0xFFF0F1F5),
-                title: l10n.settingsSendDiagnosticLogs,
-                subtitle: l10n.settingsSendDiagnosticLogsSubtitle,
-                trailing: const SizedBox.shrink(),
-                onTap: () => sendLogsToFirebase(
-                  context: context,
-                  logger: ref.read(appLoggerProvider),
-                  gateway: ref.read(firestoreGatewayProvider),
-                  auth: ref.read(authRepositoryProvider),
+            // Bug 12: diagnostic logs are the TUTOR's own device/account logs
+            // (uploaded to the tutor's Firestore under their own auth) — an
+            // account/device-scope action that must be hidden when viewing a
+            // talmid. Shown only in a non-tutored (own) session.
+            if (!isTutoredSession)
+              _SurfaceCard(
+                child: PreferenceListTile.withIcon(
+                  icon: Icons.bug_report_outlined,
+                  iconColor: AppTheme.brandInkMuted,
+                  iconBackground: const Color(0xFFF0F1F5),
+                  title: l10n.settingsSendDiagnosticLogs,
+                  subtitle: l10n.settingsSendDiagnosticLogsSubtitle,
+                  trailing: const SizedBox.shrink(),
+                  onTap: () => sendLogsToFirebase(
+                    context: context,
+                    logger: ref.read(appLoggerProvider),
+                    gateway: ref.read(firestoreGatewayProvider),
+                    auth: ref.read(authRepositoryProvider),
+                  ),
                 ),
               ),
-            ),
             const SizedBox(height: 24),
             FutureBuilder<PackageInfo>(
               future: PackageInfo.fromPlatform(),

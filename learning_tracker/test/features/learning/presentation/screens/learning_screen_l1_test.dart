@@ -600,7 +600,7 @@ void main() {
   // ── 13b. Track-type storage keys must never reach the card ──────────────────
   //
   // Regression for the on-device P1: the scheduler set trackLabel to
-  // `TrackType.personal.storageKey` ("personal"), which rendered verbatim as the
+  // `'personal'` ("personal"), which rendered verbatim as the
   // card's bottom row. Even if a stray task carried that raw value, the card —
   // having no track-label row — must never surface it.
 

@@ -139,13 +139,9 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
     }
   }
 
-  /// Kept for API compatibility with callers that passed a TrackType.
-  /// W3.22: trackType is no longer stored; the argument is ignored.
-  Future<void> deactivateTrack(
-    CurriculumId curriculumId, [
-    // ignore: avoid_unused_constructor_parameters
-    dynamic trackType,
-  ]) => retireTrack(curriculumId);
+  /// Retire the single track for [curriculumId]. One track per curriculum.
+  Future<void> deactivateTrack(CurriculumId curriculumId) =>
+      retireTrack(curriculumId);
 
   /// Get all active tracks for a profile.
   ///
@@ -176,6 +172,26 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
   Future<CurriculumTrack?> getTrackById(int trackId) => (select(
     curriculumTracks,
   )..where((t) => t.id.equals(trackId))).getSingleOrNull();
+
+  /// Get the single track for a `(profileId, curriculumId)` pair, or null.
+  ///
+  /// One track per (profileId, curriculumId) (W3.22), so this is a unique
+  /// lookup. Used by the sync mergers to resolve the LOCAL track id for child
+  /// rows (stage_definitions / goals / study_day_configs) whose stored
+  /// `track_id` is the REMOTE id — under a tutored mirror the same logical
+  /// track is re-inserted with a different local autoincrement id, so the
+  /// remote id never matches. Resolving by (profile, curriculum) realigns
+  /// those FKs and is identity-preserving for own-data sync.
+  Future<CurriculumTrack?> getTrackByProfileAndCurriculum(
+    int profileId,
+    String curriculumStorageKey,
+  ) =>
+      (select(curriculumTracks)..where(
+            (t) =>
+                t.profileId.equals(profileId) &
+                t.curriculumId.equals(curriculumStorageKey),
+          ))
+          .getSingleOrNull();
 
   /// Watch all active tracks for a profile.
   Stream<List<CurriculumTrack>> watchActiveTracksForProfile(int profileId) {

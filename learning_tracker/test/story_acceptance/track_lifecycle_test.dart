@@ -18,7 +18,6 @@ library;
 import 'package:drift/drift.dart' show Value;
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/scheduler/domain/projection/projection.dart';
 import 'package:test/test.dart';
@@ -43,7 +42,7 @@ Future<void> _addCompletion(
     curriculumId: curriculum.storageKey,
     sefariaRef: sefariaRef,
     stageId: stageId,
-    trackType: TrackType.personal.storageKey,
+    trackType: 'personal',
     trackId: Value(trackId),
     eventTimestamp: completedAt ?? DateTimeFactory.nowUtc(),
   ),

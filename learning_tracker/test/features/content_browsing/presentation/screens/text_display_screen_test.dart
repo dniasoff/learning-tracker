@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/preferences/text_display_preferences.dart';
 import 'package:learning_tracker/features/content_browsing/data/repositories/text_cache_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/text_display_providers.dart';
@@ -51,7 +50,7 @@ void main() {
         textCacheRepositoryProvider.overrideWithValue(repository),
         allDailyTasksProvider.overrideWith((ref) => Future.value(dailyTasks)),
         trackStorageKeyForTrackIdProvider.overrideWith(
-          (ref, trackId) async => TrackType.personal.storageKey,
+          (ref, trackId) async => 'personal',
         ),
         isStageCompletedProvider.overrideWith((ref, params) async => false),
       ],

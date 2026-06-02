@@ -2,13 +2,11 @@
 // fromFirestore error path (lines 50-51).
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/features/learning/domain/entities/bookmark.dart';
 
 void main() {
   final base = BookmarkEntity(
     curriculumId: CurriculumId.mishnayos,
-    trackType: TrackType.personal,
     sefariaRef: 'Berakhot 1:1',
     updatedAt: DateTime.utc(2026, 3, 15),
   );
@@ -21,7 +19,6 @@ void main() {
     test('returns an equivalent copy when called with no overrides', () {
       final copy = base.copyWith();
       expect(copy.curriculumId, base.curriculumId);
-      expect(copy.trackType, base.trackType);
       expect(copy.sefariaRef, base.sefariaRef);
       expect(copy.updatedAt, base.updatedAt);
     });

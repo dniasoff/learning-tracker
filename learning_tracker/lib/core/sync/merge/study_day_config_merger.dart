@@ -39,16 +39,30 @@ class StudyDayConfigMerger implements EntityMerger {
           : decoded.profileId;
       if (docProfileId != profileId) continue;
 
-      // study_day_configs.trackId is a FK into curriculum_tracks. If the
-      // referenced track is not present locally yet (e.g. this listener
-      // snapshot merged before the curriculum_tracks snapshot, or a
-      // cross-device id mismatch), inserting would throw a FK-constraint
-      // violation that fails the ENTIRE study_day_configs channel merge —
-      // which in turn triggers a dashboard rebuild storm. Skip the row; the
-      // next full pull re-merges it (LWW, idempotent) once the track exists.
-      final trackExists = await (_db.select(
-        _db.curriculumTracks,
-      )..where((t) => t.id.equals(decoded.trackId))).getSingleOrNull();
+      // study_day_configs.trackId is a FK into curriculum_tracks. The stored
+      // track_id is the REMOTE id; under a tutored mirror the track was
+      // re-inserted with a different local autoincrement id, so the remote id
+      // never matches and the row would be dropped (the FK-existence guard
+      // below fails) — leaving the scheduler with no study-day pattern and a
+      // 0-due projection (Bug 3). Resolve the LOCAL track by (profile,
+      // curriculum) and bind the config to it. No-op for own-data sync.
+      //
+      // If the referenced track is not present locally yet (e.g. this listener
+      // snapshot merged before the curriculum_tracks snapshot), inserting would
+      // throw a FK-constraint violation that fails the ENTIRE study_day_configs
+      // channel merge — which in turn triggers a dashboard rebuild storm. Skip
+      // the row; the next full pull re-merges it (LWW, idempotent) once the
+      // track exists.
+      final localTrack = await _db.trackDao.getTrackByProfileAndCurriculum(
+        profileId,
+        decoded.curriculumId,
+      );
+      final trackId = localTrack?.id ?? decoded.trackId;
+      final trackExists =
+          localTrack ??
+          await (_db.select(
+            _db.curriculumTracks,
+          )..where((t) => t.id.equals(trackId))).getSingleOrNull();
       if (trackExists == null) continue;
 
       final localRow =
@@ -57,7 +71,7 @@ class StudyDayConfigMerger implements EntityMerger {
                     t.profileId.equals(profileId) &
                     t.curriculumId.equals(decoded.curriculumId) &
                     t.dayOfWeek.equals(decoded.dayOfWeek) &
-                    t.trackId.equals(decoded.trackId),
+                    t.trackId.equals(trackId),
               ))
               .getSingleOrNull();
 
@@ -74,7 +88,7 @@ class StudyDayConfigMerger implements EntityMerger {
             StudyDayConfigsCompanion.insert(
               profileId: profileId,
               curriculumId: decoded.curriculumId,
-              trackId: decoded.trackId,
+              trackId: trackId,
               dayOfWeek: decoded.dayOfWeek,
               dayType: drift.Value(decoded.dayType),
               updatedAt: decoded.updatedAt,

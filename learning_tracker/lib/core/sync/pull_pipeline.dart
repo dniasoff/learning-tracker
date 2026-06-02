@@ -2,6 +2,8 @@ import 'dart:async';
 
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/logging/log_events.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/core/sync/exceptions/firestore_permission_denied_exception.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 
@@ -241,17 +243,30 @@ class PullPipeline {
   /// (the parent's Firestore namespace) but dispatches every page to the
   /// merger with [localProfileId] — the synthetic local row id created by
   /// [ProfileDao.upsertTutoredProfile]. No merger logic changes needed.
-  Future<void> pullForTutoredProfile({
+  /// Returns the number of child collections/documents that failed to merge.
+  /// A non-zero count means the mirror is only partially refreshed — the caller
+  /// surfaces this as a soft error WITHOUT wiping the mirror (a generic failure
+  /// is not a grant revocation). A [FirestorePermissionDeniedException] still
+  /// propagates (revoked grant → wipe).
+  Future<int> pullForTutoredProfile({
     required String parentUid,
     required String remoteProfileId,
     required int localProfileId,
     int pageSize = defaultPageSize,
   }) async {
+    var failureCount = 0;
+    // Bug 3: curriculum_tracks MUST be pulled before any collection whose rows
+    // are bound to a track id (settings/stage_definitions/goals/
+    // study_day_configs). Those rows carry the REMOTE track id; the mergers
+    // resolve the LOCAL mirror track id by (profile, curriculum), so the local
+    // track row has to exist first or the resolution falls back to the stale
+    // remote id (study_day_configs would then be dropped by its FK guard) and
+    // the scheduler projection computes nothing for the tutor.
     final collections = <(String collection, String kind)>[
       ('completions', EntityKind.completion),
       ('bookmarks', EntityKind.bookmark),
-      ('settings', EntityKind.settings),
       ('curriculum_tracks', EntityKind.trackConfig),
+      ('settings', EntityKind.settings),
       ('goals', EntityKind.goal),
       ('learning_ledger', EntityKind.learningLedger),
       ('stage_definitions', EntityKind.stageDefinition),
@@ -264,14 +279,32 @@ class PullPipeline {
     ];
 
     for (final (collection, kind) in collections) {
-      await _pullChildCollection(
-        parentUid: parentUid,
-        remoteProfileId: remoteProfileId,
-        localProfileId: localProfileId,
-        collection: collection,
-        kind: kind,
-        pageSize: pageSize,
-      );
+      // Bug 3: isolate each collection. A single collection's merge/DB error
+      // (e.g. gamification_settings' point_configs FK violation) must NOT abort
+      // the whole tutored pull — that left the mirror with only partial data
+      // and a 0-due / "No projection" scheduler view. Log + continue so the
+      // remaining collections still land. PermissionDenied still propagates
+      // (revoked grant → caller wipes the mirror).
+      try {
+        await _pullChildCollection(
+          parentUid: parentUid,
+          remoteProfileId: remoteProfileId,
+          localProfileId: localProfileId,
+          collection: collection,
+          kind: kind,
+          pageSize: pageSize,
+        );
+      } on FirestorePermissionDeniedException {
+        rethrow;
+      } catch (e, stackTrace) {
+        failureCount++;
+        AppLogger.instance.warning(
+          event: 'tutored_pull_collection_failed',
+          fields: {'collection': collection, 'kind': kind},
+          exception: e,
+          stackTrace: stackTrace,
+        );
+      }
     }
 
     // Preference documents — single-doc sub-collections.
@@ -280,15 +313,29 @@ class PullPipeline {
       ('gamification_settings', EntityKind.gamificationSettings),
       ('ui_preferences', EntityKind.uiPreferences),
     ]) {
-      await _pullChildDocument(
-        parentUid: parentUid,
-        remoteProfileId: remoteProfileId,
-        localProfileId: localProfileId,
-        collection: 'preferences',
-        docId: docId,
-        kind: kind,
-      );
+      try {
+        await _pullChildDocument(
+          parentUid: parentUid,
+          remoteProfileId: remoteProfileId,
+          localProfileId: localProfileId,
+          collection: 'preferences',
+          docId: docId,
+          kind: kind,
+        );
+      } on FirestorePermissionDeniedException {
+        rethrow;
+      } catch (e, stackTrace) {
+        failureCount++;
+        AppLogger.instance.warning(
+          event: 'tutored_pull_document_failed',
+          fields: {'doc': docId, 'kind': kind},
+          exception: e,
+          stackTrace: stackTrace,
+        );
+      }
     }
+
+    return failureCount;
   }
 
   Future<void> _pullChildDocument({

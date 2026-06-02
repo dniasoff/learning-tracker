@@ -36,20 +36,34 @@ class GoalMerger implements EntityMerger {
   }) async {
     for (final row in rows) {
       final curriculumId = row['curriculum_id'] as String?;
-      final trackId = FirestoreCodec.parseInt(row['track_id']);
+      final remoteTrackId = FirestoreCodec.parseInt(row['track_id']);
       final createdAt = FirestoreCodec.parseDateTime(row['created_at']);
       final updatedAt = FirestoreCodec.parseDateTime(row['updated_at']);
       final syncedAt = FirestoreCodec.parseDateTime(row['synced_at']);
 
       if (curriculumId == null ||
-          trackId == null ||
-          trackId == 0 ||
+          remoteTrackId == null ||
+          remoteTrackId == 0 ||
           createdAt == null ||
           updatedAt == null) {
         continue;
       }
 
-      final naturalKey = trackId.toString();
+      // Bug 3: resolve the LOCAL track id from (profile, curriculum). The
+      // stored track_id is the remote id; under a tutored mirror the track was
+      // re-inserted with a different local autoincrement id, so binding the
+      // goal to the remote id leaves getGoalByTrack(localTrackId) empty and the
+      // scheduler projection skips the track. No-op for own-data sync.
+      final localTrack = await _db.trackDao.getTrackByProfileAndCurriculum(
+        profileId,
+        curriculumId,
+      );
+      final trackId = localTrack?.id ?? remoteTrackId;
+
+      // Keep the LWW natural key tied to the remote track id so the per-row
+      // timestamp arbitration stays stable across pulls regardless of how the
+      // local id was minted.
+      final naturalKey = remoteTrackId.toString();
       final localUpdatedAt = await _store.currentUpdatedAt(
         kind: kind,
         profileId: profileId,

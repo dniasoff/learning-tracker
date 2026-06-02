@@ -218,9 +218,7 @@
   "continueButton": "Continue",
   "skip": "Skip",
   "joinCalendarProgram": "Join a Calendar Program",
-  "customTrack": "Custom Track",
   "joinCalendarDesc": "Follow a daily learning schedule like Daf Yomi",
-  "customTrackDesc": "Create your own learning plan at your own pace",
   "availablePrograms": "Available Programs",
   "todaysAssignment": "Today's Assignment",
   "startTrackingFrom": "Start Tracking From",
@@ -518,6 +516,7 @@
   "profilePickerMyChildren": "MY CHILDREN",
   "profilePickerYourProfiles": "YOUR PROFILES",
   "profilePickerTalmidProfiles": "TALMID PROFILES",
+  "profilePickerSkipToSettings": "Skip to Settings",
   "profilePickerTutoredChildren": "TUTORED CHILDREN",
   "tutoredChildrenViewInvitations": "View invitations",
   "tutoredChildrenManageGrants": "Manage tutoring grants",
@@ -531,6 +530,12 @@
   "tutoredChildrenStatusTutoring": "Tutoring",
   "tutoredChildrenRoleBadge": "Tutor",
   "tutorModeIndicator": "Tutor mode",
+  "tutorModeIndicatorNamed": "Tutor mode · {name}",
+  "@tutorModeIndicatorNamed": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
   "tutorModeExit": "Exit",
   "tutoredEntryPermissionDenied": "Access denied — the grant may have been revoked.",
   "tutoredEntryError": "Could not load talmid data. Please try again.",
@@ -595,6 +600,7 @@
   "manageTutors": "Manage Tutors",
   "manageTutorsSubtitle": "Invite or remove tutors for this child",
   "manageTracksForChildSubtitle": "Add, edit, or archive your child's tracks",
+  "manageChildLearningSubtitle": "Manage tracks, points, rewards, and goals",
   "pointConfiguration": "Point Configuration",
   "pointConfigurationSubtitle": "Set how many points activities are worth",
   "rewardConfigurationTitle": "Reward configuration",
@@ -2009,11 +2015,6 @@
       "email": { "type": "String" }
     }
   },
-  "inviteTutorLinkCopied": "Link copied to clipboard!",
-  "inviteTutorShareLinkHeading": "Share link (backup delivery)",
-  "inviteTutorShareLinkBody": "If the email is not received, share this link directly with the tutor.",
-  "inviteTutorCopyLinkTooltip": "Copy link",
-  "inviteTutorCopyShareLink": "Copy share link",
 
   "manageGrantsAppBarTitle": "My Tutoring Grants",
   "manageGrantsActiveSection": "Active ({count})",

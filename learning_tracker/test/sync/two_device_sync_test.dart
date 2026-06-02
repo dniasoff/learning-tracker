@@ -14,7 +14,6 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 import 'package:learning_tracker/features/learning/data/completion_writer.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_command.dart';
@@ -59,7 +58,7 @@ void main() {
             curriculumId: CurriculumId.mishnayos.storageKey,
             sefariaRef: 'Berakhot 1:1',
             stageId: 1,
-            trackType: TrackType.personal.storageKey,
+            trackType: 'personal',
             trackId: trackIdA,
             completedAt: DateTime.utc(2026, 5, 1),
             points: 5,
@@ -132,7 +131,7 @@ void main() {
           curriculumId: CurriculumId.mishnayos.storageKey,
           sefariaRef: 'Berakhot 5:1',
           stageId: 1,
-          trackType: TrackType.personal.storageKey,
+          trackType: 'personal',
           trackId: trackIdB,
           completedAt: ts,
           points: 5,
@@ -148,7 +147,7 @@ void main() {
             curriculumId: CurriculumId.mishnayos.storageKey,
             sefariaRef: 'Berakhot 5:1',
             stageId: 1,
-            trackType: TrackType.personal.storageKey,
+            trackType: 'personal',
             eventTimestamp: ts,
           ),
         );

@@ -12,7 +12,6 @@ import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/enums/track_type.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
@@ -86,11 +85,11 @@ void main() {
       );
 
       await repo.markComplete(
-        CompletionRequest(
+        const CompletionRequest(
           curriculumId: 'mishnayos',
           sefariaRef: 'Mishnah_Berakhot_1',
           stageId: 1,
-          trackType: TrackType.personal.storageKey,
+          trackType: 'personal',
         ),
       );
 
@@ -136,11 +135,11 @@ void main() {
       );
 
       await repo.markComplete(
-        CompletionRequest(
+        const CompletionRequest(
           curriculumId: 'mishnayos',
           sefariaRef: 'Mishnah_Berakhot_1',
           stageId: 1,
-          trackType: TrackType.personal.storageKey,
+          trackType: 'personal',
         ),
       );
 

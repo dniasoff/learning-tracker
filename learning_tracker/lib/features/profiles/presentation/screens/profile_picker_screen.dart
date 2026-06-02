@@ -144,6 +144,11 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
             ),
             // Talmidim — only renders when the user has ≥1 active tutor grant.
             const TutoredChildrenSection(),
+            // Skip to Settings — always available so an adult who only wants to
+            // manage tutoring / account / device settings is never forced to
+            // create a learner profile to reach Settings. Especially needed for
+            // tutor-only accounts with no own profile/track.
+            _buildSkipToSettings(context),
             // Account exit — shown when the user has no own learner profiles
             // (tutor-only account) so they can sign out without needing to
             // create a profile or enter a talmid's context first.
@@ -407,6 +412,28 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
       ref.read(selectedProfileIdProvider.notifier).clear();
     }
     ref.invalidate(profileListProvider);
+  }
+
+  // ── Skip to Settings ──────────────────────────────────────────────────────
+
+  /// A "Skip to Settings" affordance so the user can always reach the app
+  /// Settings without first selecting (or creating) a learner profile. Routes
+  /// to [SettingsRoute] (a child of the app shell, which the ProfileGuard lets
+  /// through even when no own profile exists).
+  Widget _buildSkipToSettings(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return Padding(
+      padding: const EdgeInsets.only(top: 20),
+      child: TextButton.icon(
+        icon: const Icon(Icons.settings_rounded, size: 20),
+        label: Text(l10n.profilePickerSkipToSettings),
+        style: TextButton.styleFrom(
+          foregroundColor: AppTheme.brandBlueDeep,
+          padding: const EdgeInsets.symmetric(vertical: 12),
+        ),
+        onPressed: () => unawaited(context.router.push(const SettingsRoute())),
+      ),
+    );
   }
 
   // ── Account exit for tutor-only users ────────────────────────────────────

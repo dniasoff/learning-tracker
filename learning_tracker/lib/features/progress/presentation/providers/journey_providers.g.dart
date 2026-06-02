@@ -128,7 +128,7 @@ final class JourneyViewModelProvider
   }
 }
 
-String _$journeyViewModelHash() => r'9608997670028cb52fab4bfc022fde54db2709be';
+String _$journeyViewModelHash() => r'2af56ea76c448e4ca66487f473563f6db4c6b252';
 
 /// Computes the full JourneyViewModel for a given profile.
 
