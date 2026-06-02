@@ -8,6 +8,7 @@ import 'package:learning_tracker/features/progress/domain/models/journey_view_mo
 import 'package:learning_tracker/features/progress/presentation/widgets/siyum_milestone_label.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/siyumim_grouped_view.dart'
     show formatMilestoneDate;
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Chronological view of all siyumim (unit + aggregate + curriculum) across
 /// every curriculum, newest first, grouped by month.
@@ -37,9 +38,10 @@ class SiyumimTimelineView extends ConsumerWidget {
     }
 
     if (entries.isEmpty) {
+      final l10n = AppLocalizations.of(context)!;
       return Center(
         child: Text(
-          'No siyumim to show',
+          l10n.siyumimEmptyState,
           style: TextStyle(
             color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),

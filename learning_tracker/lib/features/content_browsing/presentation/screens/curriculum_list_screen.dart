@@ -6,6 +6,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
@@ -287,7 +288,7 @@ class _CurriculumCard extends ConsumerWidget {
               children: [
                 if (containerCount > 0) ...[
                   Text(
-                    '$containerCount ${CurriculumLabels.containerCountLabel(curriculum, useHebrew: domainTermLabels(ref).isHebrew)}',
+                    '$containerCount ${CurriculumLabels.containerCountLabel(curriculum, useHebrew: domainTermLabels(ref).isHebrew, variant: ref.watch(currentTransliterationVariantProvider))}',
                     style: const TextStyle(
                       fontSize: 12,
                       color: AppTheme.brandInkMuted,
@@ -298,7 +299,7 @@ class _CurriculumCard extends ConsumerWidget {
                 ],
                 if (leafCount > 0)
                   Text(
-                    '$leafCount ${CurriculumLabels.primaryUnitLabel(curriculum, useHebrew: domainTermLabels(ref).isHebrew)}',
+                    '$leafCount ${CurriculumLabels.primaryUnitLabel(curriculum, useHebrew: domainTermLabels(ref).isHebrew, variant: ref.watch(currentTransliterationVariantProvider))}',
                     style: const TextStyle(
                       fontSize: 12,
                       color: AppTheme.brandInkMuted,

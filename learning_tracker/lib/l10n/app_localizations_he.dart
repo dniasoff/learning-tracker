@@ -525,6 +525,16 @@ class AppLocalizationsHe extends AppLocalizations {
       'מצב תאריך יעד פעיל — יש ללחוץ כאן לקצב יעד';
 
   @override
+  String addTrackChazaraStepTitle(String term) {
+    return 'להוסיף $term?';
+  }
+
+  @override
+  String addTrackChazaraStepQuestion(String term) {
+    return 'איך תרצה לבצע $term?';
+  }
+
+  @override
   String addTrackGoalDeadlinePaceLine(
     int items,
     String unit,

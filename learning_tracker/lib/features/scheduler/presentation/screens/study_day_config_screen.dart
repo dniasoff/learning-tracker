@@ -314,7 +314,11 @@ class _DayToggleTile extends StatelessWidget {
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Text(
-                    isStudy ? 'Study' : 'Review',
+                    isStudy
+                        ? AppLocalizations.of(context)!.schedulerStudyLabel
+                        : AppLocalizations.of(
+                            context,
+                          )!.schedulerReviewOnlyLabel,
                     style: TextStyle(
                       color: isStudy
                           ? theme.colorScheme.primary

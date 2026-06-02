@@ -1044,6 +1044,18 @@ abstract class AppLocalizations {
   /// **'Deadline is on — tap here to use target pace instead'**
   String get addTrackGoalTapToUsePace;
 
+  /// Title for the optional chazara (review) setup step in the add-track flow. {term} is the localized chazara/review domain term.
+  ///
+  /// In en, this message translates to:
+  /// **'Add {term}?'**
+  String addTrackChazaraStepTitle(String term);
+
+  /// Question header for the chazara (review) setup step in the add-track flow. {term} is the localized chazara/review domain term.
+  ///
+  /// In en, this message translates to:
+  /// **'How do you want to {term}?'**
+  String addTrackChazaraStepQuestion(String term);
+
   /// No description provided for @addTrackGoalDeadlinePaceLine.
   ///
   /// In en, this message translates to:

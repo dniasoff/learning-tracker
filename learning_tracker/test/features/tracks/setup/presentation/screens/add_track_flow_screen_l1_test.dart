@@ -458,6 +458,37 @@ void main() {
       addTearDown(() => _tearDown(tester));
     });
 
+    testWidgets('chazara step title is localized via the chazara domain term '
+        '(no hardcoded "Review")', (tester) async {
+      // Resume directly to the chazara setup step for self-paced Chumash so
+      // the inline-setup header renders. The header must route through the
+      // chazara domain term + l10n frame — never the old hardcoded English
+      // "Add Review?" / "How do you want to review?".
+      SharedPreferences.setMockInitialValues({
+        'add_track_step': AddTrackStep.chazaraSetup.index,
+        'add_track_curriculum': CurriculumId.chumash.storageKey,
+      });
+
+      final svc = MockTrackCreationService();
+      await tester.pumpWidget(
+        _buildApp(overrides: _baseOverrides(creationService: svc)),
+      );
+      await _settle(tester);
+
+      // English Hebrew-terms-off → chazara term renders as "Chazara".
+      // Self-paced (no program) frame: "How do you want to Chazara?".
+      expect(
+        find.textContaining('Chazara'),
+        findsAtLeastNWidgets(1),
+        reason: 'Chazara step header must render the chazara domain term',
+      );
+      // The previously-hardcoded English domain-term strings must be gone.
+      expect(find.text('How do you want to review?'), findsNothing);
+      expect(find.text('Add Review?'), findsNothing);
+
+      addTearDown(() => _tearDown(tester));
+    });
+
     testWidgets('stale Mishna Yomit program does NOT bleed into Chumash '
         '(stale-program-bleed guard)', (tester) async {
       // Saved state has a program ID from a prior Mishnayos run but the

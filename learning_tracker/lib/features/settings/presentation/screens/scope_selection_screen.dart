@@ -4,7 +4,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
+import 'package:learning_tracker/core/labels/curriculum_label_renderer.dart';
+import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
@@ -33,6 +36,18 @@ class _ScopeSelectionScreenState extends ConsumerState<ScopeSelectionScreen> {
 
   /// Currently selected scope values at the chosen level.
   final Set<String> _selectedValues = {};
+
+  /// Hebrew proper name for each raw scope value at [_selectedLevel], keyed by
+  /// the raw value (e.g. "Berakhos" → "ברכות"). Populated from the loaded
+  /// content whenever a level is chosen so [CurriculumLabelRenderer.renderValue]
+  /// can emit the real Hebrew name (named levels) rather than echoing the raw
+  /// English storage key. Empty until content + a level are available.
+  final Map<String, String> _hebrewNameByValue = {};
+
+  /// Level-1 raw value for each scope value at [_selectedLevel] (its
+  /// per-curriculum level-override context). Lets the renderer resolve
+  /// book-specific level labels (e.g. Mussar's Shaarim vs Perakim).
+  final Map<String, String> _parentL1ByValue = {};
 
   /// Whether "All" is selected (no scope restrictions).
   bool _selectAll = true;
@@ -68,9 +83,72 @@ class _ScopeSelectionScreenState extends ConsumerState<ScopeSelectionScreen> {
 
   int get _maxLevels => CurriculumLabels.depth(widget.curriculumId);
 
+  /// Variant-aware level WORD (e.g. "Masechta" / "Masekhta" / "מסכת"),
+  /// honouring the Hebrew Terms toggle and the current nusach.
   String _labelForLevel(int level) {
-    final labels = CurriculumLabels.labelsEn(widget.curriculumId);
+    final terms = domainTermLabels(ref);
+    final variant = ref.watch(currentTransliterationVariantProvider);
+    final labels = CurriculumLabels.labelsForVariant(
+      widget.curriculumId,
+      useHebrew: terms.isHebrew,
+      variant: variant,
+    );
     return level <= labels.length ? labels[level - 1] : 'Level $level';
+  }
+
+  /// Render a raw scope storage key (e.g. "Zeraim"/"Berakhos") into the
+  /// proper display name for [level], honouring Hebrew Terms + nusach.
+  ///
+  /// Supplies the matching Hebrew proper name + level-1 context (captured in
+  /// [_hebrewNameByValue]/[_parentL1ByValue] from the loaded content) so named
+  /// levels render the real Hebrew name in Hebrew mode instead of echoing the
+  /// raw English storage key.
+  String _renderValueForLevel(String rawValue, int level) {
+    final terms = domainTermLabels(ref);
+    final variant = ref.watch(currentTransliterationVariantProvider);
+    return CurriculumLabelRenderer.renderValue(
+      curriculumId: widget.curriculumId,
+      level: level,
+      rawValue: rawValue,
+      useHebrew: terms.isHebrew,
+      hebrewName: _hebrewNameByValue[rawValue],
+      parentL1Value: _parentL1ByValue[rawValue],
+      transliterationVariant: variant,
+    );
+  }
+
+  /// Refresh [_hebrewNameByValue]/[_parentL1ByValue] for the current
+  /// [_selectedLevel] from the loaded [items]. The representative row for a
+  /// value is the container item whose deepest populated level is exactly the
+  /// selected level (its Hebrew display name is the proper name for that level).
+  void _refreshValueNames(List<ContentItem> items, int level) {
+    _hebrewNameByValue.clear();
+    _parentL1ByValue.clear();
+    for (final item in items) {
+      final value = _getItemLevelValue(item, level);
+      if (value == null) continue;
+      _parentL1ByValue.putIfAbsent(value, () => item.level1);
+      // Prefer the container row (no deeper level) so the Hebrew name is the
+      // name *at* this level, not a descendant leaf's name.
+      final isContainerForLevel = _getItemLevelValue(item, level + 1) == null;
+      if (isContainerForLevel && !_hebrewNameByValue.containsKey(value)) {
+        // Use the sanctioned core/labels accessor (DNI-386: no direct
+        // Hebrew-name field reads outside core/labels).
+        final hebrewName = CurriculumLabelRenderer.hebrewNameOf(item);
+        if (hebrewName != null) _hebrewNameByValue[value] = hebrewName;
+      }
+    }
+  }
+
+  /// Render every currently-selected raw value at [_selectedLevel] into a
+  /// comma-joined display string. Falls back to the raw values when no level
+  /// is chosen (should not happen while values are selected).
+  String _renderSelectedValues() {
+    final level = _selectedLevel;
+    if (level == null) return _selectedValues.join(', ');
+    return _selectedValues
+        .map((v) => _renderValueForLevel(v, level))
+        .join(', ');
   }
 
   @override
@@ -114,6 +192,12 @@ class _ScopeSelectionScreenState extends ConsumerState<ScopeSelectionScreen> {
   }
 
   Widget _buildBody(List<ContentItem> allItems) {
+    // Keep the value→Hebrew-name lookup in step with the loaded content and
+    // the currently chosen level so the summary / snackbar / checkbox titles
+    // all render proper names (not raw storage keys).
+    if (_selectedLevel != null) {
+      _refreshValueNames(allItems, _selectedLevel!);
+    }
     return ListView(
       children: [
         // "All" option
@@ -207,7 +291,7 @@ class _ScopeSelectionScreenState extends ConsumerState<ScopeSelectionScreen> {
               'Summary',
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
-            subtitle: Text(_selectedValues.join(', ')),
+            subtitle: Text(_renderSelectedValues()),
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -227,7 +311,7 @@ class _ScopeSelectionScreenState extends ConsumerState<ScopeSelectionScreen> {
       final isSelected = _selectedValues.contains(value);
       final leafCount = _countLeafItemsForValue(allItems, value);
       return CheckboxListTile(
-        title: Text(value),
+        title: Text(_renderValueForLevel(value, _selectedLevel!)),
         subtitle: Text(
           AppLocalizations.of(context)!.scopeSelectionItemCount(leafCount),
         ),
@@ -329,13 +413,17 @@ class _ScopeSelectionScreenState extends ConsumerState<ScopeSelectionScreen> {
     ref.invalidate(scopedItemCountProvider(widget.curriculumId));
 
     if (mounted) {
+      // Render values BEFORE pop() while `ref` is still valid; the
+      // "Scope updated:" frame is structural English, but the VALUES honour
+      // Hebrew Terms + nusach.
+      final renderedValues = _renderSelectedValues();
       Navigator.of(context).pop();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
             _selectAll
                 ? 'Scope set to entire curriculum'
-                : 'Scope updated: ${_selectedValues.join(", ")}',
+                : 'Scope updated: $renderedValues',
           ),
         ),
       );

@@ -52,6 +52,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
@@ -91,6 +92,16 @@ class _HebrewTermsOff extends UseHebrewTerms {
 class _HebrewTermsOn extends UseHebrewTerms {
   @override
   bool build() => true;
+}
+
+class _VariantSephardi extends CurrentTransliterationVariant {
+  @override
+  TransliterationVariant build() => TransliterationVariant.sephardi;
+}
+
+class _VariantAshkenazi extends CurrentTransliterationVariant {
+  @override
+  TransliterationVariant build() => TransliterationVariant.ashkenazi;
 }
 
 // ── Minimal synthetic content ─────────────────────────────────────────────────
@@ -170,6 +181,50 @@ final _kFakeItems = [
   ),
 ];
 
+// ── Chumash fixture (named level-1 Sefer, nusach-sensitive) ──────────────────
+//
+// Chumash level-1 values are NAMED Seferim that the renderer transliterates
+// per-nusach: "Genesis" → "Bereishis" (ashkenazi) / "Bereshit" (sephardi), and
+// renders the Hebrew proper name ("בראשית") in Hebrew mode. The bundled data
+// ships English book names ("Genesis") as the raw scope storage key, so this
+// fixture is the regression target for the raw-key rendering bypass.
+
+final _kChumashItems = [
+  // Level-1 container (Sefer)
+  const ContentItem(
+    curriculumId: 'chumash',
+    level1: 'Genesis',
+    displayNameHe: 'בראשית',
+    displayNameEn: 'Genesis',
+    sefariaRef: 'Genesis',
+    sortOrder: 0,
+    isLeaf: false,
+  ),
+  // Level-2 container (Perek 1)
+  const ContentItem(
+    curriculumId: 'chumash',
+    level1: 'Genesis',
+    level2: '1',
+    displayNameHe: 'א',
+    displayNameEn: '1',
+    sefariaRef: 'Genesis.1',
+    sortOrder: 1,
+    isLeaf: false,
+  ),
+  // Leaf (Pasuk)
+  const ContentItem(
+    curriculumId: 'chumash',
+    level1: 'Genesis',
+    level2: '1',
+    level3: '1',
+    displayNameHe: 'א',
+    displayNameEn: '1',
+    sefariaRef: 'Genesis.1.1',
+    sortOrder: 2,
+    isLeaf: true,
+  ),
+];
+
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 Future<void> _pump(WidgetTester tester, Widget app) async {
@@ -191,6 +246,7 @@ Widget _buildScopeApp({
   bool useHebrew = false,
   Locale locale = const Locale('en'),
   CurriculumId curriculum = CurriculumId.mishnayos,
+  TransliterationVariant variant = TransliterationVariant.ashkenazi,
 }) {
   final repo = contentRepo ?? _makeDefaultRepo();
   return ProviderScope(
@@ -204,6 +260,14 @@ Widget _buildScopeApp({
         useHebrewTermsProvider.overrideWith(() => _HebrewTermsOn())
       else
         useHebrewTermsProvider.overrideWith(() => _HebrewTermsOff()),
+      if (variant == TransliterationVariant.sephardi)
+        currentTransliterationVariantProvider.overrideWith(
+          () => _VariantSephardi(),
+        )
+      else
+        currentTransliterationVariantProvider.overrideWith(
+          () => _VariantAshkenazi(),
+        ),
     ],
     child: MaterialApp(
       locale: locale,
@@ -298,18 +362,19 @@ Widget _buildCurriculumMarkingApp({
 
 // ── Fake content repo builder ─────────────────────────────────────────────────
 
-_MockContentRepository _makeDefaultRepo() {
+_MockContentRepository _makeDefaultRepo({List<ContentItem>? items}) {
+  final content = items ?? _kFakeItems;
   final repo = _MockContentRepository();
   when(
     () => repo.getContentForCurriculum(any<CurriculumId>()),
-  ).thenAnswer((_) async => _kFakeItems);
+  ).thenAnswer((_) async => content);
   when(
     () => repo.getScopedContent(
       curriculumId: any<CurriculumId>(named: 'curriculumId'),
       scopeLevel: any<int>(named: 'scopeLevel'),
       scopeValues: any<List<String>>(named: 'scopeValues'),
     ),
-  ).thenAnswer((_) async => _kFakeItems);
+  ).thenAnswer((_) async => content);
   when(
     () => repo.getHierarchyConfig(any<CurriculumId>()),
   ).thenAnswer((_) async => throw UnimplementedError('not needed'));
@@ -321,7 +386,7 @@ _MockContentRepository _makeDefaultRepo() {
       level3: any<String>(named: 'level3'),
       level4: any<String>(named: 'level4'),
     ),
-  ).thenAnswer((_) async => _kFakeItems);
+  ).thenAnswer((_) async => content);
   when(
     () => repo.search(
       curriculumId: any<CurriculumId>(named: 'curriculumId'),
@@ -896,6 +961,160 @@ void main() {
       expect(find.text('אישי'), findsNothing);
       await _tearDown(tester);
     });
+  });
+
+  group('ScopeSelectionScreen — domain-term rendering (no raw-key bypass)', () {
+    // Regression: the screen used to render RAW Torah storage keys (e.g. the
+    // English book name "Genesis") and hardcoded English level words, ignoring
+    // the Hebrew Terms toggle + nusach. It must now route every value + level
+    // word through CurriculumLabelRenderer / CurriculumLabels.
+
+    Future<void> drillToFirstLevel(WidgetTester tester) async {
+      // Turn "select all" OFF, then tap the first selectable level tile.
+      await tester.tap(find.byType(SwitchListTile));
+      await tester.pump();
+      final levelTile = find.descendant(
+        of: find.byType(ListTile),
+        matching: find.byIcon(Icons.chevron_right),
+      );
+      await tester.tap(levelTile.first);
+      await tester.pump();
+    }
+
+    testWidgets(
+      'level WORD honours Hebrew Terms: "Sefer" (en) vs "חומש" (he) for chumash',
+      (tester) async {
+        // English mode: level-1 word is the English "Sefer".
+        await _pump(
+          tester,
+          _buildScopeApp(
+            db: _db,
+            curriculum: CurriculumId.chumash,
+            contentRepo: _makeDefaultRepo(items: _kChumashItems),
+          ),
+        );
+        await tester.tap(find.byType(SwitchListTile));
+        await tester.pump();
+        expect(find.text('Sefer'), findsOneWidget);
+        await _tearDown(tester);
+
+        // Hebrew mode: level-1 word is the Hebrew "חומש" (NOT the raw English).
+        await _pump(
+          tester,
+          _buildScopeApp(
+            db: _db,
+            curriculum: CurriculumId.chumash,
+            useHebrew: true,
+            locale: const Locale('he'),
+            contentRepo: _makeDefaultRepo(items: _kChumashItems),
+          ),
+        );
+        await tester.tap(find.byType(SwitchListTile));
+        await tester.pump();
+        expect(find.text('חומש'), findsOneWidget);
+        expect(
+          find.text('Sefer'),
+          findsNothing,
+          reason: 'level word must not leak the English term in Hebrew mode',
+        );
+        await _tearDown(tester);
+      },
+    );
+
+    testWidgets(
+      'value checkbox renders Hebrew proper name when Hebrew Terms ON '
+      '(raw key "Genesis" -> "בראשית", never the raw English key)',
+      (tester) async {
+        await _pump(
+          tester,
+          _buildScopeApp(
+            db: _db,
+            curriculum: CurriculumId.chumash,
+            useHebrew: true,
+            locale: const Locale('he'),
+            contentRepo: _makeDefaultRepo(items: _kChumashItems),
+          ),
+        );
+        await drillToFirstLevel(tester);
+
+        expect(find.byType(CheckboxListTile), findsOneWidget);
+        // Hebrew proper name rendered — NOT the raw storage key "Genesis".
+        expect(find.text('בראשית'), findsOneWidget);
+        expect(
+          find.text('Genesis'),
+          findsNothing,
+          reason: 'raw English storage key must not be shown in Hebrew mode',
+        );
+        await _tearDown(tester);
+      },
+    );
+
+    testWidgets(
+      'value checkbox uses the nusach: ashkenazi "Bereishis" vs sephardi "Bereshit"',
+      (tester) async {
+        // Ashkenazi (English mode): "Genesis" → "Bereishis".
+        await _pump(
+          tester,
+          _buildScopeApp(
+            db: _db,
+            curriculum: CurriculumId.chumash,
+            contentRepo: _makeDefaultRepo(items: _kChumashItems),
+          ),
+        );
+        await drillToFirstLevel(tester);
+        expect(find.text('Bereishis'), findsOneWidget);
+        expect(
+          find.text('Genesis'),
+          findsNothing,
+          reason: 'raw English key must be transliterated, not echoed',
+        );
+        await _tearDown(tester);
+
+        // Sephardi (English mode): "Genesis" → "Bereshit".
+        await _pump(
+          tester,
+          _buildScopeApp(
+            db: _db,
+            curriculum: CurriculumId.chumash,
+            variant: TransliterationVariant.sephardi,
+            contentRepo: _makeDefaultRepo(items: _kChumashItems),
+          ),
+        );
+        await drillToFirstLevel(tester);
+        expect(find.text('Bereshit'), findsOneWidget);
+        expect(find.text('Bereishis'), findsNothing);
+        await _tearDown(tester);
+      },
+    );
+
+    testWidgets(
+      'mishnayos masechta "Berakhot" renders Hebrew "ברכות" when Hebrew Terms ON',
+      (tester) async {
+        // Drill to the Masechta level (level 2) and verify the Hebrew name.
+        await _pump(
+          tester,
+          _buildScopeApp(db: _db, useHebrew: true, locale: const Locale('he')),
+        );
+        await tester.tap(find.byType(SwitchListTile));
+        await tester.pump();
+        // Level tiles: level 1 (Seder) and level 2 (Masechta). Tap the 2nd.
+        final levelTiles = find.descendant(
+          of: find.byType(ListTile),
+          matching: find.byIcon(Icons.chevron_right),
+        );
+        await tester.tap(levelTiles.at(1));
+        await tester.pump();
+
+        // _kMasechta1 = "Berakhot" → displayNameHe "ברכות".
+        expect(find.text('ברכות'), findsOneWidget);
+        expect(
+          find.text('Berakhot'),
+          findsNothing,
+          reason: 'raw masechta storage key must not surface in Hebrew mode',
+        );
+        await _tearDown(tester);
+      },
+    );
   });
 
   group('ScopeSelectionScreen — he-RTL smoke', () {

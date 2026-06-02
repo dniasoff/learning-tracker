@@ -396,7 +396,7 @@ void main() {
       await tester.pump(Duration.zero);
     });
 
-    testWidgets('hardcoded badge labels Study and Review are present', (
+    testWidgets('badge labels use localized Study / Review only keys', (
       tester,
     ) async {
       // Seed one review day so both badge labels are visible.
@@ -414,10 +414,51 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 
-      // 'Study' badge (hardcoded, also used in legend via l10n)
+      // Badges now render via the same l10n keys as the legend
+      // (schedulerStudyLabel / schedulerReviewOnlyLabel) — no longer the
+      // hardcoded 'Study' / 'Review' literals. In en these resolve to
+      // 'Study' and 'Review only'.
       expect(find.text('Study'), findsAtLeast(1));
-      // 'Review' badge is hardcoded (separate from l10n 'Review only' legend)
-      expect(find.text('Review'), findsAtLeast(1));
+      // The review badge now reads 'Review only' (the localized key), not the
+      // old hardcoded bare 'Review'.
+      expect(find.text('Review only'), findsAtLeast(1));
+      // Regression guard: the previously-hardcoded bare 'Review' badge text
+      // must no longer be emitted on its own.
+      expect(find.text('Review'), findsNothing);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    });
+
+    testWidgets('review badge renders Hebrew when Hebrew Terms is on', (
+      tester,
+    ) async {
+      // Seed one review day so the review badge is visible.
+      await db.studyDayConfigDao.upsertDayConfig(
+        profileId: 1,
+        curriculumId: CurriculumId.mishnayos.storageKey,
+        trackId: 1,
+        dayOfWeek: 7,
+        dayType: DayType.review.storageKey,
+      );
+
+      // he locale drives the AppLocalizations badge strings to Hebrew.
+      await tester.pumpWidget(
+        _buildScreen(
+          curriculumId: CurriculumId.mishnayos,
+          db: db,
+          locale: const Locale('he'),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      // schedulerStudyLabel = "לימוד", schedulerReviewOnlyLabel = "חזרה בלבד".
+      expect(find.text('לימוד'), findsAtLeast(1));
+      expect(find.text('חזרה בלבד'), findsAtLeast(1));
+      // The old hardcoded English badges must not appear under he locale.
+      expect(find.text('Study'), findsNothing);
+      expect(find.text('Review'), findsNothing);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(Duration.zero);

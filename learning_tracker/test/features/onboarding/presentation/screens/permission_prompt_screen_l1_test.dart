@@ -25,6 +25,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/features/notifications/domain/services/notification_gateway.dart';
 import 'package:learning_tracker/features/notifications/presentation/providers/notification_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/screens/permission_prompt_screen.dart';
@@ -49,6 +51,28 @@ class _FakePageRouteInfo extends Fake implements PageRouteInfo {}
 // instance. Instead we use a minimal subclass that delegates detect() to an
 // injected closure, avoiding real geolocator calls.
 
+// ── Hebrew Terms / nusach overrides ─────────────────────────────────────────────
+
+class _FalseUseHebrewTerms extends UseHebrewTerms {
+  @override
+  bool build() => false;
+}
+
+class _TrueUseHebrewTerms extends UseHebrewTerms {
+  @override
+  bool build() => true;
+}
+
+/// Fixed-nusach notifier so the Shabbos transliteration is deterministic.
+class _FixedVariant extends CurrentTransliterationVariant {
+  _FixedVariant(this._variant);
+
+  final TransliterationVariant _variant;
+
+  @override
+  TransliterationVariant build() => _variant;
+}
+
 class _FakeSacredLocationNotifier extends SacredLocationNotifier {
   _FakeSacredLocationNotifier(this._detectResult);
 
@@ -69,11 +93,19 @@ Widget _buildApp({
   required _FakeSacredLocationNotifier locationNotifier,
   bool isOnboarding = false,
   Locale locale = const Locale('en'),
+  bool useHebrewTerms = false,
+  TransliterationVariant variant = TransliterationVariant.ashkenazi,
 }) {
   return ProviderScope(
     overrides: [
       notificationServiceProvider.overrideWithValue(notifGateway),
       sacredLocationProvider.overrideWith(() => locationNotifier),
+      useHebrewTermsProvider.overrideWith(
+        () => useHebrewTerms ? _TrueUseHebrewTerms() : _FalseUseHebrewTerms(),
+      ),
+      currentTransliterationVariantProvider.overrideWith(
+        () => _FixedVariant(variant),
+      ),
     ],
     child: MaterialApp(
       locale: locale,
@@ -719,6 +751,75 @@ void main() {
       await _pump(tester);
 
       expect(find.byType(AppBar), findsOneWidget);
+
+      await _teardown(tester);
+    });
+  });
+
+  // ── Shabbos domain term (toggle + nusach aware) ──────────────────────────────
+
+  group('PermissionPromptScreen — Shabbos domain term', () {
+    testWidgets('Ashkenazi nusach renders "Shabbos" in the body + card', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _buildApp(
+          notifGateway: _defaultNotifGateway(),
+          router: _defaultRouter(),
+          locationNotifier: _locationNotifier(
+            const LocationFetchPermissionDenied(permanentlyDenied: false),
+          ),
+          isOnboarding: true,
+        ),
+      );
+      await _pump(tester);
+
+      expect(find.textContaining('Shabbos'), findsWidgets);
+      expect(find.textContaining('Shabbat'), findsNothing);
+      expect(find.textContaining('שבת'), findsNothing);
+
+      await _teardown(tester);
+    });
+
+    testWidgets('Sephardi nusach renders "Shabbat"', (tester) async {
+      await tester.pumpWidget(
+        _buildApp(
+          notifGateway: _defaultNotifGateway(),
+          router: _defaultRouter(),
+          locationNotifier: _locationNotifier(
+            const LocationFetchPermissionDenied(permanentlyDenied: false),
+          ),
+          isOnboarding: true,
+          variant: TransliterationVariant.sephardi,
+        ),
+      );
+      await _pump(tester);
+
+      expect(find.textContaining('Shabbat'), findsWidgets);
+      expect(find.textContaining('Shabbos'), findsNothing);
+
+      await _teardown(tester);
+    });
+
+    testWidgets('Hebrew Terms ON renders "שבת" (nusach-independent)', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _buildApp(
+          notifGateway: _defaultNotifGateway(),
+          router: _defaultRouter(),
+          locationNotifier: _locationNotifier(
+            const LocationFetchPermissionDenied(permanentlyDenied: false),
+          ),
+          isOnboarding: true,
+          useHebrewTerms: true,
+        ),
+      );
+      await _pump(tester);
+
+      expect(find.textContaining('שבת'), findsWidgets);
+      expect(find.textContaining('Shabbos'), findsNothing);
+      expect(find.textContaining('Shabbat'), findsNothing);
 
       await _teardown(tester);
     });

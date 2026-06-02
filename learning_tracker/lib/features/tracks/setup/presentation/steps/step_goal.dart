@@ -58,11 +58,19 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
 
   LevelLabels get _paceUnitLevel => _opts.levelFor(_paceGranularity);
 
-  String _unitSingular({required bool useHebrew}) =>
-      _paceUnitLevel.inLanguage(useHebrew: useHebrew);
+  String _unitSingular({
+    required bool useHebrew,
+    required TransliterationVariant variant,
+  }) => _paceUnitLevel.inLanguage(useHebrew: useHebrew, variant: variant);
 
-  String _unitPlural({required bool useHebrew}) =>
-      _paceUnitLevel.inLanguage(useHebrew: useHebrew, plural: true);
+  String _unitPlural({
+    required bool useHebrew,
+    required TransliterationVariant variant,
+  }) => _paceUnitLevel.inLanguage(
+    useHebrew: useHebrew,
+    plural: true,
+    variant: variant,
+  );
 
   String _formatDate(DateTime value, {required bool useHebrew}) {
     if (useHebrew) {
@@ -141,10 +149,14 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
     await _pickDeadline();
   }
 
-  String _formatUnitForEstimate(int perStudyDay, {required bool useHebrew}) {
+  String _formatUnitForEstimate(
+    int perStudyDay, {
+    required bool useHebrew,
+    required TransliterationVariant variant,
+  }) {
     final s = perStudyDay == 1
-        ? _unitSingular(useHebrew: useHebrew)
-        : _unitPlural(useHebrew: useHebrew);
+        ? _unitSingular(useHebrew: useHebrew, variant: variant)
+        : _unitPlural(useHebrew: useHebrew, variant: variant);
     return s.isNotEmpty ? s[0].toUpperCase() + s.substring(1) : s;
   }
 
@@ -246,6 +258,7 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
     final l10n = AppLocalizations.of(context)!;
     final useHebrew = ref.watch(useHebrewDateProvider);
     final useHebrewTerms = domainTermLabels(ref).isHebrew;
+    final variant = ref.watch(currentTransliterationVariantProvider);
     final scopeCountAsync = ref.watch(
       scopedItemCountProvider(widget.curriculumId),
     );
@@ -274,16 +287,21 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
       isActive: _mode == 'pace',
       paceValue: _paceValue,
       pacePeriod: _paceUnit,
-      unitSingular: _unitSingular(useHebrew: useHebrewTerms),
-      unitPlural: _unitPlural(useHebrew: useHebrewTerms),
+      unitSingular: _unitSingular(useHebrew: useHebrewTerms, variant: variant),
+      unitPlural: _unitPlural(useHebrew: useHebrewTerms, variant: variant),
       hasUnitChoice: opts.hasChoice,
       coarseKey: opts.coarseKey,
       coarseLabel: opts.coarse.inLanguage(
         useHebrew: useHebrewTerms,
         plural: true,
+        variant: variant,
       ),
       fineKey: opts.fineKey,
-      fineLabel: opts.fine?.inLanguage(useHebrew: useHebrewTerms, plural: true),
+      fineLabel: opts.fine?.inLanguage(
+        useHebrew: useHebrewTerms,
+        plural: true,
+        variant: variant,
+      ),
       paceGranularity: _paceGranularity,
       projectedFinishLabel: _projectedFinishLabel(
         useHebrew,
@@ -322,6 +340,7 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
       unitLabel: _formatUnitForEstimate(
         itemsPerStudyDay,
         useHebrew: useHebrewTerms,
+        variant: variant,
       ),
       onTapDate: _pickDeadline,
       l10n: l10n,

@@ -1,7 +1,7 @@
 // Mixed tests: SiyumimTimelineView (widget) + lifetime_knowledge_providers (logic)
 //
 // Part A — SiyumimTimelineView widget tests
-//   A1.  Empty view-model → "No siyumim to show" empty-state text rendered.
+//   A1.  Empty view-model → localized `siyumimEmptyState` text rendered.
 //   A2.  One unit-level milestone → star icon row visible (Icons.star).
 //   A3.  One aggregate-level milestone → workspace_premium icon rendered.
 //   A4.  One curriculum-level milestone → emoji_events icon rendered.
@@ -232,20 +232,25 @@ void main() {
   // =========================================================================
 
   group('A — SiyumimTimelineView widget', () {
-    testWidgets('A1 — empty view-model shows "No siyumim to show"', (
+    testWidgets('A1 — empty view-model shows the localized empty-state', (
       tester,
     ) async {
       await tester.pumpWidget(_host(viewModel: _empty()));
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 
+      // Empty state must use the shared l10n key `siyumimEmptyState`
+      // (same as SiyumimGroupedView) — no hardcoded English. English locale
+      // resolves to "No siyumim yet — keep learning!".
       expect(
-        find.text('No siyumim to show'),
+        find.text('No siyumim yet — keep learning!'),
         findsOneWidget,
         reason:
-            'Empty JourneyViewModel must render the empty-state text, not '
-            'a blank screen',
+            'Empty JourneyViewModel must render the localized empty-state '
+            'text, not a blank screen or a hardcoded literal',
       );
+      // The old hardcoded literal must be gone.
+      expect(find.text('No siyumim to show'), findsNothing);
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(Duration.zero);
     });
@@ -433,7 +438,7 @@ void main() {
               'bulk-mark credit policy: sentinel dates count toward siyumim/lifetime',
         );
         // Empty state must NOT show — there IS a siyum.
-        expect(find.text('No siyumim to show'), findsNothing);
+        expect(find.text('No siyumim yet — keep learning!'), findsNothing);
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump(Duration.zero);
       },

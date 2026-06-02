@@ -124,7 +124,7 @@ final class DashboardUserModeProvider
   }
 }
 
-String _$dashboardUserModeHash() => r'a39159891268c9e4cbfb443eb8b07b9b58928c39';
+String _$dashboardUserModeHash() => r'1c87fec8197ef6b77fafc77b457a3012f71aa361';
 
 /// Provider for list of active curricula IDs, scoped to active profile.
 

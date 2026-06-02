@@ -47,10 +47,14 @@ class _ScopeStepContentState extends ConsumerState<ScopeStepContent> {
 
   int get _maxSelectableLevel => _maxLevels - 1;
 
-  String _labelForLevel(int level, {required bool useHebrew}) {
+  String _labelForLevel(
+    int level, {
+    required bool useHebrew,
+    required TransliterationVariant variant,
+  }) {
     final levels = CurriculumLabels.levels(widget.curriculumId);
     return level <= levels.length
-        ? levels[level - 1].inLanguage(useHebrew: useHebrew)
+        ? levels[level - 1].inLanguage(useHebrew: useHebrew, variant: variant)
         : 'Level $level';
   }
 
@@ -331,8 +335,11 @@ class _ScopeStepContentState extends ConsumerState<ScopeStepContent> {
                     ),
                     currentLevel: _currentLevel,
                     maxSelectableLevel: _maxSelectableLevel,
-                    labelForLevel: (level) =>
-                        _labelForLevel(level, useHebrew: useHebrew),
+                    labelForLevel: (level) => _labelForLevel(
+                      level,
+                      useHebrew: useHebrew,
+                      variant: variant,
+                    ),
                     scopeDescription: _scopeDescription,
                     scopeIcon: _scopeIcon,
                     childCountForItem: (item) =>
@@ -357,8 +364,11 @@ class _ScopeStepContentState extends ConsumerState<ScopeStepContent> {
                   allDirectlySelected: _allItemsDirectlySelected(displayItems),
                   currentLevel: _currentLevel,
                   maxSelectableLevel: _maxSelectableLevel,
-                  labelForLevel: (level) =>
-                      _labelForLevel(level, useHebrew: useHebrew),
+                  labelForLevel: (level) => _labelForLevel(
+                    level,
+                    useHebrew: useHebrew,
+                    variant: variant,
+                  ),
                   isSelected: _isItemSelected,
                   isDirectlySelected: _isItemDirectlySelected,
                   onToggle: (item) => _toggleItem(item, useHebrew),

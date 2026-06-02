@@ -1,6 +1,8 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/labels/domain_term_labels.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/notifications/presentation/providers/notification_providers.dart';
 import 'package:learning_tracker/features/sacred_time/data/services/location_service.dart';
@@ -95,6 +97,9 @@ class _PermissionPromptScreenState
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final shabbos = domainTermLabels(
+      ref,
+    ).shabbos(variant: ref.watch(currentTransliterationVariantProvider));
 
     return Scaffold(
       backgroundColor: AppTheme.brandCreamCard,
@@ -115,10 +120,10 @@ class _PermissionPromptScreenState
               Text(
                 widget.isOnboarding
                     ? 'Allow these optional permissions so Learning Tracker '
-                          'can remind you to learn and compute Shabbos times '
+                          'can remind you to learn and compute $shabbos times '
                           'for your location.'
                     : 'Manage optional permissions for reminders and '
-                          'Shabbos-time calculations.',
+                          '$shabbos-time calculations.',
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                   height: 1.45,
@@ -142,7 +147,7 @@ class _PermissionPromptScreenState
                 iconBackground: const Color(0xFFDDF3EB),
                 title: 'Location',
                 subtitle:
-                    'Accurate Shabbos candle-lighting and Havdalah times '
+                    'Accurate $shabbos candle-lighting and Havdalah times '
                     'based on your city.',
                 status: _locationStatus,
                 onTap: _locationDone ? null : _requestLocation,

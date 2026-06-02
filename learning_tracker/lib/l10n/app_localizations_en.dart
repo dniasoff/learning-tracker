@@ -529,6 +529,16 @@ class AppLocalizationsEn extends AppLocalizations {
       'Deadline is on — tap here to use target pace instead';
 
   @override
+  String addTrackChazaraStepTitle(String term) {
+    return 'Add $term?';
+  }
+
+  @override
+  String addTrackChazaraStepQuestion(String term) {
+    return 'How do you want to $term?';
+  }
+
+  @override
   String addTrackGoalDeadlinePaceLine(
     int items,
     String unit,

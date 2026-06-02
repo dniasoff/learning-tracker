@@ -5,6 +5,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/steps/step_starting_position_calendar.dart';
@@ -148,15 +149,16 @@ class _StartingPositionStepState extends ConsumerState<StartingPositionStep> {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
     final useHebrewTerms = domainTermLabels(ref).isHebrew;
+    final variant = ref.watch(currentTransliterationVariantProvider);
 
-    // Resolve level labels respecting the Hebrew Terms toggle.
+    // Resolve level labels respecting the Hebrew Terms toggle + nusach.
     final containerLabel =
         _containerLevelIndex != null &&
             _containerLevelIndex! <= CurriculumLabels.depth(widget.curriculumId)
         ? CurriculumLabels.level(
             widget.curriculumId,
             _containerLevelIndex!,
-          ).inLanguage(useHebrew: useHebrewTerms)
+          ).inLanguage(useHebrew: useHebrewTerms, variant: variant)
         : 'Section';
     final leafLabel =
         _leafLevelIndex != null &&
@@ -164,7 +166,7 @@ class _StartingPositionStepState extends ConsumerState<StartingPositionStep> {
         ? CurriculumLabels.level(
             widget.curriculumId,
             _leafLevelIndex!,
-          ).inLanguage(useHebrew: useHebrewTerms)
+          ).inLanguage(useHebrew: useHebrewTerms, variant: variant)
         : 'Item';
 
     if (_loading) {

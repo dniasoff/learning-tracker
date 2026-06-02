@@ -91,6 +91,71 @@ void main() {
       expect(find.textContaining('10'), findsWidgets);
     });
 
+    testWidgets(
+      'count labels honor Sephardi transliteration variant in English mode',
+      (tester) async {
+        // English mode (so the transliteration variant is consulted) +
+        // Sephardi nusach. Mishnayos count labels must read "Masekhtot"
+        // (container) and "Mishnayot" (unit), NOT the Ashkenazi
+        // "Masechtos"/"Mishnayos".
+        SharedPreferences.setMockInitialValues(<String, Object>{
+          'hebrew_terms_script_p0': false,
+          'transliteration_variant_p0': 'sephardi',
+        });
+
+        final mockRepo = MockContentRepository();
+
+        // Mishnayos with one non-leaf container + one leaf item so both
+        // containerCount (>0) and leafCount (>0) render their labels.
+        when(
+          () => mockRepo.getContentForCurriculum(CurriculumId.mishnayos),
+        ).thenAnswer(
+          (_) async => const [
+            ContentItem(
+              curriculumId: 'mishnayos',
+              level1: 'Zeraim',
+              displayNameHe: 'מסכת ברכות',
+              displayNameEn: 'Berachos',
+              sefariaRef: 'Mishnah Berakhot',
+              sortOrder: 0,
+              isLeaf: false,
+            ),
+            ContentItem(
+              curriculumId: 'mishnayos',
+              level1: 'Zeraim',
+              level2: 'Berachos',
+              displayNameHe: 'משנה א',
+              displayNameEn: 'Mishnah 1',
+              sefariaRef: 'Mishnah Berakhot 1:1',
+              sortOrder: 1,
+              isLeaf: true,
+            ),
+          ],
+        );
+
+        for (final curriculum in CurriculumId.values) {
+          if (curriculum != CurriculumId.mishnayos) {
+            when(
+              () => mockRepo.getContentForCurriculum(curriculum),
+            ).thenAnswer((_) async => []);
+          }
+        }
+
+        await tester.pumpWidget(createTestWidget(repository: mockRepo));
+        await tester.pumpAndSettle();
+
+        // Count labels carry the Sephardi forms ("1 Masekhtot" container
+        // count, "1 Mishnayot" unit count). Match the count-prefixed strings
+        // so the assertion targets the labels under test and not the
+        // curriculum card title ("Mishnayos").
+        expect(find.textContaining('1 Masekhtot'), findsWidgets);
+        expect(find.textContaining('1 Mishnayot'), findsWidgets);
+        // Ashkenazi count labels must NOT leak through.
+        expect(find.textContaining('1 Masechtos'), findsNothing);
+        expect(find.textContaining('1 Mishnayos'), findsNothing);
+      },
+    );
+
     testWidgets('navigates to content hierarchy when curriculum tapped', (
       tester,
     ) async {

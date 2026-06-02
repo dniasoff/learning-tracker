@@ -256,7 +256,7 @@ class _IntroPage extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  _buildTitleBlock(),
+                  _buildTitleBlock(mishnaLabel: terms.mishnah),
                   const SizedBox(height: 10),
                   _buildSubtitleBlock(
                     useHebrew: terms.isHebrew,
@@ -295,7 +295,7 @@ class _IntroPage extends ConsumerWidget {
                   const IntroChildModeTag(),
                   const SizedBox(height: 12),
                 ],
-                _buildTitleBlock(),
+                _buildTitleBlock(mishnaLabel: terms.mishnah),
                 const SizedBox(height: 14),
                 _buildSubtitleBlock(
                   useHebrew: terms.isHebrew,
@@ -326,7 +326,7 @@ class _IntroPage extends ConsumerWidget {
     }
   }
 
-  Widget _buildTitleBlock() {
+  Widget _buildTitleBlock({required String mishnaLabel}) {
     return AnimatedBuilder(
       animation: iconAnimation,
       builder: (context, _) {
@@ -334,12 +334,15 @@ class _IntroPage extends ConsumerWidget {
           parent: iconAnimation,
           curve: const Interval(0.2, 0.75, curve: Curves.easeOut),
         ).value;
-        return Opacity(opacity: fade, child: _titleRich());
+        return Opacity(
+          opacity: fade,
+          child: _titleRich(mishnaLabel: mishnaLabel),
+        );
       },
     );
   }
 
-  Widget _titleRich() {
+  Widget _titleRich({required String mishnaLabel}) {
     switch (data.variant) {
       case _IntroPageVariant.dailyPlan:
         return Text.rich(
@@ -359,11 +362,14 @@ class _IntroPage extends ConsumerWidget {
         return Text.rich(
           TextSpan(
             style: _headStyle,
-            children: const [
-              TextSpan(text: 'Never Forget\na '),
+            children: [
+              const TextSpan(text: 'Never Forget\na '),
               TextSpan(
-                text: 'Mishna',
-                style: TextStyle(color: _kNavy, fontStyle: FontStyle.italic),
+                text: mishnaLabel,
+                style: const TextStyle(
+                  color: _kNavy,
+                  fontStyle: FontStyle.italic,
+                ),
               ),
             ],
           ),

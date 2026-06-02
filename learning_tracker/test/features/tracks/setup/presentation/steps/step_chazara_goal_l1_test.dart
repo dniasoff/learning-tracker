@@ -51,6 +51,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:learning_tracker/core/constants/curriculum_defaults.dart'
+    show TransliterationVariant;
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
@@ -88,6 +90,11 @@ class _FalseUseHebrewDate extends UseHebrewDate {
 class _ProfileIdOverride extends ActiveProfileId {
   @override
   int build() => 1;
+}
+
+class _SephardiVariant extends CurrentTransliterationVariant {
+  @override
+  TransliterationVariant build() => TransliterationVariant.sephardi;
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -137,6 +144,7 @@ const _kScopeCount = 60;
 /// state tests).
 List<Override> _goalStepOverrides({
   bool useHebrewDate = false,
+  bool sephardi = false,
   int scopeCount = _kScopeCount,
   Completer<int>? scopeCompleter,
 }) {
@@ -150,6 +158,8 @@ List<Override> _goalStepOverrides({
   return [
     userDatabaseProvider.overrideWithValue(db),
     contentRepositoryProvider.overrideWith((ref) => contentRepo),
+    if (sephardi)
+      currentTransliterationVariantProvider.overrideWith(_SephardiVariant.new),
     useHebrewTermsProvider.overrideWith(() => _FalseUseHebrewTerms()),
     useHebrewDateProvider.overrideWith(
       () => useHebrewDate ? _TrueUseHebrewDate() : _FalseUseHebrewDate(),
@@ -735,6 +745,36 @@ void main() {
           goal.rawLearningUnit,
           isNotNull,
           reason: 'rawLearningUnit must be set after granularity change',
+        );
+
+        addTearDown(() => _tearDown(tester));
+      },
+    );
+
+    // Nusach-aware unit word: in Sephardi mode the fine unit must render the
+    // Sephardi transliteration ("Mishnayot"), never the Ashkenazi form
+    // ("Mishnayos"). Guards the inLanguage(variant:) threading in step_goal.
+    testWidgets(
+      'mishnayos: Sephardi nusach renders "Mishnayot" not "Mishnayos"',
+      (tester) async {
+        await tester.pumpWidget(
+          _buildGoalStepApp(
+            overrides: _goalStepOverrides(sephardi: true),
+            curriculumId: CurriculumId.mishnayos,
+          ),
+        );
+        await _settle(tester);
+
+        // The fine-granularity segment label uses the nusach-aware unit word.
+        expect(
+          find.text('Mishnayot'),
+          findsAtLeastNWidgets(1),
+          reason: 'Sephardi nusach must use the Sephardi unit transliteration',
+        );
+        expect(
+          find.text('Mishnayos'),
+          findsNothing,
+          reason: 'Ashkenazi unit word must not leak into Sephardi nusach',
         );
 
         addTearDown(() => _tearDown(tester));

@@ -246,6 +246,20 @@
   "manageTracksDetail": "יצירה ועריכה של מסלולי הלמידה",
   "addTrackGoalTapToUseDeadline": "מצב קצב יעד פעיל — יש ללחוץ כאן ליעד לפי תאריך יעד",
   "addTrackGoalTapToUsePace": "מצב תאריך יעד פעיל — יש ללחוץ כאן לקצב יעד",
+  "addTrackChazaraStepTitle": "להוסיף {term}?",
+  "@addTrackChazaraStepTitle": {
+    "description": "Title for the optional chazara (review) setup step in the add-track flow. {term} is the localized chazara/review domain term.",
+    "placeholders": {
+      "term": { "type": "String" }
+    }
+  },
+  "addTrackChazaraStepQuestion": "איך תרצה לבצע {term}?",
+  "@addTrackChazaraStepQuestion": {
+    "description": "Question header for the chazara (review) setup step in the add-track flow. {term} is the localized chazara/review domain term.",
+    "placeholders": {
+      "term": { "type": "String" }
+    }
+  },
   "addTrackGoalDeadlinePaceLine": "בערך {items} {unit} בכל יום לימוד, על פני {studyDays} ימי לימוד עד תאריך היעד (בערך {totalItems} יחידות בתחום).",
   "@addTrackGoalDeadlinePaceLine": {
     "placeholders": {

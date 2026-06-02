@@ -82,8 +82,11 @@ class CurriculumProgressScreen extends ConsumerWidget {
                   ),
                 )
               else
+                // Unknown storage key (no matching CurriculumId) — never leak
+                // the raw key (e.g. 'bavli') into the title. Show a localized
+                // unknown-curriculum label instead.
                 Text(
-                  curriculumId,
+                  l10n.errorUnknownCurriculum(curriculumId),
                   style: plusJakartaTheme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w800,
                     color: AppTheme.brandInk,

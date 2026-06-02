@@ -132,12 +132,45 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
 
   /// Plural unit label shown in the pace input ("Pesukim per day", not
   /// "Pasuk per day") — the count is always > 1 in practice.
-  String get _unitDisplayLabel {
-    if (_paceGranularity == 'daf') return 'Dafim';
-    if (_paceGranularity == 'amud') return 'Amudim';
-    if (_paceGranularity == 'perek') return 'Perakim';
-    if (_paceGranularity == 'pasuk') return 'Pesukim';
-    return CurriculumLabels.leaf(widget.curriculumId).enPlural;
+  ///
+  /// Renders the Torah unit term via the shared [CurriculumLabels] control so
+  /// it honours the Hebrew Terms toggle ([useHebrew]) and the nusach
+  /// ([variant]) — e.g. "Dafim" → "דפים" (Hebrew) or "Dapim" (Sephardi).
+  /// The granularity key (daf/amud/perek/pasuk) is matched against the
+  /// curriculum's own level list so the correct [LevelLabels] is chosen;
+  /// it falls back to the leaf level when the granularity has no matching
+  /// level (e.g. Yerushalmi has no Amud level).
+  String _unitDisplayLabel({
+    required bool useHebrew,
+    required TransliterationVariant variant,
+  }) {
+    final id = widget.curriculumId;
+    final labels = _levelForGranularity(id, _paceGranularity);
+    return labels.inLanguage(
+      useHebrew: useHebrew,
+      plural: true,
+      variant: variant,
+    );
+  }
+
+  /// Resolves the [LevelLabels] for a pace-granularity storage key by matching
+  /// its canonical English singular (Daf/Amud/Perek/Pasuk) against the
+  /// curriculum's level list. Falls back to the leaf level when no level in
+  /// this curriculum corresponds to the granularity.
+  LevelLabels _levelForGranularity(CurriculumId id, String granularity) {
+    const granularityToEn = {
+      'daf': 'Daf',
+      'amud': 'Amud',
+      'perek': 'Perek',
+      'pasuk': 'Pasuk',
+    };
+    final targetEn = granularityToEn[granularity];
+    if (targetEn != null) {
+      final singulars = CurriculumLabels.labelsEn(id);
+      final idx = singulars.indexOf(targetEn);
+      if (idx >= 0) return CurriculumLabels.level(id, idx + 1);
+    }
+    return CurriculumLabels.leaf(id);
   }
 
   String _formatDateLine(DateTime? d, {required bool useHebrew}) {
@@ -311,7 +344,12 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
 
   Widget _buildPaceSection() {
     final useHebrew = ref.watch(useHebrewDateProvider);
-    final unitLabel = _unitDisplayLabel;
+    final useHebrewTerms = ref.watch(useHebrewTermsProvider);
+    final variant = ref.watch(currentTransliterationVariantProvider);
+    final unitLabel = _unitDisplayLabel(
+      useHebrew: useHebrewTerms,
+      variant: variant,
+    );
     final perLabel = _paceUnit == 'per_day' ? 'per day' : 'per week';
 
     return Column(

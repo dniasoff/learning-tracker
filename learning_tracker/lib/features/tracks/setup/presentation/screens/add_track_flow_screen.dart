@@ -990,9 +990,11 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
     // Program with OPEN chazara → offer optional inline setup
     // Self-paced → inline setup
     // Both paths use ChazaraInlineSetup; differ only in header copy.
+    final l10n = AppLocalizations.of(context)!;
+    final chazaraTerm = domainTermLabels(ref).chazara;
     final headerTitle = _isProgramTrack
-        ? 'Add Review?'
-        : 'How do you want to review?';
+        ? l10n.addTrackChazaraStepTitle(chazaraTerm)
+        : l10n.addTrackChazaraStepQuestion(chazaraTerm);
     final headerSubtitle = _isProgramTrack
         ? '${_state.programName} doesn\'t include a review schedule. '
               'Set one up now or skip.'

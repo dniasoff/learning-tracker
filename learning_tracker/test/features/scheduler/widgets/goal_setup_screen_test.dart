@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/presentation/screens/goal_setup_screen.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -16,13 +19,15 @@ GoalEntity _makeGoal() => GoalEntity(
   updatedAt: DateTime.utc(2026, 1, 1),
 );
 
-Widget _makeApp({required Widget home}) => ProviderScope(
-  child: MaterialApp(
-    localizationsDelegates: AppLocalizations.localizationsDelegates,
-    supportedLocales: AppLocalizations.supportedLocales,
-    home: home,
-  ),
-);
+Widget _makeApp({required Widget home, List<Override> overrides = const []}) =>
+    ProviderScope(
+      overrides: overrides,
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: home,
+      ),
+    );
 
 void main() {
   setUp(() {
@@ -153,6 +158,73 @@ void main() {
       // Bavli deepest level is "Amud" — appears in input label and projection card
       expect(find.textContaining('Amud'), findsAtLeast(1));
     });
+
+    // Reads the labelText of the pace-input TextFormField. This is the
+    // term-aware unit label produced by `_unitDisplayLabel` — distinct from
+    // the unit-picker SegmentedButton, whose labels come from the app-locale
+    // l10n keys (always English in these tests).
+    String paceInputLabel(WidgetTester tester) {
+      final field = tester.widget<TextField>(
+        find.descendant(
+          of: find.byType(TextFormField),
+          matching: find.byType(TextField),
+        ),
+      );
+      return field.decoration!.labelText!;
+    }
+
+    testWidgets('pace unit label renders Hebrew term when Hebrew Terms is on '
+        '(no hardcoded English)', (tester) async {
+      await tester.pumpWidget(
+        _makeApp(
+          overrides: [useHebrewTermsProvider.overrideWithValue(true)],
+          home: const GoalSetupScreen(
+            curriculumId: CurriculumId.bavli,
+            totalItems: 2711,
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Pace'));
+      await tester.pump();
+
+      // Bavli default pace granularity is Amud → Hebrew plural "עמודים".
+      // The previous implementation hardcoded English "Amudim"; with the
+      // shared-control fix the Hebrew Terms toggle must flip the unit word.
+      final label = paceInputLabel(tester);
+      expect(label, contains('עמודים'));
+      expect(label, isNot(contains('Amudim')));
+    });
+
+    testWidgets(
+      'pace unit label renders Sephardi nusach (Dapim, not Dafim) for daf '
+      'granularity',
+      (tester) async {
+        await tester.pumpWidget(
+          _makeApp(
+            overrides: [
+              useHebrewTermsProvider.overrideWithValue(false),
+              currentTransliterationVariantProvider.overrideWithValue(
+                TransliterationVariant.sephardi,
+              ),
+            ],
+            home: const GoalSetupScreen(
+              curriculumId: CurriculumId.yerushalmi,
+              totalItems: 1554,
+            ),
+          ),
+        );
+
+        await tester.tap(find.text('Pace'));
+        await tester.pump();
+
+        // Yerushalmi pace unit is Daf; Sephardi nusach renders "Dapim", and
+        // the Ashkenazi "Dafim" must NOT appear in the term-aware input label.
+        final label = paceInputLabel(tester);
+        expect(label, contains('Dapim'));
+        expect(label, isNot(contains('Dafim')));
+      },
+    );
 
     testWidgets('edit mode shows Update Goal button', (tester) async {
       await tester.pumpWidget(

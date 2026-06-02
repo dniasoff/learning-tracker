@@ -46,6 +46,12 @@ class _FalseUseHebrewTerms extends UseHebrewTerms {
   bool build() => false;
 }
 
+/// Hebrew Terms ON — renders the native-script domain terms (e.g. "משנה").
+class _TrueUseHebrewTerms extends UseHebrewTerms {
+  @override
+  bool build() => true;
+}
+
 // ---------------------------------------------------------------------------
 // Rig
 // ---------------------------------------------------------------------------
@@ -53,10 +59,13 @@ class _FalseUseHebrewTerms extends UseHebrewTerms {
 Widget _rig({
   required _MockStackRouter router,
   Locale locale = const Locale('en'),
+  bool useHebrewTerms = false,
 }) {
   return ProviderScope(
     overrides: [
-      useHebrewTermsProvider.overrideWith(() => _FalseUseHebrewTerms()),
+      useHebrewTermsProvider.overrideWith(
+        () => useHebrewTerms ? _TrueUseHebrewTerms() : _FalseUseHebrewTerms(),
+      ),
     ],
     child: MaterialApp(
       locale: locale,
@@ -311,6 +320,40 @@ void main() {
 
       final prefs = await SharedPreferences.getInstance();
       expect(prefs.getBool(kIntroSeen), isNull);
+
+      await _tearDown(tester);
+    });
+  });
+
+  // ── 6b. Mishna domain term switches with the Hebrew Terms toggle ─────────
+
+  group('Mishna domain term (toggle-aware)', () {
+    testWidgets('page 2 shows transliterated "Mishna" when Hebrew Terms OFF', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_rig(router: router));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 900));
+
+      await _swipeToNextPage(tester); // page 1 → 2 (mishna page)
+
+      expect(find.textContaining('Mishna'), findsWidgets);
+      expect(find.textContaining('משנה'), findsNothing);
+
+      await _tearDown(tester);
+    });
+
+    testWidgets('page 2 shows Hebrew "משנה" when Hebrew Terms ON', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_rig(router: router, useHebrewTerms: true));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 900));
+
+      await _swipeToNextPage(tester); // page 1 → 2 (mishna page)
+
+      expect(find.textContaining('משנה'), findsOneWidget);
+      expect(find.textContaining('Mishna'), findsNothing);
 
       await _tearDown(tester);
     });

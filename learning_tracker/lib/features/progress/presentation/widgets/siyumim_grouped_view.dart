@@ -3,8 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
+import 'package:learning_tracker/core/labels/curriculum_label_renderer.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/progress/domain/models/journey_view_model.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/siyum_milestone_label.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -215,7 +217,7 @@ class _CurriculumCompleteHero extends StatelessWidget {
 /// The header shows the localized "Siyum Seder {name}" label; the expansion
 /// body lists the contained masechtos so the user can see exactly what
 /// rolled up.
-class _AggregateMilestoneTile extends StatelessWidget {
+class _AggregateMilestoneTile extends ConsumerWidget {
   const _AggregateMilestoneTile({
     required this.milestone,
     required this.curriculumId,
@@ -229,8 +231,31 @@ class _AggregateMilestoneTile extends StatelessWidget {
   final DomainTermLabels terms;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
+    // Contained units are masechta names stored as raw content keys
+    // (e.g. "Berakhos"); these are level-2 *named* values, so the renderer
+    // needs each unit's Hebrew name to render it in Hebrew rather than fall
+    // back to the raw key. Resolve a level-2-key → Hebrew-name map from the
+    // curriculum's content; null while loading so the renderer transliterates
+    // (English) until the names arrive.
+    final hebrewByUnitKey = ref
+        .watch(curriculumContentProvider(curriculumId))
+        .maybeWhen(
+          data: (items) {
+            final map = <String, String>{};
+            for (final item in items) {
+              final key = item.level2;
+              if (key != null && !map.containsKey(key)) {
+                // DNI-386: route the Hebrew name through the core/labels accessor.
+                final hebrewName = CurriculumLabelRenderer.hebrewNameOf(item);
+                if (hebrewName != null) map[key] = hebrewName;
+              }
+            }
+            return map;
+          },
+          orElse: () => const <String, String>{},
+        );
     final label = aggregateSiyumLabel(
       curriculumId: curriculumId,
       aggregateName: milestone.aggregateKey ?? milestone.displayName,
@@ -268,7 +293,18 @@ class _AggregateMilestoneTile extends StatelessWidget {
                 ),
                 const SizedBox(width: 6),
                 Expanded(
-                  child: Text(unitKey, style: const TextStyle(fontSize: 13)),
+                  // Render through the shared CurriculumLabel.level control
+                  // (masechta = level 2) so the name switches across
+                  // Hebrew / Ashkenazi / Sephardi instead of leaking the raw
+                  // storage key. hebrewName lets the renderer produce the
+                  // Hebrew masechta name when the Hebrew Terms toggle is on.
+                  child: CurriculumLabel.level(
+                    curriculumId: curriculumId,
+                    level: 2,
+                    rawValue: unitKey,
+                    hebrewName: hebrewByUnitKey[unitKey],
+                    style: const TextStyle(fontSize: 13),
+                  ),
                 ),
               ],
             ),

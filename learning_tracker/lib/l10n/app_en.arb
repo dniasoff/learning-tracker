@@ -246,6 +246,20 @@
   "manageTracksDetail": "Create and edit your learning tracks",
   "addTrackGoalTapToUseDeadline": "Target pace is on — tap here to use a deadline instead",
   "addTrackGoalTapToUsePace": "Deadline is on — tap here to use target pace instead",
+  "addTrackChazaraStepTitle": "Add {term}?",
+  "@addTrackChazaraStepTitle": {
+    "description": "Title for the optional chazara (review) setup step in the add-track flow. {term} is the localized chazara/review domain term.",
+    "placeholders": {
+      "term": { "type": "String" }
+    }
+  },
+  "addTrackChazaraStepQuestion": "How do you want to {term}?",
+  "@addTrackChazaraStepQuestion": {
+    "description": "Question header for the chazara (review) setup step in the add-track flow. {term} is the localized chazara/review domain term.",
+    "placeholders": {
+      "term": { "type": "String" }
+    }
+  },
   "addTrackGoalDeadlinePaceLine": "About {items} {unit} per study day, across {studyDays} study days to finish the scope by the deadline (≈{totalItems} items).",
   "@addTrackGoalDeadlinePaceLine": {
     "placeholders": {
