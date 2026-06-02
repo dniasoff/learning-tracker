@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/utils/hebrew_calendar_utils.dart';
 import 'package:learning_tracker/core/utils/text_input_formatters.dart';
@@ -344,7 +345,9 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
 
   Widget _buildPaceSection() {
     final useHebrew = ref.watch(useHebrewDateProvider);
-    final useHebrewTerms = ref.watch(useHebrewTermsProvider);
+    // Domain-term toggle via the shared accessor (DNI: no raw
+    // useHebrewTermsProvider read outside core/labels).
+    final useHebrewTerms = domainTermLabels(ref).isHebrew;
     final variant = ref.watch(currentTransliterationVariantProvider);
     final unitLabel = _unitDisplayLabel(
       useHebrew: useHebrewTerms,

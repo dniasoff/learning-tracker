@@ -15,9 +15,9 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/enums/curriculum_overlap_registry.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
+import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
-import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
@@ -306,7 +306,7 @@ final trackDualProgressMetricsProvider = FutureProvider.autoDispose
       // `ref.read`/`ref.watch` after an async gap throws "Cannot use Ref after
       // dispose", failing the whole metric list.
       final progressSvc = ref.read(trackProgressServiceProvider);
-      final useHebrewTerms = ref.watch(useHebrewTermsProvider);
+      final useHebrewTerms = domainTermLabelsFromRef(ref).isHebrew;
       final tracks = await db.trackDao.getAllForProfile(profileId);
 
       final metrics = <TrackDualProgressMetric>[];

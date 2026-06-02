@@ -271,7 +271,7 @@ lint: ## Run custom_lint (skips gracefully if not in pubspec)
 	  echo "custom_lint not in pubspec — skipping (add custom_lint to dev_dependencies when ready)"; \
 	fi
 
-audit: ## Run all 17 enforcement greps (NFR19) — exits non-zero on any violation
+audit: ## Run all 20 enforcement greps (NFR19) — exits non-zero on any violation
 	@echo "=== audit: enforcement greps ==="
 	@FAIL=0; \
 	echo "1/15 — No Firebase imports outside core/auth or core/sync"; \
@@ -435,9 +435,27 @@ audit: ## Run all 17 enforcement greps (NFR19) — exits non-zero on any violati
 	    | grep -v ":[[:space:]]*//"; \
 	  FAIL=1; \
 	fi; \
+	echo "19/20 — No hardcoded Torah domain-term literals in presentation strings (Hebrew-terms consistency)"; \
+	if grep -rnE "'[^']*\b(Mishnayos|Mishnayot|Masechtos|Masekhtot|Masekhet|Dafim|Dapim|Amudim|Perakim|Pesukim|Chazara|Siyumim|Sedarim)\b[^']*'" lib/features --include="*.dart" \
+	    | grep "/presentation/" | grep -v "\.g\.dart" | grep -v "\.freezed\.dart" | grep -v ":[[:space:]]*//" \
+	    | grep -q .; then \
+	  echo "  Domain terms must render via domainTermLabels / CurriculumLabels / CurriculumLabelRenderer / l10n so they honour the Hebrew-terms + Ashkenazi/Sephardi settings:"; \
+	  grep -rnE "'[^']*\b(Mishnayos|Mishnayot|Masechtos|Masekhtot|Masekhet|Dafim|Dapim|Amudim|Perakim|Pesukim|Chazara|Siyumim|Sedarim)\b[^']*'" lib/features --include="*.dart" \
+	    | grep "/presentation/" | grep -v "\.g\.dart" | grep -v "\.freezed\.dart" | grep -v ":[[:space:]]*//"; \
+	  FAIL=1; \
+	fi; \
+	echo "20/20 — No raw curriculumId/storageKey rendered in Text() (render via CurriculumLabel / rendered*ForRef)"; \
+	if grep -rnE "Text\(\s*(curriculumId|[a-zA-Z_]+\.storageKey)\b" lib/features --include="*.dart" \
+	    | grep "/presentation/" | grep -v "\.g\.dart" | grep -v ":[[:space:]]*//" \
+	    | grep -q .; then \
+	  echo "  Raw storage keys must render via CurriculumLabel / CurriculumLabelRenderer / rendered*ForRef:"; \
+	  grep -rnE "Text\(\s*(curriculumId|[a-zA-Z_]+\.storageKey)\b" lib/features --include="*.dart" \
+	    | grep "/presentation/" | grep -v "\.g\.dart" | grep -v ":[[:space:]]*//"; \
+	  FAIL=1; \
+	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \
 	  exit 1; \
 	else \
-	  echo "=== audit PASSED — all 18 greps clean ==="; \
+	  echo "=== audit PASSED — all 20 greps clean ==="; \
 	fi

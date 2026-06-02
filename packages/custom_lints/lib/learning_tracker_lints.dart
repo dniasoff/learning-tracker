@@ -11,6 +11,9 @@
 ///     features must communicate only through their barrel `X/X.dart` surface.
 ///   - [NoFirebaseOutsideCore]: prevents Firebase SDK imports outside
 ///     `lib/core/auth/` and `lib/core/sync/`.
+///   - [NoHardcodedDomainTerm]: warns on hardcoded Torah domain-term English
+///     literals in user-facing strings in presentation code; render via
+///     domainTermLabels / CurriculumLabels / l10n instead.
 ///   - [NoHardcodedTextDirection]: warns on hardcoded directional layout values
 ///     that break RTL locales (EdgeInsets.only(left/right), Alignment.centerLeft/
 ///     centerRight, TextAlign.left/right).
@@ -27,6 +30,7 @@ import 'src/rules/no_curriculum_display_name_bypass.dart';
 import 'src/rules/no_e_to_string_in_ui.dart';
 import 'src/rules/no_feature_cross_import.dart';
 import 'src/rules/no_firebase_outside_core.dart';
+import 'src/rules/no_hardcoded_domain_term.dart';
 import 'src/rules/no_hardcoded_text_direction.dart';
 import 'src/rules/no_raw_logevent.dart';
 import 'src/rules/no_raw_talker.dart';
@@ -42,6 +46,7 @@ class _LearningTrackerLintPlugin extends PluginBase {
         NoEToStringInUi(),
         NoFeatureCrossImport(),
         NoFirebaseOutsideCore(),
+        NoHardcodedDomainTerm(),
         NoHardcodedTextDirection(),
         NoRawLogEvent(),
         NoRawTalker(),
