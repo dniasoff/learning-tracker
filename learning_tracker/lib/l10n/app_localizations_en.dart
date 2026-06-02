@@ -1233,6 +1233,12 @@ class AppLocalizationsEn extends AppLocalizations {
       'Add, edit, or archive your child\'s tracks';
 
   @override
+  String get manageGoals => 'Manage Goals';
+
+  @override
+  String get manageGoalsSubtitle => 'Set pace or deadline goals for each track';
+
+  @override
   String get manageChildLearningSubtitle =>
       'Manage tracks, points, rewards, and goals';
 

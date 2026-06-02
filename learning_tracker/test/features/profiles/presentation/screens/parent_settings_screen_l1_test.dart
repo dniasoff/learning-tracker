@@ -218,6 +218,7 @@ void main() {
   testWidgets('owner context: Add Lifetime Learning tile is visible', (
     tester,
   ) async {
+    _useTallViewport(tester);
     await tester.pumpWidget(_buildApp(router: router, tutorPerms: null));
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
@@ -323,6 +324,65 @@ void main() {
     await _tearDown(tester);
   });
 
+  // ── Goals: owner + tutor see "Manage Goals"; canEditGoals=false hides it ──
+
+  testWidgets('owner context: Manage Goals tile is visible', (tester) async {
+    await tester.pumpWidget(_buildApp(router: router, tutorPerms: null));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.text('Manage Goals'), findsOneWidget);
+
+    await _tearDown(tester);
+  });
+
+  testWidgets(
+    'tutor context, all-perms (canEditGoals=true): Manage Goals tile visible',
+    (tester) async {
+      // Default tutor permissions have canEditGoals=true (and
+      // canMarkLiveCompletion hard-false), so the tutor CAN reach + edit goals.
+      await tester.pumpWidget(
+        _buildApp(router: router, tutorPerms: TutorPermissions.defaults()),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text('Manage Goals'), findsOneWidget);
+
+      await _tearDown(tester);
+    },
+  );
+
+  testWidgets('tutor context, canEditGoals=false: Manage Goals tile hidden', (
+    tester,
+  ) async {
+    final perms = TutorPermissions.defaults().copyWith(canEditGoals: false);
+    await tester.pumpWidget(_buildApp(router: router, tutorPerms: perms));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.text('Manage Goals'), findsNothing);
+
+    await _tearDown(tester);
+  });
+
+  testWidgets('tapping Manage Goals pushes ParentTrackManagementRoute', (
+    tester,
+  ) async {
+    await tester.pumpWidget(_buildApp(router: router, tutorPerms: null));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    await tester.tap(find.text('Manage Goals'));
+    await tester.pump();
+
+    verify(
+      () => router.push<Object?>(any(), onFailure: any(named: 'onFailure')),
+    ).called(1);
+
+    await _tearDown(tester);
+  });
+
   // ── 4. Tutor context, canEditPoints=false → Point Config + Adjust hidden ──
 
   testWidgets(
@@ -385,9 +445,12 @@ void main() {
   // ── 6. All three blocked → edit panel absent ──────────────────────────────
 
   testWidgets('tutor context, no edit perms: entire edit panel absent '
-      '(no Manage Tracks / Point Config / Reward Config)', (tester) async {
+      '(no Manage Tracks / Goals / Point Config / Reward Config)', (
+    tester,
+  ) async {
     const perms = TutorPermissions(
       canEditStages: false,
+      canEditGoals: false,
       canEditPoints: false,
       canEditRewards: false,
     );
@@ -396,6 +459,7 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
 
     expect(find.text('Manage Tracks'), findsNothing);
+    expect(find.text('Manage Goals'), findsNothing);
     expect(find.text('Point Configuration'), findsNothing);
     expect(find.text('Reward configuration'), findsNothing);
     expect(find.text('Adjust Points'), findsNothing);
@@ -487,6 +551,7 @@ void main() {
   testWidgets(
     'tutor context, canBulkPriorCompletion=true: bulk-mark tile visible',
     (tester) async {
+      _useTallViewport(tester);
       await tester.pumpWidget(
         _buildApp(router: router, tutorPerms: TutorPermissions.defaults()),
       );
@@ -661,6 +726,7 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
 
     expect(find.text('Manage Tracks'), findsNothing);
+    expect(find.text('Manage Goals'), findsNothing);
     expect(find.text('Point Configuration'), findsNothing);
     expect(find.text('Adjust Points'), findsNothing);
     expect(find.text('Reward configuration'), findsNothing);

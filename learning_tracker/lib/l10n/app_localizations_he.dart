@@ -1221,6 +1221,12 @@ class AppLocalizationsHe extends AppLocalizations {
       'הוספה, עריכה או ארכיון של מסלולי הילד';
 
   @override
+  String get manageGoals => 'ניהול מטרות';
+
+  @override
+  String get manageGoalsSubtitle => 'הגדרת מטרות קצב או יעד לכל מסלול';
+
+  @override
   String get manageChildLearningSubtitle =>
       'ניהול מסלולים, נקודות, פרסים ומטרות';
 

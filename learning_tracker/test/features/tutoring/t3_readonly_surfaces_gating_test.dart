@@ -228,16 +228,33 @@ void main() {
       },
     );
 
-    test('AC2: tutored Settings header reflects the tutored-child context', () {
-      // TUT-05: the header must NOT show the tutor own "SELF-LEARNER" account
-      // in a tutored session — it shows the talmid + TUTOR badge.
+    test('AC2: account/profile header is HIDDEN in a tutored session', () {
+      // BUG 2 (supersedes TUT-05): the header card + its tap-through
+      // account-actions sheet are the TUTOR's own device/account surface
+      // (switch login, change password, sign out, delete account). It must be
+      // hidden entirely when an active tutored selection is present so no
+      // tutor-account items leak into the talmid's student-scope context.
+      final headerIdx = settingsSrc.indexOf('UserProfileHeaderCard(');
       expect(
-        settingsSrc,
-        contains('UserProfileContextRole.tutor'),
+        headerIdx,
+        greaterThanOrEqualTo(0),
         reason:
-            'settings_screen.dart must pass UserProfileContextRole.tutor to the '
-            'header in a tutored session so it reflects the talmid context '
-            '(TUT-05), not the tutor own account',
+            'settings_screen.dart must still render UserProfileHeaderCard '
+            'for own (non-tutored) sessions',
+      );
+      // The header must be guarded by `if (!isTutoredSession)` immediately
+      // before it.
+      final guardIdx = settingsSrc.lastIndexOf(
+        'if (!isTutoredSession)',
+        headerIdx,
+      );
+      expect(
+        guardIdx,
+        greaterThanOrEqualTo(0),
+        reason:
+            'settings_screen.dart must gate UserProfileHeaderCard behind '
+            '`if (!isTutoredSession)` so the tutor own-account header is hidden '
+            'in a tutored session (BUG 2)',
       );
     });
 

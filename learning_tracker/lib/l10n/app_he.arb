@@ -585,6 +585,8 @@
   "manageTutors": "ניהול מדריכים",
   "manageTutorsSubtitle": "הזמנה או הסרה של מדריכים לילד זה",
   "manageTracksForChildSubtitle": "הוספה, עריכה או ארכיון של מסלולי הילד",
+  "manageGoals": "ניהול מטרות",
+  "manageGoalsSubtitle": "הגדרת מטרות קצב או יעד לכל מסלול",
   "manageChildLearningSubtitle": "ניהול מסלולים, נקודות, פרסים ומטרות",
   "pointConfiguration": "הגדרת נקודות",
   "pointConfigurationSubtitle": "כמה נקודות שווה כל פעילות",

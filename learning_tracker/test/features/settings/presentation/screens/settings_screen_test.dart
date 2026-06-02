@@ -17,6 +17,7 @@ import 'package:learning_tracker/features/profiles/presentation/providers/active
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/settings_screen.dart';
+import 'package:learning_tracker/features/settings/presentation/widgets/user_profile_header_card.dart';
 import 'package:learning_tracker/features/tracks/domain/services/curriculum_activation_service.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
@@ -355,5 +356,40 @@ void main() {
         await tester.pump(Duration.zero);
       },
     );
+
+    // BUG 2: the account/profile header card is the TUTOR's own account surface
+    // (name + email + tap-through to switch login / change password / sign out /
+    // delete account). It must be HIDDEN in a tutored (talmid) session so no
+    // tutor-account items leak into the student-scope context.
+    testWidgets('hides the account/profile header card', (tester) async {
+      await tester.pumpWidget(
+        createTestWidget(
+          initialActive: [CurriculumId.mishnayos],
+          tutoredSession: true,
+        ),
+      );
+      await pumpUntilSettled(tester);
+
+      expect(find.byType(UserProfileHeaderCard), findsNothing);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    });
+  });
+
+  group('Own (non-tutored) session — account header present', () {
+    // Counterpart to BUG 2: the header card must STILL render for a normal
+    // (own-profile) session so the user can reach the account-actions sheet.
+    testWidgets('shows the account/profile header card', (tester) async {
+      await tester.pumpWidget(
+        createTestWidget(initialActive: [CurriculumId.mishnayos]),
+      );
+      await pumpUntilSettled(tester);
+
+      expect(find.byType(UserProfileHeaderCard), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    });
   });
 }

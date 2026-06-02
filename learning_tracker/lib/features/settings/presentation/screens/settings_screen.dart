@@ -66,21 +66,24 @@ class SettingsScreen extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.fromLTRB(16, 20, 16, 28),
           children: [
-            // Profile header is shown for EVERY profile (child, adult, tutored):
-            // it is the canonical learner + login-account switcher. Daniel
+            // Profile header is the canonical learner + login-account switcher
+            // (avatar, name, account email; tap → account actions sheet). Daniel
             // requires children to be able to switch learner and login account
-            // from here too, so it is never hidden.
-            UserProfileHeaderCard(
-              user: user,
-              activeProfile: activeProfile,
-              surface: UserProfileHeaderSurface.settings,
-              // TUT-05: in a tutored session the header must reflect the
-              // tutored-CHILD context (talmid name + TUTOR badge, account email
-              // hidden) — not the tutor's own "SELF-LEARNER" account.
-              contextRole: isTutoredSession
-                  ? UserProfileContextRole.tutor
-                  : UserProfileContextRole.selfLearner,
-            ),
+            // from here, so it is shown for every OWN profile (child, adult).
+            //
+            // In a TUTORED session it is HIDDEN: the header + its tap-through
+            // account-actions sheet are the TUTOR's own device/account surface
+            // (switch login, change password, sign out, delete account), which
+            // must not leak into the talmid's student-scope context. The
+            // persistent role switcher in the app shell remains the path out of
+            // the tutored session.
+            if (!isTutoredSession)
+              UserProfileHeaderCard(
+                user: user,
+                activeProfile: activeProfile,
+                surface: UserProfileHeaderSurface.settings,
+                contextRole: UserProfileContextRole.selfLearner,
+              ),
             // ── Pending tutor invitations ──────────────────────────────────────
             // Shown automatically when a parent has sent an invite addressed to
             // this account's email — no link sharing required.

@@ -2261,6 +2261,18 @@ abstract class AppLocalizations {
   /// **'Add, edit, or archive your child\'s tracks'**
   String get manageTracksForChildSubtitle;
 
+  /// No description provided for @manageGoals.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage Goals'**
+  String get manageGoals;
+
+  /// No description provided for @manageGoalsSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Set pace or deadline goals for each track'**
+  String get manageGoalsSubtitle;
+
   /// No description provided for @manageChildLearningSubtitle.
   ///
   /// In en, this message translates to:

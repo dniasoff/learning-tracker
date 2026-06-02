@@ -600,6 +600,8 @@
   "manageTutors": "Manage Tutors",
   "manageTutorsSubtitle": "Invite or remove tutors for this child",
   "manageTracksForChildSubtitle": "Add, edit, or archive your child's tracks",
+  "manageGoals": "Manage Goals",
+  "manageGoalsSubtitle": "Set pace or deadline goals for each track",
   "manageChildLearningSubtitle": "Manage tracks, points, rewards, and goals",
   "pointConfiguration": "Point Configuration",
   "pointConfigurationSubtitle": "Set how many points activities are worth",

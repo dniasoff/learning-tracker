@@ -96,6 +96,11 @@ class ParentSettingsScreen extends ConsumerWidget {
     // canEditPoints permission, NOT canEditGoals (a different concept).
     final canEditPoints = !isTutoredContext || tutorPerms.canEditPoints;
     final canEditRewards = !isTutoredContext || tutorPerms.canEditRewards;
+    // Goals are per-track (set/edited from each track's "Set/Edit Goal" tile),
+    // so the hub's "Manage Goals" row routes into the track list. Gated on the
+    // dedicated canEditGoals permission (default true for tutors), distinct
+    // from canEditStages which gates track add/edit/archive.
+    final canEditGoals = !isTutoredContext || tutorPerms.canEditGoals;
     // WS3.3h: canBulkPriorCompletion = true by default (G3/DEC-33) — tutors
     // always see the bulk-mark tile unless the parent explicitly disabled it.
     final canBulkMark = !isTutoredContext || tutorPerms.canBulkPriorCompletion;
@@ -106,7 +111,8 @@ class ParentSettingsScreen extends ConsumerWidget {
     // Build the main edit tiles, hiding those locked by tutor permissions.
     // If all three tiles are hidden the panel is omitted entirely to avoid
     // an empty card.
-    final showEditPanel = canEditTracks || canEditPoints || canEditRewards;
+    final showEditPanel =
+        canEditTracks || canEditGoals || canEditPoints || canEditRewards;
 
     return Scaffold(
       backgroundColor: _pageBg,
@@ -166,9 +172,30 @@ class ParentSettingsScreen extends ConsumerWidget {
                           context.pushRoute(const ParentTrackManagementRoute()),
                     ),
                   ],
+                  // Goals: per-track pace/deadline goals are set from each
+                  // track's "Set/Edit Goal" tile, so this row routes into the
+                  // track list. Gated on canEditGoals (default true for tutors),
+                  // distinct from canEditStages above.
+                  if (canEditGoals) ...[
+                    if (canEditTracks) _rowDivider(),
+                    _ManageRow(
+                      iconBackground: const Color(0xFFE7F0FF),
+                      icon: Icons.flag_rounded,
+                      iconColor: const Color(0xFF1E52D4),
+                      title: l10n.manageGoals,
+                      subtitle: l10n.manageGoalsSubtitle,
+                      trailing: const Icon(
+                        Icons.chevron_right_rounded,
+                        color: _chevronMuted,
+                        size: 26,
+                      ),
+                      onTap: () =>
+                          context.pushRoute(const ParentTrackManagementRoute()),
+                    ),
+                  ],
                   // WS3.3d: canEditPoints gates "Point Configuration" for tutors.
                   if (canEditPoints) ...[
-                    if (canEditTracks) _rowDivider(),
+                    if (canEditTracks || canEditGoals) _rowDivider(),
                     _ManageRow(
                       iconBackground: _iconCircleMuted,
                       icon: Icons.tune_rounded,
@@ -202,7 +229,8 @@ class ParentSettingsScreen extends ConsumerWidget {
                   ],
                   // WS3.3d: canEditRewards gates "Reward Configuration" for tutors.
                   if (canEditRewards) ...[
-                    if (canEditTracks || canEditPoints) _rowDivider(),
+                    if (canEditTracks || canEditGoals || canEditPoints)
+                      _rowDivider(),
                     _ManageRow(
                       iconBackground: const Color(0xFFFFE8CC),
                       icon: Icons.card_giftcard_rounded,
