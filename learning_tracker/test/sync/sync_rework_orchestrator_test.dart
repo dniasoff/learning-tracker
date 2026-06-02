@@ -435,11 +435,22 @@ void main() {
     // Post-fix, FirestoreListenerSource resolves the profile id lazily and
     // SyncOrchestratorImpl.restartListeners() re-opens the listener set. The
     // provider calls restartListeners() on every profile change.
+    //
+    // Profile 0 is the no-profile sentinel: there is no `learner_profiles/0`
+    // document, so FirestoreListenerSource opens ONLY the account-level
+    // channels (learner_profiles + tutor_grants) for it — never the per-profile
+    // subcollection listeners (which would flood logcat with PERMISSION_DENIED).
+    // Those account-level channels do NOT record a profile id in
+    // [_ChannelCountingGateway.openedProfileIds], so the cold-start set leaves
+    // it empty; only after the switch to a real profile do per-profile channels
+    // open and populate it. The asymmetry is therefore expected and asserted
+    // explicitly below.
     test('I3: restartListeners() rebinds the live listener set to the current '
         'profile', () async {
       final gateway = _ChannelCountingGateway();
       // The resolver models activeProfileIdProvider: it starts on the
-      // bootstrap profile (0) and flips to a real profile after a switch.
+      // bootstrap/sentinel profile (0) and flips to a real profile after a
+      // switch.
       var currentProfile = 0;
       final orchestrator = _buildOrchestrator(
         gateway,
@@ -448,14 +459,23 @@ void main() {
       addTearDown(orchestrator.dispose);
 
       orchestrator.start();
+      // Cold start on the sentinel profile opens ONLY account-level channels —
+      // no per-profile listener is opened, so no profile id is recorded.
       expect(
-        gateway.openedProfileIds.every((id) => id == 0),
-        isTrue,
+        gateway.openedProfileIds,
+        isEmpty,
         reason:
-            'I3: the cold-start listener set must open against the '
-            'bootstrap profile that was active at start()',
+            'I3: the sentinel profile (0) must NOT open per-profile listeners '
+            '— there is no learner_profiles/0 document to read',
       );
-      final channelsPerSet = gateway.totalChannelsOpened;
+      final accountLevelChannels = gateway.totalChannelsOpened;
+      expect(
+        accountLevelChannels,
+        greaterThan(0),
+        reason:
+            'I3: even on the sentinel profile the account-level channels '
+            '(learner_profiles + tutor_grants) must open',
+      );
 
       // The user picks a real profile — the provider would observe this and
       // call restartListeners().
@@ -464,19 +484,30 @@ void main() {
       // restart() is stop()-then-start(); both are async.
       await Future<void>.delayed(Duration.zero);
 
+      // restartListeners() re-opens exactly one fresh set bound to profile 7.
+      // The full set (per-profile + account-level) is strictly larger than the
+      // sentinel-only set, and every per-profile channel targets profile 7.
       expect(
         gateway.totalChannelsOpened,
-        equals(channelsPerSet * 2),
+        greaterThan(accountLevelChannels),
         reason:
-            'I3: restartListeners() must re-open exactly one fresh listener '
-            'set (not zero, not a duplicate)',
+            'I3: restartListeners() must re-open the full listener set for the '
+            'real profile (not zero new channels)',
       );
       expect(
-        gateway.openedProfileIds.sublist(channelsPerSet),
+        gateway.openedProfileIds,
+        isNotEmpty,
+        reason:
+            'I3: switching to a real profile must open per-profile listeners',
+      );
+      expect(
+        gateway.openedProfileIds,
         everyElement(equals(7)),
         reason:
-            'I3: every channel opened after the profile switch must be '
-            'bound to the new profile id — not the stale bootstrap profile',
+            'I3: every per-profile channel must be bound to the new profile id '
+            '(7) — never the stale sentinel profile (0), and the sentinel set '
+            'opened no per-profile channels, so no duplicate profile-7 batch '
+            'exists',
       );
     });
 

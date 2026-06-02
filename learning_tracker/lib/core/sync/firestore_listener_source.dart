@@ -91,12 +91,53 @@ class FirestoreListenerSource implements ListenerSource {
     'reward_redemptions': 'updated_at',
   };
 
+  /// Sentinel profile id meaning "no real active profile yet".
+  ///
+  /// `0` is the legacy/default value [ActiveProfileId] returns transiently —
+  /// e.g. during an account switch-back, before the signed-in account's real
+  /// active profile resolves, or while a tutored mirror pull is still in
+  /// flight. There is NO `users/{uid}/learner_profiles/0` document, so any
+  /// per-profile subcollection listener opened against it is denied by the
+  /// Firestore rules and floods logcat with PERMISSION_DENIED. The per-profile
+  /// channels are therefore skipped while the active profile is this sentinel;
+  /// a subsequent `restart()` (fired by the orchestrator when the real profile
+  /// resolves) re-opens the full channel set against the concrete profile id.
+  static const int noProfileSentinel = 0;
+
   @override
   Map<String, Stream<Object?>> openChannels() {
     // Resolve once per openChannels() call so every channel in this set is
     // bound to the same (current) gateway and profile id.
     final gateway = _resolveGateway();
     final profileId = _resolveProfileId();
+
+    // Account-level / root-scoped channels are valid regardless of the active
+    // profile id (they address `users/{uid}/learner_profiles` and the root
+    // `tutor_grants` collection scoped by uid, never `learner_profiles/{id}`).
+    // They are always opened — including while [profileId] is the
+    // [noProfileSentinel] — so the profile list and tutor grants stay live even
+    // before a concrete profile is selected.
+    final accountLevel = <String, Stream<Object?>>{
+      // `learner_profiles` lives at the ACCOUNT level
+      // (users/{uid}/learner_profiles) — the parent of every per-profile
+      // subcollection, not a child of any one profile document. The gateway
+      // exposes a dedicated `listenToLearnerProfiles` method that builds the
+      // correct path (the per-profile-subcollection helper would otherwise
+      // yield `users/{uid}/learner_profiles/{profileId}/learner_profiles`).
+      'learner_profiles': gateway.listenToLearnerProfiles(),
+      // tutor_grants — top-level collection scoped to the caller's uid via
+      // a `where` predicate. The gateway handles the OR query (tutor_uid OR
+      // parent_uid == auth.uid). Empty stream when not authenticated.
+      'tutor_grants': gateway.listenToTutorGrants(),
+    };
+
+    // Guard the per-profile channels: there is no `learner_profiles/0`
+    // document, so opening them with the sentinel id only produces a
+    // PERMISSION_DENIED flood. Return only the account-level channels; the
+    // orchestrator restarts the supervisor once the real profile resolves.
+    if (profileId == noProfileSentinel) {
+      return accountLevel;
+    }
 
     Stream<Object?> coll(String collection) {
       final field =
@@ -138,13 +179,10 @@ class FirestoreListenerSource implements ListenerSource {
       'learning_ledger': coll('learning_ledger'),
       'learning_order': coll('learning_order'),
       'profile_programs': coll('profile_programs'),
-      // `learner_profiles` lives at the ACCOUNT level
-      // (users/{uid}/learner_profiles) — the parent of every per-profile
-      // subcollection, not a child of any one profile document. The gateway
-      // exposes a dedicated `listenToLearnerProfiles` method that builds the
-      // correct path (the per-profile-subcollection helper would otherwise
-      // yield `users/{uid}/learner_profiles/{profileId}/learner_profiles`).
-      'learner_profiles': gateway.listenToLearnerProfiles(),
+      // Account-level / root-scoped channels (profile-id independent) — see
+      // [accountLevel] above; spread in so the full set is returned when a
+      // concrete profile is active.
+      ...accountLevel,
       // Single-document preference listeners (W3.33 unified docs under
       // `preferences/{scope}`):
       'preferences/notification_settings': doc(
@@ -156,10 +194,6 @@ class FirestoreListenerSource implements ListenerSource {
         'gamification_settings',
       ),
       'preferences/ui_preferences': doc('preferences', 'ui_preferences'),
-      // tutor_grants — top-level collection scoped to the caller's uid via
-      // a `where` predicate. The gateway handles the OR query (tutor_uid OR
-      // parent_uid == auth.uid). Empty stream when not authenticated.
-      'tutor_grants': gateway.listenToTutorGrants(),
       // Phase 1 — listener for the new study_day_configs collection. The
       // per-curriculum/per-track day pattern was local-only before; the
       // merger now consumes pulled rows and reconciles them with the

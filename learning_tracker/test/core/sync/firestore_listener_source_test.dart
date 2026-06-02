@@ -174,4 +174,108 @@ void main() {
       },
     );
   });
+
+  // ── profileId == 0 sentinel guard ──────────────────────────────────────────
+  //
+  // Regression for the PERMISSION_DENIED flood after an account switch-back:
+  // [ActiveProfileId] transiently resolves to 0 (the no-profile sentinel)
+  // before the signed-in account's real active profile resolves. A listener
+  // restart fired during that window must NOT open per-profile subcollection
+  // listeners against `users/{uid}/learner_profiles/0/...` — there is no
+  // `learner_profiles/0` document, so the Firestore rules deny every read.
+  group('FirestoreListenerSource.openChannels() — profileId == 0 sentinel', () {
+    late _StubGateway gateway;
+    late FirestoreListenerSource source;
+
+    setUp(() {
+      gateway = _StubGateway();
+      source = FirestoreListenerSource(
+        resolveGateway: () => gateway,
+        resolveProfileId: () => FirestoreListenerSource.noProfileSentinel,
+      );
+    });
+
+    test('opens NO per-profile collection listeners', () {
+      source.openChannels();
+      expect(
+        gateway.collectionCalls,
+        isEmpty,
+        reason:
+            'profileId == 0 has no learner_profiles/0 doc; opening per-profile '
+            'collection listeners floods logcat with PERMISSION_DENIED',
+      );
+    });
+
+    test('opens NO per-profile document listeners (preferences)', () {
+      source.openChannels();
+      expect(gateway.docCalls, isEmpty);
+    });
+
+    test('exposes NONE of the per-profile channels', () {
+      const perProfileChannels = [
+        'completions',
+        'bookmarks',
+        'settings',
+        'streak_events',
+        'curriculum_tracks',
+        'stage_definitions',
+        'study_day_configs',
+        'goals',
+        'learning_ledger',
+        'learning_order',
+        'profile_programs',
+        'points_ledger',
+        'reward_redemptions',
+        'preferences/notification_settings',
+        'preferences/gamification_settings',
+        'preferences/ui_preferences',
+      ];
+      final channels = source.openChannels();
+      for (final channel in perProfileChannels) {
+        expect(
+          channels.keys,
+          isNot(contains(channel)),
+          reason: '$channel must be skipped while profileId == 0',
+        );
+      }
+    });
+
+    test(
+      'still opens account-level channels (learner_profiles + tutor_grants)',
+      () {
+        // These address `users/{uid}/learner_profiles` and the root
+        // `tutor_grants` collection — they are profile-id independent and must
+        // stay live even before a concrete profile resolves.
+        final channels = source.openChannels();
+        expect(
+          channels.keys,
+          containsAll(['learner_profiles', 'tutor_grants']),
+        );
+        expect(gateway.learnerProfilesCalled, isTrue);
+        expect(gateway.tutorGrantsCalled, isTrue);
+      },
+    );
+
+    test('re-resolving to a real profile re-opens the full channel set', () {
+      // Simulate the orchestrator's restart() after the active profile
+      // resolves: a fresh openChannels() with profileId != 0 must include the
+      // per-profile channels again.
+      var pid = FirestoreListenerSource.noProfileSentinel;
+      final dynamicSource = FirestoreListenerSource(
+        resolveGateway: () => gateway,
+        resolveProfileId: () => pid,
+      );
+
+      final sentinelChannels = dynamicSource.openChannels();
+      expect(sentinelChannels.keys, isNot(contains('completions')));
+
+      pid = 7;
+      final realChannels = dynamicSource.openChannels();
+      expect(realChannels.keys, contains('completions'));
+      expect(
+        gateway.collectionCalls.map((c) => c.collection),
+        contains('completions'),
+      );
+    });
+  });
 }
