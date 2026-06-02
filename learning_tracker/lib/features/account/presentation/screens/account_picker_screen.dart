@@ -24,6 +24,8 @@ import 'package:learning_tracker/features/onboarding/presentation/screens/onboar
     show kOnboardingComplete;
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart'
     show selectedProfileIdProvider;
+import 'package:learning_tracker/features/tutoring/tutoring.dart'
+    show activeTutoredProfileSelectionProvider;
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -551,6 +553,14 @@ class _AccountTile extends ConsumerWidget {
     // ProfileGuard onto the wrong profile in this account's DB.
     ref.read(selectedProfileIdProvider.notifier).clear();
 
+    // An account switch lands on the switched account's OWN profile in NORMAL
+    // mode: clear any active talmid selection and lock the parent-PIN gate
+    // (pinGuard.lock() also clears parentPinAuthenticatedProfileId via its
+    // onSessionLocked callback) so the previous account's tutor/parent context
+    // never leaks into the new one.
+    ref.read(activeTutoredProfileSelectionProvider.notifier).exit();
+    ref.read(routerProvider).pinGuard.lock();
+
     ref.read(authStateProvider.notifier).setCloudBornSession(profile: profile);
 
     // Restart sync for the now-active identity. The authStateProvider rebuild
@@ -596,6 +606,11 @@ class _AccountTile extends ConsumerWidget {
     await prefs.setBool(kOnboardingComplete, true);
     // R1o-C2: clear any stale selected profile id from the previous account.
     ref.read(selectedProfileIdProvider.notifier).clear();
+    // Land on the switched account's OWN profile in NORMAL mode — drop any
+    // talmid selection and lock the parent-PIN gate carried over from the
+    // previous account.
+    ref.read(activeTutoredProfileSelectionProvider.notifier).exit();
+    ref.read(routerProvider).pinGuard.lock();
     // DEC-34: do NOT call signOut() — switching accounts must never terminate
     // other accounts' sessions. The Drift DB swap above isolates the data;
     // the AuthState update below makes this account the active on-screen context.

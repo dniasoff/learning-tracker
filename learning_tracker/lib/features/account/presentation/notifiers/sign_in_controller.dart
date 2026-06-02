@@ -9,6 +9,7 @@ import 'package:learning_tracker/core/database/daos/user_profile_dao.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/navigation/router_provider.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/core/sync/providers/outbox_providers.dart'
@@ -27,7 +28,10 @@ import 'package:learning_tracker/features/onboarding/presentation/providers/onbo
     show kOnboardingComplete, kOnboardingSkipped;
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/tutoring/tutoring.dart'
-    show TutorGrantState, tutorGrantRepositoryProvider;
+    show
+        TutorGrantState,
+        activeTutoredProfileSelectionProvider,
+        tutorGrantRepositoryProvider;
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -253,6 +257,7 @@ class SignInController extends Notifier<SignInState> {
         await prefs.setBool(kOnboardingComplete, true);
       }
       _ref.read(selectedProfileIdProvider.notifier).clear();
+      _resetSessionContextForFreshSignIn();
       if (firstSignInNeedsSetup) {
         unawaited(
           router.replaceAll([
@@ -334,6 +339,7 @@ class SignInController extends Notifier<SignInState> {
           .read(auth_state.authStateProvider.notifier)
           .setCloudBornSession(profile: profile);
       _ref.read(selectedProfileIdProvider.notifier).clear();
+      _resetSessionContextForFreshSignIn();
       unawaited(router.replaceAll([const AppShellRoute()]));
       return true;
     } catch (e, stackTrace) {
@@ -353,7 +359,30 @@ class SignInController extends Notifier<SignInState> {
 
   // ── Post sign-in navigation ─────────────────────────────────────────────────
 
+  /// Reset all per-session context that must NOT survive a fresh sign-in /
+  /// session establishment.
+  ///
+  /// A sign-in must always land in the user's OWN profile in NORMAL mode:
+  ///   * Any active tutored (talmid) selection is cleared — the user is not in
+  ///     a talmid view; entering one requires an explicit switcher + Tutor PIN.
+  ///   * The parent-mode PIN gate is locked (`pinGuard.lock()` clears both the
+  ///     guard's cached scope and `parentPinAuthenticatedProfileId` via its
+  ///     `onSessionLocked` callback) — reaching parent management requires the
+  ///     PIN again.
+  ///
+  /// These two pieces of state are `keepAlive` / live in the router singleton,
+  /// so without this reset they leak across a sign-out → sign-in within the
+  /// same process, auto-restoring the previous tutor/parent context. This is
+  /// scoped to session establishment only — ordinary mid-session navigation and
+  /// explicit talmid/parent entry are untouched.
+  void _resetSessionContextForFreshSignIn() {
+    _ref.read(activeTutoredProfileSelectionProvider.notifier).exit();
+    _ref.read(routerProvider).pinGuard.lock();
+  }
+
   Future<void> _navigateAfterSignIn(StackRouter router) async {
+    _resetSessionContextForFreshSignIn();
+
     final user = _ref.read(authRepositoryProvider).currentUser;
     if (user == null) return;
 
