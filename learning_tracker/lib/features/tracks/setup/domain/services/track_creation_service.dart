@@ -180,6 +180,16 @@ class TrackCreationService {
       );
     }
 
+    // Push the seeded stages to Firestore (network) — the wizard/noReview seed
+    // is LOCAL-only, so without this the stage_definitions subcollection stays
+    // empty and a tutor mirror (or any second device) pulls zero stages and
+    // shows "No projection" for the track. The owner projects fine from the
+    // local seed; this closes the cloud gap.
+    await _stageRepository.pushStagesForTrack(
+      trackId: trackId,
+      curriculumId: curriculum,
+    );
+
     await _deleteExistingGoals(trackId);
     await _recreateGoal(
       result: result,

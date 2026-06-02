@@ -395,6 +395,27 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
   CurriculumId _curriculumFromStorageKey(String key) =>
       CurriculumId.values.firstWhere((c) => c.storageKey == key);
 
+  @override
+  Future<void> pushStagesForTrack({
+    required int trackId,
+    required CurriculumId curriculumId,
+  }) async {
+    final push = _pushStageDefinitions;
+    if (push == null) return;
+
+    final stages = await _stageDao.getStagesByTrack(trackId);
+    if (stages.isEmpty) return;
+
+    final now = DateTimeFactory.nowUtc();
+    final stagePayloads = stages.map(_stagePushPayload).toList();
+    await push(
+      trackId: trackId,
+      curriculumId: curriculumId.storageKey,
+      stages: stagePayloads,
+      updatedAt: now,
+    );
+  }
+
   Future<void> _pushStages(CurriculumId curriculumId) async {
     final push = _pushStageDefinitions;
     if (push == null) return;
@@ -408,21 +429,7 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
     // curriculum per profile post-W3.22). Pick the first row's trackId.
     final trackId = stages.first.trackId;
     final now = DateTimeFactory.nowUtc();
-    final stagePayloads = stages.map((s) {
-      final spec = _decodeSchedule(s.schedule);
-      return <String, dynamic>{
-        'stage_order': s.stageOrder,
-        'stage_name': s.stageName,
-        'schedule': jsonDecode(s.schedule),
-        'is_default': s.isDefault,
-        // Legacy fields for backwards-compat with old Firestore readers.
-        'delay_days': spec.delayDays,
-        'schedule_type': spec.storageKey,
-        if (spec.daysOfWeek != null) 'days_of_week': spec.daysOfWeek,
-        if (spec.rollingWindowSize != null)
-          'rolling_window_size': spec.rollingWindowSize,
-      };
-    }).toList();
+    final stagePayloads = stages.map(_stagePushPayload).toList();
 
     await push(
       trackId: trackId,
@@ -430,5 +437,22 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
       stages: stagePayloads,
       updatedAt: now,
     );
+  }
+
+  /// Builds the Firestore push payload for one stage row.
+  Map<String, dynamic> _stagePushPayload(db.StageDefinition s) {
+    final spec = _decodeSchedule(s.schedule);
+    return <String, dynamic>{
+      'stage_order': s.stageOrder,
+      'stage_name': s.stageName,
+      'schedule': jsonDecode(s.schedule),
+      'is_default': s.isDefault,
+      // Legacy fields for backwards-compat with old Firestore readers.
+      'delay_days': spec.delayDays,
+      'schedule_type': spec.storageKey,
+      if (spec.daysOfWeek != null) 'days_of_week': spec.daysOfWeek,
+      if (spec.rollingWindowSize != null)
+        'rolling_window_size': spec.rollingWindowSize,
+    };
   }
 }

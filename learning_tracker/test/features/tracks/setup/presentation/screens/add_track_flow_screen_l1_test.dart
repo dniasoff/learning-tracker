@@ -1029,6 +1029,12 @@ void main() {
       when(
         () => stageRepo.deleteStagesForTrack(any()),
       ).thenAnswer((_) async {});
+      when(
+        () => stageRepo.pushStagesForTrack(
+          trackId: any(named: 'trackId'),
+          curriculumId: any(named: 'curriculumId'),
+        ),
+      ).thenAnswer((_) async {});
 
       final activationSvc = MockCurriculumActivationService();
       when(
@@ -1111,6 +1117,12 @@ void main() {
         when(() => goalRepo.deleteGoal(any())).thenAnswer((_) async {});
         when(
           () => stageRepo.deleteStagesForTrack(any()),
+        ).thenAnswer((_) async {});
+        when(
+          () => stageRepo.pushStagesForTrack(
+            trackId: any(named: 'trackId'),
+            curriculumId: any(named: 'curriculumId'),
+          ),
         ).thenAnswer((_) async {});
 
         final activationSvc = MockCurriculumActivationService();

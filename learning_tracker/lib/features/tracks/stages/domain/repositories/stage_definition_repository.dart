@@ -71,6 +71,18 @@ abstract class StageDefinitionRepository {
   /// the replacement is complete.
   Future<void> deleteStagesForTrack(int trackId);
 
+  /// Pushes the stage definitions of a single [trackId] to the cloud.
+  ///
+  /// Stage seeding (via the chazara wizard / noReview fallback) writes only to
+  /// the local DB. Without an explicit push the `stage_definitions` Firestore
+  /// subcollection stays empty, so a tutor mirror (and any second device) pulls
+  /// zero stages and the scheduler shows "No projection" for the track. Track
+  /// creation calls this after committing the local seed.
+  Future<void> pushStagesForTrack({
+    required int trackId,
+    required CurriculumId curriculumId,
+  });
+
   /// Returns every stage definition in the database (cross-curriculum).
   ///
   /// Intended for full-data export only.

@@ -99,6 +99,12 @@ void main() {
       'trackingStartDate, not a future one', () async {
     final stageRepo = _MockStageRepo();
     when(() => stageRepo.deleteStagesForTrack(any())).thenAnswer((_) async {});
+    when(
+      () => stageRepo.pushStagesForTrack(
+        trackId: any(named: 'trackId'),
+        curriculumId: any(named: 'curriculumId'),
+      ),
+    ).thenAnswer((_) async {});
 
     final activation = _MockActivation();
     when(
@@ -157,6 +163,12 @@ void main() {
       'trackingStartDate', () async {
     final stageRepo = _MockStageRepo();
     when(() => stageRepo.deleteStagesForTrack(any())).thenAnswer((_) async {});
+    when(
+      () => stageRepo.pushStagesForTrack(
+        trackId: any(named: 'trackId'),
+        curriculumId: any(named: 'curriculumId'),
+      ),
+    ).thenAnswer((_) async {});
 
     final activation = _MockActivation();
     when(

@@ -34,26 +34,27 @@ void main() {
     await db.close();
   });
 
-  TrackCreationService buildService() => TrackCreationService(
-    database: db,
-    activationService: CurriculumActivationService(
-      database: db,
-      pushCurriculumTrack: null,
-      trackRepository: TrackRepositoryImpl(database: db),
-    ),
-    wizardService: LearningProcessWizardService(
-      stageDao: db.stageDao,
-      learningProgramRepo: LearningProgramRepository.instance,
-      profileProgramDao: db.profileProgramDao,
-    ),
-    goalRepository: GoalRepositoryImpl(database: db),
-    stageRepository: StageDefinitionRepositoryImpl(
-      stageDao: db.stageDao,
-      completionDao: db.completionDao,
-      pushStageDefinitions: null,
-    ),
-    analytics: const NullAnalyticsService(),
-  );
+  TrackCreationService buildService({PushStageDefinitionsFn? pushStages}) =>
+      TrackCreationService(
+        database: db,
+        activationService: CurriculumActivationService(
+          database: db,
+          pushCurriculumTrack: null,
+          trackRepository: TrackRepositoryImpl(database: db),
+        ),
+        wizardService: LearningProcessWizardService(
+          stageDao: db.stageDao,
+          learningProgramRepo: LearningProgramRepository.instance,
+          profileProgramDao: db.profileProgramDao,
+        ),
+        goalRepository: GoalRepositoryImpl(database: db),
+        stageRepository: StageDefinitionRepositoryImpl(
+          stageDao: db.stageDao,
+          completionDao: db.completionDao,
+          pushStageDefinitions: pushStages,
+        ),
+        analytics: const NullAnalyticsService(),
+      );
 
   test('track created without a wizard result is seeded with the לימוד stage '
       '(no "No projection")', () async {
@@ -89,6 +90,48 @@ void main() {
       stages.length,
       1,
       reason: 'noReview fallback seeds ONLY לימוד — no chazara stages',
+    );
+  });
+
+  test('track creation pushes the seeded stages to the cloud '
+      '(so a tutor mirror / second device projects too)', () async {
+    // The seed is local-only; without an explicit push the stage_definitions
+    // subcollection stays empty and a tutor pulls zero stages → "No
+    // projection". Capture the push to prove createTrack closes that gap.
+    final pushed = <Map<String, dynamic>>[];
+    int? pushedTrackId;
+    String? pushedCurriculum;
+    Future<void> spy({
+      required int trackId,
+      required String curriculumId,
+      required List<Map<String, dynamic>> stages,
+      required DateTime updatedAt,
+    }) async {
+      pushedTrackId = trackId;
+      pushedCurriculum = curriculumId;
+      pushed.addAll(stages);
+    }
+
+    await buildService(pushStages: spy).createTrack(
+      result: const AddTrackResult(
+        curriculumId: CurriculumId.mishnayos,
+        label: 'Mishnayos',
+        studyDays: {1: 'study'},
+      ),
+      profileId: 1,
+    );
+
+    expect(
+      pushed,
+      isNotEmpty,
+      reason: 'seeded stages must be pushed to Firestore for tutors/devices',
+    );
+    expect(pushedCurriculum, CurriculumId.mishnayos.storageKey);
+    expect(pushedTrackId, isNotNull);
+    expect(
+      pushed.map((s) => s['stage_name']),
+      contains('לימוד'),
+      reason: 'the לימוד stage must be in the pushed payload',
     );
   });
 }
