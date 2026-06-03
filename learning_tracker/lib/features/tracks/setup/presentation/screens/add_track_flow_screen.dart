@@ -10,6 +10,7 @@ import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/widgets/app_dialog.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/models/wizard_result_wrapper.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
@@ -377,123 +378,19 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
   Future<void> _handleExit() async {
     final hasData = _state.curriculumId != null;
     if (hasData) {
-      final shouldExit = await showDialog<bool>(
+      final l10n = AppLocalizations.of(context)!;
+      final shouldExit = await showAppConfirmDialog(
         context: context,
-        barrierColor: Colors.black.withValues(alpha: 0.46),
-        builder: (context) {
-          final theme = Theme.of(context);
-          return Dialog(
-            elevation: 0,
-            insetPadding: const EdgeInsets.symmetric(horizontal: 24),
-            backgroundColor: Colors.transparent,
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(24, 26, 24, 20),
-              decoration: BoxDecoration(
-                color: AppTheme.brandCreamCard,
-                borderRadius: BorderRadius.circular(34),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Stack(
-                    clipBehavior: Clip.none,
-                    children: [
-                      Container(
-                        width: 88,
-                        height: 88,
-                        decoration: const BoxDecoration(
-                          color: AppColors.statusErrorSoft,
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.exit_to_app_rounded,
-                          color: AppColors.chartRed,
-                          size: 40,
-                        ),
-                      ),
-                      Positioned(
-                        top: -1,
-                        right: -2,
-                        child: Container(
-                          width: 23,
-                          height: 23,
-                          decoration: BoxDecoration(
-                            color: AppTheme.brandBlue,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: AppTheme.brandCreamCard,
-                              width: 2,
-                            ),
-                          ),
-                          child: const Icon(
-                            Icons.question_mark_rounded,
-                            size: 13,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    'Exit Track Setup?',
-                    style: theme.textTheme.headlineMedium?.copyWith(
-                      color: AppTheme.brandBlueDeep,
-                      fontWeight: FontWeight.w800,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    'Are you sure you want to exit?\n'
-                    'Your setup progress will be lost.',
-                    style: theme.textTheme.bodyLarge?.copyWith(
-                      color: AppTheme.brandInkMuted,
-                      height: 1.45,
-                      fontWeight: FontWeight.w500,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 24),
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton(
-                      onPressed: () => Navigator.pop(context, true),
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppTheme.brandBlue,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        elevation: 2,
-                      ),
-                      child: Text(AppLocalizations.of(context)!.actionExit),
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  SizedBox(
-                    width: double.infinity,
-                    child: TextButton(
-                      onPressed: () => Navigator.pop(context, false),
-                      style: TextButton.styleFrom(
-                        foregroundColor: AppTheme.brandInkMuted,
-                        backgroundColor: const Color(0xFFF0F1F5),
-                        padding: const EdgeInsets.symmetric(vertical: 15),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                      ),
-                      child: Text(AppLocalizations.of(context)!.actionCancel),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
+        title: 'Exit Track Setup?',
+        message:
+            'Are you sure you want to exit?\n'
+            'Your setup progress will be lost.',
+        confirmLabel: l10n.actionExit,
+        cancelLabel: l10n.actionCancel,
+        icon: Icons.exit_to_app_rounded,
+        destructive: true,
       );
-      if (shouldExit != true) return;
+      if (!shouldExit) return;
     }
     await _clearSavedState();
     widget.onCancel?.call();
