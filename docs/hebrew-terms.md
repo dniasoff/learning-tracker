@@ -167,3 +167,45 @@ The audit (2026-05-18) found the implementation has diverged from this spec:
    — **FIXED** (A4): `curriculumDisplayNames` removed (prior wave); `uiChazara`,
    `uiReviewSection`, `uiBubbleChazara`, and the `stageNameMap` 'Review' entry
    now all reference `stageChazaraPrefix` — single source for `'חזרה'`.
+
+## 12. Enforced bypass classes (2026-06-03)
+
+Three bypass classes slipped past the original enforcement (`make audit` greps,
+the `no_hardcoded_domain_term` custom lint, and the
+`domain_term_rendering_modes` golden test) and had to be found by hand and
+on-device. They are now permanently caught — a regression in any of them turns
+the build red:
+
+- **classA — variant-blind `displayNameEn`/`displayNameHe` inside
+  `lib/core/labels/`.** The displayName greps (audit check 8) exempt
+  `core/labels/`, so a labels file could read a displayName and render it
+  without applying the Ashkenazi/Sephardi transliteration. **Enforced by**
+  `make audit` check **22/22**: any non-generated `lib/core/labels/` file that
+  references `displayNameEn`/`displayNameHe` MUST also reference
+  `currentTransliterationVariantProvider` / `TransliterationVariant` /
+  `variant` in the same file (file-level heuristic). A legitimately
+  Hebrew-only accessor may opt out with an inline `// audit:classA-exempt`
+  comment.
+
+- **classB — a raw content VALUE held in a variable/field flowed into
+  `Text()`** (e.g. `level.levelName`, `milestone.aggregateKey`,
+  `preset.displayName`). Grep cannot see through a variable, so these are
+  caught at runtime by the **`domain_term_rendering_modes` golden test**
+  (Layer 4): the missed surfaces — HierarchyProgressCard, the Siyumim grouped
+  aggregate tile, the goal-setup unit pills, the sacred-time lock overlay and
+  settings card, the track-order section header, and a
+  `curriculumLabelText`-driven surface — are each rendered in all three modes
+  (Hebrew / Ashkenazi / Sephardi) asserting the term switches and the
+  wrong-nusach form is absent.
+
+- **classC — a hardcoded nusach-specific ARB l10n getter used directly via
+  `AppLocalizations`** (e.g. `dayNameShabbos`, `unitDafim`, `unitAmudim`,
+  `unitPerakim`, `unitPesukim`, the `scheduler*Label` twins) instead of
+  `domainTermLabels(ref)` / `CurriculumLabels`. Such a getter's VALUE is a
+  baked nusach term that cannot switch script/nusach. **Enforced by**
+  `make audit` check **21/22**, which fails on any direct use of those getters
+  under `lib/features/**/presentation/`. Note: the `sacredTime*Shabbos*` /
+  `sacredTimeShabbosModeLabel` getters are deliberately NOT on the forbidden
+  list — they are `{term}`-placeholder templates that RECEIVE an
+  already-resolved `domainTermLabels(...).shabbos(variant:)` value, so they are
+  the correct path.

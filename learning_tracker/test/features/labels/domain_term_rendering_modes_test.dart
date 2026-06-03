@@ -16,6 +16,27 @@
 //        • CurriculumListScreen — the count labels (container + unit).
 //        • ScopeSelectionScreen — the level WORD for chumash ("Sefer" / "חומש").
 //
+//   4. classB regression net — the surfaces the grep/lint enforcement CANNOT
+//      see (a raw content VALUE in a variable/field flowed into Text()). These
+//      had to be found by hand + on-device, so they are pinned here, each in
+//      all three modes, asserting the term switches and the wrong-nusach form
+//      is absent:
+//        • HierarchyProgressCard          — seder name via level.levelName
+//                                           (Taharos / Tahorot / טהרות).
+//        • SiyumimGroupedView aggregate    — "Siyum Seder {name}" via
+//                                           milestone.aggregateKey
+//                                           (Siyum Seder Taharos / Tahorot).
+//        • GoalSetupForm unit pills        — granularity pill via
+//                                           CurriculumLabels (Dafim / Dapim /
+//                                           דפים).
+//        • SacredTimeLockOverlay           — Shabbos / Shabbat / שבת greeting.
+//        • SacredTimeSettingsCard          — Shabbos / Shabbat / שבת header.
+//        • track-order section header WORD — CurriculumLabels.containerSection
+//                                           Header (Masechtos / Masekhtot /
+//                                           מסכתות).
+//        • curriculumLabelText surface     — CurriculumLabel.curriculum
+//                                           (Mishnayos / Mishnayot / משניות).
+//
 // Assertions are deliberately robust: find.textContaining the expected term
 // form, and find.textContaining absence of the WRONG-nusach form, rather than
 // brittle exact-layout matching.
@@ -32,6 +53,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
@@ -41,10 +63,20 @@ import 'package:learning_tracker/features/content_browsing/presentation/provider
 import 'package:learning_tracker/features/content_browsing/presentation/screens/curriculum_list_screen.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/progress/domain/models/curriculum_progress_data.dart';
+import 'package:learning_tracker/features/progress/domain/models/journey_view_model.dart';
+import 'package:learning_tracker/features/progress/presentation/widgets/hierarchy_progress_card.dart';
+import 'package:learning_tracker/features/progress/presentation/widgets/siyumim_grouped_view.dart';
+import 'package:learning_tracker/features/sacred_time/domain/models/sacred_window.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_lock_overlay.dart';
+import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_settings_card.dart';
+import 'package:learning_tracker/features/scheduler/presentation/screens/goal_setup_screen.dart';
 import 'package:learning_tracker/features/settings/presentation/screens/scope_selection_screen.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -75,6 +107,27 @@ class _VariantAshkenazi extends CurrentTransliterationVariant {
 class _VariantSephardi extends CurrentTransliterationVariant {
   @override
   TransliterationVariant build() => TransliterationVariant.sephardi;
+}
+
+/// Pins the Hebrew-date preference OFF so the goal-setup form's
+/// `useHebrewDateProvider` read does not reach SharedPreferences / the active
+/// profile in the lightweight Layer-4 pumps. The Hebrew-TERMS toggle (which is
+/// what drives the domain-term script) is overridden separately per mode.
+class _HebrewDateOff extends UseHebrewDate {
+  @override
+  bool build() => false;
+}
+
+/// A [CurrentSacredWindow] that always reports an active Shabbos lock window
+/// and schedules NO timer — so the lock overlay renders its Shabbos greeting
+/// deterministically without leaving a pending timer in the test.
+class _FixedShabbosWindow extends CurrentSacredWindow {
+  @override
+  SacredWindow? build() => SacredWindow(
+    startUtc: DateTime.utc(2026, 1, 1),
+    endUtc: DateTime.utc(2026, 1, 2),
+    kind: SacredWindowKind.shabbos,
+  );
 }
 
 // ── The three modes ──────────────────────────────────────────────────────────
@@ -159,6 +212,35 @@ const _kMishnayosContainerLeaf = <ContentItem>[
     displayNameHe: 'משנה א',
     displayNameEn: 'Mishnah 1',
     sefariaRef: 'Mishnah Berakhot 1:1',
+    sortOrder: 1,
+    isLeaf: true,
+  ),
+];
+
+/// Mishnayos Seder-Tahoros fixture. Level-1 raw key is the Sefaria seder key
+/// `'Tahorot'`; its Hebrew name `'טהרות'` lets the renderer show the Hebrew
+/// form when Hebrew Terms is on, and `transliterateNamedValue` switches the
+/// English form between "Taharos" (Ashkenazi) and "Tahorot" (Sephardi). Used
+/// by the HierarchyProgressCard and SiyumimGroupedView aggregate surfaces,
+/// which both flow a raw `levelName` / `aggregateKey` VARIABLE into Text() —
+/// the classB bypass the grep gate cannot see.
+const _kMishnayosTahorosItems = <ContentItem>[
+  ContentItem(
+    curriculumId: 'mishnayos',
+    level1: 'Tahorot',
+    displayNameHe: 'טהרות',
+    displayNameEn: 'Taharos',
+    sefariaRef: 'Mishnah Kelim',
+    sortOrder: 0,
+    isLeaf: false,
+  ),
+  ContentItem(
+    curriculumId: 'mishnayos',
+    level1: 'Tahorot',
+    level2: 'Keilim',
+    displayNameHe: 'כלים',
+    displayNameEn: 'Keilim',
+    sefariaRef: 'Mishnah Kelim',
     sortOrder: 1,
     isLeaf: true,
   ),
@@ -280,6 +362,56 @@ Widget _buildScopeApp(
       ],
       supportedLocales: AppLocalizations.supportedLocales,
       home: ScopeSelectionScreen(curriculumId: curriculum),
+    ),
+  );
+}
+
+/// Pumps an arbitrary [child] under a bare [MaterialApp] (no l10n delegates)
+/// in the given [mode], optionally overriding the content repository. For
+/// Layer-4 surfaces whose label resolution needs only the Hebrew-terms toggle +
+/// nusach variant and (optionally) the content repo.
+Widget _buildPlainApp(
+  _Mode mode,
+  ContentRepository? repo,
+  Widget child, {
+  List<Override> extraOverrides = const [],
+}) {
+  return ProviderScope(
+    overrides: [
+      ...mode.providerOverrides,
+      if (repo != null) contentRepositoryProvider.overrideWithValue(repo),
+      ...extraOverrides,
+    ],
+    child: MaterialApp(home: Scaffold(body: child)),
+  );
+}
+
+/// Like [_buildPlainApp] but wires the full localization delegates and the
+/// mode's locale — required for surfaces that read `AppLocalizations` (the
+/// sacred-time greeting/header templates, the siyumim subtitle, the goal-setup
+/// per-day/per-week labels).
+Widget _buildLocalizedApp(
+  _Mode mode,
+  ContentRepository? repo,
+  Widget child, {
+  List<Override> extraOverrides = const [],
+}) {
+  return ProviderScope(
+    overrides: [
+      ...mode.providerOverrides,
+      if (repo != null) contentRepositoryProvider.overrideWithValue(repo),
+      ...extraOverrides,
+    ],
+    child: MaterialApp(
+      locale: mode.locale,
+      localizationsDelegates: const [
+        AppLocalizations.delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: AppLocalizations.supportedLocales,
+      home: Scaffold(body: child),
     ),
   );
 }
@@ -545,6 +677,395 @@ void main() {
 
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump(Duration.zero);
+      });
+    }
+  });
+
+  // ═════════════════════════════════════════════════════════════════════════
+  // Layer 4 — classB regression net: a raw content VALUE in a variable/field
+  // flowed into Text(). These are the surfaces the grep/lint enforcement
+  // CANNOT see — they had to be found by hand + on-device, so they are pinned
+  // here in all three modes.
+  // ═════════════════════════════════════════════════════════════════════════
+
+  // ── 4a — HierarchyProgressCard ("Breakdown by Level" card) ──────────────────
+  //
+  // The card title is `renderCurriculumLevelName(ref, …, rawValue: level.level
+  // Name)` — the seder name lives in a VARIABLE (HierarchyLevelProgress.level
+  // Name). For Seder Tahoros that is "Taharos" (Ashkenazi) / "Tahorot"
+  // (Sephardi) / "טהרות" (Hebrew). The renderer needs the curriculum content
+  // (for the Hebrew name + transliteration), so the content repo is mocked.
+
+  group('Layer 4a — HierarchyProgressCard seder name (level.levelName)', () {
+    final expected = {
+      _Mode.hebrew: 'טהרות',
+      _Mode.ashkenazi: 'Taharos',
+      _Mode.sephardi: 'Tahorot',
+    };
+    final wrong = {
+      _Mode.hebrew: ['Taharos', 'Tahorot'],
+      _Mode.ashkenazi: ['Tahorot', 'טהרות'],
+      _Mode.sephardi: ['Taharos', 'טהרות'],
+    };
+
+    for (final mode in _Mode.values) {
+      testWidgets('seder name switches — ${mode.label}', (tester) async {
+        final repo = _makeRepoFor(
+          CurriculumId.mishnayos,
+          _kMishnayosTahorosItems,
+        );
+        const level = HierarchyLevelProgress(
+          curriculumId: CurriculumId.mishnayos,
+          level: 1,
+          levelName: 'Tahorot',
+          levelLabel: 'Seder',
+          totalItems: 4,
+          completedItems: 2,
+          stageBreakdown: [StageBreakdownEntry(stageName: 'Learn', count: 2)],
+          trackBreakdown: <String, int>{},
+        );
+        await tester.pumpWidget(
+          _buildPlainApp(mode, repo, const HierarchyProgressCard(level: level)),
+        );
+        // Settle the async curriculumContent load that feeds the Hebrew name.
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        expect(
+          find.textContaining(expected[mode]!),
+          findsWidgets,
+          reason: 'seder name in ${mode.label} should show "${expected[mode]}"',
+        );
+        for (final w in wrong[mode]!) {
+          expect(
+            find.textContaining(w),
+            findsNothing,
+            reason: 'seder name in ${mode.label} must NOT leak "$w"',
+          );
+        }
+      });
+    }
+  });
+
+  // ── 4b — SiyumimGroupedView aggregate tile ──────────────────────────────────
+  //
+  // The aggregate row label is `"${terms.siyumSeder} $aggregateName"` where
+  // aggregateName = renderCurriculumLevelName(…, rawValue: milestone.aggregate
+  // Key) — again a raw VARIABLE. So the row reads "Siyum Seder Taharos" /
+  // "Siyum Seder Tahorot" / "סיום סדר טהרות". This pins both the framing word
+  // (siyumSeder) AND the variant-switched seder name together.
+
+  group('Layer 4b — SiyumimGroupedView aggregate (milestone.aggregateKey)', () {
+    final expected = {
+      _Mode.hebrew: 'סדר טהרות',
+      _Mode.ashkenazi: 'Siyum Seder Taharos',
+      _Mode.sephardi: 'Siyum Seder Tahorot',
+    };
+    final wrong = {
+      _Mode.hebrew: ['Taharos', 'Tahorot'],
+      _Mode.ashkenazi: ['Tahorot', 'טהרות'],
+      _Mode.sephardi: ['Taharos', 'טהרות'],
+    };
+
+    for (final mode in _Mode.values) {
+      testWidgets('aggregate label switches — ${mode.label}', (tester) async {
+        final repo = _makeRepoFor(
+          CurriculumId.mishnayos,
+          _kMishnayosTahorosItems,
+        );
+        final viewModel = JourneyViewModel(
+          curricula: [
+            CurriculumJourney(
+              curriculumId: CurriculumId.mishnayos,
+              completions: const [],
+              uniqueUnitsCompleted: 1,
+              totalUnitsAvailable: 1,
+              milestones: [
+                MilestoneAchievement(
+                  type: 'seder_complete',
+                  level: MilestoneLevel.aggregate,
+                  curriculumId: CurriculumId.mishnayos,
+                  displayName: 'Tahorot',
+                  aggregateKey: 'Tahorot',
+                  containedUnitKeys: const ['Keilim'],
+                  achievedAt: DateTime.utc(2026, 1, 1),
+                ),
+              ],
+            ),
+          ],
+          totalCompletions: 1,
+          totalUniqueUnits: 1,
+          unitLevelSiyumimCount: 0,
+          aggregateLevelSiyumimCount: 1,
+          curriculumLevelSiyumimCount: 0,
+        );
+        await tester.pumpWidget(
+          _buildLocalizedApp(
+            mode,
+            repo,
+            SiyumimGroupedView(viewModel: viewModel),
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        expect(
+          find.textContaining(expected[mode]!),
+          findsWidgets,
+          reason:
+              'aggregate label in ${mode.label} should contain '
+              '"${expected[mode]}"',
+        );
+        for (final w in wrong[mode]!) {
+          expect(
+            find.textContaining(w),
+            findsNothing,
+            reason: 'aggregate label in ${mode.label} must NOT leak "$w"',
+          );
+        }
+      });
+    }
+  });
+
+  // ── 4c — GoalSetupForm unit-picker pills ────────────────────────────────────
+  //
+  // The Bavli unit picker renders Amud / Daf pills whose labels come from
+  // `_granularityUnitLabel(…) → CurriculumLabels.level(…).inLanguage(plural)`,
+  // a VARIABLE flowed into Text(). The daf pill reads "Dafim" (Ashkenazi) /
+  // "Dapim" (Sephardi) / "דפים" (Hebrew).
+
+  group('Layer 4c — GoalSetupForm daf unit pill', () {
+    final expected = {
+      _Mode.hebrew: 'דפים',
+      _Mode.ashkenazi: 'Dafim',
+      _Mode.sephardi: 'Dapim',
+    };
+    final wrong = {
+      _Mode.hebrew: ['Dafim', 'Dapim'],
+      _Mode.ashkenazi: ['Dapim', 'דפים'],
+      _Mode.sephardi: ['Dafim', 'דפים'],
+    };
+
+    for (final mode in _Mode.values) {
+      testWidgets('daf pill switches — ${mode.label}', (tester) async {
+        await tester.pumpWidget(
+          _buildLocalizedApp(
+            mode,
+            null,
+            GoalSetupForm(
+              curriculumId: CurriculumId.bavli,
+              totalItems: 100,
+              onComplete: (_) {},
+            ),
+            extraOverrides: [
+              useHebrewDateProvider.overrideWith(() => _HebrewDateOff()),
+            ],
+          ),
+        );
+        await tester.pump();
+
+        expect(
+          find.textContaining(expected[mode]!),
+          findsWidgets,
+          reason: 'daf pill in ${mode.label} should show "${expected[mode]}"',
+        );
+        for (final w in wrong[mode]!) {
+          expect(
+            find.textContaining(w),
+            findsNothing,
+            reason: 'daf pill in ${mode.label} must NOT leak "$w"',
+          );
+        }
+      });
+    }
+  });
+
+  // ── 4d — SacredTimeLockOverlay greeting ─────────────────────────────────────
+  //
+  // The lock overlay resolves `terms.shabbos(variant:)` at the Consumer layer
+  // and threads it into the localized greeting/subtitle. The greeting reads
+  // "Good Shabbos" / "Good Shabbat" / a Hebrew greeting containing "שבת".
+
+  group('Layer 4d — SacredTimeLockOverlay Shabbos greeting', () {
+    final expectedTerm = {
+      _Mode.hebrew: 'שבת',
+      _Mode.ashkenazi: 'Shabbos',
+      _Mode.sephardi: 'Shabbat',
+    };
+    final wrong = {
+      _Mode.hebrew: ['Shabbos', 'Shabbat'],
+      _Mode.ashkenazi: ['Shabbat', 'שבת'],
+      _Mode.sephardi: ['Shabbos', 'שבת'],
+    };
+
+    for (final mode in _Mode.values) {
+      testWidgets('greeting switches — ${mode.label}', (tester) async {
+        await tester.pumpWidget(
+          _buildLocalizedApp(
+            mode,
+            null,
+            const SacredTimeLockOverlay(child: SizedBox.shrink()),
+            extraOverrides: [
+              currentSacredWindowProvider.overrideWith(
+                () => _FixedShabbosWindow(),
+              ),
+            ],
+          ),
+        );
+        await tester.pump();
+
+        expect(
+          find.textContaining(expectedTerm[mode]!),
+          findsWidgets,
+          reason:
+              'lock greeting in ${mode.label} should contain '
+              '"${expectedTerm[mode]}"',
+        );
+        for (final w in wrong[mode]!) {
+          expect(
+            find.textContaining(w),
+            findsNothing,
+            reason: 'lock greeting in ${mode.label} must NOT leak "$w"',
+          );
+        }
+      });
+    }
+  });
+
+  // ── 4e — SacredTimeSettingsCard header ──────────────────────────────────────
+  //
+  // The settings card resolves `terms.shabbos(variant:)` and threads it into
+  // the header mode label (`{term} MODE`) and the card description. Pins the
+  // same Shabbos / Shabbat / שבת switch on the settings surface.
+
+  group('Layer 4e — SacredTimeSettingsCard Shabbos header', () {
+    final expectedTerm = {
+      _Mode.hebrew: 'שבת',
+      _Mode.ashkenazi: 'Shabbos',
+      _Mode.sephardi: 'Shabbat',
+    };
+    final wrong = {
+      _Mode.hebrew: ['Shabbos', 'Shabbat'],
+      _Mode.ashkenazi: ['Shabbat', 'שבת'],
+      _Mode.sephardi: ['Shabbos', 'שבת'],
+    };
+
+    setUp(() => SharedPreferences.setMockInitialValues({}));
+
+    for (final mode in _Mode.values) {
+      testWidgets('header switches — ${mode.label}', (tester) async {
+        await tester.pumpWidget(
+          _buildLocalizedApp(mode, null, const SacredTimeSettingsCard()),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
+
+        expect(
+          find.textContaining(expectedTerm[mode]!),
+          findsWidgets,
+          reason:
+              'settings header in ${mode.label} should contain '
+              '"${expectedTerm[mode]}"',
+        );
+        for (final w in wrong[mode]!) {
+          expect(
+            find.textContaining(w),
+            findsNothing,
+            reason: 'settings header in ${mode.label} must NOT leak "$w"',
+          );
+        }
+      });
+    }
+  });
+
+  // ── 4f — track-order section-header WORD ────────────────────────────────────
+  //
+  // The track-learning-order screen's level-2 section header is
+  // `CurriculumLabels.containerSectionHeader(id, useHebrew:, variant:)`. Pumping
+  // the full screen needs the order repos + families; the header itself is a
+  // pure shared-library call, so it is exercised through the same live-provider
+  // probe as Layer 1. The word reads "Masechtos" / "Masekhtot" / "מסכתות".
+
+  group('Layer 4f — track-order container section header word', () {
+    final expected = {
+      _Mode.hebrew: 'מסכתות',
+      _Mode.ashkenazi: 'Masechtos',
+      _Mode.sephardi: 'Masekhtot',
+    };
+    final wrong = {
+      _Mode.hebrew: ['Masechtos', 'Masekhtot'],
+      _Mode.ashkenazi: ['Masekhtot', 'מסכתות'],
+      _Mode.sephardi: ['Masechtos', 'מסכתות'],
+    };
+
+    for (final mode in _Mode.values) {
+      testWidgets('section header switches — ${mode.label}', (tester) async {
+        await _pumpProbe(
+          tester,
+          mode,
+          (ref) =>
+              CurriculumLabels.containerSectionHeader(
+                CurriculumId.mishnayos,
+                useHebrew: domainTermLabels(ref).isHebrew,
+                variant: ref.watch(currentTransliterationVariantProvider),
+              ) ??
+              '',
+        );
+
+        expect(find.textContaining(expected[mode]!), findsOneWidget);
+        for (final w in wrong[mode]!) {
+          expect(
+            find.textContaining(w),
+            findsNothing,
+            reason: 'section header in ${mode.label} must NOT leak "$w"',
+          );
+        }
+      });
+    }
+  });
+
+  // ── 4g — curriculumLabelText surface (CurriculumLabel.curriculum) ───────────
+  //
+  // The curriculum NAME itself is nusach-sensitive: Mishnayos / Mishnayot /
+  // משניות. `CurriculumLabel.curriculum` and `curriculumLabelText(ref)` share
+  // one implementation; the widget is the rendered surface.
+
+  group('Layer 4g — CurriculumLabel.curriculum (Mishnayos)', () {
+    final expected = {
+      _Mode.hebrew: 'משניות',
+      _Mode.ashkenazi: 'Mishnayos',
+      _Mode.sephardi: 'Mishnayot',
+    };
+    final wrong = {
+      _Mode.hebrew: ['Mishnayos', 'Mishnayot'],
+      _Mode.ashkenazi: ['Mishnayot', 'משניות'],
+      _Mode.sephardi: ['Mishnayos', 'משניות'],
+    };
+
+    for (final mode in _Mode.values) {
+      testWidgets('curriculum name switches — ${mode.label}', (tester) async {
+        await tester.pumpWidget(
+          _buildPlainApp(
+            mode,
+            null,
+            const CurriculumLabel.curriculum(CurriculumId.mishnayos),
+          ),
+        );
+        await tester.pump();
+
+        expect(
+          find.textContaining(expected[mode]!),
+          findsOneWidget,
+          reason:
+              'curriculum name in ${mode.label} should be "${expected[mode]}"',
+        );
+        for (final w in wrong[mode]!) {
+          expect(
+            find.textContaining(w),
+            findsNothing,
+            reason: 'curriculum name in ${mode.label} must NOT leak "$w"',
+          );
+        }
       });
     }
   });

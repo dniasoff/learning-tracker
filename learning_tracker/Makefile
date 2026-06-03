@@ -271,7 +271,7 @@ lint: ## Run custom_lint (skips gracefully if not in pubspec)
 	  echo "custom_lint not in pubspec — skipping (add custom_lint to dev_dependencies when ready)"; \
 	fi
 
-audit: ## Run all 20 enforcement greps (NFR19) — exits non-zero on any violation
+audit: ## Run all 22 enforcement greps (NFR19) — exits non-zero on any violation
 	@echo "=== audit: enforcement greps ==="
 	@FAIL=0; \
 	echo "1/15 — No Firebase imports outside core/auth or core/sync"; \
@@ -444,7 +444,7 @@ audit: ## Run all 20 enforcement greps (NFR19) — exits non-zero on any violati
 	    | grep "/presentation/" | grep -v "\.g\.dart" | grep -v "\.freezed\.dart" | grep -v ":[[:space:]]*//"; \
 	  FAIL=1; \
 	fi; \
-	echo "20/20 — No raw curriculumId/storageKey rendered in Text() (render via CurriculumLabel / rendered*ForRef)"; \
+	echo "20/22 — No raw curriculumId/storageKey rendered in Text() (render via CurriculumLabel / rendered*ForRef)"; \
 	if grep -rnE "Text\(\s*(curriculumId|[a-zA-Z_]+\.storageKey)\b" lib/features --include="*.dart" \
 	    | grep "/presentation/" | grep -v "\.g\.dart" | grep -v ":[[:space:]]*//" \
 	    | grep -q .; then \
@@ -453,9 +453,50 @@ audit: ## Run all 20 enforcement greps (NFR19) — exits non-zero on any violati
 	    | grep "/presentation/" | grep -v "\.g\.dart" | grep -v ":[[:space:]]*//"; \
 	  FAIL=1; \
 	fi; \
+	echo "21/22 — No nusach-specific domain-term ARB getter used directly in lib/features/ presentation (classC)"; \
+	# Hebrew-terms bypass classC: an ARB getter whose VALUE is itself a hardcoded \
+	# nusach-specific Torah term (dayNameShabbos="Shabbos", unitDafim="Dafim", …, \
+	# and the scheduler*Label twins) must NEVER be read straight off \
+	# AppLocalizations — it cannot switch Hebrew / Ashkenazi / Sephardi. Domain \
+	# terms render via domainTermLabels(ref) / CurriculumLabels / \
+	# CurriculumLabelRenderer instead, which honour the toggle + nusach. \
+	# \
+	# Deliberately NOT in this list: the sacredTime*Shabbos* / \
+	# sacredTimeShabbosModeLabel getters — those are {term}-PLACEHOLDER templates \
+	# ("Good {term}", "{term} MODE") that RECEIVE the already-resolved \
+	# domainTermLabels(...).shabbos(variant:) value as an argument, so they are the \
+	# CORRECT path and stay green. Matches `.<getter>(` and `.<getter>` (no-arg \
+	# getters), covering l10n.x, AppLocalizations.of(context)!.x and aliases. \
+	FORBIDDEN_L10N='\.(dayNameShabbos|unitDafim|unitAmudim|unitPerakim|unitPesukim|schedulerDafimLabel|schedulerAmudimLabel|schedulerPerakimLabel|schedulerPesukimLabel)\b'; \
+	if grep -rnE "$$FORBIDDEN_L10N" lib/features --include="*.dart" \
+	    | grep "/presentation/" | grep -v "\.g\.dart" | grep -v "\.freezed\.dart" | grep -v ":[[:space:]]*//" \
+	    | grep -q .; then \
+	  echo "  Nusach-specific ARB getters cannot switch script/nusach — route domain terms through domainTermLabels / CurriculumLabels:"; \
+	  grep -rnE "$$FORBIDDEN_L10N" lib/features --include="*.dart" \
+	    | grep "/presentation/" | grep -v "\.g\.dart" | grep -v "\.freezed\.dart" | grep -v ":[[:space:]]*//"; \
+	  FAIL=1; \
+	fi; \
+	echo "22/22 — Every lib/core/labels/ file touching displayNameEn/He must be variant-aware (classA)"; \
+	# Hebrew-terms bypass classA: a labels file that reads .displayNameEn / \
+	# .displayNameHe but never references the nusach variant is rendering a name \
+	# WITHOUT applying Ashkenazi/Sephardi transliteration — a bypass the displayName \
+	# greps (check 8) intentionally exempt for core/labels. File-level heuristic: \
+	# any non-generated core/labels file that touches displayName must also mention \
+	# currentTransliterationVariantProvider OR TransliterationVariant OR `variant`. \
+	# Add a narrow `// audit:classA-exempt` line to a legitimately Hebrew-only \
+	# accessor file if one is ever introduced. \
+	for f in $$(grep -rlE "displayName(En|He)\b" lib/core/labels/ --include="*.dart" \
+	    | grep -v "\.g\.dart" | grep -v "\.freezed\.dart"); do \
+	  if grep -q "audit:classA-exempt" "$$f"; then continue; fi; \
+	  if ! grep -qE "currentTransliterationVariantProvider|TransliterationVariant|variant" "$$f"; then \
+	    echo "  $$f reads displayNameEn/He but is NOT variant-aware (no TransliterationVariant / variant reference) — it must transliterate per nusach:"; \
+	    grep -nE "displayName(En|He)\b" "$$f"; \
+	    FAIL=1; \
+	  fi; \
+	done; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \
 	  exit 1; \
 	else \
-	  echo "=== audit PASSED — all 20 greps clean ==="; \
+	  echo "=== audit PASSED — all 22 greps clean ==="; \
 	fi
