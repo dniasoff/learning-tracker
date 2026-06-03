@@ -64,6 +64,7 @@ import 'package:learning_tracker/features/profiles/domain/services/pin_service.d
 import 'package:learning_tracker/features/profiles/presentation/providers/pin_flow_controller.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/screens/pin_flow_screen.dart';
+import 'package:learning_tracker/features/profiles/presentation/widgets/parent_pin_keypad_dialog.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/parent_pin_setup_dialog.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
@@ -1219,5 +1220,123 @@ void main() {
         await _teardown(tester);
       },
     );
+  });
+
+  // ──────────────────────────────────────────────────────────────────────────
+  // E. ParentPinChangeDialog (showParentPinChangeDialog)
+  //
+  // This is the dialog the Settings screen actually invokes for "Change Parent
+  // PIN" (settings_screen.dart). Its confirm→save path had NO coverage, so a
+  // regression here would ship silently (the user reported being unable to
+  // change their PIN on a stale build). These tests drive all three keypad
+  // steps end-to-end.
+  // ──────────────────────────────────────────────────────────────────────────
+  group('E. ParentPinChangeDialog (showParentPinChangeDialog)', () {
+    late _MockPinService ps;
+
+    setUp(() {
+      ps = _MockPinService();
+    });
+
+    Widget buildChangeHarness({
+      int profileId = _kProfileId,
+      Locale locale = const Locale('en'),
+    }) {
+      return MaterialApp(
+        locale: locale,
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+        home: Builder(
+          builder: (ctx) => Scaffold(
+            body: Center(
+              child: ElevatedButton(
+                onPressed: () => showParentPinChangeDialog(
+                  ctx,
+                  profileId: profileId,
+                  pinService: ps,
+                ),
+                child: const Text('open'),
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
+    testWidgets(
+      'E1: full happy path verifyCurrent→enterNew→confirmNew saves + closes',
+      (tester) async {
+        tester.view.physicalSize = const Size(800, 1600);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+
+        when(
+          () => ps.verifyProfilePin(_kProfileId, '1111'),
+        ).thenAnswer((_) async => true);
+        when(() => ps.setProfilePin(any(), any())).thenAnswer((_) async {});
+
+        await tester.pumpWidget(buildChangeHarness());
+        await tester.pump(const Duration(seconds: 1));
+        await tester.tap(find.text('open'));
+        await tester.pump(const Duration(milliseconds: 300));
+
+        // Step 1: Enter Current PIN.
+        expect(find.text('Enter Current PIN'), findsAtLeastNWidgets(1));
+        await _enterPin(tester, '1111');
+        await tester.pump(const Duration(milliseconds: 200));
+
+        // Step 2: Enter New PIN.
+        expect(find.text('Enter New PIN'), findsAtLeastNWidgets(1));
+        await _enterPin(tester, '2580');
+        await tester.pump(const Duration(milliseconds: 200));
+
+        // Step 3: Confirm New PIN — the 4th digit auto-saves.
+        expect(find.text('Confirm New PIN'), findsAtLeastNWidgets(1));
+        await _enterPin(tester, '2580');
+        await tester.pump(const Duration(milliseconds: 300));
+
+        verify(() => ps.verifyProfilePin(_kProfileId, '1111')).called(1);
+        verify(() => ps.setProfilePin(_kProfileId, '2580')).called(1);
+        // Dialog dismissed → the launcher button is visible again.
+        expect(find.text('Confirm New PIN'), findsNothing);
+
+        await _teardown(tester);
+      },
+    );
+
+    testWidgets('E2: confirm mismatch → pinsDoNotMatch, no save', (
+      tester,
+    ) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      when(
+        () => ps.verifyProfilePin(_kProfileId, '1111'),
+      ).thenAnswer((_) async => true);
+      when(() => ps.setProfilePin(any(), any())).thenAnswer((_) async {});
+
+      await tester.pumpWidget(buildChangeHarness());
+      await tester.pump(const Duration(seconds: 1));
+      await tester.tap(find.text('open'));
+      await tester.pump(const Duration(milliseconds: 300));
+
+      await _enterPin(tester, '1111'); // verify current
+      await tester.pump(const Duration(milliseconds: 200));
+      await _enterPin(tester, '2580'); // new
+      await tester.pump(const Duration(milliseconds: 200));
+      await _enterPin(tester, '9999'); // confirm — mismatch
+      await tester.pump(const Duration(milliseconds: 300));
+
+      expect(find.textContaining('do not match'), findsAtLeastNWidgets(1));
+      verifyNever(() => ps.setProfilePin(any(), any()));
+
+      await _teardown(tester);
+    });
   });
 }
