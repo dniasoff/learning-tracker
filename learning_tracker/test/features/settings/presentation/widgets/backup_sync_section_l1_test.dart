@@ -555,6 +555,89 @@ void main() {
     });
   });
 
+  group('BackupSyncSection — cold-launch pull trigger (BUG 2)', () {
+    testWidgets(
+      'cloud-born + localOnly on mount kicks orchestrator.pullOnLaunch() so '
+      'the status resolves without a background→foreground cycle',
+      (tester) async {
+        final mockOrch = _MockSyncOrchestrator();
+        when(
+          () => mockOrch.currentStatus,
+        ).thenReturn(const SyncStatus.localOnly());
+        when(
+          () => mockOrch.statusStream,
+        ).thenAnswer((_) => const Stream.empty());
+        when(() => mockOrch.pullOnLaunch()).thenAnswer((_) async {});
+
+        await _pump(
+          tester,
+          _buildHarness(
+            syncStatus: const SyncStatus.localOnly(),
+            authState: _kCloudUser,
+            orchestrator: mockOrch,
+          ),
+        );
+
+        // The mount-time post-frame callback must have triggered a cold-start
+        // pull (once-per-launch guard makes a duplicate call cheap/no-op).
+        verify(() => mockOrch.pullOnLaunch()).called(1);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(Duration.zero);
+      },
+    );
+
+    testWidgets(
+      'cloud-born already synced on mount does NOT kick another pull',
+      (tester) async {
+        final synced = SyncStatus.synced(lastSyncedAt: DateTime.now());
+        final mockOrch = _MockSyncOrchestrator();
+        when(() => mockOrch.currentStatus).thenReturn(synced);
+        when(
+          () => mockOrch.statusStream,
+        ).thenAnswer((_) => const Stream.empty());
+        when(() => mockOrch.pullOnLaunch()).thenAnswer((_) async {});
+
+        await _pump(
+          tester,
+          _buildHarness(
+            syncStatus: synced,
+            authState: _kCloudUser,
+            orchestrator: mockOrch,
+          ),
+        );
+
+        verifyNever(() => mockOrch.pullOnLaunch());
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(Duration.zero);
+      },
+    );
+
+    testWidgets('local-born on mount does NOT kick a pull', (tester) async {
+      final mockOrch = _MockSyncOrchestrator();
+      when(
+        () => mockOrch.currentStatus,
+      ).thenReturn(const SyncStatus.localOnly());
+      when(() => mockOrch.statusStream).thenAnswer((_) => const Stream.empty());
+      when(() => mockOrch.pullOnLaunch()).thenAnswer((_) async {});
+
+      await _pump(
+        tester,
+        _buildHarness(
+          syncStatus: const SyncStatus.localOnly(),
+          authState: _kLocalUser,
+          orchestrator: mockOrch,
+        ),
+      );
+
+      verifyNever(() => mockOrch.pullOnLaunch());
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    });
+  });
+
   group('BackupSyncSection — cloud-born without Upgrade CTA', () {
     testWidgets(
       'signed-in cloud-born user on SyncStatusLocalOnly has no Upgrade button',

@@ -64,6 +64,12 @@ class _SeedingSyncOrchestrator implements SyncOrchestrator {
   Future<void> pushAllLocalData() async {}
 
   @override
+  Future<void> stopListeners() async {}
+
+  @override
+  void restartListeners() {}
+
+  @override
   SyncStatus get currentStatus =>
       SyncStatus.synced(lastSyncedAt: DateTimeFactory.nowUtc());
 

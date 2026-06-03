@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -12,14 +14,60 @@ import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Sync status and optional upgrade-to-cloud CTA (DNI-188).
-class BackupSyncSection extends ConsumerWidget {
+class BackupSyncSection extends ConsumerStatefulWidget {
   const BackupSyncSection({super.key, this.parentSettingsHeroLayout = false});
 
   /// When true, local-only state uses a centered hero layout (Parent Settings).
   final bool parentSettingsHeroLayout;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<BackupSyncSection> createState() => _BackupSyncSectionState();
+}
+
+class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
+  @override
+  void initState() {
+    super.initState();
+    // Kick a cold-start pull when the Backup & Sync surface mounts.
+    //
+    // The orchestrator's status stream starts at `localOnly` and only flips to
+    // `synced` after a `pullOnLaunch`. On a cold launch that RESUMES an existing
+    // cloud session (no fresh sign-in / device-restore / account-switch — the
+    // three paths that already call `pullOnLaunch`) nothing triggered the pull,
+    // so opening Parent Settings showed "Connecting…" indefinitely until a
+    // background→foreground cycle fired the resume-pull. Triggering it here
+    // resolves the status without that cycle.
+    //
+    // `pullOnLaunch`'s once-per-launch guard makes this a no-op if a pull
+    // already ran (or is in flight) this session, so the extra call is cheap and
+    // safe. Fire-and-forget with a timeout so a slow/failed pull never blocks
+    // the UI (the orchestrator emits its own syncing/synced/error status).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      try {
+        final authState = ref.read(authStateProvider);
+        if (!authState.isCloudBorn) return;
+        final orchestrator = ref.read(syncOrchestratorProvider);
+        if (orchestrator == null) return;
+        if (orchestrator.currentStatus is! SyncStatusLocalOnly) return;
+        unawaited(
+          orchestrator.pullOnLaunch().timeout(
+            const Duration(seconds: 8),
+            onTimeout: () {},
+          ),
+        );
+      } catch (_) {
+        // Best-effort kick: a provider build failure (e.g. in widget tests
+        // that don't wire the full sync stack) must never crash the surface.
+        // The orchestrator emits its own status; the UI degrades gracefully.
+      }
+    });
+  }
+
+  bool get parentSettingsHeroLayout => widget.parentSettingsHeroLayout;
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
     final syncStatus = ref.watch(syncStatusProvider);

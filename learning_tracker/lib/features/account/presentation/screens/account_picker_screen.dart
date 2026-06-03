@@ -468,6 +468,19 @@ class _AccountTile extends ConsumerWidget {
     final messenger = ScaffoldMessenger.of(context);
     final targetUid = account.firebaseUid;
 
+    // Tear down the previous account's Firestore real-time listeners BEFORE we
+    // re-authenticate to the target identity. The device has a single
+    // FirebaseAuth slot; once signInWithGoogle() flips the live uid, any
+    // listener still subscribed under the PREVIOUS uid
+    // (users/<oldUid>/learner_profiles, the tutor_grants OR-queries) is
+    // re-evaluated against the new auth context and denied — the
+    // PERMISSION_DENIED flood reported in the bug, and the cause of the
+    // parent's "Manage Tutors" sticking on "Pending" (the tutor_grants listen
+    // dies on the denial). The listener set is re-opened against the new
+    // identity by the orchestrator's active-profile listener once the switch
+    // completes. Best-effort: never block or throw out of the switch.
+    await ref.read(syncOrchestratorProvider)?.stopListeners();
+
     // SILENT-FIRST: attempt a no-UI re-auth to the cached Google session. If it
     // resolves the TARGET account's uid, activate with no picker. A null result
     // (no cached session) or a uid mismatch (silent resolved a different cached
@@ -596,6 +609,14 @@ class _AccountTile extends ConsumerWidget {
     // this must never block or throw out of the switch.
     final orchestrator = ref.read(syncOrchestratorProvider);
     if (orchestrator != null) {
+      // Re-open the Firestore real-time listeners against the now-active
+      // identity. The previous account's listeners were torn down before
+      // re-auth (see _reauthAndActivateCloudAccount / _onTap) so the set is
+      // currently stopped; restart deterministically rebinds it to the new
+      // uid + profile — even when the new account's active profile id collides
+      // with the previous one (the orchestrator's profile-change listener
+      // would not fire in that case).
+      orchestrator.restartListeners();
       unawaited(
         orchestrator.pullOnLaunch().timeout(
           const Duration(seconds: 8),

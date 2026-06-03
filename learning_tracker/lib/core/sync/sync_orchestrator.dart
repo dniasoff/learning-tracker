@@ -69,6 +69,33 @@ abstract class SyncOrchestrator {
   /// engine. Consumers subscribe here instead of holding a direct
   /// [SyncEngine] reference.
   Stream<SyncStatus> get statusStream;
+
+  /// Tear down the account-level + per-profile Firestore real-time listener
+  /// set WITHOUT disposing the orchestrator (the [LifecycleObserver] and the
+  /// status stream survive).
+  ///
+  /// Called by the account-switch flow BEFORE it re-authenticates Firebase to
+  /// the target account's identity. The device holds a single
+  /// [FirebaseAuth.currentUser] slot, so once `signInWithGoogle()` flips the
+  /// live uid, any still-subscribed listener bound to the PREVIOUS uid
+  /// (`users/<oldUid>/learner_profiles`, the `tutor_grants` OR-queries scoped
+  /// to the old uid) is re-evaluated against the new auth context and denied —
+  /// flooding logcat with `PERMISSION_DENIED` for the old uid and leaving the
+  /// parent's "Manage Tutors" stuck on "Pending" because the `tutor_grants`
+  /// listen was killed by the denial. Stopping the set first guarantees no
+  /// stale-uid listen fires across the auth flip; the orchestrator's
+  /// active-profile listener re-opens the set against the new identity once the
+  /// switch completes.
+  Future<void> stopListeners();
+
+  /// Re-open the Firestore real-time listener set against the current profile
+  /// and uid. Paired with [stopListeners] by the account-switch flow so the
+  /// listener set is deterministically rebound to the new identity once the
+  /// switch completes — even when the new account's active profile id happens
+  /// to collide with the previous one (per-account autoincrement ids), where
+  /// the orchestrator's active-profile change listener would not fire. A no-op
+  /// when [start] was never called.
+  void restartListeners();
 }
 
 // ---------------------------------------------------------------------------
@@ -1139,6 +1166,7 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
   /// duplicate lifecycle observer is ever created (the Bug #1 failure mode).
   ///
   /// A no-op when [start] was never called.
+  @override
   void restartListeners() {
     final supervisor = _listenerSupervisor;
     if (supervisor == null) return;
@@ -1155,6 +1183,31 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
         );
       }),
     );
+  }
+
+  /// Stop the Firestore real-time listener set without disposing the
+  /// orchestrator. See [SyncOrchestrator.stopListeners] for the account-switch
+  /// rationale (tear down before the uid flips so no stale-uid listen is
+  /// denied). A no-op when [start] was never called.
+  ///
+  /// The [LifecycleObserver] and the status stream are intentionally left
+  /// untouched — only the listener subscriptions are cancelled. A later
+  /// [restartListeners] (fired by the active-profile listener once the new
+  /// identity resolves) re-opens the channel set against the current uid.
+  @override
+  Future<void> stopListeners() async {
+    final supervisor = _listenerSupervisor;
+    if (supervisor == null) return;
+    _logger?.info(event: 'sync_orchestrator_listeners_stop_for_switch');
+    try {
+      await supervisor.stop();
+    } catch (e, stackTrace) {
+      _logger?.warning(
+        event: 'sync_orchestrator_listeners_stop_failed',
+        exception: e,
+        stackTrace: stackTrace,
+      );
+    }
   }
 
   /// Dispose listeners and unregister from [WidgetsBinding].

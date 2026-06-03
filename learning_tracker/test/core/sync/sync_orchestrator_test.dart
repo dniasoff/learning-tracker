@@ -949,6 +949,125 @@ void main() {
       orchestrator.dispose();
     });
   });
+
+  // ── BUG 1 — listener teardown on account switch ──────────────────────────────
+  //
+  // The account-switch flow tears the listener set down BEFORE it re-auths to
+  // the target identity (so no stale-uid listen is denied by Firestore), then
+  // re-opens it once the new identity is active. These tests pin that contract
+  // at the orchestrator boundary: stopListeners() cancels every live
+  // subscription, and restartListeners() re-subscribes.
+
+  group('stopListeners() / restartListeners()', () {
+    setUpAll(TestWidgetsFlutterBinding.ensureInitialized);
+
+    test('stopListeners() cancels every live listener subscription', () async {
+      final gateway = _ListenerTrackingGateway();
+      final orchestrator = SyncOrchestratorImpl(
+        resolveGateway: () => gateway,
+        resolveMergeRouter: () => _FakeMergeRouter(),
+        resolveProfileId: () => _testProfileId,
+        resolvePushAllLocalData: () async {},
+        connectivityStream: null,
+        resetFirestoreNetworkOverride: () async {},
+      );
+      orchestrator.start();
+      // Allow the supervisor's async start() to attach.
+      await Future<void>.delayed(Duration.zero);
+      expect(
+        gateway.activeListenerCount,
+        greaterThan(0),
+        reason: 'start() must open the listener set',
+      );
+
+      await orchestrator.stopListeners();
+
+      expect(
+        gateway.activeListenerCount,
+        0,
+        reason:
+            'stopListeners() must cancel every live subscription so no '
+            'stale-uid listen survives the account-switch auth flip',
+      );
+      orchestrator.dispose();
+    });
+
+    test('restartListeners() re-opens the set after stopListeners()', () async {
+      final gateway = _ListenerTrackingGateway();
+      final orchestrator = SyncOrchestratorImpl(
+        resolveGateway: () => gateway,
+        resolveMergeRouter: () => _FakeMergeRouter(),
+        resolveProfileId: () => _testProfileId,
+        resolvePushAllLocalData: () async {},
+        connectivityStream: null,
+        resetFirestoreNetworkOverride: () async {},
+      );
+      orchestrator.start();
+      await Future<void>.delayed(Duration.zero);
+      await orchestrator.stopListeners();
+      expect(gateway.activeListenerCount, 0);
+
+      orchestrator.restartListeners();
+      await Future<void>.delayed(Duration.zero);
+
+      expect(
+        gateway.activeListenerCount,
+        greaterThan(0),
+        reason: 'restartListeners() must re-bind the set to the new identity',
+      );
+      orchestrator.dispose();
+    });
+
+    test('stopListeners() before start() is a safe no-op', () async {
+      final orchestrator = _makeOrchestrator();
+      await expectLater(orchestrator.stopListeners(), completes);
+    });
+  });
+}
+
+// ── Helper: a gateway that tracks live listener subscriptions ─────────────────
+
+/// A [FirestoreGateway] fake whose real-time listener streams are backed by
+/// broadcast controllers so the test can observe how many subscriptions are
+/// currently live. Used to verify [SyncOrchestratorImpl.stopListeners] cancels
+/// every subscription and [SyncOrchestratorImpl.restartListeners] re-opens it.
+class _ListenerTrackingGateway extends _FakeGateway {
+  int activeListenerCount = 0;
+
+  Stream<T> _tracked<T>() {
+    late StreamController<T> controller;
+    controller = StreamController<T>.broadcast(
+      onListen: () => activeListenerCount++,
+      onCancel: () {
+        activeListenerCount--;
+        unawaited(controller.close());
+      },
+    );
+    return controller.stream;
+  }
+
+  @override
+  Stream<ListenerSnapshot> listenToCollection({
+    required int profileId,
+    required String collection,
+    required String orderField,
+    int limit = 500,
+  }) => _tracked<ListenerSnapshot>();
+
+  @override
+  Stream<Map<String, dynamic>?> listenToDocument({
+    required int profileId,
+    required String collection,
+    required String docId,
+  }) => _tracked<Map<String, dynamic>?>();
+
+  @override
+  Stream<ListenerSnapshot> listenToTutorGrants({int limit = 500}) =>
+      _tracked<ListenerSnapshot>();
+
+  @override
+  Stream<ListenerSnapshot> listenToLearnerProfiles({int limit = 500}) =>
+      _tracked<ListenerSnapshot>();
 }
 
 // ── Helper: a gateway that never resolves fetchPage ───────────────────────────
