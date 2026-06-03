@@ -341,9 +341,11 @@ void main() {
       expect(find.text('Siyum Masechta Berakhot'), findsNothing);
 
       // ── Tapping the aggregate expands it; contained masechtos appear. ──
+      // The masechta name renders through the variant-aware CurriculumLabel,
+      // so in this English/Ashkenazi-default harness "Berakhot" -> "Berakhos".
       await tester.tap(aggregateFinder);
       await tester.pumpAndSettle();
-      expect(find.text('Berakhot'), findsOneWidget);
+      expect(find.text('Berakhos'), findsOneWidget);
       expect(find.text('Peah'), findsOneWidget);
 
       // ── Vertical order: curriculum-complete hero is above the aggregate

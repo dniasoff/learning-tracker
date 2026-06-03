@@ -264,4 +264,91 @@ void main() {
       },
     );
   });
+
+  group('Masechta-name transliteration (transliterateNamedValue)', () {
+    // raw data value -> (ashkenazi, sephardi). The raw value is the Sefaria
+    // spelling, which is also the Sephardi form.
+    const cases = <String, (String, String)>{
+      'Berakhot': ('Berakhos', 'Berakhot'),
+      'Shabbat': ('Shabbos', 'Shabbat'),
+      'Ketubot': ('Kesubos', 'Ketubot'),
+      'Makkot': ('Makkos', 'Makkot'),
+      'Bava Batra': ('Bava Basra', 'Bava Batra'),
+      'Sukkah': ('Succah', 'Sukkah'),
+      'Taanit': ('Taanis', 'Taanit'),
+      'Yevamot': ('Yevamos', 'Yevamot'),
+      // Sheviit has no bare Bavli form in the data — only the Mishnah /
+      // Yerushalmi prefixed keys exist.
+      'Mishnah Sheviit': ('Sheviis', 'Sheviit'),
+    };
+
+    cases.forEach((raw, forms) {
+      test('$raw → ${forms.$1} (ashk) / ${forms.$2} (seph)', () {
+        expect(
+          CurriculumLabels.transliterateNamedValue(
+            raw,
+            variant: TransliterationVariant.ashkenazi,
+          ),
+          forms.$1,
+        );
+        expect(
+          CurriculumLabels.transliterateNamedValue(
+            raw,
+            variant: TransliterationVariant.sephardi,
+          ),
+          forms.$2,
+        );
+      });
+    });
+
+    test('Mishnah- and Yerushalmi-prefixed raw forms also resolve', () {
+      // Mishnayos data ships "Mishnah Berakhot"; Yerushalmi "Jerusalem Talmud
+      // Berakhot". Both must hit the same nusach-sensitive name.
+      expect(
+        CurriculumLabels.transliterateNamedValue(
+          'Mishnah Berakhot',
+          variant: TransliterationVariant.ashkenazi,
+        ),
+        'Berakhos',
+      );
+      expect(
+        CurriculumLabels.transliterateNamedValue(
+          'Jerusalem Talmud Shabbat',
+          variant: TransliterationVariant.ashkenazi,
+        ),
+        'Shabbos',
+      );
+      // Mishnah-only apostrophe form of Taanit.
+      expect(
+        CurriculumLabels.transliterateNamedValue(
+          "Mishnah Ta'anit",
+          variant: TransliterationVariant.ashkenazi,
+        ),
+        'Taanis',
+      );
+    });
+  });
+
+  group('Mishnayos masechta breadcrumb renders per-nusach (L2 name)', () {
+    test('Mishnah Ketubot → Kesubos (ashk) vs Ketubot (seph)', () {
+      // Masechta is a named level with no level-word prefix, so the rendered
+      // L2 segment is the bare nusach name.
+      final ashk = CurriculumLabelRenderer.renderValue(
+        curriculumId: CurriculumId.mishnayos,
+        level: 2,
+        rawValue: 'Mishnah Ketubot',
+        useHebrew: false,
+      );
+      expect(ashk, 'Kesubos');
+      final seph = CurriculumLabelRenderer.renderValue(
+        curriculumId: CurriculumId.mishnayos,
+        level: 2,
+        rawValue: 'Mishnah Ketubot',
+        useHebrew: false,
+        transliterationVariant: TransliterationVariant.sephardi,
+      );
+      expect(seph, 'Ketubot');
+      expect(ashk, isNot(equals(seph)));
+    });
+  });
 }
