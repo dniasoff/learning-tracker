@@ -490,6 +490,13 @@ class CurriculumLabels {
   static const Map<TransliterationVariant, Map<String, String>>
   _englishNameTransliterations = {
     TransliterationVariant.ashkenazi: {
+      // Curriculum (CurriculumId.displayNameEn) names that differ by nusach.
+      // Keyed by the exact Ashkenazi displayNameEn string. The remaining
+      // curricula (Talmud Bavli, Talmud Yerushalmi, Mishna Berurah, Chumash,
+      // Mishneh Torah, Mussar) are identical in both nuschaos and pass through.
+      'Mishnayos': 'Mishnayos',
+      'Tanach': 'Tanach',
+      'Nach': 'Nach',
       // Tanach top sections
       'Torah': 'Torah',
       'Prophets': "Nevi'im",
@@ -694,6 +701,11 @@ class CurriculumLabels {
       'Tahorot': 'Taharos', 'Seder Tahorot': 'Seder Taharos',
     },
     TransliterationVariant.sephardi: {
+      // Curriculum (CurriculumId.displayNameEn) names that differ by nusach.
+      // Keyed by the exact Ashkenazi displayNameEn string.
+      'Mishnayos': 'Mishnayot',
+      'Tanach': 'Tanakh',
+      'Nach': 'Nakh',
       // Tanach top sections
       'Torah': 'Torah',
       'Prophets': "Nevi'im",

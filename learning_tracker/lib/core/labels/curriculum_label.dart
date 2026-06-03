@@ -225,11 +225,21 @@ class CurriculumLabel extends ConsumerWidget {
     switch (_kind) {
       case _Kind.curriculum:
         final useHebrew = ref.watch(useHebrewTermsProvider);
+        if (useHebrew) {
+          return _text(_curriculumId!.displayNameHe, useHebrew: true);
+        }
+        // English mode: the curriculum's `displayNameEn` is the Ashkenazi
+        // transliteration. Run it through the single transliteration source so
+        // Sephardi users see the Sephardi form (e.g. "Mishnayot" not
+        // "Mishnayos"). Names that are identical in both nuschaos fall through
+        // to the raw Ashkenazi value.
+        final variant = ref.watch(currentTransliterationVariantProvider);
         return _text(
-          useHebrew
-              ? _curriculumId!.displayNameHe
-              : _curriculumId!.displayNameEn,
-          useHebrew: useHebrew,
+          CurriculumLabels.transliterateNamedValue(
+            _curriculumId!.displayNameEn,
+            variant: variant,
+          ),
+          useHebrew: false,
         );
       case _Kind.calendarProgram:
         final useHebrew = ref.watch(useHebrewTermsProvider);

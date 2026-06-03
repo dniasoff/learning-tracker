@@ -335,6 +335,62 @@ void main() {
     });
   });
 
+  group('Curriculum-name transliteration (transliterateNamedValue)', () {
+    // CurriculumId.displayNameEn (Ashkenazi) -> (ashkenazi, sephardi).
+    // Only Mishnayos / Tanach / Nach differ by nusach; the others pass
+    // through to the raw Ashkenazi value.
+    const cases = <String, (String, String)>{
+      'Mishnayos': ('Mishnayos', 'Mishnayot'),
+      'Tanach': ('Tanach', 'Tanakh'),
+      'Nach': ('Nach', 'Nakh'),
+    };
+
+    cases.forEach((raw, forms) {
+      test('$raw → ${forms.$1} (ashk) / ${forms.$2} (seph)', () {
+        expect(
+          CurriculumLabels.transliterateNamedValue(
+            raw,
+            variant: TransliterationVariant.ashkenazi,
+          ),
+          forms.$1,
+        );
+        expect(
+          CurriculumLabels.transliterateNamedValue(
+            raw,
+            variant: TransliterationVariant.sephardi,
+          ),
+          forms.$2,
+        );
+      });
+    });
+
+    test('nusach-invariant curriculum names pass through unchanged', () {
+      for (final name in const [
+        'Talmud Bavli',
+        'Talmud Yerushalmi',
+        'Mishna Berurah',
+        'Chumash',
+        'Mishneh Torah',
+        'Mussar',
+      ]) {
+        expect(
+          CurriculumLabels.transliterateNamedValue(
+            name,
+            variant: TransliterationVariant.ashkenazi,
+          ),
+          name,
+        );
+        expect(
+          CurriculumLabels.transliterateNamedValue(
+            name,
+            variant: TransliterationVariant.sephardi,
+          ),
+          name,
+        );
+      }
+    });
+  });
+
   group('Mishnayos masechta breadcrumb renders per-nusach (L2 name)', () {
     test('Mishnah Ketubot → Kesubos (ashk) vs Ketubot (seph)', () {
       // Masechta is a named level with no level-word prefix, so the rendered

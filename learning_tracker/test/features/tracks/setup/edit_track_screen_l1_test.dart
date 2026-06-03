@@ -27,6 +27,7 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
@@ -159,6 +160,8 @@ Widget _buildApp({
   required _MockTrackEditService mockService,
   bool hasChazara = false,
   List<DailyTask> dailyTasks = const [],
+  bool useHebrew = false,
+  TransliterationVariant? variant,
 }) {
   return ProviderScope(
     overrides: [
@@ -177,7 +180,9 @@ Widget _buildApp({
             .first,
       ).overrideWithValue(const AsyncData(false)),
       allDailyTasksProvider.overrideWith((ref) => Future.value(dailyTasks)),
-      useHebrewTermsProvider.overrideWith(() => _FakeUseHebrewTerms()),
+      useHebrewTermsProvider.overrideWith(() => _FakeUseHebrewTerms(useHebrew)),
+      if (variant != null)
+        currentTransliterationVariantProvider.overrideWithValue(variant),
     ],
     child: MaterialApp(
       locale: const Locale('en'),
@@ -269,8 +274,10 @@ class _FakeActiveTutoredProfileSelection extends ActiveTutoredProfileSelection {
 }
 
 class _FakeUseHebrewTerms extends UseHebrewTerms {
+  _FakeUseHebrewTerms([this._value = false]);
+  final bool _value;
   @override
-  bool build() => false;
+  bool build() => _value;
 }
 
 // ── Tests ─────────────────────────────────────────────────────────────────────
@@ -492,6 +499,97 @@ void main() {
 
       // The pace value "3" should be visible.
       expect(find.text('3'), findsWidgets);
+
+      await _tearDown(tester);
+    });
+  });
+
+  // ── Group: study-days day-6 label (nusach + Hebrew terms) ─────────────────
+
+  group('EditTrackScreen — day-6 label honours nusach + Hebrew terms', () {
+    testWidgets('Ashkenazi (en) → "Shabbos"', (tester) async {
+      _setTallViewport(tester);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final trackId = await seedTrack(
+        db,
+        profileId: 1,
+        curriculumId: 'mishnayos',
+      );
+      await _seedGoal(db, profileId: 1, trackId: trackId);
+
+      await tester.pumpWidget(
+        _buildApp(
+          track: _track(id: trackId),
+          db: db,
+          mockService: mockService,
+          variant: TransliterationVariant.ashkenazi,
+        ),
+      );
+      await _pump(tester);
+
+      expect(find.text('Shabbos'), findsOneWidget);
+      expect(find.text('Shabbat'), findsNothing);
+      expect(find.text('שבת'), findsNothing);
+
+      await _tearDown(tester);
+    });
+
+    testWidgets('Sephardi (en) → "Shabbat"', (tester) async {
+      _setTallViewport(tester);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final trackId = await seedTrack(
+        db,
+        profileId: 1,
+        curriculumId: 'mishnayos',
+      );
+      await _seedGoal(db, profileId: 1, trackId: trackId);
+
+      await tester.pumpWidget(
+        _buildApp(
+          track: _track(id: trackId),
+          db: db,
+          mockService: mockService,
+          variant: TransliterationVariant.sephardi,
+        ),
+      );
+      await _pump(tester);
+
+      expect(find.text('Shabbat'), findsOneWidget);
+      expect(find.text('Shabbos'), findsNothing);
+      expect(find.text('שבת'), findsNothing);
+
+      await _tearDown(tester);
+    });
+
+    testWidgets('Hebrew terms ON → "שבת"', (tester) async {
+      _setTallViewport(tester);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final trackId = await seedTrack(
+        db,
+        profileId: 1,
+        curriculumId: 'mishnayos',
+      );
+      await _seedGoal(db, profileId: 1, trackId: trackId);
+
+      await tester.pumpWidget(
+        _buildApp(
+          track: _track(id: trackId),
+          db: db,
+          mockService: mockService,
+          useHebrew: true,
+        ),
+      );
+      await _pump(tester);
+
+      expect(find.text('שבת'), findsOneWidget);
+      expect(find.text('Shabbos'), findsNothing);
+      expect(find.text('Shabbat'), findsNothing);
 
       await _tearDown(tester);
     });

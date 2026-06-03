@@ -7,7 +7,9 @@ import 'package:intl/intl.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
+import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/calendar_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
@@ -805,11 +807,17 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
   ///
   /// Convention: [dayNum] follows Dart's [DateTime.weekday] values
   /// (1 = Monday … 7 = Sunday), identical to [kStepStudyDayNumbers].
-  /// Day 6 (Saturday) renders the app's term "Shabbos" (en) / "שבת" (he) via
-  /// l10n — consistent with the sacred-time feature; other days are
-  /// locale-formatted via [DateFormat].
+  /// Day 6 (Saturday) renders the app's term "Shabbos" (Ashkenazi) /
+  /// "Shabbat" (Sephardi) / "שבת" (Hebrew Terms on) via [domainTermLabels],
+  /// so it honours both the transliteration nusach and the Hebrew-Terms
+  /// toggle — consistent with [StudyDaysEditable] and the sacred-time
+  /// feature; other days are locale-formatted via [DateFormat].
   String _dayName(int dayNum) {
-    if (dayNum == 6) return AppLocalizations.of(context)!.dayNameShabbos;
+    if (dayNum == 6) {
+      return domainTermLabels(
+        ref,
+      ).shabbos(variant: ref.watch(currentTransliterationVariantProvider));
+    }
     final locale = Localizations.localeOf(context).languageCode;
     // Anchor: 2023-01-02 is a Monday (DateTime.weekday == 1).
     // Adding (dayNum - 1) days yields a date whose weekday == dayNum.

@@ -1,17 +1,27 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
-  Widget wrap(Widget child, {bool hebrewTermsScript = true}) {
+  Widget wrap(
+    Widget child, {
+    bool hebrewTermsScript = true,
+    TransliterationVariant? variant,
+  }) {
     SharedPreferences.setMockInitialValues({
       'hebrew_terms_script_p0': hebrewTermsScript,
     });
     return ProviderScope(
+      overrides: [
+        if (variant != null)
+          currentTransliterationVariantProvider.overrideWithValue(variant),
+      ],
       child: MaterialApp(home: Scaffold(body: child)),
     );
   }
@@ -29,16 +39,111 @@ void main() {
       expect(find.text('Mishnayos'), findsNothing);
     });
 
-    testWidgets('Hebrew terms OFF → displayNameEn', (tester) async {
+    testWidgets('Hebrew terms OFF, Ashkenazi → "Mishnayos"', (tester) async {
       await tester.pumpWidget(
         wrap(
           const CurriculumLabel.curriculum(CurriculumId.mishnayos),
           hebrewTermsScript: false,
+          variant: TransliterationVariant.ashkenazi,
         ),
       );
       await tester.pumpAndSettle();
       expect(find.text('Mishnayos'), findsOneWidget);
+      expect(find.text('Mishnayot'), findsNothing);
       expect(find.text('משניות'), findsNothing);
+    });
+
+    testWidgets('Hebrew terms OFF, Sephardi → "Mishnayot"', (tester) async {
+      await tester.pumpWidget(
+        wrap(
+          const CurriculumLabel.curriculum(CurriculumId.mishnayos),
+          hebrewTermsScript: false,
+          variant: TransliterationVariant.sephardi,
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Mishnayot'), findsOneWidget);
+      expect(find.text('Mishnayos'), findsNothing);
+      expect(find.text('משניות'), findsNothing);
+    });
+
+    testWidgets('Tanach: Ashkenazi "Tanach" vs Sephardi "Tanakh"', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        wrap(
+          const CurriculumLabel.curriculum(CurriculumId.tanach),
+          hebrewTermsScript: false,
+          variant: TransliterationVariant.ashkenazi,
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Tanach'), findsOneWidget);
+
+      await tester.pumpWidget(
+        wrap(
+          const CurriculumLabel.curriculum(CurriculumId.tanach),
+          hebrewTermsScript: false,
+          variant: TransliterationVariant.sephardi,
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Tanakh'), findsOneWidget);
+      expect(find.text('Tanach'), findsNothing);
+    });
+
+    testWidgets('Nach: Ashkenazi "Nach" vs Sephardi "Nakh"', (tester) async {
+      await tester.pumpWidget(
+        wrap(
+          const CurriculumLabel.curriculum(CurriculumId.nach),
+          hebrewTermsScript: false,
+          variant: TransliterationVariant.ashkenazi,
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Nach'), findsOneWidget);
+
+      await tester.pumpWidget(
+        wrap(
+          const CurriculumLabel.curriculum(CurriculumId.nach),
+          hebrewTermsScript: false,
+          variant: TransliterationVariant.sephardi,
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Nakh'), findsOneWidget);
+      expect(find.text('Nach'), findsNothing);
+    });
+
+    testWidgets(
+      'nusach-invariant curriculum (Talmud Bavli) is identical in both',
+      (tester) async {
+        await tester.pumpWidget(
+          wrap(
+            const CurriculumLabel.curriculum(CurriculumId.bavli),
+            hebrewTermsScript: false,
+            variant: TransliterationVariant.sephardi,
+          ),
+        );
+        await tester.pumpAndSettle();
+        // Falls through transliterateNamedValue to the raw Ashkenazi value.
+        expect(find.text('Talmud Bavli'), findsOneWidget);
+      },
+    );
+
+    testWidgets('Sephardi + Hebrew terms ON still renders Hebrew', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        wrap(
+          const CurriculumLabel.curriculum(CurriculumId.mishnayos),
+          hebrewTermsScript: true,
+          variant: TransliterationVariant.sephardi,
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('משניות'), findsOneWidget);
+      expect(find.text('Mishnayot'), findsNothing);
     });
   });
 
