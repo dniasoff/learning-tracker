@@ -5,6 +5,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_renderer.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/progress/domain/models/journey_view_model.dart';
@@ -314,10 +315,25 @@ class _AggregateMilestoneTile extends ConsumerWidget {
   }
 }
 
+/// The curriculum-structural unit scopes whose `unitKey` is a *named* value
+/// (masechta / sefer / siman / hilchos) that must be transliterated or shown
+/// in Hebrew per the active variant — rather than leaking the raw Sefaria
+/// storage key into the "Siyum Masechta {name}" frame. Maps each scope to the
+/// content level its key lives at (masechta/siman/hilchos are level-2; a sefer
+/// is the level-1 unit in two-tier curricula), so the renderer fetches the
+/// right level metadata. Both levels are *named*, so even a level mismatch
+/// transliterates the name identically.
+const Map<String, int> unitScopeContentLevel = {
+  'masechta': 2,
+  'siman': 2,
+  'hilchos': 2,
+  'sefer': 1,
+};
+
 /// Row for a standalone unit-level milestone (Siyum Masechta / Sefer /
 /// Siman / Hilchos). Used both inside grouped curriculum sections and in
 /// the timeline view.
-class _UnitMilestoneTile extends StatelessWidget {
+class _UnitMilestoneTile extends ConsumerWidget {
   const _UnitMilestoneTile({
     required this.milestone,
     required this.accentColor,
@@ -329,9 +345,27 @@ class _UnitMilestoneTile extends StatelessWidget {
   final DomainTermLabels terms;
 
   @override
-  Widget build(BuildContext context) {
-    final unitName = milestone.unitKey ?? milestone.displayName;
+  Widget build(BuildContext context, WidgetRef ref) {
     final scope = milestone.unitScope ?? 'masechta';
+    final rawName = milestone.unitKey ?? milestone.displayName;
+
+    // Resolve the unit name to its variant-aware DISPLAY form before building
+    // the "Siyum Masechta {name}" label, mirroring the sibling aggregate tile:
+    // the storage key (e.g. "Shabbat") must switch to "Shabbos" (Ashkenazi) /
+    // "Shabbat" (Sephardi) / "שבת" (Hebrew) per the active toggle + nusach,
+    // while the "Siyum Masechta " frame stays under `terms`/[unitSiyumLabel].
+    // Only structural named scopes are transliterated; unknown scopes (which
+    // hit [unitSiyumLabel]'s generic fallback) keep the raw value.
+    final contentLevel = unitScopeContentLevel[scope];
+    final unitName = (contentLevel != null && milestone.unitKey != null)
+        ? renderMilestoneName(
+            ref,
+            curriculumId: milestone.curriculumId,
+            level: contentLevel,
+            rawValue: rawName,
+          )
+        : rawName;
+
     final label = unitSiyumLabel(
       unitName: unitName,
       unitScope: scope,
@@ -353,6 +387,54 @@ class _UnitMilestoneTile extends StatelessWidget {
       ),
     );
   }
+}
+
+/// Resolve a milestone's raw storage key (masechta/sefer/siman/hilchos at a
+/// unit level, or a seder/chelek at the aggregate level) to its variant-aware
+/// display name.
+///
+/// Looks up the Hebrew name from the curriculum's loaded content (routed
+/// through the core/labels accessor per DNI-386) so Hebrew mode shows the
+/// proper Hebrew name; in English mode the renderer transliterates the raw
+/// key under the active nusach. Falls back to a transliteration-only render
+/// while content is still loading (the Hebrew name simply arrives on rebuild).
+///
+/// Shared with the chronological timeline view so both surfaces resolve names
+/// identically before passing them into the siyum-label frame.
+String renderMilestoneName(
+  WidgetRef ref, {
+  required CurriculumId curriculumId,
+  required int level,
+  required String rawValue,
+}) {
+  // Resolve the matching content row's Hebrew name (level-2 named units like
+  // masechtos, else the level-1 sefer). Null while content loads or when the
+  // key isn't present; the renderer then transliterates the raw key.
+  final hebrewName = ref
+      .watch(curriculumContentProvider(curriculumId))
+      .maybeWhen(
+        data: (items) {
+          for (final item in items) {
+            final key = level == 1 ? item.level1 : item.level2;
+            if (key == rawValue) {
+              return CurriculumLabelRenderer.hebrewNameOf(item);
+            }
+          }
+          return null;
+        },
+        orElse: () => null,
+      );
+
+  return CurriculumLabelRenderer.renderValue(
+    curriculumId: curriculumId,
+    level: level,
+    rawValue: rawValue,
+    // Term toggle via the shared accessor (DNI 7/15: no raw
+    // useHebrewTermsProvider read outside core/labels).
+    useHebrew: domainTermLabels(ref).isHebrew,
+    hebrewName: hebrewName,
+    transliterationVariant: ref.watch(currentTransliterationVariantProvider),
+  );
 }
 
 /// Format a milestone [date] using [DateFormat.yMMMd] for the active locale —

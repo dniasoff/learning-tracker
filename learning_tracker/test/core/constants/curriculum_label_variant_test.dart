@@ -280,6 +280,12 @@ void main() {
       // Sheviit has no bare Bavli form in the data — only the Mishnah /
       // Yerushalmi prefixed keys exist.
       'Mishnah Sheviit': ('Sheviis', 'Sheviit'),
+      // Seder (order) names — only Tahoros differs by nusach; "Seder" prefix
+      // is kept, other sedarim pass through unchanged.
+      'Tahorot': ('Taharos', 'Tahorot'),
+      'Seder Tahorot': ('Seder Taharos', 'Seder Tahorot'),
+      'Seder Zeraim': ('Seder Zeraim', 'Seder Zeraim'),
+      'Seder Moed': ('Seder Moed', 'Seder Moed'),
     };
 
     cases.forEach((raw, forms) {

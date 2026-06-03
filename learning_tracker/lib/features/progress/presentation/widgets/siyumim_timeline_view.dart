@@ -7,7 +7,7 @@ import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/progress/domain/models/journey_view_model.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/siyum_milestone_label.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/siyumim_grouped_view.dart'
-    show formatMilestoneDate;
+    show formatMilestoneDate, renderMilestoneName, unitScopeContentLevel;
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Chronological view of all siyumim (unit + aggregate + curriculum) across
@@ -139,16 +139,46 @@ class _TimelineCard extends ConsumerWidget {
         );
       case MilestoneLevel.aggregate:
         icon = Icons.workspace_premium;
+        // Resolve the seder/chelek name (a level-1 named value) to its
+        // variant-aware display form before framing it as "Siyum Seder {name}",
+        // mirroring the grouped view so the timeline follows the Hebrew-terms
+        // toggle and Ashkenazi/Sephardi nusach instead of leaking the raw
+        // Sefaria key (e.g. "Tahorot" vs "Tahoros").
+        final aggregateRaw = m.aggregateKey ?? m.displayName;
+        final aggregateName = m.aggregateKey != null
+            ? renderMilestoneName(
+                ref,
+                curriculumId: entry.curriculumId,
+                level: 1,
+                rawValue: aggregateRaw,
+              )
+            : aggregateRaw;
         label = aggregateSiyumLabel(
           curriculumId: entry.curriculumId,
-          aggregateName: m.aggregateKey ?? m.displayName,
+          aggregateName: aggregateName,
           terms: terms,
         );
       case MilestoneLevel.unit:
         icon = Icons.star;
+        // Resolve the masechta/sefer/siman/hilchos name to its variant-aware
+        // display form before framing it as "Siyum Masechta {name}", so the
+        // raw key (e.g. "Shabbat") switches to "Shabbos" / "Shabbat" / "שבת"
+        // per the active toggle + nusach. Only structural named scopes are
+        // resolved; unknown scopes keep the raw value (generic fallback frame).
+        final scope = m.unitScope ?? 'masechta';
+        final unitRaw = m.unitKey ?? m.displayName;
+        final contentLevel = unitScopeContentLevel[scope];
+        final unitName = (contentLevel != null && m.unitKey != null)
+            ? renderMilestoneName(
+                ref,
+                curriculumId: entry.curriculumId,
+                level: contentLevel,
+                rawValue: unitRaw,
+              )
+            : unitRaw;
         label = unitSiyumLabel(
-          unitName: m.unitKey ?? m.displayName,
-          unitScope: m.unitScope ?? 'masechta',
+          unitName: unitName,
+          unitScope: scope,
           terms: terms,
         );
     }

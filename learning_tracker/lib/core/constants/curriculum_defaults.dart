@@ -686,6 +686,12 @@ class CurriculumLabels {
       'Mishnah Tevul Yom': 'Tevul Yom',
       'Mishnah Yadayim': 'Yadayim',
       'Mishnah Zavim': 'Zavim',
+      // Seder (order) names — level 1. Only Tahoros differs by nusach; the
+      // other sedarim are identical in both transliterations and pass through
+      // unchanged. "Seder" is part of the displayed name (unlike the Mishnah/
+      // Yerushalmi curriculum prefixes above, which are stripped), so it is
+      // kept. Keyed bare and with the "Seder " prefix the data carries.
+      'Tahorot': 'Taharos', 'Seder Tahorot': 'Seder Taharos',
     },
     TransliterationVariant.sephardi: {
       // Tanach top sections
@@ -882,6 +888,8 @@ class CurriculumLabels {
       'Mishnah Tevul Yom': 'Tevul Yom',
       'Mishnah Yadayim': 'Yadayim',
       'Mishnah Zavim': 'Zavim',
+      // Seder (order) names — Sephardi = the raw form ("Seder" kept).
+      'Tahorot': 'Tahorot', 'Seder Tahorot': 'Seder Tahorot',
     },
   };
 

@@ -333,9 +333,12 @@ void main() {
       // While collapsed the contained masechtos are NOT in the widget tree.
       expect(find.text('Berakhot'), findsNothing);
 
-      // ── Standalone unit appears as "Siyum Masechta Shabbat" because
-      //   Moed is not yet fully complete. ──────────────────────────────────
-      expect(find.text('Siyum Masechta Shabbat'), findsOneWidget);
+      // ── Standalone unit appears as "Siyum Masechta Shabbos" because
+      //   Moed is not yet fully complete. The masechta NAME is resolved
+      //   through the variant-aware renderer (English/Ashkenazi default), so
+      //   the raw Sefaria key "Shabbat" surfaces as "Shabbos" — the "Siyum
+      //   Masechta " frame still comes from the domain-term labels. ─────────
+      expect(find.text('Siyum Masechta Shabbos'), findsOneWidget);
       // The Berakhot unit-level milestone is hidden because Zeraim is a
       // completed aggregate (it shows only on expansion).
       expect(find.text('Siyum Masechta Berakhot'), findsNothing);
@@ -353,7 +356,7 @@ void main() {
       final heroCentre = tester.getCenter(heroFinder);
       final aggregateCentre = tester.getCenter(aggregateFinder);
       final standaloneCentre = tester.getCenter(
-        find.text('Siyum Masechta Shabbat'),
+        find.text('Siyum Masechta Shabbos'),
       );
       expect(heroCentre.dy, lessThan(aggregateCentre.dy));
       expect(aggregateCentre.dy, lessThan(standaloneCentre.dy));

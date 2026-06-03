@@ -330,14 +330,16 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 
-      final berakhot = tester.getRect(find.textContaining('Berakhot').first);
-      final shabbat = tester.getRect(find.textContaining('Shabbat').first);
+      // Names render through the variant-aware label (English/Ashkenazi
+      // default here), so "Berakhot" -> "Berakhos" and "Shabbat" -> "Shabbos".
+      final berakhot = tester.getRect(find.textContaining('Berakhos').first);
+      final shabbat = tester.getRect(find.textContaining('Shabbos').first);
 
       expect(
         shabbat.top,
         lessThan(berakhot.top),
         reason:
-            'Newest-first: Shabbat (later, May) must appear above Berakhot '
+            'Newest-first: Shabbos (later, May) must appear above Berakhos '
             '(earlier, March) in the list',
       );
       await tester.pumpWidget(const SizedBox.shrink());

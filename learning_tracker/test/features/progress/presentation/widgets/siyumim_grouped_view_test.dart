@@ -255,4 +255,68 @@ void main() {
       expect(find.text('Berakhos'), findsNothing);
     },
   );
+
+  testWidgets('standalone unit row resolves the masechta name variant-awarely '
+      '(Hebrew-terms mode shows the Hebrew name in the Siyum Masechta frame)', (
+    tester,
+  ) async {
+    // A standalone (un-absorbed) masechta-level siyum. Its raw key is the
+    // Sefaria value "Shabbat"; the curriculum content supplies the Hebrew
+    // name "שבת". Under Hebrew-terms mode the row must read "סיום מסכת שבת"
+    // — proving the unit NAME flows through the variant-aware renderer
+    // rather than leaking the raw key into the label frame.
+    const shabbos = ContentItem(
+      curriculumId: 'bavli',
+      level1: 'Moed',
+      level2: 'Shabbat',
+      displayNameHe: 'שבת',
+      displayNameEn: 'Shabbos',
+      sefariaRef: 'Shabbat',
+      sortOrder: 0,
+      isLeaf: false,
+    );
+    final viewModel = JourneyViewModel(
+      curricula: [
+        CurriculumJourney(
+          curriculumId: CurriculumId.bavli,
+          completions: const [],
+          uniqueUnitsCompleted: 1,
+          totalUnitsAvailable: 63,
+          milestones: [
+            MilestoneAchievement(
+              type: 'unit_complete',
+              level: MilestoneLevel.unit,
+              curriculumId: CurriculumId.bavli,
+              displayName: 'Shabbat',
+              unitKey: 'Shabbat',
+              unitScope: 'masechta',
+              achievedAt: DateTime(2026, 5, 11),
+            ),
+          ],
+        ),
+      ],
+      totalCompletions: 0,
+      totalUniqueUnits: 1,
+      unitLevelSiyumimCount: 1,
+      aggregateLevelSiyumimCount: 0,
+      curriculumLevelSiyumimCount: 0,
+    );
+
+    await tester.pumpWidget(
+      _host(
+        viewModel: viewModel,
+        useHebrewTerms: true,
+        locale: const Locale('he'),
+        content: const {
+          CurriculumId.bavli: [shabbos],
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // The Hebrew masechta name "שבת" is framed by the Hebrew "סיום מסכת".
+    expect(find.text('סיום מסכת שבת'), findsOneWidget);
+    // The raw English storage key must NOT leak into the row.
+    expect(find.textContaining('Shabbat'), findsNothing);
+  });
 }
