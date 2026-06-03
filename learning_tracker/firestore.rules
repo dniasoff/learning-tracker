@@ -314,8 +314,9 @@ service cloud.firestore {
           allow create, update: if isOwner(uid)
             && request.resource.data.keys().hasOnly([
               'profile_id', 'curriculum_id', 'track_id', 'stage_order',
-              'stage_name', 'schedule', 'delay_days', 'is_default',
-              'days_of_week', 'rolling_window_size', 'updated_at', 'synced_at'
+              'stage_name', 'schedule', 'delay_days', 'schedule_type',
+              'is_default', 'days_of_week', 'rolling_window_size',
+              'updated_at', 'synced_at'
             ]);
           allow delete: if false;
         }
