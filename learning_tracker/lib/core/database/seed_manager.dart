@@ -59,6 +59,12 @@ class SeedManager {
     if (!dbFile.existsSync()) {
       _logger?.info(event: 'seed_manager_first_launch_extract');
       await _extractSeedDb(_dbPath);
+      // Stamp the bundled constant so a fresh install does not needlessly
+      // re-seed on its next launch when the asset's baked version trails the
+      // constant (see _stampInstalledVersion / _atomicReplace Step 3b).
+      if (_readInstalledVersion(_dbPath) != bundledSeedVersion) {
+        _stampInstalledVersion(_dbPath, bundledSeedVersion);
+      }
       return _dbPath;
     }
 
@@ -146,6 +152,23 @@ class SeedManager {
     }
   }
 
+  /// Stamp [version] into the extracted content.db's seed_metadata so the
+  /// re-seed gate compares against the bundled constant (not the asset's baked
+  /// version). Best-effort: a failure here only means the next launch re-seeds
+  /// again, which is recoverable, so we log and swallow rather than abort the
+  /// (otherwise successful) replacement.
+  void _stampInstalledVersion(String dbPath, int version) {
+    Database? db;
+    try {
+      db = sqlite3.open(dbPath);
+      db.execute('UPDATE seed_metadata SET version = ?', [version]);
+    } catch (e) {
+      _logger?.error(event: 'seed_manager_stamp_version_failed', exception: e);
+    } finally {
+      db?.dispose();
+    }
+  }
+
   /// Extract seed.db.gz from assets to the target path.
   ///
   /// The bundled asset is gzipped — `dart:io`'s `gzip.decode` is C-native
@@ -190,9 +213,23 @@ class SeedManager {
       await _extractSeedDb(_dbPath);
 
       // Step 3: Verify the new database is valid
-      final newVersion = _readInstalledVersion(_dbPath);
-      if (newVersion == null) {
+      final assetVersion = _readInstalledVersion(_dbPath);
+      if (assetVersion == null) {
         throw SeedManagerException('New seed database has no version metadata');
+      }
+
+      // Step 3b: Stamp the bundled-constant version into the extracted db.
+      //
+      // The gzipped asset carries its own baked seed_metadata.version, which is
+      // NOT necessarily bumped every time the asset content changes (English
+      // text was added to the asset while its baked version stayed 14). Without
+      // this stamp the re-seed gate (`bundledSeedVersion > installed`) compares
+      // against the asset's stale baked version forever — a constant-only bump
+      // would re-extract on EVERY launch. Stamping the constant makes the
+      // documented "bump seed_version.dart when content changed" process
+      // correct and loop-free.
+      if (assetVersion != bundledSeedVersion) {
+        _stampInstalledVersion(_dbPath, bundledSeedVersion);
       }
 
       // Step 4: Delete backup
@@ -202,7 +239,10 @@ class SeedManager {
 
       _logger?.info(
         event: 'seed_manager_upgrade_complete',
-        fields: {'newVersion': newVersion},
+        fields: {
+          'assetVersion': assetVersion,
+          'newVersion': bundledSeedVersion,
+        },
       );
     } catch (e) {
       // Extraction or verification failed — rollback
