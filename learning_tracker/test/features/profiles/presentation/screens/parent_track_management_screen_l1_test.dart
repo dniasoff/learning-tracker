@@ -295,12 +295,14 @@ void main() {
       await _teardown(tester);
     });
 
-    testWidgets('"Manage Tracks" app-bar title is present', (tester) async {
+    testWidgets('"Tracks & Goals" app-bar title is present', (tester) async {
       final track = _track();
       await tester.pumpWidget(_buildApp(router: router, tracks: [track]));
       await _settle(tester);
 
-      expect(find.text('Manage Tracks'), findsOneWidget);
+      // Title covers both entry points (Manage Tracks + Manage Goals) so
+      // arriving from Manage Goals no longer reads as the wrong screen.
+      expect(find.text('Tracks & Goals'), findsOneWidget);
       await _teardown(tester);
     });
 

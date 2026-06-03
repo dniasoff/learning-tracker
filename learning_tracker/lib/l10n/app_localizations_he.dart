@@ -514,6 +514,9 @@ class AppLocalizationsHe extends AppLocalizations {
   String get manageTracks => 'ניהול מסלולים';
 
   @override
+  String get manageTracksAndGoalsTitle => 'מסלולים ומטרות';
+
+  @override
   String get manageTracksDetail => 'יצירה ועריכה של מסלולי הלמידה';
 
   @override

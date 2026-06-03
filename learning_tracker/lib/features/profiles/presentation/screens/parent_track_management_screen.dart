@@ -66,7 +66,10 @@ class _ParentTrackManagementScreenState
           onPressed: () => context.maybePop(),
         ),
         title: Text(
-          l10n.manageTracks,
+          // Reached from both "Manage Tracks" and "Manage Goals" (goals are
+          // set per-track from each card here), so the title covers both —
+          // arriving from Manage Goals no longer reads as the wrong screen.
+          l10n.manageTracksAndGoalsTitle,
           style: Theme.of(context).textTheme.headlineSmall?.copyWith(
             fontWeight: FontWeight.w800,
             color: AppTheme.brandBlueDeep,

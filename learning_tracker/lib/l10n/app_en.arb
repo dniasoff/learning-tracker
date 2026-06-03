@@ -243,6 +243,10 @@
   "error": "Error",
   "loading": "Loading...",
   "manageTracks": "Manage Tracks",
+  "manageTracksAndGoalsTitle": "Tracks & Goals",
+  "@manageTracksAndGoalsTitle": {
+    "description": "AppBar title for the parent track-management screen, reached from both the 'Manage Tracks' and 'Manage Goals' tiles (goals are set per-track here), so the title covers both."
+  },
   "manageTracksDetail": "Create and edit your learning tracks",
   "addTrackGoalTapToUseDeadline": "Target pace is on — tap here to use a deadline instead",
   "addTrackGoalTapToUsePace": "Deadline is on — tap here to use target pace instead",

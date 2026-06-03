@@ -400,60 +400,65 @@ Future<void> _showAdjustPointsDialog(
     builder: (ctx) => StatefulBuilder(
       builder: (ctx, setState) => AlertDialog(
         title: Text(l10n.parentPointsAdjustTitle),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Consumer(
-              builder: (context, ref, _) {
-                final balance =
-                    ref
-                        .watch(activeProfilePointsBalanceProvider)
-                        .asData
-                        ?.value ??
-                    0;
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 16),
-                  child: Text(
-                    l10n.parentPointsAdjustCurrentBalance(balance),
-                    style: Theme.of(ctx).textTheme.bodyMedium,
+        // The dialog shrinks when the numeric keyboard opens; without a
+        // scroll view the fixed-height column overflowed (~66px). Scrolling
+        // lets the content fit and resize with the keyboard.
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Consumer(
+                builder: (context, ref, _) {
+                  final balance =
+                      ref
+                          .watch(activeProfilePointsBalanceProvider)
+                          .asData
+                          ?.value ??
+                      0;
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 16),
+                    child: Text(
+                      l10n.parentPointsAdjustCurrentBalance(balance),
+                      style: Theme.of(ctx).textTheme.bodyMedium,
+                    ),
+                  );
+                },
+              ),
+              SegmentedButton<bool>(
+                segments: [
+                  ButtonSegment(
+                    value: true,
+                    label: Text(l10n.parentPointsAdjustAddLabel),
                   ),
-                );
-              },
-            ),
-            SegmentedButton<bool>(
-              segments: [
-                ButtonSegment(
-                  value: true,
-                  label: Text(l10n.parentPointsAdjustAddLabel),
-                ),
-                ButtonSegment(
-                  value: false,
-                  label: Text(l10n.parentPointsAdjustDeductLabel),
-                ),
-              ],
-              selected: {addMode},
-              onSelectionChanged: (v) => setState(() => addMode = v.first),
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: amountController,
-              keyboardType: TextInputType.number,
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              decoration: InputDecoration(
-                hintText: l10n.parentPointsAdjustAmountHint,
-                border: const OutlineInputBorder(),
+                  ButtonSegment(
+                    value: false,
+                    label: Text(l10n.parentPointsAdjustDeductLabel),
+                  ),
+                ],
+                selected: {addMode},
+                onSelectionChanged: (v) => setState(() => addMode = v.first),
               ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: noteController,
-              decoration: InputDecoration(
-                hintText: l10n.parentPointsAdjustNoteHint,
-                border: const OutlineInputBorder(),
+              const SizedBox(height: 16),
+              TextField(
+                controller: amountController,
+                keyboardType: TextInputType.number,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                decoration: InputDecoration(
+                  hintText: l10n.parentPointsAdjustAmountHint,
+                  border: const OutlineInputBorder(),
+                ),
               ),
-            ),
-          ],
+              const SizedBox(height: 12),
+              TextField(
+                controller: noteController,
+                decoration: InputDecoration(
+                  hintText: l10n.parentPointsAdjustNoteHint,
+                  border: const OutlineInputBorder(),
+                ),
+              ),
+            ],
+          ),
         ),
         actions: [
           TextButton(

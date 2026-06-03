@@ -1026,6 +1026,12 @@ abstract class AppLocalizations {
   /// **'Manage Tracks'**
   String get manageTracks;
 
+  /// AppBar title for the parent track-management screen, reached from both the 'Manage Tracks' and 'Manage Goals' tiles (goals are set per-track here), so the title covers both.
+  ///
+  /// In en, this message translates to:
+  /// **'Tracks & Goals'**
+  String get manageTracksAndGoalsTitle;
+
   /// No description provided for @manageTracksDetail.
   ///
   /// In en, this message translates to:

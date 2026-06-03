@@ -243,6 +243,7 @@
   "error": "שגיאה",
   "loading": "...טוען",
   "manageTracks": "ניהול מסלולים",
+  "manageTracksAndGoalsTitle": "מסלולים ומטרות",
   "manageTracksDetail": "יצירה ועריכה של מסלולי הלמידה",
   "addTrackGoalTapToUseDeadline": "מצב קצב יעד פעיל — יש ללחוץ כאן ליעד לפי תאריך יעד",
   "addTrackGoalTapToUsePace": "מצב תאריך יעד פעיל — יש ללחוץ כאן לקצב יעד",

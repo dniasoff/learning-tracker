@@ -420,6 +420,82 @@ void main() {
 
       await _tearDown(tester);
     });
+
+    testWidgets('success: screen pops back after the invite is sent', (
+      tester,
+    ) async {
+      when(
+        () => mockUseCase(
+          tutorEmail: any(named: 'tutorEmail'),
+          childProfileId: any(named: 'childProfileId'),
+          childName: any(named: 'childName'),
+          parentName: any(named: 'parentName'),
+        ),
+      ).thenAnswer((_) async => const TutorGrantSuccess(grantId: 'grant-pop'));
+
+      // Push the invite screen onto a Navigator so there is something to pop
+      // back to (the "Manage Tutors" stand-in below).
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            inviteTutorUseCaseProvider.overrideWithValue(mockUseCase),
+            profileListProvider.overrideWith(
+              (ref) => [
+                _profile(id: 1, name: 'Parent', mode: 'adult'),
+                _profile(id: 42, name: 'Child', mode: 'child'),
+              ],
+            ),
+            outgoingTutorGrantsProvider(
+              _childProfileId,
+            ).overrideWith((ref) => Future.value([])),
+          ],
+          child: MaterialApp(
+            locale: const Locale('en'),
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Builder(
+              builder: (context) => Scaffold(
+                body: Center(
+                  child: ElevatedButton(
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute<void>(
+                        builder: (_) => const InviteTutorScreen(
+                          childProfileId: _childProfileId,
+                        ),
+                      ),
+                    ),
+                    child: const Text('open'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.tap(find.text('open'));
+      await tester.pumpAndSettle();
+
+      // Invite screen is on top.
+      expect(find.byType(InviteTutorScreen), findsOneWidget);
+
+      await tester.enterText(find.byType(TextFormField), 'tutor@example.com');
+      await tester.pump();
+      await tester.tap(find.byType(FilledButton));
+      await tester.pumpAndSettle();
+
+      // Screen popped back to the Manage Tutors stand-in; snackbar survives.
+      expect(find.byType(InviteTutorScreen), findsNothing);
+      expect(find.text('open'), findsOneWidget);
+      expect(find.text('Invite sent to tutor@example.com!'), findsOneWidget);
+
+      await _tearDown(tester);
+    });
   });
 
   // ── Failure path ────────────────────────────────────────────────────────────

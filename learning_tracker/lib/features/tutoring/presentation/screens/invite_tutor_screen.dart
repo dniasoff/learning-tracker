@@ -98,6 +98,9 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
           // new pending invite shows up immediately on Manage Tutors instead
           // of serving the stale empty result fetched before this invite.
           ref.invalidate(outgoingTutorGrantsProvider(widget.childProfileId));
+          // Show the confirmation on the root messenger so it survives the
+          // pop, then return to Manage Tutors — previously the screen stayed
+          // put with no navigation, so the tap appeared to do nothing.
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(
@@ -106,6 +109,8 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
               backgroundColor: Colors.green.shade700,
             ),
           );
+          await Navigator.of(context).maybePop();
+          return;
         case TutorGrantFailure(:final message):
           setState(() => _errorMessage = message);
         case TutorGrantPreconditionError(:final message):

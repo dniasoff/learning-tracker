@@ -518,6 +518,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get manageTracks => 'Manage Tracks';
 
   @override
+  String get manageTracksAndGoalsTitle => 'Tracks & Goals';
+
+  @override
   String get manageTracksDetail => 'Create and edit your learning tracks';
 
   @override
