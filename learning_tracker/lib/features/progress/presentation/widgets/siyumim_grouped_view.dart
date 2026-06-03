@@ -257,9 +257,23 @@ class _AggregateMilestoneTile extends ConsumerWidget {
           },
           orElse: () => const <String, String>{},
         );
+    // Resolve the seder/chelek name (a level-1 named value) to its
+    // variant-aware display form before framing it as "Siyum Seder {name}",
+    // mirroring the timeline view so the grouped view follows the Hebrew-terms
+    // toggle and Ashkenazi/Sephardi nusach instead of leaking the raw Sefaria
+    // key (e.g. "Tahorot" vs "Tahoros"). Unknown aggregates with no key keep
+    // the displayName fallback.
+    final aggregateName = milestone.aggregateKey != null
+        ? renderCurriculumLevelName(
+            ref,
+            curriculumId: curriculumId,
+            level: 1,
+            rawValue: milestone.aggregateKey!,
+          )
+        : milestone.displayName;
     final label = aggregateSiyumLabel(
       curriculumId: curriculumId,
-      aggregateName: milestone.aggregateKey ?? milestone.displayName,
+      aggregateName: aggregateName,
       terms: terms,
     );
     final containedCount = milestone.containedUnitKeys.length;

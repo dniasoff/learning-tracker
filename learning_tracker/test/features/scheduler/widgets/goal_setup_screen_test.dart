@@ -145,6 +145,9 @@ void main() {
     ) async {
       await tester.pumpWidget(
         _makeApp(
+          // Pin English terms so the assertion is deterministic — Hebrew Terms
+          // defaults to ON, under which the unit word renders as "עמודים".
+          overrides: [useHebrewTermsProvider.overrideWithValue(false)],
           home: const GoalSetupScreen(
             curriculumId: CurriculumId.bavli,
             totalItems: 2711,
@@ -160,9 +163,11 @@ void main() {
     });
 
     // Reads the labelText of the pace-input TextFormField. This is the
-    // term-aware unit label produced by `_unitDisplayLabel` — distinct from
-    // the unit-picker SegmentedButton, whose labels come from the app-locale
-    // l10n keys (always English in these tests).
+    // term-aware unit label produced by `_unitDisplayLabel`. The unit-picker
+    // SegmentedButton pills are now also term/nusach-aware (they route through
+    // the same `CurriculumLabels` library), so they honour the Hebrew Terms
+    // toggle and the Ashkenazi/Sefardi nusach rather than the app-locale
+    // l10n keys.
     String paceInputLabel(WidgetTester tester) {
       final field = tester.widget<TextField>(
         find.descendant(
@@ -225,6 +230,84 @@ void main() {
         expect(label, isNot(contains('Dafim')));
       },
     );
+
+    // The Daf unit-picker pill must respect the Ashkenazi/Sefardi nusach and
+    // the Hebrew Terms toggle. Bavli surfaces both Amud + Daf pills; the Daf
+    // word only appears on its pill (default selection/projection is Amud), so
+    // matching the Daf form reliably targets the pill itself.
+    testWidgets('daf unit pill renders Dafim under Ashkenazi nusach', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _makeApp(
+          overrides: [
+            useHebrewTermsProvider.overrideWithValue(false),
+            currentTransliterationVariantProvider.overrideWithValue(
+              TransliterationVariant.ashkenazi,
+            ),
+          ],
+          home: const GoalSetupScreen(
+            curriculumId: CurriculumId.bavli,
+            totalItems: 2711,
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Pace'));
+      await tester.pump();
+
+      expect(find.text('Dafim'), findsOneWidget);
+      expect(find.text('Dapim'), findsNothing);
+      expect(find.text('דפים'), findsNothing);
+    });
+
+    testWidgets('daf unit pill renders Dapim under Sefardi nusach', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _makeApp(
+          overrides: [
+            useHebrewTermsProvider.overrideWithValue(false),
+            currentTransliterationVariantProvider.overrideWithValue(
+              TransliterationVariant.sephardi,
+            ),
+          ],
+          home: const GoalSetupScreen(
+            curriculumId: CurriculumId.bavli,
+            totalItems: 2711,
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Pace'));
+      await tester.pump();
+
+      // Sefardi maps the Ashkenazi "Dafim" to "Dapim" — the wrong spelling
+      // ("Dafim") must NOT appear anywhere on the pill.
+      expect(find.text('Dapim'), findsOneWidget);
+      expect(find.text('Dafim'), findsNothing);
+    });
+
+    testWidgets('daf unit pill renders Hebrew דפים when Hebrew Terms is on', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _makeApp(
+          overrides: [useHebrewTermsProvider.overrideWithValue(true)],
+          home: const GoalSetupScreen(
+            curriculumId: CurriculumId.bavli,
+            totalItems: 2711,
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Pace'));
+      await tester.pump();
+
+      expect(find.text('דפים'), findsOneWidget);
+      expect(find.text('Dafim'), findsNothing);
+      expect(find.text('Dapim'), findsNothing);
+    });
 
     testWidgets('edit mode shows Update Goal button', (tester) async {
       await tester.pumpWidget(

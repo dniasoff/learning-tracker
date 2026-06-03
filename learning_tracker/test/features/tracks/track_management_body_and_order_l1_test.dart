@@ -43,6 +43,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:learning_tracker/core/constants/curriculum_defaults.dart'
+    show TransliterationVariant;
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
@@ -81,6 +83,13 @@ class _MockCurriculumActivationService extends Mock
 class _HebrewTermsOff extends UseHebrewTerms {
   @override
   bool build() => false;
+}
+
+// ── Nusach pinned to Sephardi (for reorder-header transliteration test) ───────
+
+class _SephardiVariant extends CurrentTransliterationVariant {
+  @override
+  TransliterationVariant build() => TransliterationVariant.sephardi;
 }
 
 // ── Constants ─────────────────────────────────────────────────────────────────
@@ -187,6 +196,7 @@ Widget _buildOrderApp({
   int trackId = _kTrackId,
   CurriculumId curriculumId = _kCurriculumId,
   Locale locale = const Locale('en'),
+  bool sephardi = false,
 }) {
   return ProviderScope(
     retry: (_, __) => null,
@@ -208,6 +218,10 @@ Widget _buildOrderApp({
         curriculumId,
       ).overrideWith((ref) async => 0),
       useHebrewTermsProvider.overrideWith(() => _HebrewTermsOff()),
+      if (sephardi)
+        currentTransliterationVariantProvider.overrideWith(
+          _SephardiVariant.new,
+        ),
     ],
     child: MaterialApp(
       locale: locale,
@@ -768,6 +782,50 @@ void main() {
 
       // Title format: "<curriculum> • Reorder"
       expect(find.textContaining('Reorder'), findsOneWidget);
+
+      await _teardown(tester);
+    });
+
+    // 17c. The P2 fix: the L2 reorder section header is nusach-aware. In the
+    // default Ashkenazi nusach Mishnayos shows "Masechtos"; under Sephardi it
+    // must switch to "Masekhtot" (proving topSectionHeader /
+    // containerSectionHeader forward the variant to inLanguage()).
+    testWidgets('17c. L2 section header is "Masechtos" in Ashkenazi nusach', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _buildOrderApp(
+          repo: repo,
+          sedarimFactory: () => Future.value([_orderItem('Seder Zeraim', 0)]),
+          masechtosFactory: () => Future.value([_orderItem('Berakhos', 0)]),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text('Masechtos'), findsOneWidget);
+      expect(find.text('Masekhtot'), findsNothing);
+
+      await _teardown(tester);
+    });
+
+    testWidgets('17d. L2 section header switches to "Masekhtot" in Sephardi', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _buildOrderApp(
+          repo: repo,
+          sedarimFactory: () => Future.value([_orderItem('Seder Zeraim', 0)]),
+          masechtosFactory: () => Future.value([_orderItem('Berakhos', 0)]),
+          sephardi: true,
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      // Sephardi nusach maps Masechtos → Masekhtot; the Ashkenazi form gone.
+      expect(find.text('Masekhtot'), findsOneWidget);
+      expect(find.text('Masechtos'), findsNothing);
 
       await _teardown(tester);
     });

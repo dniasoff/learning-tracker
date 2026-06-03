@@ -22,6 +22,7 @@ library;
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
@@ -43,6 +44,15 @@ class _UseHebrewTermsOverride extends UseHebrewTerms {
   _UseHebrewTermsOverride();
   @override
   bool build() => false;
+}
+
+/// Pin the nusach so curriculumLabelTextFromRef (now variant-aware) does not
+/// reach the SharedPreferences-backed real provider in this binding-less
+/// ProviderContainer unit test.
+class _VariantOverride extends CurrentTransliterationVariant {
+  _VariantOverride();
+  @override
+  TransliterationVariant build() => TransliterationVariant.ashkenazi;
 }
 
 /// Build a representative Mishnayos content list — six sederim, each with
@@ -322,6 +332,7 @@ ProviderContainer _container({
     overrides: [
       userDatabaseProvider.overrideWith((ref) => db),
       useHebrewTermsProvider.overrideWith(_UseHebrewTermsOverride.new),
+      currentTransliterationVariantProvider.overrideWith(_VariantOverride.new),
       activeCurriculaProvider.overrideWith(
         (ref) => Future.value(activeCurricula),
       ),

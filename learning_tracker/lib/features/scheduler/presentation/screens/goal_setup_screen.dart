@@ -145,8 +145,24 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
     required bool useHebrew,
     required TransliterationVariant variant,
   }) {
-    final id = widget.curriculumId;
-    final labels = _levelForGranularity(id, _paceGranularity);
+    return _granularityUnitLabel(
+      _paceGranularity,
+      useHebrew: useHebrew,
+      variant: variant,
+    );
+  }
+
+  /// Resolves the plural display label for a specific pace-granularity key
+  /// (daf/amud/perek/pasuk) via the variant-aware [CurriculumLabels] library,
+  /// honouring both the Hebrew-terms toggle and the Ashkenazi/Sefardi nusach.
+  /// Used by the unit-picker pills so they never bypass either control
+  /// (e.g. Sefardi renders "Dapim", Ashkenazi "Dafim", Hebrew "דפים").
+  String _granularityUnitLabel(
+    String granularity, {
+    required bool useHebrew,
+    required TransliterationVariant variant,
+  }) {
+    final labels = _levelForGranularity(widget.curriculumId, granularity);
     return labels.inLanguage(
       useHebrew: useHebrew,
       plural: true,
@@ -446,6 +462,11 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
 
   @override
   Widget build(BuildContext context) {
+    // Domain-term toggle + nusach variant, read once and reused for the
+    // unit-picker pills so they honour both controls (DNI: no raw
+    // useHebrewTermsProvider read outside core/labels).
+    final useHebrewTerms = domainTermLabels(ref).isHebrew;
+    final variant = ref.watch(currentTransliterationVariantProvider);
     return Padding(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -487,13 +508,21 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
                               ButtonSegment(
                                 value: 'perek',
                                 label: Text(
-                                  AppLocalizations.of(context)!.unitPerakim,
+                                  _granularityUnitLabel(
+                                    'perek',
+                                    useHebrew: useHebrewTerms,
+                                    variant: variant,
+                                  ),
                                 ),
                               ),
                               ButtonSegment(
                                 value: 'pasuk',
                                 label: Text(
-                                  AppLocalizations.of(context)!.unitPesukim,
+                                  _granularityUnitLabel(
+                                    'pasuk',
+                                    useHebrew: useHebrewTerms,
+                                    variant: variant,
+                                  ),
                                 ),
                               ),
                             ]
@@ -501,13 +530,21 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
                               ButtonSegment(
                                 value: 'amud',
                                 label: Text(
-                                  AppLocalizations.of(context)!.unitAmudim,
+                                  _granularityUnitLabel(
+                                    'amud',
+                                    useHebrew: useHebrewTerms,
+                                    variant: variant,
+                                  ),
                                 ),
                               ),
                               ButtonSegment(
                                 value: 'daf',
                                 label: Text(
-                                  AppLocalizations.of(context)!.unitDafim,
+                                  _granularityUnitLabel(
+                                    'daf',
+                                    useHebrew: useHebrewTerms,
+                                    variant: variant,
+                                  ),
                                 ),
                               ),
                             ],

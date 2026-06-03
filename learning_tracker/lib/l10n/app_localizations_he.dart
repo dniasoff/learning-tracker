@@ -2127,10 +2127,14 @@ class AppLocalizationsHe extends AppLocalizations {
   String get controlledByParent => 'בשליטת ההורה';
 
   @override
-  String get sacredTimeLockGoodShabbos => 'שבת שלום';
+  String sacredTimeLockGoodShabbos(String term) {
+    return '$term שלום';
+  }
 
   @override
-  String get sacredTimeLockShabbosSubtitle => 'האפליקציה סגורה לכבוד שבת.';
+  String sacredTimeLockShabbosSubtitle(String term) {
+    return 'האפליקציה סגורה לכבוד $term.';
+  }
 
   @override
   String get sacredTimeLockGoodYomTov => 'חג שמח';
@@ -2139,11 +2143,14 @@ class AppLocalizationsHe extends AppLocalizations {
   String get sacredTimeLockYomTovSubtitle => 'האפליקציה סגורה לכבוד יום טוב.';
 
   @override
-  String get sacredTimeLockShabbosYomTovGreeting => 'שבת שלום וחג שמח';
+  String sacredTimeLockShabbosYomTovGreeting(String term) {
+    return '$term שלום וחג שמח';
+  }
 
   @override
-  String get sacredTimeLockShabbosYomTovSubtitle =>
-      'האפליקציה סגורה לכבוד שבת ויום טוב.';
+  String sacredTimeLockShabbosYomTovSubtitle(String term) {
+    return 'האפליקציה סגורה לכבוד $term ויום טוב.';
+  }
 
   @override
   String get sacredTimeLockYomKippurGreeting => 'גמר חתימה טובה';
@@ -2168,11 +2175,14 @@ class AppLocalizationsHe extends AppLocalizations {
   String get textReaderFailedToLoad => 'טעינת הטקסט נכשלה';
 
   @override
-  String get sacredTimeCardDescription =>
-      'האפליקציה מושתקת ונעולה בשבת וביום טוב. הזמנים מחושבים מקומית לפי המיקום שלכם עם מרווח של 15 דקות.';
+  String sacredTimeCardDescription(String term) {
+    return 'האפליקציה מושתקת ונעולה ב$term וביום טוב. הזמנים מחושבים מקומית לפי המיקום שלכם עם מרווח של 15 דקות.';
+  }
 
   @override
-  String get sacredTimeShabbosModeLabel => 'מצב שבת';
+  String sacredTimeShabbosModeLabel(String term) {
+    return 'מצב $term';
+  }
 
   @override
   String get sacredTimeAlwaysOn => 'תמיד פעיל';

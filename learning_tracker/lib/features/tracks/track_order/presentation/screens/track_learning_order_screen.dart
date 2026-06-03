@@ -6,6 +6,7 @@ import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/widgets/reorder_confirm_dialog.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/tracks/track_order/presentation/providers/track_learning_order_providers.dart';
@@ -54,6 +55,7 @@ class _TrackLearningOrderScreenState
     final theme = Theme.of(context);
     final isLoading = sedarimAsync.isLoading || masechtosAsync.isLoading;
     final terms = domainTermLabels(ref);
+    final variant = ref.watch(currentTransliterationVariantProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -82,6 +84,7 @@ class _TrackLearningOrderScreenState
                       CurriculumLabels.topSectionHeader(
                         widget.curriculumId,
                         useHebrew: terms.isHebrew,
+                        variant: variant,
                       ),
                     ),
                     ReorderableListView(
@@ -109,6 +112,7 @@ class _TrackLearningOrderScreenState
                       CurriculumLabels.containerSectionHeader(
                             widget.curriculumId,
                             useHebrew: terms.isHebrew,
+                            variant: variant,
                           ) ??
                           '',
                     ),

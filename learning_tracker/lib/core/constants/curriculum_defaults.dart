@@ -1127,22 +1127,39 @@ class CurriculumLabels {
 
   /// Plural label for the level-1 reorder section ("סדרים" in Hebrew
   /// mode, "Sedarim" in English mode). Never bilingual.
-  static String topSectionHeader(CurriculumId id, {required bool useHebrew}) =>
-      level(id, 1).inLanguage(useHebrew: useHebrew, plural: true);
+  ///
+  /// [variant] selects the English transliteration dialect (Sephardi maps
+  /// e.g. "Seforim" → "Sefarim"); it is irrelevant in Hebrew mode.
+  static String topSectionHeader(
+    CurriculumId id, {
+    required bool useHebrew,
+    TransliterationVariant variant = TransliterationVariant.ashkenazi,
+  }) => level(
+    id,
+    1,
+  ).inLanguage(useHebrew: useHebrew, plural: true, variant: variant);
 
-  /// Plural label for the level-2 reorder section ("מסכתות" / "Masechtos").
-  /// Null for single-level curricula.
+  /// Plural label for the level-2 reorder section ("מסכתות" / "Masechtos" /
+  /// "Masekhtot"). Null for single-level curricula.
   ///
   /// **Always returns level 2's plural** — not "level above leaf". For
   /// deep curricula like Mishnayos (Seder/Masechta/Perek/Mishna) the
   /// second reorder section is Masechtos (L2), not Perakim (L3).
+  ///
+  /// [variant] selects the English transliteration dialect so Sephardi nusach
+  /// renders "Masekhtot" instead of "Masechtos"; irrelevant in Hebrew mode.
   static String? containerSectionHeader(
     CurriculumId id, {
     required bool useHebrew,
+    TransliterationVariant variant = TransliterationVariant.ashkenazi,
   }) {
     final list = _levels[id]!;
     if (list.length < 2) return null;
-    return list[1].inLanguage(useHebrew: useHebrew, plural: true);
+    return list[1].inLanguage(
+      useHebrew: useHebrew,
+      plural: true,
+      variant: variant,
+    );
   }
 
   /// Whether the level-2 reorder section should render. Chumash and Tanach

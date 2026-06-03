@@ -1,7 +1,9 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/features/sacred_time/data/services/location_service.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_location.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_location_provider.dart';
@@ -18,6 +20,11 @@ class SacredTimeSettingsCard extends ConsumerWidget {
     final theme = Theme.of(context);
     final location = ref.watch(sacredLocationProvider);
     final inIsrael = ref.watch(inIsraelProvider);
+    // Variant-aware Shabbos term, resolved once here at the Consumer layer and
+    // composed into the localized header/description frames.
+    final shabbos = domainTermLabels(
+      ref,
+    ).shabbos(variant: ref.watch(currentTransliterationVariantProvider));
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -33,14 +40,16 @@ class SacredTimeSettingsCard extends ConsumerWidget {
       ),
       child: Column(
         children: [
-          _Header(theme: theme),
+          _Header(theme: theme, shabbos: shabbos),
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  AppLocalizations.of(context)!.sacredTimeCardDescription,
+                  AppLocalizations.of(
+                    context,
+                  )!.sacredTimeCardDescription(shabbos),
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                     height: 1.4,
@@ -62,9 +71,12 @@ class SacredTimeSettingsCard extends ConsumerWidget {
 }
 
 class _Header extends StatelessWidget {
-  const _Header({required this.theme});
+  const _Header({required this.theme, required this.shabbos});
 
   final ThemeData theme;
+
+  /// Variant-resolved Shabbos term, uppercased for the mode label below.
+  final String shabbos;
 
   @override
   Widget build(BuildContext context) {
@@ -80,7 +92,9 @@ class _Header extends StatelessWidget {
           const Icon(Icons.lock_clock_outlined, color: Colors.white, size: 17),
           const SizedBox(width: 8),
           Text(
-            AppLocalizations.of(context)!.sacredTimeShabbosModeLabel,
+            AppLocalizations.of(
+              context,
+            )!.sacredTimeShabbosModeLabel(shabbos.toUpperCase()),
             style: const TextStyle(
               color: Colors.white,
               fontWeight: FontWeight.w800,

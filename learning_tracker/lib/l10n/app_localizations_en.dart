@@ -2149,10 +2149,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get controlledByParent => 'Controlled by parent';
 
   @override
-  String get sacredTimeLockGoodShabbos => 'Good Shabbos';
+  String sacredTimeLockGoodShabbos(String term) {
+    return 'Good $term';
+  }
 
   @override
-  String get sacredTimeLockShabbosSubtitle => 'The app is closed for Shabbos.';
+  String sacredTimeLockShabbosSubtitle(String term) {
+    return 'The app is closed for $term.';
+  }
 
   @override
   String get sacredTimeLockGoodYomTov => 'Good Yom Tov';
@@ -2161,12 +2165,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get sacredTimeLockYomTovSubtitle => 'The app is closed for Yom Tov.';
 
   @override
-  String get sacredTimeLockShabbosYomTovGreeting =>
-      'Good Shabbos & Good Yom Tov';
+  String sacredTimeLockShabbosYomTovGreeting(String term) {
+    return 'Good $term & Good Yom Tov';
+  }
 
   @override
-  String get sacredTimeLockShabbosYomTovSubtitle =>
-      'The app is closed for Shabbos and Yom Tov.';
+  String sacredTimeLockShabbosYomTovSubtitle(String term) {
+    return 'The app is closed for $term and Yom Tov.';
+  }
 
   @override
   String get sacredTimeLockYomKippurGreeting =>
@@ -2193,11 +2199,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get textReaderFailedToLoad => 'Failed to load text';
 
   @override
-  String get sacredTimeCardDescription =>
-      'App is silenced and locked during Shabbos and Yom Tov. Times computed locally from your location with a 15-minute cushion.';
+  String sacredTimeCardDescription(String term) {
+    return 'App is silenced and locked during $term and Yom Tov. Times computed locally from your location with a 15-minute cushion.';
+  }
 
   @override
-  String get sacredTimeShabbosModeLabel => 'SHABBOS MODE';
+  String sacredTimeShabbosModeLabel(String term) {
+    return '$term MODE';
+  }
 
   @override
   String get sacredTimeAlwaysOn => 'Always on';

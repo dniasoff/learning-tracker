@@ -17,10 +17,24 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_window.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_lock_overlay.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
+
+/// Pins the lock-overlay greeting to the deterministic Ashkenazi English form
+/// ("Good Shabbos"). These scope tests assert on the greeting text only to
+/// detect overlay presence — they are not exercising the Hebrew-terms toggle /
+/// nusach, so fix those inputs (the toggle defaults to ON, which would
+/// otherwise render the Hebrew term).
+final List<Override> _ashkenaziEnglishTerms = [
+  useHebrewTermsProvider.overrideWithValue(false),
+  currentTransliterationVariantProvider.overrideWithValue(
+    TransliterationVariant.ashkenazi,
+  ),
+];
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -48,7 +62,7 @@ Future<void> _pump(
 }) async {
   await tester.pumpWidget(
     ProviderScope(
-      overrides: overrides,
+      overrides: [..._ashkenaziEnglishTerms, ...overrides],
       child: MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
@@ -167,6 +181,7 @@ void main() {
       (tester) async {
         final container = ProviderContainer(
           overrides: [
+            ..._ashkenaziEnglishTerms,
             currentSacredWindowProvider.overrideWithValue(
               _activeShabboWindow(),
             ),
@@ -189,8 +204,11 @@ void main() {
         // Sacred time active — lock screen is shown.
         expect(find.text('Good Shabbos'), findsOneWidget);
 
-        // Sacred time ends — update the provider value.
+        // Sacred time ends — update the provider value. The override count
+        // must stay constant (Riverpod forbids add/remove), so re-supply the
+        // term overrides alongside the now-null window.
         container.updateOverrides([
+          ..._ashkenaziEnglishTerms,
           currentSacredWindowProvider.overrideWithValue(null),
         ]);
         await tester.pump();

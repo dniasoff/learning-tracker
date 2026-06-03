@@ -90,6 +90,13 @@ class _FalseUseHebrewDate extends UseHebrewDate {
   bool build() => false;
 }
 
+// Pin Hebrew-terms OFF (English transliteration) so the unit-picker pills
+// render the English forms these tests assert (Amudim/Dafim/Perakim/Pesukim).
+class _FalseUseHebrewTerms extends UseHebrewTerms {
+  @override
+  bool build() => false;
+}
+
 // ── Constants ─────────────────────────────────────────────────────────────────
 
 const int _kTutorProfileId = 11;
@@ -158,6 +165,7 @@ Widget _buildGoalFormHarness({
     overrides: [
       clockProvider.overrideWith((ref) => _kNow),
       useHebrewDateProvider.overrideWith(() => _FalseUseHebrewDate()),
+      useHebrewTermsProvider.overrideWith(() => _FalseUseHebrewTerms()),
     ],
     child: MaterialApp(
       locale: locale,
@@ -190,6 +198,7 @@ Widget _buildGoalScreenHarness({
     overrides: [
       clockProvider.overrideWith((ref) => _kNow),
       useHebrewDateProvider.overrideWith(() => _FalseUseHebrewDate()),
+      useHebrewTermsProvider.overrideWith(() => _FalseUseHebrewTerms()),
     ],
     child: MaterialApp(
       locale: locale,

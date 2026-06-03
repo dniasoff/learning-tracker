@@ -451,6 +451,40 @@ void main() {
       addTearDown(() => _tearDown(tester));
     });
 
+    // 9b. The P1 fix: when the program seed carries a stored `label` (the
+    // script/term form, e.g. "חזרה א׳"), the row must render THAT label —
+    // not the title-cased English normalisation of the raw snake_case key.
+    testWidgets('stored stage label is preferred over normalizeStageName', (
+      tester,
+    ) async {
+      final stages = [
+        {'stage': 'chazara_1', 'label': 'חזרה א׳', 'delay_days': 1},
+      ];
+      await tester.pumpWidget(_buildChazaraApp(stages: stages));
+      await _settle(tester);
+
+      // Stored Hebrew label surfaces; the English normalisation must not.
+      expect(find.text('חזרה א׳'), findsOneWidget);
+      expect(find.text('Chazara 1'), findsNothing);
+
+      addTearDown(() => _tearDown(tester));
+    });
+
+    // 9c. A blank/whitespace-only label must fall back to the normalised key.
+    testWidgets('blank stage label falls back to normalizeStageName', (
+      tester,
+    ) async {
+      final stages = [
+        {'stage': 'chazara_1', 'label': '  ', 'delay_days': 1},
+      ];
+      await tester.pumpWidget(_buildChazaraApp(stages: stages));
+      await _settle(tester);
+
+      expect(find.text('Chazara 1'), findsOneWidget);
+
+      addTearDown(() => _tearDown(tester));
+    });
+
     // 10. Continue callback
     testWidgets('tapping Continue calls the onContinue callback', (
       tester,

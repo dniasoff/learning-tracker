@@ -3848,14 +3848,14 @@ abstract class AppLocalizations {
   /// No description provided for @sacredTimeLockGoodShabbos.
   ///
   /// In en, this message translates to:
-  /// **'Good Shabbos'**
-  String get sacredTimeLockGoodShabbos;
+  /// **'Good {term}'**
+  String sacredTimeLockGoodShabbos(String term);
 
   /// No description provided for @sacredTimeLockShabbosSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'The app is closed for Shabbos.'**
-  String get sacredTimeLockShabbosSubtitle;
+  /// **'The app is closed for {term}.'**
+  String sacredTimeLockShabbosSubtitle(String term);
 
   /// No description provided for @sacredTimeLockGoodYomTov.
   ///
@@ -3872,14 +3872,14 @@ abstract class AppLocalizations {
   /// No description provided for @sacredTimeLockShabbosYomTovGreeting.
   ///
   /// In en, this message translates to:
-  /// **'Good Shabbos & Good Yom Tov'**
-  String get sacredTimeLockShabbosYomTovGreeting;
+  /// **'Good {term} & Good Yom Tov'**
+  String sacredTimeLockShabbosYomTovGreeting(String term);
 
   /// No description provided for @sacredTimeLockShabbosYomTovSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'The app is closed for Shabbos and Yom Tov.'**
-  String get sacredTimeLockShabbosYomTovSubtitle;
+  /// **'The app is closed for {term} and Yom Tov.'**
+  String sacredTimeLockShabbosYomTovSubtitle(String term);
 
   /// No description provided for @sacredTimeLockYomKippurGreeting.
   ///
@@ -3926,14 +3926,14 @@ abstract class AppLocalizations {
   /// No description provided for @sacredTimeCardDescription.
   ///
   /// In en, this message translates to:
-  /// **'App is silenced and locked during Shabbos and Yom Tov. Times computed locally from your location with a 15-minute cushion.'**
-  String get sacredTimeCardDescription;
+  /// **'App is silenced and locked during {term} and Yom Tov. Times computed locally from your location with a 15-minute cushion.'**
+  String sacredTimeCardDescription(String term);
 
   /// No description provided for @sacredTimeShabbosModeLabel.
   ///
   /// In en, this message translates to:
-  /// **'SHABBOS MODE'**
-  String get sacredTimeShabbosModeLabel;
+  /// **'{term} MODE'**
+  String sacredTimeShabbosModeLabel(String term);
 
   /// No description provided for @sacredTimeAlwaysOn.
   ///

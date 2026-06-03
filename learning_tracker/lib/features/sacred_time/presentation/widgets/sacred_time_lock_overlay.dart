@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/labels/domain_term_labels.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/widgets/scrollable_fill_body.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_window.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
@@ -21,25 +23,39 @@ class SacredTimeLockOverlay extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final activeWindow = ref.watch(currentSacredWindowProvider);
+    if (activeWindow == null) {
+      return Stack(children: [child]);
+    }
+    // Resolve the variant-aware Shabbos term once here (this is the Consumer
+    // layer) and hand the composed greeting/subtitle down to the plain
+    // _LockScreen widget. Keeps the Hebrew-terms toggle + Ashkenazi/Sephardi
+    // nusach honoured rather than baking "Shabbos" into the ARB.
+    final terms = domainTermLabels(ref);
+    final variant = ref.watch(currentTransliterationVariantProvider);
+    final shabbos = terms.shabbos(variant: variant);
     return Stack(
       children: [
         child,
-        if (activeWindow != null) _LockScreen(window: activeWindow),
+        _LockScreen(window: activeWindow, shabbos: shabbos),
       ],
     );
   }
 }
 
 class _LockScreen extends StatelessWidget {
-  const _LockScreen({required this.window});
+  const _LockScreen({required this.window, required this.shabbos});
 
   final SacredWindow window;
+
+  /// Variant-resolved Shabbos term ("Shabbos" / "Shabbat" / "שבת"), composed
+  /// into the localized greeting and subtitle frames.
+  final String shabbos;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     final spec = _specFor(window.kind);
-    final (greeting, subtitle) = _stringsFor(window.kind, l10n);
+    final (greeting, subtitle) = _stringsFor(window.kind, l10n, shabbos);
     return PopScope(
       canPop: false,
       child: AnnotatedRegion<SystemUiOverlayStyle>(
@@ -118,12 +134,13 @@ class _LockScreen extends StatelessWidget {
   static (String greeting, String subtitle) _stringsFor(
     SacredWindowKind kind,
     AppLocalizations l10n,
+    String shabbos,
   ) {
     switch (kind) {
       case SacredWindowKind.shabbos:
         return (
-          l10n.sacredTimeLockGoodShabbos,
-          l10n.sacredTimeLockShabbosSubtitle,
+          l10n.sacredTimeLockGoodShabbos(shabbos),
+          l10n.sacredTimeLockShabbosSubtitle(shabbos),
         );
       case SacredWindowKind.yomTov:
         return (
@@ -132,8 +149,8 @@ class _LockScreen extends StatelessWidget {
         );
       case SacredWindowKind.shabbosYomTov:
         return (
-          l10n.sacredTimeLockShabbosYomTovGreeting,
-          l10n.sacredTimeLockShabbosYomTovSubtitle,
+          l10n.sacredTimeLockShabbosYomTovGreeting(shabbos),
+          l10n.sacredTimeLockShabbosYomTovSubtitle(shabbos),
         );
       case SacredWindowKind.yomKippur:
         return (

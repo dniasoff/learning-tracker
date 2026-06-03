@@ -376,34 +376,61 @@ enum _Kind {
 /// render.
 enum CurriculumLabelMode { breadcrumb, leaf, parent }
 
-String _curriculumLabel(CurriculumId curriculum, bool useHebrew) =>
-    useHebrew ? curriculum.displayNameHe : curriculum.displayNameEn;
+/// Resolves the pure-string curriculum label. In English mode the curriculum's
+/// `displayNameEn` (the Ashkenazi transliteration) is run through the single
+/// transliteration source so Sephardi users see the Sephardi form (e.g.
+/// "Mishnayot" not "Mishnayos"); names identical in both nuschaos fall through
+/// to the raw Ashkenazi value. Hebrew mode is unaffected by [variant].
+String _curriculumLabel(
+  CurriculumId curriculum,
+  bool useHebrew,
+  TransliterationVariant variant,
+) => useHebrew
+    ? curriculum.displayNameHe
+    : CurriculumLabels.transliterateNamedValue(
+        curriculum.displayNameEn,
+        variant: variant,
+      );
 
 /// Ref-free variant: resolves the curriculum label from an already-read
 /// `useHebrewTerms` flag. Use inside async provider bodies where the
 /// Hebrew-terms value must be captured BEFORE an `await` (calling
 /// [curriculumLabelTextFromRef] after an async gap risks "Cannot use Ref
 /// after dispose"). Pass `ref.watch(useHebrewTermsProvider)` captured up-front.
+/// [variant] should likewise be captured from
+/// `ref.watch(currentTransliterationVariantProvider)`; it defaults to Ashkenazi
+/// so existing callers keep today's behavior.
 String curriculumLabelFor(
   CurriculumId curriculum, {
   required bool useHebrewTerms,
-}) => _curriculumLabel(curriculum, useHebrewTerms);
+  TransliterationVariant variant = TransliterationVariant.ashkenazi,
+}) => _curriculumLabel(curriculum, useHebrewTerms, variant);
 
 /// Pure-string variant of [CurriculumLabel.curriculum] for AppBar titles,
 /// dialog messages, sort keys, semantics labels — places that need a `String`
-/// rather than a widget. Watches [useHebrewTermsProvider]. Use this from
-/// widgets (ConsumerWidget, Consumer, hooks_riverpod).
+/// rather than a widget. Watches [useHebrewTermsProvider] and
+/// [currentTransliterationVariantProvider]. Use this from widgets
+/// (ConsumerWidget, Consumer, hooks_riverpod).
 String curriculumLabelText(WidgetRef ref, {required CurriculumId curriculum}) =>
-    _curriculumLabel(curriculum, ref.watch(useHebrewTermsProvider));
+    _curriculumLabel(
+      curriculum,
+      ref.watch(useHebrewTermsProvider),
+      ref.watch(currentTransliterationVariantProvider),
+    );
 
 /// Same as [curriculumLabelText] but takes a provider-side [Ref]. Use this
 /// from inside provider/notifier closures where the closure parameter is
-/// [Ref] rather than [WidgetRef]. Watches [useHebrewTermsProvider] so the
-/// containing provider re-runs when the toggle changes.
+/// [Ref] rather than [WidgetRef]. Watches [useHebrewTermsProvider] and
+/// [currentTransliterationVariantProvider] so the containing provider re-runs
+/// when either toggle changes.
 String curriculumLabelTextFromRef(
   Ref ref, {
   required CurriculumId curriculum,
-}) => _curriculumLabel(curriculum, ref.watch(useHebrewTermsProvider));
+}) => _curriculumLabel(
+  curriculum,
+  ref.watch(useHebrewTermsProvider),
+  ref.watch(currentTransliterationVariantProvider),
+);
 
 /// Returns the Hebrew form of a curriculum's name unconditionally. Use only
 /// when both forms must be shown simultaneously (dual-language presentations

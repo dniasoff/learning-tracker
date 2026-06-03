@@ -630,7 +630,7 @@ class _OptionCard extends StatelessWidget {
   }
 }
 
-class _PresetCard extends StatelessWidget {
+class _PresetCard extends ConsumerWidget {
   const _PresetCard({
     required this.preset,
     required this.isSelected,
@@ -642,7 +642,7 @@ class _PresetCard extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
@@ -669,7 +669,7 @@ class _PresetCard extends StatelessWidget {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        preset.displayName,
+                        learningProgramLabelText(ref, program: preset),
                         style: theme.textTheme.titleMedium?.copyWith(
                           fontWeight: FontWeight.bold,
                         ),

@@ -1057,12 +1057,32 @@
   },
   "controlledByParent": "Controlled by parent",
 
-  "sacredTimeLockGoodShabbos": "Good Shabbos",
-  "sacredTimeLockShabbosSubtitle": "The app is closed for Shabbos.",
+  "sacredTimeLockGoodShabbos": "Good {term}",
+  "@sacredTimeLockGoodShabbos": {
+    "placeholders": {
+      "term": { "type": "String" }
+    }
+  },
+  "sacredTimeLockShabbosSubtitle": "The app is closed for {term}.",
+  "@sacredTimeLockShabbosSubtitle": {
+    "placeholders": {
+      "term": { "type": "String" }
+    }
+  },
   "sacredTimeLockGoodYomTov": "Good Yom Tov",
   "sacredTimeLockYomTovSubtitle": "The app is closed for Yom Tov.",
-  "sacredTimeLockShabbosYomTovGreeting": "Good Shabbos & Good Yom Tov",
-  "sacredTimeLockShabbosYomTovSubtitle": "The app is closed for Shabbos and Yom Tov.",
+  "sacredTimeLockShabbosYomTovGreeting": "Good {term} & Good Yom Tov",
+  "@sacredTimeLockShabbosYomTovGreeting": {
+    "placeholders": {
+      "term": { "type": "String" }
+    }
+  },
+  "sacredTimeLockShabbosYomTovSubtitle": "The app is closed for {term} and Yom Tov.",
+  "@sacredTimeLockShabbosYomTovSubtitle": {
+    "placeholders": {
+      "term": { "type": "String" }
+    }
+  },
   "sacredTimeLockYomKippurGreeting": "Have an easy and meaningful fast",
   "sacredTimeLockYomKippurSubtitle": "The app is closed for Yom Kippur.",
 
@@ -1071,8 +1091,18 @@
   "textReaderTextUnavailableTitle": "Text not available",
   "textReaderCheckConnection": "Check your internet connection and try again.",
   "textReaderFailedToLoad": "Failed to load text",
-  "sacredTimeCardDescription": "App is silenced and locked during Shabbos and Yom Tov. Times computed locally from your location with a 15-minute cushion.",
-  "sacredTimeShabbosModeLabel": "SHABBOS MODE",
+  "sacredTimeCardDescription": "App is silenced and locked during {term} and Yom Tov. Times computed locally from your location with a 15-minute cushion.",
+  "@sacredTimeCardDescription": {
+    "placeholders": {
+      "term": { "type": "String" }
+    }
+  },
+  "sacredTimeShabbosModeLabel": "{term} MODE",
+  "@sacredTimeShabbosModeLabel": {
+    "placeholders": {
+      "term": { "type": "String" }
+    }
+  },
   "sacredTimeAlwaysOn": "Always on",
   "sacredTimeNoLocation": "No location set",
   "sacredTimeSourceDetected": "Detected automatically",

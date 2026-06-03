@@ -454,6 +454,42 @@ void main() {
         await _tearDown(tester);
       },
     );
+
+    // Regression: the program name in the "Program: …" tile must route
+    // through the shared learningProgramLabelText helper so the Hebrew Terms
+    // toggle is honoured — not the raw `info.displayName`. Program id 5 in
+    // the seed list is "Daf Yomi" (name 'daf_yomi'), which IS registered in
+    // CalendarProgramRegistry → Hebrew ON resolves to "דף יומי".
+    testWidgets('program tile shows Hebrew program name when useHebrew=true', (
+      tester,
+    ) async {
+      await _seedProfileProgram(_db, programId: 5);
+
+      await _pump(
+        tester,
+        _buildApp(db: _db, useHebrew: true, locale: const Locale('he')),
+      );
+
+      expect(find.textContaining('דף יומי'), findsOneWidget);
+      // The raw English displayName must NOT leak through when Hebrew is on.
+      expect(find.textContaining('Daf Yomi'), findsNothing);
+
+      await _tearDown(tester);
+    });
+
+    testWidgets(
+      'program tile shows English program name when useHebrew=false',
+      (tester) async {
+        await _seedProfileProgram(_db, programId: 5);
+
+        await _pump(tester, _buildApp(db: _db, useHebrew: false));
+
+        expect(find.textContaining('Daf Yomi'), findsOneWidget);
+        expect(find.textContaining('דף יומי'), findsNothing);
+
+        await _tearDown(tester);
+      },
+    );
   });
 
   // ── he-RTL smoke ─────────────────────────────────────────────────────────────

@@ -524,6 +524,49 @@ void main() {
       expect(find.text('Daf Yomi'), findsOneWidget);
       await _tearDown(tester);
     });
+
+    // Regression: program name must route through the shared
+    // learningProgramLabelText helper (CalendarProgramRegistry-backed),
+    // not the raw `preset.displayName`, so the Hebrew Terms toggle is
+    // respected. `name: 'daf_yomi'` IS in CalendarProgramRegistry → Hebrew
+    // ON resolves to "דף יומי".
+    testWidgets(
+      'preset card renders Hebrew program name when Hebrew Terms is ON',
+      (tester) async {
+        final presets = [
+          _preset(id: 1, name: 'daf_yomi', displayName: 'Daf Yomi'),
+        ];
+        await tester.pumpWidget(
+          buildDirect(
+            presets: presets,
+            locale: const Locale('he'),
+            useHebrew: true,
+          ),
+        );
+        await _settle(tester);
+
+        // Hebrew form from CalendarProgramRegistry — not the raw English
+        // displayName.
+        expect(find.text('דף יומי'), findsOneWidget);
+        expect(find.text('Daf Yomi'), findsNothing);
+        await _tearDown(tester);
+      },
+    );
+
+    testWidgets(
+      'preset card renders English displayName when Hebrew Terms is OFF',
+      (tester) async {
+        final presets = [
+          _preset(id: 1, name: 'daf_yomi', displayName: 'Daf Yomi'),
+        ];
+        await tester.pumpWidget(buildDirect(presets: presets));
+        await _settle(tester);
+
+        expect(find.text('Daf Yomi'), findsOneWidget);
+        expect(find.text('דף יומי'), findsNothing);
+        await _tearDown(tester);
+      },
+    );
   });
 
   // ── WizardCustomStep1 ───────────────────────────────────────────────────────

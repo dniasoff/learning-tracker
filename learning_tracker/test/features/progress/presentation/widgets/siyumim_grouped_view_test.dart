@@ -13,6 +13,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:intl/intl.dart';
+import 'package:learning_tracker/core/constants/curriculum_defaults.dart'
+    show TransliterationVariant;
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
@@ -31,16 +33,29 @@ class _UseHebrewTermsOverride extends UseHebrewTerms {
   bool build() => useHebrew;
 }
 
+/// Pins the transliteration nusach so the aggregate seder name (Tahoros vs
+/// Tahorot) is deterministic across the grouped-view tests.
+class _VariantOverride extends CurrentTransliterationVariant {
+  _VariantOverride(this.variant);
+  final TransliterationVariant variant;
+  @override
+  TransliterationVariant build() => variant;
+}
+
 Widget _host({
   required JourneyViewModel viewModel,
   Locale? locale,
   bool useHebrewTerms = false,
+  TransliterationVariant variant = TransliterationVariant.ashkenazi,
   Map<CurriculumId, List<ContentItem>> content = const {},
 }) {
   return ProviderScope(
     overrides: [
       useHebrewTermsProvider.overrideWith(
         () => _UseHebrewTermsOverride(useHebrew: useHebrewTerms),
+      ),
+      currentTransliterationVariantProvider.overrideWith(
+        () => _VariantOverride(variant),
       ),
       for (final entry in content.entries)
         curriculumContentProvider(
@@ -318,5 +333,111 @@ void main() {
     expect(find.text('סיום מסכת שבת'), findsOneWidget);
     // The raw English storage key must NOT leak into the row.
     expect(find.textContaining('Shabbat'), findsNothing);
+  });
+
+  // ── Aggregate (seder) name transliteration — the P1 fix ────────────────────
+  //
+  // The aggregate tile previously passed `milestone.aggregateKey` RAW into
+  // aggregateSiyumLabel, so "Siyum Seder Tahorot" never transliterated (always
+  // the raw academic/Sephardi form, even under the Ashkenazi nusach). These
+  // tests pin the milestone to a Tahorot-seder Mishnayos aggregate (the one
+  // seder whose name differs by nusach) and assert it resolves variant-awarely.
+
+  JourneyViewModel tahorotAggregate() => JourneyViewModel(
+    curricula: [
+      CurriculumJourney(
+        curriculumId: CurriculumId.mishnayos,
+        completions: const [],
+        uniqueUnitsCompleted: 12,
+        totalUnitsAvailable: 63,
+        milestones: [
+          MilestoneAchievement(
+            type: 'seder_complete',
+            level: MilestoneLevel.aggregate,
+            curriculumId: CurriculumId.mishnayos,
+            displayName: 'Tahorot',
+            aggregateKey: 'Tahorot',
+            containedUnitKeys: const [],
+            achievedAt: DateTime(2026, 5, 11),
+          ),
+        ],
+      ),
+    ],
+    totalCompletions: 0,
+    totalUniqueUnits: 12,
+    unitLevelSiyumimCount: 0,
+    aggregateLevelSiyumimCount: 1,
+    curriculumLevelSiyumimCount: 0,
+  );
+
+  // Content row supplying the Hebrew seder name for the level-1 key "Tahorot",
+  // so Hebrew-terms mode can render "טהרות" instead of transliterating.
+  const tahorotSeder = ContentItem(
+    curriculumId: 'mishnayos',
+    level1: 'Tahorot',
+    displayNameHe: 'טהרות',
+    displayNameEn: 'Tahorot',
+    sefariaRef: 'Tahorot',
+    sortOrder: 0,
+    isLeaf: false,
+  );
+
+  testWidgets(
+    'aggregate seder name transliterates to Ashkenazi (Tahoros) — not raw',
+    (tester) async {
+      await tester.pumpWidget(
+        _host(
+          viewModel: tahorotAggregate(),
+          content: const {
+            CurriculumId.mishnayos: [tahorotSeder],
+          },
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Ashkenazi nusach: "Tahorot" → "Taharos", framed by "Siyum Seder".
+      expect(find.text('Siyum Seder Taharos'), findsOneWidget);
+      // The raw academic key must NOT leak through.
+      expect(find.text('Siyum Seder Tahorot'), findsNothing);
+    },
+  );
+
+  testWidgets('aggregate seder name transliterates to Sephardi (Tahorot)', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _host(
+        viewModel: tahorotAggregate(),
+        variant: TransliterationVariant.sephardi,
+        content: const {
+          CurriculumId.mishnayos: [tahorotSeder],
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Sephardi nusach keeps "Tahorot"; the Ashkenazi form must be absent.
+    expect(find.text('Siyum Seder Tahorot'), findsOneWidget);
+    expect(find.text('Siyum Seder Taharos'), findsNothing);
+  });
+
+  testWidgets('aggregate seder name renders the Hebrew seder name '
+      'in Hebrew-terms mode', (tester) async {
+    await tester.pumpWidget(
+      _host(
+        viewModel: tahorotAggregate(),
+        useHebrewTerms: true,
+        locale: const Locale('he'),
+        content: const {
+          CurriculumId.mishnayos: [tahorotSeder],
+        },
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Hebrew-terms mode: the Hebrew seder name "טהרות" framed by "סיום סדר".
+    expect(find.text('סיום סדר טהרות'), findsOneWidget);
+    // No raw Latin key in Hebrew mode.
+    expect(find.textContaining('Tahorot'), findsNothing);
   });
 }

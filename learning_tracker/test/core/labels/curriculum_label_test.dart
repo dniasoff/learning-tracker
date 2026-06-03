@@ -284,7 +284,7 @@ void main() {
       expect(captured, 'משניות');
     });
 
-    testWidgets('returns English when toggle off', (tester) async {
+    testWidgets('returns English Ashkenazi when toggle off', (tester) async {
       String? captured;
       await tester.pumpWidget(
         wrap(
@@ -298,10 +298,86 @@ void main() {
             },
           ),
           hebrewTermsScript: false,
+          variant: TransliterationVariant.ashkenazi,
         ),
       );
       await tester.pumpAndSettle();
       expect(captured, 'Mishnayos');
+    });
+
+    testWidgets('returns English Sephardi form when variant is sephardi', (
+      tester,
+    ) async {
+      String? captured;
+      await tester.pumpWidget(
+        wrap(
+          Consumer(
+            builder: (context, ref, _) {
+              captured = curriculumLabelText(
+                ref,
+                curriculum: CurriculumId.mishnayos,
+              );
+              return const SizedBox.shrink();
+            },
+          ),
+          hebrewTermsScript: false,
+          variant: TransliterationVariant.sephardi,
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(captured, 'Mishnayot');
+    });
+
+    testWidgets('Hebrew toggle wins over Sephardi variant', (tester) async {
+      String? captured;
+      await tester.pumpWidget(
+        wrap(
+          Consumer(
+            builder: (context, ref, _) {
+              captured = curriculumLabelText(
+                ref,
+                curriculum: CurriculumId.mishnayos,
+              );
+              return const SizedBox.shrink();
+            },
+          ),
+          hebrewTermsScript: true,
+          variant: TransliterationVariant.sephardi,
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(captured, 'משניות');
+    });
+  });
+
+  group('curriculumLabelFor (ref-free string helper)', () {
+    test('Ashkenazi (default variant) → "Mishnayos"', () {
+      expect(
+        curriculumLabelFor(CurriculumId.mishnayos, useHebrewTerms: false),
+        'Mishnayos',
+      );
+    });
+
+    test('Sephardi variant → "Mishnayot"', () {
+      expect(
+        curriculumLabelFor(
+          CurriculumId.mishnayos,
+          useHebrewTerms: false,
+          variant: TransliterationVariant.sephardi,
+        ),
+        'Mishnayot',
+      );
+    });
+
+    test('Hebrew terms → Hebrew form regardless of variant', () {
+      expect(
+        curriculumLabelFor(
+          CurriculumId.mishnayos,
+          useHebrewTerms: true,
+          variant: TransliterationVariant.sephardi,
+        ),
+        'משניות',
+      );
     });
   });
 

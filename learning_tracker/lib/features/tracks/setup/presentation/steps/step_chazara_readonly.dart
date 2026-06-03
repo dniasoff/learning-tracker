@@ -99,9 +99,15 @@ class ChazaraReadOnlyStep extends StatelessWidget {
                     separatorBuilder: (_, __) => const SizedBox(height: 10),
                     itemBuilder: (context, index) {
                       final stage = stages[index] as Map<String, dynamic>;
-                      final name = normalizeStageName(
-                        stage['stage'].toString(),
-                      );
+                      // Prefer the program's stored script label (e.g.
+                      // "חזרה א׳" / "חזרה יומית") so the stage name honours the
+                      // Hebrew/term form the seed data already carries; fall
+                      // back to title-casing the raw snake_case key only when
+                      // no label is present.
+                      final storedLabel = (stage['label'] as String?)?.trim();
+                      final name = (storedLabel?.isNotEmpty ?? false)
+                          ? storedLabel!
+                          : normalizeStageName(stage['stage'].toString());
                       final delay = stage['delay_days'];
                       final delayLabel = switch (delay) {
                         final int value when value == 1 =>
