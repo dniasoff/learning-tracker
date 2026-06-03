@@ -193,18 +193,26 @@ class _TimelineCard extends ConsumerWidget {
         ),
         subtitle: Row(
           children: [
-            CurriculumLabel.curriculum(
-              entry.curriculumId,
-              style: TextStyle(
-                fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+            Flexible(
+              child: CurriculumLabel.curriculum(
+                entry.curriculumId,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
             ),
-            Text(
-              ' · ${formatMilestoneDate(context, m.achievedAt)}',
-              style: TextStyle(
-                fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
+            Flexible(
+              child: Text(
+                ' · ${formatMilestoneDate(context, m.achievedAt)}',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
             ),
           ],

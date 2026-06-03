@@ -189,7 +189,12 @@ class _EmailVerificationConfirmPanelState
       elevation: 12,
       shadowColor: Colors.black26,
       borderRadius: BorderRadius.circular(28),
-      child: Padding(
+      // Scroll-escape valve: when a host constrains the panel's height (e.g. it
+      // sits inside a height-clamped dialog) and the illustration + title +
+      // body + buttons are taller than that, the content scrolls instead of
+      // overflowing. Where the panel is unbounded (its usual placement) the
+      // scroll view lays out at the Column's natural size — behaviour preserved.
+      child: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
         child: Column(
           mainAxisSize: MainAxisSize.min,
@@ -234,14 +239,19 @@ class _EmailVerificationConfirmPanelState
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     const Icon(Icons.mail_outline_rounded, size: 20),
                     const SizedBox(width: 10),
-                    Text(
-                      'Open Email',
-                      style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w700,
+                    Flexible(
+                      child: Text(
+                        'Open Email',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                     ),
                   ],
@@ -275,6 +285,7 @@ class _EmailVerificationConfirmPanelState
                           )
                         : Row(
                             mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
                             children: [
                               const Icon(
                                 Icons.refresh_rounded,
@@ -282,13 +293,17 @@ class _EmailVerificationConfirmPanelState
                                 color: AppTheme.brandInk,
                               ),
                               const SizedBox(width: 6),
-                              Text(
-                                'Send Again',
-                                style: Theme.of(context).textTheme.labelLarge
-                                    ?.copyWith(
-                                      fontWeight: FontWeight.w700,
-                                      color: AppTheme.brandInk,
-                                    ),
+                              Flexible(
+                                child: Text(
+                                  'Send Again',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context).textTheme.labelLarge
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.w700,
+                                        color: AppTheme.brandInk,
+                                      ),
+                                ),
                               ),
                             ],
                           ),
@@ -310,6 +325,7 @@ class _EmailVerificationConfirmPanelState
                     ),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
                         const Icon(
                           Icons.close_rounded,
@@ -317,10 +333,14 @@ class _EmailVerificationConfirmPanelState
                           color: AppTheme.brandInk,
                         ),
                         const SizedBox(width: 4),
-                        Text(
-                          'Cancel',
-                          style: Theme.of(context).textTheme.labelLarge
-                              ?.copyWith(fontWeight: FontWeight.w700),
+                        Flexible(
+                          child: Text(
+                            'Cancel',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.labelLarge
+                                ?.copyWith(fontWeight: FontWeight.w700),
+                          ),
                         ),
                       ],
                     ),

@@ -88,6 +88,11 @@ class ContentItemTile extends ConsumerWidget {
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: AppTheme.brandCreamCard,
+      // Scroll-controlled so the sheet can grow with its content and the
+      // _StageBreakdownSheet's internal SingleChildScrollView gets a bounded
+      // height to scroll within (capped at 80% of screen) instead of
+      // overflowing on short screens or with large text.
+      isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -213,78 +218,89 @@ class _StageBreakdownSheet extends ConsumerWidget {
       stageDefinitionRepositoryProvider(curriculumEnum),
     );
     final terms = domainTermLabels(ref);
+    final media = MediaQuery.of(context);
 
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: AppTheme.brandOutline,
-                borderRadius: BorderRadius.circular(2),
+    // Bound the sheet to 80% of the screen height (minus the keyboard) and make
+    // its body scrollable so a long breakdown — or large accessibility text —
+    // scrolls within the sheet instead of overflowing.
+    return SafeArea(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: (media.size.height - media.viewInsets.bottom) * 0.8,
+        ),
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: AppTheme.brandOutline,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
               ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          CurriculumLabel.item(
-            item,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: AppTheme.brandInk,
-            ),
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            'Review History',
-            style: TextStyle(fontSize: 13, color: AppTheme.brandInkMuted),
-          ),
-          const SizedBox(height: 16),
-          breakdownAsync.when(
-            data: (breakdown) {
-              if (breakdown.isEmpty) {
-                return const Text(
-                  'No completions yet.',
-                  style: TextStyle(color: AppTheme.brandInkMuted),
-                );
-              }
-              return FutureBuilder<Map<int, String>>(
-                future: _resolveStageNames(stageRepository, curriculumEnum),
-                builder: (context, snapshot) {
-                  final rawNames = snapshot.data ?? {};
-                  // Resolve each stored name through the toggle-aware resolver
-                  // so the breakdown re-renders live when the Hebrew Terms
-                  // toggle changes.
-                  final names = {
-                    for (final entry in rawNames.entries)
-                      entry.key: terms.resolveStoredStageName(entry.value),
-                  };
-                  return ItemReviewBreakdown(
-                    stageBreakdown: breakdown,
-                    stageNames: names,
+              const SizedBox(height: 16),
+              CurriculumLabel.item(
+                item,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: AppTheme.brandInk,
+                ),
+              ),
+              const SizedBox(height: 4),
+              const Text(
+                'Review History',
+                style: TextStyle(fontSize: 13, color: AppTheme.brandInkMuted),
+              ),
+              const SizedBox(height: 16),
+              breakdownAsync.when(
+                data: (breakdown) {
+                  if (breakdown.isEmpty) {
+                    return const Text(
+                      'No completions yet.',
+                      style: TextStyle(color: AppTheme.brandInkMuted),
+                    );
+                  }
+                  return FutureBuilder<Map<int, String>>(
+                    future: _resolveStageNames(stageRepository, curriculumEnum),
+                    builder: (context, snapshot) {
+                      final rawNames = snapshot.data ?? {};
+                      // Resolve each stored name through the toggle-aware resolver
+                      // so the breakdown re-renders live when the Hebrew Terms
+                      // toggle changes.
+                      final names = {
+                        for (final entry in rawNames.entries)
+                          entry.key: terms.resolveStoredStageName(entry.value),
+                      };
+                      return ItemReviewBreakdown(
+                        stageBreakdown: breakdown,
+                        stageNames: names,
+                      );
+                    },
                   );
                 },
-              );
-            },
-            loading: () => const Center(child: CircularProgressIndicator()),
-            error: (e, st) => AppErrorView(
-              error: e,
-              stackTrace: st,
-              onRetry: () => ref.refresh(
-                itemStageBreakdownProvider((
-                  curriculumId: curriculumId,
-                  sefariaRef: item.sefariaRef,
-                )),
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, st) => AppErrorView(
+                  error: e,
+                  stackTrace: st,
+                  onRetry: () => ref.refresh(
+                    itemStageBreakdownProvider((
+                      curriculumId: curriculumId,
+                      sefariaRef: item.sefariaRef,
+                    )),
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(height: 16),
+            ],
           ),
-          const SizedBox(height: 16),
-        ],
+        ),
       ),
     );
   }

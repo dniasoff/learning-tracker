@@ -427,15 +427,24 @@ class _AllTimeSummaryCard extends ConsumerWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _AllTimeStat(value: activeDaysLabel, label: l10n.allTimeActiveDays),
-            _AllTimeStat(
-              value: limudCount,
-              label: l10n.allTimeTermDone(terms.limud),
+            Expanded(
+              child: _AllTimeStat(
+                value: activeDaysLabel,
+                label: l10n.allTimeActiveDays,
+              ),
+            ),
+            Expanded(
+              child: _AllTimeStat(
+                value: limudCount,
+                label: l10n.allTimeTermDone(terms.limud),
+              ),
             ),
             if (anyTrackHasChazara)
-              _AllTimeStat(
-                value: chazaraCount,
-                label: l10n.allTimeTermDone(terms.chazaros),
+              Expanded(
+                child: _AllTimeStat(
+                  value: chazaraCount,
+                  label: l10n.allTimeTermDone(terms.chazaros),
+                ),
               ),
           ],
         ),
@@ -457,6 +466,8 @@ class _AllTimeStat extends StatelessWidget {
       children: [
         Text(
           value,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
           style: theme.textTheme.headlineMedium?.copyWith(
             fontWeight: FontWeight.w800,
             color: const Color(0xFF1A1F2F),
@@ -466,6 +477,8 @@ class _AllTimeStat extends StatelessWidget {
         Text(
           label,
           textAlign: TextAlign.center,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
           style: theme.textTheme.labelSmall?.copyWith(
             color: const Color(0xFF778099),
             fontWeight: FontWeight.w600,

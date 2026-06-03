@@ -533,7 +533,7 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
 
       // After success the dialog is popped; the AlertDialog must be gone.
-      expect(find.byType(AlertDialog), findsNothing);
+      expect(find.byType(Form), findsNothing);
 
       await _teardown(tester);
     });
@@ -591,7 +591,7 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
 
       // Dialog must remain open after failure.
-      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.byType(Form), findsOneWidget);
 
       await _teardown(tester);
     });
@@ -690,7 +690,7 @@ void main() {
       );
       await _openDialog(tester);
 
-      expect(find.byType(AlertDialog), findsOneWidget);
+      expect(find.byType(Form), findsOneWidget);
 
       await _teardown(tester);
     });

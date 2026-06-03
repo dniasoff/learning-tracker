@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/utils/text_input_formatters.dart';
+import 'package:learning_tracker/core/widgets/app_dialog.dart';
 import 'package:learning_tracker/features/account/domain/services/account_management_service.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -12,7 +13,11 @@ Future<bool?> showReauthenticateDialog({
   required String email,
   required AccountManagementService service,
 }) {
-  return showDialog<bool>(
+  // Route through the shared, overflow-safe dialog shell: its body is always
+  // wrapped in a height-constrained SingleChildScrollView and the card is
+  // clamped to the viewport minus the keyboard inset, so the text field +
+  // body never overflow on a small screen / large text / open keyboard.
+  return showAppDialog<bool>(
     context: context,
     builder: (context) => _ReauthenticateDialog(email: email, service: service),
   );
@@ -62,39 +67,55 @@ class _ReauthenticateDialogState extends State<_ReauthenticateDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: Text(AppLocalizations.of(context)!.reauthDialogTitle),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text(AppLocalizations.of(context)!.reauthDialogBody),
-          const SizedBox(height: 16),
-          TextField(
-            controller: _passwordController,
-            obscureText: true,
-            inputFormatters: const [NoSpaceFormatter()],
-            decoration: InputDecoration(
-              labelText: AppLocalizations.of(context)!.currentPasswordLabel,
-              errorText: _error,
-            ),
-            onSubmitted: (_) => _submit(),
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+
+    // Body for the shared [showAppDialog] shell — title, prompt, field, then
+    // the action row. The shell wraps this in a scrollable, keyboard-aware,
+    // height-clamped card, so a bare Column here is overflow-safe.
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(l10n.reauthDialogTitle, style: theme.textTheme.titleLarge),
+        const SizedBox(height: 16),
+        Text(l10n.reauthDialogBody),
+        const SizedBox(height: 16),
+        TextField(
+          controller: _passwordController,
+          obscureText: true,
+          inputFormatters: const [NoSpaceFormatter()],
+          decoration: InputDecoration(
+            labelText: l10n.currentPasswordLabel,
+            errorText: _error,
           ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: _loading ? null : () => Navigator.pop(context, false),
-          child: Text(AppLocalizations.of(context)!.actionCancel),
+          onSubmitted: (_) => _submit(),
         ),
-        TextButton(
-          onPressed: _loading ? null : _submit,
-          child: _loading
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : Text(AppLocalizations.of(context)!.reauthVerify),
+        const SizedBox(height: 16),
+        // OverflowBar (the same widget AlertDialog uses for its actions) lays
+        // the buttons out in a row but wraps them to a new line when they don't
+        // fit the width — avoiding a horizontal RenderFlex overflow on a narrow
+        // screen / large text.
+        OverflowBar(
+          alignment: MainAxisAlignment.end,
+          spacing: 8,
+          overflowAlignment: OverflowBarAlignment.end,
+          children: [
+            TextButton(
+              onPressed: _loading ? null : () => Navigator.pop(context, false),
+              child: Text(l10n.actionCancel),
+            ),
+            TextButton(
+              onPressed: _loading ? null : _submit,
+              child: _loading
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(l10n.reauthVerify),
+            ),
+          ],
         ),
       ],
     );

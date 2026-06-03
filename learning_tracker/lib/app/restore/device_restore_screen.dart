@@ -104,8 +104,12 @@ class _DeviceRestoreScreenState extends ConsumerState<DeviceRestoreScreen> {
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
+      // The status branches are fixed piles of content (no Expanded/Spacer),
+      // so a plain SingleChildScrollView is the right escape valve: it
+      // shrink-wraps and stays centred on normal screens, and scrolls instead
+      // of throwing a RenderFlex overflow on short viewports / large text.
       body: Center(
-        child: Padding(
+        child: SingleChildScrollView(
           padding: const EdgeInsets.all(32),
           child: status.when(
             idle: () => const SizedBox.shrink(),

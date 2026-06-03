@@ -284,13 +284,18 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
                   ),
                 ),
                 SizedBox(width: 10),
-                Text(
-                  'Backup & Sync',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontWeight: FontWeight.w700,
-                    fontSize: 33,
-                    height: 1.05,
+                // Flexible + ellipsis so the large title never overflows the
+                // row horizontally on a narrow screen / large text.
+                Flexible(
+                  child: Text(
+                    'Backup & Sync',
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 33,
+                      height: 1.05,
+                    ),
                   ),
                 ),
               ],

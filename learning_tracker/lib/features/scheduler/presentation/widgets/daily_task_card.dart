@@ -158,11 +158,14 @@ class DailyTaskCard extends ConsumerWidget {
                             ),
                           ),
                           const SizedBox(width: 8),
-                          Text(
-                            stageLabel,
-                            style: theme.textTheme.bodySmall?.copyWith(
-                              color: AppTheme.brandInkMuted,
-                              fontWeight: FontWeight.w600,
+                          Flexible(
+                            child: Text(
+                              stageLabel,
+                              overflow: TextOverflow.ellipsis,
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: AppTheme.brandInkMuted,
+                                fontWeight: FontWeight.w600,
+                              ),
                             ),
                           ),
                         ],

@@ -55,191 +55,198 @@ class ProfileSwitcherSheet extends ConsumerWidget {
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 40,
-                  height: 4,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade300,
-                    borderRadius: BorderRadius.circular(2),
-                  ),
-                ),
-              ),
-              // ── ACCOUNT (login) switching ─────────────────────────────────
-              // The login account is distinct from the learner profile: this
-              // row switches WHICH login is active (e.g. between two Google
-              // accounts on the device); the Profiles list below switches the
-              // active learner within the current account.
-              Text(
-                l10n.sectionAccount,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: AppTheme.brandInkMuted,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.8,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Material(
-                color: Colors.transparent,
-                child: ListTile(
-                  leading: const CircleAvatar(
-                    backgroundColor: AppTheme.brandBlueSoft,
-                    child: Icon(
-                      Icons.swap_horiz_rounded,
-                      color: AppTheme.brandBlueDeep,
+      // Bound the sheet height, then scroll the WHOLE body inside that bound.
+      // In an `isScrollControlled` sheet the parent imposes no height limit, so
+      // a mainAxisSize.min Column reported its full natural height and the
+      // former Flexible(SingleChildScrollView) collapsed — the profiles list
+      // and the fixed Account / Add-profile / Skip-to-Settings tiles overflowed
+      // on short screens / many profiles / large text. Clamping to 85% of the
+      // screen and putting all content in a single SingleChildScrollView makes
+      // every row (incl. the bottom tiles) reachable by scrolling, with no
+      // overflow across device sizes / text scales.
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.85,
+        ),
+        child: SafeArea(
+          top: false,
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Center(
+                  child: Container(
+                    width: 40,
+                    height: 4,
+                    margin: const EdgeInsets.only(bottom: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.grey.shade300,
+                      borderRadius: BorderRadius.circular(2),
                     ),
                   ),
-                  title: Text(
-                    l10n.switchAccount,
-                    style: const TextStyle(fontWeight: FontWeight.w600),
-                  ),
-                  subtitle: accountEmail == null
-                      ? null
-                      : Text(
-                          accountEmail,
-                          style: const TextStyle(
-                            color: AppTheme.brandInkMuted,
-                            fontSize: 12,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                  trailing: const Icon(
-                    Icons.chevron_right_rounded,
-                    color: AppColors.inkMidGrey,
-                  ),
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    unawaited(context.pushRoute(const AccountPickerRoute()));
-                  },
-                  contentPadding: EdgeInsets.zero,
                 ),
-              ),
-              const Divider(height: 24),
-              Text(
-                l10n.switcherSheetProfiles,
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: AppTheme.brandInkMuted,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.8,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Flexible(
-                child: SingleChildScrollView(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      for (final profile in profiles)
-                        _SwitcherProfileTile(
-                          profile: profile,
-                          isActive: profile.id == activeProfileId,
-                          onTap: () => _switchProfile(context, ref, profile.id),
-                          onEdit: () =>
-                              unawaited(editProfileFlow(context, ref, profile)),
-                          onDelete: () => unawaited(
-                            deleteProfileFlow(context, ref, profile),
-                          ),
-                        ),
-                      // Talmid profiles — self-gating: renders only when the
-                      // current user has ≥1 active or pending tutor grant.
-                      const TutoredChildrenSection(),
-                    ],
+                // ── ACCOUNT (login) switching ─────────────────────────────────
+                // The login account is distinct from the learner profile: this
+                // row switches WHICH login is active (e.g. between two Google
+                // accounts on the device); the Profiles list below switches the
+                // active learner within the current account.
+                Text(
+                  l10n.sectionAccount,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: AppTheme.brandInkMuted,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.8,
                   ),
                 ),
-              ),
-              const SizedBox(height: 8),
-              Material(
-                color: Colors.transparent,
-                child: ListTile(
-                  leading: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      border: Border.all(
-                        color: AppTheme.brandOutline,
-                        style: BorderStyle.solid,
+                const SizedBox(height: 8),
+                Material(
+                  color: Colors.transparent,
+                  child: ListTile(
+                    leading: const CircleAvatar(
+                      backgroundColor: AppTheme.brandBlueSoft,
+                      child: Icon(
+                        Icons.swap_horiz_rounded,
+                        color: AppTheme.brandBlueDeep,
                       ),
                     ),
-                    child: const Icon(
-                      Icons.add_rounded,
-                      color: AppTheme.brandBlueDeep,
-                      size: 20,
+                    title: Text(
+                      l10n.switchAccount,
+                      style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
-                  ),
-                  title: Text(
-                    l10n.addProfile,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.brandBlueDeep,
+                    subtitle: accountEmail == null
+                        ? null
+                        : Text(
+                            accountEmail,
+                            style: const TextStyle(
+                              color: AppTheme.brandInkMuted,
+                              fontSize: 12,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                    trailing: const Icon(
+                      Icons.chevron_right_rounded,
+                      color: AppColors.inkMidGrey,
                     ),
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      unawaited(context.pushRoute(const AccountPickerRoute()));
+                    },
+                    contentPadding: EdgeInsets.zero,
                   ),
-                  onTap: () async {
-                    // D4 root cause: popping the sheet FIRST unmounted both
-                    // `context` and `ref`, so showAddProfileDialog's
-                    // `context.mounted` guard bailed out before createProfile —
-                    // Add Profile silently created nothing. Keep the sheet
-                    // mounted while the dialog runs (it sits behind the modal
-                    // dialog barrier), then close it afterwards.
-                    await showAddProfileDialog(context, ref);
-                    if (context.mounted) Navigator.of(context).pop();
-                  },
-                  contentPadding: EdgeInsets.zero,
                 ),
-              ),
-              // FIX#8: "Skip to Settings" — mirrors the affordance on the full
-              // ProfilePickerScreen. A user with no own profile (or who simply
-              // wants Settings) can reach it directly from the mid-session
-              // switcher sheet. Pop the sheet first, then route to SettingsRoute
-              // (a shell child the ProfileGuard lets through even with no own
-              // profile), via the root navigator so it works regardless of which
-              // surface opened the sheet.
-              Material(
-                color: Colors.transparent,
-                child: ListTile(
-                  key: const Key('switcherSheetSkipToSettings'),
-                  leading: Container(
-                    width: 40,
-                    height: 40,
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: AppTheme.brandBlueSoft,
-                    ),
-                    child: const Icon(
-                      Icons.settings_rounded,
-                      color: AppTheme.brandBlueDeep,
-                      size: 20,
-                    ),
+                const Divider(height: 24),
+                Text(
+                  l10n.switcherSheetProfiles,
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: AppTheme.brandInkMuted,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.8,
                   ),
-                  title: Text(
-                    l10n.profilePickerSkipToSettings,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      color: AppTheme.brandBlueDeep,
-                    ),
-                  ),
-                  trailing: const Icon(
-                    Icons.chevron_right_rounded,
-                    color: AppColors.inkMidGrey,
-                  ),
-                  onTap: () {
-                    Navigator.of(context).pop();
-                    unawaited(context.pushRoute(const SettingsRoute()));
-                  },
-                  contentPadding: EdgeInsets.zero,
                 ),
-              ),
-            ],
+                const SizedBox(height: 8),
+                // The profiles list lays out at its natural height; the whole
+                // sheet scrolls as one unit inside the bounded SingleChildScroll-
+                // View above, so no inner same-axis scroll view is needed here.
+                for (final profile in profiles)
+                  _SwitcherProfileTile(
+                    profile: profile,
+                    isActive: profile.id == activeProfileId,
+                    onTap: () => _switchProfile(context, ref, profile.id),
+                    onEdit: () =>
+                        unawaited(editProfileFlow(context, ref, profile)),
+                    onDelete: () =>
+                        unawaited(deleteProfileFlow(context, ref, profile)),
+                  ),
+                // Talmid profiles — self-gating: renders only when the current
+                // user has ≥1 active or pending tutor grant.
+                const TutoredChildrenSection(),
+                const SizedBox(height: 8),
+                Material(
+                  color: Colors.transparent,
+                  child: ListTile(
+                    leading: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: AppTheme.brandOutline,
+                          style: BorderStyle.solid,
+                        ),
+                      ),
+                      child: const Icon(
+                        Icons.add_rounded,
+                        color: AppTheme.brandBlueDeep,
+                        size: 20,
+                      ),
+                    ),
+                    title: Text(
+                      l10n.addProfile,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.brandBlueDeep,
+                      ),
+                    ),
+                    onTap: () async {
+                      // D4 root cause: popping the sheet FIRST unmounted both
+                      // `context` and `ref`, so showAddProfileDialog's
+                      // `context.mounted` guard bailed out before createProfile —
+                      // Add Profile silently created nothing. Keep the sheet
+                      // mounted while the dialog runs (it sits behind the modal
+                      // dialog barrier), then close it afterwards.
+                      await showAddProfileDialog(context, ref);
+                      if (context.mounted) Navigator.of(context).pop();
+                    },
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+                // FIX#8: "Skip to Settings" — mirrors the affordance on the full
+                // ProfilePickerScreen. A user with no own profile (or who simply
+                // wants Settings) can reach it directly from the mid-session
+                // switcher sheet. Pop the sheet first, then route to SettingsRoute
+                // (a shell child the ProfileGuard lets through even with no own
+                // profile), via the root navigator so it works regardless of which
+                // surface opened the sheet.
+                Material(
+                  color: Colors.transparent,
+                  child: ListTile(
+                    key: const Key('switcherSheetSkipToSettings'),
+                    leading: Container(
+                      width: 40,
+                      height: 40,
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppTheme.brandBlueSoft,
+                      ),
+                      child: const Icon(
+                        Icons.settings_rounded,
+                        color: AppTheme.brandBlueDeep,
+                        size: 20,
+                      ),
+                    ),
+                    title: Text(
+                      l10n.profilePickerSkipToSettings,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: AppTheme.brandBlueDeep,
+                      ),
+                    ),
+                    trailing: const Icon(
+                      Icons.chevron_right_rounded,
+                      color: AppColors.inkMidGrey,
+                    ),
+                    onTap: () {
+                      Navigator.of(context).pop();
+                      unawaited(context.pushRoute(const SettingsRoute()));
+                    },
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),

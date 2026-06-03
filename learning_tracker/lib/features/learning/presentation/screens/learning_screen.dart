@@ -410,9 +410,16 @@ class _LearnTaskCard extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
+                    // Badge chips: a Wrap (not a Row) so that on a narrow
+                    // viewport at large text the stage chip drops to a second
+                    // line instead of overflowing horizontally. On normal
+                    // devices both chips sit on one line, unchanged.
+                    Wrap(
+                      spacing: 6,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        if (isOverdue) ...[
+                        if (isOverdue)
                           Container(
                             padding: const EdgeInsets.symmetric(
                               horizontal: 7,
@@ -431,8 +438,6 @@ class _LearnTaskCard extends ConsumerWidget {
                               ),
                             ),
                           ),
-                          const SizedBox(width: 6),
-                        ],
                         Container(
                           padding: const EdgeInsets.symmetric(
                             horizontal: 6,
@@ -444,6 +449,8 @@ class _LearnTaskCard extends ConsumerWidget {
                           ),
                           child: Text(
                             stageLabel,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                             style: theme.textTheme.labelSmall?.copyWith(
                               color: const Color(0xFF6A7282),
                               fontWeight: FontWeight.w700,

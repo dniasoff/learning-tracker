@@ -97,61 +97,67 @@ class _ChooseMethodWidget extends ConsumerWidget {
     final theme = Theme.of(context);
     return SafeArea(
       top: false,
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            Text(
-              _questionText,
-              style: theme.textTheme.headlineSmall,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 8),
-            Text(
-              curriculumLabelText(ref, curriculum: curriculumId),
-              style: theme.textTheme.bodyLarge?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+      // Scroll escape valve: this body is a fixed pile of option cards (no
+      // Expanded/Spacer), so a plain SingleChildScrollView lets it scroll
+      // instead of overflowing on short screens / large text. Normal-screen
+      // appearance is unchanged.
+      child: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                _questionText,
+                style: theme.textTheme.headlineSmall,
+                textAlign: TextAlign.center,
               ),
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 32),
-            if (presets.isNotEmpty)
+              const SizedBox(height: 8),
+              Text(
+                curriculumLabelText(ref, curriculum: curriculumId),
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 32),
+              if (presets.isNotEmpty)
+                _OptionCard(
+                  icon: Icons.school,
+                  title: 'Follow a program',
+                  subtitle: '${presets.length} programs available',
+                  onTap: ctx.advance,
+                ),
+              const SizedBox(height: 12),
               _OptionCard(
-                icon: Icons.school,
-                title: 'Follow a program',
-                subtitle: '${presets.length} programs available',
-                onTap: ctx.advance,
-              ),
-            const SizedBox(height: 12),
-            _OptionCard(
-              icon: Icons.tune,
-              title: 'Custom schedule',
-              subtitle: 'Build your own review cycle',
-              onTap: () => onComplete(
-                LearningProcessWizardResult(
-                  wizardResult: WizardResult(
-                    curriculumId: curriculumId,
-                    choice: WizardChoice.custom,
+                icon: Icons.tune,
+                title: 'Custom schedule',
+                subtitle: 'Build your own review cycle',
+                onTap: () => onComplete(
+                  LearningProcessWizardResult(
+                    wizardResult: WizardResult(
+                      curriculumId: curriculumId,
+                      choice: WizardChoice.custom,
+                    ),
                   ),
                 ),
               ),
-            ),
-            const SizedBox(height: 12),
-            _OptionCard(
-              icon: Icons.play_arrow,
-              title: 'No formal review',
-              subtitle: 'Just track learning progress',
-              onTap: () => onComplete(
-                LearningProcessWizardResult(
-                  wizardResult: WizardResult(
-                    curriculumId: curriculumId,
-                    choice: WizardChoice.noReview,
+              const SizedBox(height: 12),
+              _OptionCard(
+                icon: Icons.play_arrow,
+                title: 'No formal review',
+                subtitle: 'Just track learning progress',
+                onTap: () => onComplete(
+                  LearningProcessWizardResult(
+                    wizardResult: WizardResult(
+                      curriculumId: curriculumId,
+                      choice: WizardChoice.noReview,
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/widgets/scrollable_fill_body.dart';
 import 'package:learning_tracker/features/sacred_time/domain/models/sacred_window.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_windows_provider.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -48,34 +49,39 @@ class _LockScreen extends StatelessWidget {
           child: SafeArea(
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 32),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    spec.icon,
-                    size: 96,
-                    color: Colors.white.withValues(alpha: 0.92),
-                  ),
-                  const SizedBox(height: 28),
-                  Text(
-                    greeting,
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.displaySmall?.copyWith(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w800,
-                      letterSpacing: -0.5,
+              // Centre the greeting on normal devices, but let it scroll when
+              // the icon + large display text exceed the viewport height (small
+              // screens at large text scales) instead of overflowing.
+              child: ScrollableFillBody(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      spec.icon,
+                      size: 96,
+                      color: Colors.white.withValues(alpha: 0.92),
                     ),
-                  ),
-                  const SizedBox(height: 14),
-                  Text(
-                    subtitle,
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Colors.white.withValues(alpha: 0.78),
-                      height: 1.4,
+                    const SizedBox(height: 28),
+                    Text(
+                      greeting,
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.displaySmall?.copyWith(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: -0.5,
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 14),
+                    Text(
+                      subtitle,
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: Colors.white.withValues(alpha: 0.78),
+                        height: 1.4,
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),

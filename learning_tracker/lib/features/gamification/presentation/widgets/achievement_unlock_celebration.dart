@@ -233,7 +233,6 @@ class _UnlockPartyDialogState extends State<_UnlockPartyDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Dialog(
       backgroundColor: Colors.transparent,
       insetPadding: EdgeInsets.zero,
@@ -282,91 +281,131 @@ class _UnlockPartyDialogState extends State<_UnlockPartyDialog> {
             Center(
               child: Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Material(
-                  color: Colors.transparent,
-                  child: Container(
-                    width: 340,
-                    padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(28),
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [
-                          Color(0xFFFFF4E0),
-                          Color(0xFFFFE0F0),
-                          Color(0xFFE0F4FF),
-                        ],
-                      ),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Color(0x4D0038A8),
-                          blurRadius: 32,
-                          offset: Offset(0, 12),
-                        ),
-                      ],
-                      border: Border.all(
-                        color: Colors.white.withValues(alpha: 0.9),
-                        width: 3,
-                      ),
-                    ),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text('🎉', style: TextStyle(fontSize: 52)),
-                        const SizedBox(height: 4),
-                        Text(
-                          widget.l10n.achievementsUnlockPartyTitle,
-                          textAlign: TextAlign.center,
-                          style: theme.textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.w900,
-                            color: const Color(0xFFE65100),
-                            letterSpacing: 0.3,
-                            height: 1.1,
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        Text(
-                          widget.l10n.achievementsUnlockPartyMessage(
-                            widget.displayName,
-                            widget.milestoneTitle,
-                            widget.trackLabel,
-                          ),
-                          textAlign: TextAlign.center,
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            height: 1.4,
-                            color: const Color(0xFF37474F),
-                          ),
-                        ),
-                        const SizedBox(height: 20),
-                        FilledButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          style: FilledButton.styleFrom(
-                            backgroundColor: AppTheme.brandBlue,
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 32,
-                              vertical: 14,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(20),
-                            ),
-                          ),
-                          child: Text(
-                            widget.l10n.achievementsUnlockPartyButton,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                child: AchievementUnlockCard(
+                  displayName: widget.displayName,
+                  milestoneTitle: widget.milestoneTitle,
+                  trackLabel: widget.trackLabel,
+                  l10n: widget.l10n,
+                  onContinue: () => Navigator.of(context).pop(),
                 ),
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// The branded celebration card (emoji + title + message + button), extracted
+/// from [_UnlockPartyDialog] so the overflow-prone surface can be rendered and
+/// guarded without the looping confetti / auto-close timer.
+///
+/// Overflow-safe by construction: the card height is capped to the viewport
+/// (minus safe-area + a small margin) and its content lives in a
+/// [SingleChildScrollView], so a long milestone/track name at large text scales
+/// shrinks-and-scrolls instead of overflowing the Column.
+class AchievementUnlockCard extends StatelessWidget {
+  const AchievementUnlockCard({
+    super.key,
+    required this.displayName,
+    required this.milestoneTitle,
+    required this.trackLabel,
+    required this.l10n,
+    required this.onContinue,
+  });
+
+  final String displayName;
+  final String milestoneTitle;
+  final String trackLabel;
+  final AppLocalizations l10n;
+  final VoidCallback onContinue;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final media = MediaQuery.of(context);
+    final maxCardHeight = media.size.height - media.padding.vertical - 48;
+    return Material(
+      color: Colors.transparent,
+      child: Container(
+        width: 340,
+        constraints: BoxConstraints(
+          maxHeight: maxCardHeight > 0 ? maxCardHeight : media.size.height,
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 24, 20, 20),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(28),
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [Color(0xFFFFF4E0), Color(0xFFFFE0F0), Color(0xFFE0F4FF)],
+          ),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x4D0038A8),
+              blurRadius: 32,
+              offset: Offset(0, 12),
+            ),
+          ],
+          border: Border.all(
+            color: Colors.white.withValues(alpha: 0.9),
+            width: 3,
+          ),
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('🎉', style: TextStyle(fontSize: 52)),
+              const SizedBox(height: 4),
+              Text(
+                l10n.achievementsUnlockPartyTitle,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w900,
+                  color: const Color(0xFFE65100),
+                  letterSpacing: 0.3,
+                  height: 1.1,
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                l10n.achievementsUnlockPartyMessage(
+                  displayName,
+                  milestoneTitle,
+                  trackLabel,
+                ),
+                textAlign: TextAlign.center,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                  height: 1.4,
+                  color: const Color(0xFF37474F),
+                ),
+              ),
+              const SizedBox(height: 20),
+              FilledButton(
+                onPressed: onContinue,
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppTheme.brandBlue,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 14,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                ),
+                child: Text(
+                  l10n.achievementsUnlockPartyButton,
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

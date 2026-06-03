@@ -401,96 +401,130 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
 
   Widget _buildSuccess(ThemeData theme) {
     final l10n = AppLocalizations.of(context)!;
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const CircleAvatar(
-            radius: 40,
-            backgroundColor: Color(0xFFEAF5EA),
-            child: Icon(
-              Icons.check_circle_rounded,
-              size: 48,
-              color: Color(0xFF3A7C3A),
+    // Centred fixed pile — wrap in a height-clamped scroll view so it stays
+    // vertically centred on normal screens but scrolls (rather than
+    // overflowing) on short viewports / large text.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: constraints.maxHeight.isFinite
+                  ? (constraints.maxHeight - 48).clamp(0.0, double.infinity)
+                  : 0,
+            ),
+            child: IntrinsicHeight(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  const CircleAvatar(
+                    radius: 40,
+                    backgroundColor: Color(0xFFEAF5EA),
+                    child: Icon(
+                      Icons.check_circle_rounded,
+                      size: 48,
+                      color: Color(0xFF3A7C3A),
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    l10n.acceptInviteSuccessHeading,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.brandInk,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    l10n.acceptInviteSuccessBody,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: AppTheme.brandInkMuted,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  FilledButton(
+                    onPressed: () => unawaited(
+                      context.router.replaceAll([const AppShellRoute()]),
+                    ),
+                    style: FilledButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: const StadiumBorder(),
+                    ),
+                    child: Text(l10n.actionGoToDashboard),
+                  ),
+                ],
+              ),
             ),
           ),
-          const SizedBox(height: 20),
-          Text(
-            l10n.acceptInviteSuccessHeading,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: AppTheme.brandInk,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            l10n.acceptInviteSuccessBody,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.bodyLarge?.copyWith(
-              color: AppTheme.brandInkMuted,
-              height: 1.4,
-            ),
-          ),
-          const SizedBox(height: 32),
-          FilledButton(
-            onPressed: () =>
-                unawaited(context.router.replaceAll([const AppShellRoute()])),
-            style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              shape: const StadiumBorder(),
-            ),
-            child: Text(l10n.actionGoToDashboard),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
   Widget _buildError(ThemeData theme) {
     final l10n = AppLocalizations.of(context)!;
-    return Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          CircleAvatar(
-            radius: 40,
-            backgroundColor: Colors.red.shade50,
-            child: Icon(
-              Icons.error_rounded,
-              size: 48,
-              color: Colors.red.shade600,
+    // Centred fixed pile — wrap in a height-clamped scroll view so it stays
+    // vertically centred on normal screens but scrolls (rather than
+    // overflowing) on short viewports / large text.
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        return SingleChildScrollView(
+          padding: const EdgeInsets.all(24),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              minHeight: constraints.maxHeight.isFinite
+                  ? (constraints.maxHeight - 48).clamp(0.0, double.infinity)
+                  : 0,
+            ),
+            child: IntrinsicHeight(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  CircleAvatar(
+                    radius: 40,
+                    backgroundColor: Colors.red.shade50,
+                    child: Icon(
+                      Icons.error_rounded,
+                      size: 48,
+                      color: Colors.red.shade600,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                  Text(
+                    l10n.acceptInviteErrorHeading,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.headlineSmall?.copyWith(
+                      fontWeight: FontWeight.w800,
+                      color: AppTheme.brandInk,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    _errorMessage ?? l10n.unexpectedError,
+                    textAlign: TextAlign.center,
+                    style: theme.textTheme.bodyLarge?.copyWith(
+                      color: AppTheme.brandInkMuted,
+                      height: 1.4,
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  OutlinedButton(
+                    onPressed: () =>
+                        setState(() => _step = _AcceptStep.readyToAccept),
+                    child: Text(l10n.actionTryAgain),
+                  ),
+                ],
+              ),
             ),
           ),
-          const SizedBox(height: 20),
-          Text(
-            l10n.acceptInviteErrorHeading,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: AppTheme.brandInk,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            _errorMessage ?? l10n.unexpectedError,
-            textAlign: TextAlign.center,
-            style: theme.textTheme.bodyLarge?.copyWith(
-              color: AppTheme.brandInkMuted,
-              height: 1.4,
-            ),
-          ),
-          const SizedBox(height: 32),
-          OutlinedButton(
-            onPressed: () => setState(() => _step = _AcceptStep.readyToAccept),
-            child: Text(l10n.actionTryAgain),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

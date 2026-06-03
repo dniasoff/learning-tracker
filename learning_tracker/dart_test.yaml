@@ -166,3 +166,4 @@ tags:
 
   # Multi-device overflow guard (test/overflow/)
   overflow:
+  settings:

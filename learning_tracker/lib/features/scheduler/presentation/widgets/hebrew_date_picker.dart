@@ -104,6 +104,7 @@ class _HebrewDatePickerState extends State<HebrewDatePicker> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final media = MediaQuery.of(context);
     final months = _getMonths();
     final maxDay = _daysInMonth();
     final effectiveDay = _hebrewDay > maxDay ? maxDay : _hebrewDay;
@@ -113,248 +114,267 @@ class _HebrewDatePickerState extends State<HebrewDatePicker> {
       day: effectiveDay,
     );
 
+    // Available height = full screen minus the system safe-area insets and the
+    // on-screen keyboard, minus a small breathing-room margin. When the screen
+    // is short or large text is in use, the picker content scrolls instead of
+    // overflowing — mirrors the clamp/scroll contract in [showAppDialog].
+    final maxHeight =
+        media.size.height -
+        media.padding.top -
+        media.padding.bottom -
+        media.viewInsets.bottom -
+        48;
+
     return Dialog(
       backgroundColor: AppTheme.brandCreamCard,
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),
       child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 360),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 12, 20),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Select Hebrew date',
-                      textAlign: TextAlign.center,
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        color: AppTheme.brandInk,
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        height: 1.2,
-                      ),
-                    ),
-                  ),
-                  IconButton(
-                    onPressed: () => Navigator.of(context).pop(),
-                    icon: const Icon(
-                      Icons.close,
-                      color: AppTheme.brandInkMuted,
-                      size: 22,
-                    ),
-                    tooltip: MaterialLocalizations.of(
-                      context,
-                    ).closeButtonTooltip,
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              // Year
-              Text(
-                'Hebrew year',
-                style: theme.textTheme.labelSmall?.copyWith(
-                  color: AppTheme.brandInkMuted,
-                  fontWeight: FontWeight.w700,
-                  letterSpacing: 0.2,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
-                decoration: BoxDecoration(
-                  color: _fieldFill,
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Row(
+        constraints: BoxConstraints(
+          maxWidth: 360,
+          maxHeight: maxHeight > 0 ? maxHeight : media.size.height,
+        ),
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(20, 8, 12, 20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
                   children: [
-                    Material(
-                      color: Colors.transparent,
-                      child: IconButton(
-                        onPressed: () => setState(() {
-                          _hebrewYear--;
-                          _clampDayToMonth();
-                        }),
-                        icon: const Icon(
-                          Icons.remove_rounded,
-                          color: AppTheme.brandBlue,
-                        ),
-                      ),
-                    ),
+                    const SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        '$_hebrewYear',
+                        'Select Hebrew date',
                         textAlign: TextAlign.center,
                         style: theme.textTheme.titleLarge?.copyWith(
+                          color: AppTheme.brandInk,
+                          fontSize: 22,
                           fontWeight: FontWeight.w800,
-                          color: AppTheme.brandBlueDeep,
+                          height: 1.2,
                         ),
                       ),
                     ),
-                    Material(
-                      color: Colors.transparent,
-                      child: IconButton(
-                        onPressed: () => setState(() {
-                          _hebrewYear++;
+                    IconButton(
+                      onPressed: () => Navigator.of(context).pop(),
+                      icon: const Icon(
+                        Icons.close,
+                        color: AppTheme.brandInkMuted,
+                        size: 22,
+                      ),
+                      tooltip: MaterialLocalizations.of(
+                        context,
+                      ).closeButtonTooltip,
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                // Year
+                Text(
+                  'Hebrew year',
+                  style: theme.textTheme.labelSmall?.copyWith(
+                    color: AppTheme.brandInkMuted,
+                    fontWeight: FontWeight.w700,
+                    letterSpacing: 0.2,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: _fieldFill,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    children: [
+                      Material(
+                        color: Colors.transparent,
+                        child: IconButton(
+                          onPressed: () => setState(() {
+                            _hebrewYear--;
+                            _clampDayToMonth();
+                          }),
+                          icon: const Icon(
+                            Icons.remove_rounded,
+                            color: AppTheme.brandBlue,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: Text(
+                          '$_hebrewYear',
+                          textAlign: TextAlign.center,
+                          style: theme.textTheme.titleLarge?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: AppTheme.brandBlueDeep,
+                          ),
+                        ),
+                      ),
+                      Material(
+                        color: Colors.transparent,
+                        child: IconButton(
+                          onPressed: () => setState(() {
+                            _hebrewYear++;
+                            _clampDayToMonth();
+                          }),
+                          icon: const Icon(
+                            Icons.add_rounded,
+                            color: AppTheme.brandBlue,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: DropdownButtonFormField<int>(
+                        // Controlled selection when year changes month list; keep
+                        // `value` (initialValue is one-shot per FormField key).
+                        // ignore: deprecated_member_use
+                        value: months.contains(_hebrewMonth)
+                            ? _hebrewMonth
+                            : months.first,
+                        decoration: _fieldDecoration('Month'),
+                        items: months.map((m) {
+                          final name = HebrewCalendarUtils.getHebrewMonthName(
+                            m,
+                            hebrewYear: _hebrewYear,
+                          );
+                          return DropdownMenuItem(
+                            value: m,
+                            child: Text(
+                              name,
+                              overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(
+                                color: AppTheme.brandInk,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (v) => setState(() {
+                          _hebrewMonth = v!;
                           _clampDayToMonth();
                         }),
-                        icon: const Icon(
-                          Icons.add_rounded,
-                          color: AppTheme.brandBlue,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    SizedBox(
+                      width: 108,
+                      child: DropdownButtonFormField<int>(
+                        // ignore: deprecated_member_use
+                        value: effectiveDay,
+                        decoration: _fieldDecoration('Day'),
+                        items: List.generate(
+                          maxDay,
+                          (i) => DropdownMenuItem(
+                            value: i + 1,
+                            child: Text(
+                              '${i + 1}',
+                              style: const TextStyle(
+                                color: AppTheme.brandInk,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
                         ),
+                        onChanged: (v) => setState(() {
+                          _hebrewDay = v!;
+                          _clampDayToMonth();
+                        }),
                       ),
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: DropdownButtonFormField<int>(
-                      // Controlled selection when year changes month list; keep
-                      // `value` (initialValue is one-shot per FormField key).
-                      // ignore: deprecated_member_use
-                      value: months.contains(_hebrewMonth)
-                          ? _hebrewMonth
-                          : months.first,
-                      decoration: _fieldDecoration('Month'),
-                      items: months.map((m) {
-                        final name = HebrewCalendarUtils.getHebrewMonthName(
-                          m,
-                          hebrewYear: _hebrewYear,
-                        );
-                        return DropdownMenuItem(
-                          value: m,
-                          child: Text(
-                            name,
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(
-                              color: AppTheme.brandInk,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        );
-                      }).toList(),
-                      onChanged: (v) => setState(() {
-                        _hebrewMonth = v!;
-                        _clampDayToMonth();
-                      }),
+                const SizedBox(height: 16),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppTheme.brandCreamSoft,
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(
+                      color: AppTheme.brandOutline.withValues(alpha: 0.45),
                     ),
                   ),
-                  const SizedBox(width: 12),
-                  SizedBox(
-                    width: 108,
-                    child: DropdownButtonFormField<int>(
-                      // ignore: deprecated_member_use
-                      value: effectiveDay,
-                      decoration: _fieldDecoration('Day'),
-                      items: List.generate(
-                        maxDay,
-                        (i) => DropdownMenuItem(
-                          value: i + 1,
-                          child: Text(
-                            '${i + 1}',
-                            style: const TextStyle(
-                              color: AppTheme.brandInk,
-                              fontWeight: FontWeight.w600,
-                            ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.event_rounded,
+                        size: 20,
+                        color: AppTheme.brandInkMuted,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'English: ${HebrewCalendarUtils.formatEnglishDate(gregorian, locale: Localizations.localeOf(context).toString())}',
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: AppTheme.brandInk,
+                            fontWeight: FontWeight.w600,
                           ),
                         ),
                       ),
-                      onChanged: (v) => setState(() {
-                        _hebrewDay = v!;
-                        _clampDayToMonth();
-                      }),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 12,
-                ),
-                decoration: BoxDecoration(
-                  color: AppTheme.brandCreamSoft,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(
-                    color: AppTheme.brandOutline.withValues(alpha: 0.45),
+                    ],
                   ),
                 ),
-                child: Row(
+                const SizedBox(height: 20),
+                Row(
                   children: [
-                    const Icon(
-                      Icons.event_rounded,
-                      size: 20,
-                      color: AppTheme.brandInkMuted,
-                    ),
-                    const SizedBox(width: 10),
                     Expanded(
-                      child: Text(
-                        'English: ${HebrewCalendarUtils.formatEnglishDate(gregorian, locale: Localizations.localeOf(context).toString())}',
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: AppTheme.brandInk,
-                          fontWeight: FontWeight.w600,
+                      child: TextButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        style: TextButton.styleFrom(
+                          foregroundColor: AppTheme.brandInkMuted,
+                          padding: const EdgeInsets.symmetric(vertical: 14),
+                          textStyle: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        child: Text(AppLocalizations.of(context)!.actionCancel),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 2,
+                      child: FilledButton(
+                        onPressed: () {
+                          Navigator.of(context).pop(
+                            HebrewCalendarUtils.hebrewToGregorian(
+                              year: _hebrewYear,
+                              month: _hebrewMonth,
+                              day: effectiveDay,
+                            ),
+                          );
+                        },
+                        style: FilledButton.styleFrom(
+                          backgroundColor: AppTheme.brandBlue,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(28),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: Text(
+                          AppLocalizations.of(context)!.schedulerSelectDate,
                         ),
                       ),
                     ),
                   ],
                 ),
-              ),
-              const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      style: TextButton.styleFrom(
-                        foregroundColor: AppTheme.brandInkMuted,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        textStyle: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      child: Text(AppLocalizations.of(context)!.actionCancel),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    flex: 2,
-                    child: FilledButton(
-                      onPressed: () {
-                        Navigator.of(context).pop(
-                          HebrewCalendarUtils.hebrewToGregorian(
-                            year: _hebrewYear,
-                            month: _hebrewMonth,
-                            day: effectiveDay,
-                          ),
-                        );
-                      },
-                      style: FilledButton.styleFrom(
-                        backgroundColor: AppTheme.brandBlue,
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(28),
-                        ),
-                        elevation: 0,
-                      ),
-                      child: Text(
-                        AppLocalizations.of(context)!.schedulerSelectDate,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

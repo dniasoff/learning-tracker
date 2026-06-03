@@ -93,9 +93,10 @@ class StudyDayConfigScreen extends ConsumerWidget {
               );
             }
 
-            return Padding(
+            return SingleChildScrollView(
               padding: const EdgeInsets.all(24),
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
@@ -105,7 +106,11 @@ class StudyDayConfigScreen extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Row(
+                  // Wrap (not Row) so the two legend chips flow to a second
+                  // line on narrow widths / large text instead of overflowing.
+                  Wrap(
+                    spacing: 16,
+                    runSpacing: 8,
                     children: [
                       _LegendDot(
                         color: theme.colorScheme.primary,
@@ -113,7 +118,6 @@ class StudyDayConfigScreen extends ConsumerWidget {
                           context,
                         )!.schedulerStudyLabel,
                       ),
-                      const SizedBox(width: 16),
                       _LegendDot(
                         color: theme.colorScheme.onSurfaceVariant.withValues(
                           alpha: 0.4,
@@ -302,29 +306,35 @@ class _DayToggleTile extends StatelessWidget {
                     ),
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: isStudy
-                        ? theme.colorScheme.primary.withValues(alpha: 0.15)
-                        : theme.colorScheme.outline.withValues(alpha: 0.25),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Text(
-                    isStudy
-                        ? AppLocalizations.of(context)!.schedulerStudyLabel
-                        : AppLocalizations.of(
-                            context,
-                          )!.schedulerReviewOnlyLabel,
-                    style: TextStyle(
+                // Flexible + ellipsis so the badge shrinks rather than
+                // overflowing the row at large text on narrow screens.
+                Flexible(
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
                       color: isStudy
-                          ? theme.colorScheme.primary
-                          : theme.colorScheme.onSurfaceVariant,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
+                          ? theme.colorScheme.primary.withValues(alpha: 0.15)
+                          : theme.colorScheme.outline.withValues(alpha: 0.25),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(
+                      isStudy
+                          ? AppLocalizations.of(context)!.schedulerStudyLabel
+                          : AppLocalizations.of(
+                              context,
+                            )!.schedulerReviewOnlyLabel,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: isStudy
+                            ? theme.colorScheme.primary
+                            : theme.colorScheme.onSurfaceVariant,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),
@@ -354,10 +364,16 @@ class _LegendDot extends StatelessWidget {
           decoration: BoxDecoration(color: color, shape: BoxShape.circle),
         ),
         const SizedBox(width: 6),
-        Text(
-          label,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
+        // Flexible + ellipsis so a long label at large text ellipsizes
+        // instead of overflowing the (Wrap-bounded) legend chip.
+        Flexible(
+          child: Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
           ),
         ),
       ],

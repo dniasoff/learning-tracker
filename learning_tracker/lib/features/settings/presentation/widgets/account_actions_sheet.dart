@@ -100,7 +100,10 @@ class _AccountActionsSheet extends ConsumerWidget {
       ),
       child: SafeArea(
         top: false,
-        child: Padding(
+        // Scroll the rows (up to 5 ListTiles) so that on a short screen / large
+        // text / landscape the sheet content scrolls instead of overflowing.
+        // The sheet is already isScrollControlled, so it can grow to fit.
+        child: SingleChildScrollView(
           padding: const EdgeInsets.fromLTRB(8, 12, 8, 12),
           child: Column(
             mainAxisSize: MainAxisSize.min,

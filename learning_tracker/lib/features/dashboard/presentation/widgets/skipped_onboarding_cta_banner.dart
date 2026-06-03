@@ -14,6 +14,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/widgets/scrollable_fill_body.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart'
     show profileListProvider;
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -84,88 +85,91 @@ class _CtaBannerBody extends StatelessWidget {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
 
-    return Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const CircleAvatar(
-              radius: 36,
-              backgroundColor: Color(0xFFE4E7EF),
-              child: Icon(
-                Icons.waving_hand_rounded,
-                size: 36,
-                color: AppTheme.brandBlueDeep,
+    // Overflow-safe fill: centres on normal screens, scrolls on short ones.
+    return ScrollableFillBody(
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircleAvatar(
+                radius: 36,
+                backgroundColor: Color(0xFFE4E7EF),
+                child: Icon(
+                  Icons.waving_hand_rounded,
+                  size: 36,
+                  color: AppTheme.brandBlueDeep,
+                ),
               ),
-            ),
-            const SizedBox(height: 20),
-            Text(
-              joinedToTutor
-                  ? l10n.tutorWelcomeBannerTitle
-                  : l10n.ctaGetStartedTitle,
-              textAlign: TextAlign.center,
-              style: theme.textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.w800,
-                color: AppTheme.brandInk,
+              const SizedBox(height: 20),
+              Text(
+                joinedToTutor
+                    ? l10n.tutorWelcomeBannerTitle
+                    : l10n.ctaGetStartedTitle,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  color: AppTheme.brandInk,
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              joinedToTutor
-                  ? l10n.tutorWelcomeBannerBody
-                  : l10n.ctaGetStartedBody,
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodyLarge?.copyWith(
-                color: AppTheme.brandInkMuted,
-                height: 1.4,
+              const SizedBox(height: 8),
+              Text(
+                joinedToTutor
+                    ? l10n.tutorWelcomeBannerBody
+                    : l10n.ctaGetStartedBody,
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyLarge?.copyWith(
+                  color: AppTheme.brandInkMuted,
+                  height: 1.4,
+                ),
               ),
-            ),
-            const SizedBox(height: 32),
-            FilledButton.icon(
-              icon: const Icon(Icons.add_rounded),
-              label: Text(l10n.ctaAddLearningTrack),
-              style: FilledButton.styleFrom(
-                backgroundColor: AppTheme.brandBlue,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: const StadiumBorder(),
-              ),
-              onPressed: () async {
-                // D6: a track cannot be saved on a profile-less account — the
-                // active profileId resolves to the sentinel 0, which has no
-                // learner_profiles row, so the track/stage insert FK-fails and
-                // the user only sees "Failed to save track". Guide them to
-                // create a profile FIRST instead of into a guaranteed failure.
-                final profiles = await ref.read(profileListProvider.future);
-                if (!context.mounted) return;
-                if (profiles.isEmpty) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text(l10n.ctaCreateProfileFirst)),
+              const SizedBox(height: 32),
+              FilledButton.icon(
+                icon: const Icon(Icons.add_rounded),
+                label: Text(l10n.ctaAddLearningTrack),
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppTheme.brandBlue,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: const StadiumBorder(),
+                ),
+                onPressed: () async {
+                  // D6: a track cannot be saved on a profile-less account — the
+                  // active profileId resolves to the sentinel 0, which has no
+                  // learner_profiles row, so the track/stage insert FK-fails and
+                  // the user only sees "Failed to save track". Guide them to
+                  // create a profile FIRST instead of into a guaranteed failure.
+                  final profiles = await ref.read(profileListProvider.future);
+                  if (!context.mounted) return;
+                  if (profiles.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(l10n.ctaCreateProfileFirst)),
+                    );
+                    unawaited(context.router.push(const ManageLearnersRoute()));
+                    return;
+                  }
+                  unawaited(
+                    context.router.push(
+                      TrackManagementHubRoute(startAdding: true),
+                    ),
                   );
-                  unawaited(context.router.push(const ManageLearnersRoute()));
-                  return;
-                }
-                unawaited(
-                  context.router.push(
-                    TrackManagementHubRoute(startAdding: true),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 24),
-            TextButton(
-              onPressed: () async {
-                await clearOnboardingSkipState();
-                ref.invalidate(onboardingSkipStateProvider);
-              },
-              child: Text(
-                l10n.commonDismiss,
-                style: const TextStyle(color: AppTheme.brandInkMuted),
+                },
               ),
-            ),
-          ],
+              const SizedBox(height: 24),
+              TextButton(
+                onPressed: () async {
+                  await clearOnboardingSkipState();
+                  ref.invalidate(onboardingSkipStateProvider);
+                },
+                child: Text(
+                  l10n.commonDismiss,
+                  style: const TextStyle(color: AppTheme.brandInkMuted),
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
