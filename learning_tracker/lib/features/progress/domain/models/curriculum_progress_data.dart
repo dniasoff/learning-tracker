@@ -1,3 +1,4 @@
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 
 /// Progress data for an entire curriculum, broken down by hierarchy level.
@@ -18,6 +19,8 @@ class CurriculumProgressData {
 /// Progress for one hierarchy level (e.g., a specific seder).
 class HierarchyLevelProgress {
   const HierarchyLevelProgress({
+    required this.curriculumId,
+    required this.level,
     required this.levelName,
     required this.levelLabel,
     required this.totalItems,
@@ -27,6 +30,17 @@ class HierarchyLevelProgress {
     this.subLevels,
   });
 
+  /// Which curriculum this level belongs to — needed so the presentation
+  /// layer can resolve [levelName] (a raw content key) to its variant-aware
+  /// display form via the shared curriculum label renderer.
+  final CurriculumId curriculumId;
+
+  /// 1-based hierarchy depth of this level (1 = seder/sefer, 2 = masechta, …).
+  /// Feeds the level-aware name renderer alongside [levelName].
+  final int level;
+
+  /// Raw content storage key for this level (e.g. "Seder Zeraim"). NOT a
+  /// display string — render it through the curriculum label layer.
   final String levelName;
   final String levelLabel;
   final int totalItems;

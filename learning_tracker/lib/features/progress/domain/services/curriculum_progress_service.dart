@@ -1,4 +1,5 @@
 import 'package:learning_tracker/core/database/daos/completion_dao.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/features/progress/domain/models/curriculum_progress_data.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart'
@@ -57,8 +58,15 @@ class CurriculumProgressService {
       notStarted: notStartedCount,
     );
 
+    // Resolve the storage key to its CurriculumId once so every hierarchy
+    // level can carry it for variant-aware name rendering in the UI. Unknown
+    // keys (should not happen for real curricula) fall back to mishnayos so
+    // the renderer still produces a sensible transliteration.
+    final curriculumEnum = _resolveCurriculumId(curriculumId);
+
     // Build hierarchy levels (level 1 grouping)
     final hierarchyLevels = _buildLevel1Progress(
+      curriculumEnum: curriculumEnum,
       leafItems: leafItems,
       completions: completions,
       stageDefinitions: stageDefinitions,
@@ -96,7 +104,18 @@ class CurriculumProgressService {
     return completedCount / leafItems.length;
   }
 
+  /// Map a curriculum storage key to its [CurriculumId]. Falls back to
+  /// [CurriculumId.mishnayos] for unrecognised keys so callers always get a
+  /// non-null enum to thread into the label renderer.
+  static CurriculumId _resolveCurriculumId(String storageKey) {
+    for (final id in CurriculumId.values) {
+      if (id.storageKey == storageKey) return id;
+    }
+    return CurriculumId.mishnayos;
+  }
+
   static List<HierarchyLevelProgress> _buildLevel1Progress({
+    required CurriculumId curriculumEnum,
     required List<ContentItem> leafItems,
     required List<Completion> completions,
     required List<domain_stage.StageDefinition> stageDefinitions,
@@ -140,6 +159,7 @@ class CurriculumProgressService {
       List<HierarchyLevelProgress>? subLevels;
       if (levelLabels.length > 1) {
         subLevels = _buildLevel2Progress(
+          curriculumEnum: curriculumEnum,
           leafItems: items,
           completions: levelCompletions,
           stageDefinitions: stageDefinitions,
@@ -148,6 +168,8 @@ class CurriculumProgressService {
       }
 
       return _buildLevelProgress(
+        curriculumEnum: curriculumEnum,
+        level: 1,
         levelName: level1Name,
         levelLabel: level1Label,
         leafItems: items,
@@ -159,6 +181,7 @@ class CurriculumProgressService {
   }
 
   static List<HierarchyLevelProgress> _buildLevel2Progress({
+    required CurriculumId curriculumEnum,
     required List<ContentItem> leafItems,
     required List<Completion> completions,
     required List<domain_stage.StageDefinition> stageDefinitions,
@@ -195,6 +218,8 @@ class CurriculumProgressService {
       final levelCompletions = completionsByLevel2[level2Name] ?? [];
 
       return _buildLevelProgress(
+        curriculumEnum: curriculumEnum,
+        level: 2,
         levelName: level2Name,
         levelLabel: levelLabel,
         leafItems: items,
@@ -205,6 +230,8 @@ class CurriculumProgressService {
   }
 
   static HierarchyLevelProgress _buildLevelProgress({
+    required CurriculumId curriculumEnum,
+    required int level,
     required String levelName,
     required String levelLabel,
     required List<ContentItem> leafItems,
@@ -242,6 +269,8 @@ class CurriculumProgressService {
     }
 
     return HierarchyLevelProgress(
+      curriculumId: curriculumEnum,
+      level: level,
       levelName: levelName,
       levelLabel: levelLabel,
       totalItems: leafItems.length,

@@ -17,6 +17,7 @@ import 'package:flutter_test/flutter_test.dart'
     hide expect, group, setUp, setUpAll, test;
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/streak_widget.dart';
@@ -212,6 +213,8 @@ void main() {
             padding: EdgeInsets.all(12),
             child: HierarchyProgressCard(
               level: HierarchyLevelProgress(
+                curriculumId: CurriculumId.mishnayos,
+                level: 1,
                 levelName: 'Seder Zeraim',
                 levelLabel: 'seder',
                 totalItems: 74,

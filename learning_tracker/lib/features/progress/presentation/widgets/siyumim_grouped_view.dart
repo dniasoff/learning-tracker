@@ -4,8 +4,8 @@ import 'package:intl/intl.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_renderer.dart';
+import 'package:learning_tracker/core/labels/curriculum_level_name.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
-import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/progress/domain/models/journey_view_model.dart';
@@ -393,49 +393,22 @@ class _UnitMilestoneTile extends ConsumerWidget {
 /// unit level, or a seder/chelek at the aggregate level) to its variant-aware
 /// display name.
 ///
-/// Looks up the Hebrew name from the curriculum's loaded content (routed
-/// through the core/labels accessor per DNI-386) so Hebrew mode shows the
-/// proper Hebrew name; in English mode the renderer transliterates the raw
-/// key under the active nusach. Falls back to a transliteration-only render
-/// while content is still loading (the Hebrew name simply arrives on rebuild).
-///
-/// Shared with the chronological timeline view so both surfaces resolve names
-/// identically before passing them into the siyum-label frame.
+/// Thin delegate to the shared [renderCurriculumLevelName] in the core/labels
+/// layer so this surface and the Progress "Breakdown by Level" cards resolve
+/// names through ONE implementation (content lookup → Hebrew-name accessor →
+/// variant-aware render). Kept as a named helper so the existing timeline /
+/// grouped-view call sites stay unchanged.
 String renderMilestoneName(
   WidgetRef ref, {
   required CurriculumId curriculumId,
   required int level,
   required String rawValue,
-}) {
-  // Resolve the matching content row's Hebrew name (level-2 named units like
-  // masechtos, else the level-1 sefer). Null while content loads or when the
-  // key isn't present; the renderer then transliterates the raw key.
-  final hebrewName = ref
-      .watch(curriculumContentProvider(curriculumId))
-      .maybeWhen(
-        data: (items) {
-          for (final item in items) {
-            final key = level == 1 ? item.level1 : item.level2;
-            if (key == rawValue) {
-              return CurriculumLabelRenderer.hebrewNameOf(item);
-            }
-          }
-          return null;
-        },
-        orElse: () => null,
-      );
-
-  return CurriculumLabelRenderer.renderValue(
-    curriculumId: curriculumId,
-    level: level,
-    rawValue: rawValue,
-    // Term toggle via the shared accessor (DNI 7/15: no raw
-    // useHebrewTermsProvider read outside core/labels).
-    useHebrew: domainTermLabels(ref).isHebrew,
-    hebrewName: hebrewName,
-    transliterationVariant: ref.watch(currentTransliterationVariantProvider),
-  );
-}
+}) => renderCurriculumLevelName(
+  ref,
+  curriculumId: curriculumId,
+  level: level,
+  rawValue: rawValue,
+);
 
 /// Format a milestone [date] using [DateFormat.yMMMd] for the active locale —
 /// US English renders "May 11, 2026" while UK/IL and Hebrew render

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/labels/curriculum_level_name.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
@@ -67,14 +68,14 @@ class _HierarchySurfaceCard extends StatelessWidget {
   }
 }
 
-class _ExpandableHierarchyCard extends StatelessWidget {
+class _ExpandableHierarchyCard extends ConsumerWidget {
   const _ExpandableHierarchyCard({required this.level, required this.color});
 
   final HierarchyLevelProgress level;
   final Color color;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     return _HierarchySurfaceCard(
       child: Theme(
@@ -94,7 +95,12 @@ class _ExpandableHierarchyCard extends StatelessWidget {
             shape: const Border(),
             collapsedShape: const Border(),
             title: Text(
-              level.levelName,
+              renderCurriculumLevelName(
+                ref,
+                curriculumId: level.curriculumId,
+                level: level.level,
+                rawValue: level.levelName,
+              ),
               style: theme.textTheme.titleSmall?.copyWith(
                 fontWeight: FontWeight.w700,
                 color: AppTheme.brandInk,
@@ -135,14 +141,14 @@ class _ExpandableHierarchyCard extends StatelessWidget {
   }
 }
 
-class _LevelContent extends StatelessWidget {
+class _LevelContent extends ConsumerWidget {
   const _LevelContent({required this.level, required this.color});
 
   final HierarchyLevelProgress level;
   final Color color;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -159,7 +165,12 @@ class _LevelContent extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    level.levelName,
+                    renderCurriculumLevelName(
+                      ref,
+                      curriculumId: level.curriculumId,
+                      level: level.level,
+                      rawValue: level.levelName,
+                    ),
                     style: theme.textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w700,
                       color: AppTheme.brandInk,

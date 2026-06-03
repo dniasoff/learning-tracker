@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/progress/domain/models/curriculum_progress_data.dart';
 import 'package:learning_tracker/features/progress/domain/services/pace_calculator.dart';
 import 'package:learning_tracker/features/progress/presentation/widgets/hierarchy_progress_card.dart';
@@ -16,6 +20,22 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 class _UseHebrewTermsOff extends UseHebrewTerms {
   @override
   bool build() => false;
+}
+
+/// Hebrew Terms ON — for the "Breakdown by Level" name-rendering matrix.
+class _UseHebrewTermsOn extends UseHebrewTerms {
+  @override
+  bool build() => true;
+}
+
+class _VariantAshkenazi extends CurrentTransliterationVariant {
+  @override
+  TransliterationVariant build() => TransliterationVariant.ashkenazi;
+}
+
+class _VariantSephardi extends CurrentTransliterationVariant {
+  @override
+  TransliterationVariant build() => TransliterationVariant.sephardi;
 }
 
 Widget _wrap(Widget child) {
@@ -175,6 +195,8 @@ void main() {
       // Rule 8: chazara entries are those AFTER the first stage. When only
       // the learn stage exists, the chazaros suffix is omitted entirely.
       const level = HierarchyLevelProgress(
+        curriculumId: CurriculumId.mishnayos,
+        level: 1,
         levelName: 'Seder Zeraim',
         levelLabel: 'Seder',
         totalItems: 10,
@@ -184,7 +206,11 @@ void main() {
       );
 
       await tester.pumpWidget(_wrap(const HierarchyProgressCard(level: level)));
+      await tester.pumpAndSettle();
 
+      // English (Ashkenazi default) mode: the level-1 seder key transliterates
+      // through the shared renderer; "Seder Zeraim" is identical in both
+      // nuschaos so it passes through unchanged.
       expect(find.text('Seder Zeraim'), findsOneWidget);
       // Single-stage: no chazara column, so subtitle is progress-only.
       expect(find.text('5/10 (50%)'), findsOneWidget);
@@ -198,6 +224,8 @@ void main() {
     ) async {
       // When a second stage (chazara) exists, the chazaros count is shown.
       const level = HierarchyLevelProgress(
+        curriculumId: CurriculumId.mishnayos,
+        level: 1,
         levelName: 'Seder Zeraim',
         levelLabel: 'Seder',
         totalItems: 10,
@@ -210,6 +238,7 @@ void main() {
       );
 
       await tester.pumpWidget(_wrap(const HierarchyProgressCard(level: level)));
+      await tester.pumpAndSettle();
 
       expect(find.text('Seder Zeraim'), findsOneWidget);
       // Multi-stage: chazaros suffix appears (count = sum of stages after first).
@@ -219,6 +248,8 @@ void main() {
 
     testWidgets('expandable card shows sub-levels on tap', (tester) async {
       const level = HierarchyLevelProgress(
+        curriculumId: CurriculumId.mishnayos,
+        level: 1,
         levelName: 'Seder Zeraim',
         levelLabel: 'Seder',
         totalItems: 4,
@@ -227,6 +258,8 @@ void main() {
         trackBreakdown: {'personal': 2},
         subLevels: [
           HierarchyLevelProgress(
+            curriculumId: CurriculumId.mishnayos,
+            level: 2,
             levelName: 'Berachos',
             levelLabel: 'Masechta',
             totalItems: 2,
@@ -237,6 +270,8 @@ void main() {
             trackBreakdown: {'personal': 2},
           ),
           HierarchyLevelProgress(
+            curriculumId: CurriculumId.mishnayos,
+            level: 2,
             levelName: 'Peah',
             levelLabel: 'Masechta',
             totalItems: 2,
@@ -250,6 +285,7 @@ void main() {
       );
 
       await tester.pumpWidget(_wrap(const HierarchyProgressCard(level: level)));
+      await tester.pumpAndSettle();
 
       // Sub-levels not visible initially
       expect(find.text('Berachos'), findsNothing);
@@ -263,4 +299,158 @@ void main() {
       expect(find.text('Peah'), findsOneWidget);
     });
   });
+
+  group('HierarchyProgressCard — level name follows the rendering contract', () {
+    // Mishnayos seder containers as they live in the bundled content asset:
+    // the raw level1 storage key carries the "Seder " prefix, and the content
+    // row supplies the Hebrew name. The Progress "Breakdown by Level" title
+    // MUST resolve the raw key through the shared renderer — Hebrew script
+    // when Hebrew-terms is ON, the nusach-appropriate transliteration when OFF
+    // — instead of leaking the raw English key (the confirmed bug).
+    const zeraim = ContentItem(
+      curriculumId: 'mishnayos',
+      level1: 'Seder Zeraim',
+      displayNameHe: 'סדר זרעים',
+      displayNameEn: 'Seder Zeraim',
+      sefariaRef: 'Seder Zeraim',
+      sortOrder: 0,
+      isLeaf: false,
+    );
+    // Tahoros/Tahorot is the ONE seder that differs across nuschaos, so it
+    // proves the transliteration-variant path (the rest are identical).
+    const tahoros = ContentItem(
+      curriculumId: 'mishnayos',
+      level1: 'Seder Tahorot',
+      displayNameHe: 'סדר טהרות',
+      displayNameEn: 'Seder Tahorot',
+      sefariaRef: 'Seder Tahorot',
+      sortOrder: 1,
+      isLeaf: false,
+    );
+
+    Widget host({
+      required HierarchyLevelProgress level,
+      required bool useHebrewTerms,
+      required TransliterationVariant variant,
+      Locale? locale,
+    }) {
+      return ProviderScope(
+        overrides: [
+          useHebrewTermsProvider.overrideWith(
+            useHebrewTerms ? _UseHebrewTermsOn.new : _UseHebrewTermsOff.new,
+          ),
+          currentTransliterationVariantProvider.overrideWith(
+            variant == TransliterationVariant.sephardi
+                ? _VariantSephardi.new
+                : _VariantAshkenazi.new,
+          ),
+          curriculumContentProvider(
+            CurriculumId.mishnayos,
+          ).overrideWith((ref) async => const [zeraim, tahoros]),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: locale,
+          theme: AppTheme.lightTheme(),
+          home: Scaffold(body: SingleChildScrollView(child: child(level))),
+        ),
+      );
+    }
+
+    HierarchyLevelProgress sederLevel(String rawLevelName) =>
+        HierarchyLevelProgress(
+          curriculumId: CurriculumId.mishnayos,
+          level: 1,
+          levelName: rawLevelName,
+          levelLabel: 'Seder',
+          totalItems: 10,
+          completedItems: 5,
+          stageBreakdown: const [
+            StageBreakdownEntry(stageName: 'Learned', count: 5),
+          ],
+          trackBreakdown: const {'personal': 5},
+        );
+
+    testWidgets('Hebrew-terms ON renders the Hebrew seder name (Zeraim)', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        host(
+          level: sederLevel('Seder Zeraim'),
+          useHebrewTerms: true,
+          variant: TransliterationVariant.ashkenazi,
+          locale: const Locale('he'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // The shared renderer strips the structural "סדר " prefix from the
+      // Hebrew name (the canonical contract — see curriculum_label_renderer
+      // test), so Zeraim resolves to its bare Hebrew name.
+      expect(find.text('זרעים'), findsOneWidget);
+      // The raw English storage key must NOT leak.
+      expect(find.text('Seder Zeraim'), findsNothing);
+    });
+
+    testWidgets(
+      'Hebrew-terms OFF + Ashkenazi renders "Seder Taharos" (variant proof)',
+      (tester) async {
+        await tester.pumpWidget(
+          host(
+            level: sederLevel('Seder Tahorot'),
+            useHebrewTerms: false,
+            variant: TransliterationVariant.ashkenazi,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Ashkenazi transliteration of the only nusach-divergent seder.
+        expect(find.text('Seder Taharos'), findsOneWidget);
+        expect(find.text('Seder Tahorot'), findsNothing);
+        // No Hebrew leaks in English mode.
+        expect(find.text('סדר טהרות'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'Hebrew-terms OFF + Sephardi renders "Seder Tahorot" (variant proof)',
+      (tester) async {
+        await tester.pumpWidget(
+          host(
+            level: sederLevel('Seder Tahorot'),
+            useHebrewTerms: false,
+            variant: TransliterationVariant.sephardi,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Sephardi transliteration keeps "Tahorot".
+        expect(find.text('Seder Tahorot'), findsOneWidget);
+        expect(find.text('Seder Taharos'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'Hebrew-terms OFF + Ashkenazi renders identical-across-nusach seder '
+      '("Seder Zeraim") unchanged',
+      (tester) async {
+        await tester.pumpWidget(
+          host(
+            level: sederLevel('Seder Zeraim'),
+            useHebrewTerms: false,
+            variant: TransliterationVariant.ashkenazi,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Zeraim is identical in both nuschaos — passes through unchanged.
+        expect(find.text('Seder Zeraim'), findsOneWidget);
+      },
+    );
+  });
 }
+
+/// Wraps [HierarchyProgressCard] for the rendering-contract group above.
+Widget child(HierarchyLevelProgress level) =>
+    HierarchyProgressCard(level: level);
