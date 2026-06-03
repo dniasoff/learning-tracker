@@ -117,6 +117,20 @@ class DomainTermLabels {
     return variant == TransliterationVariant.sephardi ? 'Shabbat' : 'Shabbos';
   }
 
+  /// "Havdalah" / "Havdala" (the close-of-Shabbos ceremony).
+  ///
+  /// English-mode spelling is nusach-dependent: Ashkenazi "Havdalah",
+  /// Sephardi "Havdala". As with [shabbos], the variant is supplied by the
+  /// caller (resolved from `currentTransliterationVariantProvider`).
+  /// Hebrew mode is nusach-independent ("הבדלה").
+  /// ARB en: termHavdalah  |  he: termHavdalah
+  String havdalah({
+    TransliterationVariant variant = TransliterationVariant.ashkenazi,
+  }) {
+    if (_useHebrew) return HebrewTerms.uiHavdalah;
+    return variant == TransliterationVariant.sephardi ? 'Havdala' : 'Havdalah';
+  }
+
   // ── Scholar tier / honorific ─────────────────────────────────────────────
 
   /// "Talmid Chochom" — title-case.

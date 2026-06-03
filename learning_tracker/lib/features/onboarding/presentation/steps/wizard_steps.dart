@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/models/wizard_result_wrapper.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/learning_process_wizard_service.dart';
 import 'package:learning_tracker/features/onboarding/presentation/steps/onboarding_step.dart';
@@ -466,14 +467,14 @@ class _CustomStep3Widget extends ConsumerWidget {
   final WizardStepData data;
   final void Function(LearningProcessWizardResult) onComplete;
 
-  String _formatDays(Set<int> days) {
-    const dayNames = {
+  String _formatDays(Set<int> days, String shabbos) {
+    final dayNames = {
       1: 'Mon',
       2: 'Tue',
       3: 'Wed',
       4: 'Thu',
       5: 'Fri',
-      6: 'Shabbos',
+      6: shabbos,
       7: 'Sun',
     };
     final sorted = days.toList()..sort();
@@ -484,6 +485,9 @@ class _CustomStep3Widget extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final terms = domainTermLabels(ref);
+    final shabbos = terms.shabbos(
+      variant: ref.watch(currentTransliterationVariantProvider),
+    );
     return SafeArea(
       top: false,
       child: Padding(
@@ -518,7 +522,7 @@ class _CustomStep3Widget extends ConsumerWidget {
                       ),
                       Text(
                         data.rounds[i].useWeekly
-                            ? 'Every ${_formatDays(data.rounds[i].selectedDays)}'
+                            ? 'Every ${_formatDays(data.rounds[i].selectedDays, shabbos)}'
                             : '${data.rounds[i].delayDays} ${data.rounds[i].delayDays == 1 ? 'day' : 'days'} after learning',
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: theme.colorScheme.onSurfaceVariant,
@@ -705,6 +709,9 @@ class _RoundTimingCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final terms = domainTermLabels(ref);
+    final shabbos = terms.shabbos(
+      variant: ref.watch(currentTransliterationVariantProvider),
+    );
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
@@ -769,7 +776,7 @@ class _RoundTimingCard extends ConsumerWidget {
                     3: 'Wed',
                     4: 'Thu',
                     5: 'Fri',
-                    6: 'Shabbos',
+                    6: shabbos,
                   }.entries)
                     FilterChip(
                       label: Text(entry.value),

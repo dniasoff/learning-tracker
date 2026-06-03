@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:learning_tracker/core/labels/domain_term_labels.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/services/track_creation_service.dart';
@@ -20,16 +23,16 @@ const kStepStudyDayLabels = [
 const kStepStudyDayNumbers = [7, 1, 2, 3, 4, 5, 6];
 
 /// Study days — vertical layout, all 7 active by default, "Shabbos" label.
-class StudyDaysEditable extends StatefulWidget {
+class StudyDaysEditable extends ConsumerStatefulWidget {
   const StudyDaysEditable({required this.onComplete, super.key});
 
   final ValueChanged<Map<int, String>> onComplete;
 
   @override
-  State<StudyDaysEditable> createState() => _StudyDaysEditableState();
+  ConsumerState<StudyDaysEditable> createState() => _StudyDaysEditableState();
 }
 
-class _StudyDaysEditableState extends State<StudyDaysEditable> {
+class _StudyDaysEditableState extends ConsumerState<StudyDaysEditable> {
   late final Map<int, String> _days;
 
   @override
@@ -72,11 +75,14 @@ class _StudyDaysEditableState extends State<StudyDaysEditable> {
               itemBuilder: (context, index) {
                 final dayNum = kStepStudyDayNumbers[index];
                 final isActive = _days[dayNum] == 'study';
+                final title = _dayName(dayNum);
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 10),
                   child: StudyDayCard(
-                    initial: kStepStudyDayLabels[index].substring(0, 1),
-                    title: _dayName(dayNum),
+                    initial: dayNum == 6
+                        ? title.substring(0, 1)
+                        : kStepStudyDayLabels[index].substring(0, 1),
+                    title: title,
                     subtitle: '',
                     subtitleColor: AppTheme.brandInkMuted,
                     activeColor: AppColors.surfaceE9,
@@ -115,11 +121,17 @@ class _StudyDaysEditableState extends State<StudyDaysEditable> {
   ///
   /// Convention: [dayNum] follows Dart's [DateTime.weekday] values
   /// (1 = Monday … 7 = Sunday), identical to [kStepStudyDayNumbers].
-  /// Day 6 (Saturday) renders the app's term "Shabbos" (en) / "שבת" (he) via
-  /// l10n — consistent with the sacred-time feature; other days are
+  /// Day 6 (Saturday) renders the app's term "Shabbos" (Ashkenazi) /
+  /// "Shabbat" (Sephardi) / "שבת" (Hebrew Terms on) via [domainTermLabels],
+  /// so it honours both the transliteration nusach and the Hebrew-Terms
+  /// toggle — consistent with the sacred-time feature; other days are
   /// locale-formatted via [DateFormat].
   String _dayName(int dayNum) {
-    if (dayNum == 6) return AppLocalizations.of(context)!.dayNameShabbos;
+    if (dayNum == 6) {
+      return domainTermLabels(
+        ref,
+      ).shabbos(variant: ref.watch(currentTransliterationVariantProvider));
+    }
     final locale = Localizations.localeOf(context).languageCode;
     // Anchor: 2023-01-02 is a Monday (DateTime.weekday == 1).
     // Adding (dayNum - 1) days yields a date whose weekday == dayNum.
@@ -223,7 +235,7 @@ class StudyDayCard extends StatelessWidget {
 }
 
 /// Study days — read-only display for program tracks.
-class StudyDaysReadOnly extends StatelessWidget {
+class StudyDaysReadOnly extends ConsumerWidget {
   const StudyDaysReadOnly({
     required this.programName,
     required this.onContinue,
@@ -234,9 +246,12 @@ class StudyDaysReadOnly extends StatelessWidget {
   final VoidCallback onContinue;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
+    final shabbos = domainTermLabels(
+      ref,
+    ).shabbos(variant: ref.watch(currentTransliterationVariantProvider));
 
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -260,7 +275,9 @@ class StudyDaysReadOnly extends StatelessWidget {
               itemBuilder: (context, index) {
                 return ListTile(
                   title: Text(
-                    kStepStudyDayLabels[index],
+                    kStepStudyDayNumbers[index] == 6
+                        ? shabbos
+                        : kStepStudyDayLabels[index],
                     style: theme.textTheme.bodyLarge,
                   ),
                   trailing: Icon(

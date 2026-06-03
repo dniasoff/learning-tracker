@@ -777,11 +777,16 @@ void main() {
       expect(find.textContaining('Shabbos'), findsWidgets);
       expect(find.textContaining('Shabbat'), findsNothing);
       expect(find.textContaining('שבת'), findsNothing);
+      // Havdalah term resolves to the Ashkenazi spelling in the location card.
+      expect(find.textContaining('Havdalah'), findsWidgets);
+      expect(find.textContaining('הבדלה'), findsNothing);
 
       await _teardown(tester);
     });
 
-    testWidgets('Sephardi nusach renders "Shabbat"', (tester) async {
+    testWidgets('Sephardi nusach renders "Shabbat" and "Havdala"', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         _buildApp(
           notifGateway: _defaultNotifGateway(),
@@ -797,32 +802,40 @@ void main() {
 
       expect(find.textContaining('Shabbat'), findsWidgets);
       expect(find.textContaining('Shabbos'), findsNothing);
+      // Sephardi Havdalah spelling drops the trailing "h" → "Havdala".
+      expect(find.textContaining('Havdala'), findsWidgets);
+      expect(find.textContaining('Havdalah'), findsNothing);
 
       await _teardown(tester);
     });
 
-    testWidgets('Hebrew Terms ON renders "שבת" (nusach-independent)', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        _buildApp(
-          notifGateway: _defaultNotifGateway(),
-          router: _defaultRouter(),
-          locationNotifier: _locationNotifier(
-            const LocationFetchPermissionDenied(permanentlyDenied: false),
+    testWidgets(
+      'Hebrew Terms ON renders "שבת" + "הבדלה" (nusach-independent)',
+      (tester) async {
+        await tester.pumpWidget(
+          _buildApp(
+            notifGateway: _defaultNotifGateway(),
+            router: _defaultRouter(),
+            locationNotifier: _locationNotifier(
+              const LocationFetchPermissionDenied(permanentlyDenied: false),
+            ),
+            isOnboarding: true,
+            useHebrewTerms: true,
           ),
-          isOnboarding: true,
-          useHebrewTerms: true,
-        ),
-      );
-      await _pump(tester);
+        );
+        await _pump(tester);
 
-      expect(find.textContaining('שבת'), findsWidgets);
-      expect(find.textContaining('Shabbos'), findsNothing);
-      expect(find.textContaining('Shabbat'), findsNothing);
+        expect(find.textContaining('שבת'), findsWidgets);
+        expect(find.textContaining('Shabbos'), findsNothing);
+        expect(find.textContaining('Shabbat'), findsNothing);
+        // Havdalah term resolves to Hebrew script when the toggle is on.
+        expect(find.textContaining('הבדלה'), findsWidgets);
+        expect(find.textContaining('Havdalah'), findsNothing);
+        expect(find.textContaining('Havdala'), findsNothing);
 
-      await _teardown(tester);
-    });
+        await _teardown(tester);
+      },
+    );
   });
 
   // ── Hardcoded string audit ───────────────────────────────────────────────────

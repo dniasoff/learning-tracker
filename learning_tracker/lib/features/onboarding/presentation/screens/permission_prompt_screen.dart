@@ -97,9 +97,10 @@ class _PermissionPromptScreenState
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final shabbos = domainTermLabels(
-      ref,
-    ).shabbos(variant: ref.watch(currentTransliterationVariantProvider));
+    final variant = ref.watch(currentTransliterationVariantProvider);
+    final terms = domainTermLabels(ref);
+    final shabbos = terms.shabbos(variant: variant);
+    final havdalah = terms.havdalah(variant: variant);
 
     return Scaffold(
       backgroundColor: AppTheme.brandCreamCard,
@@ -147,7 +148,7 @@ class _PermissionPromptScreenState
                 iconBackground: const Color(0xFFDDF3EB),
                 title: 'Location',
                 subtitle:
-                    'Accurate $shabbos candle-lighting and Havdalah times '
+                    'Accurate $shabbos candle-lighting and $havdalah times '
                     'based on your city.',
                 status: _locationStatus,
                 onTap: _locationDone ? null : _requestLocation,

@@ -153,6 +153,9 @@ class HebrewTerms {
   /// "Shabbos" / "Shabbat" (the Sabbath) → Hebrew script.
   static const String uiShabbos = 'שבת';
 
+  /// "Havdalah" / "Havdala" (the close-of-Shabbos ceremony) → Hebrew script.
+  static const String uiHavdalah = 'הבדלה';
+
   // ── Scholar tier / honorific terms ──────────────────────────────────────
 
   /// "Talmid Chochom" (highest scholar tier) → Hebrew script.
