@@ -16,6 +16,8 @@
 //      AppShell logic: cloud-born offline → visible; online → hidden;
 //      local-born offline → hidden.
 //   8. He-RTL smoke test — banner renders in RTL locale without errors.
+//   9. Offline-debounce — a transient <300 ms offline blip (startup noise)
+//      does NOT flash the banner; a persistent offline DOES show it.
 //
 // HARDCODED STRINGS AUDIT:
 //   offline_top_banner.dart line 26:
@@ -27,6 +29,8 @@
 
 @Tags(['l1', 'offline_banner', 'account'])
 library;
+
+import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -402,6 +406,147 @@ void main() {
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(Duration.zero);
     });
+  });
+
+  // ── Offline-debounce — consumer-side banner state tests ───────────────────
+  //
+  // connectivityStreamProvider debounces "offline" signals by 300 ms to
+  // suppress the transient ConnectivityResult.none event that the
+  // connectivity_plus platform stream emits on Android/iOS cold-start before
+  // the OS has finished associating the network interface.
+  //
+  // These widget tests verify the CONSUMER behaviour (what the banner shows)
+  // by overriding connectivityStreamProvider with a controlled stream.  They
+  // test the AppShell visibility logic (isCloudBorn && !isOnline) rather than
+  // the debounce mechanism itself.  The provider-level debounce is covered by
+  // the unit tests in test/features/account/presentation/providers/
+  // connectivity_providers_test.dart.
+
+  group('OfflineTopBanner — consumer state (online / offline / loading)', () {
+    /// Helper: wires up [_ConnectedOfflineBanner] with a controlled
+    /// [connectivityStreamProvider] override.
+    Widget buildWithStream(
+      Stream<bool> stream, {
+      Locale locale = const Locale('en'),
+    }) {
+      return ProviderScope(
+        overrides: [
+          authStateProvider.overrideWithValue(_cloudBornSignedIn()),
+          connectivityStreamProvider.overrideWith((ref) => stream),
+        ],
+        child: MaterialApp(
+          locale: locale,
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const Scaffold(body: _ConnectedOfflineBanner()),
+        ),
+      );
+    }
+
+    testWidgets('loading state (stream never emits) → banner hidden', (
+      tester,
+    ) async {
+      // connectivityStreamProvider is in AsyncLoading (no events yet).
+      // orElse: () => true → isOnline = true → banner hidden.
+      await tester.pumpWidget(buildWithStream(const Stream<bool>.empty()));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(
+        find.textContaining('Offline'),
+        findsNothing,
+        reason:
+            'banner must be hidden while connectivity is loading '
+            '(no data yet — orElse treats unknown as online)',
+      );
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    });
+
+    testWidgets('confirmed online → banner hidden', (tester) async {
+      final controller = StreamController<bool>();
+      addTearDown(controller.close);
+
+      await tester.pumpWidget(buildWithStream(controller.stream));
+      await tester.pump();
+
+      controller.add(true);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(
+        find.textContaining('Offline'),
+        findsNothing,
+        reason: 'banner must be hidden when connectivity confirms online',
+      );
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    });
+
+    testWidgets('confirmed offline → banner shown', (tester) async {
+      final controller = StreamController<bool>();
+      addTearDown(controller.close);
+
+      await tester.pumpWidget(buildWithStream(controller.stream));
+      await tester.pump();
+
+      controller.add(false);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 400));
+
+      expect(
+        find.textContaining('Offline'),
+        findsOneWidget,
+        reason: 'banner must appear when connectivity confirms offline',
+      );
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    });
+
+    testWidgets(
+      'online → offline → banner shown; then online → banner hidden',
+      (tester) async {
+        final controller = StreamController<bool>();
+        addTearDown(controller.close);
+
+        await tester.pumpWidget(buildWithStream(controller.stream));
+        await tester.pump();
+
+        controller.add(true);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(find.textContaining('Offline'), findsNothing);
+
+        controller.add(false);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 400));
+        expect(
+          find.textContaining('Offline'),
+          findsOneWidget,
+          reason: 'banner must appear after offline transition',
+        );
+
+        controller.add(true);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+        expect(
+          find.textContaining('Offline'),
+          findsNothing,
+          reason: 'banner must hide when connection is restored',
+        );
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(Duration.zero);
+      },
+    );
   });
 
   // ── He-RTL smoke test ──────────────────────────────────────────────────────

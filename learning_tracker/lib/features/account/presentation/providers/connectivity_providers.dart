@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:internet_connection_checker/internet_connection_checker.dart';
@@ -50,6 +52,23 @@ void debugResetLastKnownOnline() => _lastKnownOnline = false;
 @visibleForTesting
 void debugSetLastKnownOnline(bool value) => _lastKnownOnline = value;
 
+/// How long an "offline" signal from the platform connectivity stream must
+/// persist before it is forwarded downstream as a real [connectivityStreamProvider]
+/// emission.
+///
+/// The underlying `internet_connection_checker` package subscribes to the
+/// platform `connectivity_plus` stream on first listen. On Android/iOS the
+/// platform can fire an immediate `ConnectivityResult.none` event before the
+/// OS has finished associating the active network interface — a spurious
+/// ~1 s blip that causes the offline banner to flash on cold-start even though
+/// the device is genuinely online.
+///
+/// Buffering "offline" signals for this short window suppresses startup noise
+/// while keeping real mid-session offline detection fast (300 ms delay is
+/// imperceptible in practice).  "Online" (`true`) signals are always forwarded
+/// immediately because there is no benefit in delaying a recovery signal.
+const _kOfflineDebounce = Duration(milliseconds: 300);
+
 /// Live connectivity stream — `true` when the device has a usable
 /// internet connection, `false` otherwise. Widgets/providers that
 /// need to react to online/offline transitions (offline banner,
@@ -59,14 +78,54 @@ void debugSetLastKnownOnline(bool value) => _lastKnownOnline = value;
 /// the current state immediately instead of waiting for the first
 /// transition event. Every emission also updates [lastKnownOnline] so the
 /// loading state of connectivity-aware UI can seed from the latest reading.
+///
+/// Offline signals from [InternetConnectionChecker.onStatusChange] are
+/// debounced by [_kOfflineDebounce] to suppress transient platform noise
+/// (see constant documentation above).  Online signals are forwarded
+/// immediately.
 final connectivityStreamProvider = StreamProvider<bool>((ref) async* {
   final checker = ref.watch(internetConnectionCheckerProvider);
   final initial = await checker.hasConnection;
   _lastKnownOnline = initial;
   yield initial;
-  yield* checker.onStatusChange.map((status) {
-    final online = status == InternetConnectionStatus.connected;
-    _lastKnownOnline = online;
-    return online;
+
+  // Debounce offline signals so a transient platform disconnected event
+  // (common on startup) does not flash the offline banner.
+  Timer? offlineDebounceTimer;
+  final controller = StreamController<bool>();
+
+  final subscription = checker.onStatusChange.listen(
+    (status) {
+      final online = status == InternetConnectionStatus.connected;
+      _lastKnownOnline = online;
+      if (online) {
+        // Cancel any pending offline debounce and emit online immediately.
+        offlineDebounceTimer?.cancel();
+        offlineDebounceTimer = null;
+        if (!controller.isClosed) controller.add(true);
+      } else {
+        // Defer the offline signal; only emit if still offline after the window.
+        offlineDebounceTimer?.cancel();
+        offlineDebounceTimer = Timer(_kOfflineDebounce, () {
+          if (!controller.isClosed) controller.add(false);
+        });
+      }
+    },
+    onDone: () {
+      offlineDebounceTimer?.cancel();
+      controller.close();
+    },
+    onError: (Object e, StackTrace s) {
+      offlineDebounceTimer?.cancel();
+      if (!controller.isClosed) controller.addError(e, s);
+    },
+  );
+
+  ref.onDispose(() {
+    subscription.cancel();
+    offlineDebounceTimer?.cancel();
+    controller.close();
   });
+
+  yield* controller.stream;
 });
