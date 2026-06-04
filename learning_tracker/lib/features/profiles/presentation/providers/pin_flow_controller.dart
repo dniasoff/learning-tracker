@@ -142,8 +142,42 @@ class PinFlowController extends _$PinFlowController {
   // Public API
   // ------------------------------------------------------------------
 
-  /// Reinitialise state for [mode]. Call from [PinFlowScreen.initState].
+  /// Identity of the screen mount this controller is currently initialised for,
+  /// or `null` when it still holds the default `build()` state and has not yet
+  /// been claimed by a mounted screen. Each [PinFlowScreen] mount passes a new
+  /// token, so a re-pushed screen always triggers a fresh reset (clearing stale
+  /// digits/step from a prior session) while in-progress entry for the CURRENT
+  /// mount is never clobbered by a late-draining initState microtask.
+  Object? _mountToken;
+
+  /// Reinitialise state for [mode]. Direct reset used by tests and any caller
+  /// that does not participate in the mount-token protocol.
   void reset(PinFlowMode mode) {
+    _mountToken = null;
+    state = PinFlowState(mode: mode, step: _initialStep(mode));
+  }
+
+  /// Claim the controller for a screen mount identified by [mountToken],
+  /// resetting state for [mode] *exactly once per mount*.
+  ///
+  /// Both the screen's `initState` (deferred) and its keypad gesture handlers
+  /// (synchronous, between frames) call this with the same per-mount [mountToken].
+  /// The FIRST call for a given token does the fresh reset; subsequent calls are
+  /// no-ops, so:
+  ///
+  ///  * A re-pushed screen (new token) always starts clean — clearing any stale
+  ///    4-digit buffer left in the keepAlive controller (which otherwise tripped
+  ///    the `digits.length >= 4` guard and froze the keypad).
+  ///  * The first keypress synchronously establishes the correct [mode] even if
+  ///    the deferred initState reset has not drained yet — so a setup keypress is
+  ///    never routed through the stale default (verify) handler. That mis-routing,
+  ///    followed by the late reset reverting the step, is what froze the setup
+  ///    screen on "Set Parent PIN" after 4 digits.
+  ///  * Because the late initState microtask re-invokes with the SAME token, it
+  ///    no longer wipes digits the user has already entered for this mount.
+  void initializeForMount(Object mountToken, PinFlowMode mode) {
+    if (identical(_mountToken, mountToken)) return;
+    _mountToken = mountToken;
     state = PinFlowState(mode: mode, step: _initialStep(mode));
   }
 

@@ -37,28 +37,33 @@ class PinFlowScreen extends ConsumerStatefulWidget {
 }
 
 class _PinFlowScreenState extends ConsumerState<PinFlowScreen> {
+  /// Per-mount identity. A fresh object every time the screen mounts, so the
+  /// keepAlive controller resets exactly once per mount (clearing any stale
+  /// state from a prior session) without clobbering in-progress entry. See
+  /// [PinFlowController.initializeForMount].
+  final Object _mountToken = Object();
+
   @override
   void initState() {
     super.initState();
-    // Reset controller state whenever the screen first mounts so that a
-    // re-pushed screen doesn't carry stale step/digit state from a previous
-    // session. The controller is keepAlive: true, so without this the next
-    // mount would inherit the prior `digits` — and if those were already at the
-    // 4-digit cap, the `digits.length >= 4` guard in appendDigit would swallow
-    // every keypress, freezing the keypad until a force-stop.
+    // Reset the keepAlive controller for this mount so a re-pushed screen does
+    // not carry stale step/digit state. The controller is keepAlive: true, so
+    // without this the next mount would inherit the prior `digits` — and if
+    // those were at the 4-digit cap, the `digits.length >= 4` guard in
+    // appendDigit would swallow every keypress, freezing the keypad.
     //
-    // The reset is scheduled as a microtask rather than a postFrameCallback:
-    //  * Riverpod forbids mutating a provider synchronously inside initState
-    //    (it would fire "modify a provider while the widget tree is building"),
-    //    so it must be deferred.
-    //  * A microtask drains at the end of the current event-loop turn — after
-    //    this build completes but BEFORE the next frame and, critically, before
-    //    any user gesture (a keypress is a separate event-loop turn). So the
-    //    reset is guaranteed to run before the user's first digit, deterministly
-    //    closing the race that a postFrameCallback left open.
+    // This is scheduled as a microtask because Riverpod forbids mutating a
+    // provider synchronously inside initState (it builds the tree). The
+    // microtask is NOT guaranteed to drain before the user's first keypress on
+    // device, so the keypad handlers also call initializeForMount synchronously
+    // (see _onDigit). Passing the same _mountToken makes both paths idempotent:
+    // whichever fires first does the reset; the other is a no-op and will not
+    // wipe digits already entered for this mount.
     Future.microtask(() {
       if (!mounted) return;
-      ref.read(pinFlowControllerProvider.notifier).reset(widget.mode);
+      ref
+          .read(pinFlowControllerProvider.notifier)
+          .initializeForMount(_mountToken, widget.mode);
     });
   }
 
@@ -66,11 +71,23 @@ class _PinFlowScreenState extends ConsumerState<PinFlowScreen> {
   // Keypad callbacks — forwarded to the controller
   // ------------------------------------------------------------------
 
-  void _onDigit(String d) =>
-      ref.read(pinFlowControllerProvider.notifier).appendDigit(d);
+  void _onDigit(String d) {
+    final controller = ref.read(pinFlowControllerProvider.notifier);
+    // Synchronously guarantee the keepAlive controller is initialised for THIS
+    // mount/mode before the digit is appended. The deferred initState reset is
+    // not guaranteed to have drained before the first keypress on device;
+    // without this, the first digits were routed through the stale default
+    // (verify) mode and the setup screen froze on "Set Parent PIN". Gesture
+    // callbacks run between frames, so this provider mutation is allowed.
+    controller.initializeForMount(_mountToken, widget.mode);
+    controller.appendDigit(d);
+  }
 
-  void _onBackspace() =>
-      ref.read(pinFlowControllerProvider.notifier).backspace();
+  void _onBackspace() {
+    final controller = ref.read(pinFlowControllerProvider.notifier);
+    controller.initializeForMount(_mountToken, widget.mode);
+    controller.backspace();
+  }
 
   void _onCancel() => _popResult(false);
 

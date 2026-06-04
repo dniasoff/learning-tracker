@@ -4,6 +4,8 @@
 /// bcrypt never runs in tests.
 library;
 
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
@@ -129,6 +131,130 @@ void main() {
       final s = container.read(pinFlowControllerProvider);
       expect(s.mode, PinFlowMode.change);
       expect(s.step, PinFlowStep.verifyCurrent);
+    });
+  });
+
+  group('PinFlowController — mount-token init / setup-freeze race (regression)', () {
+    // Reproduces the reported on-device freeze: on the "Set Parent PIN" setup
+    // screen the user taps 4 digits — all dots fill — but the screen stays on
+    // "Set Parent PIN" and cannot proceed.
+    //
+    // Root cause: the screen schedules its reset(setup) as a deferred microtask
+    // in initState. On device that microtask is NOT guaranteed to drain before
+    // the first keypress, so the keepAlive controller is still in its default
+    // build() state (mode: verify). The 4 setup digits were therefore routed
+    // through _handleVerify (the WRONG handler); the trailing reset then reverted
+    // the step to enterNew. Net: stuck on "Set Parent PIN".
+    //
+    // The fix: keypad gestures call initializeForMount(token, mode) synchronously
+    // BEFORE appending, so the correct mode is always established first. Both the
+    // gesture path and the late initState microtask share one per-mount token, so
+    // the late reset is a no-op and never wipes in-progress entry.
+
+    test(
+      'setup keypress before the deferred reset drains still advances to confirm '
+      '(no verify mis-route, no late-reset wipe)',
+      () async {
+        final ps = _MockPinService();
+        // If the bug regressed, the 4 digits would hit _handleVerify here.
+        when(() => ps.verifyProfilePin(any(), any())).thenAnswer(
+          (_) async =>
+              fail('setup digits must NOT be routed through verifyProfilePin'),
+        );
+        when(() => ps.setProfilePin(any(), any())).thenAnswer((_) async {});
+
+        final container = _makeContainer(pinService: ps, profileId: 42);
+        addTearDown(container.dispose);
+        final ctrl = container.read(pinFlowControllerProvider.notifier);
+        final token = Object();
+
+        // Mirror initState: schedule the reset as a deferred microtask that has
+        // NOT yet run when the user taps.
+        unawaited(
+          Future.microtask(
+            () => ctrl.initializeForMount(token, PinFlowMode.setup),
+          ),
+        );
+
+        // User taps 4 digits via the screen's gesture path, which initialises
+        // synchronously first (exactly what _onDigit now does).
+        for (final d in '1234'.split('')) {
+          ctrl.initializeForMount(token, PinFlowMode.setup);
+          ctrl.appendDigit(d);
+        }
+
+        // Let the deferred microtask reset and any async handler drain.
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+
+        final s = container.read(pinFlowControllerProvider);
+        expect(
+          s.mode,
+          PinFlowMode.setup,
+          reason: 'controller must be in setup mode, not the stale default',
+        );
+        expect(
+          s.step,
+          PinFlowStep.confirm,
+          reason: 'first 4 setup digits must advance enterNew -> confirm',
+        );
+        expect(
+          s.firstPin,
+          '1234',
+          reason: 'the first PIN must be held for the confirm step',
+        );
+        expect(
+          s.digits,
+          isEmpty,
+          reason: 'confirm step starts with an empty buffer',
+        );
+      },
+    );
+
+    test('initializeForMount is idempotent within one mount (late microtask '
+        'does not wipe in-progress entry)', () async {
+      final ps = _MockPinService();
+      final container = _makeContainer(pinService: ps, profileId: 42);
+      addTearDown(container.dispose);
+      final ctrl = container.read(pinFlowControllerProvider.notifier);
+      final token = Object();
+
+      // First gesture initialises the mount and enters 2 digits.
+      ctrl.initializeForMount(token, PinFlowMode.setup);
+      ctrl.appendDigit('1');
+      ctrl.appendDigit('2');
+      expect(container.read(pinFlowControllerProvider).digits, '12');
+
+      // The late initState microtask fires with the SAME token — must be a no-op.
+      ctrl.initializeForMount(token, PinFlowMode.setup);
+      expect(
+        container.read(pinFlowControllerProvider).digits,
+        '12',
+        reason: 'same-token re-init must not wipe in-progress digits',
+      );
+    });
+
+    test('a NEW mount token forces a fresh reset (stale digits cleared on '
+        're-push)', () async {
+      final ps = _MockPinService();
+      when(
+        () => ps.verifyProfilePin(any(), any()),
+      ).thenAnswer((_) => Future.delayed(const Duration(days: 1), () => false));
+      final container = _makeContainer(pinService: ps, profileId: 42);
+      addTearDown(container.dispose);
+      final ctrl = container.read(pinFlowControllerProvider.notifier);
+
+      // Prior mount leaves the keepAlive buffer full.
+      final firstToken = Object();
+      ctrl.initializeForMount(firstToken, PinFlowMode.verify);
+      _enterDigits(ctrl, '1234');
+      expect(container.read(pinFlowControllerProvider).digits.length, 4);
+
+      // Re-push: a brand-new token forces a clean reset.
+      final secondToken = Object();
+      ctrl.initializeForMount(secondToken, PinFlowMode.verify);
+      expect(container.read(pinFlowControllerProvider).digits, isEmpty);
+      ctrl.appendDigit('7');
+      expect(container.read(pinFlowControllerProvider).digits, '7');
     });
   });
 
