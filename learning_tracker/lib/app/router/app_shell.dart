@@ -446,86 +446,132 @@ class ProfileSwitcherBar extends ConsumerWidget {
         ? 'U'
         : trimmed.substring(0, 1).toUpperCase();
 
+    // Tap-target overlap fix: the switcher bar is 44 px tall and spans the
+    // full screen width. On pushed sub-routes (via PersistentSwitcherScaffold)
+    // the sub-route's AppBar back-arrow sits immediately below this bar on the
+    // LEFT edge of the screen. A full-width InkWell therefore covers the same
+    // horizontal zone as the leading back-arrow, so near-miss taps intended for
+    // the back button accidentally fire the switcher instead.
+    //
+    // Fix: keep the full-width decorative Container (background + border), but
+    // restrict the InkWell's hit region so it starts after the standard leading
+    // zone (kMinInteractiveDimension = 48 dp). The dead zone on the left is
+    // never accidentally tappable as the switcher; the chip itself (avatar, name,
+    // badge, unfold icon) remains fully tappable because it sits to the right.
+    //
+    // Note: kMinInteractiveDimension (48 dp) equals the Material minimum touch
+    // target and matches the width of a standard AppBar leading IconButton, so
+    // this inset is enough to clear the back arrow on any standard sub-route.
     return Material(
       type: MaterialType.transparency,
-      child: InkWell(
-        key: const Key('appShellProfileSwitcherBar'),
-        // The switcher sheet is a modal bottom sheet, which needs a Navigator
-        // ancestor of the context it's opened from. On the four shell tabs this
-        // bar renders inside AutoTabsScaffold's appBar — below the router's
-        // Navigator — so the local `context` works. But the SAME bar is also
-        // rendered by PersistentSwitcherScaffold in the MaterialApp.router
-        // builder slot, which sits ABOVE the router's Navigator; there the local
-        // `context` has no Navigator ancestor and showModalBottomSheet would
-        // throw (swallowed → tap does nothing). Routing through the root
-        // navigator's context — which always sits at the router's Navigator —
-        // makes the tap open the sheet identically on tabs AND every pushed
-        // sub-route. Fall back to the local context if the key isn't mounted.
-        onTap: () =>
-            showProfileSwitcherSheet(navigatorKey.currentContext ?? context),
-        child: Container(
-          height: 44,
-          decoration: const BoxDecoration(
-            color: barBackground,
-            border: Border(bottom: BorderSide(color: barBorder)),
-          ),
-          padding: const EdgeInsets.symmetric(horizontal: 14),
-          child: Row(
-            children: [
-              Container(
-                width: 28,
-                height: 28,
-                alignment: Alignment.center,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: barForeground.withValues(alpha: 0.14),
+      // The background Container renders full-width so the bar still fills the
+      // header visually. Only the InkWell (and therefore the tap-target) is
+      // inset from the start edge.
+      child: Container(
+        key: const Key('appShellProfileSwitcherBarBackground'),
+        height: 44,
+        decoration: const BoxDecoration(
+          color: barBackground,
+          border: Border(bottom: BorderSide(color: barBorder)),
+        ),
+        child: Row(
+          children: [
+            // Dead zone: covers the leading-button width so taps over the
+            // back-arrow area (left kMinInteractiveDimension px) are NOT
+            // captured by the switcher InkWell.
+            const SizedBox(width: kMinInteractiveDimension),
+            // The actual tappable chip — all content to the right of the
+            // leading zone. The InkWell shrinks to the chip's intrinsic width
+            // via the Expanded wrapper, keeping the hit-target off the left
+            // leading edge.
+            Expanded(
+              child: InkWell(
+                key: const Key('appShellProfileSwitcherBar'),
+                // The switcher sheet is a modal bottom sheet, which needs a
+                // Navigator ancestor of the context it's opened from. On the
+                // four shell tabs this bar renders inside AutoTabsScaffold's
+                // appBar — below the router's Navigator — so the local
+                // `context` works. But the SAME bar is also rendered by
+                // PersistentSwitcherScaffold in the MaterialApp.router builder
+                // slot, which sits ABOVE the router's Navigator; there the
+                // local `context` has no Navigator ancestor and
+                // showModalBottomSheet would throw (swallowed → tap does
+                // nothing). Routing through the root navigator's context —
+                // which always sits at the router's Navigator — makes the tap
+                // open the sheet identically on tabs AND every pushed
+                // sub-route. Fall back to the local context if the key isn't
+                // mounted.
+                onTap: () => showProfileSwitcherSheet(
+                  navigatorKey.currentContext ?? context,
                 ),
-                child: Text(
-                  initial,
-                  style: const TextStyle(
-                    color: barForeground,
-                    fontSize: 14,
-                    fontWeight: FontWeight.w800,
+                child: Padding(
+                  // 14 dp right padding matches the original symmetric(14)
+                  // inset; no extra left padding needed here since the dead-
+                  // zone SizedBox already clears the leading area.
+                  padding: const EdgeInsetsDirectional.only(end: 14),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 28,
+                        height: 28,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: barForeground.withValues(alpha: 0.14),
+                        ),
+                        child: Text(
+                          initial,
+                          style: const TextStyle(
+                            color: barForeground,
+                            fontSize: 14,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          displayName,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            color: barInk,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: primary.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Text(
+                          roleBadge,
+                          style: const TextStyle(
+                            color: barForeground,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Icon(
+                        Icons.unfold_more_rounded,
+                        size: 20,
+                        color: barForeground,
+                      ),
+                    ],
                   ),
                 ),
               ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Text(
-                  displayName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    color: barInk,
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: primary.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Text(
-                  roleBadge,
-                  style: const TextStyle(
-                    color: barForeground,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w700,
-                    letterSpacing: 0.5,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 8),
-              const Icon(
-                Icons.unfold_more_rounded,
-                size: 20,
-                color: barForeground,
-              ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

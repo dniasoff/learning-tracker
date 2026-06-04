@@ -1214,13 +1214,11 @@ void main() {
         await tester.pumpWidget(barUnderDarkAmbient());
         await tester.pump();
 
+        // The background Container is the outer wrapper (parent of the InkWell)
+        // so it is no longer a *descendant* of the keyed InkWell; look it up by
+        // its own key instead.
         final container = tester.widget<Container>(
-          find
-              .descendant(
-                of: find.byKey(const Key('appShellProfileSwitcherBar')),
-                matching: find.byType(Container),
-              )
-              .first,
+          find.byKey(const Key('appShellProfileSwitcherBarBackground')),
         );
         final decoration = container.decoration! as BoxDecoration;
         // Fully opaque (alpha 255) — nothing behind it can bleed through.
@@ -1248,5 +1246,107 @@ void main() {
       final nameText = tester.widget<Text>(find.text('Talmid1'));
       expect(nameText.style?.color, AppTheme.brandInk);
     });
+  });
+
+  // Tap-target overlap fix: the ProfileSwitcherBar previously used a
+  // full-width InkWell that covered x=0..screenWidth. On pushed sub-routes the
+  // sub-route AppBar's leading back-arrow sits immediately below and to the
+  // LEFT of the switcher bar. A full-width tap zone therefore captured taps
+  // aimed at the back arrow. The fix introduces a dead zone of
+  // kMinInteractiveDimension on the leading edge so only the chip (to the
+  // right) is interactive.
+  group('Tap-target overlap fix — switcher InkWell has leading inset', () {
+    Widget barInScaffold() => ProviderScope(
+      overrides: [
+        profileListStreamProvider.overrideWith(
+          (ref) => Stream.value(<ProfileModel>[
+            ProfileModel(
+              id: 1,
+              accountId: 1,
+              displayName: 'Talmid1',
+              mode: 'adult',
+              avatarIndex: 0,
+              createdAt: DateTime(2024),
+              updatedAt: DateTime(2024),
+            ),
+          ]),
+        ),
+        activeProfileIdProvider.overrideWith(_FixedActiveProfileId.new),
+        authStateProvider.overrideWithValue(_authOverride),
+      ],
+      child: MaterialApp(
+        locale: const Locale('en'),
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
+        theme: ThemeData.light(),
+        home: const Scaffold(body: ProfileSwitcherBar()),
+      ),
+    );
+
+    testWidgets('InkWell (tappable chip) left edge does not start at x=0 '
+        '— leading dead zone is present', (tester) async {
+      await tester.pumpWidget(barInScaffold());
+      await tester.pump();
+
+      // The background container spans the full screen width (x=0).
+      final bgRect = tester.getRect(
+        find.byKey(const Key('appShellProfileSwitcherBarBackground')),
+      );
+      expect(bgRect.left, 0.0);
+
+      // The InkWell (tappable area) must NOT start at x=0 — it must be
+      // inset by at least kMinInteractiveDimension to clear the leading zone.
+      final inkWellRect = tester.getRect(
+        find.byKey(const Key('appShellProfileSwitcherBar')),
+      );
+      expect(
+        inkWellRect.left,
+        greaterThanOrEqualTo(kMinInteractiveDimension),
+        reason:
+            'The switcher InkWell must start at or after '
+            'kMinInteractiveDimension (${kMinInteractiveDimension}dp) so it '
+            'does not overlap the AppBar leading back-arrow zone.',
+      );
+    });
+
+    testWidgets(
+      'a hit-test at x=0 in the bar area does NOT land on the InkWell',
+      (tester) async {
+        await tester.pumpWidget(barInScaffold());
+        await tester.pump();
+
+        // The InkWell (tappable area) starts at kMinInteractiveDimension.
+        // Confirm that a point in the dead zone (x < kMinInteractiveDimension)
+        // does not hit the InkWell's render object.
+        final inkWellFinder = find.byKey(
+          const Key('appShellProfileSwitcherBar'),
+        );
+        final inkWellRect = tester.getRect(inkWellFinder);
+
+        // A tap at x=4 (deep inside the dead zone) should be OUTSIDE the
+        // InkWell's bounding rect.
+        const deadZoneTapX = 4.0;
+        final bgRect = tester.getRect(
+          find.byKey(const Key('appShellProfileSwitcherBarBackground')),
+        );
+        final tapPoint = Offset(deadZoneTapX, bgRect.center.dy);
+
+        // The dead-zone tap point must lie outside the InkWell rect, proving
+        // the InkWell does not cover the leading back-arrow zone.
+        expect(
+          inkWellRect.contains(tapPoint),
+          isFalse,
+          reason:
+              'A tap at x=$deadZoneTapX (back-arrow dead zone) must fall '
+              'OUTSIDE the InkWell rect — the switcher chip must not cover '
+              'the leading zone.',
+        );
+      },
+    );
   });
 }
