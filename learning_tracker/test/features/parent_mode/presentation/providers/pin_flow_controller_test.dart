@@ -475,6 +475,104 @@ void main() {
     });
   });
 
+  // ── Setup / change / verify completion — digits cleared (linger regression) ─
+  //
+  // Root cause of the "Set Parent PIN" linger: _handleSetup set
+  // `completed: true` without clearing `digits`, so the frame rendered between
+  // the state change and maybePop() showed 4 filled dots.
+  // The fix adds `digits: ''` to every completion copyWith().
+  group('PinFlowController — digits cleared on completion (linger fix)', () {
+    test('setup: digits are empty after matching confirm PIN saves', () async {
+      final ps = _MockPinService();
+      when(() => ps.setProfilePin(1, '1234')).thenAnswer((_) async {});
+
+      final container = _makeContainer(pinService: ps);
+      addTearDown(container.dispose);
+      final ctrl = container.read(pinFlowControllerProvider.notifier);
+      ctrl.reset(PinFlowMode.setup);
+
+      // enterNew
+      _enterDigits(ctrl, '1234');
+      await Future<void>.delayed(Duration.zero);
+      expect(
+        container.read(pinFlowControllerProvider).step,
+        PinFlowStep.confirm,
+      );
+
+      // confirm
+      _enterDigits(ctrl, '1234');
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      final s = container.read(pinFlowControllerProvider);
+      expect(s.completed, isTrue);
+      expect(
+        s.digits,
+        isEmpty,
+        reason: 'digits must be cleared on completion so no filled-dots linger',
+      );
+    });
+
+    test('change: digits are empty after confirm step saves', () async {
+      final ps = _MockPinService();
+      when(() => ps.verifyProfilePin(1, '0000')).thenAnswer((_) async => true);
+      when(() => ps.setProfilePin(1, '5678')).thenAnswer((_) async {});
+
+      final container = _makeContainer(pinService: ps);
+      addTearDown(container.dispose);
+      final ctrl = container.read(pinFlowControllerProvider.notifier);
+      ctrl.reset(PinFlowMode.change);
+
+      // verifyCurrent
+      _enterDigits(ctrl, '0000');
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+      expect(
+        container.read(pinFlowControllerProvider).step,
+        PinFlowStep.enterNew,
+      );
+
+      // enterNew
+      _enterDigits(ctrl, '5678');
+      await Future<void>.delayed(Duration.zero);
+      expect(
+        container.read(pinFlowControllerProvider).step,
+        PinFlowStep.confirm,
+      );
+
+      // confirm
+      _enterDigits(ctrl, '5678');
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      final s = container.read(pinFlowControllerProvider);
+      expect(s.completed, isTrue);
+      expect(
+        s.digits,
+        isEmpty,
+        reason: 'digits must be cleared on completion so no filled-dots linger',
+      );
+    });
+
+    test('verify: digits are empty after correct PIN', () async {
+      final ps = _MockPinService();
+      when(() => ps.verifyProfilePin(1, '9999')).thenAnswer((_) async => true);
+
+      final container = _makeContainer(pinService: ps);
+      addTearDown(container.dispose);
+      final ctrl = container.read(pinFlowControllerProvider.notifier);
+      ctrl.reset(PinFlowMode.verify);
+
+      _enterDigits(ctrl, '9999');
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      final s = container.read(pinFlowControllerProvider);
+      expect(s.completed, isTrue);
+      expect(
+        s.digits,
+        isEmpty,
+        reason: 'digits must be cleared on completion so no filled-dots linger',
+      );
+    });
+  });
+
   group('PinFlowController — setup mode step transitions (sync)', () {
     test('4 digits in enterNew → transitions to confirm step', () async {
       final ps = _MockPinService();

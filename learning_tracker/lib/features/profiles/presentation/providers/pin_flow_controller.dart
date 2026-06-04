@@ -272,10 +272,13 @@ class PinFlowController extends _$PinFlowController {
     state = state.copyWith(busy: true, errorMessage: null);
     try {
       await pinService.setProfilePin(profileId, pin);
+      // Clear digits immediately so the completion frame shows an empty
+      // keypad instead of 4 filled dots while maybePop() is in-flight.
       state = state.copyWith(
         busy: false,
         completed: true,
         step: PinFlowStep.done,
+        digits: '',
       );
     } on ArgumentError catch (e) {
       state = state.copyWith(
@@ -346,10 +349,13 @@ class PinFlowController extends _$PinFlowController {
         }
         state = state.copyWith(busy: true, errorMessage: null);
         await pinService.setProfilePin(profileId, pin);
+        // Clear digits so the completion frame shows an empty keypad while
+        // maybePop() is in-flight (same fix as _handleSetup).
         state = state.copyWith(
           busy: false,
           completed: true,
           step: PinFlowStep.done,
+          digits: '',
         );
 
       case PinFlowStep.done:
@@ -373,10 +379,13 @@ class PinFlowController extends _$PinFlowController {
     try {
       final ok = await pinService.verifyProfilePin(profileId, pin);
       if (ok) {
+        // Clear digits so the completion frame shows an empty keypad while
+        // maybePop() is in-flight.
         state = state.copyWith(
           busy: false,
           completed: true,
           step: PinFlowStep.done,
+          digits: '',
         );
       } else {
         state = state.copyWith(

@@ -1339,4 +1339,99 @@ void main() {
       await _teardown(tester);
     });
   });
+
+  // ── G. Setup-completion navigation linger regression ──────────────────────
+  //
+  // Repro: after entering the 4th confirm digit on the "Set Parent PIN" setup
+  // screen, the screen would linger showing the filled-dots keypad with the
+  // "Set Parent PIN" title before the maybePop took effect.  The root cause was
+  // that _handleSetup set `completed: true` without clearing `digits`, so the
+  // rebuild that preceded maybePop() re-rendered 4 filled dots.
+  //
+  // The fix: _handleSetup (and _handleChange / _handleVerify for parity) now
+  // sets `digits: ''` alongside `completed: true`, so any frame rendered before
+  // the pop shows an empty keypad.
+  group('G. Setup-completion navigation linger (regression)', () {
+    testWidgets(
+      'G1: setup completion — maybePop called and digits are empty on completion',
+      (tester) async {
+        tester.view.physicalSize = const Size(800, 1600);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+
+        final ps = _MockPinService();
+        when(
+          () => ps.setProfilePin(_kProfileId, '2468'),
+        ).thenAnswer((_) async {});
+
+        final router = _MockStackRouter();
+        final appRouter = _MockAppRouter();
+        _stubRouter(router);
+
+        final container = ProviderContainer(
+          retry: (_, __) => null,
+          overrides: [
+            pinServiceProvider.overrideWithValue(ps),
+            routerProvider.overrideWithValue(appRouter),
+            selectedProfileIdProvider.overrideWith(
+              () => _FixedSelectedProfileId(_kProfileId),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp(
+              localizationsDelegates: const [
+                AppLocalizations.delegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: StackRouterScope(
+                controller: router,
+                stateHash: 0,
+                child: const PinFlowScreen(mode: PinFlowMode.setup),
+              ),
+            ),
+          ),
+        );
+        await tester.pump(const Duration(seconds: 1));
+
+        // enterNew step.
+        await _enterPin(tester, '2468');
+        await tester.pump(const Duration(seconds: 1));
+
+        // confirm step — same PIN.
+        await _enterPin(tester, '2468');
+        await tester.pump(const Duration(seconds: 1));
+
+        // Controller must be completed and digits must be cleared so no
+        // filled-dots frame lingers before the pop takes effect.
+        final state = container.read(pinFlowControllerProvider);
+        expect(
+          state.completed,
+          isTrue,
+          reason: 'Controller must be completed after matching PIN confirm',
+        );
+        expect(
+          state.digits,
+          isEmpty,
+          reason:
+              'Digits must be cleared on completion so no filled-dots frame '
+              'lingers before maybePop takes effect',
+        );
+
+        // maybePop(true) must have been called.
+        verify(
+          () => router.maybePop<bool>(any<bool>()),
+        ).called(greaterThanOrEqualTo(1));
+
+        await _teardown(tester);
+      },
+    );
+  });
 }
