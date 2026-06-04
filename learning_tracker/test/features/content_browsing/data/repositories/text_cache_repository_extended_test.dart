@@ -210,6 +210,50 @@ void main() {
       // All segments empty → falls through to daily_content → returns null.
       expect(result, isNull);
     });
+
+    // Regression test for the "no English Translation tab" bug:
+    // When the bundled content.db has english_text for individual pasuk rows
+    // (e.g. 'Genesis 1:1', 'Genesis 1:2', …) but NOT a direct row for
+    // the chapter ref ('Genesis 1'), the repository must aggregate the child
+    // rows and expose a non-empty TextContent.englishText so the reader shows
+    // the "English Translation" card.
+    test(
+      'chapter-level ref: englishText is non-empty when child rows have english',
+      () async {
+        await insertTextCache(
+          sefariaRef: 'Genesis 1:1',
+          hebrewText: 'בְּרֵאשִׁית בָּרָא',
+          englishText: 'When God began to create heaven and earth—',
+        );
+        await insertTextCache(
+          sefariaRef: 'Genesis 1:2',
+          hebrewText: 'וְהָאָרֶץ הָיְתָה',
+          englishText: 'the earth being unformed and void',
+        );
+
+        final result = await repository.getText('Genesis 1');
+
+        expect(
+          result,
+          isNotNull,
+          reason: 'chapter ref must resolve via child aggregation',
+        );
+        expect(
+          result!.englishText,
+          isNotEmpty,
+          reason:
+              'TextContent.englishText must be non-empty so the reader shows '
+              'the English Translation card — this was the root of the '
+              'Chumash no-English-tab regression',
+        );
+        expect(result.segments, hasLength(2));
+        expect(
+          result.segments.every((s) => s.englishText.isNotEmpty),
+          isTrue,
+          reason: 'each pasuk segment carries its own english text',
+        );
+      },
+    );
   });
 
   // ── daily_content fallback ────────────────────────────────────────────────
