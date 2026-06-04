@@ -22,6 +22,7 @@ import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/sync/initial_sync_state.dart';
+import 'package:learning_tracker/core/sync/providers/sync_status_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/screens/dashboard_screen.dart';
@@ -33,6 +34,7 @@ import 'package:learning_tracker/features/progress/presentation/providers/lifeti
 import 'package:learning_tracker/features/progress/presentation/widgets/progress_tier_counter_row.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
+import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 import '../../../../helpers/drift_memory.dart';
@@ -118,6 +120,11 @@ List<Override> _overridesFor({
   int points = 0,
 }) {
   return [
+    // DashboardScreen listens to syncStatusProvider (auto-refresh on launch-pull
+    // completion). Stub it so the test never reaches the real sync/auth/Firebase
+    // provider graph. `localOnly` never transitions to `synced`, so the
+    // auto-refresh listener stays dormant.
+    syncStatusProvider.overrideWith((ref) => const SyncStatus.localOnly()),
     activeProfileIdProvider.overrideWith(() => _ProfileIdOverride(_profileId)),
     useHebrewTermsProvider.overrideWith(
       () => _UseHebrewTermsOverride(useHebrew: false),
@@ -549,6 +556,9 @@ void main() {
       required List<TrackDualProgressMetric> dualMetrics,
     }) {
       return [
+        // Stub syncStatusProvider so DashboardScreen's auto-refresh listener
+        // never reaches the real sync/auth/Firebase provider graph.
+        syncStatusProvider.overrideWith((ref) => const SyncStatus.localOnly()),
         userDatabaseProvider.overrideWith((ref) => db),
         activeProfileIdProvider.overrideWith(
           () => _ProfileIdOverride(_profileId),
