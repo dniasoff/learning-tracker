@@ -196,17 +196,25 @@ class ProfileRepositoryImpl implements ProfileRepository {
       await (_db.delete(
         _db.pointConfigs,
       )..where((t) => t.profileId.equals(id))).go();
-      await (_db.delete(
-        _db.curriculumTracks,
-      )..where((t) => t.profileId.equals(id))).go();
+      // curriculum_scopes and study_day_configs hold a non-nullable (RESTRICT)
+      // FK to curriculum_tracks, so they MUST be cleared BEFORE the tracks
+      // themselves. Deleting curriculum_tracks first fails with
+      // SqliteException(787) FOREIGN KEY constraint, which rolls back the whole
+      // transaction — the profile is never deleted and the user just sees the
+      // confirm dialog dismiss with nothing happening.
       await (_db.delete(
         _db.curriculumScopes,
       )..where((t) => t.profileId.equals(id))).go();
       await (_db.delete(
-        _db.learningLedger,
+        _db.studyDayConfigs,
       )..where((t) => t.profileId.equals(id))).go();
       await (_db.delete(
-        _db.studyDayConfigs,
+        _db.curriculumTracks,
+      )..where((t) => t.profileId.equals(id))).go();
+      // learning_ledger.trackId is ON DELETE SET NULL, so its order relative to
+      // curriculum_tracks does not matter.
+      await (_db.delete(
+        _db.learningLedger,
       )..where((t) => t.profileId.equals(id))).go();
       await (_db.delete(
         _db.profilePrograms,

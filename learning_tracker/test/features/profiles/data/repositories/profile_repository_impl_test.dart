@@ -175,6 +175,82 @@ void main() {
       expect(result, isNull);
     });
 
+    test(
+      'deleteProfile succeeds when the profile owns a track with a '
+      'curriculum_scope and study_day_config (FK ordering regression)',
+      () async {
+        // Regression: curriculum_scopes and study_day_configs hold a
+        // non-nullable (RESTRICT) FK to curriculum_tracks. If the delete
+        // transaction removes curriculum_tracks before those children, SQLite
+        // raises FOREIGN KEY constraint failed (787), the transaction rolls
+        // back, and the profile is never deleted — the user just sees the
+        // confirm dialog dismiss with nothing happening. Production runs with
+        // PRAGMA foreign_keys = ON, so this must hold here too.
+        final now = DateTimeFactory.nowUtc();
+        await repo.createProfile(
+          accountId: 1,
+          displayName: 'Keeper',
+          mode: 'adult',
+        );
+        final profile = await repo.createProfile(
+          accountId: 1,
+          displayName: 'Has Track',
+          mode: 'child',
+        );
+
+        final trackId = await db
+            .into(db.curriculumTracks)
+            .insert(
+              CurriculumTracksCompanion.insert(
+                profileId: profile.id,
+                curriculumId: 'mishnayos',
+                stateChangedAt: now,
+                activatedAt: now,
+              ),
+            );
+        await db
+            .into(db.curriculumScopes)
+            .insert(
+              CurriculumScopesCompanion.insert(
+                profileId: profile.id,
+                curriculumId: 'mishnayos',
+                trackId: trackId,
+                scopeLevel: 1,
+                scopeValue: 'Seder Zeraim',
+                createdAt: now,
+              ),
+            );
+        await db
+            .into(db.studyDayConfigs)
+            .insert(
+              StudyDayConfigsCompanion.insert(
+                profileId: profile.id,
+                curriculumId: 'mishnayos',
+                trackId: trackId,
+                dayOfWeek: 1,
+                updatedAt: now,
+              ),
+            );
+
+        await repo.deleteProfile(profile.id);
+
+        expect(await repo.getProfileById(profile.id), isNull);
+        // The track and its FK-bearing children are gone too.
+        final tracks = await (db.select(
+          db.curriculumTracks,
+        )..where((t) => t.profileId.equals(profile.id))).get();
+        expect(tracks, isEmpty);
+        final scopes = await (db.select(
+          db.curriculumScopes,
+        )..where((t) => t.profileId.equals(profile.id))).get();
+        expect(scopes, isEmpty);
+        final studyDays = await (db.select(
+          db.studyDayConfigs,
+        )..where((t) => t.profileId.equals(profile.id))).get();
+        expect(studyDays, isEmpty);
+      },
+    );
+
     test('countProfilesForAccount returns correct count', () async {
       expect(await repo.countProfilesForAccount(1), 0);
 
