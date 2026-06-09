@@ -1515,6 +1515,15 @@
     }
   },
 
+  "curriculumProgressBreakdownByLevel": "פירוט לפי רמה",
+  "curriculumProgressLoading": "טוענים נתוני התקדמות...",
+  "curriculumProgressLoadFailed": "שגיאה בטעינת ההתקדמות: {error}",
+  "@curriculumProgressLoadFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+
   "tierLensRecentActivity": "פעילות אחרונה",
   "@tierLensRecentActivity": {
     "description": "Lens label for the engagement tier (live-only completions)."

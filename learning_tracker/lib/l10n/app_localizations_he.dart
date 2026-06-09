@@ -3068,6 +3068,17 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
+  String get curriculumProgressBreakdownByLevel => 'פירוט לפי רמה';
+
+  @override
+  String get curriculumProgressLoading => 'טוענים נתוני התקדמות...';
+
+  @override
+  String curriculumProgressLoadFailed(String error) {
+    return 'שגיאה בטעינת ההתקדמות: $error';
+  }
+
+  @override
   String get tierLensRecentActivity => 'פעילות אחרונה';
 
   @override

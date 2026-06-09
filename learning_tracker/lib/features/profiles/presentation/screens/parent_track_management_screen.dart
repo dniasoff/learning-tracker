@@ -142,13 +142,14 @@ class _ParentTrackManagementScreenState
   }
 
   Widget _buildActiveHeader(BuildContext context, int activeCount) {
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         children: [
           Expanded(
             child: Text(
-              'Active Tracks',
+              l10n.activeTracksLabel,
               style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.w800,
                 color: AppTheme.brandInk,
@@ -162,7 +163,7 @@ class _ParentTrackManagementScreenState
               borderRadius: BorderRadius.circular(999),
             ),
             child: Text(
-              '$activeCount RUNNING',
+              l10n.activeTracksRunning(activeCount),
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                 color: AppColors.goldAmber,
                 fontWeight: FontWeight.w800,

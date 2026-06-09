@@ -487,4 +487,109 @@ void main() {
       );
     },
   );
+
+  // CP-01 regression: 'Breakdown by Level', 'Loading progress...', and
+  // 'Failed to load progress: $error' were hard-coded English literals in the
+  // screen. They must be driven by l10n keys so Hebrew users see localised
+  // text. The tests below assert the English locale renders the correct text
+  // from the ARB string (not from a residual literal), and that the Hebrew
+  // locale renders the Hebrew translation.
+  testWidgets(
+    'CP-01: "Breakdown by Level" heading comes from l10n, not a hard-coded literal',
+    (tester) async {
+      // Seed one completion so the screen renders the data path that shows the
+      // hierarchy section with the "Breakdown by Level" heading.
+      await _seedCompletion(
+        db,
+        trackId: trackId,
+        ref: leaves[0].sefariaRef,
+        stageId: learnStageId,
+        at: DateTime.utc(2026, 5, 1, 10),
+      );
+
+      final repo = _FakeContentRepository(leaves);
+      final router = _RecordingRouter([]);
+
+      await tester.pumpWidget(
+        _pump(db: db, repo: repo, stageRepo: stageRepo, router: router),
+      );
+      await tester.pumpAndSettle();
+
+      // English locale: the ARB value equals the old hard-coded string, so
+      // this passes regardless — but it pins the contract that this text is
+      // ARB-driven.
+      expect(
+        find.text('Breakdown by Level'),
+        findsOneWidget,
+        reason:
+            'CP-01: The hierarchy section heading must come from the '
+            'curriculumProgressBreakdownByLevel ARB key, not a hard-coded '
+            'English literal.',
+      );
+    },
+  );
+
+  testWidgets(
+    'CP-01: "Breakdown by Level" heading renders Hebrew in he locale',
+    (tester) async {
+      await _seedCompletion(
+        db,
+        trackId: trackId,
+        ref: leaves[0].sefariaRef,
+        stageId: learnStageId,
+        at: DateTime.utc(2026, 5, 1, 10),
+      );
+
+      final repo = _FakeContentRepository(leaves);
+      final router = _RecordingRouter([]);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            userDatabaseProvider.overrideWith((ref) => db),
+            contentRepositoryProvider.overrideWithValue(repo),
+            activeProfileIdProvider.overrideWith(
+              () => _ProfileIdOverride(_profileId),
+            ),
+            useHebrewTermsProvider.overrideWith(
+              () => _UseHebrewTermsOverride(useHebrew: false),
+            ),
+            stageDefinitionRepositoryProvider.overrideWith(
+              (ref, c) => stageRepo,
+            ),
+          ],
+          child: MaterialApp(
+            locale: const Locale('he'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: StackRouterScope(
+              controller: router,
+              stateHash: 0,
+              child: const CurriculumProgressScreen(
+                curriculumId: _curriculumKey,
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Hebrew locale must render the Hebrew ARB value, NOT the English literal.
+      expect(
+        find.text('פירוט לפי רמה'),
+        findsOneWidget,
+        reason:
+            'CP-01: Under the he locale the hierarchy heading must render the '
+            'Hebrew translation ("פירוט לפי רמה") not the English literal '
+            '"Breakdown by Level". A hard-coded English literal would fail '
+            'this assertion.',
+      );
+      expect(
+        find.text('Breakdown by Level'),
+        findsNothing,
+        reason:
+            'CP-01: The English literal must not appear when locale is he.',
+      );
+    },
+  );
 }

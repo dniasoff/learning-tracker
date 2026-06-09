@@ -5447,6 +5447,24 @@ abstract class AppLocalizations {
   /// **'{completed} of {total}'**
   String itemsLearnedOf(int completed, int total);
 
+  /// Section heading in CurriculumProgressScreen above the per-level hierarchy cards.
+  ///
+  /// In en, this message translates to:
+  /// **'Breakdown by Level'**
+  String get curriculumProgressBreakdownByLevel;
+
+  /// Loading placeholder shown in CurriculumProgressScreen while progress data is being fetched.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading progress...'**
+  String get curriculumProgressLoading;
+
+  /// Error message shown in CurriculumProgressScreen when progress data fails to load.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to load progress: {error}'**
+  String curriculumProgressLoadFailed(String error);
+
   /// Lens label for the engagement tier (live-only completions) — Recent Activity screen and Progress hub tile.
   ///
   /// In en, this message translates to:

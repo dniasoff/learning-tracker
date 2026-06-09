@@ -1573,6 +1573,22 @@
     }
   },
 
+  "curriculumProgressBreakdownByLevel": "Breakdown by Level",
+  "@curriculumProgressBreakdownByLevel": {
+    "description": "Section heading in CurriculumProgressScreen above the per-level hierarchy cards."
+  },
+  "curriculumProgressLoading": "Loading progress...",
+  "@curriculumProgressLoading": {
+    "description": "Loading placeholder shown in CurriculumProgressScreen while progress data is being fetched."
+  },
+  "curriculumProgressLoadFailed": "Failed to load progress: {error}",
+  "@curriculumProgressLoadFailed": {
+    "description": "Error message shown in CurriculumProgressScreen when progress data fails to load.",
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+
   "tierLensRecentActivity": "Recent Activity",
   "@tierLensRecentActivity": {
     "description": "Lens label for the engagement tier (live-only completions) — Recent Activity screen and Progress hub tile."

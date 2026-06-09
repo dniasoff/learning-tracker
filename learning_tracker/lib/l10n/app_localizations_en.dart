@@ -3102,6 +3102,17 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get curriculumProgressBreakdownByLevel => 'Breakdown by Level';
+
+  @override
+  String get curriculumProgressLoading => 'Loading progress...';
+
+  @override
+  String curriculumProgressLoadFailed(String error) {
+    return 'Failed to load progress: $error';
+  }
+
+  @override
   String get tierLensRecentActivity => 'Recent Activity';
 
   @override

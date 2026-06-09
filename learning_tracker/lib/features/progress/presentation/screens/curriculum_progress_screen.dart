@@ -160,7 +160,7 @@ class CurriculumProgressScreen extends ConsumerWidget {
                     ),
                     const SizedBox(height: 24),
                     Text(
-                      'Breakdown by Level',
+                      l10n.curriculumProgressBreakdownByLevel,
                       style: plusJakartaTheme.textTheme.titleLarge?.copyWith(
                         fontWeight: FontWeight.w700,
                         fontSize: 28,
@@ -182,10 +182,10 @@ class CurriculumProgressScreen extends ConsumerWidget {
               );
             },
             loading: () => bodyChild(
-              const Center(
+              Center(
                 child: Padding(
-                  padding: EdgeInsets.only(top: 48),
-                  child: LoadingIndicator(message: 'Loading progress...'),
+                  padding: const EdgeInsets.only(top: 48),
+                  child: LoadingIndicator(message: l10n.curriculumProgressLoading),
                 ),
               ),
             ),
@@ -193,7 +193,7 @@ class CurriculumProgressScreen extends ConsumerWidget {
               Padding(
                 padding: const EdgeInsets.all(24),
                 child: ErrorDisplay(
-                  message: 'Failed to load progress: $error',
+                  message: l10n.curriculumProgressLoadFailed(error.toString()),
                   onRetry: () =>
                       ref.invalidate(curriculumProgressProvider(curriculumId)),
                 ),
