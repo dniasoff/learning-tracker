@@ -26,11 +26,22 @@ part 'child_redemption_screen.g.dart';
 
 // ─── Providers ────────────────────────────────────────────────────────────────
 
+/// Child's debitable points balance — reactive stream backed by watchBalance.
+///
+/// DG-RDMP-01: previously a one-shot [FutureProvider] calling
+/// [PointsBalanceDao.getBalance] (reads the balance once). This left the
+/// ChildRedemptionScreen's balance card STALE after any balance mutation
+/// (parent adjustment, redemption debit) until a manual `ref.invalidate()`.
+///
+/// Fix: converted to a [StreamProvider] backed by
+/// [PointsBalanceDao.watchBalance] — the same reactive read path used by
+/// [dashboardGlobalPointsProvider] and [globalPointsProvider]. Any write to
+/// the PointsBalance row causes the stream to emit the new value immediately.
 @riverpod
-Future<int> childRedemptionBalance(Ref ref) async {
+Stream<int> childRedemptionBalance(Ref ref) {
   final db = ref.watch(userDatabaseProvider);
   final profileId = ref.watch(activeProfileIdProvider);
-  return db.pointsBalanceDao.getBalance(profileId);
+  return db.pointsBalanceDao.watchBalance(profileId);
 }
 
 @riverpod
@@ -187,8 +198,9 @@ class ChildRedemptionScreen extends ConsumerWidget {
           content: Text(l10n.redeemScreenRequestedSnackbar(reward.title)),
         ),
       );
-      // Invalidate so balance refreshes.
-      ref.invalidate(childRedemptionBalanceProvider);
+      // DG-RDMP-01: no need to invalidate — childRedemptionBalanceProvider is
+      // now a StreamProvider backed by watchBalance, which emits the updated
+      // balance reactively after the createRedemption debit.
     }
   }
 }
