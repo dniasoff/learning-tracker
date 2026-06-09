@@ -255,16 +255,43 @@ final class StudyDaysPerWeekFamily extends $Family
 }
 
 /// Toggle a day between study and review.
+///
+/// DEPRECATED / DEAD CODE — this provider has no call sites. The production
+/// toggle path is `study_day_config_screen.dart:_toggleDay`, which correctly
+/// pushes sync and invalidates the scheduler after the DB write completes.
+/// This provider is kept only to avoid regenerating build_runner output;
+/// it must not be used because:
+///   1. It does not push sync (no syncFacade call).
+///   2. ref.invalidate(allDailyTasksProvider) fires before the write completes
+///      (STUDYDAY-TOGGLE-RACE-14 — fixed in the screen's _toggleDay).
 
 @ProviderFor(toggleStudyDay)
 final toggleStudyDayProvider = ToggleStudyDayFamily._();
 
 /// Toggle a day between study and review.
+///
+/// DEPRECATED / DEAD CODE — this provider has no call sites. The production
+/// toggle path is `study_day_config_screen.dart:_toggleDay`, which correctly
+/// pushes sync and invalidates the scheduler after the DB write completes.
+/// This provider is kept only to avoid regenerating build_runner output;
+/// it must not be used because:
+///   1. It does not push sync (no syncFacade call).
+///   2. ref.invalidate(allDailyTasksProvider) fires before the write completes
+///      (STUDYDAY-TOGGLE-RACE-14 — fixed in the screen's _toggleDay).
 
 final class ToggleStudyDayProvider
     extends $FunctionalProvider<AsyncValue<void>, void, FutureOr<void>>
     with $FutureModifier<void>, $FutureProvider<void> {
   /// Toggle a day between study and review.
+  ///
+  /// DEPRECATED / DEAD CODE — this provider has no call sites. The production
+  /// toggle path is `study_day_config_screen.dart:_toggleDay`, which correctly
+  /// pushes sync and invalidates the scheduler after the DB write completes.
+  /// This provider is kept only to avoid regenerating build_runner output;
+  /// it must not be used because:
+  ///   1. It does not push sync (no syncFacade call).
+  ///   2. ref.invalidate(allDailyTasksProvider) fires before the write completes
+  ///      (STUDYDAY-TOGGLE-RACE-14 — fixed in the screen's _toggleDay).
   ToggleStudyDayProvider._({
     required ToggleStudyDayFamily super.from,
     required (CurriculumId, int, DayType) super.argument,
@@ -311,6 +338,15 @@ final class ToggleStudyDayProvider
 String _$toggleStudyDayHash() => r'7801f428051abfd237c0693218aa28f68538c147';
 
 /// Toggle a day between study and review.
+///
+/// DEPRECATED / DEAD CODE — this provider has no call sites. The production
+/// toggle path is `study_day_config_screen.dart:_toggleDay`, which correctly
+/// pushes sync and invalidates the scheduler after the DB write completes.
+/// This provider is kept only to avoid regenerating build_runner output;
+/// it must not be used because:
+///   1. It does not push sync (no syncFacade call).
+///   2. ref.invalidate(allDailyTasksProvider) fires before the write completes
+///      (STUDYDAY-TOGGLE-RACE-14 — fixed in the screen's _toggleDay).
 
 final class ToggleStudyDayFamily extends $Family
     with
@@ -328,6 +364,15 @@ final class ToggleStudyDayFamily extends $Family
       );
 
   /// Toggle a day between study and review.
+  ///
+  /// DEPRECATED / DEAD CODE — this provider has no call sites. The production
+  /// toggle path is `study_day_config_screen.dart:_toggleDay`, which correctly
+  /// pushes sync and invalidates the scheduler after the DB write completes.
+  /// This provider is kept only to avoid regenerating build_runner output;
+  /// it must not be used because:
+  ///   1. It does not push sync (no syncFacade call).
+  ///   2. ref.invalidate(allDailyTasksProvider) fires before the write completes
+  ///      (STUDYDAY-TOGGLE-RACE-14 — fixed in the screen's _toggleDay).
 
   ToggleStudyDayProvider call(
     CurriculumId curriculumId,
