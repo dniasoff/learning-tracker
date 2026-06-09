@@ -6,6 +6,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
+import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
@@ -575,6 +576,21 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
                         : null,
                   );
                 },
+              ),
+              const Divider(height: 1, indent: 56),
+            ],
+            if (!hasProgramEnrollment && curriculum != null) ...[
+              ListTile(
+                key: const ValueKey('trackDetail.studyDaysTile'),
+                leading: const Icon(
+                  Icons.calendar_today_outlined,
+                  color: AppColors.blueMedium,
+                ),
+                title: Text(AppLocalizations.of(context)!.studyDaysTitle),
+                trailing: const Icon(Icons.chevron_right_rounded),
+                onTap: () => context.router.push(
+                  StudyDayConfigRoute(curriculumId: curriculum),
+                ),
               ),
               const Divider(height: 1, indent: 56),
             ],
