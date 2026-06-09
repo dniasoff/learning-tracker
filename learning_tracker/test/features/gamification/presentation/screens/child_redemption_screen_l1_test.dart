@@ -111,7 +111,9 @@ Future<void> _pumpScreen(
     ProviderScope(
       overrides: [
         // Supply balance synchronously so the balance card shows immediately.
-        childRedemptionBalanceProvider.overrideWith((ref) async => balance),
+        childRedemptionBalanceProvider.overrideWith(
+          (ref) => Stream.value(balance),
+        ),
         // Supply reward list synchronously.
         childRedemptionRewardsProvider.overrideWith((ref) async => rewards),
         // Point to our in-memory database for createRedemption calls.
@@ -160,7 +162,9 @@ Future<void> _pumpScreenWithRouter(
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        childRedemptionBalanceProvider.overrideWith((ref) async => balance),
+        childRedemptionBalanceProvider.overrideWith(
+          (ref) => Stream.value(balance),
+        ),
         childRedemptionRewardsProvider.overrideWith((ref) async => rewards),
         userDatabaseProvider.overrideWithValue(database),
         activeProfileIdProvider.overrideWithValue(_profileId),

@@ -152,7 +152,7 @@ Widget _buildApp({
       syncWriteFacadeProvider.overrideWithValue(null),
       // Points providers are needed by PointsDisplayWidget inside the
       // expansion tile. Override to avoid real DB calls.
-      globalPointsProvider.overrideWith((ref) async => 0),
+      globalPointsProvider.overrideWith((ref) => Stream.value(0)),
       curriculumBreakdownProvider.overrideWith((ref) async => {}),
     ],
     child: MaterialApp(
