@@ -299,7 +299,7 @@ class _GoalCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '$count today tasks',
+                  '$count today ${count == 1 ? 'task' : 'tasks'}',
                   style: theme.textTheme.headlineMedium?.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.w800,
