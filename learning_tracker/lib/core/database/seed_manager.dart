@@ -181,12 +181,43 @@ class SeedManager {
   Future<void> _extractSeedDb(String targetPath) async {
     try {
       final compressed = await rootBundle.load(_seedAssetPath);
-      final decompressed = gzip.decode(compressed.buffer.asUint8List());
-      await File(targetPath).writeAsBytes(decompressed, flush: true);
+      final input = compressed.buffer.asUint8List(
+        compressed.offsetInBytes,
+        compressed.lengthInBytes,
+      );
+      // Stream-decode the gzip straight to disk. The previous
+      // `gzip.decode(...)` allocated the entire ~432 MB plaintext as ONE
+      // contiguous Uint8List, which the Scudo allocator cannot satisfy on
+      // 2 GB / older devices (API <= 31) — the app OOM-crashed during
+      // first-launch seeding and dropped the user back on the launcher.
+      // Streaming keeps peak memory to ~1 MB per decoded chunk plus the
+      // compressed blob, so first launch succeeds on low-RAM / older Android.
+      var bytesWritten = 0;
+      final out = File(targetPath).openWrite();
+      try {
+        Stream<List<int>> compressedChunks() async* {
+          const chunkSize = 1 << 20; // 1 MB
+          for (var i = 0; i < input.length; i += chunkSize) {
+            final end =
+                (i + chunkSize < input.length) ? i + chunkSize : input.length;
+            yield input.sublist(i, end);
+          }
+        }
+
+        await out.addStream(
+          compressedChunks().transform(gzip.decoder).map((chunk) {
+            bytesWritten += chunk.length;
+            return chunk;
+          }),
+        );
+        await out.flush();
+      } finally {
+        await out.close();
+      }
       _logger?.info(
         event: 'seed_manager_seed_extracted',
         fields: {
-          'sizeMb': (decompressed.length / 1024 / 1024).toStringAsFixed(1),
+          'sizeMb': (bytesWritten / 1024 / 1024).toStringAsFixed(1),
         },
       );
     } catch (e) {
