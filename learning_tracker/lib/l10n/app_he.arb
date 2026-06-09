@@ -1515,6 +1515,12 @@
     }
   },
 
+  "overallProgressCardTitle": "התקדמות כוללת",
+  "overallProgressStatTotalItems": "סה\"כ פריטים",
+  "overallProgressStatCompletedAllStages": "הושלמו כל השלבים",
+  "overallProgressStatInProgress": "בתהליך",
+  "overallProgressStatNotStarted": "טרם הוחל",
+
   "curriculumProgressBreakdownByLevel": "פירוט לפי רמה",
   "curriculumProgressLoading": "טוענים נתוני התקדמות...",
   "curriculumProgressLoadFailed": "שגיאה בטעינת ההתקדמות: {error}",

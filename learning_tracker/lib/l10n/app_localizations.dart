@@ -5447,6 +5447,36 @@ abstract class AppLocalizations {
   /// **'{completed} of {total}'**
   String itemsLearnedOf(int completed, int total);
 
+  /// Title of the OverallStatsCard on the Curriculum Progress screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Overall Progress'**
+  String get overallProgressCardTitle;
+
+  /// Row label in OverallStatsCard for the total number of items in the curriculum.
+  ///
+  /// In en, this message translates to:
+  /// **'Total items'**
+  String get overallProgressStatTotalItems;
+
+  /// Row label in OverallStatsCard for the count of items that have completed every stage.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed all stages'**
+  String get overallProgressStatCompletedAllStages;
+
+  /// Row label in OverallStatsCard for the count of items currently in progress.
+  ///
+  /// In en, this message translates to:
+  /// **'In progress'**
+  String get overallProgressStatInProgress;
+
+  /// Row label in OverallStatsCard for the count of items not yet started.
+  ///
+  /// In en, this message translates to:
+  /// **'Not started'**
+  String get overallProgressStatNotStarted;
+
   /// Section heading in CurriculumProgressScreen above the per-level hierarchy cards.
   ///
   /// In en, this message translates to:

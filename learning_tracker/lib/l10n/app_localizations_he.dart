@@ -3068,6 +3068,21 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
+  String get overallProgressCardTitle => 'התקדמות כוללת';
+
+  @override
+  String get overallProgressStatTotalItems => 'סה\"כ פריטים';
+
+  @override
+  String get overallProgressStatCompletedAllStages => 'הושלמו כל השלבים';
+
+  @override
+  String get overallProgressStatInProgress => 'בתהליך';
+
+  @override
+  String get overallProgressStatNotStarted => 'טרם הוחל';
+
+  @override
   String get curriculumProgressBreakdownByLevel => 'פירוט לפי רמה';
 
   @override

@@ -1573,6 +1573,27 @@
     }
   },
 
+  "overallProgressCardTitle": "Overall Progress",
+  "@overallProgressCardTitle": {
+    "description": "Title of the OverallStatsCard on the Curriculum Progress screen."
+  },
+  "overallProgressStatTotalItems": "Total items",
+  "@overallProgressStatTotalItems": {
+    "description": "Row label in OverallStatsCard for the total number of items in the curriculum."
+  },
+  "overallProgressStatCompletedAllStages": "Completed all stages",
+  "@overallProgressStatCompletedAllStages": {
+    "description": "Row label in OverallStatsCard for the count of items that have completed every stage."
+  },
+  "overallProgressStatInProgress": "In progress",
+  "@overallProgressStatInProgress": {
+    "description": "Row label in OverallStatsCard for the count of items currently in progress."
+  },
+  "overallProgressStatNotStarted": "Not started",
+  "@overallProgressStatNotStarted": {
+    "description": "Row label in OverallStatsCard for the count of items not yet started."
+  },
+
   "curriculumProgressBreakdownByLevel": "Breakdown by Level",
   "@curriculumProgressBreakdownByLevel": {
     "description": "Section heading in CurriculumProgressScreen above the per-level hierarchy cards."

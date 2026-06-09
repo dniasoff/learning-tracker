@@ -3102,6 +3102,21 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get overallProgressCardTitle => 'Overall Progress';
+
+  @override
+  String get overallProgressStatTotalItems => 'Total items';
+
+  @override
+  String get overallProgressStatCompletedAllStages => 'Completed all stages';
+
+  @override
+  String get overallProgressStatInProgress => 'In progress';
+
+  @override
+  String get overallProgressStatNotStarted => 'Not started';
+
+  @override
   String get curriculumProgressBreakdownByLevel => 'Breakdown by Level';
 
   @override
