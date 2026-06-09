@@ -2516,6 +2516,22 @@ class AppLocalizationsHe extends AppLocalizations {
   String get backupSyncTapToRetry => 'הקש לניסיון חוזר';
 
   @override
+  String get backupConnecting => 'מתחבר…';
+
+  @override
+  String get backupOffline => 'לא מקוון';
+
+  @override
+  String backupSyncPaused(int count, String reason) {
+    return 'סנכרון מושהה — $count ממתינים. $reason';
+  }
+
+  @override
+  String backupSyncPausedNoCount(String reason) {
+    return 'סנכרון מושהה. $reason';
+  }
+
+  @override
   String get backupUpgradeToCloud => 'שדרג לענן';
 
   @override

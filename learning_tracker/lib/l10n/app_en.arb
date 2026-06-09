@@ -1277,6 +1277,21 @@
     }
   },
   "backupSyncTapToRetry": "Tap to retry",
+  "backupConnecting": "Connecting…",
+  "backupOffline": "Offline",
+  "backupSyncPaused": "Sync paused — {count} queued. {reason}",
+  "@backupSyncPaused": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "reason": { "type": "String" }
+    }
+  },
+  "backupSyncPausedNoCount": "Sync paused. {reason}",
+  "@backupSyncPausedNoCount": {
+    "placeholders": {
+      "reason": { "type": "String" }
+    }
+  },
   "backupUpgradeToCloud": "Upgrade to Cloud",
 
   "reauthDialogTitle": "Verify Your Identity",
