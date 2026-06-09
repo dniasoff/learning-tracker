@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/content/content_tree.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/network/sefaria/models/curriculum_hierarchy_config.dart';
@@ -9,6 +11,7 @@ import 'package:learning_tracker/features/content_browsing/presentation/provider
 import 'package:learning_tracker/features/content_browsing/presentation/screens/content_hierarchy_screen.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/breadcrumb_navigation.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -33,6 +36,12 @@ void main() {
     String? level3,
     String? level4,
   }) {
+    // Build an empty ContentTree so the screen falls back to
+    // filteredContentProvider (which is mocked via mockRepo.filterByLevel).
+    final emptyTree = ContentTree.fromCurricula({
+      for (final c in CurriculumId.values) c: const [],
+    });
+
     return ProviderScope(
       overrides: [
         contentRepositoryProvider.overrideWithValue(mockRepo),
@@ -40,8 +49,22 @@ void main() {
         completionCountProvider.overrideWith(
           (ref, ({String curriculumId, String sefariaRef}) arg) async => 0,
         ),
+        // Provide an empty ContentTree so itemsAsync falls through to
+        // filteredContentProvider (backed by the mock repository).
+        contentTreeProvider.overrideWith((ref) async => emptyTree),
+        // Avoid asset loading for all curricula content.
+        curriculumContentProvider.overrideWith(
+          (ref, CurriculumId cid) async => const <ContentItem>[],
+        ),
       ],
       child: MaterialApp(
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
         home: ContentHierarchyScreen(
           curriculumId: curriculumId ?? 'mishnayos',
           level1: level1,

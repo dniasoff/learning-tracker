@@ -113,8 +113,10 @@ class _ContentHierarchyScreenState
         final children = tree.children(curriculum, _navigationStack);
         // Fall back to the filteredContent provider if the tree hasn't
         // indexed these items yet (e.g. during the very first load when the
-        // curriculum content hasn't been cached in the tree yet).
-        if (children.isEmpty && _navigationStack.isNotEmpty) {
+        // curriculum content hasn't been cached in the tree yet).  This
+        // applies at ALL depths — including root level (empty nav stack) —
+        // so that an unpopulated tree does not incorrectly show "No content".
+        if (children.isEmpty) {
           return ref.watch(
             filteredContentProvider(
               curriculumId: curriculum,
