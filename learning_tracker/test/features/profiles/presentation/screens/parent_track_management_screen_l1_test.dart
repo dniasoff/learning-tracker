@@ -614,4 +614,85 @@ void main() {
       await _teardown(tester);
     });
   });
+
+  // TRK-PAR-04 regression: "Active Tracks" and "N RUNNING" were hard-coded
+  // English literals in _buildActiveHeader. They must be driven by the ARB
+  // keys activeTracksLabel / activeTracksRunning so Hebrew users see localised
+  // text. Under the he locale the English literals must NOT appear.
+  group('TRK-PAR-04 — Active Tracks header and RUNNING pill are localised', () {
+    testWidgets(
+      'English locale: header shows "Active Tracks" (via ARB key, not literal)',
+      (tester) async {
+        final track = _track();
+        await tester.pumpWidget(_buildApp(router: router, tracks: [track]));
+        await _settle(tester);
+
+        expect(
+          find.text('Active Tracks'),
+          findsOneWidget,
+          reason:
+              'TRK-PAR-04: English locale must render "Active Tracks" from the '
+              'activeTracksLabel ARB key.',
+        );
+        await _teardown(tester);
+      },
+    );
+
+    testWidgets(
+      'Hebrew locale: header renders Hebrew translation, NOT the English literal',
+      (tester) async {
+        final track = _track();
+        await tester.pumpWidget(
+          _buildApp(
+            router: router,
+            tracks: [track],
+            locale: const Locale('he'),
+          ),
+        );
+        await _settle(tester);
+
+        // Hebrew ARB value for activeTracksLabel
+        expect(
+          find.text('מסלולים פעילים'),
+          findsOneWidget,
+          reason:
+              'TRK-PAR-04: Under he locale the header must render the Hebrew '
+              'translation ("מסלולים פעילים") not the English literal '
+              '"Active Tracks". Hard-coded literal would fail this assertion.',
+        );
+        expect(
+          find.text('Active Tracks'),
+          findsNothing,
+          reason:
+              'TRK-PAR-04: The English literal must not appear under he locale.',
+        );
+        await _teardown(tester);
+      },
+    );
+
+    testWidgets(
+      'Hebrew locale: RUNNING pill renders Hebrew count, NOT English "N RUNNING"',
+      (tester) async {
+        final track = _track();
+        await tester.pumpWidget(
+          _buildApp(
+            router: router,
+            tracks: [track],
+            locale: const Locale('he'),
+          ),
+        );
+        await _settle(tester);
+
+        // Must NOT contain the English literal RUNNING
+        expect(
+          find.textContaining('RUNNING'),
+          findsNothing,
+          reason:
+              'TRK-PAR-04: "RUNNING" is an English literal that must not '
+              'appear under he locale.',
+        );
+        await _teardown(tester);
+      },
+    );
+  });
 }
