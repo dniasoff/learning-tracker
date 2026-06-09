@@ -406,6 +406,22 @@
       "error": { "type": "String" }
     }
   },
+  "contentHierarchyBrowseTitle": "Browse Content",
+  "@contentHierarchyBrowseTitle": {
+    "description": "AppBar title for the ContentHierarchyScreen showing the curriculum content tree."
+  },
+  "contentHierarchyUnknownTitle": "Unknown Curriculum",
+  "@contentHierarchyUnknownTitle": {
+    "description": "AppBar title shown in ContentHierarchyScreen when the curriculumId does not match any known curriculum."
+  },
+  "contentHierarchyNoContent": "No content available",
+  "@contentHierarchyNoContent": {
+    "description": "Empty-state message in ContentHierarchyScreen when there are no items to display."
+  },
+  "contentHierarchySearchTooltip": "Search",
+  "@contentHierarchySearchTooltip": {
+    "description": "Tooltip for the search icon button in ContentHierarchyScreen."
+  },
   "noItemsAtThisLevel": "No items at this level",
   "breadcrumbsRoot": "Root",
   "lifetimeMarkSavedCount": "Marked {count} lifetime selection(s).",

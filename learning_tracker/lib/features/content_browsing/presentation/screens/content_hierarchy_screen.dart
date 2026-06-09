@@ -75,8 +75,11 @@ class _ContentHierarchyScreenState
     final curriculum = _curriculumOrNull;
 
     if (curriculum == null) {
+      final l10nEarly = AppLocalizations.of(context)!;
       return Scaffold(
-        appBar: AppBar(title: const AppBarTitle(text: 'Unknown Curriculum')),
+        appBar: AppBar(
+          title: AppBarTitle(text: l10nEarly.contentHierarchyUnknownTitle),
+        ),
         body: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
@@ -88,7 +91,7 @@ class _ContentHierarchyScreenState
               ),
               const SizedBox(height: 16),
               Text(
-                'Unknown curriculum: "${widget.curriculumId}"',
+                l10nEarly.errorUnknownCurriculum(widget.curriculumId),
                 textAlign: TextAlign.center,
               ),
             ],
@@ -137,11 +140,12 @@ class _ContentHierarchyScreenState
     );
 
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
         title: AppBarTitle(
           child: Text(
-            'Browse Content',
+            l10n.contentHierarchyBrowseTitle,
             style: theme.textTheme.titleLarge?.copyWith(
               fontWeight: FontWeight.w800,
               fontSize: 24,
@@ -159,7 +163,7 @@ class _ContentHierarchyScreenState
           IconButton(
             key: const Key('content_hierarchy_search_icon'),
             icon: const Icon(Icons.search),
-            tooltip: 'Search',
+            tooltip: l10n.contentHierarchySearchTooltip,
             onPressed: () => context.router.push(
               ContentSearchRoute(curriculumId: widget.curriculumId),
             ),
@@ -252,7 +256,7 @@ class _ContentHierarchyScreenState
                         ),
                         const SizedBox(height: 12),
                         Text(
-                          'No content available',
+                          l10n.contentHierarchyNoContent,
                           style: TextStyle(
                             color: Theme.of(
                               context,

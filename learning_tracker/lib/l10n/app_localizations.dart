@@ -1475,6 +1475,30 @@ abstract class AppLocalizations {
   /// **'Unable to load curriculum content: {error}'**
   String contentLoadError(String error);
 
+  /// AppBar title for the ContentHierarchyScreen showing the curriculum content tree.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse Content'**
+  String get contentHierarchyBrowseTitle;
+
+  /// AppBar title shown in ContentHierarchyScreen when the curriculumId does not match any known curriculum.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown Curriculum'**
+  String get contentHierarchyUnknownTitle;
+
+  /// Empty-state message in ContentHierarchyScreen when there are no items to display.
+  ///
+  /// In en, this message translates to:
+  /// **'No content available'**
+  String get contentHierarchyNoContent;
+
+  /// Tooltip for the search icon button in ContentHierarchyScreen.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get contentHierarchySearchTooltip;
+
   /// No description provided for @noItemsAtThisLevel.
   ///
   /// In en, this message translates to:

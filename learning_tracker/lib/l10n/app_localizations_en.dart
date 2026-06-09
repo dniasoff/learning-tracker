@@ -793,6 +793,18 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get contentHierarchyBrowseTitle => 'Browse Content';
+
+  @override
+  String get contentHierarchyUnknownTitle => 'Unknown Curriculum';
+
+  @override
+  String get contentHierarchyNoContent => 'No content available';
+
+  @override
+  String get contentHierarchySearchTooltip => 'Search';
+
+  @override
   String get noItemsAtThisLevel => 'No items at this level';
 
   @override

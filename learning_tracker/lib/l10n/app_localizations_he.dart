@@ -788,6 +788,18 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
+  String get contentHierarchyBrowseTitle => 'עיון בתוכן';
+
+  @override
+  String get contentHierarchyUnknownTitle => 'קורס לא ידוע';
+
+  @override
+  String get contentHierarchyNoContent => 'אין תוכן זמין';
+
+  @override
+  String get contentHierarchySearchTooltip => 'חיפוש';
+
+  @override
   String get noItemsAtThisLevel => 'אין פריטים ברמה זו';
 
   @override

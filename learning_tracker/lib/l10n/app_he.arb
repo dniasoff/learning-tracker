@@ -403,6 +403,10 @@
       "error": { "type": "String" }
     }
   },
+  "contentHierarchyBrowseTitle": "עיון בתוכן",
+  "contentHierarchyUnknownTitle": "קורס לא ידוע",
+  "contentHierarchyNoContent": "אין תוכן זמין",
+  "contentHierarchySearchTooltip": "חיפוש",
   "noItemsAtThisLevel": "אין פריטים ברמה זו",
   "breadcrumbsRoot": "שורש",
   "lifetimeMarkSavedCount": "סומנו {count} בחירה(ות) לכל החיים.",
