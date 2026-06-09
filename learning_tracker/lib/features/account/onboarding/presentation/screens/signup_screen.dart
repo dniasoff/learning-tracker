@@ -8,6 +8,7 @@ import 'package:google_sign_in/google_sign_in.dart'
     show GoogleSignInException, GoogleSignInExceptionCode;
 import 'package:internet_connection_checker/internet_connection_checker.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
@@ -233,7 +234,19 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
 
       // Clear any cached Firebase user so offline local sessions are never
       // mistaken for cloud sign-in (downstream Firestore awaits would stall).
-      await ref.read(authRepositoryProvider).signOut();
+      // On emulators / devices without Google Play Services this can throw
+      // PlatformException(clearCredentialStateAsync…).  The local account was
+      // already created successfully, so a signOut failure must NOT roll back
+      // the signup — swallow and log it.
+      try {
+        await ref.read(authRepositoryProvider).signOut();
+      } catch (e) {
+        // Best-effort cleanup — not fatal for the local signup path.
+        AppLogger.instance.warning(
+          event: 'sign_up_local_sign_out_failed',
+          exception: e,
+        );
+      }
 
       if (!mounted) return;
       final router = context.router;

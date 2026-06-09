@@ -119,9 +119,18 @@ class AccountLifecycleService {
   }
 
   void _deleteDbFile(String dbFileName) {
-    final file = File('$_dbPath/$dbFileName');
-    if (file.existsSync()) {
-      file.deleteSync();
+    // drift_flutter 0.2.8 stores driftDatabase(name: 'foo.db') as 'foo.db.sqlite'
+    // on the filesystem (see drift_flutter/src/native.dart line 51:
+    // `'$name.sqlite'`).  Try the .sqlite-suffixed path first; fall back to the
+    // bare name so registry entries written before this fix are also cleaned up.
+    final driftFile = File('$_dbPath/$dbFileName.sqlite');
+    if (driftFile.existsSync()) {
+      driftFile.deleteSync();
+      return;
+    }
+    final bareFile = File('$_dbPath/$dbFileName');
+    if (bareFile.existsSync()) {
+      bareFile.deleteSync();
     }
   }
 }
