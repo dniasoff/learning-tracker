@@ -573,9 +573,24 @@ class _AccountTile extends ConsumerWidget {
       }
     }
 
-    if (profile == null || !context.mounted) {
+    if (profile == null) {
+      // ACCTPICK-03 / SI-04: the account is in the registry but its local DB
+      // row is missing (e.g. DB deleted, corrupt, or never populated because
+      // the account was only created in the cloud and never synced to this
+      // device). Silently returning leaves the user stranded on the picker
+      // with no indication of the failure. Surface a clear error so they know
+      // to connect to the internet to restore from the cloud.
+      if (context.mounted) {
+        final l10n = AppLocalizations.of(context)!;
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(content: Text(l10n.authLocalDataMissing)),
+          );
+      }
       return;
     }
+    if (!context.mounted) return;
 
     final prefs = await SharedPreferences.getInstance();
     final session = SessionPersistenceService(
@@ -641,7 +656,21 @@ class _AccountTile extends ConsumerWidget {
 
     final dao = ref.read(userDatabaseProvider).userProfileDao;
     final profile = await dao.findLocalBornByEmail(account.email);
-    if (profile == null || !context.mounted) return;
+    if (profile == null) {
+      // Same silent-fail guard as _activateCloudAccountFromLocalData: if the
+      // local DB row for this local-born account is missing (DB deleted or
+      // corrupted), surface an error rather than silently stranding the user.
+      if (context.mounted) {
+        final l10n = AppLocalizations.of(context)!;
+        ScaffoldMessenger.of(context)
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            SnackBar(content: Text(l10n.authLocalDataMissing)),
+          );
+      }
+      return;
+    }
+    if (!context.mounted) return;
 
     final prefs = await SharedPreferences.getInstance();
     final session = SessionPersistenceService(
