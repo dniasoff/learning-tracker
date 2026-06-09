@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/gamification/domain/services/points_service.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 
 /// Provider for the PointsService, scoped to active profile.
@@ -41,9 +42,17 @@ final globalPointsProvider = StreamProvider<int>((ref) {
 });
 
 /// Per-curriculum breakdown map.
+///
+/// DG-BRKD-01: watches [completionCommittedProvider] so the breakdown chips
+/// in [PointsDisplayWidget] update after a completion is committed — without
+/// requiring a pull-to-refresh or widget disposal/re-creation. Same pattern
+/// as [achievementsOverviewProvider] and [dashboardCompletionPercentageProvider].
 final curriculumBreakdownProvider = FutureProvider<Map<CurriculumId, int>>((
   ref,
 ) async {
+  // Rebuild whenever a completion is committed — keeps the per-curriculum
+  // chip labels live on the gamification screen.
+  ref.watch<int>(completionCommittedProvider);
   final service = ref.watch(pointsServiceProvider);
   return service.getCurriculumBreakdown();
 });
