@@ -206,9 +206,29 @@ class SignInController extends Notifier<SignInState> {
             Future.value(false));
     if (verifiedAfterPrompt) return true;
 
-    await authRepo.signOut();
+    // SI-VERIFY-01: signOut() can throw PlatformException(clearCredentialStateAsync…)
+    // on emulators/devices without Google Play Services. The user cancelled
+    // email verification — wrap in its own try/catch so a cleanup failure
+    // never surfaces as "Sign-in failed" (authErrSignInGeneric) to the user.
+    // The caller already returns false here, so the sign-in correctly fails.
+    try {
+      await authRepo.signOut();
+    } catch (e) {
+      AppLogger.instance.warning(
+        event: 'ensure_cloud_email_verified_sign_out_failed',
+        exception: e,
+      );
+    }
     return false;
   }
+
+  /// Exposed for regression tests covering SI-VERIFY-01: a throwing signOut()
+  /// in _ensureCloudEmailVerified must not surface as a sign-in error.
+  @visibleForTesting
+  Future<bool> ensureCloudEmailVerifiedForTest(
+    String email,
+    AppLocalizations l10n,
+  ) => _ensureCloudEmailVerified(email, l10n);
 
   // ── Offline restore ─────────────────────────────────────────────────────────
 
