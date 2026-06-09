@@ -16,6 +16,7 @@ import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 import 'package:learning_tracker/features/gamification/domain/reward_milestone_icons.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
+import 'package:learning_tracker/features/gamification/presentation/providers/achievements_overview_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/features/tutoring/tutoring.dart';
@@ -198,9 +199,17 @@ class ChildRedemptionScreen extends ConsumerWidget {
           content: Text(l10n.redeemScreenRequestedSnackbar(reward.title)),
         ),
       );
-      // DG-RDMP-01: no need to invalidate — childRedemptionBalanceProvider is
-      // now a StreamProvider backed by watchBalance, which emits the updated
+      // DG-RDMP-01: no need to invalidate childRedemptionBalanceProvider —
+      // it is a StreamProvider backed by watchBalance, which emits the updated
       // balance reactively after the createRedemption debit.
+      //
+      // DG-ACHV-01: invalidate achievementsOverviewProvider so the gamification
+      // screen's unlock classification reflects the post-debit balance without
+      // requiring a pull-to-refresh. Without this, a milestone that was
+      // "unlocked" (affordable) at the time of redemption would remain classified
+      // as unlocked on the achievements screen even though the child's balance
+      // has since dropped below the threshold.
+      ref.invalidate(achievementsOverviewProvider);
     }
   }
 }
