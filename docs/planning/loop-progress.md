@@ -60,6 +60,44 @@ pristine dev (local WSL font rendering ≠ CI image) — pre-existing, not intro
 3. Tap by resource-id/content-desc with a "focus left the app → relaunch" guard; hard timeout on every adb call.
 4. No tautological tests — a regression test must exercise the real production path.
 
-### Iteration 2 — PENDING
-Rebuild+redeploy combined APK to all 5 (now all run) → relaunch 5 workers with the hardened brief above →
-bring sync (App Check) online for the cloud/two-device P0s.
+### Iteration 2 — COMPLETE (2026-06-09) — pushed to dev (6f68ca9f..bca4b912)
+
+First round with REAL on-device driving on all 5 (the hardened brief worked: screencaps, uiautomator dumps,
+DB ground-truth, disk hygiene, analyze+format before commit). **~14 fixes integrated** + 3 regression guards:
+- Slice B: `StudyDayConfig` screen had NO navigation path anywhere in the app (added the tile); study-day
+  toggle race (scheduler rebuilt from stale data before the DB write committed). Dead `toggleStudyDay`
+  provider annotated.
+- Slice C: drift `.sqlite`-suffix orphan **data-loss** (account DBs never deleted — bare path missing suffix);
+  3× false sign-out errors on no-Play-Services / partial-CredentialManager devices.
+- Slice D: idempotency + stream-reactivity regression guards (declineRedemption/fulfilRedemption/watchBalance).
+- Slice A: spurious `SyncStatus.syncing` on late subscribe; `DeviceRestoreScreen` hard-coded English.
+- Slice E: `OverallStatsCard` + `ContentHierarchy` i18n; recent-activity staleness.
+- Regression-fix pass (caught by the consolidated gate): the ContentTree integration over-restricted the
+  `filteredContentProvider` fallback (`&& _navigationStack.isNotEmpty`) → **root-level content screen showed
+  "No content available" even with data** — real user-facing bug, fixed; content-hierarchy tests given i18n
+  delegates. sync/infra "failures" were transient full-suite pollution, not real regressions.
+
+**Gate discipline held:** iter-2 worker fixes changed behaviour their slice tests didn't cover; the
+consolidated `make ci` caught 7 cross-cutting test breakages, a focused 2-agent fix-it pass resolved them
+(fix-code vs update-test decided per case, no weakened tests), and only then did dev go green + push. Remaining
+reds are the 4 pre-existing golden screenshot tests (fail on pristine dev too — local WSL fonts ≠ CI image).
+
+**New process lessons → iteration 3:**
+1. Copy git-ignored build assets (`content.db.gz`, `google-services.json`) into each worktree at setup so
+   workers can rebuild the APK for on-device re-verification (slice E was blocked on this).
+2. Workers should run the FULL relevant test directory (not just their new test) before committing, to catch
+   sibling-test breakage their slice change causes (the gap that needed the regression-fix pass).
+3. Exclude `test/golden/` from the loop's local gate so "any failure = a real regression" (the 4 goldens
+   can't pass locally and were masking real reds).
+
+**Blockers routed to iteration 3:**
+- **Parent-PIN nav dead-end (P0):** confirming a new PIN in SetParentPINScreen loops back to itself instead of
+  ParentSettings — lives in `features/profiles/` (slice E root); blocked slice D's whole redemption/reward
+  sweep. → assign to slice E.
+- Cross-slice i18n: `backup_sync_section.dart` hard-coded English (lines 148/211/292/395). → assign to slice E
+  (owns l10n) or settings owner.
+
+### Iteration 3 — PENDING
+Rebuild+redeploy (done post-iter2) → relaunch with: parent-PIN nav fix on slice E (unblocks gamification
+sweep on slice D); worktree asset-copy in setup; full-test-dir pre-commit check; golden exclusion in gate.
+Then bring sync (App Check) online for cloud/two-device P0s.
