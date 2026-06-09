@@ -168,16 +168,18 @@ void main() {
     testWidgets('shows CircularProgressIndicator while loading', (
       tester,
     ) async {
-      // Use a Completer so the future never completes and there's no
-      // pending timer that would trip the test framework's invariant check.
-      final completer = Completer<List<RewardRedemption>>();
+      // Use a StreamController that never emits — the StreamProvider stays in
+      // AsyncLoading, so the screen shows the progress indicator indefinitely.
+      final controller = StreamController<List<RewardRedemption>>();
       await tester.pumpWidget(
         ProviderScope(
           overrides: [
             userDatabaseProvider.overrideWithValue(db),
             activeProfileIdProvider.overrideWith(_ProfileIdOverride.new),
             outboxSyncWriteFacadeProvider.overrideWithValue(null),
-            pendingRedemptionsProvider.overrideWith((ref) => completer.future),
+            pendingRedemptionsProvider.overrideWith(
+              (ref) => controller.stream,
+            ),
           ],
           child: const MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,
@@ -186,14 +188,14 @@ void main() {
           ),
         ),
       );
-      // One pump — the future hasn't completed so we stay in loading state.
+      // One pump — the stream hasn't emitted so we stay in loading state.
       await tester.pump();
 
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
       expect(find.text('No pending prize requests.'), findsNothing);
 
-      // Complete the future before teardown so the Completer doesn't leak.
-      completer.complete([]);
+      // Close the controller before teardown to avoid leaking resources.
+      await controller.close();
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(Duration.zero);
     });
@@ -218,16 +220,17 @@ void main() {
       const errorMsg = 'db_unavailable_for_test';
       await tester.pumpWidget(
         ProviderScope(
-          // Riverpod 3: disable retry so FutureProvider surfaces AsyncError
+          // Riverpod 3: disable retry so StreamProvider surfaces AsyncError
           // instead of staying stuck in AsyncLoading on first-load failure.
           retry: (_, __) => null,
           overrides: [
             userDatabaseProvider.overrideWithValue(db),
             activeProfileIdProvider.overrideWith(_ProfileIdOverride.new),
             outboxSyncWriteFacadeProvider.overrideWithValue(null),
-            pendingRedemptionsProvider.overrideWith((ref) async {
-              throw Exception(errorMsg);
-            }),
+            // For a StreamProvider, emit an error event via Stream.error().
+            pendingRedemptionsProvider.overrideWith(
+              (ref) => Stream.error(Exception(errorMsg)),
+            ),
           ],
           child: const MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,

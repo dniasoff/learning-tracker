@@ -22,13 +22,32 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 
 // ─── Provider ─────────────────────────────────────────────────────────────────
 
-// Declared as a manual FutureProvider (not @riverpod code-gen) to avoid
-// riverpod_generator choking on the Drift-generated [RewardRedemption] type.
+/// Pending reward-redemption requests for the active (child) profile.
+///
+/// DG-PND-05: previously a one-shot [FutureProvider.autoDispose] calling
+/// [PointsBalanceDao.getPendingRedemptions]. This left the
+/// [ParentPendingRedemptionsScreen] list STALE after any mutation — e.g., when
+/// the child submits a new redemption on another device (cloud sync push) or
+/// when a pending row transitions to fulfilled/declined — until
+/// `ref.invalidate()` was called manually.
+///
+/// Fix: converted to a [StreamProvider.autoDispose] backed by
+/// [PointsBalanceDao.watchPendingRedemptions]. The stream emits the updated
+/// list on every `reward_redemptions` row change, so the parent sees new
+/// requests and fulfilled/declined removals instantly without requiring manual
+/// invalidation or pull-to-refresh.
+///
+/// The `ref.invalidate(pendingRedemptionsProvider)` calls after fulfil/decline
+/// are retained for backwards compatibility (they restart the stream
+/// subscription, which is benign for a [StreamProvider]).
+///
+/// Declared as a manual provider (not @riverpod code-gen) to avoid
+/// riverpod_generator choking on the Drift-generated [RewardRedemption] type.
 final pendingRedemptionsProvider =
-    FutureProvider.autoDispose<List<RewardRedemption>>((ref) async {
+    StreamProvider.autoDispose<List<RewardRedemption>>((ref) {
       final db = ref.watch(userDatabaseProvider);
       final profileId = ref.watch(activeProfileIdProvider);
-      return db.pointsBalanceDao.getPendingRedemptions(profileId);
+      return db.pointsBalanceDao.watchPendingRedemptions(profileId);
     });
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
