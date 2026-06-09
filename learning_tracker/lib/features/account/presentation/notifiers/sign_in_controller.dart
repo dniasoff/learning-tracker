@@ -242,7 +242,18 @@ class SignInController extends Notifier<SignInState> {
       _ref
           .read(auth_state.authStateProvider.notifier)
           .setLocalBornSession(profile: profile);
-      await _ref.read(authRepositoryProvider).signOut();
+      // SI-LOCAL-01: signOut() can throw PlatformException(clearCredentialStateAsync…)
+      // on emulators/devices without Google Play Services. The local account was
+      // already created successfully — wrap in its own try/catch so a cleanup
+      // failure never rolls the sign-in into an error state.
+      try {
+        await _ref.read(authRepositoryProvider).signOut();
+      } catch (e) {
+        AppLogger.instance.warning(
+          event: 'try_local_fallback_sign_in_sign_out_failed',
+          exception: e,
+        );
+      }
       final profiles = await _ref
           .read(userDatabaseProvider)
           .profileDao
@@ -685,7 +696,18 @@ class SignInController extends Notifier<SignInState> {
         _ref
             .read(auth_state.authStateProvider.notifier)
             .setLocalBornSession(profile: profile);
-        await _ref.read(authRepositoryProvider).signOut();
+        // SI-LOCAL-01: signOut() can throw PlatformException(clearCredentialStateAsync…)
+        // on emulators/devices without Google Play Services. The local account
+        // authenticated successfully — wrap in its own try/catch so a cleanup
+        // failure never surfaces as "Sign-in failed" to the user.
+        try {
+          await _ref.read(authRepositoryProvider).signOut();
+        } catch (e) {
+          AppLogger.instance.warning(
+            event: 'sign_in_local_sign_out_failed',
+            exception: e,
+          );
+        }
         // SI-08: clear all per-session router state that must NOT survive a
         // fresh sign-in. The local-account path previously only cleared
         // selectedProfileId, leaving the tutored-selection and PIN-gate caches
