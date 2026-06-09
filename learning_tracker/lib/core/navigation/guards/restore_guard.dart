@@ -36,6 +36,18 @@ class RestoreGuard extends AutoRouteGuard {
     _isNewDevice = false;
   }
 
+  /// Reset the new-device cache so the guard re-evaluates on the next
+  /// navigation. Must be called on every account switch: after
+  /// `markRestoreComplete()` sets `_isNewDevice = false`, a subsequent
+  /// sign-in under a DIFFERENT cloud account (whose local DB is empty)
+  /// would be silently skipped — never redirected to DeviceRestoreRoute.
+  ///
+  /// RESTORE-01: account-switch path in [AccountPickerScreen] calls this so
+  /// each incoming account gets its own fresh restore check.
+  void resetForNewSession() {
+    _isNewDevice = null;
+  }
+
   @override
   Future<void> onNavigation(
     NavigationResolver resolver,

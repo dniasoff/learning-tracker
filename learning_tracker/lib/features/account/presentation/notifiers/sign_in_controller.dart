@@ -369,15 +369,21 @@ class SignInController extends Notifier<SignInState> {
   ///     guard's cached scope and `parentPinAuthenticatedProfileId` via its
   ///     `onSessionLocked` callback) — reaching parent management requires the
   ///     PIN again.
+  ///   * The restore-guard new-device cache is reset so each sign-in gets a
+  ///     fresh check. Without this, a cloud account that completed a device
+  ///     restore in a prior session (same process, different user) would leave
+  ///     `_isNewDevice = false` and skip the redirect for the incoming account
+  ///     even when its local DB is empty. (RESTORE-01)
   ///
-  /// These two pieces of state are `keepAlive` / live in the router singleton,
-  /// so without this reset they leak across a sign-out → sign-in within the
-  /// same process, auto-restoring the previous tutor/parent context. This is
-  /// scoped to session establishment only — ordinary mid-session navigation and
-  /// explicit talmid/parent entry are untouched.
+  /// These pieces of state are `keepAlive` / live in the router singleton,
+  /// so without these resets they leak across a sign-out → sign-in within the
+  /// same process, auto-restoring the previous tutor/parent/restore context.
+  /// This is scoped to session establishment only — ordinary mid-session
+  /// navigation and explicit talmid/parent entry are untouched.
   void _resetSessionContextForFreshSignIn() {
     _ref.read(activeTutoredProfileSelectionProvider.notifier).exit();
     _ref.read(routerProvider).pinGuard.lock();
+    _ref.read(routerProvider).restoreGuard.resetForNewSession();
   }
 
   Future<void> _navigateAfterSignIn(StackRouter router) async {
@@ -680,6 +686,14 @@ class SignInController extends Notifier<SignInState> {
             .read(auth_state.authStateProvider.notifier)
             .setLocalBornSession(profile: profile);
         await _ref.read(authRepositoryProvider).signOut();
+        // SI-08: clear all per-session router state that must NOT survive a
+        // fresh sign-in. The local-account path previously only cleared
+        // selectedProfileId, leaving the tutored-selection and PIN-gate caches
+        // intact. In a multi-account scenario (cloud session interrupted, user
+        // signs in with a local account) this leaked the previous session's tutor
+        // context and restore-guard state into the new session. Mirrors the
+        // _navigateAfterSignIn and _tryLocalFallbackSignIn paths.
+        _resetSessionContextForFreshSignIn();
         _ref.read(selectedProfileIdProvider.notifier).clear();
         final profiles = await _ref
             .read(userDatabaseProvider)

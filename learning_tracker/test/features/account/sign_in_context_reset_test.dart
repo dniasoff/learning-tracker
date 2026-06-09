@@ -213,5 +213,41 @@ void main() {
         );
       },
     );
+
+    test(
+      'SI-08: local-account DIRECT sign-in path invokes _resetSessionContextForFreshSignIn',
+      () {
+        // BEFORE FIX this test FAILED: the local-account direct sign-in branch
+        // (registry entry found, accountTier.isLocal == true) only cleared
+        // selectedProfileId, leaving the tutored-selection, pin-gate cache, and
+        // restore-guard state intact.
+        //
+        // Verify that _resetSessionContextForFreshSignIn() is called in the
+        // local-account direct branch — identified by the surrounding landmark:
+        // setLocalBornSession is the call that establishes the local session,
+        // immediately after which the reset must run.
+        final setLocalIdx = controllerSrc.indexOf(
+          '.setLocalBornSession(profile: profile)',
+        );
+        expect(
+          setLocalIdx,
+          greaterThanOrEqualTo(0),
+          reason: 'sign_in_controller must call setLocalBornSession',
+        );
+        // The reset call must appear in the source AFTER setLocalBornSession.
+        // It is allowed to appear multiple times (also in _tryLocalFallbackSignIn);
+        // we just need at least one occurrence after the first setLocalBornSession.
+        final afterSetLocal = controllerSrc.substring(setLocalIdx);
+        expect(
+          afterSetLocal.contains('_resetSessionContextForFreshSignIn()'),
+          isTrue,
+          reason:
+              'SI-08: the local-account direct sign-in path must call '
+              '_resetSessionContextForFreshSignIn() after setLocalBornSession '
+              'to clear the tutored-selection, PIN-gate, and restore-guard cache '
+              'that would otherwise leak from a prior session',
+        );
+      },
+    );
   });
 }
