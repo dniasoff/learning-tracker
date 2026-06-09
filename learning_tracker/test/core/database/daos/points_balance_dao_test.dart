@@ -77,6 +77,84 @@ void main() {
       expect(await db.pointsBalanceDao.getBalance(1), 2);
     });
 
+    // ── watchBalance — reactive stream (DG-DASH-02 iter-1 re-verify) ──────────
+
+    test('watchBalance emits updated balance reactively after creditCompletion '
+        'without requiring an explicit invalidation '
+        '(iter-1 re-verify: dashboard balance stream must stay live)', () async {
+      final emissions = <int>[];
+      final sub = db.pointsBalanceDao.watchBalance(1).listen(emissions.add);
+      addTearDown(sub.cancel);
+
+      // Initial emission: 0 (no balance row yet).
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(
+        emissions,
+        contains(0),
+        reason: 'initial balance must be 0 before any credit',
+      );
+
+      // Credit points — watchBalance must emit the new value without any
+      // manual ref.invalidate() call.
+      await db.pointsBalanceDao.creditCompletion(1, 50);
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      expect(
+        emissions.last,
+        50,
+        reason:
+            'watchBalance must reactively emit 50 after creditCompletion(50) '
+            'without explicit invalidation — if this fails the provider is '
+            'a one-shot FutureProvider (stale dashboard balance, D2 regression)',
+      );
+
+      // Second credit — stream must emit again.
+      await db.pointsBalanceDao.creditCompletion(1, 20);
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      expect(
+        emissions.last,
+        70,
+        reason: 'watchBalance must emit 70 after a second creditCompletion(20)',
+      );
+    });
+
+    test(
+      'watchBalance emits updated balance reactively after declineRedemption '
+      'refund — dashboard balance stays live without pull-to-refresh',
+      () async {
+        await db.pointsBalanceDao.creditCompletion(1, 100);
+        final redemption = await db.pointsBalanceDao.createRedemption(
+          profileId: 1,
+          rewardTitle: 'Book',
+          iconIndex: 0,
+          pointsCost: 40,
+        );
+        // Balance is 60 after debit.
+        expect(await db.pointsBalanceDao.getBalance(1), 60);
+
+        final emissions = <int>[];
+        final sub = db.pointsBalanceDao.watchBalance(1).listen(emissions.add);
+        addTearDown(sub.cancel);
+
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+        // Initial emission must include 60.
+        expect(emissions, contains(60));
+
+        // Decline → refund 40 → balance becomes 100.
+        await db.pointsBalanceDao.declineRedemption(redemption!.id);
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+
+        expect(
+          emissions.last,
+          100,
+          reason:
+              'watchBalance must emit 100 after declineRedemption refund '
+              'without explicit invalidation',
+        );
+      },
+    );
+
     test('getLedger returns at least one entry after a credit', () async {
       await db.pointsBalanceDao.creditCompletion(1, 5);
       final ledger = await db.pointsBalanceDao.getLedger(1);
@@ -169,6 +247,86 @@ void main() {
         expect(all.any((r) => r.status == 'declined'), isTrue);
       },
     );
+
+    test('declineRedemption is a no-op when called a second time '
+        '(idempotency: no double-refund on sequential decline calls)', () async {
+      await db.pointsBalanceDao.creditCompletion(1, 100);
+      final redemption = await db.pointsBalanceDao.createRedemption(
+        profileId: 1,
+        rewardTitle: 'Candy',
+        iconIndex: 0,
+        pointsCost: 30,
+      );
+
+      // Balance after redeem: 100 - 30 = 70.
+      expect(await db.pointsBalanceDao.getBalance(1), 70);
+
+      // First decline: refund 30 → balance back to 100.
+      await db.pointsBalanceDao.declineRedemption(redemption!.id);
+      expect(await db.pointsBalanceDao.getBalance(1), 100);
+
+      // Second decline: the idempotency guard reads status='declined' and
+      // must return early — balance must NOT be credited a second time.
+      await db.pointsBalanceDao.declineRedemption(redemption.id);
+
+      expect(
+        await db.pointsBalanceDao.getBalance(1),
+        100,
+        reason:
+            'second declineRedemption must be a no-op: '
+            'balance must not be credited again after status is already declined',
+      );
+
+      final all = await db.pointsBalanceDao.getAllRedemptions(1);
+      final row = all.firstWhere((r) => r.id == redemption.id);
+      expect(row.status, 'declined');
+
+      final ledger = await db.pointsBalanceDao.getLedger(1);
+      // Ledger must have exactly 3 entries: completion_credit, redemption_debit,
+      // and ONE redemption_refund — NOT two refunds.
+      final refunds = ledger.where((e) => e.entryKind == 'redemption_refund');
+      expect(
+        refunds,
+        hasLength(1),
+        reason: 'only one refund entry must exist — double-refund would show 2',
+      );
+    });
+
+    test('fulfilRedemption is a no-op when called a second time '
+        '(idempotency: status stays fulfilled, balance unchanged)', () async {
+      await db.pointsBalanceDao.creditCompletion(1, 100);
+      final redemption = await db.pointsBalanceDao.createRedemption(
+        profileId: 1,
+        rewardTitle: 'Book',
+        iconIndex: 1,
+        pointsCost: 40,
+      );
+
+      // Balance after redeem: 100 - 40 = 60.
+      expect(await db.pointsBalanceDao.getBalance(1), 60);
+
+      // First fulfil: status → fulfilled, balance unchanged (no ledger effect).
+      await db.pointsBalanceDao.fulfilRedemption(redemption!.id);
+
+      final balanceAfterFirst = await db.pointsBalanceDao.getBalance(1);
+      expect(balanceAfterFirst, 60);
+
+      // Second fulfil: must be a no-op.
+      await db.pointsBalanceDao.fulfilRedemption(redemption.id);
+
+      expect(
+        await db.pointsBalanceDao.getBalance(1),
+        60,
+        reason:
+            'second fulfilRedemption must not change balance (fulfil has no '
+            'ledger effect, but the guard must still fire to prevent a '
+            'status overwrite race)',
+      );
+
+      final all = await db.pointsBalanceDao.getAllRedemptions(1);
+      final row = all.firstWhere((r) => r.id == redemption.id);
+      expect(row.status, 'fulfilled');
+    });
 
     test('fulfilRedemption is a no-op on an already-declined redemption '
         '(D5: no fulfil-vs-decline race / no double benefit)', () async {
