@@ -613,6 +613,12 @@ class _AccountTile extends ConsumerWidget {
     // never leaks into the new one.
     ref.read(activeTutoredProfileSelectionProvider.notifier).exit();
     ref.read(routerProvider).pinGuard.lock();
+    // RESTORE-01: reset the restore guard's new-device cache so the incoming
+    // account gets its own fresh check. After `markRestoreComplete()` sets
+    // `_isNewDevice = false`, switching to a DIFFERENT cloud account whose
+    // local DB is empty would be silently skipped — never redirected to
+    // DeviceRestoreRoute — without this reset.
+    ref.read(routerProvider).restoreGuard.resetForNewSession();
 
     ref.read(authStateProvider.notifier).setCloudBornSession(profile: profile);
 
@@ -686,6 +692,9 @@ class _AccountTile extends ConsumerWidget {
     // previous account.
     ref.read(activeTutoredProfileSelectionProvider.notifier).exit();
     ref.read(routerProvider).pinGuard.lock();
+    // RESTORE-01: same session-reset as _activateCloudAccountFromLocalData —
+    // ensure the restore guard re-evaluates for the incoming account.
+    ref.read(routerProvider).restoreGuard.resetForNewSession();
     // DEC-34: do NOT call signOut() — switching accounts must never terminate
     // other accounts' sessions. The Drift DB swap above isolates the data;
     // the AuthState update below makes this account the active on-screen context.
