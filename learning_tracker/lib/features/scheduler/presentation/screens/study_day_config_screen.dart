@@ -216,6 +216,11 @@ class StudyDayConfigScreen extends ConsumerWidget {
             dayOfWeek: dayOfWeek,
             dayType: newType.storageKey,
           );
+          // STUDYDAY-TOGGLE-RACE-14: invalidate AFTER the DB write completes
+          // so the scheduler re-reads the updated study-day config. The
+          // previous placement (after the .then() call, i.e. before the async
+          // write) caused allDailyTasksProvider to rebuild from stale data.
+          ref.invalidate(allDailyTasksProvider);
           try {
             await syncFacade?.pushStudyDayConfig({
               'profile_id': profileId,
@@ -237,7 +242,6 @@ class StudyDayConfigScreen extends ConsumerWidget {
             }
           }
         });
-    ref.invalidate(allDailyTasksProvider);
   }
 }
 
