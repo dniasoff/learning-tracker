@@ -686,6 +686,14 @@ class SignInController extends Notifier<SignInState> {
             .read(auth_state.authStateProvider.notifier)
             .setLocalBornSession(profile: profile);
         await _ref.read(authRepositoryProvider).signOut();
+        // SI-08: clear all per-session router state that must NOT survive a
+        // fresh sign-in. The local-account path previously only cleared
+        // selectedProfileId, leaving the tutored-selection and PIN-gate caches
+        // intact. In a multi-account scenario (cloud session interrupted, user
+        // signs in with a local account) this leaked the previous session's tutor
+        // context and restore-guard state into the new session. Mirrors the
+        // _navigateAfterSignIn and _tryLocalFallbackSignIn paths.
+        _resetSessionContextForFreshSignIn();
         _ref.read(selectedProfileIdProvider.notifier).clear();
         final profiles = await _ref
             .read(userDatabaseProvider)
