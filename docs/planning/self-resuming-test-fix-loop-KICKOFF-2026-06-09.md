@@ -60,10 +60,14 @@ write the final report and DO NOT schedule again. If an iteration is blocked (em
 still schedule the next one with a short note in loop-progress.md so the loop self-heals.
 
 SETUP (first iteration only — detect from loop-progress.md whether already done)
-1. Emulator: confirm a device with `adb devices`. Prefer the emulator (stable, no calls/notification
-   shade, run-as is writable so you can flip prefs to reach first-run states, free to wipe/reinstall).
-   If the physical phone is the target instead, it lives at 100.72.6.10:5555 (stable port) — see
-   reference_phone_testing_adb; ask for the port only if 5555 refuses.
+1. Device: run `adb devices`. Use whatever device/emulator is attached (the app package id is
+   com.jcom.torah.learning_tracker). If NONE is attached, STOP and ask the user how to connect (serial,
+   `adb connect <ip:port>`, or to start an emulator) — do not proceed blind. Prefer an emulator when
+   available (stable, no incoming calls / notification shade, run-as is writable so you can flip prefs
+   to reach first-run states, free to wipe/reinstall). If a physical phone is the target, note that
+   some OEMs (e.g. Samsung) mount the app data dir read-only under run-as, so you can read prefs but
+   not flip them — reach first-run states by reinstall instead. Wireless-debugging ports rotate per
+   session; ask the user for the current one if a saved serial refuses.
 2. Build + install the debug app:  cd learning_tracker &&
    PATH=/home/daniel/flutter/bin:$PATH JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64
    ANDROID_HOME=/home/daniel/Android/Sdk ANDROID_SDK_ROOT=/home/daniel/Android/Sdk
