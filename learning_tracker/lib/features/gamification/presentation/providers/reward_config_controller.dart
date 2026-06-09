@@ -4,6 +4,7 @@ import 'package:learning_tracker/features/gamification/domain/models/reward_mile
 import 'package:learning_tracker/features/gamification/domain/reward_milestone_icons.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
 import 'package:learning_tracker/features/gamification/presentation/providers/achievements_overview_provider.dart';
+import 'package:learning_tracker/features/gamification/presentation/screens/child_redemption_screen.dart';
 import 'package:learning_tracker/features/gamification/presentation/widgets/reward_form.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
@@ -144,6 +145,11 @@ class RewardConfigController extends _$RewardConfigController {
     await ref.read(syncWriteFacadeProvider)?.pushGamificationSettingsSnapshot();
     ref.invalidate(achievementsOverviewProvider);
     ref.invalidate(dashboardChildNextRewardProvider);
+    // DG-RDMP-02: invalidate the child-facing reward list so that
+    // ChildRedemptionScreen immediately reflects any reward the parent just
+    // saved, toggled, or deleted — without requiring the child to navigate
+    // away and back.
+    ref.invalidate(childRedemptionRewardsProvider);
   }
 
   /// Validates the form and persists the milestone. Returns a [RewardSaveResult]
