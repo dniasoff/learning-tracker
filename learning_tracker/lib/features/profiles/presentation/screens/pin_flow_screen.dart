@@ -217,6 +217,16 @@ class _PinFlowScreenState extends ConsumerState<PinFlowScreen> {
   void _handleCompletion(PinFlowState state) {
     switch (widget.mode) {
       case PinFlowMode.setup:
+        // Prime the guard session BEFORE popping so that ParentSettingsRoute's
+        // pinGuard evaluation short-circuits on the re-evaluation triggered by
+        // resolver.next(true). Without this, the guard sees _authenticatedScope
+        // as null during the synchronous re-evaluation window and re-pushes the
+        // setup screen, causing an infinite loop.
+        final setupProfileId = ref.read(selectedProfileIdProvider);
+        if (setupProfileId != null) {
+          ref.read(routerProvider).pinGuard.markAuthenticated(setupProfileId);
+        }
+        unawaited(_popResult(true));
       case PinFlowMode.change:
         unawaited(_popResult(true));
       case PinFlowMode.verify:
