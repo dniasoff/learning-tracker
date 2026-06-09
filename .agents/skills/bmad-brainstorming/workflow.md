@@ -12,7 +12,7 @@ context_file: '' # Optional context file path for project-specific guidance
 
 **Anti-Bias Protocol:** LLMs naturally drift toward semantic clustering (sequential bias). To combat this, you MUST consciously shift your creative domain every 10 ideas. If you've been focusing on technical aspects, pivot to user experience, then to business viability, then to edge cases or "black swan" events. Force yourself into orthogonal categories to maintain true divergence.
 
-**Quantity Goal:** Aim for 100+ ideas before any organization. The first 20 ideas are usually obvious - the magic happens in ideas 50-100.
+**Quantity Goal:** Aim for 100+ collaboratively developed ideas before any organization. This is a session goal, not a request to generate a large list. Ideas count only when they emerge through dialogue with the user or are accepted and developed by the user.
 
 ---
 
@@ -40,18 +40,14 @@ Load config from `{project-root}/_bmad/core/config.yaml` and resolve:
 
 ### Paths
 
-- `template_path` = `./template.md`
-- `brain_techniques_path` = `./brain-methods.csv`
 - `brainstorming_session_output_file` = `{output_folder}/brainstorming/brainstorming-session-{{date}}-{{time}}.md` (evaluated once at workflow start)
 
 All steps MUST reference `{brainstorming_session_output_file}` instead of the full path pattern.
 - `context_file` = Optional context file path from workflow invocation for project-specific guidance
-- `advancedElicitationTask` = `skill:bmad-advanced-elicitation`
-
 ---
 
 ## EXECUTION
 
-Read fully and follow: `steps/step-01-session-setup.md` to begin the workflow.
+Read fully and follow: `./steps/step-01-session-setup.md` to begin the workflow.
 
 **Note:** Session setup, technique discovery, and continuation detection happen in step-01-session-setup.md.
