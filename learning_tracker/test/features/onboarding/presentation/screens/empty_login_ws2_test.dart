@@ -287,25 +287,32 @@ void main() {
       expect(find.text("I'm a tutor"), findsOneWidget);
     });
 
-    testWidgets('EmptyLoginScreen renders device notification toggle stub', (
-      tester,
-    ) async {
-      final mockRouter = _MockStackRouter();
-      when(() => mockRouter.replaceAll(any())).thenAnswer((_) async {});
+    testWidgets(
+      'EmptyLoginScreen does NOT render a device notification toggle',
+      (tester) async {
+        final mockRouter = _MockStackRouter();
+        when(() => mockRouter.replaceAll(any())).thenAnswer((_) async {});
 
-      await tester.pumpWidget(
-        _wrapWithProviders(child: const EmptyLoginScreen(), router: mockRouter),
-      );
-      await tester.pump();
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          _wrapWithProviders(
+            child: const EmptyLoginScreen(),
+            router: mockRouter,
+          ),
+        );
+        await tester.pump();
+        await tester.pumpAndSettle();
 
-      // WS5: DeviceNotificationToggle is rendered with key 'device_notification_toggle'
-      expect(
-        find.byKey(const Key('device_notification_toggle')),
-        findsOneWidget,
-      );
-      expect(find.text('Device notifications'), findsOneWidget);
-    });
+        // The device-notification toggle was removed from this landing surface:
+        // OS notification permission is now requested up front in the first-run
+        // intro flow (AppIntroScreen) and managed afterwards under
+        // Settings → Notification Settings. It must not appear here.
+        expect(
+          find.byKey(const Key('device_notification_toggle')),
+          findsNothing,
+        );
+        expect(find.text('Device notifications'), findsNothing);
+      },
+    );
 
     testWidgets(
       'EmptyLoginScreen CTA banner shows "Add a learning track" call-to-action',

@@ -14,6 +14,12 @@ const _kOnboardingTransliterationVariant = 'onboarding_transliteration_variant';
 /// Persistent flag — once set, onboarding is never shown again on this device.
 const kOnboardingComplete = 'onboarding_complete';
 
+/// Set once the OS permission prompts (notifications + location) have been
+/// shown at the end of the first-run intro flow (see AppIntroScreen). The
+/// post-profile onboarding permission step checks this and skips re-prompting
+/// so a brand-new user is never asked for the same permissions twice.
+const kPermissionsPrompted = 'permissions_prompted';
+
 /// W6.1/W6.3: persist skip intent for dashboard empty-state CTAs.
 const kOnboardingSkipped = 'onboarding_skipped';
 const kOnboardingJoinedToTutor = 'onboarding_joined_to_tutor';

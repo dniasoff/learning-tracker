@@ -19,7 +19,6 @@ import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/skipped_onboarding_cta_banner.dart';
-import 'package:learning_tracker/features/notifications/presentation/widgets/device_notification_toggle.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()
@@ -105,11 +104,10 @@ class EmptyLoginScreen extends ConsumerWidget {
                   },
                 ),
 
-                const SizedBox(height: 16),
-
-                // Device-level OS notification toggle (layer 1, WS5.two-layers).
-                // DEC-27: available even on empty-login (before any profile exists).
-                const DeviceNotificationToggle(),
+                // Device-level OS notification permission is requested up front
+                // in the first-run intro flow (see AppIntroScreen) and can be
+                // managed afterwards under Settings → Notification Settings, so
+                // no device-notification toggle is surfaced on this landing.
               ],
             ),
           ),

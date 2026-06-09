@@ -7,6 +7,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_resume_store.dart'
+    show kPermissionsPrompted;
 import 'package:learning_tracker/features/onboarding/presentation/widgets/glowing_cta_button.dart';
 import 'package:learning_tracker/features/onboarding/presentation/widgets/intro_daily_plan_page.dart';
 import 'package:learning_tracker/features/onboarding/presentation/widgets/intro_mishna_page.dart';
@@ -102,6 +104,14 @@ class _AppIntroScreenState extends State<AppIntroScreen>
   Future<void> _markIntroSeenAndContinue() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool(kIntroSeen, true);
+    if (!mounted) return;
+    // Ask for the device-level permissions (notifications + location) once, as
+    // the closing step of the first-run flow — before sign-in — so every user
+    // is prompted regardless of which post-sign-in path they take (profile
+    // creation, tutor join, or skip-to-empty-login). Reuses the canonical
+    // PermissionPromptScreen; it pops back here when the user resolves or skips.
+    await context.router.push(PermissionPromptRoute(isOnboarding: true));
+    await prefs.setBool(kPermissionsPrompted, true);
     if (mounted) unawaited(context.router.replace(const SignInRoute()));
   }
 

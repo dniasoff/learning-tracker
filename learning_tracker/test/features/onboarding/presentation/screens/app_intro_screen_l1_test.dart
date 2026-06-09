@@ -21,6 +21,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
+import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_resume_store.dart'
+    show kPermissionsPrompted;
 import 'package:learning_tracker/features/onboarding/presentation/screens/app_intro_screen.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
@@ -121,6 +123,9 @@ void main() {
     // replace<T extends Object?> — use untyped any() so mocktail matches
     // the generic call regardless of T.
     when(() => router.replace(any())).thenAnswer((_) async => null);
+    // The first-run flow now pushes the PermissionPromptRoute before replacing
+    // with SignInRoute; stub push so the awaited call resolves in tests.
+    when(() => router.push(any())).thenAnswer((_) async => null);
     SharedPreferences.setMockInitialValues({});
   });
 
@@ -213,11 +218,12 @@ void main() {
     );
   });
 
-  // ── 3. Skip → router.replace(SignInRoute) ──────────────────────────────────
+  // ── 3. Skip → PermissionPrompt then replace(SignInRoute) ────────────────────
 
   group('Skip button navigation', () {
     testWidgets(
-      'tapping Skip calls router.replace(SignInRoute) and writes kIntroSeen=true',
+      'tapping Skip pushes PermissionPromptRoute, then replaces SignInRoute and '
+      'writes kIntroSeen + kPermissionsPrompted',
       (tester) async {
         await tester.pumpWidget(_rig(router: router));
         await tester.pump();
@@ -225,25 +231,29 @@ void main() {
 
         await tester.tap(find.text('Skip'));
         await tester.pump();
-        // Allow SharedPreferences write + async router call to complete.
+        // Allow SharedPreferences write + async router calls to complete.
         await tester.pump(const Duration(seconds: 1));
 
-        final captured = verify(() => router.replace(captureAny())).captured;
-        expect(captured.single, isA<SignInRoute>());
+        final pushed = verify(() => router.push(captureAny())).captured;
+        expect(pushed.single, isA<PermissionPromptRoute>());
+        final replaced = verify(() => router.replace(captureAny())).captured;
+        expect(replaced.single, isA<SignInRoute>());
 
         final prefs = await SharedPreferences.getInstance();
         expect(prefs.getBool(kIntroSeen), isTrue);
+        expect(prefs.getBool(kPermissionsPrompted), isTrue);
 
         await _tearDown(tester);
       },
     );
   });
 
-  // ── 4. "Get Started" CTA → router.replace(SignInRoute) ───────────────────
+  // ── 4. "Get Started" CTA → PermissionPrompt then replace(SignInRoute) ────────
 
   group('Get Started CTA navigation', () {
     testWidgets(
-      'tapping "Get Started" on page 3 calls router.replace(SignInRoute) and writes kIntroSeen=true',
+      'tapping "Get Started" on page 3 pushes PermissionPromptRoute, then '
+      'replaces SignInRoute and writes kIntroSeen + kPermissionsPrompted',
       (tester) async {
         await tester.pumpWidget(_rig(router: router));
         await tester.pump();
@@ -258,11 +268,14 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(seconds: 1));
 
-        final captured = verify(() => router.replace(captureAny())).captured;
-        expect(captured.single, isA<SignInRoute>());
+        final pushed = verify(() => router.push(captureAny())).captured;
+        expect(pushed.single, isA<PermissionPromptRoute>());
+        final replaced = verify(() => router.replace(captureAny())).captured;
+        expect(replaced.single, isA<SignInRoute>());
 
         final prefs = await SharedPreferences.getInstance();
         expect(prefs.getBool(kIntroSeen), isTrue);
+        expect(prefs.getBool(kPermissionsPrompted), isTrue);
 
         await _tearDown(tester);
       },

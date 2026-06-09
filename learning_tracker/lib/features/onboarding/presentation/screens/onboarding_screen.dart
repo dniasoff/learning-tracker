@@ -19,6 +19,7 @@ import 'package:learning_tracker/features/profiles/domain/models/profile_model.d
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/screens/add_track_flow_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 // Re-export the completion constant so existing callers don't break.
 export 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_resume_store.dart'
@@ -431,7 +432,15 @@ class _PermissionPromptPhaseState extends State<_PermissionPromptPhase> {
     // correct destination: handoff (child) or dashboard (adult).
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
-      await context.pushRoute(PermissionPromptRoute(isOnboarding: true));
+      // The first-run intro flow (AppIntroScreen) now requests these same
+      // device-level permissions before sign-in. If it already did, skip the
+      // push so a brand-new user is not prompted twice — just continue.
+      final prefs = await SharedPreferences.getInstance();
+      final alreadyPrompted = prefs.getBool(kPermissionsPrompted) ?? false;
+      if (!mounted) return;
+      if (!alreadyPrompted) {
+        await context.pushRoute(PermissionPromptRoute(isOnboarding: true));
+      }
       if (!mounted) return;
       if (widget.isChildMode) {
         widget.onChildModeComplete();
