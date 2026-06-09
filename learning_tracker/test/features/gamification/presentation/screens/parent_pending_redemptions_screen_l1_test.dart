@@ -177,9 +177,7 @@ void main() {
             userDatabaseProvider.overrideWithValue(db),
             activeProfileIdProvider.overrideWith(_ProfileIdOverride.new),
             outboxSyncWriteFacadeProvider.overrideWithValue(null),
-            pendingRedemptionsProvider.overrideWith(
-              (ref) => controller.stream,
-            ),
+            pendingRedemptionsProvider.overrideWith((ref) => controller.stream),
           ],
           child: const MaterialApp(
             localizationsDelegates: AppLocalizations.localizationsDelegates,

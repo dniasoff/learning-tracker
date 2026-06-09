@@ -74,47 +74,40 @@ void main() {
     );
 
     test(
-      'toggleStudyDay provider skips write when track is not found (no crash)',
+      'guard: missing track resolves to null via the real lookup → no write, no FK crash',
       () async {
-        // Simulate: provider resolves track as null → should not throw.
-        // The screen should guard: if track is null, do not call upsertDayConfig.
-        // This test verifies the guard at the DAO level:
-        // a real (non-zero) trackId is required; 0 is rejected.
-        //
-        // After the fix in study_day_config_screen.dart and
-        // study_day_config_providers.dart: when track?.id is null, the upsert
-        // call is skipped (early return / guard added), so no FK violation.
-        //
-        // Test the guard by checking that calling upsert with the trackId of
-        // an existing track is fine, while null-track case is silently skipped.
-        final trackId = await seedTrack(db, profileId: 1);
-        expect(trackId, isPositive);
+        // Mirrors study_day_config_providers.dart:71-82: the provider looks up
+        // the curriculum's track and, when getSingleOrNull() returns null,
+        // returns early instead of passing trackId=0 (which would violate the
+        // FK and crash). No track is seeded here, so the real lookup must be
+        // null and the guarded upsert must be skipped — leaving no rows and
+        // throwing nothing.
+        final track =
+            await (db.select(db.curriculumTracks)
+                  ..where((t) => t.curriculumId.equals('bavli'))
+                  ..limit(1))
+                .getSingleOrNull();
+        expect(track, isNull, reason: 'no track seeded → lookup must be null');
 
-        // Build the "screen code" guard logic: skip if track is null.
-        CurriculumTrack? track;
-        // No track was resolved for some other curriculum.
-
-        // Guard: only call upsert when track is non-null.
-        if (track != null) {
+        final trackId = track?.id;
+        if (trackId != null) {
           await db.studyDayConfigDao.upsertDayConfig(
             profileId: 1,
             curriculumId: 'bavli',
-            trackId: track.id,
-            dayOfWeek: 2,
-            dayType: 'off',
+            trackId: trackId,
+            dayOfWeek: 1,
+            dayType: 'study',
           );
         }
 
-        // Verify no rows were written (the guard prevented the call).
-        final rows = await (db.select(db.studyDayConfigs)
-              ..where((t) => t.curriculumId.equals('bavli')))
-            .get();
+        final rows = await (db.select(
+          db.studyDayConfigs,
+        )..where((t) => t.curriculumId.equals('bavli'))).get();
         expect(
           rows,
           isEmpty,
           reason:
-              'Guard: when track is null, upsertDayConfig must NOT be called; '
-              'no rows should be written.',
+              'guard: null track → upsert skipped → no FK crash and no rows',
         );
       },
     );

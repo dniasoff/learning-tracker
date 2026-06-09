@@ -51,131 +51,127 @@ Future<void> _insertPendingRedemption(
   int pointsCost = 50,
 }) async {
   final now = DateTimeFactory.nowUtc();
-  await db.into(db.rewardRedemptions).insert(
-    RewardRedemptionsCompanion.insert(
-      profileId: profileId,
-      rewardTitle: rewardTitle,
-      iconIndex: Value(iconIndex),
-      pointsCost: pointsCost,
-      status: const Value('pending_fulfilment'),
-      createdAt: now,
-      updatedAt: now,
-    ),
-  );
+  await db
+      .into(db.rewardRedemptions)
+      .insert(
+        RewardRedemptionsCompanion.insert(
+          profileId: profileId,
+          rewardTitle: rewardTitle,
+          iconIndex: Value(iconIndex),
+          pointsCost: pointsCost,
+          status: const Value('pending_fulfilment'),
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
 }
 
 void main() {
-  group(
-    'pendingRedemptionsProvider — reactive stream (DG-PND-05)',
-    () {
-      test(
-        'pendingRedemptionsProvider re-emits updated list when a new '
+  group('pendingRedemptionsProvider — reactive stream (DG-PND-05)', () {
+    test('pendingRedemptionsProvider re-emits updated list when a new '
         'redemption is inserted WITHOUT explicit ref.invalidate() '
-        '(must be stream-backed, not one-shot FutureProvider)',
-        () async {
-          final db = inMemoryDb();
-          addTearDown(db.close);
-          await seedProfile(db);
+        '(must be stream-backed, not one-shot FutureProvider)', () async {
+      final db = inMemoryDb();
+      addTearDown(db.close);
+      await seedProfile(db);
 
-          final container = ProviderContainer(
-            overrides: [
-              userDatabaseProvider.overrideWithValue(db),
-              activeProfileIdProvider.overrideWithValue(1),
-            ],
-          );
-          addTearDown(container.dispose);
+      final container = ProviderContainer(
+        overrides: [
+          userDatabaseProvider.overrideWithValue(db),
+          activeProfileIdProvider.overrideWithValue(1),
+        ],
+      );
+      addTearDown(container.dispose);
 
-          final emissions = _captureEmissions(container);
+      final emissions = _captureEmissions(container);
 
-          // Initial state: empty list.
-          await Future<void>.delayed(const Duration(milliseconds: 20));
-          expect(
-            emissions.any((list) => list.isEmpty),
-            isTrue,
-            reason: 'initial emissions must include an empty list',
-          );
-
-          // Insert a pending redemption row directly (simulates child submitting
-          // or a cloud-sync push landing a new row).
-          await _insertPendingRedemption(
-            db,
-            profileId: 1,
-            rewardTitle: 'Ice Cream',
-            pointsCost: 40,
-          );
-
-          // Allow the reactive stream to propagate.
-          await Future<void>.delayed(const Duration(milliseconds: 50));
-
-          // Without ref.invalidate(), the reactive provider must have emitted a
-          // list containing the new row.
-          final flatTitles = emissions.expand((list) => list).map(
-            (r) => r.rewardTitle,
-          );
-          expect(
-            flatTitles,
-            contains('Ice Cream'),
-            reason:
-                'pendingRedemptionsProvider must emit the updated list '
-                'reactively after a new redemption row is inserted — without '
-                'requiring explicit ref.invalidate(). If this fails the '
-                'provider is still a stale FutureProvider.',
-          );
-        },
+      // Initial state: empty list.
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(
+        emissions.any((list) => list.isEmpty),
+        isTrue,
+        reason: 'initial emissions must include an empty list',
       );
 
-      test(
-        'pendingRedemptionsProvider emits list minus fulfilled item '
-        'reactively after fulfilRedemption WITHOUT explicit invalidation',
-        () async {
-          final db = inMemoryDb();
-          addTearDown(db.close);
-          await seedProfile(db);
-
-          // Seed a pending row.
-          await _insertPendingRedemption(
-            db,
-            profileId: 1,
-            rewardTitle: 'Toy',
-            pointsCost: 30,
-          );
-
-          final container = ProviderContainer(
-            overrides: [
-              userDatabaseProvider.overrideWithValue(db),
-              activeProfileIdProvider.overrideWithValue(1),
-            ],
-          );
-          addTearDown(container.dispose);
-
-          final emissions = _captureEmissions(container);
-          await Future<void>.delayed(const Duration(milliseconds: 20));
-
-          // Must initially have emitted the pending row.
-          final allRows = emissions.expand((list) => list).toList();
-          expect(
-            allRows.any((r) => r.rewardTitle == 'Toy'),
-            isTrue,
-            reason: 'initial emission must contain the pending row',
-          );
-          final row = allRows.firstWhere((r) => r.rewardTitle == 'Toy');
-
-          // Fulfil the redemption — list must shrink without invalidation.
-          await db.pointsBalanceDao.fulfilRedemption(row.id);
-
-          await Future<void>.delayed(const Duration(milliseconds: 50));
-
-          // After fulfilment, an emission with an EMPTY list must have arrived.
-          expect(
-            emissions.any((list) => list.isEmpty),
-            isTrue,
-            reason:
-                'pendingRedemptionsProvider must emit an empty list reactively '
-                'after fulfilRedemption, without requiring explicit '
-                'ref.invalidate().',
-          );
-        },
+      // Insert a pending redemption row directly (simulates child submitting
+      // or a cloud-sync push landing a new row).
+      await _insertPendingRedemption(
+        db,
+        profileId: 1,
+        rewardTitle: 'Ice Cream',
+        pointsCost: 40,
       );
-    },
-  );
+
+      // Allow the reactive stream to propagate.
+      await Future<void>.delayed(const Duration(milliseconds: 50));
+
+      // Without ref.invalidate(), the reactive provider must have emitted a
+      // list containing the new row.
+      final flatTitles = emissions
+          .expand((list) => list)
+          .map((r) => r.rewardTitle);
+      expect(
+        flatTitles,
+        contains('Ice Cream'),
+        reason:
+            'pendingRedemptionsProvider must emit the updated list '
+            'reactively after a new redemption row is inserted — without '
+            'requiring explicit ref.invalidate(). If this fails the '
+            'provider is still a stale FutureProvider.',
+      );
+    });
+
+    test(
+      'pendingRedemptionsProvider emits list minus fulfilled item '
+      'reactively after fulfilRedemption WITHOUT explicit invalidation',
+      () async {
+        final db = inMemoryDb();
+        addTearDown(db.close);
+        await seedProfile(db);
+
+        // Seed a pending row.
+        await _insertPendingRedemption(
+          db,
+          profileId: 1,
+          rewardTitle: 'Toy',
+          pointsCost: 30,
+        );
+
+        final container = ProviderContainer(
+          overrides: [
+            userDatabaseProvider.overrideWithValue(db),
+            activeProfileIdProvider.overrideWithValue(1),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        final emissions = _captureEmissions(container);
+        await Future<void>.delayed(const Duration(milliseconds: 20));
+
+        // Must initially have emitted the pending row.
+        final allRows = emissions.expand((list) => list).toList();
+        expect(
+          allRows.any((r) => r.rewardTitle == 'Toy'),
+          isTrue,
+          reason: 'initial emission must contain the pending row',
+        );
+        final row = allRows.firstWhere((r) => r.rewardTitle == 'Toy');
+
+        // Fulfil the redemption — list must shrink without invalidation.
+        await db.pointsBalanceDao.fulfilRedemption(row.id);
+
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+
+        // After fulfilment, an emission with an EMPTY list must have arrived.
+        expect(
+          emissions.any((list) => list.isEmpty),
+          isTrue,
+          reason:
+              'pendingRedemptionsProvider must emit an empty list reactively '
+              'after fulfilRedemption, without requiring explicit '
+              'ref.invalidate().',
+        );
+      },
+    );
+  });
 }

@@ -185,7 +185,9 @@ class CurriculumProgressScreen extends ConsumerWidget {
               Center(
                 child: Padding(
                   padding: const EdgeInsets.only(top: 48),
-                  child: LoadingIndicator(message: l10n.curriculumProgressLoading),
+                  child: LoadingIndicator(
+                    message: l10n.curriculumProgressLoading,
+                  ),
                 ),
               ),
             ),

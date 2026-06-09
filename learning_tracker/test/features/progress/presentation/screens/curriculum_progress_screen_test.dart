@@ -587,8 +587,7 @@ void main() {
       expect(
         find.text('Breakdown by Level'),
         findsNothing,
-        reason:
-            'CP-01: The English literal must not appear when locale is he.',
+        reason: 'CP-01: The English literal must not appear when locale is he.',
       );
     },
   );

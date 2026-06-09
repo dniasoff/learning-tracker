@@ -198,8 +198,9 @@ class SeedManager {
         Stream<List<int>> compressedChunks() async* {
           const chunkSize = 1 << 20; // 1 MB
           for (var i = 0; i < input.length; i += chunkSize) {
-            final end =
-                (i + chunkSize < input.length) ? i + chunkSize : input.length;
+            final end = (i + chunkSize < input.length)
+                ? i + chunkSize
+                : input.length;
             yield input.sublist(i, end);
           }
         }
@@ -216,9 +217,7 @@ class SeedManager {
       }
       _logger?.info(
         event: 'seed_manager_seed_extracted',
-        fields: {
-          'sizeMb': (bytesWritten / 1024 / 1024).toStringAsFixed(1),
-        },
+        fields: {'sizeMb': (bytesWritten / 1024 / 1024).toStringAsFixed(1)},
       );
     } catch (e) {
       _logger?.error(event: 'seed_manager_extract_failed', exception: e);

@@ -24,6 +24,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
+import 'package:learning_tracker/features/learning/domain/repositories/track_repository.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:learning_tracker/features/tracks/domain/services/curriculum_activation_service.dart';
@@ -31,8 +32,6 @@ import 'package:learning_tracker/features/tracks/setup/presentation/providers/tr
 import 'package:learning_tracker/features/tracks/setup/presentation/screens/track_management_hub_screen.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
-
-import 'package:learning_tracker/features/learning/domain/repositories/track_repository.dart';
 
 import '../../../helpers/drift_memory.dart';
 
@@ -50,7 +49,8 @@ class _TrackRepositoryForTest implements TrackRepository {
   Future<void> initializeDefaultTracks(
     CurriculumId curriculumId, {
     int profileId = 0,
-  }) => _db.trackDao.initializeDefaultTracks(curriculumId, profileId: profileId);
+  }) =>
+      _db.trackDao.initializeDefaultTracks(curriculumId, profileId: profileId);
 }
 
 class _FakePageRouteInfo extends Fake implements PageRouteInfo {}
@@ -98,14 +98,16 @@ List<Override> _perTrackOverrides(List<CurriculumTrack> tracks) {
 }
 
 /// Builds a [CurriculumActivationService] wired to [db] without sync.
-CurriculumActivationService _buildActivationService(UserDatabase db, int profileId) =>
-    CurriculumActivationService(
-      database: db,
-      pushCurriculumTrack: null,
-      trackRepository: _TrackRepositoryForTest(db),
-      profileId: profileId,
-      syncFacade: null,
-    );
+CurriculumActivationService _buildActivationService(
+  UserDatabase db,
+  int profileId,
+) => CurriculumActivationService(
+  database: db,
+  pushCurriculumTrack: null,
+  trackRepository: _TrackRepositoryForTest(db),
+  profileId: profileId,
+  syncFacade: null,
+);
 
 Widget _buildApp({
   required _MockStackRouter router,
@@ -186,7 +188,9 @@ void main() {
         final trackId = await seedTrack(db, profileId: _kProfileId);
         final track = _track(id: trackId);
 
-        await tester.pumpWidget(_buildApp(router: router, tracks: [track], db: db));
+        await tester.pumpWidget(
+          _buildApp(router: router, tracks: [track], db: db),
+        );
         await _settle(tester);
 
         // Trigger delete dialog via long-press.
@@ -233,7 +237,9 @@ void main() {
         final trackId = await seedTrack(db, profileId: _kProfileId);
         final track = _track(id: trackId);
 
-        await tester.pumpWidget(_buildApp(router: router, tracks: [track], db: db));
+        await tester.pumpWidget(
+          _buildApp(router: router, tracks: [track], db: db),
+        );
         await _settle(tester);
 
         await tester.longPress(find.byType(InkWell).first);

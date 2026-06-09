@@ -792,10 +792,7 @@ void main() {
         // Hard-coded 'Sync paused' must NOT appear in Hebrew locale.
         expect(find.textContaining('Sync paused'), findsNothing);
         // The localized Hebrew text must appear instead.
-        expect(
-          find.textContaining('סנכרון מושהה'),
-          findsOneWidget,
-        );
+        expect(find.textContaining('סנכרון מושהה'), findsOneWidget);
 
         await tester.pumpWidget(const SizedBox.shrink());
         await tester.pump(Duration.zero);

@@ -18,8 +18,6 @@
 @Tags(['gamification', 'staleness'])
 library;
 
-import 'dart:async';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
@@ -33,13 +31,9 @@ import '../../../../helpers/drift_memory.dart';
 /// [ProviderContainer] themselves.
 List<int> _captureEmissions(ProviderContainer container) {
   final emissions = <int>[];
-  container.listen<AsyncValue<int>>(
-    globalPointsProvider,
-    (_, next) {
-      next.whenData(emissions.add);
-    },
-    fireImmediately: true,
-  );
+  container.listen<AsyncValue<int>>(globalPointsProvider, (_, next) {
+    next.whenData(emissions.add);
+  }, fireImmediately: true);
   return emissions;
 }
 
@@ -85,49 +79,46 @@ void main() {
       },
     );
 
-    test(
-      'globalPointsProvider re-emits updated balance after createRedemption '
-      'debit WITHOUT explicit invalidation',
-      () async {
-        final db = inMemoryDb();
-        addTearDown(db.close);
-        await seedProfile(db);
+    test('globalPointsProvider re-emits updated balance after createRedemption '
+        'debit WITHOUT explicit invalidation', () async {
+      final db = inMemoryDb();
+      addTearDown(db.close);
+      await seedProfile(db);
 
-        // Start with 100 points.
-        await db.pointsBalanceDao.creditCompletion(1, 100);
+      // Start with 100 points.
+      await db.pointsBalanceDao.creditCompletion(1, 100);
 
-        final container = ProviderContainer(
-          overrides: [
-            userDatabaseProvider.overrideWithValue(db),
-            activeProfileIdProvider.overrideWithValue(1),
-          ],
-        );
-        addTearDown(container.dispose);
+      final container = ProviderContainer(
+        overrides: [
+          userDatabaseProvider.overrideWithValue(db),
+          activeProfileIdProvider.overrideWithValue(1),
+        ],
+      );
+      addTearDown(container.dispose);
 
-        final emissions = _captureEmissions(container);
-        await Future<void>.delayed(const Duration(milliseconds: 20));
-        expect(emissions, contains(100));
+      final emissions = _captureEmissions(container);
+      await Future<void>.delayed(const Duration(milliseconds: 20));
+      expect(emissions, contains(100));
 
-        // Debit 40 points via a redemption.
-        await db.pointsBalanceDao.createRedemption(
-          profileId: 1,
-          rewardTitle: 'Ice Cream',
-          iconIndex: 0,
-          pointsCost: 40,
-        );
+      // Debit 40 points via a redemption.
+      await db.pointsBalanceDao.createRedemption(
+        profileId: 1,
+        rewardTitle: 'Ice Cream',
+        iconIndex: 0,
+        pointsCost: 40,
+      );
 
-        await Future<void>.delayed(const Duration(milliseconds: 50));
+      await Future<void>.delayed(const Duration(milliseconds: 50));
 
-        // Provider must have emitted 60, not remain stale at 100.
-        expect(
-          emissions,
-          contains(60),
-          reason:
-              'globalPointsProvider must emit debited balance (60) after '
-              'createRedemption without requiring invalidation.',
-        );
-      },
-    );
+      // Provider must have emitted 60, not remain stale at 100.
+      expect(
+        emissions,
+        contains(60),
+        reason:
+            'globalPointsProvider must emit debited balance (60) after '
+            'createRedemption without requiring invalidation.',
+      );
+    });
   });
 
   group(
@@ -161,7 +152,11 @@ void main() {
 
           final emissions = _captureEmissions(container);
           await Future<void>.delayed(const Duration(milliseconds: 20));
-          expect(emissions, contains(60), reason: 'balance should be 60 after debit');
+          expect(
+            emissions,
+            contains(60),
+            reason: 'balance should be 60 after debit',
+          );
 
           // Parent declines → refund 40 → balance back to 100.
           await db.pointsBalanceDao.declineRedemption(redemption!.id);

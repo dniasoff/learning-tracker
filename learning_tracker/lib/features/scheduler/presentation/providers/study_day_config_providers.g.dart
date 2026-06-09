@@ -308,7 +308,7 @@ final class ToggleStudyDayProvider
   }
 }
 
-String _$toggleStudyDayHash() => r'64ee4406404fc26f7b85aed80e5fef6ef5770eee';
+String _$toggleStudyDayHash() => r'7801f428051abfd237c0693218aa28f68538c147';
 
 /// Toggle a day between study and review.
 

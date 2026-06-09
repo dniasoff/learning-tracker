@@ -584,9 +584,7 @@ class _AccountTile extends ConsumerWidget {
         final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(content: Text(l10n.authLocalDataMissing)),
-          );
+          ..showSnackBar(SnackBar(content: Text(l10n.authLocalDataMissing)));
       }
       return;
     }
@@ -670,9 +668,7 @@ class _AccountTile extends ConsumerWidget {
         final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context)
           ..hideCurrentSnackBar()
-          ..showSnackBar(
-            SnackBar(content: Text(l10n.authLocalDataMissing)),
-          );
+          ..showSnackBar(SnackBar(content: Text(l10n.authLocalDataMissing)));
       }
       return;
     }

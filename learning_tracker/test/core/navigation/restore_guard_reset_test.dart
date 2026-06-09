@@ -43,15 +43,17 @@ class _FakePageRouteInfo extends Fake implements PageRouteInfo {}
 /// a non-empty DB and caches `_isNewDevice = false` on first nav.
 Future<void> _seedProfile(UserDatabase db) async {
   final accountId = await seedAccount(db);
-  await db.into(db.learnerProfiles).insert(
-    LearnerProfilesCompanion.insert(
-      accountId: accountId,
-      displayName: 'Alice',
-      mode: 'adult',
-      createdAt: DateTimeFactory.nowUtc(),
-      updatedAt: DateTimeFactory.nowUtc(),
-    ),
-  );
+  await db
+      .into(db.learnerProfiles)
+      .insert(
+        LearnerProfilesCompanion.insert(
+          accountId: accountId,
+          displayName: 'Alice',
+          mode: 'adult',
+          createdAt: DateTimeFactory.nowUtc(),
+          updatedAt: DateTimeFactory.nowUtc(),
+        ),
+      );
 }
 
 /// Stub a fresh resolver that silently accepts next() and next(bool).
@@ -98,9 +100,9 @@ void main() {
         // Quick sanity: the guard now short-circuits.
         final r0 = _resolver();
         final router0 = MockStackRouter();
-        when(() => router0.replace(any<PageRouteInfo>())).thenAnswer(
-          (_) async => null,
-        );
+        when(
+          () => router0.replace(any<PageRouteInfo>()),
+        ).thenAnswer((_) async => null);
         await guard.onNavigation(r0, router0);
         verify(() => r0.next()).called(1);
         verifyNever(() => router0.replace(any<PageRouteInfo>()));
@@ -146,9 +148,9 @@ void main() {
         // First nav: non-empty DB, caches _isNewDevice = false.
         final r0 = _resolver();
         final router0 = MockStackRouter();
-        when(() => router0.replace(any<PageRouteInfo>())).thenAnswer(
-          (_) async => null,
-        );
+        when(
+          () => router0.replace(any<PageRouteInfo>()),
+        ).thenAnswer((_) async => null);
         await guard.onNavigation(r0, router0);
         verify(() => r0.next()).called(1);
         verifyNever(() => router0.replace(any<PageRouteInfo>()));
@@ -182,33 +184,30 @@ void main() {
   // ── R3: reset on a fresh guard leaves behaviour unchanged ──────────────────
 
   group('R3 — reset on a fresh (never-run) guard is a no-op', () {
-    test(
-      'empty DB + cloud account redirects regardless of reset',
-      () async {
-        final guard = RestoreGuard(
-          getDatabase: () => db,
-          hasCloudAccount: () => true,
-        );
-        guard.resetForNewSession(); // no-op on fresh guard
+    test('empty DB + cloud account redirects regardless of reset', () async {
+      final guard = RestoreGuard(
+        getDatabase: () => db,
+        hasCloudAccount: () => true,
+      );
+      guard.resetForNewSession(); // no-op on fresh guard
 
-        final r = _resolver();
-        await guard.onNavigation(r, router);
+      final r = _resolver();
+      await guard.onNavigation(r, router);
 
-        verify(
-          () => router.replace(
-            any<PageRouteInfo>(
-              that: isA<PageRouteInfo>().having(
-                (r) => r.routeName,
-                'routeName',
-                'DeviceRestoreRoute',
-              ),
+      verify(
+        () => router.replace(
+          any<PageRouteInfo>(
+            that: isA<PageRouteInfo>().having(
+              (r) => r.routeName,
+              'routeName',
+              'DeviceRestoreRoute',
             ),
           ),
-        ).called(1);
-        verify(() => r.next(false)).called(1);
-        verifyNever(() => r.next());
-      },
-    );
+        ),
+      ).called(1);
+      verify(() => r.next(false)).called(1);
+      verifyNever(() => r.next());
+    });
   });
 
   // ── R4: markRestoreComplete() still works after a prior reset ──────────────

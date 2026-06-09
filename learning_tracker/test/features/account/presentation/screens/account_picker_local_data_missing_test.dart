@@ -35,7 +35,6 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
-import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
@@ -175,9 +174,7 @@ void main() {
     router = _MockStackRouter();
 
     when(() => auth.currentUser).thenReturn(null);
-    when(
-      () => router.push(any<PageRouteInfo>()),
-    ).thenAnswer((_) async => null);
+    when(() => router.push(any<PageRouteInfo>())).thenAnswer((_) async => null);
     when(
       () => router.replaceAll(any<List<PageRouteInfo>>()),
     ).thenAnswer((_) async {});
@@ -190,101 +187,94 @@ void main() {
 
   // ── C1: cloud account, offline, NO local profile ──────────────────────────
 
-  testWidgets(
-    'C1 — cloud account offline, local DB missing profile: '
-    'shows authLocalDataMissing SnackBar, does NOT navigate to AppShell',
-    (tester) async {
-      // Seed the cloud account in the device registry.
-      await registry.addAccount(_cloudAccountEntry());
+  testWidgets('C1 — cloud account offline, local DB missing profile: '
+      'shows authLocalDataMissing SnackBar, does NOT navigate to AppShell', (
+    tester,
+  ) async {
+    // Seed the cloud account in the device registry.
+    await registry.addAccount(_cloudAccountEntry());
 
-      // Simulate offline — no live Firebase session (stale), no internet.
-      final offline = _MockInternetConnectionChecker();
-      when(() => offline.hasConnection).thenAnswer((_) async => false);
-      // No live Firebase session → hasValidSession == false → offline path.
-      when(() => auth.currentUser).thenReturn(null);
+    // Simulate offline — no live Firebase session (stale), no internet.
+    final offline = _MockInternetConnectionChecker();
+    when(() => offline.hasConnection).thenAnswer((_) async => false);
+    // No live Firebase session → hasValidSession == false → offline path.
+    when(() => auth.currentUser).thenReturn(null);
 
-      await tester.pumpWidget(
-        _buildApp(
-          registry: registry,
-          userDb: userDb,
-          auth: auth,
-          router: router,
-          connectivity: offline,
-        ),
-      );
-      await tester.pump(); // resolve FutureBuilder
+    await tester.pumpWidget(
+      _buildApp(
+        registry: registry,
+        userDb: userDb,
+        auth: auth,
+        router: router,
+        connectivity: offline,
+      ),
+    );
+    await tester.pump(); // resolve FutureBuilder
 
-      // The account tile is rendered.
-      expect(find.text('Cloud Missing'), findsOneWidget);
+    // The account tile is rendered.
+    expect(find.text('Cloud Missing'), findsOneWidget);
 
-      // Tap the tile → triggers _activateCloudAccountFromLocalData offline path.
-      await tester.tap(find.text('Cloud Missing'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
+    // Tap the tile → triggers _activateCloudAccountFromLocalData offline path.
+    await tester.tap(find.text('Cloud Missing'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
 
-      // REGRESSION GUARD: A SnackBar with the "local data missing" message
-      // must be shown — the user is told why nothing happened.
-      expect(
-        find.text(
-          'This account\'s local data is missing. '
-          'Connect to the internet to restore it.',
-        ),
-        findsOneWidget,
-        reason:
-            'Silent fail: no error shown when cloud local data is missing '
-            '(ACCTPICK-03)',
-      );
+    // REGRESSION GUARD: A SnackBar with the "local data missing" message
+    // must be shown — the user is told why nothing happened.
+    expect(
+      find.text(
+        'This account\'s local data is missing. '
+        'Connect to the internet to restore it.',
+      ),
+      findsOneWidget,
+      reason:
+          'Silent fail: no error shown when cloud local data is missing '
+          '(ACCTPICK-03)',
+    );
 
-      // No navigation away from the picker — the user remains on the picker
-      // and can choose another account or connect to the internet.
-      verifyNever(() => router.replaceAll(any()));
-    },
-  );
+    // No navigation away from the picker — the user remains on the picker
+    // and can choose another account or connect to the internet.
+    verifyNever(() => router.replaceAll(any()));
+  });
 
   // ── C2: local-born account, NO local profile ──────────────────────────────
 
-  testWidgets(
-    'C2 — local-born account, local DB missing profile: '
-    'shows authLocalDataMissing SnackBar, does NOT navigate to AppShell',
-    (tester) async {
-      // Seed the local account in the device registry.
-      await registry.addAccount(_localAccountEntry());
+  testWidgets('C2 — local-born account, local DB missing profile: '
+      'shows authLocalDataMissing SnackBar, does NOT navigate to AppShell', (
+    tester,
+  ) async {
+    // Seed the local account in the device registry.
+    await registry.addAccount(_localAccountEntry());
 
-      // No internet check needed for local-born path (no network probe).
-      when(() => auth.currentUser).thenReturn(null);
+    // No internet check needed for local-born path (no network probe).
+    when(() => auth.currentUser).thenReturn(null);
 
-      await tester.pumpWidget(
-        _buildApp(
-          registry: registry,
-          userDb: userDb,
-          auth: auth,
-          router: router,
-        ),
-      );
-      await tester.pump(); // resolve FutureBuilder
+    await tester.pumpWidget(
+      _buildApp(registry: registry, userDb: userDb, auth: auth, router: router),
+    );
+    await tester.pump(); // resolve FutureBuilder
 
-      // The account tile is rendered.
-      expect(find.text('Local Missing'), findsOneWidget);
+    // The account tile is rendered.
+    expect(find.text('Local Missing'), findsOneWidget);
 
-      // Tap the tile → triggers _activateLocalAccountFromLocalData.
-      await tester.tap(find.text('Local Missing'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 300));
+    // Tap the tile → triggers _activateLocalAccountFromLocalData.
+    await tester.tap(find.text('Local Missing'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
 
-      // REGRESSION GUARD: A SnackBar with the "local data missing" message
-      // must be shown.
-      expect(
-        find.text(
-          'This account\'s local data is missing. '
-          'Connect to the internet to restore it.',
-        ),
-        findsOneWidget,
-        reason:
-            'Silent fail: no error shown when local-born local data is missing',
-      );
+    // REGRESSION GUARD: A SnackBar with the "local data missing" message
+    // must be shown.
+    expect(
+      find.text(
+        'This account\'s local data is missing. '
+        'Connect to the internet to restore it.',
+      ),
+      findsOneWidget,
+      reason:
+          'Silent fail: no error shown when local-born local data is missing',
+    );
 
-      // No navigation away from the picker.
-      verifyNever(() => router.replaceAll(any()));
-    },
-  );
+    // No navigation away from the picker.
+    verifyNever(() => router.replaceAll(any()));
+  });
 }

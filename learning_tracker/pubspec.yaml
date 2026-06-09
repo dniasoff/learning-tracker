@@ -158,6 +158,8 @@ dev_dependencies:
 # to avoid that, the plugin entry-point in analysis_options.yaml is disabled and
 # custom_lint is invoked directly via 'dart run custom_lint' from the
 # packages/custom_lints environment which has analyzer: ^8.
+  cloud_functions_platform_interface: any
+  firebase_core_platform_interface: any
 dependency_overrides:
   analyzer: ^9.0.0
   # dart_style 3.1.4+ requires analyzer ^10; pin to last version compatible with ^9.
