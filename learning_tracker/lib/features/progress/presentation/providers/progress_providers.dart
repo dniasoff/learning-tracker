@@ -113,6 +113,9 @@ Future<CurriculumProgressData> curriculumProgress(
   Ref ref,
   String curriculumId,
 ) async {
+  // CP-02: recompute whenever a completion is committed so the Breakdown by
+  // Level cards update live without the user having to pull-to-refresh.
+  ref.watch<int>(completionCommittedProvider);
   final db = ref.watch(userDatabaseProvider);
 
   // Resolve CurriculumId enum for content repository

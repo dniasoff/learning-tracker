@@ -8,6 +8,7 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_tier_filter.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:learning_tracker/features/progress/domain/services/lifetime_tree_builder.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 
@@ -175,6 +176,9 @@ final itemsLearnedDataProvider = FutureProvider.autoDispose
       CurriculumCompletionSummary?,
       ({int profileId, CurriculumId curriculumId})
     >((ref, args) async {
+      // ILP-01: recompute whenever a completion is committed so the Items
+      // Learned and Lifetime View screens stay live without pull-to-refresh.
+      ref.watch<int>(completionCommittedProvider);
       final db = ref.watch(userDatabaseProvider);
       final repo = ref.watch(contentRepositoryProvider);
       return computeItemsLearnedSummary(
@@ -211,6 +215,9 @@ final lifetimeViewDataProvider = FutureProvider.autoDispose
       CurriculumCompletionSummary?,
       ({int profileId, CurriculumId curriculumId})
     >((ref, args) async {
+      // ILP-01: recompute whenever a completion is committed so the Lifetime
+      // View screen stays live without pull-to-refresh.
+      ref.watch<int>(completionCommittedProvider);
       final db = ref.watch(userDatabaseProvider);
       final repo = ref.watch(contentRepositoryProvider);
       return computeLifetimeViewSummary(
