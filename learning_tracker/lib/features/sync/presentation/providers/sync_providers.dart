@@ -37,6 +37,13 @@ final syncStatusStreamProvider = StreamProvider<SyncStatus>((ref) {
 ///
 /// Canonical source of truth for sync-status is
 /// `core/sync/providers/sync_status_providers.dart`.
+///
+/// loop-iter2 fix: on loading (late subscriber attaches to a broadcast stream
+/// with no buffered events) delegate to [orchestrator.currentStatus] instead
+/// of emitting a spurious [SyncStatus.syncing]. A late subscriber (e.g.
+/// navigating to a screen after pullOnLaunch already completed) must see the
+/// real current status ("Synced", "Offline", …), not a Syncing flash.  Mirrors
+/// the fix already in `core/sync/providers/sync_status_providers.dart`.
 final syncStatusProvider = Provider<SyncStatus>((ref) {
   final orchestrator = ref.watch<SyncOrchestrator?>(syncOrchestratorProvider);
   if (orchestrator == null) return const SyncStatus.localOnly();
@@ -44,7 +51,11 @@ final syncStatusProvider = Provider<SyncStatus>((ref) {
   final asyncStatus = ref.watch(syncStatusStreamProvider);
   return asyncStatus.when(
     data: (status) => status,
-    loading: () => SyncStatus.syncing(startedAt: DateTimeFactory.nowLocal()),
+    // Late subscribers attach to a broadcast stream that has no pending
+    // events; Riverpod's StreamProvider enters the loading state. Return the
+    // orchestrator's authoritative snapshot rather than a synthetic
+    // SyncStatus.syncing so the UI never shows a spurious "Syncing…" flash.
+    loading: () => orchestrator.currentStatus,
     error: (error, _) => SyncStatus.error(
       message: error.toString(),
       failedAt: DateTimeFactory.nowLocal(),
