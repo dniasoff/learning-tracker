@@ -206,9 +206,29 @@ class SignInController extends Notifier<SignInState> {
             Future.value(false));
     if (verifiedAfterPrompt) return true;
 
-    await authRepo.signOut();
+    // SI-VERIFY-01: signOut() can throw PlatformException(clearCredentialStateAsync…)
+    // on emulators/devices without Google Play Services. The user cancelled
+    // email verification — wrap in its own try/catch so a cleanup failure
+    // never surfaces as "Sign-in failed" (authErrSignInGeneric) to the user.
+    // The caller already returns false here, so the sign-in correctly fails.
+    try {
+      await authRepo.signOut();
+    } catch (e) {
+      AppLogger.instance.warning(
+        event: 'ensure_cloud_email_verified_sign_out_failed',
+        exception: e,
+      );
+    }
     return false;
   }
+
+  /// Exposed for regression tests covering SI-VERIFY-01: a throwing signOut()
+  /// in _ensureCloudEmailVerified must not surface as a sign-in error.
+  @visibleForTesting
+  Future<bool> ensureCloudEmailVerifiedForTest(
+    String email,
+    AppLocalizations l10n,
+  ) => _ensureCloudEmailVerified(email, l10n);
 
   // ── Offline restore ─────────────────────────────────────────────────────────
 
@@ -242,7 +262,18 @@ class SignInController extends Notifier<SignInState> {
       _ref
           .read(auth_state.authStateProvider.notifier)
           .setLocalBornSession(profile: profile);
-      await _ref.read(authRepositoryProvider).signOut();
+      // SI-LOCAL-01: signOut() can throw PlatformException(clearCredentialStateAsync…)
+      // on emulators/devices without Google Play Services. The local account was
+      // already created successfully — wrap in its own try/catch so a cleanup
+      // failure never rolls the sign-in into an error state.
+      try {
+        await _ref.read(authRepositoryProvider).signOut();
+      } catch (e) {
+        AppLogger.instance.warning(
+          event: 'try_local_fallback_sign_in_sign_out_failed',
+          exception: e,
+        );
+      }
       final profiles = await _ref
           .read(userDatabaseProvider)
           .profileDao
@@ -685,7 +716,18 @@ class SignInController extends Notifier<SignInState> {
         _ref
             .read(auth_state.authStateProvider.notifier)
             .setLocalBornSession(profile: profile);
-        await _ref.read(authRepositoryProvider).signOut();
+        // SI-LOCAL-01: signOut() can throw PlatformException(clearCredentialStateAsync…)
+        // on emulators/devices without Google Play Services. The local account
+        // authenticated successfully — wrap in its own try/catch so a cleanup
+        // failure never surfaces as "Sign-in failed" to the user.
+        try {
+          await _ref.read(authRepositoryProvider).signOut();
+        } catch (e) {
+          AppLogger.instance.warning(
+            event: 'sign_in_local_sign_out_failed',
+            exception: e,
+          );
+        }
         // SI-08: clear all per-session router state that must NOT survive a
         // fresh sign-in. The local-account path previously only cleared
         // selectedProfileId, leaving the tutored-selection and PIN-gate caches
@@ -828,7 +870,17 @@ class SignInController extends Notifier<SignInState> {
         if (accounts.length >= kMaxDeviceAccounts) {
           final msg = l10n.authMaxDeviceAccounts(kMaxDeviceAccounts);
           _showError?.call(msg);
-          await _ref.read(authRepositoryProvider).signOut();
+          // SI-GOOGLE-01: signOut() can throw PlatformException on devices
+          // where CredentialManager is partially initialised. The error has
+          // already been shown — wrap so cleanup never masks the real error.
+          try {
+            await _ref.read(authRepositoryProvider).signOut();
+          } catch (e) {
+            AppLogger.instance.warning(
+              event: 'sign_in_google_max_accounts_sign_out_failed',
+              exception: e,
+            );
+          }
           state = SignInError(msg);
           return;
         }
@@ -838,7 +890,15 @@ class SignInController extends Notifier<SignInState> {
       if (localMatch != null && localMatch.accountTier.isLocal) {
         final msg = l10n.authOfflineUseUpgrade;
         _showError?.call(msg);
-        await _ref.read(authRepositoryProvider).signOut();
+        // SI-GOOGLE-01: same defensive wrap as above.
+        try {
+          await _ref.read(authRepositoryProvider).signOut();
+        } catch (e) {
+          AppLogger.instance.warning(
+            event: 'sign_in_google_local_conflict_sign_out_failed',
+            exception: e,
+          );
+        }
         state = SignInError(msg);
         return;
       }
