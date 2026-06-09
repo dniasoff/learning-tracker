@@ -701,6 +701,9 @@
       "total": { "type": "int" }
     }
   },
+  "deviceRestorePhaseRestoring": "מחזיר את הנתונים שלך...",
+  "deviceRestorePhaseLoadingCurricula": "טוען תוכניות לימוד...",
+  "deviceRestorePhaseImportingContent": "מייבא תוכן...",
   "skipAndContinue": "דלגו והמשיכו",
   "noActiveProfile": "אין פרופיל פעיל",
   "incorrectPin": "קוד שגוי",

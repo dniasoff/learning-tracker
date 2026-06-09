@@ -719,6 +719,9 @@
       "total": { "type": "int" }
     }
   },
+  "deviceRestorePhaseRestoring": "Restoring your data...",
+  "deviceRestorePhaseLoadingCurricula": "Loading curricula...",
+  "deviceRestorePhaseImportingContent": "Importing content...",
   "skipAndContinue": "Skip & continue",
   "noActiveProfile": "No active profile",
   "incorrectPin": "Incorrect PIN",

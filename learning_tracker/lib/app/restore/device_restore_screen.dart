@@ -98,6 +98,22 @@ class _DeviceRestoreScreenState extends ConsumerState<DeviceRestoreScreen> {
     }
   }
 
+  /// Maps the sentinel phase strings emitted by [DeviceRestoreService] to
+  /// localized labels. Falls back to the raw [phase] string for any unknown
+  /// sentinel so unexpected phases never cause a crash.
+  ///
+  /// loop-iter2: DeviceRestoreService emits hard-coded English strings.
+  /// The screen is the correct place to apply localization because
+  /// [RestoreStatus] lives outside owned roots and cannot import l10n.
+  String _localizePhase(String phase, AppLocalizations l10n) {
+    return switch (phase) {
+      'Restoring your data...' => l10n.deviceRestorePhaseRestoring,
+      'Loading curricula...' => l10n.deviceRestorePhaseLoadingCurricula,
+      'Importing content...' => l10n.deviceRestorePhaseImportingContent,
+      _ => phase,
+    };
+  }
+
   @override
   Widget build(BuildContext context) {
     final status = ref.watch(restoreStatusProvider);
@@ -126,7 +142,10 @@ class _DeviceRestoreScreenState extends ConsumerState<DeviceRestoreScreen> {
               children: [
                 const CircularProgressIndicator(),
                 const SizedBox(height: 24),
-                Text(phase, style: Theme.of(context).textTheme.titleMedium),
+                Text(
+                  _localizePhase(phase, l10n),
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
                 const SizedBox(height: 16),
                 LinearProgressIndicator(
                   value: totalSteps > 0 ? completedSteps / totalSteps : null,

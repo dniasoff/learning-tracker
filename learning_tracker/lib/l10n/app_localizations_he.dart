@@ -1484,6 +1484,15 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
+  String get deviceRestorePhaseRestoring => 'מחזיר את הנתונים שלך...';
+
+  @override
+  String get deviceRestorePhaseLoadingCurricula => 'טוען תוכניות לימוד...';
+
+  @override
+  String get deviceRestorePhaseImportingContent => 'מייבא תוכן...';
+
+  @override
   String get skipAndContinue => 'דלגו והמשיכו';
 
   @override

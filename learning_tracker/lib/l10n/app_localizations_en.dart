@@ -1498,6 +1498,15 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get deviceRestorePhaseRestoring => 'Restoring your data...';
+
+  @override
+  String get deviceRestorePhaseLoadingCurricula => 'Loading curricula...';
+
+  @override
+  String get deviceRestorePhaseImportingContent => 'Importing content...';
+
+  @override
   String get skipAndContinue => 'Skip & continue';
 
   @override

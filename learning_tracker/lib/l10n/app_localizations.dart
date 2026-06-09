@@ -2729,6 +2729,24 @@ abstract class AppLocalizations {
   /// **'Step {completed} of {total}'**
   String deviceRestoreStep(int completed, int total);
 
+  /// No description provided for @deviceRestorePhaseRestoring.
+  ///
+  /// In en, this message translates to:
+  /// **'Restoring your data...'**
+  String get deviceRestorePhaseRestoring;
+
+  /// No description provided for @deviceRestorePhaseLoadingCurricula.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading curricula...'**
+  String get deviceRestorePhaseLoadingCurricula;
+
+  /// No description provided for @deviceRestorePhaseImportingContent.
+  ///
+  /// In en, this message translates to:
+  /// **'Importing content...'**
+  String get deviceRestorePhaseImportingContent;
+
   /// No description provided for @skipAndContinue.
   ///
   /// In en, this message translates to:
