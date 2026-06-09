@@ -94,7 +94,8 @@ void main() {
       await tester.pumpWidget(_buildScreen(tasks: [_task()]));
       await tester.pumpAndSettle();
 
-      expect(find.text('1 today tasks'), findsOneWidget);
+      // SCHED-GOAL-PLURAL-15: count==1 must say "task" not "tasks".
+      expect(find.text('1 today task'), findsOneWidget);
     });
 
     testWidgets('has view toggle button', (tester) async {

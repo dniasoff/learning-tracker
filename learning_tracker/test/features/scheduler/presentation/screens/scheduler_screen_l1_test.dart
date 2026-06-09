@@ -332,7 +332,8 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 
-      expect(find.text('1 today tasks'), findsOneWidget);
+      // SCHED-GOAL-PLURAL-15: count==1 must say "task" not "tasks".
+      expect(find.text('1 today task'), findsOneWidget);
 
       await _tearDown(tester);
     });
