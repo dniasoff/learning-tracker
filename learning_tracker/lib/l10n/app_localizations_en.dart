@@ -2542,6 +2542,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get backupSyncTapToRetry => 'Tap to retry';
 
   @override
+  String get backupConnecting => 'Connecting…';
+
+  @override
+  String get backupOffline => 'Offline';
+
+  @override
+  String backupSyncPaused(int count, String reason) {
+    return 'Sync paused — $count queued. $reason';
+  }
+
+  @override
+  String backupSyncPausedNoCount(String reason) {
+    return 'Sync paused. $reason';
+  }
+
+  @override
   String get backupUpgradeToCloud => 'Upgrade to Cloud';
 
   @override

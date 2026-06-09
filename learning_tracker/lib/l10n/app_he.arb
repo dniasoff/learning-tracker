@@ -1219,6 +1219,21 @@
     }
   },
   "backupSyncTapToRetry": "הקש לניסיון חוזר",
+  "backupConnecting": "מתחבר…",
+  "backupOffline": "לא מקוון",
+  "backupSyncPaused": "סנכרון מושהה — {count} ממתינים. {reason}",
+  "@backupSyncPaused": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "reason": { "type": "String" }
+    }
+  },
+  "backupSyncPausedNoCount": "סנכרון מושהה. {reason}",
+  "@backupSyncPausedNoCount": {
+    "placeholders": {
+      "reason": { "type": "String" }
+    }
+  },
   "backupUpgradeToCloud": "שדרג לענן",
 
   "reauthDialogTitle": "אמתו את זהותכם",

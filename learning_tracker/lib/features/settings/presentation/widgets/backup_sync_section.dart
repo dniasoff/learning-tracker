@@ -80,7 +80,7 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
       return _buildCloudStatusCard(
         theme,
         icon: Icons.sync_rounded,
-        subtitle: 'Connecting…',
+        subtitle: l10n.backupConnecting,
       );
     }
     return switch (syncStatus) {
@@ -110,7 +110,7 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
         icon: Icons.cloud_off_rounded,
         subtitle: pendingChanges > 0
             ? l10n.backupPendingChanges(pendingChanges)
-            : 'Offline',
+            : l10n.backupOffline,
       ),
       SyncStatusError(:final message) => _buildCloudStatusCard(
         theme,
@@ -149,12 +149,13 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
         onTap: () => context.pushRoute(const SignInRoute()),
       );
     }
+    final l10nLocal = AppLocalizations.of(context)!;
     return _buildCloudStatusCard(
       theme,
       icon: Icons.sync_problem_rounded,
       subtitle: pendingChanges > 0
-          ? 'Sync paused — $pendingChanges queued. $reason'
-          : 'Sync paused. $reason',
+          ? l10nLocal.backupSyncPaused(pendingChanges, reason)
+          : l10nLocal.backupSyncPausedNoCount(reason),
     );
   }
 

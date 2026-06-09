@@ -720,4 +720,86 @@ void main() {
       },
     );
   });
+
+  // SYNC-BACKUP-07: he-RTL i18n regression tests.
+  //
+  // The subtitles for "Connecting…", "Offline", and "Sync paused…" were
+  // hard-coded English literals. These tests assert that the Hebrew locale
+  // shows the localized Hebrew text instead of the English literal.  They
+  // were RED before the fix (hard-coded literals survive a locale change and
+  // always show English) and GREEN after (l10n keys resolved to Hebrew).
+  group('BackupSyncSection — SYNC-BACKUP-07 he-RTL i18n regression', () {
+    testWidgets(
+      'connecting subtitle is localized in he locale (not hard-coded English)',
+      (tester) async {
+        await _pump(
+          tester,
+          _buildHarness(
+            syncStatus: const SyncStatus.localOnly(),
+            authState: _kCloudUser,
+            locale: const Locale('he'),
+          ),
+        );
+
+        // Hard-coded 'Connecting…' must NOT appear in Hebrew locale.
+        expect(find.text('Connecting…'), findsNothing);
+        expect(find.text('Connecting...'), findsNothing);
+        // The localized Hebrew text must appear instead.
+        expect(find.textContaining('מתחבר'), findsOneWidget);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(Duration.zero);
+      },
+    );
+
+    testWidgets(
+      'offline subtitle is localized in he locale (not hard-coded English)',
+      (tester) async {
+        await _pump(
+          tester,
+          _buildHarness(
+            syncStatus: const SyncStatus.offline(pendingChanges: 0),
+            authState: _kCloudUser,
+            locale: const Locale('he'),
+          ),
+        );
+
+        // Hard-coded 'Offline' must NOT appear in Hebrew locale.
+        expect(find.text('Offline'), findsNothing);
+        // The localized Hebrew text must appear instead.
+        expect(find.textContaining('לא מקוון'), findsOneWidget);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(Duration.zero);
+      },
+    );
+
+    testWidgets(
+      'degraded subtitle is localized in he locale (not hard-coded English)',
+      (tester) async {
+        await _pump(
+          tester,
+          _buildHarness(
+            syncStatus: const SyncStatus.degraded(
+              pendingChanges: 2,
+              reason: 'test reason',
+            ),
+            authState: _kCloudUser,
+            locale: const Locale('he'),
+          ),
+        );
+
+        // Hard-coded 'Sync paused' must NOT appear in Hebrew locale.
+        expect(find.textContaining('Sync paused'), findsNothing);
+        // The localized Hebrew text must appear instead.
+        expect(
+          find.textContaining('סנכרון מושהה'),
+          findsOneWidget,
+        );
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(Duration.zero);
+      },
+    );
+  });
 }

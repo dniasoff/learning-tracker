@@ -4523,6 +4523,30 @@ abstract class AppLocalizations {
   /// **'Tap to retry'**
   String get backupSyncTapToRetry;
 
+  /// No description provided for @backupConnecting.
+  ///
+  /// In en, this message translates to:
+  /// **'Connecting…'**
+  String get backupConnecting;
+
+  /// No description provided for @backupOffline.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline'**
+  String get backupOffline;
+
+  /// No description provided for @backupSyncPaused.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync paused — {count} queued. {reason}'**
+  String backupSyncPaused(int count, String reason);
+
+  /// No description provided for @backupSyncPausedNoCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Sync paused. {reason}'**
+  String backupSyncPausedNoCount(String reason);
+
   /// No description provided for @backupUpgradeToCloud.
   ///
   /// In en, this message translates to:
