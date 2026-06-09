@@ -403,6 +403,10 @@
       "error": { "type": "String" }
     }
   },
+  "contentHierarchyBrowseTitle": "עיון בתוכן",
+  "contentHierarchyUnknownTitle": "קורס לא ידוע",
+  "contentHierarchyNoContent": "אין תוכן זמין",
+  "contentHierarchySearchTooltip": "חיפוש",
   "noItemsAtThisLevel": "אין פריטים ברמה זו",
   "breadcrumbsRoot": "שורש",
   "lifetimeMarkSavedCount": "סומנו {count} בחירה(ות) לכל החיים.",
@@ -1517,6 +1521,12 @@
       "total": { "type": "int" }
     }
   },
+
+  "overallProgressCardTitle": "התקדמות כוללת",
+  "overallProgressStatTotalItems": "סה\"כ פריטים",
+  "overallProgressStatCompletedAllStages": "הושלמו כל השלבים",
+  "overallProgressStatInProgress": "בתהליך",
+  "overallProgressStatNotStarted": "טרם הוחל",
 
   "curriculumProgressBreakdownByLevel": "פירוט לפי רמה",
   "curriculumProgressLoading": "טוענים נתוני התקדמות...",

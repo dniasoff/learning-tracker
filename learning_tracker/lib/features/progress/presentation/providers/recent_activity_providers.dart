@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:learning_tracker/features/progress/domain/models/chart_data.dart';
 import 'package:learning_tracker/features/progress/domain/services/chart_data_service.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/chart_providers.dart';
@@ -59,6 +60,8 @@ final recentActivityLimudimChazarosProvider = FutureProvider.autoDispose
       window,
     ) async {
       ref.watch(progressLensRefreshTickProvider);
+      // RA-03: react to live completions immediately (not only on pull-to-refresh).
+      ref.watch<int>(completionCommittedProvider);
       final service = ref.watch(chartDataServiceProvider);
       return service.getDailyLimudimAndChazaros(
         startDate: window.startDate,
@@ -74,6 +77,8 @@ final recentActivityCumulativeProvider = FutureProvider.autoDispose
       window,
     ) async {
       ref.watch(progressLensRefreshTickProvider);
+      // RA-03: react to live completions immediately (not only on pull-to-refresh).
+      ref.watch<int>(completionCommittedProvider);
       final service = ref.watch(chartDataServiceProvider);
       return service.getCumulativeProgressLive(
         startDate: window.startDate,
@@ -91,6 +96,8 @@ final recentActivityCumulativeProvider = FutureProvider.autoDispose
 final recentActivityStreakDatesProvider = FutureProvider.autoDispose
     .family<Set<DateTime>, RecentActivityWindow>((ref, window) async {
       ref.watch(progressLensRefreshTickProvider);
+      // RA-03: react to live completions immediately (not only on pull-to-refresh).
+      ref.watch<int>(completionCommittedProvider);
       final service = ref.watch(chartDataServiceProvider);
       return service.getStreakCalendarLive(
         startDate: window.startDate,
@@ -105,6 +112,8 @@ final recentActivityStreakDatesProvider = FutureProvider.autoDispose
 final recentActivityPointsProvider = FutureProvider.autoDispose
     .family<List<DailyPointsData>?, RecentActivityWindow>((ref, window) async {
       ref.watch(progressLensRefreshTickProvider);
+      // RA-03: react to live completions immediately (not only on pull-to-refresh).
+      ref.watch<int>(completionCommittedProvider);
       final service = ref.watch(chartDataServiceProvider);
       return service.getDailyPoints(
         startDate: window.startDate,

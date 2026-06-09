@@ -406,6 +406,22 @@
       "error": { "type": "String" }
     }
   },
+  "contentHierarchyBrowseTitle": "Browse Content",
+  "@contentHierarchyBrowseTitle": {
+    "description": "AppBar title for the ContentHierarchyScreen showing the curriculum content tree."
+  },
+  "contentHierarchyUnknownTitle": "Unknown Curriculum",
+  "@contentHierarchyUnknownTitle": {
+    "description": "AppBar title shown in ContentHierarchyScreen when the curriculumId does not match any known curriculum."
+  },
+  "contentHierarchyNoContent": "No content available",
+  "@contentHierarchyNoContent": {
+    "description": "Empty-state message in ContentHierarchyScreen when there are no items to display."
+  },
+  "contentHierarchySearchTooltip": "Search",
+  "@contentHierarchySearchTooltip": {
+    "description": "Tooltip for the search icon button in ContentHierarchyScreen."
+  },
   "noItemsAtThisLevel": "No items at this level",
   "breadcrumbsRoot": "Root",
   "lifetimeMarkSavedCount": "Marked {count} lifetime selection(s).",
@@ -1574,6 +1590,27 @@
       "completed": { "type": "int" },
       "total": { "type": "int" }
     }
+  },
+
+  "overallProgressCardTitle": "Overall Progress",
+  "@overallProgressCardTitle": {
+    "description": "Title of the OverallStatsCard on the Curriculum Progress screen."
+  },
+  "overallProgressStatTotalItems": "Total items",
+  "@overallProgressStatTotalItems": {
+    "description": "Row label in OverallStatsCard for the total number of items in the curriculum."
+  },
+  "overallProgressStatCompletedAllStages": "Completed all stages",
+  "@overallProgressStatCompletedAllStages": {
+    "description": "Row label in OverallStatsCard for the count of items that have completed every stage."
+  },
+  "overallProgressStatInProgress": "In progress",
+  "@overallProgressStatInProgress": {
+    "description": "Row label in OverallStatsCard for the count of items currently in progress."
+  },
+  "overallProgressStatNotStarted": "Not started",
+  "@overallProgressStatNotStarted": {
+    "description": "Row label in OverallStatsCard for the count of items not yet started."
   },
 
   "curriculumProgressBreakdownByLevel": "Breakdown by Level",

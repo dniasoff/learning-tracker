@@ -64,7 +64,7 @@ class OverallStatsCard extends ConsumerWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Overall Progress',
+            l10n.overallProgressCardTitle,
             style: theme.textTheme.titleMedium?.copyWith(
               fontWeight: FontWeight.w800,
               color: Colors.white,
@@ -86,19 +86,22 @@ class OverallStatsCard extends ConsumerWidget {
             ),
           ],
           const SizedBox(height: 8),
-          _StatRow(label: 'Total items', value: stats.totalItems),
           _StatRow(
-            label: 'Completed all stages',
+            label: l10n.overallProgressStatTotalItems,
+            value: stats.totalItems,
+          ),
+          _StatRow(
+            label: l10n.overallProgressStatCompletedAllStages,
             value: stats.completedAllStages,
             leadingDot: true,
           ),
           _StatRow(
-            label: 'In progress',
+            label: l10n.overallProgressStatInProgress,
             value: stats.inProgress,
             leadingDot: true,
           ),
           _StatRow(
-            label: 'Not started',
+            label: l10n.overallProgressStatNotStarted,
             value: stats.notStarted,
             leadingDot: true,
           ),

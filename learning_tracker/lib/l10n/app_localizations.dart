@@ -1475,6 +1475,30 @@ abstract class AppLocalizations {
   /// **'Unable to load curriculum content: {error}'**
   String contentLoadError(String error);
 
+  /// AppBar title for the ContentHierarchyScreen showing the curriculum content tree.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse Content'**
+  String get contentHierarchyBrowseTitle;
+
+  /// AppBar title shown in ContentHierarchyScreen when the curriculumId does not match any known curriculum.
+  ///
+  /// In en, this message translates to:
+  /// **'Unknown Curriculum'**
+  String get contentHierarchyUnknownTitle;
+
+  /// Empty-state message in ContentHierarchyScreen when there are no items to display.
+  ///
+  /// In en, this message translates to:
+  /// **'No content available'**
+  String get contentHierarchyNoContent;
+
+  /// Tooltip for the search icon button in ContentHierarchyScreen.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get contentHierarchySearchTooltip;
+
   /// No description provided for @noItemsAtThisLevel.
   ///
   /// In en, this message translates to:
@@ -5464,6 +5488,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{completed} of {total}'**
   String itemsLearnedOf(int completed, int total);
+
+  /// Title of the OverallStatsCard on the Curriculum Progress screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Overall Progress'**
+  String get overallProgressCardTitle;
+
+  /// Row label in OverallStatsCard for the total number of items in the curriculum.
+  ///
+  /// In en, this message translates to:
+  /// **'Total items'**
+  String get overallProgressStatTotalItems;
+
+  /// Row label in OverallStatsCard for the count of items that have completed every stage.
+  ///
+  /// In en, this message translates to:
+  /// **'Completed all stages'**
+  String get overallProgressStatCompletedAllStages;
+
+  /// Row label in OverallStatsCard for the count of items currently in progress.
+  ///
+  /// In en, this message translates to:
+  /// **'In progress'**
+  String get overallProgressStatInProgress;
+
+  /// Row label in OverallStatsCard for the count of items not yet started.
+  ///
+  /// In en, this message translates to:
+  /// **'Not started'**
+  String get overallProgressStatNotStarted;
 
   /// Section heading in CurriculumProgressScreen above the per-level hierarchy cards.
   ///

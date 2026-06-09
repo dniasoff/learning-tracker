@@ -793,6 +793,18 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get contentHierarchyBrowseTitle => 'Browse Content';
+
+  @override
+  String get contentHierarchyUnknownTitle => 'Unknown Curriculum';
+
+  @override
+  String get contentHierarchyNoContent => 'No content available';
+
+  @override
+  String get contentHierarchySearchTooltip => 'Search';
+
+  @override
   String get noItemsAtThisLevel => 'No items at this level';
 
   @override
@@ -3109,6 +3121,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String itemsLearnedOf(int completed, int total) {
     return '$completed of $total';
   }
+
+  @override
+  String get overallProgressCardTitle => 'Overall Progress';
+
+  @override
+  String get overallProgressStatTotalItems => 'Total items';
+
+  @override
+  String get overallProgressStatCompletedAllStages => 'Completed all stages';
+
+  @override
+  String get overallProgressStatInProgress => 'In progress';
+
+  @override
+  String get overallProgressStatNotStarted => 'Not started';
 
   @override
   String get curriculumProgressBreakdownByLevel => 'Breakdown by Level';

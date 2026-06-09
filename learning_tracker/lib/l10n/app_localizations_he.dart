@@ -788,6 +788,18 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
+  String get contentHierarchyBrowseTitle => 'עיון בתוכן';
+
+  @override
+  String get contentHierarchyUnknownTitle => 'קורס לא ידוע';
+
+  @override
+  String get contentHierarchyNoContent => 'אין תוכן זמין';
+
+  @override
+  String get contentHierarchySearchTooltip => 'חיפוש';
+
+  @override
   String get noItemsAtThisLevel => 'אין פריטים ברמה זו';
 
   @override
@@ -3075,6 +3087,21 @@ class AppLocalizationsHe extends AppLocalizations {
   String itemsLearnedOf(int completed, int total) {
     return '$completed מתוך $total';
   }
+
+  @override
+  String get overallProgressCardTitle => 'התקדמות כוללת';
+
+  @override
+  String get overallProgressStatTotalItems => 'סה\"כ פריטים';
+
+  @override
+  String get overallProgressStatCompletedAllStages => 'הושלמו כל השלבים';
+
+  @override
+  String get overallProgressStatInProgress => 'בתהליך';
+
+  @override
+  String get overallProgressStatNotStarted => 'טרם הוחל';
 
   @override
   String get curriculumProgressBreakdownByLevel => 'פירוט לפי רמה';
