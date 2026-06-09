@@ -369,15 +369,21 @@ class SignInController extends Notifier<SignInState> {
   ///     guard's cached scope and `parentPinAuthenticatedProfileId` via its
   ///     `onSessionLocked` callback) — reaching parent management requires the
   ///     PIN again.
+  ///   * The restore-guard new-device cache is reset so each sign-in gets a
+  ///     fresh check. Without this, a cloud account that completed a device
+  ///     restore in a prior session (same process, different user) would leave
+  ///     `_isNewDevice = false` and skip the redirect for the incoming account
+  ///     even when its local DB is empty. (RESTORE-01)
   ///
-  /// These two pieces of state are `keepAlive` / live in the router singleton,
-  /// so without this reset they leak across a sign-out → sign-in within the
-  /// same process, auto-restoring the previous tutor/parent context. This is
-  /// scoped to session establishment only — ordinary mid-session navigation and
-  /// explicit talmid/parent entry are untouched.
+  /// These pieces of state are `keepAlive` / live in the router singleton,
+  /// so without these resets they leak across a sign-out → sign-in within the
+  /// same process, auto-restoring the previous tutor/parent/restore context.
+  /// This is scoped to session establishment only — ordinary mid-session
+  /// navigation and explicit talmid/parent entry are untouched.
   void _resetSessionContextForFreshSignIn() {
     _ref.read(activeTutoredProfileSelectionProvider.notifier).exit();
     _ref.read(routerProvider).pinGuard.lock();
+    _ref.read(routerProvider).restoreGuard.resetForNewSession();
   }
 
   Future<void> _navigateAfterSignIn(StackRouter router) async {
