@@ -89,6 +89,24 @@ class _FakePinGuard extends Fake implements PinGuard {
   void markAuthenticated(int profileId) {}
 }
 
+/// PinGuard spy that records every [markAuthenticated] call.
+class _SpyPinGuard extends Fake implements PinGuard {
+  final List<int> markAuthenticatedCalls = [];
+
+  @override
+  void markAuthenticated(int profileId) {
+    markAuthenticatedCalls.add(profileId);
+  }
+}
+
+/// AppRouter mock that exposes a [_SpyPinGuard] for assertion.
+class _SpyAppRouter extends Mock implements AppRouter {
+  _SpyAppRouter() : pinGuard = _SpyPinGuard();
+
+  @override
+  final _SpyPinGuard pinGuard;
+}
+
 // ── Notifier stubs ─────────────────────────────────────────────────────────────
 
 /// Fixed selectedProfileId notifier so the controller can resolve a profile id.
@@ -1340,17 +1358,18 @@ void main() {
     });
   });
 
-  // ── G. Setup-completion navigation linger regression ──────────────────────
+  // ── G. Setup-completion navigation linger + guard priming (regression) ────
   //
-  // Repro: after entering the 4th confirm digit on the "Set Parent PIN" setup
-  // screen, the screen would linger showing the filled-dots keypad with the
-  // "Set Parent PIN" title before the maybePop took effect.  The root cause was
-  // that _handleSetup set `completed: true` without clearing `digits`, so the
-  // rebuild that preceded maybePop() re-rendered 4 filled dots.
+  // G1: after entering the 4th confirm digit on "Set Parent PIN", the screen
+  //     lingered showing filled-dots before maybePop. Fix: digits cleared on
+  //     completion.
   //
-  // The fix: _handleSetup (and _handleChange / _handleVerify for parity) now
-  // sets `digits: ''` alongside `completed: true`, so any frame rendered before
-  // the pop shows an empty keypad.
+  // G2: after setup completes, markAuthenticated must be called on the guard
+  //     BEFORE maybePop so that ParentSettingsRoute's guard evaluation
+  //     short-circuits. Without this call the guard sees _authenticatedScope
+  //     as null, calls _hasPin (which returns false since the fresh PIN hasn't
+  //     been confirmed yet at that point in evaluation), and re-pushes the
+  //     setup screen — causing an infinite loop.
   group('G. Setup-completion navigation linger (regression)', () {
     testWidgets(
       'G1: setup completion — maybePop called and digits are empty on completion',
@@ -1429,6 +1448,86 @@ void main() {
         verify(
           () => router.maybePop<bool>(any<bool>()),
         ).called(greaterThanOrEqualTo(1));
+
+        await _teardown(tester);
+      },
+    );
+
+    // G2: pinGuard.markAuthenticated must be called before maybePop on setup
+    // completion so that ParentSettingsRoute's guard short-circuits.
+    // REGRESSION: before the fix _handleCompletion for PinFlowMode.setup did
+    // NOT call markAuthenticated — only verify mode did. This left the guard's
+    // _authenticatedScope null during the re-evaluation window, causing the
+    // setup screen to be pushed again (infinite loop).
+    testWidgets(
+      'G2: setup completion calls markAuthenticated before maybePop',
+      (tester) async {
+        tester.view.physicalSize = const Size(800, 1600);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+
+        final ps = _MockPinService();
+        when(
+          () => ps.setProfilePin(_kProfileId, '1357'),
+        ).thenAnswer((_) async {});
+
+        final router = _MockStackRouter();
+        _stubRouter(router);
+
+        // Use the spy AppRouter so we can assert markAuthenticated was called.
+        final spyAppRouter = _SpyAppRouter();
+
+        final container = ProviderContainer(
+          retry: (_, __) => null,
+          overrides: [
+            pinServiceProvider.overrideWithValue(ps),
+            routerProvider.overrideWithValue(spyAppRouter),
+            selectedProfileIdProvider.overrideWith(
+              () => _FixedSelectedProfileId(_kProfileId),
+            ),
+          ],
+        );
+        addTearDown(container.dispose);
+
+        await tester.pumpWidget(
+          UncontrolledProviderScope(
+            container: container,
+            child: MaterialApp(
+              localizationsDelegates: const [
+                AppLocalizations.delegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: StackRouterScope(
+                controller: router,
+                stateHash: 0,
+                child: const PinFlowScreen(mode: PinFlowMode.setup),
+              ),
+            ),
+          ),
+        );
+        await tester.pump(const Duration(seconds: 1));
+
+        // enterNew step.
+        await _enterPin(tester, '1357');
+        await tester.pump(const Duration(seconds: 1));
+
+        // confirm step — same PIN triggers completion.
+        await _enterPin(tester, '1357');
+        await tester.pump(const Duration(seconds: 1));
+
+        // markAuthenticated must have been called with the profile id BEFORE
+        // maybePop, so that the guard's session cache is primed.
+        expect(
+          spyAppRouter.pinGuard.markAuthenticatedCalls,
+          contains(_kProfileId),
+          reason:
+              'pinGuard.markAuthenticated(_kProfileId) must be called during '
+              'setup completion so ParentSettingsRoute guard short-circuits '
+              'instead of re-pushing the setup screen (infinite loop)',
+        );
 
         await _teardown(tester);
       },
