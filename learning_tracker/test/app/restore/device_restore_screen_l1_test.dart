@@ -66,13 +66,30 @@ class _StubAppRouter extends Mock implements AppRouter {
 }
 
 /// Stub [DeviceRestoreService] that records calls and returns preset results.
+///
+/// [restoreResult] — value returned by [restore].
+/// [restoreStatusAfterCall] — the [currentStatus] reported AFTER [restore]
+///   completes. Defaults to [RestoreStatus.idle()] to simulate the
+///   "not a new device" skip scenario (used by SYNC-RESTORE-SKIP-01).
+///   Pass [RestoreStatus.error(...)] to simulate a failed restore call so
+///   that tests checking the error-card path are not accidentally navigated
+///   away by the blank-screen guard.
+/// [retryResult] — value returned by [retry].
 class _StubRestoreService extends Fake implements DeviceRestoreService {
-  _StubRestoreService({this.restoreResult = false, this.retryResult = false});
+  _StubRestoreService({
+    this.restoreResult = false,
+    RestoreStatus? restoreStatusAfterCall,
+    this.retryResult = false,
+  }) : _restoreStatusAfterCall =
+           restoreStatusAfterCall ?? const RestoreStatus.idle();
 
   final bool restoreResult;
+  final RestoreStatus _restoreStatusAfterCall;
   final bool retryResult;
   int restoreCalls = 0;
   int retryCalls = 0;
+
+  RestoreStatus _currentStatus = const RestoreStatus.idle();
 
   final _statusCtrl = StreamController<RestoreStatus>.broadcast();
   final _completedCtrl = StreamController<void>.broadcast();
@@ -84,11 +101,12 @@ class _StubRestoreService extends Fake implements DeviceRestoreService {
   Stream<void> get restoreCompletedStream => _completedCtrl.stream;
 
   @override
-  RestoreStatus get currentStatus => const RestoreStatus.idle();
+  RestoreStatus get currentStatus => _currentStatus;
 
   @override
   Future<bool> restore({bool bypassNewDeviceCheck = false}) async {
     restoreCalls++;
+    _currentStatus = _restoreStatusAfterCall;
     return restoreResult;
   }
 
@@ -491,7 +509,15 @@ void main() {
         final db = UserDatabase(NativeDatabase.memory());
         addTearDown(db.close);
         final mockRouter = _makeRouter();
-        final stubService = _StubRestoreService(retryResult: false);
+        // restoreStatusAfterCall: error — simulates a restore that previously
+        // failed (consistent with fixedStatus: error); prevents the
+        // blank-screen idle-escape guard from triggering on the initState call.
+        final stubService = _StubRestoreService(
+          retryResult: false,
+          restoreStatusAfterCall: const RestoreStatus.error(
+            message: 'prior failure',
+          ),
+        );
         addTearDown(stubService.dispose);
 
         await tester.pumpWidget(
@@ -635,6 +661,74 @@ void main() {
         expect(captured, isNotEmpty);
         final routes = captured.first as List<PageRouteInfo>;
         expect(routes.first, isA<AppShellRoute>());
+
+        await _tearDown(tester);
+      },
+    );
+  });
+
+  // ── Skipped-restore navigation (blank-screen bug) ─────────────────────────────
+  //
+  // SYNC-RESTORE-SKIP-01 (loop-iter3)
+  //
+  // Bug: when restore() returns false (DeviceRestoreService decided the device
+  // is not "new"), _startRestore() falls into the dead `else` branch and exits
+  // without navigation.  The screen renders `idle: () => SizedBox.shrink()` —
+  // a permanently blank screen with no way for the user to recover.
+  //
+  // Fix: when restore() returns false AND the current status is still idle (not
+  // error, which already shows a retry affordance), call _navigateToApp() so
+  // the guard is cleared and the normal app shell takes over.
+
+  group('skipped restore navigates to app shell (SYNC-RESTORE-SKIP-01)', () {
+    testWidgets(
+      'restore() returns false with idle status → replaceAll([AppShellRoute]) is called',
+      (tester) async {
+        // service.restore() returns false → simulate "not a new device"
+        final db = UserDatabase(NativeDatabase.memory());
+        addTearDown(db.close);
+        final mockRouter = _makeRouter();
+        final mockGuard = _MockRestoreGuard();
+        final appRouter = _StubAppRouter(restoreGuard: mockGuard);
+        final stubService = _StubRestoreService(restoreResult: false);
+        addTearDown(stubService.dispose);
+
+        await tester.pumpWidget(
+          _buildHarness(
+            fixedStatus: const RestoreStatus.idle(),
+            mockRouter: mockRouter,
+            stubAppRouter: appRouter,
+            db: db,
+            service: stubService,
+          ),
+        );
+        // initState calls _startRestore → service.restore() returns false.
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        expect(
+          stubService.restoreCalls,
+          1,
+          reason: 'restore() must be called once',
+        );
+        // The screen MUST navigate away — blank idle must not be the final state.
+        final captured = verify(
+          () => mockRouter.replaceAll(captureAny<List<PageRouteInfo>>()),
+        ).captured;
+        expect(
+          captured,
+          isNotEmpty,
+          reason:
+              'replaceAll must be called even when restore() returns false '
+              '(guard was already activated — user must not be left on a blank screen)',
+        );
+        final routes = captured.first as List<PageRouteInfo>;
+        expect(
+          routes.first,
+          isA<AppShellRoute>(),
+          reason:
+              'navigation target must be AppShellRoute when restore is skipped',
+        );
 
         await _tearDown(tester);
       },

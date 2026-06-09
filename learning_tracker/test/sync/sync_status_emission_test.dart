@@ -398,6 +398,90 @@ void main() {
       }
     });
 
+    test(
+      'SYNC-ERR-OVERWRITE-01 (loop-iter3): error status is NOT overwritten by '
+      'outbox-derived status — a pending outbox must not hide the pull-failure '
+      'retry affordance',
+      () async {
+        // Scenario:
+        //   1. Pull fails → orchestrator status = SyncStatus.error(...)
+        //   2. User has outbox rows (queued while offline)
+        //   3. Periodic drain fires → _recomputeOutboxStatus()
+        //   4. BUG: status becomes SyncStatus.pending(...), hiding the error card
+        //   5. FIX: error status must survive _recomputeOutboxStatus()
+        final controller = StreamController<bool>();
+        addTearDown(controller.close);
+
+        final orchestrator = _buildOrchestrator(
+          db: db,
+          connectivityStream: controller.stream,
+        );
+        addTearDown(orchestrator.dispose);
+        orchestrator.start();
+
+        // Connectivity is online.
+        controller.add(true);
+        await Future<void>.delayed(Duration.zero);
+
+        // Simulate a failed pull: emit error status directly.  In production
+        // this happens inside pullOnLaunch's catch block.  We can't call
+        // pullOnLaunch against the empty gateway (it throws on the first
+        // fetch), but the test goal is the status-overwrite invariant, so
+        // we trigger the error path via pullOnLaunch and let it fail.
+        unawaited(
+          orchestrator.pullOnLaunch().catchError((Object _) {
+            // Expected: _EmptyGateway raises a NoSuchMethodError for every
+            // real fetch.  After the catch, status is SyncStatusError.
+          }),
+        );
+        // Let the pull fail and emit error status.
+        await Future<void>.delayed(const Duration(milliseconds: 10));
+
+        // Confirm the error status was set.
+        expect(
+          orchestrator.currentStatus,
+          isA<SyncStatusError>(),
+          reason: 'after a failed pull the orchestrator must be in error state',
+        );
+
+        // Enqueue an outbox row (simulates a user write during the failed
+        // pull window).
+        await _enqueue(db);
+
+        // Capture any status change from the recompute.
+        SyncStatus? statusAfterRecompute;
+        final sub = orchestrator.statusStream.listen(
+          (s) => statusAfterRecompute = s,
+        );
+        addTearDown(sub.cancel);
+
+        // Trigger the outbox-status recompute (e.g. periodic drain).
+        await orchestrator.recordDrainAttempt();
+        await Future<void>.delayed(Duration.zero);
+
+        // The error status MUST NOT be overwritten by pending/degraded/synced.
+        // If statusAfterRecompute is non-null, it means a new status was
+        // emitted — it must still be error.
+        if (statusAfterRecompute != null) {
+          expect(
+            statusAfterRecompute,
+            isA<SyncStatusError>(),
+            reason:
+                'a pending outbox row must not overwrite a pull-error status; '
+                'the user needs the "tap to retry" affordance to recover',
+          );
+        }
+        // Also assert currentStatus is still error.
+        expect(
+          orchestrator.currentStatus,
+          isA<SyncStatusError>(),
+          reason:
+              'currentStatus must remain error after _recomputeOutboxStatus '
+              'so the Backup & Sync error card is still visible',
+        );
+      },
+    );
+
     test('no outbox dao wired → status emission is a no-op', () async {
       // Construct without a resolveOutboxDao — this is the legacy fallback
       // when the orchestrator runs without outbox observability (e.g.

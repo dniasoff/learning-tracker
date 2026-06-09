@@ -30,8 +30,27 @@ class _DeviceRestoreScreenState extends ConsumerState<DeviceRestoreScreen> {
     final service = ref.read(deviceRestoreServiceProvider);
     if (service == null) return; // Local-only — no restore possible
     final success = await service.restore();
-    if (mounted && success) {
+    if (!mounted) return;
+    if (success) {
       await _navigateAfterRestore();
+      return;
+    }
+    // restore() returned false.  Two cases:
+    //   • error   — the service already emitted RestoreStatus.error(...) and
+    //               the build() method renders a retry / skip affordance.
+    //               No navigation needed — let the error card handle it.
+    //   • idle    — the service decided the device does NOT need a restore
+    //               (e.g. restoreStatePrefKey == 'complete' but the
+    //               RestoreGuard was reset). The screen would render
+    //               SizedBox.shrink() permanently.  Since the guard already
+    //               activated, we must clear it and route to the app shell
+    //               so the user is never left on a blank screen.
+    //
+    // Read the current status directly from the service (not from
+    // restoreStatusProvider, which may be overridden in tests) to ensure the
+    // idle-escape path uses the authoritative in-flight status.
+    if (service.currentStatus is RestoreStatusIdle) {
+      _navigateToApp();
     }
   }
 

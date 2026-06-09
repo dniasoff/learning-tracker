@@ -1113,6 +1113,15 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
     // pull's own _safeEmitStatus(syncing→synced) chain owns that window.
     if (_currentStatus is SyncStatusSyncing) return;
 
+    // Don't overwrite a pull error — the error card in Backup & Sync shows
+    // an actionable "tap to retry" affordance that the user needs to recover.
+    // Outbox-derived status (pending/degraded) is about PUSH health; a pull
+    // failure is a separate condition that must remain visible until the user
+    // explicitly retries or a successful pull supersedes it.  Without this
+    // guard a periodic drain or write-tee recompute would replace the error
+    // banner with "N changes pending", silently removing the retry option.
+    if (_currentStatus is SyncStatusError) return;
+
     // Identity mismatch takes precedence over the generic stuck/pending states
     // whenever there is queued data and the device is online: the rows are not
     // "stuck after N attempts" (the drain is skipped before they ever retry) —
