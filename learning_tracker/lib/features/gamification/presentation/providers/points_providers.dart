@@ -20,10 +20,24 @@ final curriculumPointsProvider = FutureProvider.family<int, CurriculumId>((
   return service.getCurriculumTotal(curriculum.storageKey);
 });
 
-/// Global points total across all curricula.
-final globalPointsProvider = FutureProvider<int>((ref) async {
-  final service = ref.watch(pointsServiceProvider);
-  return service.getGlobalTotal();
+/// Global debitable points balance — reactive stream backed by watchBalance.
+///
+/// DG-DASH-02 / D9: previously a one-shot [FutureProvider] calling
+/// [PointsService.getGlobalTotal] (which reads the balance once). This left
+/// the gamification-screen points counter STALE after any balance mutation
+/// (redemption debit, parent refund, completion credit) until the user
+/// pull-to-refreshed.
+///
+/// Fix: converted to a [StreamProvider] backed by
+/// [PointsBalanceDao.watchBalance] — the same reactive read path used by
+/// [dashboardGlobalPointsProvider]. Any write to the PointsBalance row
+/// (credit, debit, refund) causes the stream to emit the new value
+/// immediately, so the gamification screen's counter stays live without
+/// requiring manual invalidation or a pull-to-refresh.
+final globalPointsProvider = StreamProvider<int>((ref) {
+  final db = ref.watch(userDatabaseProvider);
+  final profileId = ref.watch(activeProfileIdProvider);
+  return db.pointsBalanceDao.watchBalance(profileId);
 });
 
 /// Per-curriculum breakdown map.
