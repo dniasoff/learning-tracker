@@ -29,12 +29,27 @@ import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
+import 'package:learning_tracker/features/tracks/domain/services/curriculum_activation_service.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/screens/track_management_hub_screen.dart';
+import 'package:learning_tracker/features/learning/domain/repositories/track_repository.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../helpers/drift_memory.dart';
+
+/// Minimal [TrackRepository] for tests — only [initializeDefaultTracks] is needed.
+class _TrackRepositoryForTest implements TrackRepository {
+  _TrackRepositoryForTest(this._db);
+  final UserDatabase _db;
+
+  @override
+  Future<void> initializeDefaultTracks(
+    CurriculumId curriculumId, {
+    int profileId = 0,
+  }) => _db.trackDao.initializeDefaultTracks(curriculumId, profileId: profileId);
+}
 
 // ─── Mocks ────────────────────────────────────────────────────────────────────
 
@@ -102,16 +117,27 @@ Widget _buildApp({
   Locale locale = const Locale('en'),
 }) {
   final database = db ?? inMemoryDb();
+  final profileId =
+      tracks.isNotEmpty ? tracks.first.profileId : _kProfileId;
 
   return ProviderScope(
     overrides: [
-      activeProfileIdProvider.overrideWithValue(
-        tracks.isNotEmpty ? tracks.first.profileId : _kProfileId,
-      ),
+      activeProfileIdProvider.overrideWithValue(profileId),
       userDatabaseProvider.overrideWith((ref) => database),
       activeTracksProvider.overrideWith((ref) => Stream.value(tracks)),
       ..._perTrackOverrides(tracks),
       useHebrewTermsProvider.overrideWith(() => _HebrewTermsOff()),
+      // Provide a real CurriculumActivationService backed by the in-memory DB
+      // so that the last-curriculum guard works correctly in tests.
+      curriculumActivationServiceProvider.overrideWith(
+        (ref) => CurriculumActivationService(
+          database: database,
+          pushCurriculumTrack: null,
+          trackRepository: _TrackRepositoryForTest(database),
+          profileId: profileId,
+          syncFacade: null,
+        ),
+      ),
     ],
     child: MaterialApp(
       locale: locale,
@@ -364,11 +390,18 @@ void main() {
 
   group('Delete dialog — archive', () {
     testWidgets(
-      '"Archive (keep history)" soft-deletes track (state becomes deleted)',
+      '"Archive (keep history)" soft-deletes track (state becomes deleted) '
+      '— when a second curriculum remains active',
       (tester) async {
         final db = inMemoryDb();
         await seedProfile(db);
         final trackId = await seedTrack(db, profileId: _kProfileId);
+        // Seed a SECOND curriculum so the guard allows the delete.
+        await seedTrack(
+          db,
+          profileId: _kProfileId,
+          curriculumId: 'bavli',
+        );
         final track = _track(id: trackId);
 
         await tester.pumpWidget(
@@ -400,37 +433,45 @@ void main() {
   // ── Delete dialog — wipe ────────────────────────────────────────────────────
 
   group('Delete dialog — wipe', () {
-    testWidgets('"Delete and wipe history" purges track (no longer active)', (
-      tester,
-    ) async {
-      final db = inMemoryDb();
-      await seedProfile(db);
-      final trackId = await seedTrack(db, profileId: _kProfileId);
-      final track = _track(id: trackId);
+    testWidgets(
+      '"Delete and wipe history" purges track (no longer active) '
+      '— when a second curriculum remains active',
+      (tester) async {
+        final db = inMemoryDb();
+        await seedProfile(db);
+        final trackId = await seedTrack(db, profileId: _kProfileId);
+        // Seed a SECOND curriculum so the guard allows the wipe.
+        await seedTrack(
+          db,
+          profileId: _kProfileId,
+          curriculumId: 'bavli',
+        );
+        final track = _track(id: trackId);
 
-      await tester.pumpWidget(
-        _buildApp(router: router, tracks: [track], db: db),
-      );
-      await _settle(tester);
+        await tester.pumpWidget(
+          _buildApp(router: router, tracks: [track], db: db),
+        );
+        await _settle(tester);
 
-      await tester.longPress(find.byType(InkWell).first);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
+        await tester.longPress(find.byType(InkWell).first);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
 
-      await tester.tap(find.text('Delete and wipe history'));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 500));
+        await tester.tap(find.text('Delete and wipe history'));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
 
-      final active = await db.trackDao.getActiveTracksForProfile(_kProfileId);
-      expect(
-        active.any((t) => t.id == trackId),
-        isFalse,
-        reason: 'Wipe must purge the track from active list.',
-      );
+        final active = await db.trackDao.getActiveTracksForProfile(_kProfileId);
+        expect(
+          active.any((t) => t.id == trackId),
+          isFalse,
+          reason: 'Wipe must purge the track from active list.',
+        );
 
-      await db.close();
-      await _teardown(tester);
-    });
+        await db.close();
+        await _teardown(tester);
+      },
+    );
   });
 
   // ── Product rules ────────────────────────────────────────────────────────────

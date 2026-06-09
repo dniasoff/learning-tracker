@@ -3,10 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/settings/domain/exceptions/last_active_curriculum_exception.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/after_track_change_invalidation.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart';
@@ -250,12 +253,63 @@ class _TrackManagementHubScreenState
 
     if (choice == null || !mounted) return;
 
-    final dao = ref.read(userDatabaseProvider).trackDao;
-    if (choice == 'wipe') {
-      await dao.purgeHistory(track.id);
-    } else {
-      await dao.deleteTrackAndData(track.id);
+    // TRK-HUB-04: guard — every profile must keep at least one active curriculum.
+    // Use deactivate (which throws LastActiveCurriculumException for the last
+    // curriculum) rather than calling the DAO directly to bypass the invariant.
+    if (choice == 'archive') {
+      final curriculum = CurriculumId.values
+          .where((c) => c.storageKey == track.curriculumId)
+          .firstOrNull;
+      if (curriculum != null) {
+        try {
+          await ref
+              .read(curriculumActivationServiceProvider)
+              .deactivate(curriculum);
+          await invalidateAfterTrackDataChange(ref, track.profileId);
+        } on LastActiveCurriculumException {
+          if (!mounted) return;
+          _showLastCurriculumError(l10n);
+        }
+        return;
+      }
     }
+
+    // Wipe path: still check the last-curriculum guard before purging.
+    final activeCount = await ref
+        .read(userDatabaseProvider)
+        .activeCurriculumDao
+        .getActiveCurriculaByProfile(track.profileId);
+    if (activeCount.length <= 1) {
+      if (!mounted) return;
+      _showLastCurriculumError(l10n);
+      return;
+    }
+
+    final dao = ref.read(userDatabaseProvider).trackDao;
+    await dao.purgeHistory(track.id);
     await invalidateAfterTrackDataChange(ref, track.profileId);
+  }
+
+  void _showLastCurriculumError(AppLocalizations l10n) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.cannotDeactivateLastCurriculum,
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              l10n.cannotDeactivateLastCurriculumDetail,
+              style: const TextStyle(fontSize: 12),
+            ),
+          ],
+        ),
+        duration: const Duration(seconds: 4),
+      ),
+    );
   }
 }
