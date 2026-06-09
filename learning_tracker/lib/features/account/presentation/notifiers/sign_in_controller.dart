@@ -870,7 +870,17 @@ class SignInController extends Notifier<SignInState> {
         if (accounts.length >= kMaxDeviceAccounts) {
           final msg = l10n.authMaxDeviceAccounts(kMaxDeviceAccounts);
           _showError?.call(msg);
-          await _ref.read(authRepositoryProvider).signOut();
+          // SI-GOOGLE-01: signOut() can throw PlatformException on devices
+          // where CredentialManager is partially initialised. The error has
+          // already been shown — wrap so cleanup never masks the real error.
+          try {
+            await _ref.read(authRepositoryProvider).signOut();
+          } catch (e) {
+            AppLogger.instance.warning(
+              event: 'sign_in_google_max_accounts_sign_out_failed',
+              exception: e,
+            );
+          }
           state = SignInError(msg);
           return;
         }
@@ -880,7 +890,15 @@ class SignInController extends Notifier<SignInState> {
       if (localMatch != null && localMatch.accountTier.isLocal) {
         final msg = l10n.authOfflineUseUpgrade;
         _showError?.call(msg);
-        await _ref.read(authRepositoryProvider).signOut();
+        // SI-GOOGLE-01: same defensive wrap as above.
+        try {
+          await _ref.read(authRepositoryProvider).signOut();
+        } catch (e) {
+          AppLogger.instance.warning(
+            event: 'sign_in_google_local_conflict_sign_out_failed',
+            exception: e,
+          );
+        }
         state = SignInError(msg);
         return;
       }
