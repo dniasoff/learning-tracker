@@ -75,7 +75,11 @@ Future<void> toggleStudyDay(
             )
             ..limit(1))
           .getSingleOrNull();
-  final trackId = track?.id ?? 0;
+  // STUDYDAY-COMPANION-10: skip the write if the track does not exist rather
+  // than falling back to trackId=0, which violates the FK constraint on
+  // study_day_configs.track_id → curriculum_tracks.id.
+  final trackId = track?.id;
+  if (trackId == null) return;
   await db.studyDayConfigDao.upsertDayConfig(
     profileId: profileId,
     curriculumId: curriculumId.storageKey,
