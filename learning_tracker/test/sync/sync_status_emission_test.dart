@@ -27,6 +27,7 @@ import 'package:learning_tracker/core/sync/sync_identity_status.dart';
 import 'package:learning_tracker/core/sync/sync_orchestrator.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../helpers/drift_memory.dart';
 
@@ -589,6 +590,82 @@ void main() {
         reason:
             'going offline during a pull must transition the badge to offline; '
             'the stuck "Syncing…" badge is the P0 bug (SYNC-OFFLINE-SYNCING-01)',
+      );
+    });
+
+    test('SYNC-STATUS-STALE-02 (loop-iter9): after force-stop + relaunch with '
+        'last sync <5 min ago, outbox drains to 0 but badge is stuck at '
+        'pending(N) — throttled resume must not leave badge stuck', () async {
+      // Scenario:
+      //   1. App last synced 2 min ago (stored in SharedPreferences).
+      //   2. App force-stopped and relaunched: new SyncOrchestratorImpl
+      //      instance, _everPulledOnLaunch = false.
+      //   3. Lifecycle observer fires pullOnLaunch(triggeredFromResume:true).
+      //   4. Throttle kicks in (elapsed < 5 min) → returns early.
+      //      _everPulledOnLaunch stays false.
+      //   5. User had 1 pending outbox row from before the force-stop.
+      //   6. Outbox processor drains it successfully → row gone.
+      //   7. _recomputeOutboxStatus() is called (depth=0, online=true).
+      //   8. BUG: hits `else { return; }` because _everPulledOnLaunch==false
+      //      → badge stays at whatever was last emitted (localOnly or syncing),
+      //      never transitions to synced.
+      //   9. FIX: throttled resume means a recent pull DID happen — we should
+      //      set _everPulledOnLaunch=true so the synced path is reachable.
+
+      // Seed SharedPreferences with a "last synced 2 min ago" timestamp so the
+      // throttle fires.
+      final twoMinutesAgo = DateTimeFactory.nowUtc().subtract(
+        const Duration(minutes: 2),
+      );
+      SharedPreferences.setMockInitialValues({
+        'sync_orchestrator_last_synced_at':
+            twoMinutesAgo.millisecondsSinceEpoch,
+      });
+
+      final connController = StreamController<bool>();
+      addTearDown(connController.close);
+
+      final orchestrator = _buildOrchestrator(
+        db: db,
+        connectivityStream: connController.stream,
+      );
+      addTearDown(orchestrator.dispose);
+      orchestrator.start();
+
+      // Bring connectivity online.
+      connController.add(true);
+      await Future<void>.delayed(Duration.zero);
+
+      // Seed 1 outbox row (queued before force-stop).
+      await _enqueue(db);
+
+      // Collect all emitted statuses.
+      final emissions = <SyncStatus>[];
+      final sub = orchestrator.statusStream.listen(emissions.add);
+      addTearDown(sub.cancel);
+
+      // The resume-triggered pull is throttled (elapsed 2 min < 5 min).
+      await orchestrator.pullOnLaunch(triggeredFromResume: true);
+
+      // Simulate the outbox draining: delete the row directly (mimics
+      // OutboxProcessor.drain() succeeding) and call recordDrainAttempt().
+      await db.outboxDao.deleteRow(
+        (await db.outboxDao.getPendingByKind(
+          OutboxEntityKind.completion,
+          1,
+        )).single.id,
+      );
+      await orchestrator.recordDrainAttempt();
+      await Future<void>.delayed(Duration.zero);
+
+      // After the outbox drains to 0, the badge MUST transition to synced —
+      // the throttled resume confirmed a recent pull, so "synced" is correct.
+      expect(
+        emissions.whereType<SyncStatusSynced>(),
+        isNotEmpty,
+        reason:
+            'outbox empty after throttled-resume session must emit synced; '
+            'stuck "pending(N)" badge with empty outbox is SYNC-STATUS-STALE-02',
       );
     });
   });

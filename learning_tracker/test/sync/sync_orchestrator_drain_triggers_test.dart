@@ -399,4 +399,116 @@ void main() {
       },
     );
   });
+
+  group('SYNC-DRAIN-DELAY-01 (loop-iter8) — mismatched→matched identity '
+      'transition drains immediately', () {
+    // Regression test for the iter8 fix.
+    //
+    // On a device with multiple Firebase accounts, the Auth SDK may transiently
+    // restore the previous account's token at launch (identity mismatch window).
+    // The OutboxProcessor correctly skips the drain during that window to
+    // avoid burning retry budget. Once the correct token is restored, the
+    // provider fix (SYNC-DRAIN-DELAY-01) calls processor.drain() immediately
+    // rather than waiting for the next periodic drain (up to 60 s).
+    //
+    // This test verifies:
+    //   a) drain is skipped while identity is mismatched (no push, row intact)
+    //   b) as soon as identity transitions to matched, calling drain() flushes
+    //      the row within the same async step — no timer needed.
+
+    test('mismatched identity skips drain; matched identity drains immediately '
+        'in the same tick (no timer needed)', () async {
+      // Use a fresh DB + processor directly (no orchestrator) so we can
+      // control the identity resolver without going through a timer-driven
+      // orchestrator spin-up.
+      final db = inMemoryDb();
+      addTearDown(db.close);
+
+      final pipeline = _CountingPipeline();
+
+      // Mutable identity: start as mismatched.
+      var currentlyMismatched = true;
+
+      final processor = OutboxProcessor(
+        outboxDao: db.outboxDao,
+        pipeline: pipeline,
+        clock: FakeLocalDayClock(DateTime.utc(2026, 5, 21)),
+        isIdentityMismatched: () => currentlyMismatched,
+        // Fast timeout so the test doesn't hang if something goes wrong.
+        pushTimeout: const Duration(seconds: 5),
+        drainStaleAfter: const Duration(seconds: 10),
+      );
+
+      // Seed 1 pending completion row.
+      await db.outboxDao.insertOutboxRow(
+        OutboxCompanion.insert(
+          profileId: 1,
+          entityKind: OutboxEntityKind.completion,
+          entityKey: 'k_drain_delay',
+          payload: '{"ref":"Berakhot.2a"}',
+          createdAt: DateTime.utc(2026, 5, 21),
+        ),
+      );
+
+      // --- Phase 1: drain is skipped while mismatched ---
+      final skippedCount = await processor.drain(1);
+      expect(
+        skippedCount,
+        0,
+        reason:
+            'drain must return 0 while identity is mismatched — pushing would '
+            'be denied by Firestore rules and burn the retry budget',
+      );
+      final rowsBefore = await db.outboxDao.getPendingByKind(
+        OutboxEntityKind.completion,
+        1,
+      );
+      expect(
+        rowsBefore,
+        hasLength(1),
+        reason: 'row must still be queued after the skipped drain',
+      );
+      expect(
+        pipeline.drainAttempts,
+        0,
+        reason: 'no push pipeline calls while mismatched',
+      );
+
+      // --- Phase 2: identity transitions to matched ---
+      // Simulate what the provider's ref.listen callback does: as soon as
+      // syncIdentityStatusProvider transitions mismatched→matched, it calls
+      // processor.drain(profileId) immediately (SYNC-DRAIN-DELAY-01 fix).
+      currentlyMismatched = false;
+
+      // Call drain() immediately — no timer, no periodic wait.
+      // This mirrors the single processor.drain(profileId) call in the
+      // provider's ref.listen block that fires on mismatched→matched.
+      final drained = await processor.drain(1);
+      expect(
+        drained,
+        greaterThanOrEqualTo(1),
+        reason:
+            'once identity matches, drain() must push the queued row '
+            'immediately without waiting for the next periodic timer',
+      );
+
+      final rowsAfter = await db.outboxDao.getPendingByKind(
+        OutboxEntityKind.completion,
+        1,
+      );
+      expect(
+        rowsAfter,
+        isEmpty,
+        reason:
+            'row must be gone after draining under the matched identity '
+            '— SYNC-DRAIN-DELAY-01: drain fires in the same async step '
+            'as the identity transition, not 60 s later',
+      );
+      expect(
+        pipeline.drainAttempts,
+        greaterThanOrEqualTo(1),
+        reason: 'push pipeline was called after identity matched',
+      );
+    });
+  });
 }
