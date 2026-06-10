@@ -1,0 +1,341 @@
+{
+  "batch": 1,
+  "oracle": {
+    "terms": 126,
+    "rules": 20
+  },
+  "screensAudited": [
+    "dashboard",
+    "Child prize redemption screen (ChildRedemptionScreen / \"Redeem Prizes\") — lib/features/gamification/presentation/screens/child_redemption_screen.dart",
+    "settings",
+    "addtrack (Add Track wizard: Tracks hub -> ADD TRACK; curriculum pick, scope, study-days, review/chazara type, pace/deadline, mark-prior-learning; plus Talmud Bavli \"Join a Program?\" calendar step)",
+    "trackdetail",
+    "progress"
+  ],
+  "findings": [
+    {
+      "screen": "dashboard",
+      "title": "Selected bottom-nav label \"DASHBOARD\" truncates to \"DASHBOA…\" at font_scale 1.3",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "en / adult+child / any data state / font_scale 1.3",
+      "evidence": "/tmp/audit/zoom_nav.png (active pill reads 'DASHBOA…' while LEARN/PROGRESS/SETTINGS render in full); also /tmp/audit/dash_en_adult_large2.png and /tmp/audit/dash_child_large.png",
+      "detail": "At 1.3 system text scale, the SELECTED bottom-nav tab gets extra horizontal pill padding which squeezes its own label, so the 9-char 'DASHBOARD' is ellipsized to 'DASHBOA…'. The shorter inactive labels (LEARN/PROGRESS/SETTINGS) fit. Reproduces in both adult and child mode. At font 1.0 the label fits fully (/tmp/audit/adult_again.png), confirming it is a large-text layout bug. Tap target still works but the truncated label looks broken."
+    },
+    {
+      "screen": "dashboard",
+      "title": "Track-card header shows dual script in transliteration mode — Hebrew 'תלמוד בבלי' rendered under Latin 'Talmud Bavli' (violates EN-mode no-Hebrew oracle rule, and is asymmetric vs Hebrew mode)",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "en / adult / populated / Hebrew-terms OFF (Ashkenazi)",
+      "evidence": "/tmp/audit/zoom_track_header2.png shows 'Talmud Bavli' (small, top) stacked above 'תלמוד בבלי' (large/bold, bottom). Compare /tmp/audit/dash_pop_scroll2.png (Hebrew-terms ON) where the same card shows ONLY 'תלמוד בבלי' with no Latin companion.",
+      "detail": "Oracle: 'EN / transliteration mode MUST NOT contain Hebrew-script characters (U+0590–U+05FF). A stray Hebrew letter in an English-mode label indicates a missed transliteration.' In transliteration mode the active-track card surfaces the native Hebrew curriculum name as the prominent (larger) title with the Latin transliteration as a small superscript. This both contains Hebrew script in EN-mode AND is asymmetric: Hebrew-terms-ON mode does NOT show a Latin transliteration companion. The position bar ('Chullin 41') and stat tiles correctly stay Latin, so only the curriculum title is dual-script. Needs human confirmation whether the bilingual title is intended; if so the rule/oracle expectation should be documented, otherwise the Hebrew line should be suppressed in transliteration mode."
+    },
+    {
+      "screen": "dashboard",
+      "title": "Mixed-script stat chips row: 'Streak' (Latin) | 'סיומים' (Hebrew) | 'Lifetime' (Latin) on one row in EN UI when Hebrew-terms toggle is ON",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "en / adult / populated / Hebrew-terms ON",
+      "evidence": "/tmp/audit/zoom_chiplabels.png ('Streak' / 'סיומים' / 'Lifetime'); resolves to all-Latin 'Streak'/'Siyumim'/'Lifetime' when toggle OFF — see /tmp/audit/dash_translit.png",
+      "detail": "On the populated dashboard the three summary chips mix scripts: the domain term 'Siyumim' follows the Hebrew-terms toggle and renders as Hebrew script (סיומים), while its row-mates 'Streak' and 'Lifetime' are generic UI labels that stay English. The same pattern appears in the STATS card ('OVERDUE'/'TODAY DUE' English next to 'חזרה' Hebrew — /tmp/audit/zoom_stats3e.png) and the track-card stat tiles ('חזרה'/'DUE TODAY'/'OVERDUE' — /tmp/audit/zoom_tiles.png). This is consistent with the documented independent-axes design (domain terms follow the toggle, generic UI follows locale), so it is arguably by-design, but to a human reviewer a single Hebrew word wedged between two English words on the same chip row reads as a half-translated / inconsistent UI. Flagging for product decision on whether sibling labels should be harmonized (either translate Streak/Lifetime too, or keep Siyumim/Chazara in Latin while toggle drives only curriculum content)."
+    },
+    {
+      "screen": "dashboard",
+      "title": "Add-Track 'Join a Program' card shows 'Starts: <program name>' instead of a start date",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "en / adult / Add Track wizard step 2 (reached from the dashboard 'Add Track' CTA)",
+      "evidence": "/tmp/audit/zoom_starts.png clearly reads 'Starts: דרשו עמוד היומי' (the calendar/date-icon row shows the program name 'Dirshu Amud HaYomi' as the value); full context /tmp/audit/addtrack2.png",
+      "detail": "The Dirshu program card's footer line uses a calendar icon + 'Starts:' label but the value slot is populated with the program's own Hebrew name ('דרשו עמוד היומי') rather than an actual start date. 'Starts: Dirshu Amud HaYomi' is nonsense to a user. Either the label is wrong (it is really a program-name line, not a start line) or the start-date value failed to resolve and fell back to the program title. This is in the Add-Track flow launched directly from the dashboard's primary empty-state CTA, so it is on the dashboard's main entry path."
+    },
+    {
+      "screen": "dashboard",
+      "title": "App UI locale cannot be switched to Hebrew from within the app or via per-profile pref — UI follows device locale only",
+      "sense": "logic",
+      "severity": "P2",
+      "permutation": "locale lever (he) for all dashboard permutations",
+      "evidence": "learning_tracker/lib/app/learning_tracker_app.dart:59-61 ('locale: null — Flutter resolves the active locale automatically from WidgetsBinding.window.locale … DNI-341'); settings_screen.dart:197 gates the Hebrew-terms tile on Localizations.localeOf(context).languageCode != 'he'; editing shared_prefs flutter.app_locale_p1=he had ZERO effect on the rendered UI (/tmp/audit/dash_he_adult.png stayed fully English).",
+      "detail": "The per-profile AppLocalePreference (app_locale_p1) exists and is written by the app, but the MaterialApp uses locale:null so the visible UI locale is driven entirely by the OS device locale; the pref is only consumed for out-of-band rendering (notifications, currentAppLocaleProvider). There is NO in-app UI-language control on the dashboard/settings path (the visible 'Calendar Preference English/Hebrew' is the calendar, not the UI locale). Consequence: (1) the he<->en UI-locale audit lever is not exercisable in this environment — device locale change requires root and adbd cannot run as root on this production build (API 31, no cmd locale service), so all he-locale dashboard chrome (RTL layout, Hebrew nav labels, Hebrew empty-state copy) is UNVERIFIED; (2) more importantly this is a product gap: a user who sets a profile to Hebrew via the app gets no Hebrew UI. Recommend wiring currentAppLocaleProvider into MaterialApp.locale (or a Localizations override) so the per-profile pref actually drives the UI, and to make the he-locale state testable."
+    },
+    {
+      "screen": "Child prize redemption screen (ChildRedemptionScreen / \"Redeem Prizes\") — lib/features/gamification/presentation/screens/child_redemption_screen.dart",
+      "title": "Reward title breaks mid-word under large text (font_scale 1.3): 'IceCre/am', 'Bicycl/e'",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "en UI, font_scale=1.3, balance=0",
+      "evidence": "/tmp/redeem_largetext2.png — the IceCream tile renders the single-token title as 'IceCre' on line 1 and 'am' on line 2; Bicycle renders 'Bicycl' / 'e'. The wide disabled 'Not enough points' button consumes horizontal space, squeezing the title column so a single word wraps mid-word across two lines.",
+      "detail": "_RewardCard title uses softWrap:true, maxLines:2, overflow:ellipsis (child_redemption_screen.dart lines 345-356). The code comment (#39) claims this prevents mid-character breaks, but with a wide button at 1.3x text scale the title column gets so narrow that a single token wraps mid-WORD. Not clipped (both lines visible, no ellipsis), but visually poor. Consider constraining the button width or giving the title more min-width so short single-word titles don't break."
+    },
+    {
+      "screen": "Child prize redemption screen (ChildRedemptionScreen / \"Redeem Prizes\") — lib/features/gamification/presentation/screens/child_redemption_screen.dart",
+      "title": "Disabled 'Not enough points' button label is low-contrast (~2:1, below WCAG AA 4.5:1)",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "en UI, balance < reward cost (e.g. balance 0 or 10)",
+      "evidence": "/tmp/redeem_btn_crop.png (cropped from /tmp/redeem_final_full.png) — grey label text (#9CA3AF per code, disabledBackgroundColor #E5E7EB) on light-grey fill. Foreground rgb(156,163,175) on background rgb(229,231,235) ≈ 2.0:1 contrast, well under the 4.5:1 AA threshold for normal text.",
+      "detail": "_RewardCard FilledButton uses disabledBackgroundColor #E5E7EB with label color #9CA3AF when !buttonEnabled (lines 374-388). The 'Not enough points' message is the affordance that tells a child WHY they cannot redeem, so it should remain legible. Darken the disabled label (e.g. #6B7280) to meet contrast."
+    },
+    {
+      "screen": "Child prize redemption screen (ChildRedemptionScreen / \"Redeem Prizes\") — lib/features/gamification/presentation/screens/child_redemption_screen.dart",
+      "title": "Child profile UI locale does not switch to Hebrew despite app_locale_p3=he (and legacy app_locale=he)",
+      "sense": "exploration",
+      "severity": "P2",
+      "permutation": "attempted he-locale for RedeemKid (profileId=3) via shared_prefs + relaunch",
+      "evidence": "/tmp/redeem_he_dash2.png and a11y dump — after setting flutter.app_locale_p3=he (the exact key from ProfileScopedPreferenceKeys.appLocale(3)) plus legacy flutter.app_locale=he and p0/p2=he, then force-stop+relaunch and entering RedeemKid, every UI string still renders English ('Good evening', 'Your Balance', 'Redeem', 'Not enough points', 'CURRENT BALANCE'). Only Hebrew-Terms-driven script ('סיומים','חזרה') appears, which is locale-independent by design.",
+      "detail": "This is broader than the redemption screen (affects all child surfaces) and may be intended (child UI possibly locked to account/device locale) — but it blocked auditing the redemption screen in he-RTL. The redemption screen has no curriculum labels (reward titles are free text), so the only he-specific risk is the static UI strings + RTL mirroring of the balance card / Redeem button, which could not be observed. Worth confirming whether per-profile child UI locale is supposed to be settable; if so, the scoped key is not being honored. Oracle note: Hebrew-script curriculum labels elsewhere (track-creation flow) were all correct — Bereishis/Shemos/Vayikra/Bamidbar/Devarim, חומש, משניות, תלמוד בבלי, נ\"ך, משנה ברורה, חזרה, פרקים/פסוקים — no Latin leakage."
+    },
+    {
+      "screen": "settings",
+      "title": "Sign Out and Delete Account icons render as blank solid red discs (no glyph)",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "en / ADULT MODE / account bottom sheet",
+      "evidence": "/tmp/redicons_crop.png (vs /tmp/blueicon_crop.png) — both red circular icon containers for 'Sign Out' and 'Delete Account' are completely solid red with NO visible icon inside; every other row (Switch account, Add account, Change Password) has a light-blue circle with a clearly visible dark glyph. The destructive-action icon foreground is the same red as the disc background (red-on-red), so the glyph is invisible.",
+      "detail": "In the account sheet the two destructive rows lack a discernible icon. This is a contrast/asset defect: the icon glyph color equals the container fill for the error/red variant. Functionally tappable but visually a blank disc next to the most dangerous actions (Sign Out, Delete Account)."
+    },
+    {
+      "screen": "settings",
+      "title": "Daily Reminder toggle displays ON while feature is actually disabled (pref=false, notifications blocked, permission denied)",
+      "sense": "logic",
+      "severity": "P1",
+      "permutation": "en / ADULT MODE / Notification Settings sub-screen",
+      "evidence": "/tmp/dr_dismissed.png + pref read. On entry the Daily Reminder switch showed ON (blue) but flutter.daily_reminder_enabled_1=false on disk. Tapping it turned it OFF (pref still false). Tapping it ON triggered the OS notification-permission dialog (/tmp/dr_on.png); after choosing 'Don't allow' the toggle SNAPPED BACK to ON (/tmp/dr_dismissed.png) even though Device notifications show 'Notifications blocked', permission was just denied, and pref remained false.",
+      "detail": "The Daily Reminder switch does not reflect the true enabled state. It shows ON while the backing pref is false and notifications cannot be delivered (device blocked + permission denied). Reverting to ON after a permission denial is misleading — the user believes reminders are active when they are not. Wrong/lingering toggle state per the rubric."
+    },
+    {
+      "screen": "settings",
+      "title": "Raw Firestore exception leaked verbatim into user-facing Backup & Sync banner",
+      "sense": "exploration",
+      "severity": "P2",
+      "permutation": "en / ADULT MODE / Settings main list (Backup & Sync card)",
+      "evidence": "/tmp/sync_banner_crop.png + semantics content-desc: 'Backup & Sync\\nSync error: FirestorePermissionDeniedException: The caller does not have permission to execute the specified operation. (collection: completions), op: read caused by: [cloud_firestore/permission-denied] The caller does not have permission to execute the specified operation.\\nTap to retry'. Triggered after navigating back from the App Permissions/Notifications sub-flow.",
+      "detail": "The Backup & Sync card swaps between a friendly 'Sync paused — N queued' message and a raw developer exception dump exposing the exception class name, Firestore internal codes, collection name ('completions') and op ('read'). Internal implementation details should never reach end users; this looks like a placeholder/error leak."
+    },
+    {
+      "screen": "settings",
+      "title": "Hebrew UI leaves 'SHABBOS' untranslated and produces mixed-script 'בShabbos'",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "he (RTL) / ADULT MODE / Settings — Shabbos Mode banner",
+      "evidence": "/tmp/he_banner_crop.png + semantics: title 'מצב SHABBOS' (Latin SHABBOS inside a Hebrew header) and body 'האפליקציה מושתקת ונעולה בShabbos וביום טוב...' — the Hebrew prefix ב is glued to Latin 'Shabbos', yielding the broken mixed-script token 'בShabbos'. Oracle: Hebrew-locale text must not contain stray Latin literals for translatable content.",
+      "detail": "Two untranslated strings in the Hebrew locale: the banner title 'מצב SHABBOS' should read 'מצב שבת', and the body should use 'בשבת' instead of the Latin 'בShabbos'. The mixed-script token also breaks RTL reading flow."
+    },
+    {
+      "screen": "settings",
+      "title": "Backup & Sync banner is half-translated in Hebrew (title English, body mixes Hebrew + raw English)",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "he (RTL) / ADULT MODE / Settings — Backup & Sync card",
+      "evidence": "/tmp/he_backup_crop.png + semantics: 'Backup & Sync\\nסנכרון מושהה — 15 ממתינים. outbox has 12 row(s) stuck after 3+ attempts'. Title is English; body starts in Hebrew ('סנכרון מושהה — 15 ממתינים.') then continues in raw English ('outbox has 12 row(s) stuck after 3+ attempts').",
+      "detail": "In the Hebrew UI the Backup & Sync card title is not localized and the status line is a jarring he+en sandwich. The English remainder ('outbox has N row(s) stuck...') is the same un-translated runtime status that also appears in the en build, indicating the localized template only covers the prefix."
+    },
+    {
+      "screen": "settings",
+      "title": "Nusach (Pronunciation) control shown in Hebrew UI despite Hebrew-script being forced — contradicts en-mode behavior and oracle",
+      "sense": "logic",
+      "severity": "P2",
+      "permutation": "he (RTL) vs en — Hebrew Terms / Pronunciation visibility",
+      "evidence": "/tmp/he_scroll1.png (he): order is Calendar(העדפת לוח שנה) -> Pronunciation(הגייה) -> Nikud(ניקוד); the 'Hebrew Terms' toggle row is ABSENT. Compare /tmp/ht_before.png (en, toggle OFF) where Pronunciation IS shown, and /tmp/ht_on.png (en, toggle ON) where Pronunciation is HIDDEN. Oracle: nusach is irrelevant in Hebrew-script mode. The he Pronunciation subtitle 'בראשית (אשכנזי) או בְּרֵשִית (ספרדי)' even implies a Hebrew-script nusach difference that is really only nikud.",
+      "detail": "The Hebrew UI hides the Hebrew-Terms toggle (implying Hebrew-script terms are forced) yet still exposes the Ashkenazi/Sephardi nusach control. Per the app's own en behavior (Pronunciation hides when Hebrew Terms is ON) and the domain oracle (nusach only matters in transliteration mode), the nusach control should be hidden in the Hebrew UI. Showing it — and presenting 'בראשית' vs 'בְּרֵשִית' as a nusach distinction — is logically inconsistent."
+    },
+    {
+      "screen": "settings",
+      "title": "Sync outbox backlog grows on every settings change and 'Tap to retry' is a no-op",
+      "sense": "exploration",
+      "severity": "P2",
+      "permutation": "en + he / Settings — Backup & Sync card re-read after state changes",
+      "evidence": "Re-reading the SAME card across the session: 'Sync paused — 7 queued / 7 row(s)' (/tmp/settings_scroll2.png) -> '15 queued / 9 row(s)' (semantics dump after toggles) -> raw exception (/tmp/sync_banner_crop.png) -> he 'outbox has 12 row(s)' (/tmp/he_backup_crop.png). Tapping the banner (Tap to retry) left the error unchanged (/tmp/backup_tap.png).",
+      "detail": "Every preference toggle enqueues an outbox row that never flushes (permission-denied), so the visible backlog counter climbs (7->9->12->15). The user-facing 'Tap to retry' does nothing observable. This is a live, accumulating error surface — likely a test-env Firestore-rules issue, but it is presented to the user as a persistent failure with no working remedy."
+    },
+    {
+      "screen": "settings",
+      "title": "Internal hierarchy 'level N' id exposed in Add-Lifetime-Learning picker header",
+      "sense": "exploration",
+      "severity": "P2",
+      "permutation": "en / Add Lifetime Learning -> Mishnayos picker (Settings sub-screen)",
+      "evidence": "/tmp/zeraim_deep.png ('Selected: 0 • level 6') and /tmp/berakhos.png ('Selected: 0 • level 11') — the 'level N' number jumps (1 at seder list, 6 at masechta list, 11 at perek list) and appears to be an internal depth/level id rather than a meaningful count.",
+      "detail": "The 'Mark as lifetime learned' header shows 'Selected: {n} • level {N}' where {N} is an internal data-model level id that is meaningless to users and changes unpredictably as you drill in. Likely an unintended internal value surfaced in the UI."
+    },
+    {
+      "screen": "settings",
+      "title": "Footer feedback icons (warning/comment/star) are very low contrast",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "en + he / Settings footer below 'Torah Study Tracker'",
+      "evidence": "/tmp/footer_crop.png — three small icons (triangle, comment bubble, star) rendered light-gray on white at the very bottom of the list; barely distinguishable from the background.",
+      "detail": "Minor: the footer action icons sit at low contrast (light gray on white) and read as decorative noise; if they are tappable feedback/report affordances they are easy to miss. Low severity / cosmetic."
+    },
+    {
+      "screen": "addtrack (Add Track wizard: Tracks hub -> ADD TRACK; curriculum pick, scope, study-days, review/chazara type, pace/deadline, mark-prior-learning; plus Talmud Bavli \"Join a Program?\" calendar step)",
+      "title": "Scope item count ignores the user's section selection — uses full-curriculum total (≈5846) instead of the selected sefer",
+      "sense": "domain-oracle",
+      "severity": "P1",
+      "permutation": "Chumash flow, Step 5 pace/deadline; reproduced in both he-script mode and transliteration mode",
+      "evidence": "/tmp/at_en_deadline.png + /tmp/at_helper_s.png — helper text reads 'About 5846 Pesukim per study day, across 1 study days to finish the scope by the deadline (≈5846 items)'. Same '≈5846 items' in he mode at /tmp/at_deadline.png.",
+      "detail": "Only Bereishis was selected as the scope on Step 2, yet the pace/deadline math uses 5846 items. 5846 ≈ the pesukim total of the ENTIRE 5-book Chumash (Genesis 1533 + Exodus 1213 + Leviticus 859 + Numbers 1288 + Deuteronomy 955 ≈ 5848). Bereishis alone has ~1533 pesukim / 50 perakim. The wizard computes pace feasibility and the 'per study day' figure against the whole curriculum rather than the selected scope, producing wildly wrong estimates and an unachievable deadline. This is a goal-math correctness bug, not a localization issue (wrong in en too)."
+    },
+    {
+      "screen": "addtrack (Add Track wizard: Tracks hub -> ADD TRACK; curriculum pick, scope, study-days, review/chazara type, pace/deadline, mark-prior-learning; plus Talmud Bavli \"Join a Program?\" calendar step)",
+      "title": "Arabic digits leak into Hebrew-script-mode count subtitles (should be gematriya)",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "he Hebrew-script mode (hebrewTerms ON); Step 2 scope cards for Chumash and Talmud Bavli",
+      "evidence": "/tmp/at_chumash_crop_s.png ('50 פרק • Core section focus', '40 פרק'), /tmp/at_seder_s.png ('מסכת1 • Core section focus' for זרעים, 'מסכת11' for מועד). Transliteration mode correctly uses Arabic: /tmp/at_translit_step2.png ('50 Perek').",
+      "detail": "Oracle: in Hebrew-script mode numbers must be gematriya and labels must contain no Latin/Arabic literals. The count subtitles render Arabic integers next to Hebrew unit words (פרק/מסכת). Should be 'פרק נ', 'נ פרקים', 'יא מסכתות' etc. Also the singular unit word is used with plural counts (מסכת with 11; פרק with 50 → should be מסכתות/פרקים), and the digit hugs the word with no space ('מסכת1'). Transliteration mode is correct (Arabic digits are right there), confirming this is a he-mode number-localization miss."
+    },
+    {
+      "screen": "addtrack (Add Track wizard: Tracks hub -> ADD TRACK; curriculum pick, scope, study-days, review/chazara type, pace/deadline, mark-prior-learning; plus Talmud Bavli \"Join a Program?\" calendar step)",
+      "title": "Dirshu program 'Starts:' field shows the program's own name instead of a start date",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "he mode, Talmud Bavli Step 2 'Join a Program?'",
+      "evidence": "/tmp/at_bavliwarn.png + /tmp/at_starts2_s.png — calendar-icon line reads 'Starts: דרשו עמוד היומי' (the program title), not a date. The other two programs (דף יומי, דף השבוע) correctly show 'DAILY CALENDAR' (/tmp/at_programs2.png).",
+      "detail": "The 'Starts:' date label for the Dirshu Amud HaYomi program is populated with the program name 'דרשו עמוד היומי' rather than an actual start date, misleading the user about when the program begins. Anomalous only for this program card, indicating a wrong field binding/placeholder."
+    },
+    {
+      "screen": "addtrack (Add Track wizard: Tracks hub -> ADD TRACK; curriculum pick, scope, study-days, review/chazara type, pace/deadline, mark-prior-learning; plus Talmud Bavli \"Join a Program?\" calendar step)",
+      "title": "Malformed scope-step breadcrumb: duplicated curriculum + LTR arrow + untranslated 'selection' inside RTL Hebrew",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "Step 2/3 'All of it, or just a section?' — all curricula, both he and en modes",
+      "evidence": "/tmp/at_chumash_bc_s.png ('חומש › חומש → חומש selection'); Bavli /tmp/at_bavli_scope.png ('תלמוד בבלי › סדר → תלמוד בבלי selection'); en /tmp/at_translit_step2.png ('Chumash › Chumash → Sefer selection').",
+      "detail": "The title bar repeats the curriculum name and uses an LTR '→' arrow plus the untranslated English word 'selection' inside an otherwise Hebrew/RTL context. The 'chip › {level} → {curriculum} selection' template reads as nonsense ('חומש → חומש selection'). In he mode it also violates the no-Latin-literals rule ('selection')."
+    },
+    {
+      "screen": "addtrack (Add Track wizard: Tracks hub -> ADD TRACK; curriculum pick, scope, study-days, review/chazara type, pace/deadline, mark-prior-learning; plus Talmud Bavli \"Join a Program?\" calendar step)",
+      "title": "'Mark Completed' button text breaks mid-word ('Mark Complete' + 'd') at large text",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "font_scale 1.3, Step 6 Mark Prior Learning",
+      "evidence": "/tmp/at_step6_large.png — the primary button shows 'Mark Complete' on two lines with a dangling 'd' on the third visual line.",
+      "detail": "At font_scale 1.3 the 'Mark Completed' button wraps 'Completed' across a line boundary, splitting it into 'Complete' + 'd'. Ugly, looks broken. The 'Skip for now' button wraps cleanly, so the issue is specific to the long 'Mark Completed' label needing better min-width/auto-size handling."
+    },
+    {
+      "screen": "addtrack (Add Track wizard: Tracks hub -> ADD TRACK; curriculum pick, scope, study-days, review/chazara type, pace/deadline, mark-prior-learning; plus Talmud Bavli \"Join a Program?\" calendar step)",
+      "title": "Study-days list mixes English weekday names with a Judaic Shabbos term; Shabbos defaults ON",
+      "sense": "logic",
+      "severity": "P2",
+      "permutation": "Step 3 Study Days; he mode (שבת) and transliteration mode (Shabbos)",
+      "evidence": "/tmp/at_step3b.png (Sunday..Friday English + 'שבת' Hebrew, all toggles ON) and /tmp/at_en_shabbos.png ('Sunday..Friday' + 'Shabbos', avatar 'S').",
+      "detail": "Six days render as English calendar names while only the seventh (Saturday) follows the Hebrew-terms toggle (שבת / Shabbos), giving a visually inconsistent list. Worse, Shabbos defaults to ENABLED — for a Torah app that ships a dedicated 'שבת MODE' which silences and locks the app on Shabbos (seen in Settings, /tmp/at_settings.png), scheduling study on Shabbos by default is a logical conflict. The Shabbos avatar 'S' also duplicates Sunday's 'S' initial."
+    },
+    {
+      "screen": "addtrack (Add Track wizard: Tracks hub -> ADD TRACK; curriculum pick, scope, study-days, review/chazara type, pace/deadline, mark-prior-learning; plus Talmud Bavli \"Join a Program?\" calendar step)",
+      "title": "Pluralization defects across the wizard ('1 study days', '1 DAYS', '1 selection(s)', '50 Perek')",
+      "sense": "logic",
+      "severity": "P2",
+      "permutation": "Steps 4/5/6, both modes",
+      "evidence": "/tmp/at_helper_s.png ('across 1 study days'); /tmp/at_custom_s.png ('1 DAYS'); /tmp/at_priorsel.png ('1 selection(s)'); /tmp/at_translit_step2.png ('50 Perek' singular with plural count).",
+      "detail": "Multiple count strings ignore singular/plural rules: 'across 1 study days' (should be 'day'), custom-cycle chips '1 DAYS'/'7 DAYS' (1 should be 'DAY'), '1 selection(s)' uses the '(s)' parenthetical-plural anti-pattern, and scope subtitles use the singular unit word with plural counts ('50 Perek' → 'Perakim', 'מסכת 11' → 'מסכתות'). Indicates missing ICU/plural handling."
+    },
+    {
+      "screen": "addtrack (Add Track wizard: Tracks hub -> ADD TRACK; curriculum pick, scope, study-days, review/chazara type, pace/deadline, mark-prior-learning; plus Talmud Bavli \"Join a Program?\" calendar step)",
+      "title": "Back navigation through wizard steps silently discards prior selections and deadline",
+      "sense": "exploration",
+      "severity": "P2",
+      "permutation": "Chumash flow; navigating Step 6→5→3→2 via back",
+      "evidence": "/tmp/at_back_step5_large.png (deadline I had set reverted to Target Pace mode) and /tmp/at_step2_large.png (Bereishis selection cleared, 'Select at least one' disabled again).",
+      "detail": "Returning to an earlier step resets state: the deadline mode/date set on Step 5 reverts to default Target Pace, and the sefer selection on Step 2 is cleared. A multi-step setup wizard should preserve entries when the user steps back to review, otherwise users silently lose configuration."
+    },
+    {
+      "screen": "trackdetail",
+      "title": "\"Elapsed\" label duplicated in its own value row (\"Elapsed   Elapsed 0 days\")",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "en-locale + HebrewTerms ON + Hebrew calendar (and present in EVERY permutation: translit Ashkenazi, Sephardi, large text)",
+      "evidence": "/tmp/td_en_hterms.png and /tmp/td_largetext.png — the TrackInfoCard bottom row shows label \"Elapsed\" on the left and value \"Elapsed 0 days\" on the right, so the word \"Elapsed\" appears twice on the same row.",
+      "detail": "track_info_card.dart line 116 passes label `l10n.trackInfoElapsed` (=\"Elapsed\"), and the value builder `_elapsedRemainingLabel` (line 165) constructs the value as `'${l10n.trackInfoElapsed} $elapsedDays ${l10n.trackInfoDays}'` = \"Elapsed 0 days\". The value re-includes the word already used as the row label. It should be just \"0 days\" (the row label already says \"Elapsed\"), or the value-side prefix should be dropped. Visible in all states and exaggerated at large text."
+    },
+    {
+      "screen": "trackdetail",
+      "title": "Same activation date shown in two different calendar systems on one screen (Hebrew \"Started\" vs Gregorian \"Since\")",
+      "sense": "logic",
+      "severity": "P2",
+      "permutation": "en-locale + Hebrew calendar ON (all term/nusach states)",
+      "evidence": "/tmp/td_en_hterms.png — TrackInfoCard \"Started\" row = \"כ\\\"ה סיוון תשפ\\\"ו\" (Hebrew calendar), while the header card directly below shows \"Since Jun 10, 2026\" (Gregorian) for the same track.activatedAt.",
+      "detail": "TrackInfoCard._formatDate honors useHebrewCalendar and renders the Hebrew date for \"Started\". But track_detail_screen.dart line 173 computes `activatedDate = DateFormat.yMMMd(locale).format(track.activatedAt)` unconditionally in Gregorian, and feeds it to the \"Since {date}\" line in _buildHeaderCard. So the identical activation date is shown twice in two incompatible calendar formats inches apart, which is confusing. The \"Since\" line should respect the useHebrewCalendar preference like the InfoCard does."
+    },
+    {
+      "screen": "trackdetail",
+      "title": "Goal pace field label and helper clipped/ellipsized (\"Perakim p…\" / \"How many …\")",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "en-locale, reached from the goal tile (Edit Goal → GoalSetupScreen); observed in both HebrewTerms ON (\"פרקים per …\") and OFF (\"Perakim p…\")",
+      "evidence": "/tmp/td_goal_translit.png and /tmp/td_goal_en.png — the pace TextField's floating label reads \"Perakim p…\" (truncated from \"Perakim per week\") and the helper text below reads \"How many …\" (truncated from \"How many perakim per week?\").",
+      "detail": "goal_setup_screen.dart line 385 sets `labelText: '$unitLabel $perLabel'` (=\"Perakim per week\") and line 387 `helperText: 'How many perakim per week?'`. The field sits in a narrow box beside the Per day/Per week selector, so both the label and helper are ellipsized and unreadable. The full text never fits. Reachable directly via the TrackDetail goal tile, which this pass was required to exercise."
+    },
+    {
+      "screen": "trackdetail",
+      "title": "Per-profile UI locale (he) cannot be activated; no in-app UI-language switcher exists",
+      "sense": "exploration",
+      "severity": "P2",
+      "permutation": "Attempted en→he for LoopA (profile p1)",
+      "evidence": "/tmp/td_he_dash3.png and uiautomator dump /tmp/ui_he.xml — after setting flutter.app_locale_p1=he (LoopA's confirmed key, verified via matching hebrew_terms_script_p1/use_hebrew_calendar_p1/transliteration_variant_p1 prefs) and force-stop+relaunch+re-selecting LoopA, the entire UI remained English (\"Good evening\", \"Streak\", \"Lifetime\", \"DASHBOARD/LEARN/PROGRESS/SETTINGS\"). The Settings screen exposes only a Calendar-Preference English/Hebrew toggle (dates only) and the Hebrew-Terms toggle (term script) — there is NO control to switch the app UI language.",
+      "detail": "Two concerns: (1) the per-profile app_locale pref written to shared_prefs did not take effect after a clean relaunch, suggesting the locale is restored/overridden from another source (DB/cloud) on profile selection, or the provider is not re-reading it; (2) there is no user-facing way to change the UI language for an existing profile, so a profile stuck in the wrong locale has no in-app remedy. Consequence for this audit: the he-locale RTL rendering of TrackDetail (RTL mirroring of rows, back-arrow placement, Hebrew chrome) could not be visually verified."
+    },
+    {
+      "screen": "trackdetail",
+      "title": "Chazara/review section could not be visually verified (no multi-stage track available)",
+      "sense": "exploration",
+      "severity": "P2",
+      "permutation": "All states — only a single-stage Chumash track exists for LoopA",
+      "evidence": "/tmp/td_en_hterms.png — header shows plain \"Track progress\" label, never the \"Completion (with חזרה/Chazara)\" variant. dashboard_providers.dart trackHasChazaraProvider returns count>1 stages; the Chumash track has 1 stage so chazara UI is (correctly) hidden.",
+      "detail": "The gating rule (chazara label only for stageOrder>1) is correctly implemented and the negative case is confirmed (single-stage track shows no chazara label, matching `l10n.carouselCompletion(chazaraTerm)` being skipped). However the POSITIVE case — a track with a review stage rendering \"Completion (with Chazara)\" in English and \"השלמה (עם חזרה)\" in Hebrew with geresh-marked stage numerals (חזרה א׳) — could not be exercised because no multi-stage track is present in this account. Recommend seeding a multi-stage track to fully verify the chazara term rendering across nusach/script."
+    },
+    {
+      "screen": "progress",
+      "title": "Track-created toast leaks English translation 'Genesis' instead of transliteration/Hebrew sefer name",
+      "sense": "domain-oracle",
+      "severity": "P1",
+      "permutation": "child mode, Hebrew-Terms ON, creating a Chumash > Bereishis track",
+      "evidence": "/tmp/child_trackdone.png — snackbar reads: Track \"Genesis\" created. The track card correctly shows חומש, but the confirmation toast used the raw English Bible translation 'Genesis'.",
+      "detail": "Oracle: a rendered literal 'Genesis'/'Exodus'/'Psalms' in any mode is WRONG for a Chumash sefer — it must be the transliterated Hebrew name (ashkenazi 'Bereishis' / sephardi 'Bereshit') or, in Hebrew-script mode, 'בראשית'. Here the active profile is Hebrew-Terms-ON so the expected name is בראשית; instead the snackbar surfaced the un-transliterated English translation. The sefer-name transliteration/Hebrew override was missed on the toast code path (the curriculum picker and tree render it correctly, so this is a path-specific leak)."
+    },
+    {
+      "screen": "progress",
+      "title": "Same masechta rendered with two different nuschaos in the app (Berakhot vs Berakhos)",
+      "sense": "domain-oracle",
+      "severity": "P1",
+      "permutation": "en / ashkenazi (Hebrew-Terms OFF) — Dashboard/Learn daily-task tile vs expanded breadcrumb",
+      "evidence": "/tmp/back1.png shows the compact daily-task tile as 'Berakhot 2a' (sephardi/raw spelling); /tmp/learn2.png shows the SAME task expanded as 'Berakhos › Daf 2 › Amud a' (ashkenazi). Settings confirm Pronunciation=Ashkenazi (/tmp/settings_lang.png).",
+      "detail": "With nusach=ashkenazi and Hebrew-Terms OFF the masechta must transliterate to 'Berakhos' (per LevelLabels / name-transliteration map: Berakhos/Berakhot differ by nusach). The compact daily-task label path leaked the raw/sephardi 'Berakhot' while the breadcrumb path and the Progress > Lifetime Knowledge tree (/tmp/life_tree2.png) correctly render 'Berakhos'. Same data, two different transliterations depending on render path = an oracle correctness bug. (Surfaces on Dashboard/Learn; the masechta feeds the Progress breakdown so it is in-scope context — Progress itself renders it correctly.)"
+    },
+    {
+      "screen": "progress",
+      "title": "Plural not handled for count = 1: '1 Items learned' (should be '1 Item learned')",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "en / adult / after a single completion — Lifetime Knowledge header (also under large text)",
+      "evidence": "/tmp/life_after.png and /tmp/life_largetext.png — header reads '1 Items learned' with the plural noun while the count is 1.",
+      "detail": "English plural/singular agreement is not applied to the items-learned summary count. With exactly one item it reads '1 Items learned'. Minor but visible polish bug on a primary Progress sub-screen header. (In Hebrew-terms mode the phrasing is 'פריטים נלמדו 1' which has no English plural issue, so this is en-chrome specific.)"
+    },
+    {
+      "screen": "progress",
+      "title": "Mixed Latin/Hebrew on Progress hub & Lifetime cards when Hebrew-Terms ON under an English UI locale",
+      "sense": "logic",
+      "severity": "P2",
+      "permutation": "Hebrew-Terms ON, device locale en — Progress hub + Lifetime Knowledge",
+      "evidence": "/tmp/prog_he_hub.png (🏆 counter label 'סיומים' Hebrew but lens tile 'Siyumim & Milestones' + 'Streak'/'Lifetime' English on the same screen); /tmp/life_he.png ('תלמוד בבלי' Hebrew name directly above '1 of 5349' English chrome); /tmp/life_he_tree4.png ('Live' Latin provenance label inline with 'עמוד א').",
+      "detail": "The Hebrew-Terms toggle swaps only domain terms (siyumim, curriculum names, chazara) to Hebrew script, while UI chrome ('Streak','Lifetime','Recent Activity','X of Y','Live') follows the device locale (en). This is the documented chrome-vs-term split so it is not strictly an oracle violation, but it produces jarring within-screen mixed-script strings on the lifetime cards and the same concept shown twice in two scripts ('סיומים' counter vs 'Siyumim & Milestones' tile). Worth a product decision; flagged because the oracle warns HE-script content should not carry Latin literals and a reviewer cannot tell intentional-chrome from a leak by eye."
+    },
+    {
+      "screen": "progress",
+      "title": "No in-app UI-language (he/en) switcher is wired; locale override via shared_prefs has no effect",
+      "sense": "exploration",
+      "severity": "P2",
+      "permutation": "attempting the en<->he UI-LOCALE permutation lever",
+      "evidence": "grep shows LanguageNotifier/setLanguage/supportedLanguages defined only in learning_tracker/lib/core/preferences/language_provider.dart and referenced by NO UI (no picker). Writing flutter.app_locale_p1=he and relaunching left the UI in English (/tmp/he_home.png: 'Good evening','DASHBOARD','Streak' all still English).",
+      "detail": "The app UI locale resolves from the device locale (WidgetsBinding.window.locale via localeResolutionCallback) and the only exposed 'English/Hebrew' control is Calendar Preference (dates only), not UI language. There is no reachable control to switch the Progress screen UI to a Hebrew locale, and the per-profile app_locale pref did not switch it. Consequence: the he UI-LOCALE permutation could not be exercised here (Hebrew-SCRIPT via the Hebrew-Terms toggle WAS exercised and is correct). This is a coverage gap / possibly an unwired feature rather than a visual defect on Progress."
+    },
+    {
+      "screen": "progress",
+      "title": "Wizard unit pluralization: '11 Masechta' / '50 פרק' / '40 פרק' (singular unit with plural count)",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "track-creation wizard reachable from Progress>per-track and Settings; en (Seder picker) and he (Chumash sefer picker)",
+      "evidence": "/tmp/wiz3.png 'Seder Moed — 11 Masechta'; /tmp/child_chumash.png 'בראשית — 50 פרק', 'שמות — 40 פרק'. Counts > 1 keep the singular unit word.",
+      "detail": "The count subtitle uses the singular unit noun regardless of count: '11 Masechta' should be the plural 'Masechtos' (ashkenazi) and '50 פרק' should be 'פרקים'. The oracle defines distinct plural unit words (Masechta/Masechtos, פרק/פרקים) so this is an incorrect-form (not just cosmetic) issue. Appears in the wizard which is reachable from the Progress per-track tile and Manage Tracks; Progress's own tree uses the correct prefixed singular ('Daf 2','דף ב') so the tree is fine."
+    }
+  ]
+}
