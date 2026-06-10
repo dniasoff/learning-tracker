@@ -859,7 +859,14 @@ class SignInController extends Notifier<SignInState> {
 
       final googleUser = _ref.read(authRepositoryProvider).currentUser;
       if (googleUser == null) {
-        state = const SignInIdle();
+        // DG-GAUTH-01: signInWithGoogle() returned without throwing (no
+        // user-cancel / interrupt) but left currentUser null — a silent JWT
+        // exchange failure or GMS returning without a live Firebase session.
+        // Previously we returned SignInIdle with zero feedback; show an error
+        // so the user knows to retry rather than staring at a blank screen.
+        final msg = l10n.authGoogleSignInFailed;
+        _showError?.call(msg);
+        state = SignInError(msg);
         return;
       }
 

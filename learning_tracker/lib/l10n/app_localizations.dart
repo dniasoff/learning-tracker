@@ -7138,6 +7138,42 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Your {currentStreak}-day streak is at risk!'**
   String notificationStreakBody(int currentStreak);
+
+  /// No description provided for @onboardingIntentHeading.
+  ///
+  /// In en, this message translates to:
+  /// **'What brings you here?'**
+  String get onboardingIntentHeading;
+
+  /// No description provided for @onboardingIntentSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose how you want to get started.'**
+  String get onboardingIntentSubtitle;
+
+  /// No description provided for @onboardingIntentTrackTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Track my own learning'**
+  String get onboardingIntentTrackTitle;
+
+  /// No description provided for @onboardingIntentTrackSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Set up a curriculum, goals, and daily schedule.'**
+  String get onboardingIntentTrackSubtitle;
+
+  /// No description provided for @onboardingIntentSkipTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Skip for now'**
+  String get onboardingIntentSkipTitle;
+
+  /// No description provided for @onboardingIntentSkipSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Go to the app and decide later. You can set up a track or accept an invite any time.'**
+  String get onboardingIntentSkipSubtitle;
 }
 
 class _AppLocalizationsDelegate

@@ -4061,4 +4061,24 @@ class AppLocalizationsHe extends AppLocalizations {
   String notificationStreakBody(int currentStreak) {
     return 'רצף $currentStreak הימים שלכם בסכנה!';
   }
+
+  @override
+  String get onboardingIntentHeading => 'מה הביא אותך לכאן?';
+
+  @override
+  String get onboardingIntentSubtitle => 'בחר איך תרצה להתחיל.';
+
+  @override
+  String get onboardingIntentTrackTitle => 'לעקוב אחרי הלמידה שלי';
+
+  @override
+  String get onboardingIntentTrackSubtitle =>
+      'הגדר תכנית לימוד, מטרות ולוח זמנים יומי.';
+
+  @override
+  String get onboardingIntentSkipTitle => 'דלג בינתיים';
+
+  @override
+  String get onboardingIntentSkipSubtitle =>
+      'כנס לאפליקציה והחלט מאוחר יותר. תוכל להגדיר מסלול או לקבל הזמנה בכל עת.';
 }

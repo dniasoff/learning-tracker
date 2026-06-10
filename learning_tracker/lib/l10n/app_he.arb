@@ -2258,5 +2258,12 @@
     "placeholders": {
       "currentStreak": { "type": "int" }
     }
-  }
+  },
+
+  "onboardingIntentHeading": "מה הביא אותך לכאן?",
+  "onboardingIntentSubtitle": "בחר איך תרצה להתחיל.",
+  "onboardingIntentTrackTitle": "לעקוב אחרי הלמידה שלי",
+  "onboardingIntentTrackSubtitle": "הגדר תכנית לימוד, מטרות ולוח זמנים יומי.",
+  "onboardingIntentSkipTitle": "דלג בינתיים",
+  "onboardingIntentSkipSubtitle": "כנס לאפליקציה והחלט מאוחר יותר. תוכל להגדיר מסלול או לקבל הזמנה בכל עת."
 }

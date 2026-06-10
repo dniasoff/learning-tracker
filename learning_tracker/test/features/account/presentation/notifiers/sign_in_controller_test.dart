@@ -272,6 +272,55 @@ void main() {
       },
     );
 
+    // DG-GAUTH-01: signInWithGoogle() returns without exception but
+    // currentUser is null (GMS "Account reauth failed" / silent JWT failure).
+    // Previously the controller silently returned SignInIdle with zero user
+    // feedback — the spinner vanished and the user was left with no explanation.
+    // The fix must emit SignInError and invoke _showError so the user sees
+    // "Google Sign-In failed. Please try again."
+    test(
+      'transitions to SignInError when signInWithGoogle() succeeds but '
+      'currentUser is null — DG-GAUTH-01 silent-failure regression',
+      () async {
+        final mockAuth = _MockAuthRepository();
+        // signInWithGoogle() completes without throwing (no user-cancel).
+        when(() => mockAuth.signInWithGoogle()).thenAnswer((_) async {});
+        // currentUser is null immediately after — simulates a silent JWT
+        // exchange failure or GMS returning without a live Firebase session.
+        when(() => mockAuth.currentUser).thenReturn(null);
+
+        final container = _makeContainer(authRepo: mockAuth);
+        addTearDown(container.dispose);
+
+        String? capturedError;
+        final controller = container.read(signInControllerProvider.notifier);
+        controller.setCallbacks(
+          showVerificationDialog: (_, __) async => false,
+          showError: (msg) => capturedError = msg,
+        );
+
+        final l10n = await _stubL10n();
+        await controller.signInWithGoogle(router: _StubRouter(), l10n: l10n);
+
+        final state = container.read(signInControllerProvider);
+        // Must NOT be idle — silent failure with no feedback is the bug.
+        expect(
+          state,
+          isA<SignInError>(),
+          reason:
+              'null currentUser after Google sign-in must yield '
+              'SignInError, not silent SignInIdle',
+        );
+        expect((state as SignInError).message, l10n.authGoogleSignInFailed);
+        // _showError must be called so the user actually sees the message.
+        expect(
+          capturedError,
+          l10n.authGoogleSignInFailed,
+          reason: '_showError must be invoked for DG-GAUTH-01 silent path',
+        );
+      },
+    );
+
     test(
       'transitions to SignInError for non-cancel GoogleSignInException',
       () async {

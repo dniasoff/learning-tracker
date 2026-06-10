@@ -4102,4 +4102,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String notificationStreakBody(int currentStreak) {
     return 'Your $currentStreak-day streak is at risk!';
   }
+
+  @override
+  String get onboardingIntentHeading => 'What brings you here?';
+
+  @override
+  String get onboardingIntentSubtitle => 'Choose how you want to get started.';
+
+  @override
+  String get onboardingIntentTrackTitle => 'Track my own learning';
+
+  @override
+  String get onboardingIntentTrackSubtitle =>
+      'Set up a curriculum, goals, and daily schedule.';
+
+  @override
+  String get onboardingIntentSkipTitle => 'Skip for now';
+
+  @override
+  String get onboardingIntentSkipSubtitle =>
+      'Go to the app and decide later. You can set up a track or accept an invite any time.';
 }
