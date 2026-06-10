@@ -79,12 +79,24 @@ Future<int?> autoSelectedProfileId(Ref ref) async {
   final authState = ref.watch(authStateProvider);
   if (!authState.isSignedIn) return null;
 
-  // Already selected (e.g. by the sign-in flow or the picker) — leave it.
-  final current = ref.read(selectedProfileIdProvider);
-  if (current != null) return current;
-
   final repo = ref.read(profileRepositoryProvider);
   final accountId = ref.read(currentAccountIdProvider);
+
+  // FK-CONSTRAINT-ONBOARDING-01: if a profileId is already selected (e.g.
+  // by the sign-in flow or the picker), verify it still exists in the
+  // CURRENT account's DB before early-returning. On an account switch the
+  // stale id from the previous account can survive in memory even after
+  // clear() is called (race or missed call path). Returning a stale id that
+  // has no row in this account's learner_profiles table causes
+  // SqliteException(787): FOREIGN KEY constraint failed on any
+  // profile_id-scoped INSERT (e.g. track creation → stage_definitions).
+  final current = ref.read(selectedProfileIdProvider);
+  if (current != null) {
+    final existingProfile = await repo.getProfileById(current);
+    if (existingProfile != null) return current;
+    // Stale id — clear it and fall through to the auto-select/self-heal path.
+    ref.read(selectedProfileIdProvider.notifier).clear();
+  }
   final profiles = await repo.getProfilesByAccount(accountId);
 
   final int id;
