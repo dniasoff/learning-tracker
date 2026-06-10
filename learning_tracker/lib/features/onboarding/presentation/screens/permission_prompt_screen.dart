@@ -7,6 +7,7 @@ import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/notifications/presentation/providers/notification_providers.dart';
 import 'package:learning_tracker/features/sacred_time/data/services/location_service.dart';
 import 'package:learning_tracker/features/sacred_time/presentation/providers/sacred_location_provider.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Stand-alone screen that requests notification and location permissions.
 ///
@@ -97,6 +98,7 @@ class _PermissionPromptScreenState
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final variant = ref.watch(currentTransliterationVariantProvider);
     final terms = domainTermLabels(ref);
     final shabbos = terms.shabbos(variant: variant);
@@ -108,7 +110,9 @@ class _PermissionPromptScreenState
         backgroundColor: AppTheme.brandCreamCard,
         elevation: 0,
         title: Text(
-          widget.isOnboarding ? 'Almost Done!' : 'App Permissions',
+          widget.isOnboarding
+              ? l10n.permissionPromptTitleOnboarding
+              : l10n.settingsAppPermissions,
           style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 20),
         ),
       ),
@@ -120,11 +124,8 @@ class _PermissionPromptScreenState
             children: [
               Text(
                 widget.isOnboarding
-                    ? 'Allow these optional permissions so Learning Tracker '
-                          'can remind you to learn and compute $shabbos times '
-                          'for your location.'
-                    : 'Manage optional permissions for reminders and '
-                          '$shabbos-time calculations.',
+                    ? l10n.permissionPromptBodyOnboarding(shabbos)
+                    : l10n.permissionPromptBodySettings(shabbos),
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: theme.colorScheme.onSurfaceVariant,
                   height: 1.45,
@@ -135,9 +136,8 @@ class _PermissionPromptScreenState
                 icon: Icons.notifications_active_outlined,
                 iconColor: const Color(0xFF2A4BB3),
                 iconBackground: const Color(0xFFE8EBFF),
-                title: 'Notifications',
-                subtitle:
-                    'Daily learning reminders and streak-protection alerts.',
+                title: l10n.notifications,
+                subtitle: l10n.permissionPromptNotifSubtitle,
                 status: _notifStatus,
                 onTap: _notifDone ? null : _requestNotifications,
               ),
@@ -146,10 +146,11 @@ class _PermissionPromptScreenState
                 icon: Icons.location_on_outlined,
                 iconColor: const Color(0xFF1E7B5A),
                 iconBackground: const Color(0xFFDDF3EB),
-                title: 'Location',
-                subtitle:
-                    'Accurate $shabbos candle-lighting and $havdalah times '
-                    'based on your city.',
+                title: l10n.permissionPromptLocationTitle,
+                subtitle: l10n.permissionPromptLocationSubtitle(
+                  shabbos,
+                  havdalah,
+                ),
                 status: _locationStatus,
                 onTap: _locationDone ? null : _requestLocation,
               ),
@@ -164,7 +165,9 @@ class _PermissionPromptScreenState
                 ),
                 onPressed: _finish,
                 child: Text(
-                  widget.isOnboarding ? 'Start Learning' : 'Done',
+                  widget.isOnboarding
+                      ? l10n.startLearning
+                      : l10n.permissionPromptCtaDone,
                   style: theme.textTheme.titleMedium?.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.w800,
@@ -179,7 +182,7 @@ class _PermissionPromptScreenState
                 TextButton(
                   onPressed: _finish,
                   child: Text(
-                    'Skip for now',
+                    l10n.actionSkipForNow,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
@@ -284,6 +287,7 @@ class _PermissionStatusWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return switch (status) {
       _PermissionStatus.idle => FilledButton(
         onPressed: onTap,
@@ -292,9 +296,9 @@ class _PermissionStatusWidget extends StatelessWidget {
           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
           shape: const StadiumBorder(),
         ),
-        child: const Text(
-          'Allow',
-          style: TextStyle(
+        child: Text(
+          l10n.permissionPromptAllowButton,
+          style: const TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w700,
             fontSize: 13,

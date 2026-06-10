@@ -2400,5 +2400,48 @@
   "onboardingIntentTrackTitle": "Track my own learning",
   "onboardingIntentTrackSubtitle": "Set up a curriculum, goals, and daily schedule.",
   "onboardingIntentSkipTitle": "Skip for now",
-  "onboardingIntentSkipSubtitle": "Go to the app and decide later. You can set up a track or accept an invite any time."
+  "onboardingIntentSkipSubtitle": "Go to the app and decide later. You can set up a track or accept an invite any time.",
+
+  "permissionPromptTitleOnboarding": "Almost Done!",
+  "@permissionPromptTitleOnboarding": {
+    "description": "AppBar title for PermissionPromptScreen when launched from the onboarding flow."
+  },
+  "permissionPromptBodyOnboarding": "Allow these optional permissions so Learning Tracker can remind you to learn and compute {shabbos} times for your location.",
+  "@permissionPromptBodyOnboarding": {
+    "description": "Body text on PermissionPromptScreen in onboarding mode. {shabbos} is the nusach-aware Shabbos/Shabbat/שבת term.",
+    "placeholders": {
+      "shabbos": { "type": "String" }
+    }
+  },
+  "permissionPromptBodySettings": "Manage optional permissions for reminders and {shabbos}-time calculations.",
+  "@permissionPromptBodySettings": {
+    "description": "Body text on PermissionPromptScreen when opened from Settings. {shabbos} is the nusach-aware Shabbos/Shabbat/שבת term.",
+    "placeholders": {
+      "shabbos": { "type": "String" }
+    }
+  },
+  "permissionPromptNotifSubtitle": "Daily learning reminders and streak-protection alerts.",
+  "@permissionPromptNotifSubtitle": {
+    "description": "Subtitle text on the Notifications permission card in PermissionPromptScreen."
+  },
+  "permissionPromptLocationTitle": "Location",
+  "@permissionPromptLocationTitle": {
+    "description": "Title on the Location permission card in PermissionPromptScreen."
+  },
+  "permissionPromptLocationSubtitle": "Accurate {shabbos} candle-lighting and {havdalah} times based on your city.",
+  "@permissionPromptLocationSubtitle": {
+    "description": "Subtitle on the Location permission card. {shabbos} is the nusach-aware Shabbos term; {havdalah} is the nusach-aware Havdalah term.",
+    "placeholders": {
+      "shabbos": { "type": "String" },
+      "havdalah": { "type": "String" }
+    }
+  },
+  "permissionPromptCtaDone": "Done",
+  "@permissionPromptCtaDone": {
+    "description": "Primary CTA label on PermissionPromptScreen when opened from Settings (isOnboarding=false)."
+  },
+  "permissionPromptAllowButton": "Allow",
+  "@permissionPromptAllowButton": {
+    "description": "Label on the Allow button inside each permission card on PermissionPromptScreen."
+  }
 }

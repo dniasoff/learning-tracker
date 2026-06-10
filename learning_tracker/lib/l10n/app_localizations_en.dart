@@ -4224,4 +4224,35 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get onboardingIntentSkipSubtitle =>
       'Go to the app and decide later. You can set up a track or accept an invite any time.';
+
+  @override
+  String get permissionPromptTitleOnboarding => 'Almost Done!';
+
+  @override
+  String permissionPromptBodyOnboarding(String shabbos) {
+    return 'Allow these optional permissions so Learning Tracker can remind you to learn and compute $shabbos times for your location.';
+  }
+
+  @override
+  String permissionPromptBodySettings(String shabbos) {
+    return 'Manage optional permissions for reminders and $shabbos-time calculations.';
+  }
+
+  @override
+  String get permissionPromptNotifSubtitle =>
+      'Daily learning reminders and streak-protection alerts.';
+
+  @override
+  String get permissionPromptLocationTitle => 'Location';
+
+  @override
+  String permissionPromptLocationSubtitle(String shabbos, String havdalah) {
+    return 'Accurate $shabbos candle-lighting and $havdalah times based on your city.';
+  }
+
+  @override
+  String get permissionPromptCtaDone => 'Done';
+
+  @override
+  String get permissionPromptAllowButton => 'Allow';
 }

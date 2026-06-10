@@ -7342,6 +7342,54 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Go to the app and decide later. You can set up a track or accept an invite any time.'**
   String get onboardingIntentSkipSubtitle;
+
+  /// AppBar title for PermissionPromptScreen when launched from the onboarding flow.
+  ///
+  /// In en, this message translates to:
+  /// **'Almost Done!'**
+  String get permissionPromptTitleOnboarding;
+
+  /// Body text on PermissionPromptScreen in onboarding mode. {shabbos} is the nusach-aware Shabbos/Shabbat/שבת term.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow these optional permissions so Learning Tracker can remind you to learn and compute {shabbos} times for your location.'**
+  String permissionPromptBodyOnboarding(String shabbos);
+
+  /// Body text on PermissionPromptScreen when opened from Settings. {shabbos} is the nusach-aware Shabbos/Shabbat/שבת term.
+  ///
+  /// In en, this message translates to:
+  /// **'Manage optional permissions for reminders and {shabbos}-time calculations.'**
+  String permissionPromptBodySettings(String shabbos);
+
+  /// Subtitle text on the Notifications permission card in PermissionPromptScreen.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily learning reminders and streak-protection alerts.'**
+  String get permissionPromptNotifSubtitle;
+
+  /// Title on the Location permission card in PermissionPromptScreen.
+  ///
+  /// In en, this message translates to:
+  /// **'Location'**
+  String get permissionPromptLocationTitle;
+
+  /// Subtitle on the Location permission card. {shabbos} is the nusach-aware Shabbos term; {havdalah} is the nusach-aware Havdalah term.
+  ///
+  /// In en, this message translates to:
+  /// **'Accurate {shabbos} candle-lighting and {havdalah} times based on your city.'**
+  String permissionPromptLocationSubtitle(String shabbos, String havdalah);
+
+  /// Primary CTA label on PermissionPromptScreen when opened from Settings (isOnboarding=false).
+  ///
+  /// In en, this message translates to:
+  /// **'Done'**
+  String get permissionPromptCtaDone;
+
+  /// Label on the Allow button inside each permission card on PermissionPromptScreen.
+  ///
+  /// In en, this message translates to:
+  /// **'Allow'**
+  String get permissionPromptAllowButton;
 }
 
 class _AppLocalizationsDelegate
