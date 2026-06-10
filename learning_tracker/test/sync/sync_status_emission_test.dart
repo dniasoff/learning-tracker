@@ -496,5 +496,100 @@ void main() {
 
       await expectLater(orchestrator.recordDrainAttempt(), completes);
     });
+
+    test('SYNC-OFFLINE-SYNCING-01 (loop-iter6): going offline DURING an active '
+        'pull immediately shows offline — NOT perpetual "Syncing"', () async {
+      // Regression test for P0 bug identified in iter5.
+      //
+      // Scenario:
+      //   1. Pull starts  → status = SyncStatus.syncing (badge: "Syncing…")
+      //   2. Device goes offline mid-pull (connectivity stream emits false)
+      //   3. User records completions  → write-tee → _drainOutbox →
+      //      _recomputeOutboxStatus()
+      //   4. BUG: SyncStatusSyncing guard returns early → badge stays "Syncing…"
+      //   5. FIX: offline state must override syncing immediately; only the
+      //      online-derived states (pending/degraded/synced) are blocked during
+      //      an active pull.
+      //
+      // The orchestrator emits `syncing` BEFORE the first awaited gateway
+      // operation, so we observe the syncing state by:
+      //   a) Not awaiting pullOnLaunch (fire-and-forget with catchError)
+      //   b) Yielding one microtask tick — syncing is emitted synchronously
+      //      before the first `await` inside pullOnLaunch.
+      //   c) Going offline during that window.
+      //
+      // The pull eventually fails or times out, but we assert the badge
+      // transitions to `offline` before that happens (on the connectivity
+      // change + recordDrainAttempt calls below).
+      final connController = StreamController<bool>();
+      addTearDown(connController.close);
+
+      // We need the pull to be in flight (not yet resolved) when we flip
+      // connectivity. Use a MergeRouter with no mergers so PullPipeline will
+      // call gateway.fetchPage — which on _EmptyGateway raises
+      // NoSuchMethodError. That fires ASYNCHRONOUSLY (after the first
+      // await in pullOnLaunch). We collect emissions BEFORE that throw and
+      // assert the offline transition wins.
+      final mergeRouter = MergeRouter(mergers: const <String, EntityMerger>{});
+      final orchestrator = SyncOrchestratorImpl(
+        resolveMergeRouter: () => mergeRouter,
+        resolveGateway: () => _EmptyGateway(),
+        resolveProfileId: () => 1,
+        resolvePushAllLocalData: () async {},
+        connectivityStream: connController.stream,
+        resolveOutboxDao: () => db.outboxDao,
+      );
+      addTearDown(orchestrator.dispose);
+      orchestrator.start();
+
+      // Seed as online so _lastConnectivity is set before pull starts.
+      connController.add(true);
+      await Future<void>.delayed(Duration.zero);
+
+      // Collect all emitted statuses.
+      final emissions = <SyncStatus>[];
+      final sub = orchestrator.statusStream.listen(emissions.add);
+      addTearDown(sub.cancel);
+
+      // Start the pull but do NOT await — we want to observe mid-flight.
+      // The orchestrator emits SyncStatus.syncing() synchronously before
+      // the first `await` inside pullOnLaunch.
+      unawaited(
+        orchestrator.pullOnLaunch().catchError((Object _) {
+          /* pull will fail on empty gateway — expected */
+        }),
+      );
+
+      // One microtask tick: syncing is emitted, pull is at its first await.
+      await Future<void>.delayed(Duration.zero);
+
+      // Confirm we captured the syncing emission and status is syncing.
+      expect(
+        emissions,
+        contains(isA<SyncStatusSyncing>()),
+        reason: 'pull must emit syncing before any awaited operation',
+      );
+
+      // --- HERE IS THE BUG SCENARIO ---
+      // Device goes offline while the pull is still awaiting Firestore.
+      connController.add(false);
+      await Future<void>.delayed(Duration.zero);
+
+      // Enqueue a completion (user records learning while offline).
+      await _enqueue(db);
+
+      // Write-tee drain: would call _recomputeOutboxStatus().
+      await orchestrator.recordDrainAttempt();
+      await Future<void>.delayed(Duration.zero);
+
+      // The badge MUST now reflect offline — NOT the stale "Syncing" spinner.
+      expect(
+        emissions.whereType<SyncStatusOffline>(),
+        isNotEmpty,
+        reason:
+            'going offline during a pull must transition the badge to offline; '
+            'the stuck "Syncing…" badge is the P0 bug (SYNC-OFFLINE-SYNCING-01)',
+      );
+    });
   });
 }

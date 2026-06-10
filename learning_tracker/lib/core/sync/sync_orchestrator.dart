@@ -1125,9 +1125,17 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
       },
     );
 
-    // Don't overwrite a fresh `syncing` (active pull in progress) — the
-    // pull's own _safeEmitStatus(syncing→synced) chain owns that window.
-    if (_currentStatus is SyncStatusSyncing) return;
+    // Don't overwrite a fresh `syncing` (active pull in progress) with an
+    // online-derived state — the pull's own _safeEmitStatus(syncing→synced)
+    // chain owns that window.
+    //
+    // EXCEPTION: if the device is offline, the `offline` state must win
+    // immediately even while a pull is in flight. Without this exception
+    // the badge stays stuck on "Syncing…" for the full pull-timeout window
+    // (up to 30 s × steps) after the user goes offline and records
+    // completions — the write-tee and connectivity-change recomputes both
+    // hit this guard and silently return. (SYNC-OFFLINE-SYNCING-01)
+    if (_currentStatus is SyncStatusSyncing && isOnline) return;
 
     // Don't overwrite a pull error — the error card in Backup & Sync shows
     // an actionable "tap to retry" affordance that the user needs to recover.
