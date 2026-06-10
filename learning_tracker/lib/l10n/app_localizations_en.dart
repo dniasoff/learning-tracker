@@ -2109,6 +2109,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String sendLogsSuccess(int count) {
+    return 'Logs sent ($count entries). View in Firebase console → diagnostic_logs.';
+  }
+
+  @override
   String get errorNoEmailApp => 'No email app found. Copy address instead?';
 
   @override
@@ -2619,6 +2624,19 @@ class AppLocalizationsEn extends AppLocalizations {
   String get deleteAccountHint => 'DELETE';
 
   @override
+  String get deleteAccountWarningBody =>
+      'This action is permanent and cannot be undone. All your data will be deleted.';
+
+  @override
+  String get deleteAccountReauthPassword =>
+      'You will be asked to re-enter your password to confirm your identity.';
+
+  @override
+  String deleteAccountReauthProvider(String provider) {
+    return 'You will be asked to sign in with $provider to confirm your identity.';
+  }
+
+  @override
   String backupLastSynced(String timeAgo) {
     return 'Last synced $timeAgo';
   }
@@ -2706,6 +2724,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get signOutLabel => 'Sign Out';
+
+  @override
+  String get signOutConfirmTitle => 'Sign Out';
+
+  @override
+  String get signOutConfirmBody =>
+      'Are you sure you want to sign out? Your data will be preserved for when you sign back in.';
 
   @override
   String get connectionLostTitle => 'Connection lost';

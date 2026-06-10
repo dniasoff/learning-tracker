@@ -1007,6 +1007,12 @@
       "error": { "type": "String" }
     }
   },
+  "sendLogsSuccess": "Logs sent ({count} entries). View in Firebase console → diagnostic_logs.",
+  "@sendLogsSuccess": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
   "errorNoEmailApp": "No email app found. Copy address instead?",
   "errorMarkCompleteFailed": "Failed to mark complete: {error}",
   "@errorMarkCompleteFailed": {
@@ -1302,6 +1308,14 @@
   "deleteAccountDialogTitle": "Delete Account",
   "deleteAccountTypeConfirm": "Type DELETE to confirm:",
   "deleteAccountHint": "DELETE",
+  "deleteAccountWarningBody": "This action is permanent and cannot be undone. All your data will be deleted.",
+  "deleteAccountReauthPassword": "You will be asked to re-enter your password to confirm your identity.",
+  "deleteAccountReauthProvider": "You will be asked to sign in with {provider} to confirm your identity.",
+  "@deleteAccountReauthProvider": {
+    "placeholders": {
+      "provider": { "type": "String" }
+    }
+  },
 
   "backupLastSynced": "Last synced {timeAgo}",
   "@backupLastSynced": {
@@ -1358,6 +1372,8 @@
 
   "accountDeletedTitle": "Account deleted",
   "signOutLabel": "Sign Out",
+  "signOutConfirmTitle": "Sign Out",
+  "signOutConfirmBody": "Are you sure you want to sign out? Your data will be preserved for when you sign back in.",
 
   "connectionLostTitle": "Connection lost",
   "tryAgainButton": "Try Again",
