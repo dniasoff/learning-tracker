@@ -198,5 +198,39 @@ void main() {
       // Default display name was derived from the signed-in account.
       expect(result.repo.lastEnsureName, 'Test');
     });
+
+    test(
+      'FK-CONSTRAINT-ONBOARDING-01: stale selected id that does not exist in '
+      'the current account DB is cleared and a valid profile is (re-)selected',
+      () async {
+        // Simulate switching from Account A (had profile id=42) to Account B
+        // (a fresh account whose DB only has profile id=99).
+        // The in-memory selectedProfileId still holds 42 from Account A's
+        // session (the clear() that should have been called was either not
+        // reached or arrived after autoSelected ran). If the provider
+        // early-returns 42 without checking existence, any write scoped to
+        // profile_id=42 in Account B's DB will fail with
+        // SqliteException(787): FOREIGN KEY constraint failed.
+        final result = _container(
+          authState: _signedIn,
+          profiles: [_profile(id: 99)], // Account B has only profile 99
+        );
+        final container = result.container;
+
+        // Pre-condition: stale id 42 is held from a previous account session.
+        container.read(selectedProfileIdProvider.notifier).select(42);
+        expect(container.read(selectedProfileIdProvider), 42);
+
+        final selected = await container.read(
+          autoSelectedProfileIdProvider.future,
+        );
+
+        // After self-healing, the stale id must NOT be returned.
+        expect(selected, isNot(42));
+        // A valid profile that actually exists must be selected.
+        expect(selected, 99);
+        expect(container.read(selectedProfileIdProvider), 99);
+      },
+    );
   });
 }
