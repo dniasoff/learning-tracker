@@ -54,12 +54,16 @@ NotificationGateway notificationService(Ref ref) {
 class ReminderEnabled extends _$ReminderEnabled {
   @override
   bool build() {
-    _loadFromPrefs();
-    return true; // default enabled
+    // Watch so that when the profile resolves (e.g. 0 → real id on cold start)
+    // or switches, build() is re-invoked and _loadFromPrefs runs under the
+    // correct profile id. Fixes the cold-start race where ref.read returned 0
+    // before the real profile id was available (iter10/iter11).
+    final profileId = ref.watch(activeProfileIdProvider);
+    _loadFromPrefs(profileId);
+    return true; // synchronous default; overwritten once prefs load completes
   }
 
-  Future<void> _loadFromPrefs() async {
-    final profileId = ref.read(activeProfileIdProvider);
+  Future<void> _loadFromPrefs(int profileId) async {
     final prefs = await SharedPreferences.getInstance();
     if (!ref.mounted) return;
     state =
@@ -133,12 +137,14 @@ class ReminderTime extends _$ReminderTime {
 class StreakAlertEnabled extends _$StreakAlertEnabled {
   @override
   bool build() {
-    _loadFromPrefs();
-    return true; // default enabled
+    // Watch so that a cold-start profile-id change (0 → real id) or a profile
+    // switch triggers a rebuild and re-reads prefs under the correct id.
+    final profileId = ref.watch(activeProfileIdProvider);
+    _loadFromPrefs(profileId);
+    return true; // synchronous default; overwritten once prefs load completes
   }
 
-  Future<void> _loadFromPrefs() async {
-    final profileId = ref.read(activeProfileIdProvider);
+  Future<void> _loadFromPrefs(int profileId) async {
     final prefs = await SharedPreferences.getInstance();
     if (!ref.mounted) return;
     state =
@@ -212,12 +218,14 @@ class StreakAlertTime extends _$StreakAlertTime {
 class RewardNotificationEnabled extends _$RewardNotificationEnabled {
   @override
   bool build() {
-    _loadFromPrefs();
-    return true; // default enabled
+    // Watch so that a cold-start profile-id change (0 → real id) or a profile
+    // switch triggers a rebuild and re-reads prefs under the correct id.
+    final profileId = ref.watch(activeProfileIdProvider);
+    _loadFromPrefs(profileId);
+    return true; // synchronous default; overwritten once prefs load completes
   }
 
-  Future<void> _loadFromPrefs() async {
-    final profileId = ref.read(activeProfileIdProvider);
+  Future<void> _loadFromPrefs(int profileId) async {
     final prefs = await SharedPreferences.getInstance();
     if (!ref.mounted) return;
     state =
