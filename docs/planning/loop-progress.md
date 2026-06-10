@@ -118,3 +118,20 @@ first try (modulo the 4 environmental goldens).
 ### Iteration 4 — PENDING
 Repair tablet (wipe-data restart → 32G partition; config already set) → re-add slice E (i18n/profiles/progress
 tablet RTL + carryover) → bring sync (App Check) online for cloud/two-device P0s → carry over slice C Area 5+12.
+
+### Iteration 4 — CRASHED mid-run (2026-06-10 ~02:30) → partial salvage
+The host computer crashed ~8h into the run, killing the workflow. 4 fixes had committed to branches before the
+crash and were SALVAGED (merged + gated + pushed to dev f1141a98):
+- A: write-tee drain didn't update sync-status badge after push failure.
+- B: stale goal display after EditTrack (provider not invalidated on route pop).
+- C: onboarding intent screen hardcoded English → localized; Google sign-in null-user showed no error.
+- D, E: never committed (crash hit first). Setup that DID survive: all 5 devices were rebuilt with Play Store +
+  32G partitions + App Check registered (cloud sync online), so cloud P0s are now testable.
+Lesson: commit-as-you-go + git branches made the crash a non-event for completed work.
+
+### Iteration 5 — IN PROGRESS (2026-06-10) — 3 devices (post-crash, user reduced fleet)
+Live fleet (port→API reshuffled again on reboot): emu-5554=API36 TABLET, emu-5556=API31, emu-5558=API29 —
+all Play Store + app + App Check registered. Prioritizing the two areas the crash left at ZERO coverage:
+- E (tablet 5554): i18n/RTL + profiles + progress + learning — Add-Profile, persistent switcher, he-RTL tablet overflow.
+- D (5556): parent-mode gamification sweep (now unblocked) — rewards/redemption/fulfil-vs-decline/achievements.
+- A (5558): REAL cloud sync — outbox drain to Firestore, push/pull, deployed-rules rejection, offline→online idempotent drain.
