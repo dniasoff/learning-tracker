@@ -732,6 +732,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get lifetimeStartAdding => 'Start Adding';
 
   @override
+  String get learnBrowseSectionTitle => 'Browse';
+
+  @override
   String get lifetimeBrowseFullLibrary => 'Browse Full Library';
 
   @override
