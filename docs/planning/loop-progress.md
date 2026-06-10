@@ -135,3 +135,30 @@ all Play Store + app + App Check registered. Prioritizing the two areas the cras
 - E (tablet 5554): i18n/RTL + profiles + progress + learning — Add-Profile, persistent switcher, he-RTL tablet overflow.
 - D (5556): parent-mode gamification sweep (now unblocked) — rewards/redemption/fulfil-vs-decline/achievements.
 - A (5558): REAL cloud sync — outbox drain to Firestore, push/pull, deployed-rules rejection, offline→online idempotent drain.
+
+### Iteration 5 — COMPLETE (2026-06-10, 3 devices) — validation-heavy, 0 commits
+- D (5556): drove the FULL parent-mode gamification flow on-device — 15 cells, ALL PASS, 0 bugs. Set PIN →
+  redeem → fulfil → decline+refund → adjust points → disable/delete rewards → streak nav. Strong validation
+  that the iter1/3 fixes hold end-to-end. Found 2 cross-slice items: wrong-password sign-in shows no error
+  (account); childRedemptionRewardsProvider one-shot (low-sev).
+- A (5558): identified offline stale-sync-badge bug but did not land the fix.
+- E (5554 tablet): FAILED on an image-processing API error (worker loaded a screenshot into context). 0 coverage.
+  → Lesson: workers must NEVER load screenshot PNGs into context; text-only assertions (uiautomator/logcat).
+
+### Iteration 6 — COMPLETE (2026-06-10, 3 devices) — pushed to dev (..24678e1c). 2 fixes.
+- C (5556): FIXED the wrong-password silent sign-in failure — setCallbacks ran in a postFrameCallback, racing
+  sign-in completion so the error was dropped; moved to synchronous initState (df797460). red→green.
+- A (5558): FIXED the offline stale-sync-badge — offline transition during an active pull stuck on "Syncing…"
+  (82eea7b3). red→green.
+- E (5554 tablet): image-safe RETRY succeeded — 13 cells ALL PASS, 0 bugs. Add-Profile works, persistent
+  switcher on all tabs, he-RTL ZERO RenderFlex overflow + all-Hebrew rendering, multi-profile, progress fresh.
+  ~2800 owned-root regression tests green. Tablet i18n/profiles/progress area CONFIRMED clean.
+- BLOCKER (A+C): interactive Google sign-in is NOT automatable on the emulator → deep cloud-sync P0s (outbox
+  drain to Firestore, two-device convergence) gated on establishing a cloud session. App Check IS registered;
+  options for iter8+: email/password signup (creates test accounts in real Firebase) OR user signs in a test
+  account manually. Awaiting user decision.
+
+### Iteration 7 — IN PROGRESS (2026-06-10, 3 devices) — non-cloud-gated coverage
+- B (5556): tracks/scheduler deep sweep (EditTrack, calendar programs, sacred-time, reorder, overdue) — overdue since iter3.
+- E (5554 tablet): learning-completion + content-browsing + onboarding remaining cells.
+- C (5558): account/nav cells not needing Google (account picker, switch/sign-out, magic-link, offline restore).
