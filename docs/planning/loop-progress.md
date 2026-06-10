@@ -162,3 +162,24 @@ all Play Store + app + App Check registered. Prioritizing the two areas the cras
 - B (5556): tracks/scheduler deep sweep (EditTrack, calendar programs, sacred-time, reorder, overdue) — overdue since iter3.
 - E (5554 tablet): learning-completion + content-browsing + onboarding remaining cells.
 - C (5558): account/nav cells not needing Google (account picker, switch/sign-out, magic-link, offline restore).
+
+### Iteration 8 — COMPLETE (2026-06-10) — pushed to dev (..67854cf4). CLOUD SYNC MILESTONE.
+Cloud unblocked via pre-created VERIFIED test accounts (Firebase Admin API: test-loop-a/c@orvex.test,
+emailVerified=true — bypasses the app's sign-in verification gate; deployed rules only need auth!=null).
+- A (5558, cloud sync): REAL Firestore sync PROVEN — outbox drains to 0 (10 rows), force-stop+relaunch pulls
+  back (no loss), offline→online drains IDEMPOTENTLY (6 rows, UNIQUE index prevents resurrection), ZERO
+  permission-denied on own data. FIXED SYNC-DRAIN-DELAY-01 (no event-driven drain when Firebase identity
+  transitions mismatched→matched on a multi-account device → completions sat ~3min unsynced). Test added in iter9.
+- C (5556, cloud account): lifecycle VALIDATED clean — email sign-in → registry row correct (tier=cloudBorn,
+  firebaseUid), sign-out clean, re-sign-in no dup, account picker + switch cloud↔local all work.
+- E (5554 tablet): onboarding — found + fixed a 0.1px RenderFlex overflow on profile-creation (narrow viewport).
+CROSS-SLICE FINDINGS (routed to iter9): FK-CONSTRAINT-ONBOARDING-01 (P0 — fresh cloud account keeps stale
+profile_id=1 → track-create FK crash); SYNC-STATUS-STALE-02 (badge stuck pending w/ empty outbox after relaunch);
+account-picker tap, settings header condition, registration hardcoded English.
+PROCESS: worktree codegen gap left A's fix unverified → iter9 PRE-RUNS build_runner in every worktree.
+KEY: these cloud seam bugs (drain latency, stale badge, FK-on-fresh-account) are exactly the P0 classes the
+596 headless tests structurally cannot see — the original thesis, now demonstrated on real Firestore.
+
+### Iteration 9 — IN PROGRESS (2026-06-10) — fixing iter8 cross-slice findings
+- E (tablet): P0 FK-onboarding self-heal (stale profile selection). A: SYNC-STATUS-STALE-02 + drain-delay test.
+  C: account-picker tap + registration i18n + settings header. Worktrees have codegen pre-run.
