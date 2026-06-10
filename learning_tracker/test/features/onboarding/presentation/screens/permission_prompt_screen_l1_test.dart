@@ -838,18 +838,148 @@ void main() {
     );
   });
 
-  // ── Hardcoded string audit ───────────────────────────────────────────────────
+  // ── Hardcoded string audit / Hebrew l10n assertion ───────────────────────────
+  //
+  // RED→GREEN: Previously the screen used hardcoded English literals; now it
+  // must render the correct l10n values for every locale.
 
-  group('PermissionPromptScreen — hardcoded string audit', () {
-    // HARDCODED: The screen uses literal English strings for all visible text
-    // (titles, subtitles, card titles, card subtitles, CTA labels, skip label,
-    // body copy) rather than l10n keys from AppLocalizations. This is a
-    // production concern but does not cause test failures; reported in bugsFound.
-    test('source file path is non-empty (audit marker)', () {
-      const src =
-          'lib/features/onboarding/presentation/screens/'
-          'permission_prompt_screen.dart';
-      expect(src, isNotEmpty);
+  group('PermissionPromptScreen — Hebrew l10n (rationale copy)', () {
+    testWidgets(
+      'he locale: AppBar shows "כמעט סיימנו!" (not "Almost Done!") in onboarding',
+      (tester) async {
+        await tester.pumpWidget(
+          _buildApp(
+            notifGateway: _defaultNotifGateway(),
+            router: _defaultRouter(),
+            locationNotifier: _locationNotifier(
+              const LocationFetchPermissionDenied(permanentlyDenied: false),
+            ),
+            isOnboarding: true,
+            locale: const Locale('he'),
+          ),
+        );
+        await _pump(tester);
+
+        expect(find.text('כמעט סיימנו!'), findsOneWidget);
+        expect(find.text('Almost Done!'), findsNothing);
+
+        await _teardown(tester);
+      },
+    );
+
+    testWidgets(
+      'he locale: notifications card title shows "התראות" (not "Notifications")',
+      (tester) async {
+        await tester.pumpWidget(
+          _buildApp(
+            notifGateway: _defaultNotifGateway(),
+            router: _defaultRouter(),
+            locationNotifier: _locationNotifier(
+              const LocationFetchPermissionDenied(permanentlyDenied: false),
+            ),
+            locale: const Locale('he'),
+          ),
+        );
+        await _pump(tester);
+
+        expect(find.text('התראות'), findsOneWidget);
+        expect(find.text('Notifications'), findsNothing);
+
+        await _teardown(tester);
+      },
+    );
+
+    testWidgets(
+      'he locale: location card title shows "מיקום" (not "Location")',
+      (tester) async {
+        await tester.pumpWidget(
+          _buildApp(
+            notifGateway: _defaultNotifGateway(),
+            router: _defaultRouter(),
+            locationNotifier: _locationNotifier(
+              const LocationFetchPermissionDenied(permanentlyDenied: false),
+            ),
+            locale: const Locale('he'),
+          ),
+        );
+        await _pump(tester);
+
+        expect(find.text('מיקום'), findsOneWidget);
+        expect(find.text('Location'), findsNothing);
+
+        await _teardown(tester);
+      },
+    );
+
+    testWidgets('he locale: Allow button shows "אפשר" (not "Allow")', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _buildApp(
+          notifGateway: _defaultNotifGateway(),
+          router: _defaultRouter(),
+          locationNotifier: _locationNotifier(
+            const LocationFetchPermissionDenied(permanentlyDenied: false),
+          ),
+          locale: const Locale('he'),
+        ),
+      );
+      await _pump(tester);
+
+      expect(find.text('אפשר'), findsNWidgets(2));
+      expect(find.text('Allow'), findsNothing);
+
+      await _teardown(tester);
     });
+
+    testWidgets(
+      'he locale: primary CTA shows "סיום" (not "Done") in settings mode',
+      (tester) async {
+        await tester.pumpWidget(
+          _buildApp(
+            notifGateway: _defaultNotifGateway(),
+            router: _defaultRouter(),
+            locationNotifier: _locationNotifier(
+              const LocationFetchPermissionDenied(permanentlyDenied: false),
+            ),
+            locale: const Locale('he'),
+          ),
+        );
+        await _pump(tester);
+
+        expect(find.text('סיום'), findsOneWidget);
+        expect(find.text('Done'), findsNothing);
+
+        await _teardown(tester);
+      },
+    );
+
+    testWidgets(
+      'he locale: notif subtitle shows Hebrew rationale (not English)',
+      (tester) async {
+        await tester.pumpWidget(
+          _buildApp(
+            notifGateway: _defaultNotifGateway(),
+            router: _defaultRouter(),
+            locationNotifier: _locationNotifier(
+              const LocationFetchPermissionDenied(permanentlyDenied: false),
+            ),
+            locale: const Locale('he'),
+          ),
+        );
+        await _pump(tester);
+
+        expect(
+          find.text('תזכורות לימוד יומיות והתראות להגנת הרצף.'),
+          findsOneWidget,
+        );
+        expect(
+          find.text('Daily learning reminders and streak-protection alerts.'),
+          findsNothing,
+        );
+
+        await _teardown(tester);
+      },
+    );
   });
 }

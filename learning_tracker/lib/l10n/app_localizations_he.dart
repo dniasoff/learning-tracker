@@ -4180,4 +4180,35 @@ class AppLocalizationsHe extends AppLocalizations {
   @override
   String get onboardingIntentSkipSubtitle =>
       'כנס לאפליקציה והחלט מאוחר יותר. תוכל להגדיר מסלול או לקבל הזמנה בכל עת.';
+
+  @override
+  String get permissionPromptTitleOnboarding => 'כמעט סיימנו!';
+
+  @override
+  String permissionPromptBodyOnboarding(String shabbos) {
+    return 'אפשרו הרשאות אלה כדי שהאפליקציה תוכל להזכיר לכם ללמוד ולחשב זמני $shabbos לפי מיקומכם.';
+  }
+
+  @override
+  String permissionPromptBodySettings(String shabbos) {
+    return 'נהלו הרשאות אופציונליות לתזכורות ולחישובי זמני $shabbos.';
+  }
+
+  @override
+  String get permissionPromptNotifSubtitle =>
+      'תזכורות לימוד יומיות והתראות להגנת הרצף.';
+
+  @override
+  String get permissionPromptLocationTitle => 'מיקום';
+
+  @override
+  String permissionPromptLocationSubtitle(String shabbos, String havdalah) {
+    return 'זמני הדלקת נרות $shabbos ו$havdalah מדויקים לפי עירכם.';
+  }
+
+  @override
+  String get permissionPromptCtaDone => 'סיום';
+
+  @override
+  String get permissionPromptAllowButton => 'אפשר';
 }
