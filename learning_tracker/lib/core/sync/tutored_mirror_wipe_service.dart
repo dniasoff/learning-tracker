@@ -22,6 +22,12 @@ import 'package:learning_tracker/core/database/daos/profile_dao.dart';
 ///
 /// Call [wipeMirrorForGrant] when a specific grant is revoked or resigned.
 /// Call [wipeAllMirrors] on tutor sign-out.
+/// Call [wipeRevokedMirrors] from the D18 reconcile path (incoming-grants CF
+/// success) with the **owning** account id resolved directly from the
+/// [accounts] table — NOT from `currentAccountIdProvider`.  This keeps the
+/// wipe independent of any active talmid session state that could cause
+/// `currentAccountIdProvider` to resolve to the mirror's `learner_profiles.id`
+/// (the talmid profile) rather than the tutor's `accounts.id`.
 ///
 /// [onWipe] is an optional callback invoked after the DB delete — use it to
 /// clear the `resolvedTutoredLocalProfileIdProvider` and call
@@ -63,6 +69,34 @@ class TutoredMirrorWipeService {
 
     for (final grantId in tutoredGrantIds) {
       _onWipe?.call(grantId);
+    }
+  }
+
+  /// D18 revoke-reconcile: wipe any mirror whose grant id is NOT in
+  /// [activeGrantIds], using the tutor's **owning** [accountId] (from
+  /// `accounts.id`, not from `currentAccountIdProvider`).
+  ///
+  /// This is the safe version for the incoming-grants CF success path:
+  /// `currentAccountIdProvider` can resolve to the talmid's local
+  /// `learner_profiles.id` during an active TUTORED session (not the tutor's
+  /// `accounts.id`), causing [getTutoredMirrorsForAccount] to return empty and
+  /// silently skip the wipe.  Callers MUST pass the account id resolved from
+  /// the [accounts] table directly — see `resolveOwnerAccountIdForWipe` in
+  /// `tutored_pull_providers.dart`.
+  ///
+  /// Idempotent — safe to call when no mirrors match.
+  Future<void> wipeRevokedMirrors({
+    required int ownerAccountId,
+    required Set<String> activeGrantIds,
+  }) async {
+    final mirrors = await _profileDao.getTutoredMirrorsForAccount(
+      ownerAccountId,
+    );
+    for (final m in mirrors) {
+      final gid = m.tutorGrantId;
+      if (gid != null && !activeGrantIds.contains(gid)) {
+        await wipeMirrorForGrant(gid);
+      }
     }
   }
 }

@@ -302,7 +302,7 @@ final class AutoSelectedProfileIdProvider
 }
 
 String _$autoSelectedProfileIdHash() =>
-    r'fc440350742743f450e4f2c74d3d82f51948e488';
+    r'15240541b7b94129e4e50b02844af6dac9751067';
 
 /// Profiles for the current account.
 
