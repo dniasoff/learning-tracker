@@ -75,6 +75,9 @@ class _SeedingSyncOrchestrator implements SyncOrchestrator {
 
   @override
   Stream<SyncStatus> get statusStream => const Stream.empty();
+
+  @override
+  Future<void> recordDrainAttempt() async {}
 }
 
 /// Helper that mirrors the routing decision in

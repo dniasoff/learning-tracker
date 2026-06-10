@@ -52,6 +52,9 @@ class _StubSyncOrchestrator implements SyncOrchestrator {
 
   @override
   Stream<SyncStatus> get statusStream => const Stream.empty();
+
+  @override
+  Future<void> recordDrainAttempt() async {}
 }
 
 void main() {

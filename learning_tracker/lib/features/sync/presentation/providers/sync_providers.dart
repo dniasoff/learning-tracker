@@ -96,9 +96,17 @@ final syncWriteFacadeProvider = Provider<SyncWriteFacade?>((ref) {
     // so writes reach Firestore in the same network round as the local
     // commit. Resolved lazily so the processor's rebuild lifetime is
     // independent of the facade.
-    onEnqueueDrain: () =>
-        ref.read(outboxProcessorProvider)?.drain(profileId) ??
-        Future<int>.value(0),
+    //
+    // After the drain, call recordDrainAttempt() on the orchestrator so the
+    // sync-status badge is updated immediately to reflect push success or
+    // failure. Without this call the badge stays at its old value (e.g. a
+    // stale "Synced") until the next periodic drain fires (~60 s later) —
+    // a false-Synced when the push failed (permission-denied or offline).
+    onEnqueueDrain: () async {
+      await (ref.read(outboxProcessorProvider)?.drain(profileId) ??
+          Future<int>.value(0));
+      await ref.read(syncOrchestratorProvider)?.recordDrainAttempt();
+    },
   );
 
   final tutoredSelection = ref.watch(activeTutoredProfileSelectionProvider);
@@ -149,9 +157,13 @@ final outboxSyncWriteFacadeProvider = Provider<OutboxSyncWriteFacade?>((ref) {
     database: database,
     profileId: profileId,
     clock: clock,
-    onEnqueueDrain: () =>
-        ref.read(outboxProcessorProvider)?.drain(profileId) ??
-        Future<int>.value(0),
+    // Same write-tee + recordDrainAttempt pattern as [syncWriteFacadeProvider]
+    // so points/redemption writes also update the badge immediately.
+    onEnqueueDrain: () async {
+      await (ref.read(outboxProcessorProvider)?.drain(profileId) ??
+          Future<int>.value(0));
+      await ref.read(syncOrchestratorProvider)?.recordDrainAttempt();
+    },
   );
   // WS9 Wave-B (C#2): register this facade as the points-sync sink so every
   // ledger insert + redemption mutation made via PointsBalanceDao is pushed

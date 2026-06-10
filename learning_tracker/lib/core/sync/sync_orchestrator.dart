@@ -96,6 +96,21 @@ abstract class SyncOrchestrator {
   /// the orchestrator's active-profile change listener would not fire. A no-op
   /// when [start] was never called.
   void restartListeners();
+
+  /// Recompute and emit the outbox-derived sync-status badge.
+  ///
+  /// Call this after every outbox drain — including the write-tee drain
+  /// triggered by [OutboxSyncWriteFacade._enqueue] — so the UI status badge
+  /// reflects push success or failure immediately rather than waiting up to
+  /// 60 s for the next periodic drain.
+  ///
+  /// A no-op when:
+  ///   * no [OutboxDao] resolver was wired (local-born / legacy tests)
+  ///   * the orchestrator is disposed
+  ///   * a pull is actively in progress ([SyncStatusSyncing])
+  ///   * a pull error is displayed ([SyncStatusError]) — the error card must
+  ///     remain visible until the user explicitly retries
+  Future<void> recordDrainAttempt();
 }
 
 // ---------------------------------------------------------------------------
@@ -980,6 +995,7 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
   /// Side effect: logs the `sync_outbox_depth` observability gauge so
   /// dashboards can graph backlog age. Safe to call after [dispose] —
   /// the status-controller closed-check guards against use-after-dispose.
+  @override
   Future<void> recordDrainAttempt() => _recomputeOutboxStatus();
 
   /// One-shot guard for [_maybeReviveIdentityDeadLetters]. Lives on the
