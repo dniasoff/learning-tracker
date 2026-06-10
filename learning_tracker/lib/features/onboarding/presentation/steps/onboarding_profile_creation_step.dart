@@ -399,11 +399,13 @@ class _OnboardingProfileCreationStepState
                         color: AppTheme.brandInk,
                       ),
                       const SizedBox(width: 8),
-                      Text(
-                        'Nikud',
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: AppTheme.brandInk,
+                      Flexible(
+                        child: Text(
+                          'Nikud',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: AppTheme.brandInk,
+                          ),
                         ),
                       ),
                     ],
@@ -425,11 +427,13 @@ class _OnboardingProfileCreationStepState
                         color: AppTheme.brandInk,
                       ),
                       const SizedBox(width: 8),
-                      Text(
-                        'Calendar',
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          fontWeight: FontWeight.w800,
-                          color: AppTheme.brandInk,
+                      Flexible(
+                        child: Text(
+                          'Calendar',
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            fontWeight: FontWeight.w800,
+                            color: AppTheme.brandInk,
+                          ),
                         ),
                       ),
                     ],
@@ -452,11 +456,13 @@ class _OnboardingProfileCreationStepState
                           color: AppTheme.brandInk,
                         ),
                         const SizedBox(width: 8),
-                        Text(
-                          'Hebrew Terms',
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            fontWeight: FontWeight.w800,
-                            color: AppTheme.brandInk,
+                        Flexible(
+                          child: Text(
+                            'Hebrew Terms',
+                            style: theme.textTheme.titleSmall?.copyWith(
+                              fontWeight: FontWeight.w800,
+                              color: AppTheme.brandInk,
+                            ),
                           ),
                         ),
                       ],
@@ -499,12 +505,16 @@ class _OnboardingProfileCreationStepState
                     )
                   : Row(
                       mainAxisAlignment: MainAxisAlignment.center,
+                      mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          'Create Profile',
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w800,
+                        Flexible(
+                          child: Text(
+                            'Create Profile',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w800,
+                            ),
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                         const SizedBox(width: 8),
