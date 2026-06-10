@@ -57,19 +57,28 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   @override
   void initState() {
     super.initState();
-    // Inject screen-level callbacks into the controller so it can trigger
-    // navigation + dialog flows without holding a BuildContext reference.
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      ref
-          .read(signInControllerProvider.notifier)
-          .setCallbacks(
-            showVerificationDialog: ref
-                .read(signInControllerProvider.notifier)
-                .buildVerificationCallback(context),
-            showError: _showError,
-          );
-    });
+    // Inject screen-level callbacks into the controller SYNCHRONOUSLY so they
+    // are always registered before any user interaction can trigger sign-in.
+    //
+    // Previously these were set inside addPostFrameCallback, which introduced
+    // a race: if signInWithEmail completed and raised an error before the
+    // postFrameCallback fired (or on a controller rebuild), _showError was
+    // null and the null-safe `?.call` silently dropped the error — the user
+    // saw the screen return to sign-in with no snackbar (SI-WP-01).
+    //
+    // Moving the registration here is safe: context is available on
+    // ConsumerStatefulWidget at initState time, and buildVerificationCallback
+    // only captures the context reference — it does not call ScaffoldMessenger
+    // or Navigator until the callback is actually invoked (async, well after
+    // the first frame).
+    ref
+        .read(signInControllerProvider.notifier)
+        .setCallbacks(
+          showVerificationDialog: ref
+              .read(signInControllerProvider.notifier)
+              .buildVerificationCallback(context),
+          showError: _showError,
+        );
   }
 
   @override
