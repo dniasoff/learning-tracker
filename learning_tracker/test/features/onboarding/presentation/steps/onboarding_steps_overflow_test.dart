@@ -12,15 +12,21 @@
 //                                         3 buttons).
 //   • OnboardingAddAnotherPromptStep    — post-track "add another?" prompt.
 //   • WizardChooseMethodStep            — "How do you review?" option cards.
+//   • OnboardingProfileCreationStep     — profile name + mode + prefs + CTA
+//                                         (regression: CTA clipped on tablet
+//                                         landscape when keyboard compresses
+//                                         the viewport height to ~640 dip).
 @Tags(['onboarding', 'overflow'])
 library;
 
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/features/onboarding/presentation/steps/onboarding_add_another_prompt_step.dart';
 import 'package:learning_tracker/features/onboarding/presentation/steps/onboarding_handoff_step.dart';
+import 'package:learning_tracker/features/onboarding/presentation/steps/onboarding_profile_creation_step.dart';
 import 'package:learning_tracker/features/onboarding/presentation/steps/onboarding_step.dart';
 import 'package:learning_tracker/features/onboarding/presentation/steps/wizard_steps.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
@@ -53,6 +59,17 @@ LearningProgramData _preset(int id) => LearningProgramData(
   apiProgramKey: null,
   isCalendarProgram: false,
 );
+
+void _noop() {}
+
+void _noopCreated({
+  required profile,
+  required isChildMode,
+  required useHebrewCalendar,
+  required useHebrewTerms,
+  required showNikud,
+  required transliterationVariant,
+}) {}
 
 void main() {
   testWidgets('OnboardingHandoffStep does not overflow across devices', (
@@ -103,6 +120,29 @@ void main() {
       ],
     );
   });
-}
 
-void _noop() {}
+  testWidgets(
+    'OnboardingProfileCreationStep does not overflow on tablet/landscape '
+    'with keyboard-compressed height',
+    (tester) async {
+      // Regression guard: on a 2560×1600 landscape tablet the soft keyboard
+      // raises the bottom inset to y=776, shrinking the scrollable viewport to
+      // ~640 dip. The "Create Profile" CTA must remain SCROLLABLE (not clipped)
+      // so the user can reach it — the SingleChildScrollView wrapper inside
+      // the step ensures this. If the step overflows instead of scrolling at
+      // this size the CTA becomes unreachable (zero-height in accessibility
+      // tree), reproducing the tablet regression reported in loop-iter8.
+      await expectNoOverflowAcrossDevices(
+        tester,
+        () => const OnboardingProfileCreationStep(onCreated: _noopCreated),
+        // Test only the keyboard-compressed tablet viewport and the classic
+        // small-phone corner; the full matrix is covered by the other guards.
+        sizes: const [
+          Size(768, 640), // landscape tablet at ~60% height (keyboard visible)
+          Size(320, 568), // small phone, the classic overflow offender
+        ],
+        textScales: const [1.0, 1.3],
+      );
+    },
+  );
+}
