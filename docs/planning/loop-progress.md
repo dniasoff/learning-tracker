@@ -183,3 +183,22 @@ KEY: these cloud seam bugs (drain latency, stale badge, FK-on-fresh-account) are
 ### Iteration 9 — IN PROGRESS (2026-06-10) — fixing iter8 cross-slice findings
 - E (tablet): P0 FK-onboarding self-heal (stale profile selection). A: SYNC-STATUS-STALE-02 + drain-delay test.
   C: account-picker tap + registration i18n + settings header. Worktrees have codegen pre-run.
+
+### Iteration 10 — COMPLETE (2026-06-10) — TUTOR FRONTIER (last zero-coverage area). 2 fixes.
+- TUTOR (two-device: parent test-loop-c on 5556, tutor test-loop-a on 5558): the cross-account flow WORKS
+  end-to-end — invite → accept → tutor sees the child's PARENT view (not child-mode), LIVE-MARK BARRED
+  (MarkLiveCompletionUseCase throws TutorWriteForbiddenException), persistent switcher shows tutored context,
+  revoke removes access. FIXED DG-TUT-STALE-01: parent's Manage Tutors stuck on stale "Pending" after the
+  tutor accepted — non-autoDispose FutureProvider.family cached it; → autoDispose (c56ca72d). red→green.
+- SETTINGS (5554 tablet): FIXED 3 i18n bugs — delete-account dialog, sign-out dialog, send-logs snackbar all
+  hardcoded English → localized (ccbb7e15). Validated: in-Israel/Hebrew-terms persistence, curriculum, account sheet.
+CROSS-SLICE FINDINGS → iter11:
+- D18 mirror-wipe skipped in tutored session: currentAccountIdProvider resolves to the talmid's id (not the
+  tutor's account) during a tutored session → the local mirror wipe targets the wrong id and no-ops (safety net:
+  next pull throws permission-denied and wipes directly). Cross-root: core/sync + profiles.
+- Notification reminderEnabled returns true with profileId=0 before activeProfileIdProvider resolves → toggle
+  shows ON after relaunch despite pref=false (lib/features/notifications/).
+- permission_prompt_screen.dart (onboarding) rationale copy hardcoded English.
+
+MILESTONE: every catalog area (sync, tracks, progress, scheduler, account, tutor, gamification, profiles,
+settings, learning, i18n, nav) now has real on-device coverage. Trend is strongly validation-heavy → convergence.
