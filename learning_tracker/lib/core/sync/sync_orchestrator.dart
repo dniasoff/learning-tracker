@@ -678,6 +678,15 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
               event: 'sync_orchestrator_pull_skipped_resume_throttle',
               fields: {'elapsedSeconds': elapsed.inSeconds},
             );
+            // SYNC-STATUS-STALE-02 (loop-iter9): the throttle fires because a
+            // real pull completed recently — mark the session as having pulled
+            // so _recomputeOutboxStatus() can reach the `synced` branch once
+            // the outbox empties. Without this, the badge stays stuck at
+            // "pending(N)" with an empty outbox (the else-return is hit because
+            // _everPulledOnLaunch is false). Chain a drain so any rows queued
+            // while the app was backgrounded are flushed immediately.
+            _everPulledOnLaunch = true;
+            await _drainOutbox('resume_throttled');
             return;
           }
         }
