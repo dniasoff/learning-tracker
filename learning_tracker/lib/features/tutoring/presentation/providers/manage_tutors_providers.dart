@@ -58,9 +58,15 @@ final listIncomingGrantsUseCaseProvider =
 
 /// List of outgoing grants for a specific child profile (parent view).
 ///
-/// Parameterised by [childProfileId]. Cached until invalidated.
-final outgoingTutorGrantsProvider =
-    FutureProvider.family<List<TutorGrant>, String>((ref, childProfileId) {
+/// Parameterised by [childProfileId].
+///
+/// autoDispose: evicted from cache when the ManageTutors screen is
+/// unmounted (no active subscriber). On re-entry the provider re-runs its
+/// future and calls the listTutorGrants CF again — so the parent always
+/// sees the current grant state rather than a stale cached result from a
+/// previous visit (DG-TUT-STALE-01: tutor acceptance not reflected on parent).
+final outgoingTutorGrantsProvider = FutureProvider.autoDispose
+    .family<List<TutorGrant>, String>((ref, childProfileId) {
       final useCase = ref.watch(listOutgoingGrantsUseCaseProvider);
       return useCase(childProfileId: childProfileId);
     });
