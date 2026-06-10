@@ -601,11 +601,17 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
               ),
               title: Text(AppLocalizations.of(context)!.trackEditLabel),
               trailing: const Icon(Icons.chevron_right_rounded),
-              onTap: () => Navigator.of(context).push<void>(
-                MaterialPageRoute(
-                  builder: (_) => EditTrackScreen(track: track),
-                ),
-              ),
+              onTap: () async {
+                await Navigator.of(context).push<void>(
+                  MaterialPageRoute(
+                    builder: (_) => EditTrackScreen(track: track),
+                  ),
+                );
+                if (mounted) {
+                  ref.invalidate(_trackGoalProvider(track.id));
+                  ref.invalidate(_trackPaceCalcProvider(track));
+                }
+              },
             ),
             const Divider(height: 1, indent: 56),
             ListTile(
