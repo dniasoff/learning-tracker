@@ -1824,6 +1824,80 @@ class AppLocalizationsEn extends AppLocalizations {
   String get signInRegisterHere => 'Register Here';
 
   @override
+  String get signUpTitle => 'Create Account';
+
+  @override
+  String get signUpSubtitle => 'Create your free account';
+
+  @override
+  String get signUpScholarNameHint => 'Scholar Name';
+
+  @override
+  String get signUpEmailAddressLabel => 'Email Address';
+
+  @override
+  String get signUpPasswordLabel => 'Create Password';
+
+  @override
+  String get signUpCta => 'Sign Up';
+
+  @override
+  String get signUpOrDivider => 'OR';
+
+  @override
+  String get signUpGoogleCta => 'Sign Up with Google';
+
+  @override
+  String get signUpAlreadyExploring => 'Already exploring? ';
+
+  @override
+  String get signUpLogIn => 'Log In';
+
+  @override
+  String get signUpOfflineAck =>
+      'Offline mode: account stays only on this device.';
+
+  @override
+  String get signUpAckRequiredError =>
+      'Please acknowledge the offline account warning before creating an offline account.';
+
+  @override
+  String get signUpVerificationEmailSent =>
+      'Verification email sent. Verify your email, then sign in.';
+
+  @override
+  String get signUpEmailAlreadyExists =>
+      'An account already exists with this email.';
+
+  @override
+  String get signUpDeviceEmailExists =>
+      'An account with this email already exists on this device. Sign in instead.';
+
+  @override
+  String get signUpOfflineInProgress =>
+      'An offline signup for this email is already in progress. Finish creating a profile or try again later.';
+
+  @override
+  String get signUpOfflineEmailExists =>
+      'An offline account already exists on this device with that email.';
+
+  @override
+  String signUpFailed(String error) {
+    return 'Signup failed: $error';
+  }
+
+  @override
+  String get signUpFallbackBody =>
+      'The internet connection dropped during signup. Would you like to create an offline account instead?';
+
+  @override
+  String get signUpErrWeakPassword =>
+      'Password is too weak. Use at least 6 characters.';
+
+  @override
+  String get signUpErrGeneric => 'Account creation failed. Please try again.';
+
+  @override
   String get chartFailedToLoad => 'Failed to load data';
 
   @override

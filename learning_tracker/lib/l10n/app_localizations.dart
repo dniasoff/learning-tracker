@@ -3311,6 +3311,132 @@ abstract class AppLocalizations {
   /// **'Register Here'**
   String get signInRegisterHere;
 
+  /// No description provided for @signUpTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Account'**
+  String get signUpTitle;
+
+  /// No description provided for @signUpSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create your free account'**
+  String get signUpSubtitle;
+
+  /// No description provided for @signUpScholarNameHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Scholar Name'**
+  String get signUpScholarNameHint;
+
+  /// No description provided for @signUpEmailAddressLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Email Address'**
+  String get signUpEmailAddressLabel;
+
+  /// No description provided for @signUpPasswordLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Create Password'**
+  String get signUpPasswordLabel;
+
+  /// No description provided for @signUpCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign Up'**
+  String get signUpCta;
+
+  /// No description provided for @signUpOrDivider.
+  ///
+  /// In en, this message translates to:
+  /// **'OR'**
+  String get signUpOrDivider;
+
+  /// No description provided for @signUpGoogleCta.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign Up with Google'**
+  String get signUpGoogleCta;
+
+  /// No description provided for @signUpAlreadyExploring.
+  ///
+  /// In en, this message translates to:
+  /// **'Already exploring? '**
+  String get signUpAlreadyExploring;
+
+  /// No description provided for @signUpLogIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Log In'**
+  String get signUpLogIn;
+
+  /// No description provided for @signUpOfflineAck.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline mode: account stays only on this device.'**
+  String get signUpOfflineAck;
+
+  /// No description provided for @signUpAckRequiredError.
+  ///
+  /// In en, this message translates to:
+  /// **'Please acknowledge the offline account warning before creating an offline account.'**
+  String get signUpAckRequiredError;
+
+  /// No description provided for @signUpVerificationEmailSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Verification email sent. Verify your email, then sign in.'**
+  String get signUpVerificationEmailSent;
+
+  /// No description provided for @signUpEmailAlreadyExists.
+  ///
+  /// In en, this message translates to:
+  /// **'An account already exists with this email.'**
+  String get signUpEmailAlreadyExists;
+
+  /// No description provided for @signUpDeviceEmailExists.
+  ///
+  /// In en, this message translates to:
+  /// **'An account with this email already exists on this device. Sign in instead.'**
+  String get signUpDeviceEmailExists;
+
+  /// No description provided for @signUpOfflineInProgress.
+  ///
+  /// In en, this message translates to:
+  /// **'An offline signup for this email is already in progress. Finish creating a profile or try again later.'**
+  String get signUpOfflineInProgress;
+
+  /// No description provided for @signUpOfflineEmailExists.
+  ///
+  /// In en, this message translates to:
+  /// **'An offline account already exists on this device with that email.'**
+  String get signUpOfflineEmailExists;
+
+  /// No description provided for @signUpFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Signup failed: {error}'**
+  String signUpFailed(String error);
+
+  /// No description provided for @signUpFallbackBody.
+  ///
+  /// In en, this message translates to:
+  /// **'The internet connection dropped during signup. Would you like to create an offline account instead?'**
+  String get signUpFallbackBody;
+
+  /// No description provided for @signUpErrWeakPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Password is too weak. Use at least 6 characters.'**
+  String get signUpErrWeakPassword;
+
+  /// No description provided for @signUpErrGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'Account creation failed. Please try again.'**
+  String get signUpErrGeneric;
+
   /// No description provided for @chartFailedToLoad.
   ///
   /// In en, this message translates to:

@@ -1082,8 +1082,9 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 
-    // Core elements still present in RTL
-    expect(find.text('Create Account'), findsOneWidget);
+    // Core elements still present in RTL — now rendered via l10n (iter9 fix).
+    // Hebrew ARB value for signUpTitle is "צור חשבון".
+    expect(find.text('צור חשבון'), findsOneWidget);
     expect(find.byType(TextFormField), findsNWidgets(3));
     expect(find.byType(FilledButton), findsOneWidget);
 
@@ -1100,8 +1101,9 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 
-    // Offline warning text must still be shown in RTL
-    expect(find.textContaining('Local account only'), findsOneWidget);
+    // Offline warning text must still be shown in RTL — now via l10n (iter9 fix).
+    // Hebrew ARB value for authModeLocalTitle contains "חשבון מקומי בלבד".
+    expect(find.textContaining('חשבון מקומי בלבד'), findsOneWidget);
     // Acknowledgement checkbox present
     expect(find.byType(Checkbox), findsOneWidget);
 

@@ -87,6 +87,10 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     final email = _emailController.text.trim();
     final password = _passwordController.text;
     final displayName = _nameController.text.trim();
+    // Capture l10n before any async gap so context is not read across awaits.
+    final ackRequiredError = AppLocalizations.of(
+      context,
+    )!.signUpAckRequiredError;
 
     // Epic 21.5: one-shot connectivity check at tap time decides
     // which backend handles the signup. The stream keeps the UI
@@ -97,10 +101,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     if (!isOnline) {
       // Offline path — local-born via argon2id.
       if (!_offlineAcknowledged) {
-        _showError(
-          'Please acknowledge the offline account warning before '
-          'creating an offline account.',
-        );
+        _showError(ackRequiredError);
         return;
       }
       await _signUpLocal(email, password, displayName);
@@ -122,17 +123,15 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       await authRepo.sendEmailVerification();
       await authRepo.signOut();
       if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Verification email sent. Verify your email, then sign in.',
-            ),
-          ),
+          SnackBar(content: Text(l10n.signUpVerificationEmailSent)),
         );
         unawaited(context.router.replace(const SignInRoute()));
       }
     } on DuplicateEmailException {
-      if (mounted) _showError('An account already exists with this email.');
+      if (mounted)
+        _showError(AppLocalizations.of(context)!.signUpEmailAlreadyExists);
     } on InvalidInputException catch (e) {
       if (mounted) _showError(e.reason);
     } catch (e) {
@@ -144,7 +143,11 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         return;
       }
       if (mounted) {
-        _showError(code != null ? _mapAuthError(code) : e.toString());
+        _showError(
+          code != null
+              ? _mapAuthError(code)
+              : AppLocalizations.of(context)!.signUpErrGeneric,
+        );
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -182,10 +185,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       final registry = ref.read(deviceRegistryProvider);
       if (await registry.findByEmail(normalized) != null) {
         if (mounted) {
-          _showError(
-            'An account with this email already exists on this device. '
-            'Sign in instead.',
-          );
+          _showError(AppLocalizations.of(context)!.signUpDeviceEmailExists);
         }
         return;
       }
@@ -197,10 +197,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       );
       if (!reserved) {
         if (mounted) {
-          _showError(
-            'An offline signup for this email is already in progress. '
-            'Finish creating a profile or try again later.',
-          );
+          _showError(AppLocalizations.of(context)!.signUpOfflineInProgress);
         }
         return;
       }
@@ -265,9 +262,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       final docs = await getApplicationDocumentsDirectory();
       await recover(docs.path);
       if (mounted) {
-        _showError(
-          'An offline account already exists on this device with that email.',
-        );
+        _showError(AppLocalizations.of(context)!.signUpOfflineEmailExists);
       }
     } on InvalidInputException catch (e) {
       final docs = await getApplicationDocumentsDirectory();
@@ -276,7 +271,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     } catch (e) {
       final docs = await getApplicationDocumentsDirectory();
       await recover(docs.path);
-      if (mounted) _showError('Signup failed: $e');
+      if (mounted)
+        _showError(AppLocalizations.of(context)!.signUpFailed(e.toString()));
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -286,21 +282,19 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   /// network-request-failed mid-call. Offers to create an offline
   /// account instead or retry.
   void _showFallbackDialog(String email, String password, String displayName) {
+    final l10n = AppLocalizations.of(context)!;
     showDialog<void>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: Text(AppLocalizations.of(context)!.connectionLostTitle),
-        content: const Text(
-          'The internet connection dropped during signup. '
-          'Would you like to create an offline account instead?',
-        ),
+        title: Text(l10n.connectionLostTitle),
+        content: Text(l10n.signUpFallbackBody),
         actions: [
           TextButton(
             onPressed: () {
               Navigator.of(ctx).pop();
               _signUpCloud(email, password, displayName);
             },
-            child: Text(AppLocalizations.of(context)!.tryAgainButton),
+            child: Text(l10n.tryAgainButton),
           ),
           FilledButton(
             onPressed: () {
@@ -308,7 +302,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
               setState(() => _offlineAcknowledged = true);
               _signUpLocal(email, password, displayName);
             },
-            child: Text(AppLocalizations.of(context)!.createOfflineAccount),
+            child: Text(l10n.createOfflineAccount),
           ),
         ],
       ),
@@ -333,8 +327,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
       if (existingEntry == null && accounts.length >= kMaxDeviceAccounts) {
         if (mounted) {
           _showError(
-            'Maximum $kMaxDeviceAccounts accounts reached. '
-            'Remove one to add another.',
+            AppLocalizations.of(
+              context,
+            )!.authMaxDeviceAccounts(kMaxDeviceAccounts),
           );
         }
         // Sign out the just-signed-in Google user to avoid orphan state
@@ -349,10 +344,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
         // this device — route to collision/upgrade flow instead of
         // silently merging.
         if (mounted) {
-          _showError(
-            'An offline account with this email exists on this device. '
-            'Use the Upgrade to Cloud option in Settings instead.',
-          );
+          _showError(AppLocalizations.of(context)!.authOfflineUseUpgrade);
         }
         await ref.read(authRepositoryProvider).signOut();
         return;
@@ -442,13 +434,15 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           e.code == GoogleSignInExceptionCode.interrupted) {
         // User cancelled — do nothing.
       } else if (mounted) {
-        _showError('Google Sign-In failed. Please try again.');
+        _showError(AppLocalizations.of(context)!.authGoogleSignInFailed);
       }
     } catch (e) {
       final code = _extractFirebaseCode(e);
       if (mounted) {
         _showError(
-          code != null ? _mapAuthError(code) : 'Google Sign-In failed: $e',
+          code != null
+              ? _mapAuthError(code)
+              : AppLocalizations.of(context)!.authGoogleSignInFailed,
         );
       }
     } finally {
@@ -464,17 +458,18 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   }
 
   String _mapAuthError(String code) {
+    final l10n = AppLocalizations.of(context)!;
     switch (code) {
       case 'email-already-in-use':
-        return 'An account already exists with this email.';
+        return l10n.signUpEmailAlreadyExists;
       case 'weak-password':
-        return 'Password is too weak. Use at least 6 characters.';
+        return l10n.signUpErrWeakPassword;
       case 'invalid-email':
-        return 'Please enter a valid email address.';
+        return l10n.authErrInvalidEmail;
       case 'network-request-failed':
-        return 'Network error. Please check your connection.';
+        return l10n.authErrNetwork;
       default:
-        return 'Account creation failed. Please try again.';
+        return l10n.signUpErrGeneric;
     }
   }
 
@@ -490,6 +485,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final connectivity = ref.watch(connectivityStreamProvider);
     // Offline-first: while the first probe is in flight, fall back to the last
     // observed reading (offline until proven online) rather than optimistically
@@ -543,13 +539,13 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                               crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
                                 Text(
-                                  'Create Account',
+                                  l10n.signUpTitle,
                                   style: theme.textTheme.headlineMedium
                                       ?.copyWith(fontWeight: FontWeight.w800),
                                 ),
                                 const SizedBox(height: 4),
                                 Text(
-                                  'Create your free account',
+                                  l10n.signUpSubtitle,
                                   style: theme.textTheme.bodyLarge?.copyWith(
                                     color: AppTheme.brandInkMuted,
                                   ),
@@ -581,21 +577,19 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                                 ),
                                         ),
                                         const SizedBox(width: 8),
-                                        const Expanded(
-                                          child: Text(
-                                            'Offline mode: account stays only on this device.',
-                                          ),
+                                        Expanded(
+                                          child: Text(l10n.signUpOfflineAck),
                                         ),
                                       ],
                                     ),
                                   ),
                                   const SizedBox(height: 16),
                                 ],
-                                _buildLabel('Display Name'),
+                                _buildLabel(l10n.displayName),
                                 const SizedBox(height: 8),
                                 _buildAuthField(
                                   controller: _nameController,
-                                  hintText: 'Scholar Name',
+                                  hintText: l10n.signUpScholarNameHint,
                                   suffixIcon: const Icon(
                                     Icons.face_outlined,
                                     color: AppTheme.brandInkMuted,
@@ -604,7 +598,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                   validator: _validateDisplayName,
                                 ),
                                 const SizedBox(height: 16),
-                                _buildLabel('Email Address'),
+                                _buildLabel(l10n.signUpEmailAddressLabel),
                                 const SizedBox(height: 8),
                                 _buildAuthField(
                                   controller: _emailController,
@@ -618,7 +612,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                   validator: _validateEmail,
                                 ),
                                 const SizedBox(height: 16),
-                                _buildLabel('Create Password'),
+                                _buildLabel(l10n.signUpPasswordLabel),
                                 const SizedBox(height: 8),
                                 _buildAuthField(
                                   controller: _passwordController,
@@ -680,8 +674,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                             )
                                           : Text(
                                               isOnline
-                                                  ? 'Sign Up'
-                                                  : 'Create Offline Account',
+                                                  ? l10n.signUpCta
+                                                  : l10n.createOfflineAccount,
                                               style: const TextStyle(
                                                 fontSize: 16,
                                                 fontWeight: FontWeight.w700,
@@ -700,7 +694,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                           horizontal: 14,
                                         ),
                                         child: Text(
-                                          'OR',
+                                          l10n.signUpOrDivider,
                                           style: theme.textTheme.bodyMedium
                                               ?.copyWith(
                                                 color: AppTheme.brandInkMuted,
@@ -729,16 +723,18 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                         vertical: 14,
                                       ),
                                     ),
-                                    child: const FittedBox(
+                                    child: FittedBox(
                                       fit: BoxFit.scaleDown,
                                       child: Row(
                                         mainAxisSize: MainAxisSize.min,
                                         children: [
-                                          Icon(Icons.g_mobiledata_rounded),
-                                          SizedBox(width: 8),
+                                          const Icon(
+                                            Icons.g_mobiledata_rounded,
+                                          ),
+                                          const SizedBox(width: 8),
                                           Text(
-                                            'Sign Up with Google',
-                                            style: TextStyle(
+                                            l10n.signUpGoogleCta,
+                                            style: const TextStyle(
                                               fontSize: 18,
                                               fontWeight: FontWeight.w600,
                                             ),
@@ -757,11 +753,11 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                             color: AppTheme.brandInkMuted,
                                           ),
                                       children: [
-                                        const TextSpan(
-                                          text: 'Already exploring? ',
+                                        TextSpan(
+                                          text: l10n.signUpAlreadyExploring,
                                         ),
                                         TextSpan(
-                                          text: 'Log In',
+                                          text: l10n.signUpLogIn,
                                           style: const TextStyle(
                                             color: AppTheme.brandBlue,
                                             fontWeight: FontWeight.w700,
@@ -810,6 +806,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     required ThemeData theme,
     required bool isOnline,
   }) {
+    final l10n = AppLocalizations.of(context)!;
     if (isOnline) {
       return Container(
         padding: const EdgeInsets.all(12),
@@ -827,7 +824,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
             const SizedBox(width: 10),
             Expanded(
               child: Text(
-                'Cloud account: your data is backed up and can sync across devices.',
+                l10n.authModeCloud,
                 style: theme.textTheme.bodyMedium?.copyWith(
                   color: AppTheme.brandInk,
                   fontWeight: FontWeight.w600,
@@ -860,7 +857,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'Local account only: no cloud backup and no device sync.',
+                  l10n.authModeLocalTitle,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: AppTheme.brandInk,
                     fontWeight: FontWeight.w700,
@@ -890,7 +887,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
               const SizedBox(width: 10),
               Expanded(
                 child: Text(
-                  'No cloud backup or device sync. Your data stays only on this device.',
+                  l10n.authModeLocalBody,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: AppTheme.brandInk,
                     fontWeight: FontWeight.w600,
