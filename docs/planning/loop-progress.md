@@ -101,3 +101,20 @@ reds are the 4 pre-existing golden screenshot tests (fail on pristine dev too �
 Rebuild+redeploy (done post-iter2) → relaunch with: parent-PIN nav fix on slice E (unblocks gamification
 sweep on slice D); worktree asset-copy in setup; full-test-dir pre-commit check; golden exclusion in gate.
 Then bring sync (App Check) online for cloud/two-device P0s.
+
+### Iteration 3 — COMPLETE (2026-06-10) — pushed to dev. CLEAN run (no regression-fix pass needed).
+4 phones (tablet deferred for partition repair). 6 fixes, all red→green + full-dir-green + analyze/format clean:
+- Slice C: **P0 parent-PIN nav dead-end FIXED** — PinFlowSetup completion didn't call pinGuard.markAuthenticated
+  before maybePop, so the guard re-pushed the PIN screen in an infinite loop; fixed in pin_flow_screen.dart,
+  on-device verified reaching Parent Settings. (C ran out of context before its Area 5+12 sweep — carry over.)
+- Slice A: DeviceRestoreScreen went **permanently blank** (SizedBox.shrink nav-deadlock); Backup error-card
+  state-machine invariant violation. Both fixed.
+- Slice D: 2 more stale-provider bugs (childRedemptionRewards after save; achievementsOverview after debit);
+  drove the real decline→refund flow on-device; re-verified 3 iter2 stream fixes.
+- Slice B: pluralization "1 today tasks" grammar; re-verified archive/wipe DB ground-truth + chazara gate.
+The "run full test dir before commit" rule (iter2 lesson) eliminated cross-cutting regressions — gate passed
+first try (modulo the 4 environmental goldens).
+
+### Iteration 4 — PENDING
+Repair tablet (wipe-data restart → 32G partition; config already set) → re-add slice E (i18n/profiles/progress
+tablet RTL + carryover) → bring sync (App Check) online for cloud/two-device P0s → carry over slice C Area 5+12.
