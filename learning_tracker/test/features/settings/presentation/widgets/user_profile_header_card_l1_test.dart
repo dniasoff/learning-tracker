@@ -108,7 +108,10 @@ void main() {
       );
       await tester.pumpWidget(
         _buildCardWidget(
-          authState: AuthState.signedIn(user: authUser, tier: Tier.localBorn),
+          authState: const AuthState.signedIn(
+            user: authUser,
+            tier: Tier.localBorn,
+          ),
         ),
       );
       await tester.pump();
@@ -146,7 +149,10 @@ void main() {
       );
       await tester.pumpWidget(
         _buildCardWidget(
-          authState: AuthState.signedIn(user: authUser, tier: Tier.cloudBorn),
+          authState: const AuthState.signedIn(
+            user: authUser,
+            tier: Tier.cloudBorn,
+          ),
           firebaseUser: null, // user param to widget is null (transient)
         ),
       );
