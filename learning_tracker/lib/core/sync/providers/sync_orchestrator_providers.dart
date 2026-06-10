@@ -11,6 +11,7 @@ import 'package:learning_tracker/core/sync/initial_sync_state.dart';
 import 'package:learning_tracker/core/sync/providers/merge_router_provider.dart';
 import 'package:learning_tracker/core/sync/providers/outbox_providers.dart';
 import 'package:learning_tracker/core/sync/providers/resolve_profile_id_provider.dart';
+import 'package:learning_tracker/core/sync/sync_identity_status.dart';
 import 'package:learning_tracker/core/sync/sync_orchestrator.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
@@ -179,6 +180,27 @@ final syncOrchestratorProvider = Provider<SyncOrchestrator?>((ref) {
   // provider, so the singleton invariant (S7) is preserved.
   ref.listen<int>(activeProfileIdProvider, (previous, next) {
     if (previous != next) orchestrator.restartListeners();
+  });
+
+  // SYNC-DRAIN-DELAY-01: on a device with multiple Firebase accounts, the
+  // Firebase Auth SDK transiently restores the PREVIOUS account's token during
+  // app launch.  The identity-mismatch guard in OutboxProcessor correctly skips
+  // the drain during that window — but without this listener, rows queued while
+  // the mismatch was active would be stuck until the next periodic drain fires
+  // (up to 60 s).  Once the identity transitions from mismatched → matched, kick
+  // the outbox processor immediately so queued writes reach Firestore within the
+  // same network round as the token restoration. ref.listen does not rebuild
+  // the provider so the singleton invariant (S7) is preserved.
+  ref.listen<SyncIdentityStatus>(syncIdentityStatusProvider, (previous, next) {
+    final wasUnmatched = previous?.isMismatch ?? false;
+    if (wasUnmatched && !next.isMismatch) {
+      final profileId = ref.read(activeProfileIdProvider);
+      final processor = ref.read(outboxProcessorProvider);
+      if (processor != null) {
+        unawaited(processor.drain(profileId));
+        unawaited(orchestrator.recordDrainAttempt());
+      }
+    }
   });
 
   ref.onDispose(orchestrator.dispose);
