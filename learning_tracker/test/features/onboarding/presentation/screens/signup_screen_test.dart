@@ -2,6 +2,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:drift/drift.dart' show driftRuntimeOptions;
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/registry/device_registry_database.dart';
@@ -17,6 +18,7 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_pr
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart'
     as auth_state_mod;
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../mocks/mock_repositories.dart';
@@ -48,13 +50,21 @@ void main() {
 
   tearDown(debugResetLastKnownOnline);
 
-  Widget createTestWidget() {
+  Widget createTestWidget({Locale locale = const Locale('en')}) {
     return ProviderScope(
       overrides: [
         authRepositoryProvider.overrideWithValue(mockAuthRepo),
         connectivityStreamProvider.overrideWith((ref) => Stream.value(true)),
       ],
       child: MaterialApp(
+        locale: locale,
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
         home: StackRouterScope(
           controller: mockRouter,
           stateHash: 0,
@@ -67,6 +77,7 @@ void main() {
   Widget createTestWidgetWithDatabase({
     required UserDatabase database,
     bool online = true,
+    Locale locale = const Locale('en'),
   }) {
     final testRegistry = DeviceRegistryDatabase(NativeDatabase.memory());
     return ProviderScope(
@@ -80,6 +91,14 @@ void main() {
         connectivityStreamProvider.overrideWith((ref) => Stream.value(online)),
       ],
       child: MaterialApp(
+        locale: locale,
+        localizationsDelegates: const [
+          AppLocalizations.delegate,
+          GlobalMaterialLocalizations.delegate,
+          GlobalWidgetsLocalizations.delegate,
+          GlobalCupertinoLocalizations.delegate,
+        ],
+        supportedLocales: AppLocalizations.supportedLocales,
         home: StackRouterScope(
           controller: mockRouter,
           stateHash: 0,
@@ -237,6 +256,174 @@ void main() {
 
       // Verify the sign-in was at least attempted
       verify(() => mockAuthRepo.signInWithGoogle()).called(1);
+    });
+  });
+
+  // ── iter9 l10n regression: signup screen strings must come from ARB ──────────
+  //
+  // Prior to the fix, all UI strings in SignupScreen were hardcoded English
+  // literals. This group verifies that the l10n keys are wired up correctly
+  // by checking that:
+  //   • English locale renders the expected English ARB values.
+  //   • Hebrew locale renders Hebrew ARB values (non-English strings appear,
+  //     English literals are absent).
+  group('iter9 l10n regression: signup screen strings localized', () {
+    testWidgets(
+      'English: title, subtitle, labels, CTA, OR divider come from l10n',
+      (tester) async {
+        await tester.pumpWidget(createTestWidget());
+        await tester.pump();
+
+        // Title and subtitle from ARB keys signUpTitle / signUpSubtitle.
+        expect(
+          find.text('Create Account'),
+          findsOneWidget,
+          reason: 'signUpTitle must render via l10n',
+        );
+        expect(
+          find.text('Create your free account'),
+          findsOneWidget,
+          reason: 'signUpSubtitle must render via l10n',
+        );
+
+        // Field labels from l10n.
+        expect(
+          find.text('Display Name'),
+          findsOneWidget,
+          reason: 'displayName label must come from l10n.displayName',
+        );
+        expect(
+          find.text('Email Address'),
+          findsOneWidget,
+          reason: 'signUpEmailAddressLabel must render via l10n',
+        );
+        expect(
+          find.text('Create Password'),
+          findsOneWidget,
+          reason: 'signUpPasswordLabel must render via l10n',
+        );
+
+        // CTA and OR divider.
+        expect(
+          find.text('Sign Up'),
+          findsOneWidget,
+          reason: 'signUpCta must render via l10n',
+        );
+        expect(
+          find.text('OR'),
+          findsOneWidget,
+          reason: 'signUpOrDivider must render via l10n',
+        );
+        expect(
+          find.text('Sign Up with Google'),
+          findsOneWidget,
+          reason: 'signUpGoogleCta must render via l10n',
+        );
+
+        await tester.pumpWidget(const SizedBox.shrink());
+      },
+    );
+
+    testWidgets('Hebrew locale: key UI strings render in Hebrew, not English', (
+      tester,
+    ) async {
+      await tester.pumpWidget(createTestWidget(locale: const Locale('he')));
+      await tester.pump();
+
+      // Hebrew ARB value for signUpTitle is "צור חשבון".
+      expect(
+        find.text('צור חשבון'),
+        findsOneWidget,
+        reason: 'iter9 l10n: signUpTitle must render in Hebrew locale',
+      );
+      // English literal must be absent.
+      expect(
+        find.text('Create Account'),
+        findsNothing,
+        reason:
+            'iter9 l10n: hardcoded English "Create Account" must be absent in Hebrew',
+      );
+
+      // Hebrew ARB value for signUpCta is "הרשמה".
+      expect(
+        find.text('הרשמה'),
+        findsOneWidget,
+        reason: 'iter9 l10n: signUpCta must render in Hebrew locale',
+      );
+      expect(
+        find.text('Sign Up'),
+        findsNothing,
+        reason:
+            'iter9 l10n: hardcoded English "Sign Up" must be absent in Hebrew',
+      );
+
+      // Hebrew ARB value for signUpOrDivider is "או".
+      expect(
+        find.text('או'),
+        findsOneWidget,
+        reason: 'iter9 l10n: signUpOrDivider must render in Hebrew locale',
+      );
+      expect(
+        find.text('OR'),
+        findsNothing,
+        reason: 'iter9 l10n: hardcoded English "OR" must be absent in Hebrew',
+      );
+
+      // Hebrew ARB value for signUpGoogleCta is "הרשמה עם גוגל".
+      expect(
+        find.text('הרשמה עם גוגל'),
+        findsOneWidget,
+        reason: 'iter9 l10n: signUpGoogleCta must render in Hebrew locale',
+      );
+      expect(
+        find.text('Sign Up with Google'),
+        findsNothing,
+        reason:
+            'iter9 l10n: hardcoded English "Sign Up with Google" must be absent in Hebrew',
+      );
+
+      await tester.pumpWidget(const SizedBox.shrink());
+    });
+
+    testWidgets('Hebrew offline mode: local-only warning card renders in Hebrew', (
+      tester,
+    ) async {
+      final db = UserDatabase(NativeDatabase.memory());
+      addTearDown(() async => db.close());
+
+      await tester.pumpWidget(
+        createTestWidgetWithDatabase(
+          database: db,
+          online: false,
+          locale: const Locale('he'),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 100));
+
+      // Hebrew for authModeLocalTitle (unique substring for the title card).
+      expect(
+        find.textContaining('חשבון מקומי בלבד'),
+        findsOneWidget,
+        reason:
+            'iter9 l10n: authModeLocalTitle must render in Hebrew for offline mode',
+      );
+      // Hebrew CTA for createOfflineAccount.
+      expect(
+        find.widgetWithText(FilledButton, 'צור חשבון לא מקוון'),
+        findsOneWidget,
+        reason:
+            'iter9 l10n: createOfflineAccount CTA must render in Hebrew for offline mode',
+      );
+      // English literal must be absent.
+      expect(
+        find.text('Local account only: no cloud backup and no device sync.'),
+        findsNothing,
+        reason:
+            'iter9 l10n: hardcoded English local-only warning must be absent in Hebrew',
+      );
+
+      await tester.pumpWidget(const SizedBox.shrink());
     });
   });
 }

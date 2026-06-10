@@ -1806,6 +1806,77 @@ class AppLocalizationsHe extends AppLocalizations {
   String get signInRegisterHere => 'הרשמה כאן';
 
   @override
+  String get signUpTitle => 'צור חשבון';
+
+  @override
+  String get signUpSubtitle => 'צור את חשבונך החינמי';
+
+  @override
+  String get signUpScholarNameHint => 'שם הלומד';
+
+  @override
+  String get signUpEmailAddressLabel => 'כתובת אימייל';
+
+  @override
+  String get signUpPasswordLabel => 'צור סיסמה';
+
+  @override
+  String get signUpCta => 'הרשמה';
+
+  @override
+  String get signUpOrDivider => 'או';
+
+  @override
+  String get signUpGoogleCta => 'הרשמה עם גוגל';
+
+  @override
+  String get signUpAlreadyExploring => 'כבר בחקירה? ';
+
+  @override
+  String get signUpLogIn => 'כניסה';
+
+  @override
+  String get signUpOfflineAck => 'מצב לא מקוון: החשבון נשמר רק במכשיר הזה.';
+
+  @override
+  String get signUpAckRequiredError =>
+      'אנא אשר את האזהרה לחשבון לא מקוון לפני יצירת חשבון אופ־ליין.';
+
+  @override
+  String get signUpVerificationEmailSent =>
+      'אימייל אימות נשלח. אמת את האימייל שלך ולאחר מכן היכנס.';
+
+  @override
+  String get signUpEmailAlreadyExists => 'חשבון כבר קיים עם האימייל הזה.';
+
+  @override
+  String get signUpDeviceEmailExists =>
+      'חשבון עם האימייל הזה כבר קיים במכשיר. היכנס במקום זאת.';
+
+  @override
+  String get signUpOfflineInProgress =>
+      'הרשמה לא מקוונת לאימייל זה כבר בתהליך. סיים יצירת פרופיל או נסה שוב מאוחר יותר.';
+
+  @override
+  String get signUpOfflineEmailExists =>
+      'חשבון לא מקוון כבר קיים במכשיר הזה עם האימייל הזה.';
+
+  @override
+  String signUpFailed(String error) {
+    return 'ההרשמה נכשלה: $error';
+  }
+
+  @override
+  String get signUpFallbackBody =>
+      'החיבור לאינטרנט נפסק במהלך ההרשמה. האם ברצונך ליצור חשבון לא מקוון במקום זאת?';
+
+  @override
+  String get signUpErrWeakPassword => 'הסיסמה חלשה מדי. השתמש לפחות ב-6 תווים.';
+
+  @override
+  String get signUpErrGeneric => 'יצירת החשבון נכשלה. נסה שוב.';
+
+  @override
   String get chartFailedToLoad => 'נכשל בטעינת הנתונים';
 
   @override

@@ -439,4 +439,100 @@ void main() {
       await tester.pump(Duration.zero);
     });
   });
+
+  // ── Cloud account instant switch: valid session (hasValidSession = true) ───
+  //
+  // When the live Firebase session already belongs to the tapped cloud account
+  // (currentUser.uid == account.firebaseUid), the switch is "instant" — no
+  // re-authentication is needed. The tap must:
+  //   1. NOT call signInWithGoogle() or reauthWithGoogleSilently().
+  //   2. Navigate to AppShellRoute (DB swap + session activation completes).
+  //   3. NOT route to SignInRoute.
+  //
+  // iter9 finding: this path was untested; verifying it locks the invariant.
+  group('cloud account instant switch (hasValidSession = true)', () {
+    const cloudUid = 'fb-uid-cloud-instant';
+    const cloudEmail = 'instant@test.cloud';
+
+    Future<void> seedInstantCloudAccount() async {
+      // Live Firebase session IS this account's uid — hasValidSession = true.
+      when(() => auth.currentUser).thenReturn(_user(cloudUid, cloudEmail));
+      when(() => auth.signOut()).thenAnswer((_) async {});
+      when(
+        () => auth.reloadCurrentUser(),
+      ).thenAnswer((_) async => auth.currentUser);
+      when(() => auth.reauthWithGoogleSilently()).thenAnswer((_) async => null);
+
+      await registry.addAccount(
+        DeviceAccountsCompanion.insert(
+          accountId: 'acc-cloud-instant',
+          email: cloudEmail,
+          displayName: 'Instant Cloud',
+          tier: 'cloudBorn',
+          dbFileName: 'user_acc_acc-cloud-instant.db',
+          firebaseUid: const Value(cloudUid),
+          createdAt: DateTime.utc(2026, 1, 3),
+          lastUsedAt: DateTime.utc(2026, 1, 3),
+        ),
+      );
+      // Matching cloud-born profile row so _activateCloudAccountFromLocalData
+      // resolves a profile and completes the switch.
+      await userDb
+          .into(userDb.accounts)
+          .insert(
+            AccountsCompanion.insert(
+              email: cloudEmail,
+              tier: 'cloudBorn',
+              displayName: 'Instant Cloud',
+              firebaseUid: const Value(cloudUid),
+              createdAt: DateTime.utc(2026, 1, 3),
+              updatedAt: DateTime.utc(2026, 1, 3),
+            ),
+          );
+    }
+
+    testWidgets('valid session → instant switch to AppShell, no re-auth called', (
+      tester,
+    ) async {
+      await seedInstantCloudAccount();
+
+      await tester.pumpWidget(buildApp());
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 200));
+
+      // Tap the cloud account tile.
+      await tester.tap(find.text('Instant Cloud'));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // Instant switch: NO re-auth was triggered.
+      verifyNever(() => auth.signInWithGoogle());
+      verifyNever(() => auth.reauthWithGoogleSilently());
+      // Sign-out must never happen on an account switch.
+      verifyNever(() => auth.signOut());
+
+      // Navigated to AppShell, not SignIn.
+      final replaced = verify(() => router.replaceAll(captureAny())).captured;
+      expect(
+        replaced,
+        isNotEmpty,
+        reason: 'instant switch must navigate to the app shell',
+      );
+      final routes = (replaced.last as List).cast<PageRouteInfo>();
+      expect(
+        routes.any((r) => r is AppShellRoute),
+        isTrue,
+        reason:
+            'instant cloud switch (hasValidSession=true) must land on AppShellRoute',
+      );
+      expect(
+        routes.any((r) => r is SignInRoute),
+        isFalse,
+        reason: 'instant cloud switch must NOT route to sign-in',
+      );
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    });
+  });
 }

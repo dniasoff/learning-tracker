@@ -76,7 +76,9 @@ class _UserProfileHeaderCardState extends ConsumerState<UserProfileHeaderCard> {
 
     if (user == null) {
       final authState = ref.watch(authStateProvider);
-      if (!authState.isSignedIn || !authState.isLocalBorn) {
+      // Show the "not signed in" placeholder only when there is no active
+      // session. For signed-in users the placeholder text is misleading.
+      if (!authState.isSignedIn) {
         return Padding(
           padding: const EdgeInsets.symmetric(vertical: 16),
           child: Row(
@@ -87,6 +89,12 @@ class _UserProfileHeaderCardState extends ConsumerState<UserProfileHeaderCard> {
             ],
           ),
         );
+      }
+      // A signed-in cloud-born user with user==null is a transient loading
+      // state (Firebase user not yet resolved). Return an empty widget to
+      // avoid showing a misleading "Not signed in" label.
+      if (!authState.isLocalBorn) {
+        return const SizedBox.shrink();
       }
       return _wrapSurface(
         widget.surface,
