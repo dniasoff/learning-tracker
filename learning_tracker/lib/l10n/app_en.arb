@@ -2350,5 +2350,12 @@
     "placeholders": {
       "currentStreak": { "type": "int" }
     }
-  }
+  },
+
+  "onboardingIntentHeading": "What brings you here?",
+  "onboardingIntentSubtitle": "Choose how you want to get started.",
+  "onboardingIntentTrackTitle": "Track my own learning",
+  "onboardingIntentTrackSubtitle": "Set up a curriculum, goals, and daily schedule.",
+  "onboardingIntentSkipTitle": "Skip for now",
+  "onboardingIntentSkipSubtitle": "Go to the app and decide later. You can set up a track or accept an invite any time."
 }

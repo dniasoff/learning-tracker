@@ -11,6 +11,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Which path the user chose at the onboarding fork.
 enum OnboardingIntent {
@@ -36,6 +37,7 @@ class OnboardingIntentStep extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return SafeArea(
       child: SingleChildScrollView(
@@ -44,7 +46,7 @@ class OnboardingIntentStep extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'What brings you here?',
+              l10n.onboardingIntentHeading,
               style: theme.textTheme.headlineMedium?.copyWith(
                 fontWeight: FontWeight.w800,
                 color: AppTheme.brandInk,
@@ -52,7 +54,7 @@ class OnboardingIntentStep extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(
-              'Choose how you want to get started.',
+              l10n.onboardingIntentSubtitle,
               style: theme.textTheme.bodyLarge?.copyWith(
                 color: AppTheme.brandInkMuted,
               ),
@@ -62,8 +64,8 @@ class OnboardingIntentStep extends StatelessWidget {
               icon: Icons.menu_book_rounded,
               iconBgColor: const Color(0xFFE4E7EF),
               iconColor: AppTheme.brandBlueDeep,
-              title: 'Track my own learning',
-              subtitle: 'Set up a curriculum, goals, and daily schedule.',
+              title: l10n.onboardingIntentTrackTitle,
+              subtitle: l10n.onboardingIntentTrackSubtitle,
               onTap: () => onChosen(OnboardingIntent.trackMyLearning),
             ),
             const SizedBox(height: 14),
@@ -74,10 +76,8 @@ class OnboardingIntentStep extends StatelessWidget {
               icon: Icons.skip_next_rounded,
               iconBgColor: const Color(0xFFEAF5EA),
               iconColor: const Color(0xFF3A7C3A),
-              title: 'Skip for now',
-              subtitle:
-                  'Go to the app and decide later. You can set up a track '
-                  'or accept an invite any time.',
+              title: l10n.onboardingIntentSkipTitle,
+              subtitle: l10n.onboardingIntentSkipSubtitle,
               onTap: () => onChosen(OnboardingIntent.skipForNow),
             ),
           ],
