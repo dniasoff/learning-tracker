@@ -107,7 +107,10 @@ abstract class SyncOrchestrator {
   /// A no-op when:
   ///   * no [OutboxDao] resolver was wired (local-born / legacy tests)
   ///   * the orchestrator is disposed
-  ///   * a pull is actively in progress ([SyncStatusSyncing])
+  ///   * a pull is actively in progress AND the device is online
+  ///     ([SyncStatusSyncing] + online) — the pull owns the syncing→synced
+  ///     window; [SyncStatus.offline] still wins immediately mid-pull when
+  ///     the device goes offline (SYNC-OFFLINE-SYNCING-01)
   ///   * a pull error is displayed ([SyncStatusError]) — the error card must
   ///     remain visible until the user explicitly retries
   Future<void> recordDrainAttempt();
