@@ -1373,6 +1373,12 @@ abstract class AppLocalizations {
   /// **'Start Adding'**
   String get lifetimeStartAdding;
 
+  /// No description provided for @learnBrowseSectionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Browse'**
+  String get learnBrowseSectionTitle;
+
   /// No description provided for @lifetimeBrowseFullLibrary.
   ///
   /// In en, this message translates to:

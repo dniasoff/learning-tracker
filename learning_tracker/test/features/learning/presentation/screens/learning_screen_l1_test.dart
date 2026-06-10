@@ -774,8 +774,22 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 
-      // Browse section must render.
-      expect(find.text('Browse'), findsOneWidget);
+      // Browse section must render in Hebrew as 'עיון', NOT English 'Browse'.
+      // Regression: _BrowseSection previously used a hardcoded English string
+      // instead of the localised learnBrowseSectionTitle key.
+      expect(
+        find.text('עיון'),
+        findsOneWidget,
+        reason:
+            'Browse section title must be localised: Hebrew locale must show'
+            " 'עיון', not hardcoded English 'Browse'.",
+      );
+      expect(
+        find.text('Browse'),
+        findsNothing,
+        reason:
+            'English literal "Browse" must not appear when locale is Hebrew.',
+      );
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(Duration.zero);

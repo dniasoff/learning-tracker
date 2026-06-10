@@ -378,6 +378,7 @@
     }
   },
   "lifetimeStartAdding": "Start Adding",
+  "learnBrowseSectionTitle": "Browse",
   "lifetimeBrowseFullLibrary": "Browse Full Library",
   "lifetimeHowItWorksStep1": "Select a category from the library grid to see all available tracks.",
   "lifetimeHowItWorksStep2": "Toggle tasks you've finished to update your lifetime progress map.",

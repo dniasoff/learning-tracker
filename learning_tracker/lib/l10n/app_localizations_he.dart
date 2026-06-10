@@ -727,6 +727,9 @@ class AppLocalizationsHe extends AppLocalizations {
   String get lifetimeStartAdding => 'התחל להוסיף';
 
   @override
+  String get learnBrowseSectionTitle => 'עיון';
+
+  @override
   String get lifetimeBrowseFullLibrary => 'עיון בספרייה המלאה';
 
   @override
