@@ -2084,6 +2084,11 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
+  String sendLogsSuccess(int count) {
+    return 'היומנים נשלחו ($count רשומות). צפו במסוף Firebase ← diagnostic_logs.';
+  }
+
+  @override
   String get errorNoEmailApp =>
       'לא נמצאה אפליקציית דוא\"ל. להעתיק כתובת במקום?';
 
@@ -2590,6 +2595,19 @@ class AppLocalizationsHe extends AppLocalizations {
   String get deleteAccountHint => 'DELETE';
 
   @override
+  String get deleteAccountWarningBody =>
+      'פעולה זו היא לצמיתות ולא ניתן לבטלה. כל הנתונים שלך יימחקו.';
+
+  @override
+  String get deleteAccountReauthPassword =>
+      'תתבקשו להזין מחדש את הסיסמה כדי לאמת את זהותכם.';
+
+  @override
+  String deleteAccountReauthProvider(String provider) {
+    return 'תתבקשו להיכנס עם $provider כדי לאמת את זהותכם.';
+  }
+
+  @override
   String backupLastSynced(String timeAgo) {
     return 'סונכרן לאחרונה $timeAgo';
   }
@@ -2673,6 +2691,13 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get signOutLabel => 'התנתק';
+
+  @override
+  String get signOutConfirmTitle => 'התנתקות';
+
+  @override
+  String get signOutConfirmBody =>
+      'האם אתם בטוחים שברצונכם להתנתק? הנתונים שלכם יישמרו לכשתחזרו.';
 
   @override
   String get connectionLostTitle => 'החיבור אבד';

@@ -90,8 +90,7 @@ Future<void> sendLogsToFirebase({
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            'Logs sent (${entries.length} entries). '
-            'View in Firebase console → diagnostic_logs.',
+            AppLocalizations.of(context)!.sendLogsSuccess(entries.length),
           ),
           duration: const Duration(seconds: 4),
         ),

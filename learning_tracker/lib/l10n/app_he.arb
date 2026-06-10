@@ -977,6 +977,12 @@
       "error": { "type": "String" }
     }
   },
+  "sendLogsSuccess": "היומנים נשלחו ({count} רשומות). צפו במסוף Firebase ← diagnostic_logs.",
+  "@sendLogsSuccess": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
   "errorNoEmailApp": "לא נמצאה אפליקציית דוא\"ל. להעתיק כתובת במקום?",
   "errorMarkCompleteFailed": "סימון כהושלם נכשל: {error}",
   "@errorMarkCompleteFailed": {
@@ -1232,6 +1238,14 @@
   "deleteAccountDialogTitle": "מחיקת חשבון",
   "deleteAccountTypeConfirm": "הקלידו DELETE לאישור:",
   "deleteAccountHint": "DELETE",
+  "deleteAccountWarningBody": "פעולה זו היא לצמיתות ולא ניתן לבטלה. כל הנתונים שלך יימחקו.",
+  "deleteAccountReauthPassword": "תתבקשו להזין מחדש את הסיסמה כדי לאמת את זהותכם.",
+  "deleteAccountReauthProvider": "תתבקשו להיכנס עם {provider} כדי לאמת את זהותכם.",
+  "@deleteAccountReauthProvider": {
+    "placeholders": {
+      "provider": { "type": "String" }
+    }
+  },
 
   "backupLastSynced": "סונכרן לאחרונה {timeAgo}",
   "@backupLastSynced": {
@@ -1288,6 +1302,8 @@
 
   "accountDeletedTitle": "החשבון נמחק",
   "signOutLabel": "התנתק",
+  "signOutConfirmTitle": "התנתקות",
+  "signOutConfirmBody": "האם אתם בטוחים שברצונכם להתנתק? הנתונים שלכם יישמרו לכשתחזרו.",
 
   "connectionLostTitle": "החיבור אבד",
   "tryAgainButton": "נסה שוב",

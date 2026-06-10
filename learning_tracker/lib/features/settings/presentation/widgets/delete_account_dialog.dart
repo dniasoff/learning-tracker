@@ -55,14 +55,15 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     final reauthNote = widget.needsReauth
         ? widget.reauthProvider != null
-              ? '\n\nYou will be asked to sign in with ${widget.reauthProvider} to confirm your identity.'
-              : '\n\nYou will be asked to re-enter your password to confirm your identity.'
+              ? '\n\n${l10n.deleteAccountReauthProvider(widget.reauthProvider!)}'
+              : '\n\n${l10n.deleteAccountReauthPassword}'
         : '';
 
     return AlertDialog(
-      title: Text(AppLocalizations.of(context)!.deleteAccountDialogTitle),
+      title: Text(l10n.deleteAccountDialogTitle),
       // SingleChildScrollView lets the content scroll up when the soft keyboard
       // appears, preventing the RenderFlex overflow on the TextField.
       content: SingleChildScrollView(
@@ -70,19 +71,16 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Text(
-              'This action is permanent and cannot be undone. '
-              'All your data will be deleted.$reauthNote',
+              '${l10n.deleteAccountWarningBody}$reauthNote',
               style: const TextStyle(color: Colors.red),
             ),
             const SizedBox(height: 16),
-            Text(AppLocalizations.of(context)!.deleteAccountTypeConfirm),
+            Text(l10n.deleteAccountTypeConfirm),
             const SizedBox(height: 8),
             TextField(
               controller: _controller,
               inputFormatters: const [TrimLeadingSpaceFormatter()],
-              decoration: InputDecoration(
-                hintText: AppLocalizations.of(context)!.deleteAccountHint,
-              ),
+              decoration: InputDecoration(hintText: l10n.deleteAccountHint),
             ),
           ],
         ),
@@ -90,13 +88,13 @@ class _DeleteAccountDialogState extends State<_DeleteAccountDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context, false),
-          child: Text(AppLocalizations.of(context)!.actionCancel),
+          child: Text(l10n.actionCancel),
         ),
         TextButton(
           onPressed: _canDelete ? () => Navigator.pop(context, true) : null,
-          child: const Text(
-            'Delete Account',
-            style: TextStyle(color: Colors.red),
+          child: Text(
+            l10n.deleteAccountDialogTitle,
+            style: const TextStyle(color: Colors.red),
           ),
         ),
       ],

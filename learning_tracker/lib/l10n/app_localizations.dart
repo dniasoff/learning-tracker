@@ -3797,6 +3797,12 @@ abstract class AppLocalizations {
   /// **'Failed to send logs: {error}'**
   String errorSendLogsFailed(String error);
 
+  /// No description provided for @sendLogsSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Logs sent ({count} entries). View in Firebase console → diagnostic_logs.'**
+  String sendLogsSuccess(int count);
+
   /// No description provided for @errorNoEmailApp.
   ///
   /// In en, this message translates to:
@@ -4667,6 +4673,24 @@ abstract class AppLocalizations {
   /// **'DELETE'**
   String get deleteAccountHint;
 
+  /// No description provided for @deleteAccountWarningBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This action is permanent and cannot be undone. All your data will be deleted.'**
+  String get deleteAccountWarningBody;
+
+  /// No description provided for @deleteAccountReauthPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'You will be asked to re-enter your password to confirm your identity.'**
+  String get deleteAccountReauthPassword;
+
+  /// No description provided for @deleteAccountReauthProvider.
+  ///
+  /// In en, this message translates to:
+  /// **'You will be asked to sign in with {provider} to confirm your identity.'**
+  String deleteAccountReauthProvider(String provider);
+
   /// No description provided for @backupLastSynced.
   ///
   /// In en, this message translates to:
@@ -4816,6 +4840,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sign Out'**
   String get signOutLabel;
+
+  /// No description provided for @signOutConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign Out'**
+  String get signOutConfirmTitle;
+
+  /// No description provided for @signOutConfirmBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to sign out? Your data will be preserved for when you sign back in.'**
+  String get signOutConfirmBody;
 
   /// No description provided for @connectionLostTitle.
   ///

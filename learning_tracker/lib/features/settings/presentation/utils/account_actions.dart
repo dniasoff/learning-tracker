@@ -100,7 +100,7 @@ Future<void> showSignOutConfirmation(
                 ),
                 const SizedBox(height: 20),
                 Text(
-                  'Sign Out',
+                  AppLocalizations.of(context)!.signOutConfirmTitle,
                   style: theme.textTheme.headlineMedium?.copyWith(
                     color: AppTheme.brandBlueDeep,
                     fontWeight: FontWeight.w800,
@@ -108,9 +108,7 @@ Future<void> showSignOutConfirmation(
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  'Are you sure you want to sign out?\n'
-                  'Your data will be preserved for when\n'
-                  'you sign back in.',
+                  AppLocalizations.of(context)!.signOutConfirmBody,
                   style: theme.textTheme.bodyLarge?.copyWith(
                     color: AppTheme.brandInkMuted,
                     height: 1.45,
