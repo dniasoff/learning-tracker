@@ -356,10 +356,29 @@ class _LifetimeCurriculumMarkingScreenState
     });
   }
 
+  // PP-10 fix: returns the hierarchy level the current panel is displaying so
+  // both _markAllCurrentLevel and _deselectAllCurrentLevel use the same value.
+  int get _effectiveLevel {
+    if (_currentDisplayItems.isEmpty) return 1;
+    return _currentDisplayItems.first.level1.isEmpty ? 1 : _currentLevel;
+  }
+
+  // PP-10 fix: true when every item in the current panel is already selected.
+  bool get _allCurrentSelected {
+    if (_currentDisplayItems.isEmpty) return false;
+    final level = _effectiveLevel;
+    for (final item in _currentDisplayItems) {
+      final rawValue = levelValueAt(item, level) ?? '';
+      if (rawValue.isNotEmpty &&
+          !_selections.any((s) => s.level == level && s.value == rawValue)) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   void _markAllCurrentLevel() {
-    final level = _currentDisplayItems.isNotEmpty
-        ? (_currentDisplayItems.first.level1.isEmpty ? 1 : _currentLevel)
-        : 1;
+    final level = _effectiveLevel;
     setState(() {
       _selections.removeWhere((s) => s.level == level);
       for (final item in _currentDisplayItems) {
@@ -368,6 +387,15 @@ class _LifetimeCurriculumMarkingScreenState
           _selections.add(ScopeEntry(level: level, value: rawValue));
         }
       }
+    });
+  }
+
+  // PP-10 fix: deselect all session-selected items in the current panel, while
+  // leaving persisted (already-saved) rows unchanged.
+  void _deselectAllCurrentLevel() {
+    final level = _effectiveLevel;
+    setState(() {
+      _selections.removeWhere((s) => s.level == level);
     });
   }
 
@@ -412,6 +440,10 @@ class _LifetimeCurriculumMarkingScreenState
 
       _invalidateComputedViews();
       if (!mounted) return;
+      // PP-3 fix: clear the session selection after a successful save so the
+      // user does not see lingering green checkmarks on already-persisted rows
+      // (the persisted state is now reflected by the ledger, not _selections).
+      setState(() => _selections.clear());
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.lifetimeMarkSavedCount(batchItems.length))),
       );
@@ -575,10 +607,12 @@ class _LifetimeCurriculumMarkingScreenState
                                           ),
                                     ),
                                     const SizedBox(height: 4),
+                                    // PP-3 fix: removed the "• level {N}"
+                                    // token that leaked the internal folder
+                                    // size as an opaque "level" number.
                                     Text(
-                                      l10n.lifetimeMarkAsLearnedLine(
+                                      l10n.lifetimeMarkAsLearnedCount(
                                         _selections.length,
-                                        _currentLevel,
                                       ),
                                       style: theme.textTheme.bodySmall
                                           ?.copyWith(
@@ -593,9 +627,14 @@ class _LifetimeCurriculumMarkingScreenState
                           ),
                         ),
                         const SizedBox(height: 10),
+                        // PP-10 fix: toggle between "Select all" and
+                        // "Deselect all" depending on whether every item in
+                        // the current panel is already session-selected.
                         OutlinedButton.icon(
                           onPressed: _currentDisplayItems.isEmpty
                               ? null
+                              : _allCurrentSelected
+                              ? _deselectAllCurrentLevel
                               : _markAllCurrentLevel,
                           style: OutlinedButton.styleFrom(
                             foregroundColor: AppTheme.brandBlue,
@@ -603,8 +642,17 @@ class _LifetimeCurriculumMarkingScreenState
                               color: AppTheme.brandBlue.withValues(alpha: 0.45),
                             ),
                           ),
-                          icon: const Icon(Icons.select_all, size: 20),
-                          label: Text(l10n.selectAllInThisList),
+                          icon: Icon(
+                            _allCurrentSelected
+                                ? Icons.deselect
+                                : Icons.select_all,
+                            size: 20,
+                          ),
+                          label: Text(
+                            _allCurrentSelected
+                                ? l10n.deselectAllInThisList
+                                : l10n.selectAllInThisList,
+                          ),
                         ),
                         const SizedBox(height: 8),
                         Expanded(
@@ -615,7 +663,11 @@ class _LifetimeCurriculumMarkingScreenState
                             onNavigationChanged: (path, _) =>
                                 setState(() => _hasNavStack = path.isNotEmpty),
                             onDisplayItemsChanged: (items) =>
-                                _currentDisplayItems = items,
+                                // PP-10 fix: call setState so the select-all
+                                // toggle re-evaluates _allCurrentSelected when
+                                // the displayed item list changes (e.g. drilled
+                                // into a folder).
+                                setState(() => _currentDisplayItems = items),
                             tileBuilder: (item, currentPath, onDrill) {
                               final currentLevel = currentPath.length + 1;
                               final rawValue =
