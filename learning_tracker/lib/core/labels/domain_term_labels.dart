@@ -148,9 +148,13 @@ class DomainTermLabels {
   // Stage labels must be computed at render time from the current toggle so
   // they re-render live when the setting changes (§8 of hebrew-terms.md).
 
-  /// Returns the display name for stage 0 ("Learn" / "לימוד").
-  String get stageLearn =>
-      _useHebrew ? HebrewTerms.stageLearn : HebrewTerms.stageLearnEn;
+  /// Returns the display name for stage 0 ("Limud" / "לימוד").
+  ///
+  /// IL-5 fix: English mode now returns "Limud" (canonical transliteration,
+  /// matching [limud]) rather than the legacy DB key "Learn".
+  /// The DB-stored stage name remains "Learn" (stageNameMap key); only the
+  /// *display* form is normalised here.
+  String get stageLearn => _useHebrew ? HebrewTerms.stageLearn : 'Limud';
 
   /// Returns a numbered chazara stage name, 1-based.
   ///
@@ -186,6 +190,10 @@ class DomainTermLabels {
   /// English (legacy). This function looks the name up in [HebrewTerms.stageNameMap]
   /// to identify the canonical pair and returns the correct form.
   ///
+  /// IL-5 fix: in English mode the legacy stored key "Learn" (and its Hebrew
+  /// mirror "לימוד") is normalised to "Limud" — the canonical transliteration.
+  /// The DB-stored value is NOT changed; only the *display* form is normalised.
+  ///
   /// If the name is unrecognised (user-customised), it is returned unchanged —
   /// custom names are always displayed as-is regardless of the toggle.
   String resolveStoredStageName(String storedName) {
@@ -198,12 +206,25 @@ class DomainTermLabels {
       return storedName; // Custom name — keep as-is.
     } else {
       // English mode: if stored in Hebrew, convert back to English form.
-      final toEnglish = _hebrewToEnglish[storedName];
-      if (toEnglish != null) return toEnglish;
-      // May already be English — check the forward map.
-      if (HebrewTerms.stageNameMap.containsKey(storedName)) return storedName;
+      var candidate = _hebrewToEnglish[storedName];
+      if (candidate == null &&
+          HebrewTerms.stageNameMap.containsKey(storedName)) {
+        // Already an English key (e.g. "Learn").
+        candidate = storedName;
+      }
+      if (candidate != null) {
+        // IL-5: normalise legacy "Learn" key to canonical "Limud".
+        return _normaliseEnglishStageName(candidate);
+      }
       return storedName; // Custom name — keep as-is.
     }
+  }
+
+  /// Maps legacy stored English stage-name keys to their canonical display
+  /// forms.  Currently only "Learn" → "Limud" (IL-5).
+  static String _normaliseEnglishStageName(String key) {
+    if (key == HebrewTerms.stageLearnEn) return 'Limud';
+    return key;
   }
 
   // Program-label resolution (per-LearningProgramData / per-CalendarProgramEntry)
