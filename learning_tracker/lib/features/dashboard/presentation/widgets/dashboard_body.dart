@@ -203,11 +203,19 @@ class DashboardBody extends ConsumerWidget {
     // store is the offline-first source of truth, so a resolved query is
     // authoritative regardless of whether a Firestore pull has run (BUG-#35:
     // gating additionally on `initialSyncComplete` stranded the tiles on "…"
-    // forever for CHILD / tutored sessions that never call pullOnLaunch).  The
-    // `initialSyncComplete` flag is read only to silence an unused-variable
-    // lint and document the historical first-launch hint; it no longer blocks
-    // resolution.
-    final tasksReady = dailyTasksAsync.hasValue || initialSyncComplete;
+    // forever for CHILD / tutored sessions that never call pullOnLaunch).
+    //
+    // PP-15: the previous `|| initialSyncComplete` guard made `tasksReady`
+    // true as soon as the first-launch sync flag flipped — even before the
+    // Drift query emitted — so the OVERDUE/TODAY/CHAZARA bubbles flashed
+    // real zeros for 1-2 s, which looked like "all caught up".  The fix uses
+    // ONLY `dailyTasksAsync.hasValue` so bubbles stay on "…" until the local
+    // DB query has actually returned data.  The `initialSyncComplete` variable
+    // is retained (read but not used in the condition) to document the
+    // historical decision and suppress any dead-variable lint.
+    final tasksReady = dailyTasksAsync.hasValue;
+    // ignore: unused_local_variable — retained for historical documentation.
+    final _ = initialSyncComplete;
     final lifetimeReady = lifetimeTotalsAsync.hasValue;
     // "All caught up" is suppressed until tasks are ready: showing it before
     // sync completes would mislead the user into thinking there's nothing to do
@@ -394,6 +402,7 @@ class DashboardBody extends ConsumerWidget {
             cumulativeLifetime: cumulativeLifetime,
             chazaraLabel: chazaraBubbleLabel,
             tasksReady: tasksReady,
+            lifetimeReady: lifetimeReady,
           ),
         const SizedBox(height: 30),
         Row(
