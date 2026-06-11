@@ -61,6 +61,84 @@ class Gematriya {
     return buf.toString();
   }
 
+  /// Convert a Hebrew year [hebrewYear] (≥ 1) to its gematriya representation
+  /// with the correct punctuation for display.
+  ///
+  /// **Current-era convention (years 1..5999):** the thousands component is
+  /// omitted by tradition; only the sub-1000 remainder is rendered with
+  /// standard gershayim punctuation inserted before the last letter.
+  ///
+  ///   5786 → "תשפ״ו"   (786 with gershayim, thousands ה omitted)
+  ///   5000 → ""         (no sub-1000 remainder — empty string returned for
+  ///                       pure-millennium abbreviated years; callers may
+  ///                       substitute a placeholder such as "תק״ב" for 5002)
+  ///
+  /// **Years ≥ 6000:** the thousands component is included as a geresh-marked
+  /// letter (U+05F3 ׳) so the year reads unambiguously.
+  ///
+  ///   6000 → "ו׳"
+  ///   6120 → "ו׳ק״כ"
+  ///   7000 → "ז׳"
+  ///
+  /// Gershayim (U+05F4 ״) is inserted before the last letter of the sub-1000
+  /// part when that part has two or more letters.  Single-letter sub-1000
+  /// parts receive a geresh instead.
+  ///
+  /// Throws [ArgumentError] for [hebrewYear] < 1.
+  ///
+  /// TS-6 fix: this method replaces any ad-hoc `forNumber(year % 1000)` call
+  /// that silently dropped the thousands component for years ≥ 6000.
+  static String forYear(int hebrewYear) {
+    if (hebrewYear < 1) {
+      throw ArgumentError.value(hebrewYear, 'hebrewYear', 'must be >= 1');
+    }
+
+    final thousands = hebrewYear ~/ 1000;
+    final remainder = hebrewYear % 1000;
+
+    // Sub-1000 part (may be empty if remainder == 0).
+    final String subPart;
+    if (remainder == 0) {
+      subPart = '';
+    } else {
+      subPart = _withGershayim(forNumber(remainder));
+    }
+
+    // For years with no thousands digit (1..999) or current era (thousands
+    // 1..5): omit the thousands letter by convention — only the sub-1000 part
+    // is shown.
+    if (thousands == 0 || (thousands >= 1 && thousands <= 5)) {
+      return subPart;
+    }
+
+    // For years in the 6th millennium and beyond the thousands letter is
+    // required so the year is unambiguous. Use a single geresh (׳, U+05F3).
+    final thousandsLetter = _thousandsLetter(thousands);
+    return '$thousandsLetter׳$subPart';
+  }
+
+  /// Insert gershayim (״, U+05F4) before the last rune of [s] when [s] has
+  /// two or more characters.  Single-character strings get a geresh (׳).
+  static String _withGershayim(String s) {
+    if (s.isEmpty) return s;
+    final runes = s.runes.toList();
+    if (runes.length == 1) {
+      return '$s׳'; // single letter — use geresh
+    }
+    // Insert gershayim before the last character.
+    final prefix = String.fromCharCodes(runes.sublist(0, runes.length - 1));
+    final last = String.fromCharCode(runes.last);
+    return '$prefix״$last';
+  }
+
+  /// Hebrew letter for the thousands place (1 → א, 2 → ב, …, 9 → ט).
+  /// Returns the ones letter since Hebrew years have thousands ≤ 9 for
+  /// any year in the range of interest.
+  static String _thousandsLetter(int n) {
+    assert(n >= 1 && n <= 9, 'Thousands digit out of range: $n');
+    return _ones[n];
+  }
+
   /// Parse a Hebrew gematriya string back to its integer value, or null if
   /// the input doesn't look like valid gematriya.
   ///
