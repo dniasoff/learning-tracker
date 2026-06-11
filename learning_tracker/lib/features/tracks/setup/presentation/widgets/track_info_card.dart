@@ -10,6 +10,25 @@ import 'package:learning_tracker/core/utils/hebrew_calendar_utils.dart';
 import 'package:learning_tracker/features/progress/domain/services/pace_calculator.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
+/// Returns the VALUE string for the "Elapsed" info row.
+///
+/// TS-9 fix: the old [TrackInfoCard._elapsedRemainingLabel] prepended
+/// `l10n.trackInfoElapsed` to the string, duplicating the row label.
+/// The value must be just "N days [· Remaining M days]".
+String elapsedRemainingLabel({
+  required AppLocalizations l10n,
+  required int elapsedDays,
+  required int? remainingDays,
+}) {
+  // TS-9: do NOT prepend l10n.trackInfoElapsed here — the row label
+  // already shows it.  Value = "$elapsedDays days [· Remaining M days]".
+  final elapsedStr = '$elapsedDays ${l10n.trackInfoDays}';
+  final remainingStr = remainingDays != null && remainingDays >= 0
+      ? '${l10n.trackInfoRemaining} $remainingDays ${l10n.trackInfoDays}'
+      : null;
+  return remainingStr != null ? '$elapsedStr · $remainingStr' : elapsedStr;
+}
+
 /// Info card shown at the TOP of the Track Detail screen, surfacing key pace
 /// and timeline metrics: started date, goal date, required & actual pace, and
 /// elapsed / remaining day counts.
@@ -156,18 +175,17 @@ class TrackInfoCard extends ConsumerWidget {
         '${l10n.trackInfoItemsPerDay}';
   }
 
+  // TS-9 fix: delegate to the top-level [elapsedRemainingLabel] so the
+  // value does not repeat the row label text.
   String _elapsedRemainingLabel(
     AppLocalizations l10n,
     int elapsedDays,
     int? remainingDays,
-  ) {
-    final elapsedStr =
-        '${l10n.trackInfoElapsed} $elapsedDays ${l10n.trackInfoDays}';
-    final remainingStr = remainingDays != null && remainingDays >= 0
-        ? '${l10n.trackInfoRemaining} $remainingDays ${l10n.trackInfoDays}'
-        : null;
-    return remainingStr != null ? '$elapsedStr · $remainingStr' : elapsedStr;
-  }
+  ) => elapsedRemainingLabel(
+    l10n: l10n,
+    elapsedDays: elapsedDays,
+    remainingDays: remainingDays,
+  );
 
   // ---------------------------------------------------------------------------
   // Row widgets (mirror the _configRow pattern used in the header card)

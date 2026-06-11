@@ -166,7 +166,16 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
 
       // All 7 short day labels must appear.
-      for (final label in ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']) {
+      // Saturday is rendered as 'Shabbos' (Ashkenazi default) after TS-4 fix.
+      for (final label in [
+        'Sun',
+        'Mon',
+        'Tue',
+        'Wed',
+        'Thu',
+        'Fri',
+        'Shabbos',
+      ]) {
         expect(find.text(label), findsOneWidget, reason: '$label tile missing');
       }
 
@@ -373,7 +382,9 @@ void main() {
       await tester.pump(Duration.zero);
     });
 
-    testWidgets('hardcoded day labels Sun..Sat are present', (tester) async {
+    testWidgets('day labels Sun..Fri are English, Saturday is Shabbos', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         _buildScreen(
           curriculumId: CurriculumId.mishnayos,
@@ -384,11 +395,20 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 
-      for (final label in ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']) {
+      // TS-4: Saturday is now nusach-resolved ('Shabbos' for Ashkenazi default).
+      for (final label in [
+        'Sun',
+        'Mon',
+        'Tue',
+        'Wed',
+        'Thu',
+        'Fri',
+        'Shabbos',
+      ]) {
         expect(
           find.text(label),
           findsOneWidget,
-          reason: 'Hardcoded English day label "$label" present (not i18n)',
+          reason: 'Day label "$label" should be present',
         );
       }
 
@@ -701,7 +721,16 @@ void main() {
       );
 
       // Day-toggle tiles must NOT be present (no toggles for learn-only track).
-      for (final label in ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']) {
+      // Saturday is rendered as 'Shabbos' after TS-4 fix.
+      for (final label in [
+        'Sun',
+        'Mon',
+        'Tue',
+        'Wed',
+        'Thu',
+        'Fri',
+        'Shabbos',
+      ]) {
         expect(
           find.text(label),
           findsNothing,

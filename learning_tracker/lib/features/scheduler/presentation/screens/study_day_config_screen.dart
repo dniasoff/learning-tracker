@@ -2,8 +2,11 @@ import 'package:auto_route/auto_route.dart';
 import 'package:drift/drift.dart' hide Column;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
+import 'package:learning_tracker/core/labels/domain_term_labels.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
@@ -18,15 +21,37 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Day labels in display order: Sunday first (ISO weekday 7), then Mon(1)..Sat(6).
 const _displayOrder = [7, 1, 2, 3, 4, 5, 6];
-const _dayLabels = {
+
+/// Base English day abbreviations for non-Saturday days.
+///
+/// Saturday (ISO 6) is handled separately by [studyDayLabel] via the
+/// Nusach/Hebrew-Terms resolver — never from this map — to fix TS-4.
+const _baseEnglishDayLabels = {
   1: 'Mon',
   2: 'Tue',
   3: 'Wed',
   4: 'Thu',
   5: 'Fri',
-  6: 'Sat',
+  // 6 intentionally absent — resolved via shabbos() below
   7: 'Sun',
 };
+
+/// Returns the display label for a day of the week in the Study Days screen.
+///
+/// TS-4 fix: Saturday (ISO weekday 6) is routed through [DomainTermLabels.shabbos]
+/// so it renders "Shabbos" (Ashkenazi), "Shabbat" (Sephardi), or "שבת" (Hebrew
+/// mode) instead of the hardcoded "Sat". All other days use standard English
+/// abbreviations unchanged.
+String studyDayLabel({
+  required int isoWeekday,
+  required DomainTermLabels terms,
+  required TransliterationVariant variant,
+}) {
+  if (isoWeekday == 6) {
+    return terms.shabbos(variant: variant);
+  }
+  return _baseEnglishDayLabels[isoWeekday] ?? '?';
+}
 
 @RoutePage()
 class StudyDayConfigScreen extends ConsumerWidget {
@@ -51,6 +76,10 @@ class StudyDayConfigScreen extends ConsumerWidget {
     // always edit. Mirrors the gating in parent_settings_screen.
     final tutorPerms = ref.watch(activeTutorPermissionsProvider);
     final canEdit = tutorPerms == null || tutorPerms.canEditStudyDays;
+
+    // TS-4: read terms + variant so Saturday routes through nusach resolver.
+    final terms = domainTermLabels(ref);
+    final variant = ref.watch(currentTransliterationVariantProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -137,7 +166,13 @@ class StudyDayConfigScreen extends ConsumerWidget {
                     final isStudy = currentType == DayType.study;
 
                     return _DayToggleTile(
-                      dayLabel: _dayLabels[dow]!,
+                      // TS-4: use studyDayLabel so Saturday reads
+                      // "Shabbos"/"Shabbat"/"שבת" per nusach + terms.
+                      dayLabel: studyDayLabel(
+                        isoWeekday: dow,
+                        terms: terms,
+                        variant: variant,
+                      ),
                       isStudy: isStudy,
                       onToggle: canEdit
                           ? () => _toggleDay(

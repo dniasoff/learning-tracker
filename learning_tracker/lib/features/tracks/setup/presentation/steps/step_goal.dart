@@ -16,6 +16,7 @@ import 'package:learning_tracker/core/widgets/scrollable_step_body.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/presentation/widgets/hebrew_date_picker.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
+import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/steps/goal_cards.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/steps/goal_helpers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -25,12 +26,32 @@ class SelfPacedGoalStep extends ConsumerStatefulWidget {
     required this.curriculumId,
     required this.studyDays,
     required this.onComplete,
+    // TS-2 fix: accept in-wizard scope selections so the item-count math is
+    // driven by the selected scope, not the full curriculum total.
+    this.scopeSelections,
+    // TS-10 fix: accept a previously-set goal so Back+Forward navigation
+    // restores the deadline/pace choice the user already made.
+    this.initialGoal,
     super.key,
   });
 
   final CurriculumId curriculumId;
   final Map<int, String> studyDays;
   final ValueChanged<GoalEntity?> onComplete;
+
+  /// The scope selections the user has chosen in the wizard (not yet saved to DB).
+  ///
+  /// When non-null and non-empty, the goal step derives its item count from
+  /// these selections rather than [scopedItemCountProvider] (which reads DB
+  /// scope — not yet written during the wizard flow).
+  final List<ScopeEntry>? scopeSelections;
+
+  /// A previously-set goal from the wizard state (TS-10).
+  ///
+  /// When non-null, the step initializes [_mode] and [_deadline] from this
+  /// value so backing-and-forwarding through the wizard does not discard the
+  /// user's deadline choice.
+  final GoalEntity? initialGoal;
 
   @override
   ConsumerState<SelfPacedGoalStep> createState() => _SelfPacedGoalStepState();
@@ -48,10 +69,22 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
     super.initState();
     final daily =
         CurriculumDefaults.defaultDailyTargets[widget.curriculumId] ?? 1;
-    _paceValue = (daily * 7).clamp(1, 99);
-    final now = DateTimeFactory.nowLocal();
-    _deadline = DateTime(now.year, now.month, now.day);
     _paceGranularity = _opts.defaultKey;
+
+    // TS-10: restore deadline/mode from a previously-set goal so Back+Forward
+    // navigation does not discard the user's choice.
+    final prev = widget.initialGoal;
+    if (prev != null &&
+        prev.goalType == 'deadline' &&
+        prev.targetDate != null) {
+      _mode = 'deadline';
+      _deadline = prev.targetDate!.toLocal();
+      _paceValue = (prev.paceValue ?? (daily * 7)).clamp(1, 99);
+    } else {
+      _paceValue = (daily * 7).clamp(1, 99);
+      final now = DateTimeFactory.nowLocal();
+      _deadline = DateTime(now.year, now.month, now.day);
+    }
   }
 
   PaceUnitOptions get _opts => paceUnitOptionsFor(widget.curriculumId);
@@ -80,6 +113,36 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
       value,
       locale: Localizations.localeOf(context).toString(),
     );
+  }
+
+  /// Counts the leaf content items that fall within the given wizard scope
+  /// selections (scope level + value filters applied to [allContent]).
+  ///
+  /// TS-2 fix: used when [SelfPacedGoalStep.scopeSelections] is non-null so
+  /// the goal step's item count reflects the scope the user chose in the wizard
+  /// (not the DB-saved scope which hasn't been written yet).
+  int _countItemsInWizardScope(
+    List<ContentItem> allContent,
+    List<ScopeEntry> selections,
+  ) {
+    if (selections.isEmpty) return allContent.where((i) => i.isLeaf).length;
+    // Apply the first scope entry (the wizard stores a single scope level).
+    final entry = selections.first;
+    final scopeLevel = entry.level;
+    final scopeValue = entry.value;
+    return allContent.where((item) {
+      if (!item.isLeaf) return false;
+      switch (scopeLevel) {
+        case 1:
+          return item.level1 == scopeValue;
+        case 2:
+          return item.level2 == scopeValue;
+        case 3:
+          return item.level3 == scopeValue;
+        default:
+          return true;
+      }
+    }).length;
   }
 
   int _countScopeInLearningUnit(
@@ -259,9 +322,17 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
     final useHebrew = ref.watch(useHebrewDateProvider);
     final useHebrewTerms = domainTermLabels(ref).isHebrew;
     final variant = ref.watch(currentTransliterationVariantProvider);
+
+    // TS-2 fix: when the wizard has passed explicit scopeSelections we must
+    // drive the item count from those selections (they aren't in the DB yet).
+    // When no selections are provided, fall through to the DB-backed provider
+    // as before (e.g. in the standalone GoalSetupScreen path).
+    final wizardSelections = widget.scopeSelections;
     final scopeCountAsync = ref.watch(
       scopedItemCountProvider(widget.curriculumId),
     );
+    // Full-curriculum content is always loaded so _countScopeInLearningUnit
+    // can filter by learning unit within the (possibly-scoped) set.
     final scopedContentAsync = ref.watch(
       scopedCurriculumContentProvider(widget.curriculumId),
     );
@@ -273,7 +344,18 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
         ? countStudyDaysInInclusiveMapRange(widget.studyDays, start, end)
         : 0;
     final scopeLoading = scopeCountAsync.isLoading;
-    final totalScopeItems = scopeCountAsync.asData?.value ?? 120;
+
+    // TS-2: if wizard selections are available, compute item count from those
+    // selections applied to the already-loaded content, not the DB-saved scope.
+    final int totalScopeItems;
+    if (wizardSelections != null &&
+        wizardSelections.isNotEmpty &&
+        scopedContentAsync.asData != null) {
+      final allContent = scopedContentAsync.asData!.value;
+      totalScopeItems = _countItemsInWizardScope(allContent, wizardSelections);
+    } else {
+      totalScopeItems = scopeCountAsync.asData?.value ?? 120;
+    }
     final totalScopeInLearningUnit = _countScopeInLearningUnit(
       scopedContentAsync.asData?.value,
       totalScopeItems,
@@ -372,14 +454,19 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
                   child: paceCard,
                 ),
           const SizedBox(height: 12),
+          // TS-5 fix: ClipRect constrains the InkWell hit-test area in
+          // BlurInactiveGoalOption to the card's visual bounds, preventing
+          // it from intercepting taps on the Continue button below.
           _mode == 'deadline'
               ? deadlineCard
-              : BlurInactiveGoalOption(
-                  hint: l10n.addTrackGoalTapToUseDeadline,
-                  onTap: () => unawaited(_activateDeadlineMode()),
-                  child: deadlineCard,
+              : ClipRect(
+                  child: BlurInactiveGoalOption(
+                    hint: l10n.addTrackGoalTapToUseDeadline,
+                    onTap: () => unawaited(_activateDeadlineMode()),
+                    child: deadlineCard,
+                  ),
                 ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 32),
           FilledButton(
             // F-M2: disable Continue while scope is loading in deadline mode so
             // the user cannot proceed with the fallback (120) pace.
