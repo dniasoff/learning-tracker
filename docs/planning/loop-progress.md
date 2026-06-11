@@ -222,3 +222,26 @@ REDESIGN: vision (downscaled screenshots judged by a vision agent against a huma
 - NEXT: rebuild+redeploy, REDO vision sweep to confirm findings resolved + catch regressions; iterate until clean.
 KEY LESSON: a green automated run means nothing without VISION + a DOMAIN ORACLE + EXPLORATION. "String present"
 is not "string correct"; the widget tree is not the rendered screen.
+
+### REDO R1 (2026-06-11) — find→fix→redo cycle on the first 6 re-audited screens
+REDO FIND (redo_R1.json, 36 findings): many prior fixes CONFIRMED on-device (AN-7 glyphs, IL-4 colors, daily-
+reminder persistence, TS-9 elapsed dup, reactive balance). But 1 P0 + 10 P1 remained — dominated by the KEYSTONE:
+the Hebrew UI-locale switch did not take effect on-device and there was NO in-app language switcher
+(LanguageNotifier.setLanguage had zero callers), so all he-RTL verification across 47 screens was blocked, and
+"half-translated" Hebrew screens couldn't even be reached.
+- KEYSTONE FIXED (commit 6199143b): added _AppLanguageTile (PreferenceSegmentedTile<String> English/עברית) at the
+  top of Settings → languageProvider.setLanguage → CurrentAppLocale.set → MaterialApp.locale. The MaterialApp.locale
+  wiring was already correct; the only gap was a UI control to drive it. New ARB keys settingsLanguage/Subtitle.
+  The 'No backup' badge finding was a SYMPTOM (already localized; just never reached he) — resolved by the keystone.
+- R1 FIX WAVE (workflow w4f9xr4zj, 4 worktree workers off 6199143b, disjoint file sets + additive ARB):
+  · addtrack (r1-tracks2): Genesis→transliteration toast, step-count denominator stability, "1 DAYS"/"1 study days"
+    plurals, scope breadcrumb overflow+redundancy, Back-loses-scope-selection, Starting-Position 59px overflow @1.3.
+  · trackdetail (r1-locale): TS-8 date-calendar consistency (Est. finish honors Hebrew-date pref), delete-dialog
+    safety hierarchy, Hebrew Edit-Goal full localization + label truncation, empty-track-name validation, Kodshim spelling.
+  · scheduler-studydays (r1-content2): Hebrew Study-Days full localization (title/subtitle/weekday-abbr/footer),
+    0-study-days warning guard.
+  · gamif (r1-gamif2): IceCream mid-word wrap fix @1.3, redeemScreenTitle he 'פרס הפרסים'→'מימוש פרסים'.
+- NEXT: integrate 4 branches serially into dev → regen l10n+codegen once → full make ci (watch analyze AND tests)
+  → push → rebuild+redeploy APK → REDO-verify R1's 6 screens (esp. the switcher now drives he-RTL) → continue redo
+  across the remaining 41 screens (R2–R6), iterating find→fix→redo until a sweep returns clean. Mandate: "finish 47
+  screen find first, bulk fix and then redo until no bugs."
