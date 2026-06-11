@@ -777,6 +777,11 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
+  String lifetimeMarkAsLearnedCount(int count) {
+    return 'נבחרו: $count';
+  }
+
+  @override
   String get selectAllInThisList => 'בחר הכל ברשימה';
 
   @override

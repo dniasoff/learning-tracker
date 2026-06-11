@@ -782,6 +782,11 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String lifetimeMarkAsLearnedCount(int count) {
+    return 'Selected: $count';
+  }
+
+  @override
   String get selectAllInThisList => 'Select all in this list';
 
   @override

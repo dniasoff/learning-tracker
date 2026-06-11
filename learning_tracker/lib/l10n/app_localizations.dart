@@ -1457,6 +1457,12 @@ abstract class AppLocalizations {
   /// **'Selected: {count} • level {level}'**
   String lifetimeMarkAsLearnedLine(int count, int level);
 
+  /// PP-3 fix: header info line in LifetimeCurriculumMarkingScreen — shows the session-selected count without leaking the internal 'level N' folder size.
+  ///
+  /// In en, this message translates to:
+  /// **'Selected: {count}'**
+  String lifetimeMarkAsLearnedCount(int count);
+
   /// No description provided for @selectAllInThisList.
   ///
   /// In en, this message translates to:

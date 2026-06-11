@@ -395,6 +395,12 @@
       "level": { "type": "int" }
     }
   },
+  "lifetimeMarkAsLearnedCount": "נבחרו: {count}",
+  "@lifetimeMarkAsLearnedCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
   "selectAllInThisList": "בחר הכל ברשימה",
   "deselectAllInThisList": "בטל בחירה בכל הרשימה",
   "clearSelection": "נקה בחירה",

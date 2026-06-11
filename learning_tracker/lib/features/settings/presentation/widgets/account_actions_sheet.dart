@@ -216,10 +216,13 @@ class _AccountActionsSheet extends ConsumerWidget {
               if (showSignOut)
                 ListTile(
                   leading: CircleAvatar(
+                    // AN-7 fix: glyph must contrast against errorContainer fill.
+                    // errorContainer is a light red/pink; errorContainer + error
+                    // glyph pairing is invisible on many themes. Use white glyph.
                     backgroundColor: theme.colorScheme.errorContainer,
-                    child: Icon(
+                    child: const Icon(
                       Icons.logout_rounded,
-                      color: theme.colorScheme.error,
+                      color: Colors.white,
                     ),
                   ),
                   title: Text(
@@ -236,10 +239,11 @@ class _AccountActionsSheet extends ConsumerWidget {
               if (showDelete)
                 ListTile(
                   leading: CircleAvatar(
+                    // AN-7 fix: same contrast fix as Sign Out above.
                     backgroundColor: theme.colorScheme.errorContainer,
-                    child: Icon(
+                    child: const Icon(
                       Icons.delete_forever_rounded,
-                      color: theme.colorScheme.error,
+                      color: Colors.white,
                     ),
                   ),
                   title: Text(

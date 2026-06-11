@@ -398,6 +398,13 @@
       "level": { "type": "int" }
     }
   },
+  "lifetimeMarkAsLearnedCount": "Selected: {count}",
+  "@lifetimeMarkAsLearnedCount": {
+    "description": "PP-3 fix: header info line in LifetimeCurriculumMarkingScreen — shows the session-selected count without leaking the internal 'level N' folder size.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
   "selectAllInThisList": "Select all in this list",
   "deselectAllInThisList": "Deselect all in this list",
   "clearSelection": "Clear selection",
