@@ -303,3 +303,13 @@ the Hebrew UI-locale switch did not take effect on-device and there was NO in-ap
     l10n review. NOTE: audit brief named profile 'Shloime' but the device has 'Yossi' — brief drift, harmless.
 - NEXT: integrate R2 fix wave → make ci → push → redeploy → redo R2's fixed screens; seed gamification/scheduler data;
   then R3..R6 for the remaining ~33 screens. Mandate: "check every screen … redo until no bugs."
+
+### R2 fixes integrated + R3 launched (2026-06-11)
+- R2 FIX WAVE integrated + pushed (commit 22bf15e0, make ci GREEN 9902 pass): scheduler daily-task banner Hebrew +
+  ICU plural (schedulerTodaysGoal/schedulerGoalTaskCount), tierCounter* ICU plurals (en + he dual one/two/other),
+  content-hierarchy breadcrumb RTL chevron consistency + current-crumb clip@1.3 + system-Back steps-one-level
+  (PopScope), text-reader bottom buttons SafeArea(top:false). Disjoint-root merges = clean. Workers added ~16 tests.
+  DEFERRED: masechta-count "{count} Masechta" plural (needs per-nusach plural-forms table). Debug APK redeployed.
+- R3 redo RUNNING (workflow wxta2gkt4): gamification (with a child-profile SEEDING attempt to reach the streak-chip
+  entry), reward_configuration, curriculum_progress, recent_activity, siyumim_milestones, lifetime_marking.
+- CUMULATIVE: 12 of ~45 screens redo-verified (R1 6, R2 6); ~30 real bugs fixed + keystone; ~33 screens remain.
