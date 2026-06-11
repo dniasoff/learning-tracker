@@ -236,6 +236,10 @@ Future<ProfileModel?> showAddProfileDialog(
     );
     if (context.mounted) ref.invalidate(profileListProvider);
     if (created.profileMode.isChild && context.mounted) {
+      // PP-13: update the active-profile context to the newly-created child
+      // profile so the app-shell header shows the new profile's identity during
+      // the forced PIN setup — not the previously-active profile's stale chrome.
+      ref.read(selectedProfileIdProvider.notifier).select(created.id);
       await showParentPinSetupDialog(
         context,
         ref,
