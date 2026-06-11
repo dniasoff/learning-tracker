@@ -2,18 +2,17 @@
 // Test-only: TestWidgetsFlutterBinding.instance.window.*TestValue is the only
 // binding-level viewport-sizing API available in setUp (no tester there). It is
 // functional and test-scoped, not production tech debt.
-/// Regression test: SCHED-GOAL-PLURAL-15 — _GoalCard must use correct English
-/// pluralization for its task-count label.
+/// Regression test: SCHED-GOAL-PLURAL-15 / SCHED-GOAL-I18N-R2 — the scheduler
+/// goal banner (`_GoalCard`) must be fully localized and correctly pluralized.
 ///
-/// Before the fix: `_GoalCard` renders `'$count today tasks'` unconditionally,
-/// which produces "1 today tasks" for a single task — incorrect English.
+/// Before the R2 fix: `_GoalCard` hard-coded the English eyebrow "TODAY'S GOAL"
+/// and the count text `'$count today ${count == 1 ? 'task' : 'tasks'}'`. Under
+/// the Hebrew (he) UI locale the banner leaked English chrome.
 ///
-/// After the fix: the label is `'$count today ${count == 1 ? 'task' : 'tasks'}'`,
-/// producing "1 today task" (singular) and "3 today tasks" (plural).
-///
-/// Root cause: hard-coded literal `'$count today tasks'` in `_GoalCard.build`
-/// in `scheduler_screen.dart:302`. The noun is not derived from the count
-/// value, so the singular/plural boundary is never crossed.
+/// After the fix: both strings come from ARB keys (`schedulerTodaysGoal`,
+/// `schedulerGoalTaskCount`). English plural: "1 task today" / "3 tasks today".
+/// Hebrew uses the dual: "משימה אחת היום" / "שתי משימות היום" / "{n} משימות היום",
+/// and the eyebrow reads "היעד של היום" — no English in the he locale.
 @Tags(['scheduler', 'l1', 'sched_goal_plural_15'])
 library;
 
@@ -55,22 +54,22 @@ DailyTask _task({String ref = 'Mishnah_Berakhot_1.1'}) {
   );
 }
 
-Widget _buildScreen(List<DailyTask> tasks) {
+Widget _buildScreen(List<DailyTask> tasks, {Locale locale = const Locale('en')}) {
   return ProviderScope(
     overrides: [
       allDailyTasksProvider.overrideWith((ref) => Future.value(tasks)),
       useHebrewTermsProvider.overrideWith(_HebrewTermsOff.new),
     ],
-    child: const MaterialApp(
-      locale: Locale('en'),
-      localizationsDelegates: [
+    child: MaterialApp(
+      locale: locale,
+      localizationsDelegates: const [
         AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: AppLocalizations.supportedLocales,
-      home: SchedulerScreen(),
+      home: const SchedulerScreen(),
     ),
   );
 }
@@ -96,11 +95,11 @@ void main() {
     TestWidgetsFlutterBinding.instance.window.clearDevicePixelRatioTestValue();
   });
 
-  // ── SCHED-GOAL-PLURAL-15 ─────────────────────────────────────────────────
+  // ── SCHED-GOAL-PLURAL-15 (English pluralization, localized) ───────────────
 
-  group('SCHED-GOAL-PLURAL-15: _GoalCard task-count pluralization', () {
+  group('SCHED-GOAL-PLURAL-15: _GoalCard task-count pluralization (en)', () {
     testWidgets(
-      'count == 1 shows singular "1 today task" (not "1 today tasks")',
+      'count == 1 shows singular "1 task today" (not "1 tasks today")',
       (tester) async {
         await tester.pumpWidget(_buildScreen([_task()]));
         await tester.pump();
@@ -108,20 +107,19 @@ void main() {
 
         // The singular form must say "task" not "tasks".
         expect(
-          find.text('1 today task'),
+          find.text('1 task today'),
           findsOneWidget,
           reason:
-              'SCHED-GOAL-PLURAL-15: count==1 must produce "1 today task"; '
-              r'the hard-coded literal "$count today tasks" ignores the count '
-              'and always produces the plural form.',
+              'SCHED-GOAL-PLURAL-15: count==1 must produce "1 task today" via '
+              'the ICU plural ARB key schedulerGoalTaskCount.',
         );
         // The plural form must NOT appear for a single task.
         expect(
-          find.text('1 today tasks'),
+          find.text('1 tasks today'),
           findsNothing,
           reason:
-              'SCHED-GOAL-PLURAL-15: "1 today tasks" is ungrammatical; '
-              'the bug was a missing pluralisation branch.',
+              'SCHED-GOAL-PLURAL-15: "1 tasks today" is ungrammatical; the '
+              'ICU =1 branch must be selected for a single task.',
         );
 
         await tester.pumpWidget(const SizedBox.shrink());
@@ -129,21 +127,22 @@ void main() {
       },
     );
 
-    testWidgets('count == 0 shows "0 today tasks" (plural)', (tester) async {
-      // Edge case: zero tasks uses the plural form.
+    testWidgets('count == 0 hides the goal card (empty state shown)', (
+      tester,
+    ) async {
+      // Edge case: zero tasks shows the empty-state, not _GoalCard.
       await tester.pumpWidget(_buildScreen([]));
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 
-      // Empty-state is shown — _GoalCard is NOT rendered for 0 tasks.
-      expect(find.text('0 today tasks'), findsNothing);
-      expect(find.text('0 today task'), findsNothing);
+      expect(find.text('0 tasks today'), findsNothing);
+      expect(find.text('0 task today'), findsNothing);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(Duration.zero);
     });
 
-    testWidgets('count == 3 shows plural "3 today tasks"', (tester) async {
+    testWidgets('count == 3 shows plural "3 tasks today"', (tester) async {
       await tester.pumpWidget(
         _buildScreen([
           _task(ref: 'Ref_1'),
@@ -155,9 +154,82 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
 
       expect(
-        find.text('3 today tasks'),
+        find.text('3 tasks today'),
         findsOneWidget,
-        reason: 'count > 1 must produce the plural form "3 today tasks"',
+        reason: 'count > 1 must produce the plural form "3 tasks today"',
+      );
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    });
+
+    testWidgets('eyebrow uses localized "TODAY\'S GOAL" (en)', (tester) async {
+      await tester.pumpWidget(_buildScreen([_task()]));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text("TODAY'S GOAL"), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    });
+  });
+
+  // ── SCHED-GOAL-I18N-R2 (Hebrew banner is fully Hebrew) ────────────────────
+
+  group('SCHED-GOAL-I18N-R2: _GoalCard is fully Hebrew in the he locale', () {
+    testWidgets('eyebrow + count are Hebrew; no English chrome leaks', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _buildScreen([_task()], locale: const Locale('he')),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      // The English eyebrow must NOT appear under the Hebrew UI locale.
+      expect(
+        find.text("TODAY'S GOAL"),
+        findsNothing,
+        reason:
+            'SCHED-GOAL-I18N-R2: the hard-coded English eyebrow leaked into '
+            'the Hebrew banner before the fix.',
+      );
+      // The localized Hebrew eyebrow must be present.
+      expect(find.text('היעד של היום'), findsOneWidget);
+
+      // count == 1 → Hebrew singular dual form.
+      expect(
+        find.text('משימה אחת היום'),
+        findsOneWidget,
+        reason: 'SCHED-GOAL-I18N-R2: count==1 must render the Hebrew singular.',
+      );
+      // No English count text anywhere in the Hebrew banner.
+      expect(find.text('1 task today'), findsNothing);
+      expect(find.text('1 today task'), findsNothing);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    });
+
+    testWidgets('count == 2 uses the Hebrew dual "שתי משימות היום"', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _buildScreen([
+          _task(ref: 'Ref_1'),
+          _task(ref: 'Ref_2'),
+        ], locale: const Locale('he')),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(
+        find.text('שתי משימות היום'),
+        findsOneWidget,
+        reason:
+            'SCHED-GOAL-I18N-R2: Hebrew has a dual — count==2 must use the '
+            'two{...} ICU branch, not the plural "other" form.',
       );
 
       await tester.pumpWidget(const SizedBox.shrink());

@@ -321,8 +321,8 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 
-      // _GoalCard renders '$count today tasks'
-      expect(find.text('3 today tasks'), findsOneWidget);
+      // _GoalCard renders the localized schedulerGoalTaskCount (en plural).
+      expect(find.text('3 tasks today'), findsOneWidget);
 
       await _tearDown(tester);
     });
@@ -332,8 +332,9 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 
-      // SCHED-GOAL-PLURAL-15: count==1 must say "task" not "tasks".
-      expect(find.text('1 today task'), findsOneWidget);
+      // SCHED-GOAL-PLURAL-15: count==1 must say "task" not "tasks"
+      // (localized via schedulerGoalTaskCount ICU plural).
+      expect(find.text('1 task today'), findsOneWidget);
 
       await _tearDown(tester);
     });

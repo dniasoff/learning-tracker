@@ -1809,31 +1809,42 @@
     "description": "Child-mode StreakWidget sub-line showing the longest streak. ICU plural so 1 reads 'Best: 1 day' not 'Best: 1 days'.",
     "placeholders": { "count": { "type": "int" } }
   },
-  "tierCounterStreakDays": "{count}-day streak",
-  "@tierCounterStreakDays": {
-    "description": "Engagement-tier counter — current consecutive-day streak. Appears in the three-counter header row on Dashboard and Progress hub.",
+  "schedulerTodaysGoal": "TODAY'S GOAL",
+  "@schedulerTodaysGoal": {
+    "description": "Eyebrow label on the daily-task scheduler goal banner, above the task count. Uppercase styling is applied by the text theme, not the string."
+  },
+  "schedulerGoalTaskCount": "{count, plural, =1{1 task today} other{{count} tasks today}}",
+  "@schedulerGoalTaskCount": {
+    "description": "Headline count on the scheduler goal banner — number of tasks scheduled for today. ICU plural so count==1 reads '1 task today' not '1 tasks today'.",
     "placeholders": {
       "count": { "type": "int" }
     }
   },
-  "tierCounterSiyumimEarned": "{count} {siyumimTerm} earned",
+  "tierCounterStreakDays": "{count, plural, =1{{count}-day streak} other{{count}-day streak}}",
+  "@tierCounterStreakDays": {
+    "description": "Engagement-tier counter — current consecutive-day streak. Appears in the three-counter header row on Dashboard and Progress hub. ICU plural so count==1 stays grammatical ('1-day streak').",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "tierCounterSiyumimEarned": "{count, plural, =1{{count} {siyumimTerm} earned} other{{count} {siyumimTerm} earned}}",
   "@tierCounterSiyumimEarned": {
-    "description": "Achievement-tier counter — total siyumim earned. {siyumimTerm} is the toggle-aware domain term (Siyumim / סיומים).",
+    "description": "Achievement-tier counter — total siyumim earned. {siyumimTerm} is the toggle-aware domain term (Siyumim / סיומים) and is already a plural noun, so the noun word is unchanged across counts; ICU plural is kept for parity with the Hebrew dual.",
     "placeholders": {
       "count": { "type": "int" },
       "siyumimTerm": { "type": "String" }
     }
   },
-  "tierCounterLifetimeItems": "{count} items in lifetime",
+  "tierCounterLifetimeItems": "{count, plural, =1{1 item in lifetime} other{{count} items in lifetime}}",
   "@tierCounterLifetimeItems": {
-    "description": "Lifetime-tier counter — total distinct items the user has ever marked learned (across live + bulkInTrack + lifetimeOnly).",
+    "description": "Lifetime-tier counter — total distinct items the user has ever marked learned (across live + bulkInTrack + lifetimeOnly). ICU plural so count==1 reads '1 item in lifetime'.",
     "placeholders": {
       "count": { "type": "int" }
     }
   },
-  "tierCounterPoints": "{count} pts",
+  "tierCounterPoints": "{count, plural, =1{{count} pt} other{{count} pts}}",
   "@tierCounterPoints": {
-    "description": "Child-mode points counter — appears as the fourth counter in the header row when child mode is active.",
+    "description": "Child-mode points counter — appears as the fourth counter in the header row when child mode is active. ICU plural so count==1 reads '1 pt'.",
     "placeholders": {
       "count": { "type": "int" }
     }
