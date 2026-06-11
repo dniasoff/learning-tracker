@@ -221,9 +221,25 @@ class DomainTermLabels {
   }
 
   /// Maps legacy stored English stage-name keys to their canonical display
-  /// forms.  Currently only "Learn" → "Limud" (IL-5).
+  /// forms.
+  ///
+  /// IL-5: "Learn" → "Limud" (canonical transliteration of the learn stage).
+  ///
+  /// PP-5: "Review N" → "Chazara N" and "Review" → "Chazara".
+  ///   The [_hebrewToEnglish] reverse map is built from [HebrewTerms.stageNameMap]
+  ///   by iterating its entries.  Because both 'Chazara 1' and 'Review 1' map
+  ///   to the same Hebrew value 'חזרה א׳', the last entry written wins and the
+  ///   reverse map ends up mapping 'חזרה א׳' → 'Review 1' (overwriting 'Chazara
+  ///   1').  Normalising "Review N" → "Chazara N" here ensures that the canonical
+  ///   transliteration is always returned regardless of which synonym the
+  ///   reverse map landed on.
   static String _normaliseEnglishStageName(String key) {
     if (key == HebrewTerms.stageLearnEn) return 'Limud';
+    // PP-5: normalise "Review N" → "Chazara N" (numbered chazara aliases).
+    if (key == 'Review') return HebrewTerms.stageChazaraPrefixEn; // 'Chazara'
+    final reviewNumbered = RegExp(r'^Review (\d+)$');
+    final m = reviewNumbered.firstMatch(key);
+    if (m != null) return '${HebrewTerms.stageChazaraPrefixEn} ${m.group(1)}';
     return key;
   }
 
