@@ -461,3 +461,23 @@ device-driven (commit 95ede74a, make ci GREEN 9900 pass):
   data quirk); plus a low send-logs copy note on a local-only account.
 - NEXT: integrate R4 fix wave → R5 (upgrade_to_cloud, track_management_hub, curriculum_list, learning_order,
   text_display, lifetime_knowledge) → R6 (onboarding/auth — needs pm clear for fresh state).
+
+### R5 redo + EMULATOR FLEET CRASH (2026-06-11)
+- EMULATOR CRASH mid-R5: only emulator-5554 survives; 5556 + 5558 are GONE (adb devices lists only 5554; connect
+  refused). Host-level emulator crash (same class as the earlier "computer crashed"). → track_management_hub (5556)
+  and lifetime_knowledge (5558) BLOCKED by the crash, not by code. NEEDS Daniel to restart the emulators (host action)
+  before on-device auditing/verification can resume.
+- text_display BLOCKED on 5554: profile creation FK-fails — SqliteException(787) FOREIGN KEY on INSERT INTO
+  learner_profiles(account_id=1,...) at ProfileRepositoryImpl.createProfile:74. 5554 was left in a wiped/no-account
+  state by the crash; creating a profile with no account row FK-fails and shows only a generic "unexpected error"
+  snackbar. NOT the v30 migration (v30 only deletes ledger rows + doesn't run on a fresh install). Likely a
+  pre-existing robustness gap (no-account → graceful handling / friendly error). NOTE for investigation post-restart.
+- R5 VALID CODE FINDINGS → R5 fix wave (wtaf7ld83, 2 workers off abefb594, no devices needed, make-ci-verified):
+  · upgrade_to_cloud (3 P1): ~20 hardcoded English strings (value-prop, password label/validation, ALL errors,
+    success, collision/merge UI) → localize en+he; raw "$e" in 'Upgrade failed:'/'Merge failed:' → friendly localized.
+    + backup_sync hardcoded relative-time ('just now'/'Xm ago') + 'Sign in to back up' → localize.
+  · learning_order (P2): Reset-to-Default list intermittently doesn't refresh → invalidate/refresh the order provider.
+- R5 NOTED (minor/product, not auto-fixed): Mussar lotus/yoga icon (culturally incongruous — product); curriculum
+  picker no selection-state persistence after Back + no search; Step-2 program names mixed Hebrew/Latin.
+- ON-DEVICE re-verification of R5 fixes (+ the blocked screens track_management_hub, lifetime_knowledge, text_display,
+  and the FK-profile-creation bug) is PENDING the emulator restart.
