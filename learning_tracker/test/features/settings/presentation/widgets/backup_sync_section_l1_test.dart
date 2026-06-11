@@ -295,22 +295,32 @@ void main() {
   });
 
   group('BackupSyncSection — cloud-born error', () {
-    testWidgets('shows error message and tap-to-retry copy', (tester) async {
+    testWidgets('shows friendly error message and tap-to-retry copy', (
+      tester,
+    ) async {
+      // ST-4 fix: the error card must show a friendly localized message
+      // rather than the raw exception string.  The subtitle is now:
+      //   l10n.backupSyncCloudUnavailable + "\n" + l10n.backupSyncTapToRetry
       await _pump(
         tester,
         _buildHarness(
           syncStatus: SyncStatus.error(
-            message: 'timeout',
+            message: 'FirestorePermissionDeniedException: raw internal error',
             failedAt: DateTime.now(),
           ),
           authState: _kCloudUser,
         ),
       );
 
-      // l10n: "Sync error: timeout"
-      expect(find.textContaining('Sync error'), findsOneWidget);
-      // l10n: "Tap to retry"
+      // l10n: backupSyncCloudUnavailable = "Cloud backup is temporarily unavailable."
+      expect(find.textContaining('temporarily unavailable'), findsOneWidget);
+      // l10n: backupSyncTapToRetry = "Tap to retry"
       expect(find.textContaining('Tap to retry'), findsOneWidget);
+      // The raw error message must NOT appear.
+      expect(
+        find.textContaining('FirestorePermissionDeniedException'),
+        findsNothing,
+      );
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(Duration.zero);

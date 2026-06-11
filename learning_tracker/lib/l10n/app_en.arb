@@ -1337,6 +1337,14 @@
     }
   },
   "backupSyncTapToRetry": "Tap to retry",
+  "backupSyncCloudUnavailable": "Cloud backup is temporarily unavailable.",
+  "@backupSyncCloudUnavailable": {
+    "description": "Friendly message shown instead of a raw exception string when cloud sync fails (ST-4)."
+  },
+  "backupSyncOutboxStuck": "Some changes are waiting to sync. We'll retry automatically.",
+  "@backupSyncOutboxStuck": {
+    "description": "Friendly message shown when the outbox has stuck rows, replacing the raw 'N row(s) stuck after 3+ attempts' English string (ST-4)."
+  },
   "backupConnecting": "Connecting…",
   "backupOffline": "Offline",
   "backupSyncPaused": "Sync paused — {count} queued. {reason}",

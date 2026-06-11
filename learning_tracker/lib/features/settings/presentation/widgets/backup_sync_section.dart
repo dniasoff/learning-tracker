@@ -112,11 +112,14 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
             ? l10n.backupPendingChanges(pendingChanges)
             : l10n.backupOffline,
       ),
-      SyncStatusError(:final message) => _buildCloudStatusCard(
+      // ST-4 fix: never pass a raw exception string into the user-facing
+      // subtitle.  Map all error messages to a friendly localized string so
+      // exception class names, collection paths, and error codes never render.
+      SyncStatusError() => _buildCloudStatusCard(
         theme,
         icon: Icons.warning_amber_rounded,
         subtitle:
-            '${l10n.backupSyncError(message)}\n${l10n.backupSyncTapToRetry}',
+            '${l10n.backupSyncCloudUnavailable}\n${l10n.backupSyncTapToRetry}',
         onTap: () => ref.read(syncOrchestratorProvider)?.retryPull(),
       ),
       SyncStatusDegraded(:final pendingChanges, :final reason) =>
@@ -150,12 +153,21 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
       );
     }
     final l10nLocal = AppLocalizations.of(context)!;
+    // ST-4 fix: the stuck-outbox reason is a raw English engineering string
+    // ("outbox has N row(s) stuck after 3+ attempts") that leaks internal
+    // terminology and English text into non-English UIs.  Replace it with a
+    // friendly localized message; keep the raw reason only for other known
+    // human-readable degraded states (e.g. quota exhausted).
+    final isStuckOutbox = reason.contains('row(s) stuck');
+    final localizedReason = isStuckOutbox
+        ? l10nLocal.backupSyncOutboxStuck
+        : reason;
     return _buildCloudStatusCard(
       theme,
       icon: Icons.sync_problem_rounded,
       subtitle: pendingChanges > 0
-          ? l10nLocal.backupSyncPaused(pendingChanges, reason)
-          : l10nLocal.backupSyncPausedNoCount(reason),
+          ? l10nLocal.backupSyncPaused(pendingChanges, localizedReason)
+          : l10nLocal.backupSyncPausedNoCount(localizedReason),
     );
   }
 

@@ -4721,6 +4721,18 @@ abstract class AppLocalizations {
   /// **'Tap to retry'**
   String get backupSyncTapToRetry;
 
+  /// Friendly message shown instead of a raw exception string when cloud sync fails (ST-4).
+  ///
+  /// In en, this message translates to:
+  /// **'Cloud backup is temporarily unavailable.'**
+  String get backupSyncCloudUnavailable;
+
+  /// Friendly message shown when the outbox has stuck rows, replacing the raw 'N row(s) stuck after 3+ attempts' English string (ST-4).
+  ///
+  /// In en, this message translates to:
+  /// **'Some changes are waiting to sync. We\'ll retry automatically.'**
+  String get backupSyncOutboxStuck;
+
   /// No description provided for @backupConnecting.
   ///
   /// In en, this message translates to:
