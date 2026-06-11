@@ -583,11 +583,16 @@ void main() {
     });
   });
 
-  // ── 13. saveReward — duplicate threshold ────────────────────────────────────
+  // ── 13. saveReward — duplicate threshold (GA-3: check removed) ─────────────
+  //
+  // GA-3 fix: the spend-economy model allows multiple distinct rewards at the
+  // same price. The _hasDuplicateThreshold check has been removed. Two rewards
+  // with the same cost both save successfully — the old RewardSaveDuplicateThreshold
+  // result is no longer returned for this case.
 
-  group('saveReward() — duplicate threshold', () {
+  group('saveReward() — duplicate threshold (GA-3: allowed)', () {
     test(
-      'duplicate threshold on global ladder → RewardSaveDuplicateThreshold',
+      'duplicate threshold on global ladder → both save (no ladder constraint)',
       () async {
         final c = _makeContainer();
         addTearDown(c.dispose);
@@ -605,12 +610,19 @@ void main() {
           thresholdPoints: 500,
         );
 
-        // Attempt to add another with the same threshold
+        // GA-3: a second reward at the same cost should now SUCCEED (spend-economy
+        // allows duplicate prices — the old ladder uniqueness constraint was removed).
         _notifier(c).setName('Beta');
         _notifier(c).setPointsText('500');
 
         final result = await _notifier(c).saveReward();
-        expect(result, isA<RewardSaveDuplicateThreshold>());
+        expect(
+          result,
+          isA<RewardSaved>(),
+          reason:
+              'GA-3: duplicate price is allowed in the spend-economy model; '
+              'two distinct rewards can share the same cost',
+        );
       },
     );
   });

@@ -24,6 +24,7 @@ import 'package:learning_tracker/features/dashboard/presentation/widgets/empty_d
 import 'package:learning_tracker/features/dashboard/presentation/widgets/main_focus_mission_card.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/skipped_onboarding_cta_banner.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/streak_recovery_banner.dart';
+import 'package:learning_tracker/features/gamification/presentation/widgets/gamification_route_push_guard.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
@@ -301,8 +302,23 @@ class DashboardBody extends ConsumerWidget {
               // nothing". Gamification is child-only (adults have no points), so
               // only route to it in child mode; for other modes the chip is a
               // passive streak indicator with no dead navigation.
+              //
+              // GA-4: Also guard against double-push — if GamificationRoute is
+              // already active, a second tap would push a duplicate.
+              // Use isRouteActive (safe — no null dereference) instead of
+              // router.current.name which throws when the stack is empty or
+              // the router is a partial mock.
               onTap: userMode == ProfileMode.child
-                  ? () => context.router.push(const GamificationRoute())
+                  ? () {
+                      final alreadyActive = context.router.isRouteActive(
+                        const GamificationRoute().routeName,
+                      );
+                      if (GamificationRoutePushGuard.canPush(
+                        isGamificationRouteActive: alreadyActive,
+                      )) {
+                        context.router.push(const GamificationRoute());
+                      }
+                    }
                   : null,
               child: Container(
                 padding: const EdgeInsets.symmetric(

@@ -27,10 +27,34 @@ class RewardForm {
   final bool loading;
   final String? error;
 
+  /// Maximum allowed length for a reward name (GA-2).
+  static const int kMaxNameLength = 50;
+
+  /// Maximum allowed point cost for a reward (GA-2).
+  static const int kMaxPointsCost = 99999;
+
   /// `true` when the selected reward ladder is the global (total-points) one.
   bool get usesGlobalLadder => tracks.isEmpty || isGlobalReward;
 
   int get previewPoints => int.tryParse(pointsText.trim()) ?? 0;
+
+  /// `true` when the form is editing an existing milestone (GA-7).
+  bool get isEditing => editingMilestoneId != null;
+
+  /// `true` when the form state is valid enough to enable the Save button (GA-7).
+  ///
+  /// Name must be non-empty (after trim); points must parse as a positive
+  /// integer within the allowed range. This mirrors the validation in
+  /// [RewardConfigController.saveReward] so the Save button is disabled
+  /// before a submit attempt, preventing the silent-no-op UX.
+  bool get canSave {
+    final trimmedName = name.trim();
+    if (trimmedName.isEmpty || trimmedName.length > kMaxNameLength)
+      return false;
+    final pts = int.tryParse(pointsText.trim()) ?? 0;
+    if (pts <= 0 || pts > kMaxPointsCost) return false;
+    return true;
+  }
 
   RewardForm copyWith({
     String? name,

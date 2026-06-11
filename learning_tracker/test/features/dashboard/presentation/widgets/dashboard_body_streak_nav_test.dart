@@ -181,6 +181,9 @@ void main() {
     when(
       () => router.navigate(any(), onFailure: any(named: 'onFailure')),
     ).thenAnswer((_) async {});
+    // GA-4: isRouteActive is called by the double-push guard; default to false
+    // so the first push is always allowed in these navigation tests.
+    when(() => router.isRouteActive(any())).thenReturn(false);
   });
 
   testWidgets(

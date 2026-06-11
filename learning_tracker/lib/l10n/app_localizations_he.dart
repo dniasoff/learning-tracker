@@ -1358,6 +1358,13 @@ class AppLocalizationsHe extends AppLocalizations {
   String get rewardConfigSaveRewardButton => 'שמירת פרס';
 
   @override
+  String get rewardConfigUpdateRewardButton => 'עדכון פרס';
+
+  @override
+  String get rewardConfigEditModeSubtitle =>
+      'עדכן את הסמל, השם, או עלות הנקודות עבור פרס זה.';
+
+  @override
   String get rewardConfigNamePlaceholder => 'למשל, כוכב ארד';
 
   @override

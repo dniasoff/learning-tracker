@@ -129,18 +129,6 @@ class RewardConfigController extends _$RewardConfigController {
     return svc.getMilestonesForTrack(tid);
   }
 
-  Future<bool> _hasDuplicateThreshold(
-    int threshold, {
-    String? excludeId,
-  }) async {
-    final list = await milestonesForCurrentLadder();
-    for (final m in list) {
-      if (excludeId != null && m.id == excludeId) continue;
-      if (m.thresholdPoints == threshold) return true;
-    }
-    return false;
-  }
-
   Future<void> _persistAndSync() async {
     await ref.read(syncWriteFacadeProvider)?.pushGamificationSettingsSnapshot();
     ref.invalidate(achievementsOverviewProvider);
@@ -159,18 +147,21 @@ class RewardConfigController extends _$RewardConfigController {
     final pointsParsed = int.tryParse(state.pointsText.trim()) ?? 0;
     final wasEditing = state.editingMilestoneId != null;
 
-    if (title.isEmpty || pointsParsed <= 0) {
+    // GA-2: enforce sane max caps alongside the existing >0 guard.
+    if (title.isEmpty ||
+        title.length > RewardForm.kMaxNameLength ||
+        pointsParsed <= 0 ||
+        pointsParsed > RewardForm.kMaxPointsCost) {
       return const RewardSaveInvalidInput();
     }
     if (!state.usesGlobalLadder && state.selectedTrackId == null) {
       return const RewardSaveNoTrack();
     }
-    if (await _hasDuplicateThreshold(
-      pointsParsed,
-      excludeId: state.editingMilestoneId,
-    )) {
-      return const RewardSaveDuplicateThreshold();
-    }
+    // GA-3: _hasDuplicateThreshold removed — the spend-economy model allows
+    // multiple distinct rewards at the same price (no ladder uniqueness
+    // constraint).  The RewardSaveDuplicateThreshold result class is kept for
+    // any callers that still reference it, but saveReward() no longer returns
+    // it for a same-cost add.
 
     final db = ref.read(userDatabaseProvider);
     final profileId = ref.read(activeProfileIdProvider);

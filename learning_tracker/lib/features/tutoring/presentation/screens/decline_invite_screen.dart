@@ -123,7 +123,10 @@ class _DeclineInviteScreenState extends ConsumerState<DeclineInviteScreen> {
                   parentEmail: '',
                   parentUid: grant.parentUid,
                   tutorEmail: tutorEmail,
-                  childName: grant.childProfileId,
+                  // GA-5: use the human-readable display label, not the raw
+                  // Firestore profile id (childProfileId was a raw string id,
+                  // not a child name).
+                  childName: grant.childDisplayLabel,
                 ),
           );
         case TutorGrantFailure(:final message):

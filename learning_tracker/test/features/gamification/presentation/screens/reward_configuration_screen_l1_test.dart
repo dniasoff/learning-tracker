@@ -334,7 +334,8 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 
-    await tester.tap(find.text('Save Reward'));
+    // GA-7: edit mode shows "Update Reward" button (not "Save Reward").
+    await tester.tap(find.text('Update Reward'));
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 
