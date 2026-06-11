@@ -77,6 +77,20 @@ class ScopeTopLevelView extends ConsumerWidget {
     final theme = Theme.of(context);
     final canDrillDeeper = currentLevel < maxSelectableLevel;
 
+    // The level-1 prompt wraps a domain-term level word ([labelForLevel] is
+    // resolved with the Hebrew-Terms toggle, the same toggle the curriculum
+    // chip to its left honours). Select the prompt TEMPLATE by that same
+    // toggle ([useHebrew]) so the whole segment is script-consistent: when
+    // Hebrew Terms is ON the connective chrome is Hebrew ("בחרו ספר") even in
+    // the English UI locale — no leftover Latin "Choose a" wrapping a Hebrew
+    // word — and when OFF it stays fully English ("Choose a Sefer").
+    final promptL10n = useHebrew
+        ? lookupAppLocalizations(const Locale('he'))
+        : lookupAppLocalizations(const Locale('en'));
+    final chooseLevelPrompt = promptL10n.scopeChooseLevelPrompt(
+      labelForLevel(1),
+    );
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -177,11 +191,17 @@ class ScopeTopLevelView extends ConsumerWidget {
                 // R1-(6): show only the level prompt (e.g. "Choose a Sefer").
                 // The old level1Selection re-embedded the curriculum name,
                 // duplicating the chip to its left ("Chumash › Chumash → …").
+                // R1v2: the template language now follows the Hebrew-Terms
+                // toggle (see [chooseLevelPrompt]) so the prompt never mixes a
+                // Latin "Choose a" with a Hebrew level word.
                 Flexible(
                   child: Text(
-                    l10n.scopeChooseLevelPrompt(labelForLevel(1)),
+                    chooseLevelPrompt,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
+                    textDirection: useHebrew
+                        ? TextDirection.rtl
+                        : TextDirection.ltr,
                     style: theme.textTheme.titleSmall?.copyWith(
                       color: AppTheme.brandInk,
                     ),
@@ -330,7 +350,7 @@ class ScopeHierarchyView extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         // Breadcrumb trail
-        _buildBreadcrumbs(context, theme),
+        _buildBreadcrumbs(context, theme, l10n),
         const SizedBox(height: 8),
         // Selection chips
         if (selections.isNotEmpty)
@@ -406,13 +426,19 @@ class ScopeHierarchyView extends StatelessWidget {
     );
   }
 
-  Widget _buildBreadcrumbs(BuildContext context, ThemeData theme) {
+  Widget _buildBreadcrumbs(
+    BuildContext context,
+    ThemeData theme,
+    AppLocalizations l10n,
+  ) {
     return Row(
       children: [
         IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: onBack,
-          tooltip: 'Back',
+          // R1v2: was a hardcoded 'Back' literal — now localized so the
+          // tooltip is not English chrome in the he locale.
+          tooltip: l10n.actionBack,
         ),
         Expanded(
           child: SingleChildScrollView(

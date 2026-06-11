@@ -847,6 +847,87 @@ void main() {
   });
 
   // ==========================================================================
+  // 13b. TOP-LEVEL PROMPT — script-consistent with the Hebrew-Terms toggle
+  // ==========================================================================
+
+  group('Top-level prompt — no mixed script under Hebrew Terms', () {
+    final hebrew = RegExp('[֐-׿]');
+    final latin = RegExp('[A-Za-z]');
+
+    /// Returns the rendered "Choose a {level}" prompt text from the sub-section
+    /// breadcrumb header. It is a Text containing the level-1 label.
+    String promptText(WidgetTester tester) {
+      for (final t in tester.widgetList<Text>(find.byType(Text))) {
+        final d = t.data;
+        if (d == null) continue;
+        // The top-level prompt is the only string built from
+        // scopeChooseLevelPrompt — it contains "Choose"/"בחרו".
+        if (d.contains('Choose') || d.contains('בחרו')) return d;
+      }
+      return '';
+    }
+
+    testWidgets('English UI + Terms OFF: prompt is fully English', (
+      tester,
+    ) async {
+      final contentRepo = _MockContentRepository();
+      when(
+        () => contentRepo.getContentForCurriculum(any<CurriculumId>()),
+      ).thenAnswer((_) async => _mishnayosItems());
+
+      await tester.pumpWidget(
+        _buildScopeStep(
+          overrides: _overrides(contentRepo: contentRepo, useHebrew: false),
+          onComplete: (_) {},
+        ),
+      );
+      await _settle(tester);
+
+      final prompt = promptText(tester);
+      expect(prompt.isNotEmpty, isTrue, reason: 'prompt must render');
+      expect(prompt.startsWith('Choose'), isTrue);
+      // No Hebrew script leaking into the English-mode prompt.
+      expect(hebrew.hasMatch(prompt), isFalse, reason: 'prompt was: $prompt');
+
+      addTearDown(() => _tearDown(tester));
+    });
+
+    testWidgets(
+      'English UI + Terms ON: prompt is fully Hebrew (no Latin "Choose a")',
+      (tester) async {
+        final contentRepo = _MockContentRepository();
+        when(
+          () => contentRepo.getContentForCurriculum(any<CurriculumId>()),
+        ).thenAnswer((_) async => _mishnayosItems());
+
+        await tester.pumpWidget(
+          _buildScopeStep(
+            // English UI locale, but Hebrew Terms ON — the cross-axis case
+            // that previously produced "Choose a סדר" (mixed script).
+            overrides: _overrides(contentRepo: contentRepo, useHebrew: true),
+            onComplete: (_) {},
+          ),
+        );
+        await _settle(tester);
+
+        final prompt = promptText(tester);
+        expect(prompt.isNotEmpty, isTrue, reason: 'prompt must render');
+        // Fully Hebrew: starts with "בחרו" and carries NO Latin chrome.
+        expect(prompt.startsWith('בחרו'), isTrue, reason: 'prompt was: $prompt');
+        expect(
+          latin.hasMatch(prompt),
+          isFalse,
+          reason:
+              'Hebrew Terms ON must not leave a Latin "Choose a" wrapping a '
+              'Hebrew level word — prompt was: $prompt',
+        );
+
+        addTearDown(() => _tearDown(tester));
+      },
+    );
+  });
+
+  // ==========================================================================
   // 14. HEBREW (he) LOCALE SMOKE TEST
   // ==========================================================================
 

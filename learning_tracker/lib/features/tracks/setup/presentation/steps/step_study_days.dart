@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
@@ -9,6 +10,11 @@ import 'package:learning_tracker/features/tracks/setup/domain/services/track_cre
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Day labels in Jewish week order (Sunday first, Shabbos last).
+///
+/// Legacy English fallback only — kept for source compatibility. UI labels and
+/// avatar initials are now LOCALIZED via [studyDayAbbrevLabel] so the Hebrew
+/// locale renders Hebrew abbreviations (א׳, ב׳ …) instead of Latin Sun/Mon and
+/// the row never mixes scripts. Do not use this list for display.
 const kStepStudyDayLabels = [
   'Sun',
   'Mon',
@@ -21,6 +27,49 @@ const kStepStudyDayLabels = [
 
 /// ISO day numbers in Jewish week order.
 const kStepStudyDayNumbers = [7, 1, 2, 3, 4, 5, 6];
+
+/// Returns the LOCALIZED short day label for [dayNum] (ISO weekday; Saturday=6).
+///
+/// Sun–Fri come from the shared scheduler day-abbreviation ARB keys
+/// ([AppLocalizations.schedulerDayAbbrevSun] … `Fri`) so the label follows the
+/// UI locale (English "Sun" / Hebrew "א׳"). Saturday routes through
+/// [DomainTermLabels.shabbos] so it renders "Shabbos" (Ashkenazi) / "Shabbat"
+/// (Sephardi) / "שבת" (Hebrew Terms) — matching [_dayName] and the scheduler's
+/// `studyDayLabel`. This keeps the whole study-days row script-consistent and
+/// drives the day-circle avatar initial (its first grapheme).
+String studyDayAbbrevLabel({
+  required int dayNum,
+  required AppLocalizations l10n,
+  required DomainTermLabels terms,
+  required TransliterationVariant variant,
+}) {
+  switch (dayNum) {
+    case 7:
+      return l10n.schedulerDayAbbrevSun;
+    case 1:
+      return l10n.schedulerDayAbbrevMon;
+    case 2:
+      return l10n.schedulerDayAbbrevTue;
+    case 3:
+      return l10n.schedulerDayAbbrevWed;
+    case 4:
+      return l10n.schedulerDayAbbrevThu;
+    case 5:
+      return l10n.schedulerDayAbbrevFri;
+    case 6:
+      return terms.shabbos(variant: variant);
+    default:
+      return '';
+  }
+}
+
+/// First grapheme of [label] — the day-circle avatar initial.
+///
+/// Grapheme-aware (via `characters`) so a Hebrew abbreviation such as "א׳"
+/// yields "א" (not the trailing geresh) and a multi-codepoint glyph is not
+/// split mid-character.
+String studyDayInitial(String label) =>
+    label.characters.isEmpty ? '' : label.characters.first;
 
 /// Study days — vertical layout, all 7 active by default, "Shabbos" label.
 class StudyDaysEditable extends ConsumerStatefulWidget {
@@ -49,6 +98,8 @@ class _StudyDaysEditableState extends ConsumerState<StudyDaysEditable> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
+    final terms = domainTermLabels(ref);
+    final variant = ref.watch(currentTransliterationVariantProvider);
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
@@ -76,12 +127,22 @@ class _StudyDaysEditableState extends ConsumerState<StudyDaysEditable> {
                 final dayNum = kStepStudyDayNumbers[index];
                 final isActive = _days[dayNum] == 'study';
                 final title = _dayName(dayNum);
+                // Avatar initial = first grapheme of the LOCALIZED short label
+                // (Sun–Fri from the shared scheduler abbrev keys, Sat from the
+                // shabbos term) so the row never mixes Latin initials with a
+                // lone Hebrew glyph and stays fully Hebrew in the he locale.
+                final initial = studyDayInitial(
+                  studyDayAbbrevLabel(
+                    dayNum: dayNum,
+                    l10n: l10n,
+                    terms: terms,
+                    variant: variant,
+                  ),
+                );
                 return Padding(
                   padding: const EdgeInsets.only(bottom: 10),
                   child: StudyDayCard(
-                    initial: dayNum == 6
-                        ? title.substring(0, 1)
-                        : kStepStudyDayLabels[index].substring(0, 1),
+                    initial: initial,
                     title: title,
                     subtitle: '',
                     subtitleColor: AppTheme.brandInkMuted,
@@ -249,9 +310,8 @@ class StudyDaysReadOnly extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
-    final shabbos = domainTermLabels(
-      ref,
-    ).shabbos(variant: ref.watch(currentTransliterationVariantProvider));
+    final terms = domainTermLabels(ref);
+    final variant = ref.watch(currentTransliterationVariantProvider);
 
     return Padding(
       padding: const EdgeInsets.all(16),
@@ -273,13 +333,17 @@ class StudyDaysReadOnly extends ConsumerWidget {
               itemCount: 7,
               separatorBuilder: (_, __) => const SizedBox(height: 4),
               itemBuilder: (context, index) {
+                // Localized short labels so the he locale stays fully Hebrew
+                // (Sun–Fri from the shared scheduler abbrev keys, Sat from the
+                // shabbos term) — no Latin Sun/Mon leaking into Hebrew.
+                final label = studyDayAbbrevLabel(
+                  dayNum: kStepStudyDayNumbers[index],
+                  l10n: l10n,
+                  terms: terms,
+                  variant: variant,
+                );
                 return ListTile(
-                  title: Text(
-                    kStepStudyDayNumbers[index] == 6
-                        ? shabbos
-                        : kStepStudyDayLabels[index],
-                    style: theme.textTheme.bodyLarge,
-                  ),
+                  title: Text(label, style: theme.textTheme.bodyLarge),
                   trailing: Icon(
                     Icons.check_circle,
                     color: theme.colorScheme.primary,
