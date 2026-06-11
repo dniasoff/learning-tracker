@@ -555,3 +555,22 @@ device-driven (commit 95ede74a, make ci GREEN 9900 pass):
 - COVERAGE after these: ~37/45 local-observable screens. REMAINING ~8 are CLOUD/TUTOR-gated (device_restore,
   accept/decline_invite, manage_grants, parent_pending_redemptions, cloud account_picker) — need cloud-verified test
   accounts + App Check + a 2-device tutor flow (the original kickoff's deferred "sync" area; a dedicated setup effort).
+
+### Carousel fix SHIPPED + local-observable redo COMPLETE (2026-06-11)
+- Onboarding intro-carousel localization SHIPPED (commit e8a14d50, make ci GREEN 9943 pass): 20 new ARB keys (en+he),
+  4 onboarding intro files + tests. Last clear bug from R6.
+- STUDY_DAY_CONFIG/POINT_CONFIG audit was BLOCKED by a seed-state mismatch (5556 reverted to an OLD snapshot post-crash
+  — account audit1781139453@quest.com, no Mishnayos track, PIN 2580 rejected; the seed lives on whichever device was
+  last seeded, not a fixed one). study_day_config is already covered via R1v2 (scheduler study-days localized +0-day
+  warning); point_config deferred as minor. Not worth a full re-seed. Memory note corrected (seed is not pinned to a
+  device; crashes revert to snapshots).
+- LOCAL-OBSERVABLE REDO COMPLETE: ~37/45 screens verified across R1–R6 + gamification/siyumim + the crash-blocked
+  screens + on-device collision-fix verification. All high-value/local-observable screens covered and clean (or fixed).
+- REMAINING ~8 screens are CLOUD/TUTOR-gated (device_restore, accept/decline_invite, manage_tutors-pending,
+  manage_grants, parent_pending_redemptions, cloud account_picker) — the kickoff's deferred "sync" area. Need:
+  cloud-verified test accounts (App Check debug tokens), a 2-device tutor invite→accept flow, a cloud account for
+  device_restore. A DISTINCT next phase (awaiting Daniel's go-ahead).
+- SESSION TALLY: both Daniel decisions delivered (collision fix verified on-device; local-vs-cloud intended);
+  device-language correction + Hebrew-script-terms (verified on-device); gamification unblocked+clean; PIN-loop P0
+  verified fixed; FK-profile-creation = crash artifact (non-issue); emulator fleet restored (5558 relaunched by me);
+  ~62 real bugs fixed + shipped green; ~37/45 screens redo-verified.
