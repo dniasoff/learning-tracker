@@ -156,6 +156,12 @@ class _ProfileEditFormDialogState extends State<ProfileEditFormDialog> {
   late String _mode;
   late int _avatarIndex;
 
+  // P2: inline validation for the name field. Previously a Save with an
+  // empty/whitespace name silently returned with no feedback — the dialog
+  // just stayed put. Mirrors EditTrackScreen's _nameError pattern: set on a
+  // blocked Save, cleared as the user types a non-empty value.
+  String? _nameError;
+
   @override
   void initState() {
     super.initState();
@@ -182,9 +188,18 @@ class _ProfileEditFormDialogState extends State<ProfileEditFormDialog> {
             TextField(
               controller: _nameController,
               inputFormatters: const [TrimLeadingSpaceFormatter()],
+              onChanged: (_) {
+                // Clear the inline error as soon as the user types a non-empty
+                // value, so it doesn't linger once the name is resolved.
+                if (_nameError != null &&
+                    _nameController.text.trim().isNotEmpty) {
+                  setState(() => _nameError = null);
+                }
+              },
               decoration: InputDecoration(
                 labelText: l10n.profilesNameFieldLabel,
                 hintText: l10n.profilesEnterLearnerName,
+                errorText: _nameError,
               ),
               // PP-11: autofocus removed so the avatar picker and mode toggle
               // stay visible below the fold at large text scale (font 1.3).
@@ -257,7 +272,16 @@ class _ProfileEditFormDialogState extends State<ProfileEditFormDialog> {
         FilledButton(
           onPressed: () {
             final name = _nameController.text.trim();
-            if (name.isEmpty) return;
+            // P2: an empty/whitespace name no longer silently no-ops; surface
+            // a localized inline error so the user understands why Save did
+            // nothing, then abort.
+            if (name.isEmpty) {
+              setState(() => _nameError = l10n.learnerNameRequired);
+              return;
+            }
+            if (_nameError != null) {
+              setState(() => _nameError = null);
+            }
             Navigator.of(
               context,
             ).pop((name: name, mode: _mode, avatar: _avatarIndex));

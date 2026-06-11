@@ -365,4 +365,121 @@ void main() {
       await tester.pump(Duration.zero);
     });
   });
+
+  // ── P2: empty-name inline validation ─────────────────────────────────────
+  //
+  // Previously, tapping Save with an empty/whitespace-only name silently
+  // no-oped: the dialog stayed open with NO feedback. The Save handler now
+  // surfaces a localized inline error (learnerNameRequired) and blocks the
+  // pop; typing a valid name clears the error and Save proceeds.
+
+  group('ProfileEditFormDialog — empty-name inline validation (P2)', () {
+    Future<({String name, String mode, int avatar})?> pumpAndCapture(
+      WidgetTester tester, {
+      required String initialName,
+    }) async {
+      ({String name, String mode, int avatar})? popped;
+      var dialogOpen = true;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          locale: const Locale('en'),
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: Scaffold(
+            body: Builder(
+              builder: (ctx) => Center(
+                child: ElevatedButton(
+                  key: const Key('open_dialog'),
+                  onPressed: () async {
+                    popped = await showDialog<
+                      ({String name, String mode, int avatar})
+                    >(
+                      context: ctx,
+                      builder: (_) => ProfileEditFormDialog(
+                        title: 'Edit Learner',
+                        initialName: initialName,
+                        initialMode: 'child',
+                        initialAvatar: 0,
+                      ),
+                    );
+                    dialogOpen = false;
+                  },
+                  child: const Text('Open'),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.tap(find.byKey(const Key('open_dialog')));
+      await tester.pumpAndSettle();
+      expect(dialogOpen, isTrue);
+      return popped;
+    }
+
+    testWidgets(
+      'tapping Save with a whitespace-only name shows the inline error and '
+      'does NOT close the dialog',
+      (tester) async {
+        tester.view.physicalSize = const Size(1080, 2340);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+
+        await pumpAndCapture(tester, initialName: '   ');
+
+        final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+        // No error before Save.
+        expect(find.text(l10n.learnerNameRequired), findsNothing);
+
+        await tester.tap(find.widgetWithText(FilledButton, l10n.actionSave));
+        await tester.pumpAndSettle();
+
+        // Inline error shown, dialog still open (Save blocked).
+        expect(find.text(l10n.learnerNameRequired), findsOneWidget);
+        expect(find.byType(ProfileEditFormDialog), findsOneWidget);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(Duration.zero);
+      },
+    );
+
+    testWidgets(
+      'typing a valid name clears the error and Save proceeds (pops the result)',
+      (tester) async {
+        tester.view.physicalSize = const Size(1080, 2340);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+
+        await pumpAndCapture(tester, initialName: '');
+
+        final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+
+        // Trigger the inline error first.
+        await tester.tap(find.widgetWithText(FilledButton, l10n.actionSave));
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.learnerNameRequired), findsOneWidget);
+
+        // Typing a valid name clears the inline error.
+        await tester.enterText(find.byType(TextField), 'Aviva');
+        await tester.pumpAndSettle();
+        expect(find.text(l10n.learnerNameRequired), findsNothing);
+
+        // Save now proceeds and closes the dialog.
+        await tester.tap(find.widgetWithText(FilledButton, l10n.actionSave));
+        await tester.pumpAndSettle();
+        expect(find.byType(ProfileEditFormDialog), findsNothing);
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(Duration.zero);
+      },
+    );
+  });
 }

@@ -1195,6 +1195,7 @@
   "profilesAdultLabel": "מבוגר",
   "profilesEnterLearnerName": "הזינו שם לומד",
   "profilesNameFieldLabel": "שם",
+  "learnerNameRequired": "יש להזין שם",
   "deleteProfileTitle": "מחיקת פרופיל",
   "deleteProfileLastTitle": "למחוק את הפרופיל היחיד שלך?",
   "deleteProfileBody": "האם למחוק את \"{name}\"? כל נתוני הלמידה של פרופיל זה יימחקו לצמיתות.",
