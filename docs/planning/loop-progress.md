@@ -431,3 +431,16 @@ device-driven (commit 95ede74a, make ci GREEN 9900 pass):
     זרעים, ברכות/פאה/דמאי, משניות, שבת all render in proper Hebrew script (not romanized).
 - Redo tally: 14 of ~45 screens verified (R1 6, R2 6, gamification + siyumim 2). Remaining ~26 (R4+).
 - AWAITING: collision-fix agent (qualified-path level3/4 + v30 migration) → integrate when it completes.
+
+### Collision fix SHIPPED + R4 launched (2026-06-11)
+- COLLISION FIX INTEGRATED + PUSHED (commit 39929319, make ci GREEN 9931 pass): reviewed the diff — both matchers
+  (lifetime_tree_builder + items_learned_providers) key level3/4 by scopeUnitIdentifierForItem(leaf, N) identically;
+  the write/UI _qid() calls the SAME scopeUnitIdentifier() so write↔match agree byte-for-byte; v30 migration is
+  sqlite_master-guarded + parameterized, deletes ONLY bare level3/4 scope rows (instr(unit_identifier,'|')=0), leaves
+  level1/2 + sefariaRef untouched; legacy bare marks dropped (unrecoverable). Collision regression test added.
+  Rebuilt APK + install -r on all 3 (5556 kept seeded child data).
+- R4 REDO RUNNING (workflow wlnmw7bqf): parent_settings, manage_learners, manage_tutors, invite_tutor, notifications
+  (toggle-persistence probe), city_picker. Parent surfaces reachable from the adult profile (no PIN); 5556 PIN=2580.
+- STATUS: both Daniel decisions delivered (collision fixed-not-patched; local-vs-cloud intended). 14/45 screens
+  verified + R4's 6 in flight. Remaining after R4: ~20 (R5: upgrade_to_cloud, track_management_hub, curriculum_list,
+  learning_order, text_display, lifetime_knowledge; R6: onboarding/auth cluster — needs pm clear for fresh state).
