@@ -254,6 +254,22 @@ the Hebrew UI-locale switch did not take effect on-device and there was NO in-ap
 - REDEPLOYED: debug APK (overflow stripes visible) built + installed on all 3 emulators; app launches clean past
   seed (no OOM); "No Backup" badge renders localized. R1v2 redo-verification sweep RUNNING (workflow wtqlkdi9v) over
   the 6 R1 screens — keystone language switcher (Settings→App Language→עברית→full RTL) checked first.
-- NEXT: read R1v2 results → if keystone+fixes confirmed on-device, extend the redo to the remaining 41 screens
-  (R2–R6) in batches, fix→redo until a sweep returns clean. Mandate: "finish 47 screen find first, bulk fix and then
-  redo until no bugs." Worktrees lt-r1-* still exist (reset to dev HEAD before any next fix wave).
+- R1v2 REDO RESULTS (workflow wtqlkdi9v, 6 screens, 24 findings: 1 P0/2 P1/21 P2): KEYSTONE CONFIRMED on-device —
+  Settings→App Language→עברית flips the ENTIRE UI to Hebrew RTL (chrome mirrors, nav translates+reorders, terms
+  localize), round-trips to English, works in adult AND child. The "P0" was that confirmation (mislabeled), not a
+  bug. MANY fixes verified: TS-8 dates, empty-name validation, scheduler Study-Days Hebrew (config screen), Edit Goal
+  Hebrew, delete-dialog safety, reactive balance, parent-PIN clears. Real remaining bugs found:
+  · [P1] redeemScreenTitle he STILL 'פרס הפרסים' — the additive ARB union DROPPED this MODIFIED-existing key (only
+    ADDED new keys). FIXED directly (→ 'מימוש פרסים', commit 1a30e5bd). LESSON: union must also apply modifications.
+  · [P1] Backup & Sync promo card stayed English under Hebrew UI (title+body hardcoded) — FIXED: backupSyncCardTitle/
+    Body en+he, all 3 layout variants (1a30e5bd). make ci-safe (backup test asserts unchanged EN values).
+  · CLUSTER → R1v2 fix wave (workflow wv9q2wxxt, 2 workers off 1a30e5bd, disjoint roots, NO concurrent workflow):
+    W-tracks: study-days step Latin/mixed weekday avatars→localized (schedulerDayAbbrev*+shabbos), scope breadcrumb
+    redundancy in Hebrew-Terms mode, goal-step "(≈0 items)" guard, edited-track-name not surfacing (P1 functional).
+    W-sched-dash: Edit-Goal pace-helper truncation, dashboard "Today's Missions" clip @1.3.
+  · DEFERRED (cosmetic/product): '!Auditor' bidi on a Latin test-name; carousel badge 'Today' vs 'CURRENT FOCUS';
+    App-Language-tile-placement nit (it IS at top of the prefs card); Genesis/Kodshim content-DB data (asset regen).
+- INTEGRATION DISCIPLINE going forward: cherry-pick fuller file per owner; ARB union must catch MODIFICATIONS not
+  just additions (tool/merge_arb.py is additive-only — verify modified keys manually, as redeemScreenTitle showed).
+- NEXT: integrate wv9q2wxxt (disjoint→clean) → make ci → push → redeploy → redo-verify R1v2's 6 screens again; then
+  extend redo to the remaining 41 screens (R2–R6) in batches, fix→redo until a sweep returns clean. Mandate stands.
