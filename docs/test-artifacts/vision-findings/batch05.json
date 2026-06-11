@@ -1,0 +1,493 @@
+{
+  "batch": 5,
+  "findings": [
+    {
+      "screen": "sign_in",
+      "title": "No Forgot Password / password-recovery affordance anywhere on the sign-in screen",
+      "sense": "exploration",
+      "severity": "P1",
+      "permutation": "all states (font 1.0 & 1.3, online cloud mode)",
+      "detail": "The sign-in screen offers email + Secret Key, Sign In, Sign in with Google, Keep me signed in, and a single 'New to the Quest? Register Here' link — but NO 'Forgot password' link. Confirmed in code: lib/features/account/presentation/widgets/sign_in_actions.dart and sign_in_form.dart contain no reset/recovery affordance, and the only l10n forgot-password string is absent. A cloud (password) user who forgets their password has no recovery path from this screen. The task explicitly lists forgot-password as a required control; it does not exist."
+    },
+    {
+      "screen": "sign_in",
+      "title": "Error snackbar rendered in neutral slate-grey instead of an error/red color",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "valid email + wrong password (online cloud sign-in)",
+      "detail": "On a wrong-password submit the snackbar reads 'Incorrect password. Please try again.' but is rendered on a muted slate-grey-blue background, so an authentication ERROR visually reads as a neutral/info toast. Root cause: _showError() in sign_in_screen.dart sets backgroundColor: AppTheme.brandCoralDeep, but brandCoralDeep is defined as Color(0xFF4E5E70) (a slate grey, not coral/red) in lib/core/theme/app_theme.dart:31. The constant is mis-named AND the error lacks any error-color affordance."
+    },
+    {
+      "screen": "sign_in",
+      "title": "Validation errors persist on fully-corrected fields until the next submit",
+      "sense": "logic",
+      "severity": "P2",
+      "permutation": "empty submit, then type valid email + password",
+      "detail": "After an empty-field submit shows 'Email is required' and 'Password is required', typing valid values into both fields does NOT clear the errors — the red borders and 'required' messages linger while the field content is clearly valid (e.g. email 'test-loop-c@orvex.test' with a non-empty password). The Form in sign_in_form.dart sets no autovalidateMode, so validation only re-runs on the next Sign In tap. Lingering/stale validation state per the rubric; AutovalidateMode.onUserInteraction would clear errors as the user corrects them."
+    },
+    {
+      "screen": "sign_in",
+      "title": "Stale 'CloudUser ADULT MODE' profile/mode banner overlays the unauthenticated sign-in screen",
+      "sense": "exploration",
+      "severity": "P2",
+      "permutation": "sign-in reached via add-account / post sign-out",
+      "detail": "The persistent top role-switcher banner shows 'CloudUser  ADULT MODE' (with the C avatar and the up/down switch chevron) sitting on top of the sign-in screen's own 'Welcome Back!' card. The same banner also persists on the post-sign-out Account Picker where the cloud account is flagged 'SIGN IN AGAIN'. A signed-in profile/mode identity is being shown on an auth surface that is supposed to be unauthenticated — a wrong-context/leftover-state surface (a different account's mode chrome above a fresh login form)."
+    },
+    {
+      "screen": "sign_in",
+      "title": "Focused email field clips its value mid-character at font 1.3",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "font_scale 1.3, email field focused with a long value",
+      "detail": "At font 1.3 with the field focused, 'test-loop-c@orvex.test' is cut at the right edge so it renders as 'test-loop-c@orvex.tes' + a clipped partial 't' ('tes1'-looking). It is the standard TextField horizontal-scroll-to-cursor behavior (the unfocused field at font 1.0 shows the full value, see /tmp/audit/signin_clean.png), so it is borderline-expected rather than a hard layout bug, but at large text the truncation reads as a broken/clipped value with no ellipsis."
+    },
+    {
+      "screen": "Signup (Create Account) — learning_track",
+      "title": "Offline data-loss warnings + all error snackbars render in slate-grey, not coral/red — a warning that doesn't read as a warning",
+      "sense": "vision",
+      "severity": "P1",
+      "permutation": "offline + font 1.0 and 1.3",
+      "detail": "The two offline 'no cloud backup / your data stays only on this device' destructive-warning cards, their icons, and the offline-ack-required snackbar ('Please acknowledge the offline account warning...') all render in a muted blue-grey. Root cause: the theme constants NAMED coral are actually slate-grey — app_theme.dart lines 29-31: brandCoral=0xFF708090 (CSS SlateGray), brandCoralSoft=0xFFD8DEE3, brandCoralDeep=0xFF4E5E70. _showError() sets backgroundColor: AppTheme.brandCoralDeep and _buildAccountModeCard uses brandCoralSoft/brandCoralDeep for the warning cards/icons. So EVERY error and destructive warning on signup (duplicate-email, invalid-email, weak-password, generic errors, the data-loss caveats) carries zero red/warning urgency. By contrast the AccountPicker's 'SIGN IN AGAIN' badge uses a genuine red, proving a real warning color exists in the app — the signup warnings look anomalously calm. For an offline-first signup whose entire value-prop hinges on the user understanding 'your data will NOT be backed up,' this is a meaningful semantics/contrast defect."
+    },
+    {
+      "screen": "Signup (Create Account) — learning_track",
+      "title": "RenderFlex overflow stripes ('BOTTOM OVERFLOWED BY 1.2 PIXELS') on profile-picker cards under large text (font 1.3)",
+      "sense": "vision",
+      "severity": "P1",
+      "permutation": "font 1.3 (large text), reached via add-account/signup flow",
+      "detail": "At font_scale 1.3 the 'Who is learning?' profile-picker cards (LoopA ADULT MODE and RedeemKid CHILD MODE) show Flutter's yellow-and-black RenderFlex overflow hazard stripes reading 'BOTTOM OVERFLOWED BY 1.2 PIXELS', and the 'Tap to continue' caption is clipped to 'Tap to'. This screen sits directly on the add-account -> signup navigation path. Confirmed font-scale-specific: resetting to 1.0 removes the stripes and shows full 'Tap to continue'. The card heights are not accessibility/large-text safe."
+    },
+    {
+      "screen": "Signup (Create Account) — learning_track",
+      "title": "Signup screen shows a logged-in account chip (LoopA / ADULT MODE) while creating a brand-new, different account",
+      "sense": "exploration",
+      "severity": "P2",
+      "permutation": "all (online + offline)",
+      "detail": "SignupRoute is pushed onto the app-shell stack (from the AccountPicker '+1 Add another account' dashed button, which calls context.router.push(SignupRoute())). The shell's persistent app bar — showing the currently-active account 'LoopA' and an 'ADULT MODE' chip plus an account-switcher control — remains visible on top of the signup form. So while the user is creating a NEW account with a different identity, the chrome advertises a different existing account and an interactive switcher. Wrong account/profile context for a create-account surface (rubric: 'Wrong account/profile/mode for the context')."
+    },
+    {
+      "screen": "Signup (Create Account) — learning_track",
+      "title": "Task-specified 'confirm password' field and 'terms' control do not exist on this screen",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "all",
+      "detail": "The audit brief lists 'confirm password' and 'terms' as controls to exercise, but the implementation has neither. There is exactly one password field (no confirm/mismatch path to test) and no terms-of-service / privacy acceptance checkbox. The only checkbox is the offline-acknowledge box, which appears solely in offline mode. If a confirm-password or terms gate is a product requirement, it is missing; if not, the spec/control list is stale. Either way 'password mismatch' cannot occur because there is no second field."
+    },
+    {
+      "screen": "Signup (Create Account) — learning_track",
+      "title": "Display-name validator allows trailing-space-only / unbounded names; no length cap and trimmed-empty not re-checked",
+      "sense": "logic",
+      "severity": "P2",
+      "permutation": "online, validation",
+      "detail": "validateDisplayName returns null for any non-empty raw string, but submit uses displayName.trim(). The TrimLeadingSpaceFormatter only strips LEADING spaces, so a value like 'a ' (trailing space) passes; and there is no maximum length. A 60-character name was accepted and rendered (horizontal-scrolls in the field with no overflow — graceful, but no guardrail). Edge cases of trimmed-empty or absurdly long display names are not defended at the validation layer. Low user-facing impact but a real input-validation gap."
+    },
+    {
+      "screen": "Signup (Create Account) — learning_track",
+      "title": "Inconsistent terminology/voice between Sign In and Signup screens for identical fields/concepts",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "online (cross-screen)",
+      "detail": "Sign In labels the same inputs 'Your Email' / 'Secret Key' with playful copy ('Welcome Back!', 'New to the Quest? Register Here'), while Signup uses plain 'Email Address' / 'Create Password' ('Already exploring? Log In'). The cloud card wording also differs: Sign In says data is 'backed up and syncs across devices' whereas Signup says 'backed up and can sync across devices.' Same product concept, two voices — inconsistent and slightly confusing across the auth pair."
+    },
+    {
+      "screen": "Signup (Create Account) — learning_track",
+      "title": "Validation errors are stale until next submit (no onUserInteraction re-validation)",
+      "sense": "logic",
+      "severity": "P2",
+      "permutation": "online, validation",
+      "detail": "The Form has no autovalidateMode, so once an error is shown it persists even after the user has corrected the field — e.g. after typing a valid 'AuditName' the 'Display name is required' error stays until the next Sign Up tap. Minor UX friction; users may think a corrected field is still wrong."
+    },
+    {
+      "screen": "account_picker (AccountPicker — \"Choose ",
+      "title": "Tapping a SIGN-IN-AGAIN account enters it with NO re-authentication (auth gate bypassed)",
+      "sense": "logic",
+      "severity": "P0",
+      "permutation": "multiple accounts, SIGN IN AGAIN card (Loop Test C), font 1.0",
+      "detail": "The 'Loop Test C' card is explicitly labeled SIGN IN AGAIN with a red warning triangle, signalling the cached credential is invalid and re-auth is required. Tapping the card does NOT present any password/credential challenge — it switches straight into that account's profile picker ('Who is learning?') and the switch persists across an app relaunch. A card that promises re-authentication and instead grants entry with zero auth is a security/correctness defect: either the gate is missing or the badge is lying. The trailing red triangle is also inert (tapping it does nothing — /tmp/audit/ap_tap_triangle.png), so there is no dedicated re-auth affordance at all."
+    },
+    {
+      "screen": "account_picker (AccountPicker — \"Choose ",
+      "title": "Account list reorders non-deterministically between visits; active account is not pinned",
+      "sense": "exploration",
+      "severity": "P1",
+      "permutation": "multiple accounts, repeated entry to picker, font 1.0",
+      "detail": "On first display the active account (Loop Test A, marked with a chevron) is at the top; on a later visit the SIGN-IN-AGAIN account (Loop Test C) floats to the top and the active account drops below it. The ordering is unstable across visits. This is dangerous combined with the rapid-tap/auth-bypass behavior: a user reaching for the same card position can land on a different account. The active account is not pinned/highlighted consistently."
+    },
+    {
+      "screen": "account_picker (AccountPicker — \"Choose ",
+      "title": "Rapid taps on 'Add another account' silently switch into a different account instead of opening Create Account",
+      "sense": "exploration",
+      "severity": "P1",
+      "permutation": "adversarial rapid triple-tap on Add-account button, font 1.0",
+      "detail": "A no-settle triple-tap on the dashed '+1 Add another account (3 slots remaining)' button did not reliably open the CreateAccount screen; instead the app ended up in Loop Test C's profile picker and persisted that account selection. This is a debounce / race / re-layout-during-tap defect: taps intended for the add-account button are consumed by a reordered account card. Combined with the missing re-auth gate, rapid interaction can switch the active account without the user intending to."
+    },
+    {
+      "screen": "account_picker (AccountPicker — \"Choose ",
+      "title": "Back from the profile picker (reached via account switch) exits the app to the OS launcher instead of returning to the account picker",
+      "sense": "logic",
+      "severity": "P1",
+      "permutation": "Back mid-flow after selecting an account, font 1.0",
+      "detail": "After tapping an account and landing on 'Who is learning?', pressing the system Back button drops the user straight out of the app to the Android launcher rather than back to 'Choose an Account'. There is no back stack between the account picker and the profile picker in this entry path. A user who taps the wrong account (especially given the unstable ordering) cannot Back out to re-choose — they get ejected from the app and must relaunch."
+    },
+    {
+      "screen": "account_picker (AccountPicker — \"Choose ",
+      "title": "Create Account form is left-anchored as a narrow column on tablet, leaving 60%+ of the screen blank",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "Add-account -> Create Account, tablet 2560x1600, font 1.0 and 1.3",
+      "detail": "On the wide tablet the CreateAccount form (reached via the AccountPicker's Add-account button) renders as a narrow phone-width column pinned to the left edge instead of being centered/constrained-and-centered. The large empty right region looks broken on a tablet. The account picker cards themselves do span full width, so the inconsistency is jarring within the same flow."
+    },
+    {
+      "screen": "account_picker (AccountPicker — \"Choose ",
+      "title": "Sign Out and Delete Account icons render as blank solid-red discs with no glyph in the account bottom sheet",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "Account bottom sheet (entry point to AccountPicker), font 1.0",
+      "detail": "In the ACCOUNT bottom sheet that gates the 'Switch account' entry to the picker, the two destructive actions (Sign Out, Delete Account) have icon containers filled solid red with no icon glyph inside, while every other row shows its glyph. Destructive actions losing their iconography is exactly where a clear visual cue matters most. Matches the rubric 'icon rendered as a blank disc with no glyph.'"
+    },
+    {
+      "screen": "account_picker (AccountPicker — \"Choose ",
+      "title": "AccountPicker ignores system font scaling (1.3) while the sibling Create Account screen honors it — inconsistent accessibility",
+      "sense": "exploration",
+      "severity": "P2",
+      "permutation": "font_scale 1.3 vs 1.0 on AccountPicker and CreateAccount",
+      "detail": "With system font_scale set to 1.3, the AccountPicker text does not enlarge at all (the app clamps/ignores textScaler on this screen), yet the CreateAccount screen reached one tap later DOES scale. Accessibility users who enlarge system text get no benefit on the account-selection screen, and the two screens behave inconsistently. No clipping or overflow was observed on either screen at 1.3 — this is an accessibility-compliance gap, not a layout break."
+    },
+    {
+      "screen": "account_picker (AccountPicker — \"Choose ",
+      "title": "Settings account header shows mismatched email after account interaction (TestParent profile shown with test-loop-a email while top bar had read Loop Test C)",
+      "sense": "logic",
+      "severity": "P2",
+      "permutation": "after tapping SIGN-IN-AGAIN account then selecting TestParent profile, font 1.0",
+      "detail": "The active-account identity is inconsistent across surfaces after switching: the top bar briefly read 'Loop Test C', the profile picker showed C's profiles, but Settings and the account sheet then report the email test-loop-a@orvex.test. Either the displayed email is stale or the account switch only partially took effect. Users cannot trust which account/data they are actually operating in — a real concern given the auth-bypass and reorder findings above."
+    },
+    {
+      "screen": "onboarding",
+      "title": "Hebrew-Terms = English setting is ignored across the entire curriculum/goal track wizard — every domain label renders in Hebrew script",
+      "sense": "domain-oracle",
+      "severity": "P1",
+      "permutation": "Hebrew-Terms=English, Adult Mode, font 1.0",
+      "detail": "On the profile-creation step I explicitly set the 'Hebrew Terms' toggle to English (confirmed in /tmp/audit/onb_22.png, left white pill). The code at onboarding_profile_creation_step.dart:104 persists this via useHebrewTermsProvider.set(false). Yet every subsequent track-wizard step renders ALL domain terms in Hebrew script only, with no English transliteration: curriculum picker (STEP 1) shows משניות / תלמוד בבלי / חומש / נ\"ך / משנה ברורה / תנ\"ך / תלמוד ירושלמי / משנה תורה / מוסר; programs show הלכה יומית / ערוך השולחן יומי; units show סימנים / סעיפים; review step header is 'How do you want to חזרה?'. curriculum_picker_step.dart:185 only shows the English subtitle `if (!terms.isHebrew)` — the absence of any English line on screen proves terms.isHebrew evaluated TRUE despite the English selection (provider appears reset when the offline signup invalidates userDatabaseProvider / switches DB). The domain oracle requires English-mode labels to NOT contain Hebrew-script chars (U+0590-05FF) unless intended; the user's explicit English choice is silently discarded for the whole curriculum/goal flow."
+    },
+    {
+      "screen": "onboarding",
+      "title": "'Continue' button on the goal step (STEP 6) is blocked by an overlapping tap region of the 'Set Deadline' card — taps switch goal mode / open the date picker instead of advancing",
+      "sense": "exploration",
+      "severity": "P1",
+      "permutation": "goal step STEP 6, target-pace mode, font 1.0",
+      "detail": "Repeatedly reproduced: tapping the visually-clear, enabled blue 'Continue' button at the bottom of STEP 6 does NOT advance the wizard. Instead it lands on the 'Set Deadline' card's hit region, flipping the goal type to Deadline and opening the 'Select Hebrew date' picker — even when the deadline card is visually dimmed in target-pace mode. The Continue button and the deadline card occupy colliding tap zones (tap targets colliding). This is a functional blocker: a user cannot reliably press Continue, and accidental taps silently change their goal configuration. ~10 attempts at varying y all hit the card; advancing required scrolling content up to separate the two, and even then most taps hit the card."
+    },
+    {
+      "screen": "onboarding",
+      "title": "'Starts:' label on the Halacha-Yomis program card shows the program NAME where a start DATE belongs",
+      "sense": "domain-oracle",
+      "severity": "P1",
+      "permutation": "Join a Program step STEP 2, font 1.0 and 1.3",
+      "detail": "The first program card reads (accessibility tree): 'הלכה יומית\\nDaily halacha study following the Shulchan Aruch cycle.\\nStarts: הלכה יומית'. The 'Starts:' field (calendar icon prefix, implying a date) is bound to the program name 'הלכה יומית' instead of an actual start date — a NONSENSE value (a name where a date belongs). The sibling card uses a different format ('DAILY CALENDAR'), so the two cards' metadata lines are also inconsistent."
+    },
+    {
+      "screen": "onboarding",
+      "title": "RenderFlex overflow ('OVERFLOWED BY 37 PIXELS') on the scope-step breadcrumb at font 1.3",
+      "sense": "vision",
+      "severity": "P1",
+      "permutation": "scope step STEP 3, font 1.3",
+      "detail": "At font_scale 1.3, the breadcrumb row on 'All of it, or just a section?' (STEP 3) — 'משנה ברורה ← ספר selection' — shows the classic yellow/black debug overflow stripe with 'RIGHT OVERFLOWED BY 37 PIXELS' on the right edge; the word 'selection' is clipped. A Row/breadcrumb is not constraining its children for large-text users. Visible only at 1.3; clean at 1.0."
+    },
+    {
+      "screen": "onboarding",
+      "title": "Estimated-finish gematriya year is wrong for far-future dates (renders a far-PAST Hebrew year)",
+      "sense": "domain-oracle",
+      "severity": "P1",
+      "permutation": "goal step STEP 6, target-pace = 1 se'if/week, Calendar=Hebrew",
+      "detail": "With pace floored at 1 se'if/week for the full Mishnah Berurah (≈17,397 items ≈ 334 years out, ~year 6120 / 2360 CE), the 'Estimated finish' shows 'כ׳ חשוון ק״כ'. The year 'ק״כ' = 120, which reads as Hebrew year 5120 (≈1360 CE) — a date ~666 years in the PAST. The thousands component (ו'=6000) is dropped, so any finish date beyond Hebrew year 6000 renders as a nonsensical past date. At pace 14 the date 'תת״י' (=810→5810) happens to look plausible, masking the bug; it surfaces at low pace / long horizon."
+    },
+    {
+      "screen": "onboarding",
+      "title": "Pluralization bug: '1 DAYS' (custom cycle ring) and '1 study days' (deadline estimate) for count = 1",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "review step STEP 5 + goal step STEP 6, font 1.0",
+      "detail": "Two count=1 pluralization defects. (1) Custom Cycle ring on STEP 5 shows '1 DAYS' (a11y: '1\\nDAYS') — should be '1 DAY'; the adjacent '7 DAYS' is correct. (2) The deadline-mode estimate on STEP 6 reads 'About 17397 סעיפים per study day, across 1 study days to finish the scope by the deadline' — 'across 1 study days' should be '1 study day'. Matches the rubric's '1 study days' example exactly."
+    },
+    {
+      "screen": "onboarding",
+      "title": "Degenerate default: deadline pre-set to TODAY yields impossible '17397 items in 1 study day' plan, shown as the default estimate",
+      "sense": "logic",
+      "severity": "P2",
+      "permutation": "goal step STEP 6, deadline mode (default), font 1.0",
+      "detail": "Switching to 'Set Deadline' defaults the date to today (כ\"ו סיוון תשפ\"ו = Jun 11 2026, the current date). The app then computes 'About 17397 סעיפים per study day, across 1 study days ... (≈17397 items)' — i.e. it asks the user to complete all 17,397 se'ifim in a single day. A deadline-of-today default produces a meaningless plan with no warning or floor."
+    },
+    {
+      "screen": "onboarding",
+      "title": "Mixed Hebrew/English in single phrases on the goal step ('סעיפים Per week', 'סימנים | סעיפים' vs 'Per day | Per week')",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "goal step STEP 6, Hebrew-Terms=English, font 1.0 and 1.3",
+      "detail": "The Target Pace card header literally reads 'סעיפים Per week' (Hebrew noun + English period in one line). The unit segmented control shows Hebrew 'סימנים' / 'סעיפים' while the adjacent period control is English 'Per day' / 'Per week'. In an English-terms profile these item-unit labels should be transliterated ('Simanim' / 'Se'ifim'). Half-translated phrase within one control group."
+    },
+    {
+      "screen": "onboarding",
+      "title": "Study-days list mixes scripts: six days in English, Saturday alone as Hebrew 'שבת'",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "study days step STEP 4, Hebrew-Terms=English, font 1.0",
+      "detail": "On 'Study Days', Sunday–Friday render in English (Latin), but the 7th row renders as Hebrew 'שבת' with avatar 'ש' (a11y: 'ש\\nשבת'). In an English-terms profile this is an inconsistent half-translated row — either all days transliterated or all Hebrew, not six-and-one. (Also: שבת/Shabbos defaults to ON as a study day, which is a questionable default for this domain, but the concrete bug is the mixed script.)"
+    },
+    {
+      "screen": "onboarding",
+      "title": "Curriculum scope item shows '697 סימן' — Hebrew unit in English mode AND singular for a count of 697",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "scope step STEP 3, Hebrew-Terms=English, font 1.0",
+      "detail": "The Mishnah Berurah scope item subtitle reads '697 סימן • Core section focus' (a11y confirmed). Two issues: the unit 'סימן' is Hebrew while terms=English (should be '697 Simanim' / '697 sections'), and it is the SINGULAR סימן for a count of 697 (should be plural סימנים). Arabic numeral + singular Hebrew noun + English tail in one line."
+    },
+    {
+      "screen": "onboarding",
+      "title": "Fresh sign-in / register forms show pre-filled masked password dots; reveal toggle does not unmask",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "auth gate (Sign In + Create Account), fresh install, font 1.0",
+      "detail": "On a freshly-cleared install, the Sign In 'Secret Key' field and the Create Account 'Create Password' field both render with 8 masked dots (••••••••) while the email/name fields correctly show grey placeholders. This reads as 'a password is already entered' on an empty form (leftover/placeholder state). Tapping the eye/visibility toggle flips the icon to the 'shown' state but the field content stays as dots (onb_06_key_s.png) — the reveal does not unmask the placeholder, so the affordance looks broken. The underlying EditText text is genuinely empty (a11y), so these dots are a misleading placeholder pattern."
+    },
+    {
+      "screen": "onboarding",
+      "title": "'Welcome Back!' sign-in copy shown to brand-new first-run users",
+      "sense": "logic",
+      "severity": "P2",
+      "permutation": "auth gate after fresh install + intro, font 1.0",
+      "detail": "After the three intro slides, a freshly-installed (just-cleared, re-seeded) user lands on a screen titled 'Welcome Back!' with subtitle 'Ready for your next learning adventure?' — returning-user copy for someone who has never had an account. The first-run primary action should bias toward register, not 'Welcome Back / Sign In'. 'Keep me signed in' is also pre-checked by default."
+    },
+    {
+      "screen": "onboarding",
+      "title": "Wizard allows advancing with ZERO study days selected (no validation)",
+      "sense": "logic",
+      "severity": "P2",
+      "permutation": "study days step STEP 4, all toggles off, font 1.0",
+      "detail": "I toggled all seven days (Sunday–שבת) OFF; the 'Continue' button stayed enabled and advanced to STEP 5 with zero study days. A pace-based goal with 0 study days/week is degenerate (progress impossible, estimate undefined), yet the wizard neither blocks it nor warns. Notably the later 'Estimated finish' still computed a date, implying the estimate ignores the study-days selection entirely."
+    },
+    {
+      "screen": "onboarding",
+      "title": "Redundant duplicated offline-warning banners stacked on Create Account (offline)",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "register screen, offline (wifi+data disabled), font 1.0",
+      "detail": "When offline, the Create Account screen stacks two near-identical warning banners: 'Local account only: no cloud backup and no device sync.' immediately above 'No cloud backup or device sync. Your data stays only on this device.' — plus a third 'Offline mode: account stays only on this device.' acknowledge row. Three lines saying the same thing crowd the form and push fields below the fold."
+    },
+    {
+      "screen": "onboarding",
+      "title": "Silent failure: cloud registration against unreachable backend bounces back to Sign In with no error/snackbar",
+      "sense": "exploration",
+      "severity": "P2",
+      "permutation": "register screen, online, font 1.0",
+      "detail": "Tapping 'Sign Up' online (Firebase-backed) showed a spinner for ~15s then returned to the 'Welcome Back!' Sign In screen with no visible success or error message. Per signup_screen.dart the success path sends a verification email and routes to Sign In, but from the UI the user gets zero feedback distinguishing success-needs-verification from failure — looks like a silent dead-end."
+    },
+    {
+      "screen": "onboarding",
+      "title": "Onboarding wizard primary buttons report empty accessibility bounds ([0,0][0,0])",
+      "sense": "exploration",
+      "severity": "P2",
+      "permutation": "profile-creation + goal steps, font 1.0",
+      "detail": "uiautomator dumps show several primary CTAs ('Create Profile', 'Continue' on the goal step) with content-desc present but bounds='[0,0][0,0]', i.e. no laid-out hit rectangle in the accessibility tree. This breaks TalkBack focus/activation and made automated/precise tapping unreliable. Combined with the Continue/deadline tap collision above, it points at a layout/Semantics issue for these buttons."
+    },
+    {
+      "screen": "app_intro",
+      "title": "Carousel page-indicator dots are completely missing (IntroPageIndicator built + exported but never instantiated)",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "all pages, font 1.0 and 1.3, both toggle states",
+      "detail": "No page-position dot row is rendered on ANY of the three intro pages — visually confirmed across all 9 captures. The user has no affordance telling them how many pages exist or which one they are on (only per-page progress bars labelled SETUP PROGRESS, which read as loading bars, not pagination). Code confirms why: lib/.../widgets/intro_page_indicator.dart defines IntroPageIndicator (documented as 'the canonical page position affordance'); app_intro_screen.dart re-exports it (lines 24-25) but NEVER constructs it in build(). grep shows the constructor 'IntroPageIndicator(' appears only in its own definition file. The widget is dead code; the prompt's listed 'page dots' control does not exist in the running UI."
+    },
+    {
+      "screen": "app_intro",
+      "title": "At font 1.3, rewards-page subtitle is occluded by the overlaid Get Started button on first view",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "page 3 rewards / font 1.3 / hebrew-terms ON",
+      "detail": "On landing on page 3 at font_scale 1.3, the last line of the subtitle ('from a Novice to a תלמיד חכם!') renders UNDERNEATH the bottom 'Get Started' CTA, and the two feature cards (Badge/Mystery) are entirely hidden behind it. The CTA is a Positioned overlay (bottom:20) drawn on top of the scroll content, so the content is not clipped — scrolling reveals all of it — but a large-text user sees a half-hidden sentence behind the button on initial view. No RenderFlex overflow is logged (content is scrollable), so this is a layout/occlusion polish issue, not a hard clip."
+    },
+    {
+      "screen": "app_intro",
+      "title": "Device Back button on intro exits the app instead of stepping to the previous carousel page",
+      "sense": "exploration",
+      "severity": "P2",
+      "permutation": "page 3 rewards / font 1.0 / hebrew-terms OFF (probe)",
+      "detail": "Pressing KEYCODE_BACK while on page 3 of the carousel backgrounded the app to the launcher (mCurrentFocus=nexuslauncher) rather than navigating page 3→2→1. The PageView has no Back interception. Re-launching restarts the carousel at page 1 (page position not preserved). No data loss (intro is stateless until Get Started), so low severity, but the Back behavior diverges from the common onboarding-carousel convention of stepping back through pages."
+    },
+    {
+      "screen": "app_intro",
+      "title": "No debounce on the Continue/Get Started CTA — rapid taps tunnel straight through onboarding and the permission prompt into Sign In",
+      "sense": "logic",
+      "severity": "P2",
+      "permutation": "page 1→Sign In / font 1.0 / hebrew-terms OFF (probe)",
+      "detail": "Five rapid back-to-back taps at the CTA coordinate advanced page1→2→3→Get Started, then a tap landed on the subsequently-pushed PermissionPrompt screen and dismissed it, finally landing on the Sign In screen — all from taps at one fixed point. No crash and no duplicate-route stack (single MainActivity, clean Sign In), so robustness is acceptable, but the lack of any tap debounce means a fast double-tap on 'Get Started' can blow past the onboarding permission prompt without the user seeing it."
+    },
+    {
+      "screen": "app_intro",
+      "title": "Default-ON Hebrew terms place a lone Hebrew-script word inside otherwise-English first-run copy (NOVICE / תלמיד חכם on one element)",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "page 2 + page 3 / hebrew-terms ON (factory default)",
+      "detail": "HebrewTermsPreference.defaultValue == true, so a fresh first-run user sees mixed-script intro copy before being introduced to the app or given any chance to toggle: page-2 title 'Never Forget a משנה' and page-3 'climb from a Novice to a תלמיד חכם!', plus the Scholar Progress card showing English 'NOVICE' on the left endpoint and Hebrew 'תלמיד חכם' on the right endpoint of the SAME bar. This is design-intended (toggle default), and the oracle term-flip works correctly (see below), so it is reported as a polish/UX concern, not a rendering defect: there is no in-intro control to switch to all-Latin, and the lone Hebrew word in English chrome may read as a glitch to a first-time English user. Note the decorative chips 'Review…' and '…yos' on page 2 are intentional (hard-coded literals with baked-in ellipsis), NOT clipping bugs."
+    },
+    {
+      "screen": "app_intro",
+      "title": "First-run splash ('SYNCING YOUR PROGRESS') lingers ~20-30s on a no-network emulator before the intro appears",
+      "sense": "exploration",
+      "severity": "P2",
+      "permutation": "pre-intro splash / both font scales",
+      "detail": "Before AppIntro renders, a splash titled 'Master Your Learning, One Day at a Time / TORAH JOURNEY' with a 'PREPARING YOUR PATH… / SYNCING YOUR PROGRESS' progress bar sits with an unchanging frame (byte-identical screenshots) for ~20-30s on this offline emulator before transitioning. It does eventually advance (not a true hang). This is the splash screen, adjacent to but not part of AppIntro, so noted as context; on a real slow/no-network first launch the 'syncing' splash delay is user-visible and could be perceived as stuck."
+    },
+    {
+      "screen": "permission_prompt (PermissionPromptScree",
+      "title": "Onboarding permission-rationale screen is unreachable: authGuard rejects the route during first-run (no prompt ever shown to new users)",
+      "sense": "exploration",
+      "severity": "P1",
+      "permutation": "fresh-install / no-account, first-run intro Skip path",
+      "detail": "app_intro_screen.dart:113 and onboarding_screen.dart:442 both push PermissionPromptRoute during onboarding, but app_router.dart:108-110 registers that route with guards:[authGuard]. auth_guard.dart only calls resolver.next() (allow) when kOnboardingComplete==true (line 44-48); otherwise (intro seen, no accounts) it does router.replace(SignInRoute) + resolver.next(false) (lines 67-73), REJECTING the permission-prompt navigation. During first-run, kOnboardingComplete is false at every onboarding push site, so the guard always diverts to SignIn. Empirically confirmed: tapping intro 'Skip' jumps straight to the 'Welcome Back' SignIn screen with the rationale screen never rendering. Net effect: the screen's own doc-comment promise ('shown once after profile creation') is defeated — brand-new users are NEVER shown the notifications/location rationale, and because app_intro sets kPermissionsPrompted=true (app_intro_screen.dart:114) right after the failed push, the later onboarding_screen push (gated on !alreadyPrompted, line 441) is also suppressed. POST_NOTIFICATIONS and ACCESS_COARSE_LOCATION remain granted=false (confirmed via dumpsys), so users silently get no reminders and no local Shabbos times. A text-only loop that trusts the call sites would miss that the guard nullifies them."
+    },
+    {
+      "screen": "permission_prompt (PermissionPromptScree",
+      "title": "Permission rationale screen rendered only from Settings (post-onboarding) — the single guarded route has no onboarding-time entry that survives the guard",
+      "sense": "logic",
+      "severity": "P2",
+      "permutation": "source/architecture (all paths)",
+      "detail": "There is exactly ONE PermissionPromptRoute registration and it is auth-guarded. The only push site that runs after kOnboardingComplete becomes true is Settings -> App Permissions (settings_screen.dart:114). So the screen is de-facto a Settings-only surface despite being authored as an onboarding step. This is the root cause of the P1 above and means QA/visual coverage of the onboarding variant ('Almost Done!' title, 'Start Learning' CTA — permissionPromptTitleOnboarding / startLearning) can essentially never be seen by a real first-run user."
+    },
+    {
+      "screen": "permission_prompt (PermissionPromptScree",
+      "title": "Mixed-script body copy when Hebrew-terms toggle is ON (lone Hebrew word in an otherwise-English sentence) — chrome stays English due to known locale bug",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "hebrew-terms toggle ON (source-verified; not pixel-verified)",
+      "detail": "With Hebrew-Terms ON, {shabbos}/{havdalah} resolve to Hebrew-script glyphs (שבת / הבדלה) embedded inside English sentences whose surrounding chrome (AppBar 'Almost Done!', card titles 'Notifications'/'Location', 'Allow', 'Start Learning') stay English because of the logged MaterialApp locale:null bug. The location card subtitle (permissionPromptLocationSubtitle, arb:2431) packs BOTH {shabbos} AND {havdalah} into one line, so two Hebrew terms sit inside one English sentence. By the oracle this is the intended toggle behavior (not a transliteration error), but the resulting half-translated card is a real UX smell worth design review. Could not pixel-confirm contrast/RTL handling of the embedded RTL Hebrew run inside an LTR English line — that requires rendering the screen, which was blocked."
+    },
+    {
+      "screen": "permission_prompt (PermissionPromptScree",
+      "title": "Font-scale 1.3 overflow risk on the dual-term location card is unverified (screen could not be rendered)",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "font_scale 1.3 (not exercisable)",
+      "detail": "The location card subtitle 'Accurate {shabbos} candle-lighting and {havdalah} times based on your city.' is the longest string on the screen and at font_scale 1.3 (plus the Allow button and 44px icon consuming horizontal space) is the most likely place for vertical growth / a RenderFlex squeeze. The subtitle Text (line 263) sets no maxLines/ellipsis, so it should wrap rather than clip, but the card has fixed EdgeInsets.all(14) and the Row children could collide. This is flagged as a risk only — it could not be visually confirmed because the screen never rendered on this device."
+    },
+    {
+      "screen": "empty_login",
+      "title": "Standalone EmptyLoginScreen is unreachable — every zero-profile sign-in auto-creates a default learner profile and lands on the AppShell dashboard instead",
+      "sense": "exploration",
+      "severity": "P1",
+      "permutation": "zero-profile account, online AND offline sign-in, with and without onboarding_skipped flag",
+      "detail": "EmptyLoginScreen (lib/features/onboarding/presentation/screens/empty_login_screen.dart) is documented as the surface 'shown when a user has zero profiles and previously skipped'. I constructed exactly that state by DB-editing the user account DB to zero learner_profiles and setting flutter.onboarding_skipped=true / onboarding_complete in prefs, then signed in via the AccountPicker. On EVERY attempt the app silently INSERTED a new learner_profiles row named after the account ('TestScholar', observed ids 2, 3, 4, 5 across 4 attempts) and routed to the AppShell dashboard — NEVER to the standalone EmptyLoginScreen. This happened identically offline (airplane mode on, confirmed by the airplane icon in /tmp/audit/relaunch.png) so it is NOT a Firestore cloud-pull repopulating the profile; it is a local default-profile bootstrap during sign-in/landing resolution. The sign-in resolver's EmptyLogin branch (sign_in_controller.dart lines 582 & 753-761, which require finalProfileCount==0) is therefore pre-empted and never fires. Net effect: the EmptyLogin surface — and its only unique controls (the 'I'm a tutor'/empty_login_tutor_entry OutlinedButton at lines 88-105, and the account-switch icon) — appear to be effectively dead/unreachable through normal app navigation. The only code path that renders it is the live onboarding 'Skip for now' tap (onboarding_screen.dart line 283, replaceAll([EmptyLoginRoute])), which I could not reach because sign-in auto-creates a profile before the onboarding wizard is ever shown."
+    },
+    {
+      "screen": "empty_login",
+      "title": "Zero-profile account shows full profile-scoped AppShell chrome (bottom nav + 'ADULT MODE' header) wrapping a 'you have no track/profile' empty state — context mismatch",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "zero-profile account after sign-in (online & offline)",
+      "detail": "Because sign-in auto-creates a profile and lands on AppShell, the SkippedOnboardingCtaBanner ('Get started' / 'Add a learning track to begin tracking your progress.' / blue 'Add a learning track' CTA / 'Dismiss') renders INSIDE the dashboard scaffold — complete with the 'TestScholar / ADULT MODE' profile header (top), the account-switch chevron, and the DASHBOARD/LEARN/PROGRESS/SETTINGS bottom nav. The EmptyLoginScreen by contrast is a minimal Scaffold with an AppBar titled 'Learning Tracker', a Divider, and the tutor CTA, and intentionally has NO bottom nav. So a brand-new zero-profile user is shown the full profiled app shell (with PROGRESS/LEARN tabs that have no data and an 'ADULT MODE' badge for a profile that was silently auto-created) instead of the intended minimal onboarding-recovery surface. The banner content itself is visually clean (no clipping, overflow, low-contrast, or pluralization issues; waving-hand icon renders correctly), but it is being presented in the wrong navigational context for the empty/zero-profile case."
+    },
+    {
+      "screen": "empty_login",
+      "title": "Onboarding intro slide 2 mixes Hebrew-script term into English copy and shows a truncated/orphaned transliteration suffix ('Review… …yos')",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "fresh-install first-run intro carousel (English UI, ashkenazi nusach default)",
+      "detail": "On the way to attempt the EmptyLogin path I passed through the first-run intro. Slide 2's headline rendered as 'Never Forget a משנה' — Hebrew-script characters (U+05DE U+05E9 U+05E0 U+05D4 = משנה) embedded in otherwise-English chrome while the Hebrew-terms toggle was OFF (default). Per the domain rubric, English-mode (transliteration) labels must not contain Hebrew-script unless intended, and the term should read 'Mishnah'/'Mishnayos'. The same card also exposed two fragmented strings 'Review…' and '…yos' (the ascender/descender of an ellipsized 'Mishnayos' broken across nodes), i.e. a transliteration suffix orphaned from its stem — consistent with text clipping/ellipsization. This is on the onboarding intro (adjacent to the empty-login flow), not the EmptyLogin screen itself, but it is a domain-oracle violation worth flagging given it gates the same first-run path."
+    },
+    {
+      "screen": "empty_login",
+      "title": "EmptyLogin 'Add a learning track' CTA would behave inconsistently with the screen's documented zero-profile precondition",
+      "sense": "logic",
+      "severity": "P2",
+      "permutation": "EmptyLogin reached with a non-empty profile list (e.g. via onboarding skip after a profile already exists)",
+      "detail": "Code-level corroboration of the reachability problem: EmptyLoginScreen's docstring states it is for accounts with ZERO profiles, yet its primary CTA (SkippedOnboardingCtaBanner) branches on profiles.isEmpty at runtime — if a profile exists it pushes TrackManagementHub, and only if empty does it show the 'Create a learner profile first' snackbar (ctaCreateProfileFirst) and route to ManageLearners. Given that the live path which actually renders EmptyLoginScreen is the onboarding 'Skip for now' tap (which can occur AFTER a profile row has been created earlier in the wizard), and given that sign-in auto-creates profiles, the screen can be reached in a state that contradicts its own zero-profile assumption, making the CTA's two branches reachable in the 'wrong' surface. I could not exercise the live tap (text-entry into Flutter fields via adb is not reliably injectable, blocking account creation to reach the onboarding intent chooser), so this is reported as a logic/inconsistency finding rather than a confirmed visual repro."
+    },
+    {
+      "screen": "device_restore (DeviceRestore)",
+      "title": "BLOCKER: DeviceRestore screen is unreachable with the provided account — cloud sign-in routes to Onboarding instead, because every Firestore read returns PERMISSION_DENIED",
+      "sense": "exploration",
+      "severity": "P0",
+      "permutation": "fresh-cleared device → sign in test-loop-a@orvex.test / TestLoop!2026 (reproduced twice + relaunch path)",
+      "detail": "On a freshly pm-cleared device, signing into the cloud account authenticates Firebase OK (top bar shows 'Loop Test A / ADULT MODE') but every Firestore pull fails. logcat: FirestorePermissionDeniedException (collection: completions, op: read) and 'Listen for QueryWrapper(users/WrUGgVgkhfRS5wdQJI5b0fb3Zjt2/learner_profiles) failed: PERMISSION_DENIED Missing or insufficient permissions', plus 'FirebaseContextProvider: Error getting App Check token. Error: Too many attempts.' SignInController._navigateAfterSignIn logs navigate_after_sign_in_pull_failed AND navigate_after_sign_in_fetch_profiles_failed, so cloudAccountHasProfiles=false, finalProfileCount=0 → router.replaceAll([OnboardingRoute]) (sign_in_controller.dart:614). The DeviceRestoreRoute is only reached when RestoreGuard intercepts a guarded shell-route navigation with 0 profiles + cloud account; the sign-in path diverts to Onboarding BEFORE that can happen, and on relaunch the AccountPicker→shell path logged restore_guard_new_device_check {completionCount:0, userProfileCount:1, isNewDevice:false} (a profile got created by the prior onboarding attempt). Net: with this account + this Firestore/App-Check state, the restore progress/retry/skip/error UI never renders. Needs either working Firestore permissions (so the cloud account has readable data and the new-device path engages) or a debug hook to force DeviceRestoreRoute. The iter3 'permanent blank' regression therefore could NOT be visually re-verified on-device this run; it is only confirmable by code review (see next finding)."
+    },
+    {
+      "screen": "device_restore (DeviceRestore)",
+      "title": "iter3 blank-screen risk: the 'idle' restore state renders SizedBox.shrink() — the screen is a literal blank when status is idle and the escape-hatch race loses",
+      "sense": "logic",
+      "severity": "P1",
+      "permutation": "code path: status==RestoreStatusIdle in build()",
+      "detail": "build()'s status.when idle branch returns SizedBox.shrink(), i.e. a fully blank Scaffold. The guard against a permanent blank is _startRestore(): if service.restore() returns false AND service.currentStatus is RestoreStatusIdle, it calls _navigateToApp(). This is the iter3 fix. But it is fragile: (a) it reads service.currentStatus synchronously after the awaited restore() — if the service emitted a non-idle-then-idle sequence, or restore() returns false for a non-idle reason not covered, the screen stays blank; (b) if deviceRestoreServiceProvider returns null (no cloud account / null gateway), _startRestore returns early at line 31 with NO navigation, leaving the screen on idle→SizedBox.shrink() forever. Reaching DeviceRestoreRoute with a null service (e.g. gateway briefly null during a rebuild) yields a permanent blank screen with no spinner, no text, no way out. Recommend the idle branch render a visible fallback (spinner + 'Preparing…') instead of SizedBox.shrink() so a blank can never be shown even if every escape path misses."
+    },
+    {
+      "screen": "device_restore (DeviceRestore)",
+      "title": "Restore progress shows 'Step 0 of 3' on the first frame — a zero-indexed step count is nonsensical UX for a human-facing progress label",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "restoring state, first phase 'Restoring your data...'",
+      "detail": "The service emits completedSteps 0,1,2 against totalSteps 3. The screen renders Text(l10n.deviceRestoreStep(completedSteps,totalSteps)) so the very first progress frame reads literally 'Step 0 of 3' (he: 'שלב 0 מתוך 3'), and the sequence is 0/3 → 1/3 → 2/3, never reaching '3 of 3' (it cuts to the green check). 'Step 0 of 3' reads as not-yet-started and the missing final step looks like a skipped step. Steps should be 1-indexed (Step 1/2/3 of 3) so the human sees a sane 1→3 progression. Could not screenshot live due to the P0 blocker, but it is deterministic from the emitted constants."
+    },
+    {
+      "screen": "device_restore (DeviceRestore)",
+      "title": "Onboarding carousel (pre-restore flow) shows the same masechta in mixed nuschaos / ellipsized term badges",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "fresh device onboarding intro, page 2 'Never Forget a משנה'",
+      "detail": "On the carousel page reached en-route to sign-in, the decorative term badges show '...yos' (top-right, Ashkenazi -os/-yos transliteration, ellipsized so the word is unreadable) alongside Hebrew-script 'משנה' in the headline 'Never Forget a משנה' and an English 'Review…' badge. This is an English-mode (UI locale English) surface mixing Hebrew script into the headline and ellipsizing a transliterated term to '...yos' which renders as nonsense. While this is the onboarding screen (not DeviceRestore itself), it sits directly on the path the restore-flow user traverses and violates the oracle rule that English-mode labels should not carry raw Hebrew script and that transliteration must not be clipped to an unreadable fragment. Worth flagging since the restore-flow audit traverses it."
+    },
+    {
+      "screen": "device_restore (DeviceRestore)",
+      "title": "Long first-launch splash with no progress feedback — fresh device sits on 'PREPARING YOUR PATH' for ~47s extracting a 432 MB seed DB",
+      "sense": "exploration",
+      "severity": "P2",
+      "permutation": "freshly pm-cleared device, first launch before any restore",
+      "detail": "After pm clear, the app holds on the 'PREPARING YOUR PATH… / SYNCING YOUR PROGRESS' splash for ~47 seconds while SeedManager extracts a 432.4 MB seed database. The splash's gradient bar is static and gives no indication of a long-running extraction, so on a real fresh device (the exact scenario that precedes DeviceRestore) the user faces a ~47s apparently-frozen screen with no progress %, no 'this can take a minute' copy. This is the pre-condition state for the restore flow and a likely abandonment/force-quit point. The restore flow's own progress UI is good by contrast; this seed-extract phase should show comparable progress feedback."
+    },
+    {
+      "screen": "profile_picker",
+      "title": "Profile cards are grotesquely tall on tablet/landscape — ~60% of each card is empty whitespace (fixed childAspectRatio 0.67 mis-sized for wide columns)",
+      "sense": "vision",
+      "severity": "P1",
+      "permutation": "many-profiles x font1.0 AND font1.3 x tablet-landscape (2560x1600)",
+      "detail": "ProfileGrid (learning_tracker/lib/features/profiles/presentation/widgets/profile_grid.dart:34-38) uses SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, childAspectRatio: 0.67). On a wide tablet/landscape each of the 2 columns is ~1180px, so card height is forced to width/0.67 (~1760px) while the actual content (badge + 92px avatar + name + 'Tap to continue') is only ~300px tall. Result: every profile card AND the Add Profile card render as huge boxes with the content clustered at the top and ~60% empty whitespace below — only one grid row fits on screen at a time, forcing excessive scrolling. Reproducible at font 1.0 (not transient). The aspect ratio is tuned for narrow phone columns; the layout needs a width-aware aspect ratio (or a max card height / maxCrossAxisExtent delegate) for tablet."
+    },
+    {
+      "screen": "profile_picker",
+      "title": "Profile display name is truncated with an ellipsis on phone-width cards at large font (full name only in a11y tree)",
+      "sense": "vision",
+      "severity": "P1",
+      "permutation": "many-profiles(3) x font1.3 x phone-portrait(1080x2400)",
+      "detail": "ProfileCard (profile_card.dart:146-156) renders displayName with maxLines:1 + TextOverflow.ellipsis at fontSize 22. A profile named 'Menachem-Mendel-Yehoshua' renders visually as 'Menache…' on a phone-width 2-column card at font 1.3 — the learner cannot read or distinguish their own profile name. The uiautomator content-desc still carries the full name ('ADULT MODE\\nM\\nMenachem-Mendel-Yehoshua\\n...'), so the truncation is purely visual. Matches the batch-2 'name ellipsis here' note. Inconsistent with the profile switcher sheet, which wraps the same name to two lines (see /tmp/audit/pp_childswitch.png) rather than truncating."
+    },
+    {
+      "screen": "profile_picker",
+      "title": "Child can escape CHILD MODE into an Adult profile and edit/delete any profile from the switcher with NO Parent PIN gate",
+      "sense": "exploration",
+      "severity": "P1",
+      "permutation": "child profile selected (Shloime/CHILD MODE) -> header switcher (phone-portrait)",
+      "detail": "After selecting the child profile Shloime (CHILD MODE), tapping the dashboard header chip opens the profile switcher sheet (profile_switcher_sheet.dart) with NO Parent PIN challenge — even though a Parent PIN (1111) was set up during the child profile's creation. The sheet lists all profiles with per-row edit (pencil) and delete (trash) controls, a 'Switch account' row that exposes the account email, and 'Add Profile' / 'Skip to Settings'. Tapping the adult profile 'Avraham' switched straight into ADULT MODE with no PIN prompt (/tmp/audit/pp_child2adult.png). This defeats the purpose of child mode + parent PIN: a child can leave child mode, open adult surfaces, switch account, or delete profiles unsupervised. (Surfaces from the profile-selection system adjacent to the picker; the same switcher is reachable from the picker's header chip.)"
+    },
+    {
+      "screen": "profile_picker",
+      "title": "Picker header asserts a stale/wrong active identity ('AuditParent · ADULT MODE') while the screen's whole purpose is that no profile is selected yet",
+      "sense": "logic",
+      "severity": "P2",
+      "permutation": "many-profiles x picker entry (no profile selected) x both widths/fonts",
+      "detail": "The ProfilePicker is reached precisely because ProfileGuard found 2+ profiles and NO selected profile, yet the persistent top app bar over the picker shows 'A  AuditParent' with an 'ADULT MODE' badge and a profile-switcher chevron. 'AuditParent' is the ACCOUNT display name (entered at signup) — it is NOT the name of any of the 3 learner profiles (Avraham/Shloime/Menachem...). So the header (a) shows an account name where a profile is implied and (b) shows a profile-MODE badge ('ADULT MODE') before any profile/mode has been chosen, defaulting to the profile-0 sentinel. After a profile is actually picked the header corrects (e.g. 'Shloime · CHILD MODE', /tmp/audit/pp_childsel.png), confirming the picker-state header is stale/defaulted context."
+    },
+    {
+      "screen": "profile_picker",
+      "title": "System Back on the picker exits the app to the launcher (no in-picker back affordance)",
+      "sense": "exploration",
+      "severity": "P2",
+      "permutation": "many-profiles x picker x Back button",
+      "detail": "Pressing the Android system Back button on the ProfilePicker drops the user out of the app to the home launcher (mCurrentFocus became com.google.android.apps.nexuslauncher after the keyevent). The picker is a replaceAll root route with no AppBar back button, so the only forward nav is selecting a profile, Add Profile, the (stale) header switcher chip, or Skip to Settings. Exiting to launcher on Back is defensible for a root gate, but combined with the misleading header it means a user who lands here with no obvious 'back/cancel' can only escape the app entirely. Worth a deliberate decision (no-op, or route to a sensible parent) rather than implicit app-exit."
+    },
+    {
+      "screen": "profile_picker",
+      "title": "Add Profile card label wraps to two lines ('Add'/'Profile') — cosmetic, no clipping",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "many-profiles x font1.0/1.3 x tablet AND phone",
+      "detail": "The Add Profile card title 'Add Profile' (add_profile_card.dart) wraps onto two lines on the narrow card cell. It is NOT clipped or ellipsized (the card uses FittedBox(scaleDown) + headlineSmall), so this is purely a cosmetic wrap rather than a defect, but it reads slightly awkwardly ('Add' over 'Profile') and is inconsistent with the single-line title intent. Low priority; noting for completeness."
+    }
+  ]
+}

@@ -1,0 +1,453 @@
+{
+  "batch": 3,
+  "findings": [
+    {
+      "screen": "track_management_hub (TrackManagementHub",
+      "title": "Add-Track 'Join a Program' step: 'Starts:' field shows the program NAME instead of a start date",
+      "sense": "vision",
+      "severity": "P1",
+      "permutation": "Add Track wizard step 2 'Join a Program?', both Hebrew-terms ON and OFF",
+      "detail": "On the 'Join a Program?' step (reached via the hub's ADD TRACK CTA → select Talmud Bavli), the Dirshu program card has a calendar-icon row labelled 'Starts:' whose value is the program's own name, not a date. In transliteration mode it reads literally 'Starts: Dirshu Amud HaYomi' and in Hebrew-terms mode 'Starts: דרשו עמוד היומי'. This matches the rubric 'a name where a date belongs' — the start-date binding is wrong (the name is being substituted for the cycle/track start date). Adjacent cards ('Daf Yomi' → 'DAILY CALENDAR', 'Daf a Week') do NOT show a bogus date, so the defect is specific to the program-with-start-date card."
+    },
+    {
+      "screen": "track_management_hub (TrackManagementHub",
+      "title": "Add-Track wizard step-count denominator is unstable and goes stale (1 OF 6 → 1 OF 7)",
+      "sense": "exploration",
+      "severity": "P2",
+      "permutation": "Add Track wizard, first entry vs after advancing to a program-bearing step and pressing Back",
+      "detail": "The curriculum-select screen shows 'STEP 1 OF 6' on first entry. Selecting Talmud Bavli (which has programs) advances to 'STEP 2 OF 7' — the total silently grows from 6 to 7. Pressing Back returns to curriculum-select but it now reads 'STEP 1 OF 7' instead of reverting to 6. So the denominator is sticky/stale: the first step is mislabeled as 1-of-7 before any program is even chosen, and the displayed total retroactively changes based on a later selection. Confuses the user about flow length and makes the progress bar inconsistent."
+    },
+    {
+      "screen": "track_management_hub (TrackManagementHub",
+      "title": "Track detail: redundant label — 'Elapsed' row value repeats the word ('Elapsed 0 days')",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "Track detail (from hub), all term/nusach modes, font 1.0 and 1.3",
+      "detail": "On the track detail stats card the left label is 'Elapsed' and the right-hand value is 'Elapsed 0 days', so the word 'Elapsed' is printed twice on the same line ('Elapsed: Elapsed 0 days'). The sibling rows are clean (label 'Started' → value, label 'Actual pace' → value). The value string should be just '0 days'. Persists at font 1.3."
+    },
+    {
+      "screen": "track_management_hub (TrackManagementHub",
+      "title": "Delete/Archive dialog: destructive action is the most prominent button and the three actions are mis-aligned (staircase)",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "Delete Track dialog (from track detail), font 1.0 and 1.3",
+      "detail": "The 'Delete Track' dialog ('What should happen to your completion history?') stacks three actions: 'Cancel' (right-aligned text link), 'Archive (keep history)' (centred-ish text link), and 'Delete and wipe history' (large solid red filled button). Two issues: (1) Safety hierarchy is inverted — the irreversible 'Delete and wipe history' is the single most visually dominant element while the safe 'Cancel' is the least prominent. (2) The three buttons sit at three different horizontal offsets producing a ragged staircase rather than a consistent right-aligned or full-width stack. At font 1.3 the red button label wraps to two lines ('Delete and wipe' / 'history') left-justified inside the centred pill, which looks unpolished (no hard clipping/overflow, text stays readable)."
+    },
+    {
+      "screen": "track_management_hub (TrackManagementHub",
+      "title": "Track detail mixes two date systems for the same 'start' event (Hebrew date vs Gregorian)",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "Track detail, Calendar Preference = Hebrew (default), Hebrew-terms ON and OFF",
+      "detail": "On one card the 'Started' row shows a Hebrew-script Hebrew date (כ\"ה סיוון תשפ\"ו) while a few rows down the same track shows 'Since Jun 10, 2026' (Gregorian, English). Both describe the track's start (today), yet they render in two different calendars and scripts on the same screen. In transliteration mode this is especially jarring: a transliterated English title ('Talmud Bavli') with a Hebrew-script date above and a Gregorian date below. Worth aligning to one representation or clearly differentiating the two fields."
+    },
+    {
+      "screen": "track_management_hub (TrackManagementHub",
+      "title": "Archive/Delete dialog offers actions the app then silently refuses (last active curriculum)",
+      "sense": "exploration",
+      "severity": "P2",
+      "permutation": "Delete Track dialog → Archive (keep history) on the only/last active track",
+      "detail": "With a single active track, the 'Delete Track' dialog still presents 'Archive (keep history)' and 'Delete and wipe history' as available. Tapping 'Archive (keep history)' does not archive — it dismisses and shows a snackbar: 'At least one curriculum must remain active — You cannot remove your last active curriculum. Add another curriculum before removing this one.' The guard itself is good, but the restriction is only surfaced AFTER the user commits in the destructive dialog; better UX would disable/annotate those options up front. Also note this guard makes the empty-active-tracks state effectively unreachable for an existing profile."
+    },
+    {
+      "screen": "pin_flow",
+      "title": "Rapid-tap race: a 5th keypad tap leaks past the enter→confirm transition into the Confirm step as digit 1",
+      "sense": "exploration",
+      "severity": "P1",
+      "permutation": "Set Parent PIN (setup) flow, child profile PinKid, font 1.0",
+      "detail": "On the 'Set Parent PIN' setup keypad I fired 5 concurrent taps on digit '1' with no settle. The first 4 completed the first-entry PIN '1111' and auto-advanced to 'Confirm New PIN' — but the screenshot shows the Confirm step already has ONE dot filled. The 5th physical tap, which the user intended as part of the first entry, bled through and became digit 1 of the confirm PIN. Root cause (verified in code): in lib/features/profiles/presentation/widgets/parent_pin_setup_dialog.dart _onFourDigits(), the enterNew→confirm transition does setState({_isConfirmStep=true; _digits=''}) WITHOUT setting _busy=true; the appendDigit guards are only `_busy` and `_digits.length>=4`. After the buffer resets to '' the next queued tap sees length 0 and appends. The identical gap exists in lib/features/profiles/presentation/providers/pin_flow_controller.dart _handleSetup/_handleChange (the synchronous step transitions never raise busy). Real-world impact: a fast or fat-fingered parent gets an unexplained leading digit in the confirm field → spurious 'PINs do not match', or in the worst ordering a confirm that silently includes an unintended digit. The verify-mode keypad does NOT exhibit this (its _onFourDigits sets busy=true synchronously before the async verify), so the bug is specific to the step-advancing setup/change flows."
+    },
+    {
+      "screen": "pin_flow",
+      "title": "Partial parent-PIN entry survives backgrounding — masked digit persists across HOME/resume on the verify gate",
+      "sense": "exploration",
+      "severity": "P2",
+      "permutation": "PIN-entry gate (verify), child profile RedeemKid, font 1.0",
+      "detail": "With one digit entered on the 'Enter Parent PIN' gate I pressed KEYCODE_HOME, then relaunched the app. The dialog is still open AND the one entered (masked) dot is still filled — the in-progress PIN was not cleared on pause. For a parent-control security gate, the expected hardening is to clear partial entry (or dismiss the prompt) when the app is backgrounded, so a child who picks up the device cannot resume a parent's half-typed PIN or read the entered-digit count. The dialog is barrierDismissible:false with PopScope canPop:false, so it also cannot be dismissed by the child via back — but the lingering partial entry is still a minor leak/UX concern. The digits are masked, so severity is P2."
+    },
+    {
+      "screen": "pin_flow",
+      "title": "Change-PIN 'Enter Current PIN' step reuses the verify subtitle 'to access parent settings' (copy mismatch)",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "Change PIN flow, verifyCurrent step, font 1.3",
+      "detail": "When opening Parental Controls → Parent PIN (which routes to the CHANGE flow because a PIN already exists), step 1 'Enter Current PIN' shows the subtitle 'Enter your 4-digit PIN to access parent settings.' This is the verify-gate subtitle (enterParentPinSubtitle), reused for the change flow's verifyCurrent step (see parent_pin_keypad_dialog.dart _subtitle: case verifyCurrent returns l10n.enterParentPinSubtitle). In a change context the user is not 'accessing parent settings' — they are confirming identity before changing the PIN, so the copy is slightly misleading. Cosmetic."
+    },
+    {
+      "screen": "pin_flow",
+      "title": "Mixed-script curriculum labels on the dashboard while Hebrew-terms toggle is ON (Hebrew term beside English labels)",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "Dashboard (ambient to pin_flow nav), Hebrew-terms ON, both child + adult profiles",
+      "detail": "Not part of the PIN dialogs themselves, but observed while navigating SETTINGS→Parental Controls. On the dashboard stats row the middle stat renders the Hebrew-script term 'סיומים' (siyumim) directly next to English labels 'Streak', 'Lifetime', 'Points', and the stats card mixes 'חזרה' (Hebrew) with English 'OVERDUE'/'TODAY DUE'. The uiautomator content-desc confirms: '0 סיומים earned … Streak … Lifetime … Points'. With the Hebrew-terms toggle ON this is the intended term rendering, but the single-screen mixing of Hebrew-script domain terms with English chrome labels reads as half-translated. Flagged for the domain oracle since the same screen shows two scripts. No nusach inconsistency was detected (no masechta rendered in two nuschaos)."
+    },
+    {
+      "screen": "pin_flow",
+      "title": "New profile created but header/active-profile context stayed on the previous profile during PIN setup",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "Set Parent PIN setup, immediately after creating child profile PinKid",
+      "detail": "After 'Create Profile' for PinKid, the forced 'Set Parent PIN' dialog correctly names PinKid ('…parent controls for PinKid'), but the app-shell header chip behind the dialog still shows 'RedeemKid / CHILD MODE' (the previously-active profile). The PIN was correctly written to the new profile (later verified — see below), so functionally correct, but the stale header context during setup is mildly confusing about which profile is being configured. Minor."
+    },
+    {
+      "screen": "parent_settings",
+      "title": "Raw FirestorePermissionDeniedException string leaked into user-facing Backup & Sync card",
+      "sense": "domain-oracle",
+      "severity": "P1",
+      "permutation": "all permutations (font 1.0 and 1.3, terms ON/OFF) — error is persistent",
+      "detail": "The Backup & Sync hero card on the Parent Settings landing renders a raw internal exception verbatim: 'Sync error: FirestorePermissionDeniedException: The caller does not have permission to execute the specified operation. (collection: completions), op: read caused by: [cloud_firestore/permission-denied] The caller does not have permission to execute the specified operation. Tap to retry'. This exposes the exception CLASS NAME (FirestorePermissionDeniedException), the internal Firestore collection name (completions), the operation (read), and the internal error code path ([cloud_firestore/permission-denied]) — all developer-facing. Confirmed in code: learning_tracker/lib/core/sync/sync_orchestrator.dart:959-961 sets `message = e.toString()` for any non-TimeoutException, and learning_tracker/lib/features/settings/presentation/widgets/backup_sync_section.dart:115-119 renders `l10n.backupSyncError(message)` directly. The exception's toString (firestore_permission_denied_exception.dart:32-37) produces exactly this string. Tapping 'Tap to retry' re-runs the pull and re-surfaces the same raw text (persistent, not transient). At font 1.3 it wraps to 3+ lines and is even more prominent. Needs a user-friendly mapped message (e.g. 'Cloud backup is temporarily unavailable. Tap to retry.')."
+    },
+    {
+      "screen": "parent_settings",
+      "title": "Inconsistent tile-title capitalization: 'Reward configuration' breaks the title-case pattern of its siblings",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "font 1.0, all term states",
+      "detail": "On the Parent Settings landing every management tile uses Title Case ('Manage Tracks', 'Manage Goals', 'Point Configuration', 'Adjust Points', 'Pending Prizes', 'Add Lifetime Learning', 'Manage Tutors') EXCEPT 'Reward configuration' which has a lowercase 'c'. The sub-screen it opens is titled 'Reward Configuration' (capital C), so the landing tile label is also inconsistent with its own destination header. Cosmetic but visible side-by-side."
+    },
+    {
+      "screen": "parent_settings",
+      "title": "'Manage Tracks' and 'Manage Goals' are two distinct tiles that route to the identical screen",
+      "sense": "exploration",
+      "severity": "P2",
+      "permutation": "font 1.0",
+      "detail": "The landing presents 'Manage Tracks' (subtitle 'Add, edit, or archive your child's tracks') and 'Manage Goals' (subtitle 'Set pace or deadline goals for each track') as two separate rows, but both push ParentTrackManagementRoute (confirmed parent_settings_screen.dart:172 and :193) — the same 'Tracks & Goals' screen, which shows no goal-setting affordance until you drill into an individual track. A parent tapping 'Manage Goals' expecting a goals UI lands on the track list with no obvious goal control on that screen (goal editing is behind track -> Edit Goal). Confusing dual entry."
+    },
+    {
+      "screen": "parent_settings",
+      "title": "Adjust Points amount field accepts an unbounded value (no max cap)",
+      "sense": "logic",
+      "severity": "P2",
+      "permutation": "Adjust Points dialog, font 1.0",
+      "detail": "In the Adjust Points dialog, entering '999999999999' (12 digits) is accepted and the Apply button becomes enabled — there is no maximum-value or length cap on the amount. The digitsOnly formatter correctly strips letters ('abc999999999999' -> '999999999999'), but a parent could add/deduct a nonsensical 999-billion-point adjustment in one tap. parent_settings_screen.dart only validates `amount > 0`. Low-severity robustness gap; a sane upper bound (and possibly a confirmation for very large values) would prevent accidental balance corruption."
+    },
+    {
+      "screen": "parent_settings",
+      "title": "Mixed calendar systems on the track-detail screen (Hebrew date and Gregorian date together)",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "Hebrew Terms ON + Calendar Preference = Hebrew, reached via Manage Tracks/Goals -> track",
+      "detail": "On the track-detail screen (two levels below the parent_settings landing, via Manage Tracks/Goals -> Chumash track) the 'Started' field renders a Hebrew gematriya date 'כ\"ה סיון תשפ\"ו' while the card immediately below shows 'Since Jun 10, 2026' (Gregorian) and 'Est. finish Apr 13, 2027' (Gregorian) — two different calendar systems on one screen for effectively the same anchor date. Inconsistent calendar presentation. Outside the strict landing scope but reachable from a parent_settings tile."
+    },
+    {
+      "screen": "parent_track_management (ParentTrackMana",
+      "title": "\"Archive (keep history)\" destroys the track's goal/pace/program config but leaves the track active",
+      "sense": "domain-oracle",
+      "severity": "P1",
+      "permutation": "populated track, Sephardi, hebrew-terms OFF, font 1.3 (state-independent)",
+      "detail": "Long-pressed the child's Mishnayot track -> dialog -> tapped 'Archive (keep history)'. The list immediately showed 'No active tracks' (empty), but after any rebuild/refetch (font change OR navigate-away-and-back) the SAME track reappears as active with 1 RUNNING. Comparing TrackDetail before vs after archive: before had 'Required pace 21·Per week', 'Goal 21·Per week', 'Est. finish Apr 8 2030' and action 'Edit Goal'; after archive those Goal/Required-pace/Est-finish rows are GONE, subtitle degraded from 'Completion (with Chazara)' to generic 'Track progress', and the action tile flipped from 'Edit Goal' to 'Set Goal'. So 'Archive (keep history)' wiped the goal/program/completion-mode config (the opposite of 'keep history') yet did NOT remove the track from the active list. Source: parent_track_management_screen.dart _showDeleteDialog -> choice=='archive' calls dao.deleteTrackAndData(track.id) then invalidateAfterTrackDataChange; net observed effect is partial-delete + stale empty render. Data-integrity issue on a child's record managed by a parent."
+    },
+    {
+      "screen": "parent_track_management (ParentTrackMana",
+      "title": "\"Starts:\" chip shows the program NAME instead of a start date",
+      "sense": "vision",
+      "severity": "P1",
+      "permutation": "Add Track flow Step 2 (Join a Program?), both nusach settings",
+      "detail": "On the 'Join a Program?' step reached from the Add Track control, the Mishnah Yomis card shows a calendar-icon chip reading 'Starts: Mishnah Yomis' — the field labeled 'Starts:' is followed by the program name, not a date. Confirmed in source program_selection_step.dart line 227: \\\"'Starts: \\$name'\\\" interpolates the program name into the Starts label. A name where a date belongs (rubric: nonsense value)."
+    },
+    {
+      "screen": "parent_track_management (ParentTrackMana",
+      "title": "Empty-state and Delete dialog use own-profile copy (\"your\") in a parent-manages-child context",
+      "sense": "logic",
+      "severity": "P2",
+      "permutation": "empty state + delete dialog, all permutations",
+      "detail": "This screen is the PARENT managing the CHILD's tracks (the hub tile that opens it correctly says 'Add, edit, or archive your child’s tracks'). But the destination empty-state subtitle reuses l10n.manageTracksDetail = 'Create and edit YOUR learning tracks', and the archive/wipe dialog body says 'What should happen to YOUR completion history?'. Both leak the adult/own-profile wording into the child-management surface; should read 'your child’s'."
+    },
+    {
+      "screen": "parent_track_management (ParentTrackMana",
+      "title": "Program-selection card name ignores nusach: \"Mishnah Yomis\"/\"mishnayos\" stay Ashkenazi-mixed even under Sephardi",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "Add Track Step 2, hebrew-terms OFF, Sephardi (and ON)",
+      "detail": "With Pronunciation explicitly set to Sephardi, the curriculum picker correctly renders 'Mishnayot' (-ot) and the track card renders 'Mishnayot', but the program card on the SAME flow shows 'Mishnah Yomis' (Sephardi 'Mishnah' + Ashkenazi 'Yomis') and body 'Two mishnayos per day' (Ashkenazi -os). So one screen mixes nuschaos for the same masechta and the program name/description do not honor the user's nusach. The second program ('Perek Yomi' / 'פרק יומי') DOES respect the hebrew-terms toggle, making the first card's hardcoding inconsistent."
+    },
+    {
+      "screen": "parent_track_management (ParentTrackMana",
+      "title": "Track-card subtitle and percent collide at large text (\"Chazara)0%\")",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "populated, font_scale 1.3, hebrew-terms OFF",
+      "detail": "At font_scale 1.3 the track card's subtitle 'Completion (with Chazara)' expands until it touches the trailing '0%' value with no spacing, rendering as 'Completion (with Chazara)0%'. At 1.0 the gap is correct. Spacing/overflow robustness issue under accessibility text scaling (no Row spacing/Flexible between label and value)."
+    },
+    {
+      "screen": "parent_track_management (ParentTrackMana",
+      "title": "TrackDetail mixes Hebrew and Gregorian dates on one screen despite Hebrew calendar preference",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "TrackDetail (reached from card), calendar pref = Hebrew",
+      "detail": "Calendar Preference is set to Hebrew. On the track detail the 'Started' date renders in Hebrew gematriya ('כ״ה סיוון תשפ״ו') but 'Since Jun 10, 2026' and 'Est. finish: Apr 8, 2030' render in Gregorian English on the same screen. Date formatting is inconsistent — some fields honor the Hebrew calendar preference, others ignore it."
+    },
+    {
+      "screen": "parent_track_management (ParentTrackMana",
+      "title": "Duplicated label: \"Elapsed\" row renders the word twice (\"Elapsed | Elapsed 0 days\")",
+      "sense": "logic",
+      "severity": "P2",
+      "permutation": "TrackDetail, all permutations",
+      "detail": "The track-info Elapsed row uses label = l10n.trackInfoElapsed ('Elapsed') AND a value builder _elapsedRemainingLabel that ALSO prepends l10n.trackInfoElapsed, producing value 'Elapsed 0 days'. Net rendered row: 'Elapsed' (label) + 'Elapsed 0 days' (value) — the word 'Elapsed' appears twice. Value should be just '0 days'."
+    },
+    {
+      "screen": "parent_track_management (ParentTrackMana",
+      "title": "Persistent mixed-language label \"Completion (with חזרה)\" on the track card",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "populated, hebrew-terms ON, font 1.0",
+      "detail": "With hebrew-terms ON the track-card subtitle reads 'Completion (with חזרה)' — English 'Completion (with' + Hebrew-script 'חזרה)' on one line. Half-translated label (English chrome with a single Hebrew term embedded). Same pattern recurs on the goal tile ('משניות Per week') and the deadline preview ('About 4192 משניות per study day')."
+    },
+    {
+      "screen": "parent_track_management (ParentTrackMana",
+      "title": "Pluralization + absurd-magnitude in deadline preview: \"4192 ... per study day, across 1 study days\"",
+      "sense": "exploration",
+      "severity": "P2",
+      "permutation": "Add Track Step 6 (goal/deadline), hebrew-terms ON",
+      "detail": "The disabled 'Set Deadline' card preview (accessibility text) reads: 'About 4192 משניות per study day, across 1 study days to finish the scope by the deadline (≈4192 items).' Two issues: (1) pluralization bug 'across 1 study days' should be '1 study day'; (2) magnitude is nonsensical — 4192 mishnayot per day across a single day (the full Shas-Mishnayot scope crammed into one day) because the deadline math divides the entire 4192-item scope by ~1 elapsed day. Also mixes 'משניות' (Hebrew) with English."
+    },
+    {
+      "screen": "parent_track_management (ParentTrackMana",
+      "title": "\"Manage Goals\" hub tile lands on the same Tracks screen, not a goals view",
+      "sense": "exploration",
+      "severity": "P2",
+      "permutation": "Parent Settings hub navigation",
+      "detail": "Parent Settings shows two distinct tiles with different subtitles: 'Manage Tracks' (Add, edit, or archive your child’s tracks) and 'Manage Goals' (Set pace or deadline goals for each track). Both navigate to the identical ParentTrackManagementRoute ('Tracks & Goals') with no goal-specific landing — to edit a goal the user must tap into a track card and find 'Edit Goal'. 'Manage Goals' arriving at a Tracks list is a navigation-expectation mismatch (the code comment at the title acknowledges the dual entry)."
+    },
+    {
+      "screen": "parent_track_management (ParentTrackMana",
+      "title": "Destructive 'Delete and wipe history' is the most visually prominent action; safe 'Archive' is a plain link",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "delete/archive dialog, font 1.0 and 1.3",
+      "detail": "In the 'Delete Track' dialog the destructive 'Delete and wipe history' is a large red filled button (highest visual weight) while the safer 'Archive (keep history)' and 'Cancel' are plain text links. The actions are also staggered/left-misaligned (right-aligned text buttons stacked above a wider centered red button). For an irreversible child-data-wipe, the destructive option drawing the eye is a UX risk."
+    },
+    {
+      "screen": "point_config (Parent Settings -> Point C",
+      "title": "Pluralization wrong at value 1: shows \"1 PTS\" (plural) instead of singular",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "value=1, hebrew-terms ON and OFF, font 1.0 and 1.3",
+      "detail": "With points-per-task set to 1, both the large display and stepper render \"1 PTS\" — the plural unit. Singular should be \"1 PT\" or \"1 point\". Root cause: l10n key is a static count-independent string `pointSettingsPts => 'PTS'` (lib/l10n/app_localizations_en.dart:1429); there is no plural variant. The screen-reader content-desc also announces \"1 / PTS\" (confirmed via uiautomator dump), so the bug also reaches accessibility. The rubric explicitly flags count=1 pluralization. Reproduced cleanly at value 1; correct (plural) at 10/21/111."
+    },
+    {
+      "screen": "point_config (Parent Settings -> Point C",
+      "title": "Stage label uses English translation \"Learn\" instead of transliteration \"Limud\" (Hebrew-terms OFF)",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "hebrew-terms OFF, nusach Ashkenazi",
+      "detail": "When Hebrew Terms is OFF the stage descriptor renders \"Learn · First completion (daily task)\". \"Learn\" is the English TRANSLATION; the canonical transliteration for stage 1 is \"Limud\" (the codebase's own B1 vocabulary defines it: lib/core/labels/domain_term_labels.dart:232 `String get limud => _useHebrew ? 'לימוד' : 'Limud';`, and the comment at line 222 lists the English-default transliterated forms as \"Siyum, Chazara, Limud\"). The competing legacy map hardcodes the translation: lib/core/constants/hebrew_terms.dart:28 `'Learn': 'לימוד'` and line 71 `stageLearnEn = 'Learn'`. resolveStoredStageName (domain_term_labels.dart:191) returns the stored legacy English \"Learn\" verbatim instead of normalizing to \"Limud\". The rubric: labels must use transliteration, never the English translation. Curriculum name \"Chumash\" is correctly transliterated; only the stage word is wrong."
+    },
+    {
+      "screen": "point_config (Parent Settings -> Point C",
+      "title": "Mixed-script line when Hebrew Terms ON: Hebrew stage term + English descriptor on one line",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "hebrew-terms ON",
+      "detail": "With Hebrew Terms ON the subtitle renders \"לימוד · First completion (daily task)\" — a single line mixing Hebrew-script domain term with an English UI descriptor (pointSettingsPrimaryStageLabel stays English). The stage term flips to Hebrew but the suffix does not, producing a half-translated line. Arguably by-design (descriptor is UI chrome, not a domain term), but it reads as inconsistent on a screen whose other domain labels (חומש) are fully Hebrew."
+    },
+    {
+      "screen": "point_config (Parent Settings -> Point C",
+      "title": "Blank body + green-square paint artifact for ~1-3s after background/resume",
+      "sense": "exploration",
+      "severity": "P2",
+      "permutation": "populated, background(KEYCODE_HOME) then resume",
+      "detail": "After KEYCODE_HOME then relaunch, the Point Settings app bar restores immediately but the entire body (hero header, curriculum card, Save bar) is GONE — empty grey with a tiny green square artifact at screen center. Content self-heals after ~1-3s (autoDispose FutureProvider re-fetches, showing a transient empty/loading frame with a stray paint glitch). Visible flash of empty state + render artifact on every resume. Self-recovers, so P2, but a clean transition should keep the loading spinner or last content, not flash blank with an artifact."
+    },
+    {
+      "screen": "point_config (Parent Settings -> Point C",
+      "title": "Context badge mismatch: header reads \"CHILD MODE\" on the parent-only Point Settings surface",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "all (in-parent-mode under child profile RedeemKid)",
+      "detail": "Throughout the PIN-gated Point Configuration (a parent-only control surface, profile card shows a \"PARENT\" badge), the top app chrome still shows the child's name (\"RedeemKid\") with a \"CHILD MODE\" pill. The green \"Parent mode — viewing RedeemKid\" banner only appears on the settings list, not inside Point Config. A parent deep in admin controls sees a \"CHILD MODE\" badge — mode/context confusion (rubric: wrong account/mode for the context; parent-only surface under a child badge)."
+    },
+    {
+      "screen": "point_config (Parent Settings -> Point C",
+      "title": "Back-button with unsaved pending edit silently discards (no confirm dialog)",
+      "sense": "exploration",
+      "severity": "P2",
+      "permutation": "populated, value bumped to 111 then KEYCODE_BACK",
+      "detail": "Bumped points 1->111 (unsaved), pressed Back. It navigated straight to Parent Settings with no \"Discard changes?\" prompt; the pending edit was dropped silently. Re-entering confirmed the persisted value was unchanged (still the prior saved value). Low data-loss risk since save is explicit, but a parent who edits then hits Back loses the change with zero warning."
+    },
+    {
+      "screen": "point_config (Parent Settings -> Point C",
+      "title": "Stepper +/- buttons expose no accessibility semantics (no labels, not seen as buttons)",
+      "sense": "logic",
+      "severity": "P2",
+      "permutation": "all",
+      "detail": "The increment/decrement controls are bare InkWell/Material with no Semantics label, so uiautomator (and screen readers) see them only as part of the merged card node — no actionable, labeled \"Increase points\"/\"Decrease points\" buttons. The whole card collapses into one content-desc string. A11y users cannot identify or operate the steppers. (Functional taps work fine for sighted users.)"
+    },
+    {
+      "screen": "reward_configuration",
+      "title": "Preview pluralization wrong: a 1-point reward renders \"1 Points\"",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "cost=1, font 1.0 (and 1.3)",
+      "detail": "With cost=1 the PREVIEW card reads \"1 Points\" — grammatically wrong, should read \"1 Point\". Root cause confirmed in source: lib/l10n/app_en.arb key rewardConfigPointsPreview = \"{points} Points\" is a plain int placeholder with NO ICU plural (=1{Point} other{Points}). Used in reward_configuration_screen.dart line 553 (_RewardPreview). The empty-form default also shows the nonsensical \"0 Points\". Any reward priced at exactly 1 point will display \"1 Points\" to the parent (and, since the same milestone data feeds the child Achievements surface, likely downstream too)."
+    },
+    {
+      "screen": "reward_configuration",
+      "title": "\"CHILD MODE\" badge shown on a parent-only configuration surface",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "all states (parent authenticated, viewing KidTest)",
+      "detail": "The persistent top bar shows avatar \"K KidTest\" with a blue \"CHILD MODE\" pill in the top-right corner across the entire Reward Configuration flow — a parent-only screen reached via Parent Settings after PIN. The same KidTest profile is simultaneously labelled \"PARENT\" on the Parent Settings card (rc_14/rc_40) yet \"CHILD MODE\" in the global bar. Mixed/contradictory mode indicators on a parent-restricted surface are confusing and look like a wrong-context badge. (Note: green system banner separately reads \"Parent mode — viewing KidTest\", a third mode label on screen.)"
+    },
+    {
+      "screen": "reward_configuration",
+      "title": "Screen header still says \"Configure New Reward\" while editing an existing reward",
+      "sense": "exploration",
+      "severity": "P2",
+      "permutation": "edit-existing-reward mode",
+      "detail": "Tapping the edit (pencil) icon on a reward in the Manage-rewards sheet loads that reward into the form, but the card heading remains \"Configure New Reward\", the subtitle remains the new-reward copy, and the button remains \"Save Reward\". Nothing on the form indicates edit vs create mode (only the post-save dialog differentiates \"Reward updated\" vs \"Reward created\", rc_28_updated.png). A parent who opens edit then gets distracted has no on-screen cue they are mutating an existing reward rather than adding a new one."
+    },
+    {
+      "screen": "reward_configuration",
+      "title": "Save with empty name gives zero feedback; Save button never disabled",
+      "sense": "logic",
+      "severity": "P2",
+      "permutation": "name empty + cost=5",
+      "detail": "The \"Save Reward\" button is always rendered enabled (navy, full opacity) regardless of validity. Tapping it with an empty name returns RewardSaveInvalidInput which the screen handles as a silent break/no-op (reward_configuration_screen.dart line 215-217, with code comment \"button should be disabled\" — but it is not). The user receives no explanation for why nothing happened. Same dead-end applies to cost=0/empty. Either disable the button until name+cost are valid, or surface an inline validation message."
+    },
+    {
+      "screen": "reward_configuration",
+      "title": "Empty-state copy \"Tap below to add one\" points at a button that does not exist in the sheet",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "data: empty list (no rewards)",
+      "detail": "The Manage-rewards bottom sheet empty state (l10n rewardConfigEmptyMilestones) instructs \"Tap below to add one.\" but the sheet contains no add button — the add-reward form lives on the screen BEHIND the sheet. There is nothing below the message to tap. The instruction is misleading; the user must dismiss the sheet to reach the form."
+    },
+    {
+      "screen": "reward_configuration",
+      "title": "Legacy milestone/threshold wording on a spend-economy reward (\"Points needed\", \"reach the points goal\")",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "data: 1-2 rewards; save-confirmation dialog",
+      "detail": "Per the controller's own design note (reward_config_controller.dart lines 60-64: \"every reward is now a single global priced spend-item redeemed against the one debitable balance\"), rewards are PRICED items the child SPENDS points to redeem — not milestones the child REACHES. Yet the Manage list subtitle says \"Points needed: N\" (manage_rewards_list.dart line 114, key rewardConfigPointsThresholdLabel) and the created/updated dialogs say the child sees it \"locked and blurred until they reach the points goal\". \"Needed/reach/goal\" framing contradicts the redeem/spend model and will mislead parents about how the reward economy works."
+    },
+    {
+      "screen": "reward_configuration",
+      "title": "Rewards are de-duplicated by price, blocking two differently-named rewards at the same cost",
+      "sense": "logic",
+      "severity": "P2",
+      "permutation": "two rewards, same cost=1",
+      "detail": "saveReward() rejects any reward whose cost equals an existing reward's cost (_hasDuplicateThreshold, controller lines 132-142). In a spend economy this is a real limitation: a parent cannot offer two distinct prizes (e.g. \"Ice Cream\" and \"Sticker\") at the same price. The uniqueness-by-threshold constraint is a holdover from the old single-ladder milestone model where each rung had a distinct threshold; it does not fit priced redeemable items and silently caps the catalog the parent can build."
+    },
+    {
+      "screen": "reward_configuration",
+      "title": "Cost field accepts an unbounded value (9,999,999,999) with no upper cap",
+      "sense": "exploration",
+      "severity": "P2",
+      "permutation": "cost=9999999999, huge name",
+      "detail": "The cost TextField only applies FilteringTextInputFormatter.digitsOnly (screen line 391) — no maxLength and no max-value validation. A 10-digit, ~10-billion-point price is accepted and previewed. There is no sane upper bound, so a reward can be made effectively unredeemable by typo, and the long name field likewise has no maxLength (a 70-char name was accepted, rc_35). Consider clamping cost to a reasonable maximum and capping name length."
+    },
+    {
+      "screen": "study_day_config (StudyDayConfig — \"Mish",
+      "title": "Weekday toggle UI (study/review selectors) is UNREACHABLE — no track is both self-paced and multi-stage",
+      "sense": "exploration",
+      "severity": "P1",
+      "permutation": "Adult CloudUser/bavli (multi-stage, program-enrolled) and child LoopChild/mishnayos (self-paced, single-stage)",
+      "detail": "The full StudyDayConfig UI (Sun/Mon/.../Sat tiles, Study vs Review-only legend+badges, '$n study days per week' summary) only renders when trackHasChazara (stage count > 1) — confirmed in study_day_config_screen.dart:44-94. The ONLY multi-stage track in the device data is profile 1's 'bavli' (3 stages: לימוד/חזרה א׳/חזרה ב׳), but it has a profile_programs enrollment (program_id 5, 'Chullin 41'), and track_detail_screen.dart:582 gates the Study Days tile behind !hasProgramEnrollment — so its Study Days tile is HIDDEN (track detail shows only Set Goal / Edit Track / Delete Track). The only track that exposes Study Days is the child's single-stage 'mishnayos', which therefore hits the learn-only fallback. Net: the weekday toggles + study/review selectors + Save cannot be exercised live in this build state. DB-confirmed via curriculum_tracks (2 rows), stage_definitions (track 1 = 3 stages, track 2 = 0), profile_programs (bavli enrolled)."
+    },
+    {
+      "screen": "study_day_config (StudyDayConfig — \"Mish",
+      "title": "Saturday is hardcoded 'Sat' — no Shabbos/Shabbat term, and day labels ignore Nusach + Hebrew-Terms toggles",
+      "sense": "domain-oracle",
+      "severity": "P1",
+      "permutation": "Weekday toggle grid (would render only for a self-paced multi-stage track); verified by code, not visually reachable",
+      "detail": "The study-day picker labels Saturday as generic 'Sat' via a const map with zero Nusach/Hebrew-Terms awareness. Every OTHER domain term in the app correctly flips with the Nusach control — I proved this live: flipping the child to Ashkenazi changed the lock banner from 'SHABBAT MODE / during Shabbat' to 'SHABBOS MODE / during Shabbos', and 'Mishnayot'→'Mishnayos', 'Berakhot'→'Berakhos'. The Study Days weekday row would still say 'Sat' (never Shabbos/Shabbat) and would not switch to Hebrew day names when Hebrew-Terms is ON. This is the exact 'Shabbos term' gap the audit targets. Marked P1 because it is a real, code-confirmed domain defect on the audited screen; could not be photographed because the state is unreachable (see blocked)."
+    },
+    {
+      "screen": "study_day_config (StudyDayConfig — \"Mish",
+      "title": "Pluralization is CORRECT for count=1 ('1 study day per week') — verified clean, no '1 study days' bug",
+      "sense": "logic",
+      "severity": "P2",
+      "permutation": "Weekday summary line (code-verified; not visually reachable)",
+      "detail": "The summary correctly singularizes: studyCount==1 yields 'study day', otherwise 'study days'. No '1 study days' defect exists on this screen. Reported as an explicit clean result for the pluralization rubric item the audit calls out."
+    },
+    {
+      "screen": "study_day_config (StudyDayConfig — \"Mish",
+      "title": "Reachable Study Days screen renders a near-empty void with a single bare sentence",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "Child LoopChild / mishnayos / learn-only fallback (Sephardi, Hebrew-Terms OFF, font 1.0)",
+      "detail": "The only reachable StudyDayConfig state shows just 'All days are study days for this track.' centered in a large blank screen, with no icon, illustration, or framing. No clipping, no overflow, good contrast, correct Nusach-aware title ('Mishnayot Study Days'). Not a rendering defect per se — it is the intended fallback (study_day_config_screen.dart:81-94) — but it reads as unfinished/empty for a top-level destination. P2 polish."
+    },
+    {
+      "screen": "study_day_config (StudyDayConfig — \"Mish",
+      "title": "Same six sedarim render in two different forms (Hebrew script vs Sephardi transliteration) across tracks under identical settings",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "Adult CloudUser, Hebrew-Terms ON: bavli browse vs mishnayot browse (and child mishnayot under Sephardi)",
+      "detail": "The identical Shisha Sidrei list renders as Hebrew script for the Bavli track but as Latin Sephardi transliteration (Seder Tahorot, Seder Kodashim) for the Mishnayot track. This is adjacent to the audited screen (the Study Days title uses the same curriculumLabelText path). Because the screens differ by profile/track the two forms are not on one screen simultaneously, but it signals the Hebrew-Terms/Nusach term rendering is applied inconsistently per track — worth flagging since the Study Days title depends on the same label system."
+    },
+    {
+      "screen": "learning_order (TrackLearningOrderScreen",
+      "title": "Reorder PERSISTS across full relaunch (verified at storage layer)",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "Ashkenazi / hebrew-terms OFF / font 1.0 / populated",
+      "detail": "Dragged Devarim (last) to the top. UI updated to Devarim/Bereishis/Shemos/Vayikra/Bamidbar. Force-stopped com.jcom.torah.learning_tracker and relaunched; the profile picker re-appeared (parent session reset). Inspected the persisted per-account SQLite DB: track_learning_order for track_id=2 holds sefaria_ref/sort_order = Deuteronomy(0), Genesis(1), Exodus(2), Leviticus(3), Numbers(4) — i.e. Devarim first — exactly matching the post-drag order. This is a POSITIVE confirmation (the control works), recorded as P2 informational since the task explicitly required verifying persistence across relaunch."
+    },
+    {
+      "screen": "learning_order (TrackLearningOrderScreen",
+      "title": "Storage key for ordered items is the Sefaria English book name, not a transliteration",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "Ashkenazi / hebrew-terms OFF / font 1.0 / populated",
+      "detail": "The persisted sefaria_ref column stores raw Sefaria English book identifiers (Genesis/Exodus/Deuteronomy). On screen these are correctly rendered as transliteration via CurriculumLabel.local (Bereishis/Shemos/Devarim), so this is NOT user-visible — it is a stable ref-key by design. Flagged only so the next auditor does not mistake the DB string for a UI leak; the oracle rule ('Genesis is wrong, it's Bereishis') applies to UI labels/toasts, and the UI passes. No user-facing defect."
+    },
+    {
+      "screen": "learning_order (TrackLearningOrderScreen",
+      "title": "Nusach (Ashkenazi/Sephardi) lever correctly drives curriculum term rendering",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "Sephardi vs Ashkenazi / hebrew-terms OFF / font 1.0",
+      "detail": "On the reorder screen (Ashkenazi default) the 5 Seferim render with -os/-oh (Bereishis, Shemos) — correct Ashkenazi nusach, internally consistent, no Hebrew-script characters, no English translations. Flipping Pronunciation to Sephardi via child Settings changes the shared label path: the LEARN tab's Daily Tasks switched 'Bereishis' -> 'Bereshit' (-t Sephardi spelling). The reorder rows use the identical CurriculumLabel.local widget, so they inherit the same correct switch. Toggle is symmetric (restored to Ashkenazi cleanly). Positive result."
+    },
+    {
+      "screen": "learning_order (TrackLearningOrderScreen",
+      "title": "Reorder applied silently with no confirm dialog (overdueCount=0) — expected, not a bug",
+      "sense": "logic",
+      "severity": "P2",
+      "permutation": "Ashkenazi / font 1.0 / track at 0%, 0 overdue",
+      "detail": "Per code, the reorder-amnesty ReorderConfirmDialog only appears when overdueCount > 0. The Chumash track is freshly started (0%, OVERDUE=0 on dashboard), so the drag committed immediately with no confirmation prompt and no visible toast/snackbar. Behavior matches intent. Noted so it is not mistaken for a missing-feedback defect; the save is optimistic + async with no success affordance, which is a deliberate design choice here."
+    },
+    {
+      "screen": "learning_order (TrackLearningOrderScreen",
+      "title": "Reorder screen renders cleanly — no clipping, overflow, contrast, or alignment defects",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "Ashkenazi / hebrew-terms OFF / font 1.0 / populated",
+      "detail": "Full-resolution crop inspection of the 5 rows and section header: section header 'Seferim' and labels Bereishis/Shemos/Vayikra/Bamidbar/Devarim are fully shown (no ellipsis, no mid-word break, no overflow stripes). Drag-handle glyphs (Icons.drag_handle) render as proper two-bar icons (not blank discs), right-aligned and consistently positioned, good contrast on light background. AppBar title 'Chumash • Reorder' intact; reset/refresh action icon present top-right. No overlapping/colliding tap targets. Clean."
+    },
+    {
+      "screen": "parent_pending_redemptions (ParentSettin",
+      "title": "Parent-only Pending Prizes surface wears a 'CHILD MODE' badge and the child's name/avatar in the top bar",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "populated + empty, font 1.0 and 1.3, Hebrew-terms ON",
+      "detail": "The persistent top ProfileSwitcherBar derives its role badge purely from activeProfile.profileMode (app_shell.dart ~line 437: activeProfile?.profileMode == ProfileMode.child -> l10n.profileBadgeChildMode). When a parent PIN-elevates to manage the child, the active profile is STILL the child (KidTest), and the green 'Parent mode — viewing KidTest' banner only renders on the main tab views, NOT on pushed sub-routes. Result: the Pending Prizes screen — a parent-only approve/decline surface — shows 'CHILD MODE' + child avatar 'KidTest' with no parent-mode disambiguation. On the Parent Settings screen the contradiction is on ONE screen: the inline profile card reads 'KidTest PARENT' while the top bar simultaneously reads 'CHILD MODE'. This matches the rubric's 'parent-only surface under a child badge' / 'wrong mode for the context'. Reproducible on every parent management sub-route."
+    },
+    {
+      "screen": "parent_pending_redemptions (ParentSettin",
+      "title": "Pending Prizes empty state is bare centered text with no icon or illustration",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "empty state, font 1.0 and 1.3",
+      "detail": "The empty state (parent_pending_redemptions_screen.dart lines 85-97) renders only 'No pending prize requests.' as centered #6B7280 bodyMedium text on a large blank canvas — no icon, illustration, or supporting copy. Legible and contrast is fine, but it reads as an unstyled placeholder rather than a designed empty state, inconsistent with the polished card UI used when populated. Polish gap, not a defect."
+    },
+    {
+      "screen": "parent_pending_redemptions (ParentSettin",
+      "title": "'Decline' (refund/reject) is a low-emphasis gray text button, visually detached from Fulfil",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "populated row, font 1.0 and 1.3",
+      "detail": "On each card the primary 'Fulfil' is a filled navy button while 'Decline' is a low-emphasis #6B7280 gray TextButton sitting below and slightly detached to the lower-right with significant surrounding whitespace (parent_pending_redemptions_screen.dart lines 266-283). #6B7280 on white is ~4.8:1 (passes AA for normal text but borderline). For an action that spends/declines and triggers a point refund, the gray text treatment is a weak affordance and the floating placement weakens the visual pairing with Fulfil."
+    },
+    {
+      "screen": "parent_pending_redemptions (ParentSettin",
+      "title": "Reward title in card uses Expanded Text with no maxLines/overflow (latent — not reproduced on this device)",
+      "sense": "logic",
+      "severity": "P2",
+      "permutation": "long title 'Extra Big Chocolate Fudge Sundae With Sprinkles And Cherry' @ font 1.0 and 1.3",
+      "detail": "redemption.rewardTitle (lines 222-227) is rendered inside an Expanded Column with no maxLines or overflow:ellipsis. On this 2560px-wide tablet the long multi-word title fit on a single line even at font_scale 1.3, so NO clipping/overflow was visible (clean). Flagged as a latent risk only: on a narrow phone viewport or with an even longer title the unbounded title would wrap and grow the row height, potentially crowding the right-aligned Fulfil/Decline column. Could not visually reproduce a defect on this device — low confidence."
+    }
+  ]
+}

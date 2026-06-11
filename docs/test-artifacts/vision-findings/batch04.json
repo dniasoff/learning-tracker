@@ -1,0 +1,317 @@
+{
+  "batch": 4,
+  "findings": [
+    {
+      "screen": "manage_tutors (ManageTutorsScreen)",
+      "title": "Parent-only Manage Tutors surface renders under a 'CHILD MODE' badge",
+      "sense": "vision",
+      "severity": "P1",
+      "permutation": "parent mode (PIN-elevated) on child LoopChild, font 1.0 + 1.3",
+      "detail": "The persistent ProfileSwitcherBar at the top shows the pill 'CHILD MODE' (blue) on the entire parent-management flow: Parent Settings, Manage Tutors, Invite a Tutor, and the Rescind dialog. This is the exact inversion the audit was told to check for — a parent-only surface displayed under a child-mode badge. Root cause (app_shell.dart ProfileSwitcherBar, ~line 437-444): the badge is derived from activeProfile.profileMode, and entering parent mode via the PIN gate elevates authorization WITHOUT switching the active profile away from the child. So a parent invoking/revoking tutors is told they are in CHILD MODE. Misleading at best; at worst it undermines the mental model that tutor management is a parental control. The badge should reflect the parent-elevated context (or be suppressed) on these PIN-guarded surfaces."
+    },
+    {
+      "screen": "manage_tutors (ManageTutorsScreen)",
+      "title": "Empty Manage Tutors shows no 'No tutors invited.' hint — bare 'Invite a tutor' button only",
+      "sense": "exploration",
+      "severity": "P2",
+      "permutation": "data=empty, font 1.0 and 1.3; reproduced on first entry, after rescind, and re-entry",
+      "detail": "manage_tutors_screen.dart lines 168-179 render localized 'No tutors invited.' (manageTutorsNoTutors) when the grants list resolves empty. Across every empty-state capture and uiautomator dump, that text node is ABSENT from the UI tree; there is also no LinearProgressIndicator/ProgressBar node and no error text. The screen shows only the child name header and the 'Invite a tutor' button with no status copy. Net user impact: an owner with zero tutors gets no confirmation the list is empty (vs. still loading/failed). The grants provider (outgoingTutorGrantsProvider, a network-only listTutorGrants Cloud Function FutureProvider) never logs an Async state via the riverpod observer, suggesting it may sit unresolved while the loading indicator (a zero-visibility LinearProgressIndicator) renders nothing — either way the empty-state affordance is effectively missing."
+    },
+    {
+      "screen": "manage_tutors (ManageTutorsScreen)",
+      "title": "Inconsistent section-label casing: 'ACTIVE (n)' all-caps vs 'Pending (n)' title-case",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "data with grants; verified pending label rendered, active label from l10n",
+      "detail": "manageTutorsActiveSection => 'ACTIVE ($count)' (uppercase) while manageTutorsPendingSection => 'Pending ($count)' (title case). On a screen that can show both section dividers stacked for one child, the two headers render in different casing styles — a visual-consistency defect. They should share one casing convention."
+    },
+    {
+      "screen": "manage_learners (ManageLearnersScreen)",
+      "title": "Edit Learner: Child/Adult toggle is interactive but the selected mode is silently discarded on Save",
+      "sense": "logic",
+      "severity": "P1",
+      "permutation": "adult mode, font 1.0, Edit dialog on LoopA (adult row)",
+      "detail": "In the Edit Learner dialog the Child/Adult SegmentedButton responds to taps and visually toggles (verified: switched LoopA from Adult to Child, checkmark moved). On Save the row still reads 'Adult mode' - the mode change has no effect. Root cause: editProfileFlow() in learning_tracker/lib/features/profiles/presentation/widgets/profile_edit_delete_actions.dart calls repo.updateProfile(id, displayName, avatarIndex) and never passes the selected mode (the StatefulWidget tracks _mode and lets the user change it, but it is dropped). The code comment at lines 130-131 says 'Mode is shown but not editable' yet the control is NOT disabled. This is a control-that-does-nothing UX bug and a safety concern: a parent could believe they demoted an adult profile to child (which gates adult-only surfaces behind a PIN) when nothing changed. Same dialog: the avatar IS persisted while mode is not, with zero visual cue distinguishing the live control from the dead one."
+    },
+    {
+      "screen": "manage_learners (ManageLearnersScreen)",
+      "title": "Deleted child profile reappears after an app restart (offline-first resurrection)",
+      "sense": "exploration",
+      "severity": "P1",
+      "permutation": "adult mode, delete TestChildZ then cold-relaunch",
+      "detail": "Created child 'TestChildZ' (with PIN), deleted it via the row menu -> the list correctly dropped to 3 rows and the delete held across in-session navigation away/back. After the app was relaunched (cold start), TestChildZ reappeared both on the 'Who is learning?' profile selector and in Manage Learners. deleteProfileFlow is offline-first (deletes locally then enqueues the cloud delete to the outbox); on cold restart a cloud re-pull appears to resurrect the profile before the outbox delete propagates. From the user's view: 'I deleted this child, restarted, and it came back.' This is a data-integrity / trust issue. (Caveat: could be eventual-consistency that self-heals after a full sync, but it is observable and surprising at restart.)"
+    },
+    {
+      "screen": "manage_learners (ManageLearnersScreen)",
+      "title": "At font_scale 1.3 the Edit Learner dialog hides the entire avatar picker behind the keyboard on open",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "font_scale 1.3, Edit dialog (autofocus keyboard up)",
+      "detail": "The Edit Learner dialog autofocuses the name field, so the soft keyboard is up by default. At 1.3 font scale the enlarged dialog content plus the keyboard pushes the 'Choose Avatar' section and its fixed-height (SizedBox height:60) avatar row completely below the fold, and the Child/Adult toggle row is clipped mid-button. The avatar picker is unreachable until the user manually dismisses the keyboard. At rest (keyboard down) the dialog renders fine. Affects accessibility-font users trying to change an avatar."
+    },
+    {
+      "screen": "manage_learners (ManageLearnersScreen)",
+      "title": "Add-learner FAB has no accessibility label (empty content-desc)",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "adult mode, baseline list",
+      "detail": "The primary 'add learner' action (FAB) exposes no accessible name to TalkBack/screen readers; it announces only as an unlabeled button. The per-row avatar tap targets in the Edit dialog likewise have empty content-desc (no 'Avatar 1, star' style labels). Add a tooltip/Semantics label (e.g. l10n.addProfile) to the FAB."
+    },
+    {
+      "screen": "manage_learners (ManageLearnersScreen)",
+      "title": "Add vs Edit use two inconsistent mode-selection UIs and there is no name-length limit",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "adult mode, Add dialog vs Edit dialog, long-name input",
+      "detail": "The Add Profile dialog presents mode as two big descriptive cards, while the Edit dialog presents it as a compact segmented pill - inconsistent patterns for the same concept (and in Edit the control is non-functional, see P1). Separately, name input accepts arbitrarily long values with no max-length: a 64-char name is created and the list row wraps across 3 lines with arbitrary mid-token breaks (no ellipsis, no overflow stripe, so not a crash - cosmetic). Consider a sane max length and unifying the two dialogs."
+    },
+    {
+      "screen": "manage_grants (Tutor side — \"My Tutoring",
+      "title": "ManageGrants screen and its empty-state are UNREACHABLE when the tutor has zero grants (dead UI / no entry path)",
+      "sense": "exploration",
+      "severity": "P1",
+      "permutation": "Tutor test-loop-a@orvex.test, data state = empty (0 grants)",
+      "detail": "Signed in as the tutor and reached 'Who is learning?' — the account has zero own profiles and zero incoming grants, so the 'Talmid Profiles' section (which hosts the View-invitations and Manage-tutoring-grants rows) does not render at all. The ManageGrants route /tutor/my-grants is only ever pushed from those two grant-conditional rows; there is no deep-link, notification, or menu entry. Consequently ManageGrantsScreen's _EmptyGrantsView ('No tutoring relationships' / 'When a parent invites you to tutor their child, the grant will appear here.') is effectively dead code: the only state in which it would render (grants.isEmpty) is the exact state in which no UI path exists to open the screen. A tutor can never see this empty state. This is also why the screen could not be audited live."
+    },
+    {
+      "screen": "manage_grants (Tutor side — \"My Tutoring",
+      "title": "Tutor account-switcher 'Profiles' section is empty for a profile-less tutor (only 'Add Profile' under the header)",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "Tutor test-loop-a@orvex.test, profile-less (DEC-6/DEC-21 path)",
+      "detail": "The bottom-sheet switcher shows a 'Profiles' header with NO profile rows beneath it — just the 'Add Profile' and 'Skip to Settings' actions. A header with zero items below it reads as a missing/broken list rather than an intentional empty state. For a profile-less tutor the 'Profiles' header should be suppressed or paired with an explicit empty hint."
+    },
+    {
+      "screen": "manage_grants (Tutor side — \"My Tutoring",
+      "title": "manageGrantsResign confirmation dialog body interpolates childProfileId (raw Firestore id) as the child name in the resignation notification path",
+      "sense": "logic",
+      "severity": "P2",
+      "permutation": "Active grant resign flow (static, screen unreachable at runtime)",
+      "detail": "The on-screen resign dialog correctly uses childDisplayLabel ('Talmid' fallback, never the raw id). But the fire-and-forget parent notification passes grant.childProfileId (the raw Firestore profile id) as childName. The same screen takes care never to surface the raw id to the user (per the M3 comments) yet ships it into the parent-facing resignation notification, where it can render as a NONSENSE internal id instead of a human name. Could not confirm the rendered notification because the screen is unreachable, but the code path is unambiguous."
+    },
+    {
+      "screen": "manage_grants (Tutor side — \"My Tutoring",
+      "title": "Pending-invite rows on ManageGrants have no accept/decline affordance (read-only), contrary to the audited control set",
+      "sense": "logic",
+      "severity": "P2",
+      "permutation": "Pending grant section (static)",
+      "detail": "The task's expected controls (accept/decline, enter tutored session) are NOT on this screen. ManageGrants renders pending grants as inert, status-only rows (a 'Pending' chip, no button). Accept/decline is handled elsewhere (the View-invitations row routes here, but here there is no way to act on a pending invite). A tutor who opens this screen via the 'Manage tutoring grants' row while a pending invite exists sees a Pending row they cannot act on — a likely dead-end. 'Enter tutored session' is on the profile-picker _TutoredChildRow, not here. Flagging the divergence so the expected control coverage is recorded as a gap rather than silently 'present'."
+    },
+    {
+      "screen": "invite_tutor (InviteTutorScreen — Parent",
+      "title": "Rapid double-tap on Send pops TWO screens — user lands on Parent Settings, not Manage Tutors",
+      "sense": "exploration",
+      "severity": "P1",
+      "permutation": "rapid double-tap on Send (no-settle)",
+      "detail": "Typed a valid email and tapped Send twice with no settle. The invite was sent correctly (exactly ONE invite created — data is fine), but the app navigated back TWO levels and landed on Parent Settings instead of Manage Tutors. Root cause in invite_tutor_screen.dart: on success _sendInvite calls `await Navigator.of(context).maybePop()` (line 112). The Send FilledButton is only guarded by `_isLoading || !_emailValid` (line 223); there is no debounce, so a second tap fired during the navigation transition reaches the now-revealed Manage Tutors screen and triggers an extra pop. Net effect: a fast double-tap disorients the user (they end up a screen too far back and never see the new pending invite they just created)."
+    },
+    {
+      "screen": "invite_tutor (InviteTutorScreen — Parent",
+      "title": "No confirmation dialog before sending an invite that grants a stranger access to the child's learning profile",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "valid email — send",
+      "detail": "The orchestration brief listed a 'confirm dialog' as a control to exercise, but none exists. Tapping 'Send invite' fires the invite immediately (invite_tutor_screen.dart _sendInvite calls the use case directly with no AlertDialog). Given the body copy explicitly says the tutor will 'accept access to this child's learning profile' — a privacy-/access-granting action — the absence of any confirmation step (and the lack of an in-field warning about typos in the destination email) is a UX/safety gap for a parental-control surface. The success snackbar is also identical for a fresh invite vs a re-send of an already-pending email, giving no signal which occurred."
+    },
+    {
+      "screen": "invite_tutor (InviteTutorScreen — Parent",
+      "title": "Re-sending an invite to an already-pending email shows the same 'Invite sent!' success with no 'already invited' feedback",
+      "sense": "exploration",
+      "severity": "P2",
+      "permutation": "duplicate-email re-send",
+      "detail": "Typed the exact email that already had a Pending invite. The form did not warn, the Send button enabled, and on send the snackbar reported success identically to a first-time invite. The backend correctly de-duplicated (the Pending count stayed at 1, so no double row / no stale count — good), but the UI gave no indication this was a duplicate/re-send. A parent cannot tell whether a second email was actually dispatched or silently merged."
+    },
+    {
+      "screen": "invite_tutor (InviteTutorScreen — Parent",
+      "title": "Email field has no accessibility label (uiautomator NAF=true, empty content-desc)",
+      "sense": "logic",
+      "severity": "P2",
+      "permutation": "empty/initial state; also at font 1.3",
+      "detail": "The TextFormField declares a Material `labelText` (invite_tutor_screen.dart line 179) but the rendered edit node exposes no content-description and is flagged Not-Accessibility-Friendly by uiautomator. A TalkBack user focusing the field would hear no purpose label. The visible label/hint render fine; this is a screen-reader-only gap on the single most important input on the screen."
+    },
+    {
+      "screen": "invite_tutor (InviteTutorScreen — Parent",
+      "title": "Header still shows 'CHILD MODE' badge (LoopChild) throughout the parent-only Invite a Tutor flow",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "all states",
+      "detail": "Every screenshot of this parent-only flow (Manage Tutors and Invite a Tutor) keeps the global 'CHILD MODE' badge and the LoopChild avatar in the header, even though Parent Settings was entered and these are admin-only surfaces. The mode chrome contradicts the context (a parent-only surface under a child-mode badge — matches the rubric's 'wrong mode for the context' check). It is the shared app header rather than this screen's own widget, but it is misleading on this screen."
+    },
+    {
+      "screen": "invite_tutor (InviteTutorScreen — Parent",
+      "title": "Validation is present-but-lenient: accepts malformed addresses like 'a@b.c' / 'foo@.com'; no proactive inline error",
+      "sense": "logic",
+      "severity": "P2",
+      "permutation": "junk (notanemail), partial (foo@bar), trailing whitespace",
+      "detail": "Validation correctly disables Send for clearly-junk input ('notanemail', 'foo@bar') — good. But `_emailValid` is only `text.trim().contains('@') && contains('.')`, so structurally invalid addresses (e.g. 'a@.b', 'foo@.com', '@x.y') would pass and enable Send. Because the button is disabled while invalid, the `inviteTutorInvalidEmail` error branch (lines 62-66) and the `errorText` are effectively unreachable from the UI — there is never a proactive inline validation message, only button gating. Trailing whitespace is benign: a TrimLeadingSpaceFormatter plus `.trim()` (lines 55/60/175) clean it before send, so the 'aaa@orvex.test ' case I saw enable Send is trimmed correctly."
+    },
+    {
+      "screen": "accept_invite",
+      "title": "AcceptInvite screen unreachable — no pending tutor grant for the signed-in account, and the documented /invite deep link is not registered in AndroidManifest",
+      "sense": "exploration",
+      "severity": "P1",
+      "permutation": "data-state=no-pending-invite; account LoopA / UID WrUGgVgkhfRS5wdQJI5b0fb3Zjt2",
+      "detail": "The AcceptInvite screen (lib/features/tutoring/presentation/screens/accept_invite_screen.dart) has only two in-app entry points: a pending-invite row in the profile-picker (_buildPendingInvites, line 164) and the Settings 'Talmid profiles' tile (_PendingInvitesSection, settings_screen.dart:685). Both render ONLY when ref.watch(pendingTutorInvitesProvider)/incomingTutorGrantsProvider returns a Firestore grant whose tutorEmail == the signed-in account and state==pending. The current account (UID WrUGgVgkhfRS5wdQJI5b0fb3Zjt2, read from shared_prefs flutter.last_active_account_id) has NO such grant: Manage Learners shows only own profiles, and the Settings 'Talmid profiles' section is entirely absent (it short-circuits to SizedBox.shrink when both grant lists are empty). Constructing a pending grant needs a SECOND parent account to invite this account's email (or direct Firestore seeding) — server state a read-only auditor cannot create. SEPARATELY, the screen's own doc comment (lines 10-11) and the router (app_router.dart:316, AutoRoute path '/invite') advertise '/invite?token=<grantId>' as the deep-link entry, but AndroidManifest.xml registers an intent-filter ONLY for pathPrefix '/sign-in' (lines 42-50) — there is NO filter for '/invite'. The intent attempt returned 'Activity not started, unable to resolve Intent ... act=VIEW dat=https://torah-study-tracker.firebaseapp.com/invite'. So the documented external deep-link entry point is non-functional: a real invite email linking to /invite would fail to open this screen from outside the app. This is a latent product defect (broken advertised entry) and is also why this audit pass is blocked."
+    },
+    {
+      "screen": "content_search (ContentSearchScreen) — c",
+      "title": "Search-field hint scrambles in bidi: 'Search <Hebrew>…' renders with the ellipsis detached and floated to the far-left edge",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "empty-query state, hebrew-terms ON (curriculum label = Hebrew 'תלמוד בבלי'), font 1.0 and 1.3",
+      "detail": "The hint template is searchFieldHint = 'Search $label…' (app_localizations_en.dart:2418-2420). When the curriculum label is Hebrew (RTL) — as it is whenever Hebrew Terms is ON — the LTR 'Search' word, the RTL Hebrew run, and the neutral trailing '…' get reordered by the Unicode bidi algorithm. On screen the hint reads (left-to-right) '…תלמוד בבלי Search': the ellipsis is pulled to the far LEFT edge and 'Search' is pushed to the far RIGHT, so the intended 'Search [name]…' phrase is visually fragmented. The TextField uses no Directionality/bidi-isolate around the injected label, so the mixed-direction hint is unstable. Cosmetic but visible on the default (Hebrew-terms ON) configuration of the very first state a user sees on this screen."
+    },
+    {
+      "screen": "content_search (ContentSearchScreen) — c",
+      "title": "No-results / search-field echo of the query is a single unbounded line — fits edge-to-edge on tablet but will clip/wrap unbounded on phone widths",
+      "sense": "logic",
+      "severity": "P2",
+      "permutation": "very-long query (90+ chars and 47-char tokens), no-results state, font 1.0 and 1.3",
+      "detail": "noResultsForQuery(query) echoes the raw query verbatim inside quotes with textAlign.center and no maxLines/overflow handling (content_search_screen.dart:137). On this 2560px tablet a 90-character token rendered as one centered line that touched both edges (closing quote nearly off the right edge) without hard-clipping, and the 47-char case at font 1.3 also just fit. There is no clamp, so on a narrower phone the same input either wraps to many lines or (in the TextField above) scrolls; the echoed message has no truncation safeguard. Robustness gap rather than a confirmed visible break on this device — flagged because the worst case was borderline at tablet width."
+    },
+    {
+      "screen": "content_search (ContentSearchScreen) — c",
+      "title": "No clear (X) affordance in the search field — query can only be erased with the keyboard backspace",
+      "sense": "exploration",
+      "severity": "P2",
+      "permutation": "results state and no-results state, all nusach/font permutations",
+      "detail": "The AppBar TextField uses border: InputBorder.none and defines no suffixIcon/clear button (content_search_screen.dart:95-110). The 'clear' control named in the audit brief does not exist as an on-screen affordance: the only way to clear a typed query is keyboard backspace (or Back to leave). On a touch device with a long query this is a friction point and means there is no one-tap reset to the empty 'Enter a search term above' state. Functional clear-via-backspace works correctly; this is a missing-affordance observation."
+    },
+    {
+      "screen": "text_display",
+      "title": "Hebrew-terms breadcrumb is laid out left-to-right (LTR) with right-pointing chevrons, inverting the hierarchy for an RTL reader",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "Mishna daily-task × Sephardi × Hebrew-terms ON × With-nikud × font 1.0 (also reproduced in Chumash browse breadcrumb)",
+      "detail": "When Hebrew Terms is ON the TextDisplay breadcrumb renders the domain terms in Hebrew script ('זרעים › ברכות › פרק א › משנה ב') but keeps the English LTR layout: the broadest term (זרעים / Seder) sits on the LEFT and the most-specific (משנה ב / Mishna) on the RIGHT, with '›' chevrons pointing right. For a native Hebrew reader scanning right-to-left this reverses the hierarchy — the eye hits the most-specific node first. The same direction issue is present on the Browse 'Browse Content' breadcrumb (חומש › בראשית). The individual Hebrew words and gematriya render correctly; only the breadcrumb container/separator direction was not flipped to RTL. A pure text-only loop sees the correct Hebrew strings and would mark this 'present and correct' — the directional defect is only visible with eyes."
+    },
+    {
+      "screen": "text_display",
+      "title": "Hebrew breadcrumb orphans the gematriya letter onto its own wrapped line ('משנה' / 'ב')",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "Mishna daily-task × Hebrew-terms ON × font 1.0 and font 1.3",
+      "detail": "In Hebrew-terms mode the breadcrumb 'זרעים › ברכות › פרק א › משנה ב' wraps so that the gematriya value 'ב' falls alone on the second line, separated from its label 'משנה'. The number is visually detached from the term it qualifies. Minor but reads awkwardly; a non-breaking grouping of 'משנה ב' would avoid the orphan."
+    },
+    {
+      "screen": "text_display",
+      "title": "Prev-chevron affordance for the same Mishna is inconsistent depending on how the screen was reached (browse vs. post-completion)",
+      "sense": "exploration",
+      "severity": "P2",
+      "permutation": "Mishna 2 reached via next-chevron from Mishna 1 (prev ENABLED) vs. Mishna 2 reached via Mark-complete auto-advance (prev DISABLED)",
+      "detail": "Identical content (Berakhos Perek 1 Mishna 2) shows the previous-item chevron ENABLED when you browse into it from Mishna 1, but DISABLED after you Mark-complete Mishna 1 (which shifts the daily-task navigation boundary). I tapped the grayed chevron and it did nothing, confirming a genuine disabled state. Practical consequence: immediately after completing a mishna the learner can no longer page BACK to re-read the text they just finished via the chevron — the just-completed item is dropped from the navigation set. The two navigation contexts (full-curriculum browse vs. remaining-daily-tasks) are conflated under the same chevron UI, producing a confusing/inconsistent affordance."
+    },
+    {
+      "screen": "text_display",
+      "title": "TextDisplay exposes NO in-screen nikud toggle, script toggle, or share control",
+      "sense": "exploration",
+      "severity": "P2",
+      "permutation": "All TextDisplay states (Mishna daily-task and Chumash browse-leaf)",
+      "detail": "The audit brief lists 'nikud/script toggles' and 'share' as controls to exercise on this screen. They do not exist here. The TextDisplay app bar contains only: Back (←) and prev/next chevrons (‹ ›). Nikud, nusach (Ashkenazi/Sephardi), and Hebrew-terms are all controlled GLOBALLY from Settings — there is no per-text quick toggle and no Share affordance anywhere on the reading screen. To change nikud while reading, the user must leave to Settings → toggle → navigate back. Whether intended or a gap, it means three of the five named controls for this screen are absent; recording so the orchestrator does not assume they were verified."
+    },
+    {
+      "screen": "text_display",
+      "title": "Mishna view shows English 'Mark complete' / 'Next daily task' / 'Hebrew Text' / 'English Translation' labels even with Hebrew Terms ON",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "Mishna daily-task × Hebrew-terms ON",
+      "detail": "With Hebrew Terms ON the curriculum nodes (seder/masechta/perek/mishna) correctly flip to Hebrew script + gematriya, but the section badges ('Hebrew Text', 'English Translation') and the action buttons ('Mark complete', 'Next daily task') stay English. This is arguably acceptable since they are UI chrome rather than domain curriculum terms (and the known MaterialApp locale bug keeps chrome English) — flagged as a consistency observation, not a hard defect. The toggle itself works correctly for the domain terms it governs."
+    },
+    {
+      "screen": "text_display",
+      "title": "Content-type divergence: Chumash/Tanach browse-leaf has no translation pane and no completion/Mark-complete controls, unlike the Mishna view",
+      "sense": "exploration",
+      "severity": "P2",
+      "permutation": "Chumash browse-leaf (Bereishit Perek Alef) vs. Mishna daily-task",
+      "detail": "Both surfaces are 'TextDisplay' but render very differently. The Mishna (daily-task) view has a Hebrew card + an 'English Translation' card + 'Mark complete' / 'Next daily task' buttons. The Chumash browse-leaf is a continuous-scroll chapter (verses numbered in gematriya א/ב/ג…) with NO English translation pane and NO completion/next buttons — only the chevron pager. Maqaf (־) and nikud render cleanly. Not necessarily a bug (browse is read-only, daily-task is trackable), but the absence of any translation for Chumash and the absence of a 'mark as learned' path from browse are worth confirming against intent."
+    },
+    {
+      "screen": "text_display",
+      "title": "Greeting says 'Good morning' at 12:49 PM (time-of-day mismatch) — observed on Dashboard during navigation, outside target screen",
+      "sense": "logic",
+      "severity": "P2",
+      "permutation": "LoopChild Dashboard at 12:49 (in-passing observation, not the TextDisplay target)",
+      "detail": "While re-entering the LoopChild profile to restore settings, the Dashboard header read 'Good morning' at 12:49 PM. This is on the Dashboard, not TextDisplay, so it is out of my screen scope and offered only as a drive-by note for whoever audits the Dashboard. No action expected from this TextDisplay pass."
+    },
+    {
+      "screen": "lifetime_knowledge",
+      "title": "Header labels lifetime LEARN events as \"chazaros\" (reviews); header contradicts the leaf rows which all show \"Live\" with zero chazaros",
+      "sense": "domain-oracle",
+      "severity": "P1",
+      "permutation": "data=populated, hebrew-terms ON and OFF",
+      "detail": "The header subtitle reads \"7 total chazaros\" but the user has done ZERO reviews — each leaf has only the initial limud, so every leaf renders \"Live\" with no chazara count. In code lifetime_knowledge_providers.dart:471 sets totalChazaros = completions.length, counting EVERY completion row (limud + chazara) per its own doc comment ('Every event (limud or chazara) increments the counter'), then renders it through domainTermLabels.totalChazaros() whose string is literally '{count} total chazaros'. So initial-learn events are mislabeled as reviews. The same screen visibly self-contradicts: header claims 7 chazaros while every leaf says it was only learned (Live, no chazaros). A user with N learned-but-never-reviewed items always sees a non-zero 'total chazaros' that is actually their learn count."
+    },
+    {
+      "screen": "lifetime_knowledge",
+      "title": "Pluralization broken for count=1 on the Lifetime header and tier counters (\"1 items learned\", \"1 total chazaros\", \"1 Siyumim earned\")",
+      "sense": "logic",
+      "severity": "P1",
+      "permutation": "data state where a counter == 1 (currently 7, so not visually triggered; code-certain)",
+      "detail": "None of these ARB strings use ICU {count, plural,...}; they hard-concatenate the noun in plural form. At count=1 the header card (lifetime_knowledge_screen.dart:225/233) renders \"1 items learned\" and \"1 total chazaros\" (should be \"1 item learned\" / \"1 total chazara\"); the Lifetime tile accessibility/semantic label becomes \"1 items in lifetime\"; the Siyumim tier counter becomes \"1 Siyumim earned\" (already wrong even at >1 because the term is the plural). This is exactly the '1 Items' pluralization defect class. Not reproducible visually on LoopA because counts are 7/0, but unconditional in code for any value of 1."
+    },
+    {
+      "screen": "lifetime_knowledge",
+      "title": "Mixed nusach on one screen: curriculum/book names honor Sephardi (Bereshit, Shemot) but the domain term \"chazaros\" is hard-coded Ashkenazi (-os)",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "hebrew-terms=OFF, nusach=Sephardi",
+      "detail": "With Pronunciation set to Sephardi, the breakdown correctly transliterates book names with -ot/-it endings, but the header card still says \"chazaros\" (Ashkenazi). domain_term_labels.dart:239 `String get chazaros => _useHebrew ? 'חזרות' : 'Chazaros';` takes no nusach variant — unlike shabbos()/havdalah() which DO accept a TransliterationVariant. In Sephardi it should read \"chazarot\". Same hard-Ashkenazi issue applies to siyumim/mishnayos-style terms. Result: two transliteration conventions visible on a single screen."
+    },
+    {
+      "screen": "lifetime_knowledge",
+      "title": "Hebrew-terms ON yields a mixed-script screen: stat-card headline is Hebrew while all UI chrome (title, toggle, CTA) and per-leaf provenance stay English",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "hebrew-terms=ON",
+      "detail": "The Hebrew-terms toggle swaps only domain-term strings (itemsLearnedCount/totalChazaros and curriculum names) to Hebrew script, leaving the surrounding chrome and the provenance word \"Live\" in English. The single-line headline \"פריטים נלמדו 7\" also places an Arabic numeral 7 at the visual left of an RTL Hebrew phrase. Per the known MaterialApp locale:null limitation the chrome cannot localize, but the half-Hebrew/half-English result is visually jarring and the \"Live\" Latin word sits inside otherwise all-Hebrew rows. Numeral is Arabic, not gematriya, in Hebrew-script mode."
+    },
+    {
+      "screen": "lifetime_knowledge",
+      "title": "\"Add items I learned previously\" CTA did not navigate on repeated taps",
+      "sense": "exploration",
+      "severity": "P2",
+      "permutation": "hebrew-terms=OFF/ON, populated",
+      "detail": "The footer CTA card is wired to push LifetimeMarkingRoute (lifetime_knowledge_screen.dart:169-171 InkWell onTap). Across five taps at distinct points inside the visibly-rendered card no navigation occurred. Caveat: the card's lower edge sits very close to the system gesture-nav strip, so taps near the bottom could be consumed by the OS inset rather than a true dead target — this needs confirmation with a hardware/devtools tap. Reporting as a possible non-functional CTA pending that confirmation. (By contrast, the curriculum-card expand InkWell directly above responded reliably, so taps do register on this screen.)"
+    },
+    {
+      "screen": "lifetime_marking (LifetimeMarkingScreen ",
+      "title": "Header exposes internal \"level N\" id to the user (and the number is a wrong value)",
+      "sense": "vision",
+      "severity": "P1",
+      "permutation": "All — Hebrew-terms ON/OFF, Ashkenazi & Sephardi, font 1.0 & 1.3",
+      "detail": "The \"Mark as lifetime learned\" box renders the raw string \"Selected: {count} • level {level}\" verbatim to the user, e.g. \"Selected: 0 • level 1\". This is exactly the internal \"level N\" id the screen is supposed to NOT show in the header. Worse, the number is computed wrong: at the top level it shows \"level 1\", but after drilling ONE level into Seder Moed (depth 2) the header reads \"level 6\" (lm_07/lm_22), and inside Bereshit it reads \"level 5\" (lm_27). The value equals the COUNT of items in the current list (6 masechtos in Moed, 5 perakim shown), not the hierarchy depth. So the user sees a nonsense \"level\" number that changes per folder size. Source: lifetimeMarkAsLearnedLine = \"Selected: {count} • level {level}\" fed by the buggy _currentLevel getter which returns _currentDisplayItems.length. The 'level' token should be removed from the user-facing header entirely."
+    },
+    {
+      "screen": "lifetime_marking (LifetimeMarkingScreen ",
+      "title": "Persisted (already-learned) rows are visually identical to freshly-selected rows; selection lingers after Save and after Clear",
+      "sense": "vision",
+      "severity": "P1",
+      "permutation": "After a save round-trip; both nuschaos; Hebrew-terms ON/OFF",
+      "detail": "After saving Seder Zeraim, the row shows a green filled checkbox + green highlight (MarkingRowVisual.direct, persisted branch). A brand-new manual selection (e.g. Seder Moed) renders with the EXACT same green checkbox/highlight (lm_23_resume). There is no visual distinction between \"already learned/persisted\" and \"currently selected this session\" — the user cannot tell what they are about to commit vs what is already committed. Compounding it: pressing \"Clear selection\" sets the header to \"Selected: 0\" and disables Save, yet the persisted Zeraim row STAYS green and checked (lm_11_zeraim_zoom) — looks like Clear failed. And after a successful Save the selection is NOT cleared (lm_10/lm_24: row stays green, header still \"Selected: 1\"), so a user can re-tap Save with no feedback that nothing new will happen."
+    },
+    {
+      "screen": "lifetime_marking (LifetimeMarkingScreen ",
+      "title": "Save confirmation toast uses lazy \"selection(s)\" instead of singular for count = 1",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "count = 1 save; reproduced with double-tap guard",
+      "detail": "Saving exactly one selection shows the toast \"Marked 1 lifetime selection(s).\" — the parenthetical \"(s)\" is the non-pluralized fallback flagged by the rubric for count=1. It should read \"Marked 1 lifetime selection.\" (singular). The ARB key lifetimeMarkSavedCount = \"Marked {count} lifetime selection(s).\" has no ICU plural form, so every count (1 or many) shows \"(s)\"."
+    },
+    {
+      "screen": "lifetime_marking (LifetimeMarkingScreen ",
+      "title": "Hardware Back mid-flow silently discards a pending bulk selection with no confirmation",
+      "sense": "exploration",
+      "severity": "P2",
+      "permutation": "Sephardi, Hebrew-terms OFF, font 1.0 (behavior is lever-independent)",
+      "detail": "With Seder Nashim selected but not yet saved, pressing the Android Back button navigated straight from the marking screen back to the curriculum list, discarding the pending selection with no 'discard unsaved changes?' prompt. For a bulk-marking flow where a user may have checked many items (or used Select-all), an accidental Back loses all of it silently. Low severity (standard navigation behavior) but worth a guard for large pending selections."
+    },
+    {
+      "screen": "lifetime_marking (LifetimeMarkingScreen ",
+      "title": "\"Select all in this list\" button never toggles to a Deselect-all affordance even when everything is selected",
+      "sense": "logic",
+      "severity": "P2",
+      "permutation": "Mishnayos level 1, all 6 sedarim selected",
+      "detail": "After tapping 'Select all in this list', all 6 rows are checked (header 'Selected: 6'), but the button label stays 'Select all in this list' — tapping it again just re-selects the same set (no-op). A 'deselectAllInThisList' string already exists in app_en.arb (line 402) but is not wired up on this screen, so there is no one-tap way to clear just the current list; the only clear is the global 'Clear selection'. Minor usability gap."
+    }
+  ]
+}

@@ -1,0 +1,389 @@
+{
+  "batch": 2,
+  "findings": [
+    {
+      "screen": "learning",
+      "title": "Profile cards overflow (RenderFlex 'BOTTOM OVERFLOWED BY 1.2 PIXELS') under font_scale 1.3 on the profile picker reached via app cold-start to LEARN",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "font=1.3, profile picker (entry path to LEARN)",
+      "detail": "With font_scale=1.3, relaunching the app lands on the 'Who is learning?' profile picker. BOTH profile cards render the yellow/black striped Flutter overflow banner reading 'BOTTOM OVERFLOWED BY 1.2 PIXELS' beneath the 'Tap to switch' label, and the profile names are ellipsized to 'CloudUs...' and 'LoopChi...'. This is a hard render overflow (not just truncation). It is on the profile-selector rather than the LEARN body itself, but it is squarely on the navigation path into LEARN and is the most severe visual defect found. A text-only loop would never see the overflow stripe."
+    },
+    {
+      "screen": "learning",
+      "title": "Bottom-nav 'DASHBOARD' label truncated to 'DASHBOA...' under font_scale 1.3",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "font=1.3, LEARN screen (shared bottom nav)",
+      "detail": "Under large text (font_scale 1.3) the bottom navigation 'DASHBOARD' tab label is ellipsized to 'DASHBOA...' while LEARN / PROGRESS / SETTINGS fit. The nav bar is shared by the LEARN screen and is visible from it. At font 1.0 the label renders in full (verified in /tmp/audit/back_to_browse.png), confirming this is a large-text-specific clip. Low severity (cosmetic, still tappable) but a real accessibility regression for users with large fonts."
+    },
+    {
+      "screen": "learning",
+      "title": "Completing one of two daily-task tiles (Chullin 41a + 41b) clears BOTH and shows '0 Items / All caught up' — only one was marked complete",
+      "sense": "exploration",
+      "severity": "P2",
+      "permutation": "data=populated->complete, hebrew-terms=ON",
+      "detail": "Daily Tasks listed '2 Items' as two tiles: 'חולין דף מא עמוד א' (Chullin 41a) and 'חולין דף מא עמוד ב' (Chullin 41b). I opened tile 1, used 'Next daily task' to advance to tile 2 (this does NOT complete tile 1), then tapped 'Mark complete' on tile 2 only. A 'Marked complete' snackbar appeared and on returning the counter dropped 2->0 with the 'All caught up / No tasks remaining for today' empty state — i.e. tile 1 (amud א) also vanished without being explicitly completed. Streak correctly went 0->1 and Personal Best 0->1, so this may be intended daf-granular completion (both amudim = one daf), but the UI presents two separately-completable tiles and one action cleared both. Needs confirmation of intent; flagged P2 because it could mean an amud got silently marked learned. Counter binds to allDailyTasksProvider tasks.length in learning_screen.dart:296."
+    },
+    {
+      "screen": "learning",
+      "title": "Base word מ-ש-נ-ה transliterated three inconsistent ways on one Browse screen: 'Mishnayos/Mishnayot', 'Mishneh', and 'Mishna' (Mishna Berurah drops trailing -h)",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "hebrew-terms=OFF, nusach=Ashkenazi AND Sephardi",
+      "detail": "In the Browse list, three works built on מ-ש-נ-ה render with inconsistent spelling on the SAME screen: 'Mishnayos' (Ashk) / 'Mishnayot' (Seph), 'Mishneh Torah', and 'Mishna Berurah'. 'Mishna Berurah' drops the trailing -h that 'Mishneh' keeps and that conventional usage uses ('Mishnah Berurah'). These are distinct proper nouns so it is borderline, but the missing -h on Mishna Berurah specifically is non-standard and the tri-fold spelling of the same root on one screen reads inconsistent. Low-confidence oracle nit."
+    },
+    {
+      "screen": "learning",
+      "title": "Deep breadcrumb chips truncate at the right edge in the Browse drill-down ('...› B' for Berakhot)",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "hebrew-terms=OFF, font=1.3, Browse leaf",
+      "detail": "In the Browse Content drill-down, the breadcrumb chip bar 'Talmud Bavli › Seder Zeraim › Berakhot' truncates the final chip to just 'B' at the right edge. It IS a horizontally scrollable chip bar (prior chips remain), so this is expected horizontal-scroll truncation, but the last (current) crumb being the one cut off is mildly awkward UX. Cosmetic."
+    },
+    {
+      "screen": "scheduler",
+      "title": "Daily Tasks count ('5 Items') and dashboard 'TODAY DUE: 5' never decrement when a task is completed",
+      "sense": "logic",
+      "severity": "P1",
+      "permutation": "caught-up with 5 due, post-completion, font 1.0, terms ON+OFF",
+      "detail": "Completing a daily task removes it and pulls the next verse into the list, holding the count at a constant 5. The dashboard 'TODAY DUE' circle likewise stays 5 after a completion (only 'Lifetime' incremented 5->6->7). Net effect: a user who completes today's tasks NEVER sees the due count go down, so there is no sense of progress toward 'caught up' and no reachable empty/zero-due state by working through the list. Either the counter should decrement as tasks are completed, or the label needs to communicate 'rolling queue' semantics. The completion itself works correctly (Lifetime increments, verse is removed)."
+    },
+    {
+      "screen": "scheduler",
+      "title": "Dashboard STATS panel shows hardcoded-looking '0' / '0 of 0 sections' during load instead of a skeleton",
+      "sense": "vision",
+      "severity": "P1",
+      "permutation": "transient loading frame on dashboard entry, font 1.0",
+      "detail": "On entering the dashboard the small stat cards correctly show '...' placeholder dots (a recognizable skeleton), but the large STATS panel renders real-looking zeros: OVERDUE 0, TODAY DUE 0, '0 / 0 sections — 9 curricula', 0%. These zeros are visually indistinguishable from a legitimate caught-up/empty state, so for ~1-2 seconds the user is told there is nothing due today and no curriculum progress before the real values (5 due, 5/70,033) pop in. The STATS panel should use a skeleton/spinner consistent with the cards rather than displaying 0s while loading."
+    },
+    {
+      "screen": "scheduler",
+      "title": "Mixed Hebrew-script / English on one row: dashboard stat labels read 'Streak' | 'סימונים' | 'Lifetime'",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "hebrew-terms ON, adult mode, font 1.0",
+      "detail": "With Hebrew Terms ON, the middle stat label Hebraizes to 'סימונים' (siyumim) while the flanking labels stay English ('Streak', 'Lifetime'), producing a jarring 2-English-1-Hebrew row. The accessibility string '0 סימונים earned' literally interleaves Hebrew script inside an English sentence. This is driven by the (working) Hebrew-terms toggle, but the half-translated row is a consistency defect: either all three domain-facing labels should follow the toggle or none should. Same pattern appears in Settings ('שבת MODE', 'silenced and locked during שבת and Yom Tov' — Shabbos in Hebrew script but Yom Tov transliterated) — see /tmp/audit/settings.png."
+    },
+    {
+      "screen": "scheduler",
+      "title": "Breadcrumb verse identifier wraps to its own line, orphaning the gematriya letter (Hebrew mode)",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "hebrew-terms ON, nusach n/a (script), font 1.0 and 1.3",
+      "detail": "Each task card's breadcrump 'בראשית › פרק א › פסוק ו' does not fit on one line, so 'פסוק' stays on line 1 and the single gematriya verse letter wraps alone to line 2, visually detached from its label 'פסוק'. In the first screenshot the orphaned 'ו' even reads ambiguously as 'א' at a glance. The transliteration mode wraps more gracefully ('Pasuk 8' stays together — /tmp/audit/learn_translit.png), so this is specific to the Hebrew-script breadcrumb. Not clipped/overflowing, but the orphaned single character is poor and the design should keep 'פסוק <n>' together or shrink/ellipsize the leading crumbs."
+    },
+    {
+      "screen": "scheduler",
+      "title": "Bottom-nav 'DASHBOARD' label ellipsizes to 'DASHBOA...' at font scale 1.3",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "font 1.3, any nusach/terms, scheduler (Learn) tab",
+      "detail": "At accessibility font scale 1.3 the first bottom-navigation label is truncated to 'DASHBOA...'. Only the longest label is affected; the others render fully. This is a clipped/ellipsized text instance per the rubric. Font scale was reset to 1.0 after testing."
+    },
+    {
+      "screen": "scheduler",
+      "title": "No reschedule / skip control exists on adult Daily Tasks rows",
+      "sense": "exploration",
+      "severity": "P2",
+      "permutation": "caught-up with 5 due, adult mode, font 1.0",
+      "detail": "The audit brief lists 'reschedule/skip' as a control to exercise, but the adult Daily Tasks list exposes no such control: rows are tap-only (open the study detail), swipe-to-reveal does nothing, and long-press just opens the detail. Inside a task the only actions are 'Mark complete' and 'Next daily task' (advance without completing). If reschedule/skip is an intended capability it is absent on this surface; if not, this is informational. ('Next daily task' is the closest thing to a non-destructive skip.)"
+    },
+    {
+      "screen": "gamification — My Achievements (Gamifica",
+      "title": "Streak headline pluralization wrong: '0 day streak!' (and '5 day streak!') — should be 'days'",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "data state: streak=0; font 1.0 and 1.3; Activity & points expanded",
+      "detail": "The StreakWidget headline renders '0 day streak!' directly above 'Best: 0 days'. The ICU 'other' plural branch in streakWidgetDayStreak (app_localizations_en.dart:3267) is hard-coded as '$count day streak!' (singular 'day'), so EVERY non-1 count is wrong: count=0 -> '0 day streak!', count=5 -> '5 day streak!'. English requires the plural 'days' for the 'other' category. The mismatch is visible side-by-side with the correctly-pluralized 'Best: 0 days'. The 'one' branch ('1 day streak!') is correct. Fix: 'other' should read '$count days streak!'."
+    },
+    {
+      "screen": "gamification — My Achievements (Gamifica",
+      "title": "Rapid double-tap on dashboard flame chip stacks two duplicate My Achievements screens",
+      "sense": "exploration",
+      "severity": "P2",
+      "permutation": "adversarial: rapid back-to-back taps on streak/flame chip (no settle)",
+      "detail": "The dashboard streak/flame chip onTap is `context.router.push(const GamificationRoute())` (dashboard_body.dart:305) with no re-entrancy guard or duplicate-route check. Two quick taps push the same GamificationScreen twice; the user must press Back twice to escape. Confirmed by probe: after a double-tap, the first Back press kept 'My Achievements' on screen and only the second Back returned to the dashboard. Points balance (250) was not corrupted by the probe."
+    },
+    {
+      "screen": "gamification — My Achievements (Gamifica",
+      "title": "Empty-state copy uses legacy 'earn/unlock/ladder' framing that contradicts the spend-economy model",
+      "sense": "logic",
+      "severity": "P2",
+      "permutation": "data state: 0 configured rewards",
+      "detail": "Per DEC-32/R4o-C1 (documented in achievements_overview_provider.dart and reward_milestone_service.dart) the auto-unlock achievement ladder was REPLACED by a spend economy: rewards are priced spend-items redeemed against a debitable balance. Yet the Achievements screen still says '0 / 0 Rewards', 'No rewards earned yet. Keep learning!' and Pro Tip 'Keep learning on your tracks to climb the reward ladder.' 'Earned' and 'reward ladder' describe the removed auto-unlock model; in the spend economy rewards are configured by a parent and spent, not earned by climbing a threshold ladder. Copy is internally inconsistent with the implemented mechanic."
+    },
+    {
+      "screen": "gamification — My Achievements (Gamifica",
+      "title": "Child has 250 points but zero rewards/prizes configured anywhere — points are inert, with cheerful 'doing great' messaging",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "data state: 250 points, 0 configured milestones; cross-checked Redeem Prizes",
+      "detail": "This is the '0 rewards vs configured' symptom, RESOLVED as a true empty data state rather than a display-wiring bug. Both surfaces read the same source (RewardMilestoneService SharedPreferences key reward_milestones_config_v1_<profileId>) and both are empty — verified via run-as: the prefs file contains NO reward_milestones_config_v1_* key at all. So Achievements ('0/0 Rewards') and Redeem Prizes ('No prizes configured yet') agree. The UX gap: the child has accumulated 250 spendable points with nothing to redeem them on, while the Achievements card reassures 'Keep it up, you're doing great!' — there is literally nothing to achieve or spend on until a parent configures rewards. A '0/0' rewards goal with a positive balance is a dead end that the copy papers over."
+    },
+    {
+      "screen": "gamification — My Achievements (Gamifica",
+      "title": "My Achievements cannot exercise nusach / curriculum-label rendering in the empty state (coverage gap, not a defect)",
+      "sense": "exploration",
+      "severity": "P2",
+      "permutation": "nusach Ashkenazi; hebrew-terms ON/OFF; 0 achievement rows",
+      "detail": "Because no track has configured/enabled milestones, achievementsOverviewProvider produces zero rows and zero per-track filter chips, so the screen renders NO curriculum/track-tag domain terms. The nusach (Ashkenazi/Sephardi) and Hebrew-terms levers therefore have no rendered surface to change ON THIS SCREEN — the only domain term ('Rewards', 'siyumim') doesn't appear in the achievement list. I verified the Hebrew-terms lever DOES work on the adjacent counter row: flipping it OFF changed the dashboard/Progress siyumim tile from Hebrew 'סיומים' to Ashkenazi transliteration 'Siyumim' (correct -im plural), then restored to ON. Full nusach coverage of achievement track-tags requires a profile WITH configured per-track rewards, which I could not construct (needs parent PIN + reward config flow)."
+    },
+    {
+      "screen": "gamification — My Achievements (Gamifica",
+      "title": "Counter row mixes one Hebrew-script label ('סיומים') among English siblings — intended toggle behavior, NOT a bug",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "hebrew-terms toggle ON",
+      "detail": "Recorded to pre-empt a false positive: on both the Progress hub and Dashboard the four-tile counter row shows 'Streak / סיומים / Lifetime / Points' — one Hebrew label among English. This looks like a half-translated UI but is the intended effect of the Hebrew Terms toggle (hebrew_terms_script_p0=true), which localizes only the configured DOMAIN terms (siyumim, chazara) to Hebrew script while generic UI nouns stay English. Confirmed by flipping the toggle (script changed) and the rubric exception ('unless intended'). No defect."
+    },
+    {
+      "screen": "content_hierarchy",
+      "title": "Search does not match Ashkenazi transliteration (\"shabbos\" -> No results) even though it matches Sephardi (\"shabbat\")",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "hebrew-terms ON, p0 variant=ashkenazi / p1=sephardi, font 1.0",
+      "detail": "In the ContentHierarchy search, typing the Ashkenazi transliteration of מסכת שבת — \"shabbos\" — returns \"No results for 'shabbos'\". Typing the Sephardi spelling \"shabbat\" (or even partial \"shab\") correctly returns the שבת masechta and its descendants. So the search index only carries the Sephardi transliteration alias, not the Ashkenazi one. The app supports an Ashkenazi nusach (p0 variant is ashkenazi; the Pronunciation control offers Ashkenazi), so an Ashkenazi-leaning user who searches \"shabbos\" / \"taanis\" gets a false-empty result for content that is present. Search must alias both nuschaos (and ideally the Hebrew script form)."
+    },
+    {
+      "screen": "content_hierarchy",
+      "title": "Ashkenazi nusach mapping is incomplete — Sephardi -ah forms (\"Beitzah\", \"Rosh Hashanah\") render next to correctly-Ashkenazified siblings (\"Shabbos\", \"Taanis\", \"Succah\") on one screen",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "hebrew-terms OFF, nusach=Ashkenazi, font 1.0, Talmud Bavli > Seder Moed",
+      "detail": "Switching the Pronunciation control to Ashkenazi correctly flips Shabbat->Shabbos, Taanit->Taanis, Sukkah->Succah, Nakh->Nach, Tanakh->Tanach, Mishnayot->Mishnayos. But on the SAME Seder Moed masechta list, \"Beitzah\" and \"Rosh Hashanah\" keep their Sephardi -ah endings (strict Ashkenazi would be Beitzoh/Beitza and Rosh Hashono/Hashana). The result is two different nuschaos visibly mixed on one screen (Shabbos/Taanis/Succah in -os/-is alongside Beitzah/Rosh Hashanah in -ah). This is the classic 'same screen, two nuschaos' oracle violation: the Ashkenazi transliteration table has gaps and silently falls back to the Sephardi/neutral form for some masechtos."
+    },
+    {
+      "screen": "content_hierarchy",
+      "title": "Breadcrumb omits the current Daf segment at the Amud-list level in transliteration mode",
+      "sense": "exploration",
+      "severity": "P2",
+      "permutation": "hebrew-terms OFF, nusach=Ashkenazi, font 1.0, Shabbos > Daf 2 > [Amud a / Amud b]",
+      "detail": "When you drill Talmud Bavli > Seder Moed > Shabbos > Daf 2, the Amud-selection screen's chip breadcrumb stops at 'Shabbos' (rendered as an underlined link) and never shows the current 'Daf 2'. There is no active/terminal node — both visible non-chip segments are links. So the user on the Amud a/Amud b screen cannot tell from the breadcrumb which daf they are inside. The text-display header breadcrumb one level deeper DOES include 'Daf 2 > Amud a', and the Hebrew-script-mode amud list (reached via back from the pager) showed the daf, proving the hierarchy breadcrumb is under-reporting its leaf level on the direct-drill path."
+    },
+    {
+      "screen": "content_hierarchy",
+      "title": "Deepest breadcrumb active segment is clipped (\"דף ב\" -> renders as \"ב‏ף\") at large text (font_scale 1.3) and is not recoverable by scrolling",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "hebrew-terms ON, Sephardi, font 1.3, Talmud Bavli > מועד > שבת > דף ב",
+      "detail": "At font scale 1.3 the 4-segment hierarchy breadcrumb 'תלמוד בבלי(chip) > מועד > שבת > דף ב' overflows. The pinned curriculum chip ('תלמוד בבלי') consumes fixed width and the scrollable portion does not auto-scroll to fully reveal the active rightmost (RTL) segment, so the current 'דף ב' is clipped — the leading 'ד' is cut at the container edge and it reads 'ב‏ף'. A horizontal swipe on the breadcrumb does NOT scroll it, so the clipped text is unrecoverable. Note the contrast: the text-DISPLAY header breadcrumb wraps to two lines at 1.3 (handles large text correctly), but the hierarchy/chip breadcrumb clips — different overflow handling between the two breadcrumb components."
+    },
+    {
+      "screen": "content_hierarchy",
+      "title": "First curriculum row icon (חומש / Chumash) renders as a gray disc with a washed-out/near-invisible glyph while all sibling rows have colored, legible book icons",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "hebrew-terms ON & OFF, font 1.0, LEARN > Browse top of list",
+      "detail": "On the Browse curriculum list, every curriculum tile has a tinted circular icon with a clearly-colored open-book glyph (teal/green/blue/purple) EXCEPT the first item Chumash/חומש, whose icon is a flat light-gray disc with a barely-visible gray book outline. It reads as a disabled/placeholder state next to its vivid siblings, drawing the wrong attention to the first (and arguably most fundamental) curriculum. This reproduces in both Hebrew and transliteration modes, so it is a deterministic per-curriculum color assignment issue, not a transient frame."
+    },
+    {
+      "screen": "curriculum_progress (CurriculumProgress ",
+      "title": "Review-count term 'chazaros' is hardcoded Ashkenazi and does NOT follow the Sephardi nusach setting, producing two nuschaos on one screen",
+      "sense": "domain-oracle",
+      "severity": "P1",
+      "permutation": "nusach:Sephardi x hebrew-terms:OFF (transliterated), data:populated",
+      "detail": "With Pronunciation=Sephardi, the level names correctly render Sephardi: 'Bereshit', 'Shemot', 'Vayikra' (-t endings). But the subtitle review-count label still reads '7 chazaros' / '0 chazaros' (-os, the ASHKENAZI form). Switching Pronunciation to Ashkenazi proves the term is hardcoded: the names change (Bereshit->Bereishis, Shemot->Shemos) but 'chazaros' stays identical in both modes. So in Sephardi mode the user sees Sephardi seder names alongside an Ashkenazi domain term on the same line/screen — a direct violation of the same-masechta/single-nusach oracle. Sephardi should read 'chazarot'."
+    },
+    {
+      "screen": "curriculum_progress (CurriculumProgress ",
+      "title": "Duplicate 'Learn' stage label: expanded breakdown shows two identical 'Learn: N' columns instead of distinct stage names",
+      "sense": "exploration",
+      "severity": "P1",
+      "permutation": "data:populated, hebrew-terms:OFF and ON, both fonts",
+      "detail": "Expanding any level/perek shows a four-stage row. The first TWO stage labels are both 'Learn:' (Hebrew: both 'לימוד'), each showing the same value (7). A SRS curriculum should have four DISTINCT stage names (e.g. Learn, Review 1, Review 2, Review 3 or similar). Two stages collapsing to the same label 'Learn' is a stage-name/mapping bug; it is reproduced on every populated and empty row (Learn:0 Learn:0 ...) and in both Hebrew-script and transliterated modes, so it is structural, not a one-off."
+    },
+    {
+      "screen": "curriculum_progress (CurriculumProgress ",
+      "title": "Header 'N chazaros' contradicts the per-stage review counts ('Review 1: 0, Review 2: 0') — 'chazaros' (=reviews) is shown for items with zero reviews done",
+      "sense": "logic",
+      "severity": "P2",
+      "permutation": "data:populated, both nusach, both hebrew-terms states",
+      "detail": "The card subtitle says '7 chazaros' (chazara = review/repetition) while the same card's stage breakdown shows Review 1: 0 and Review 2: 0 — i.e. zero reviews were actually performed. The '7 chazaros' value tracks the Learn count (7 items learned), so the word 'chazaros' is being misused to mean total completions/sections rather than literal reviews. Lifetime Knowledge restates this as '7 items learned / 7 total chazaros'. Consistent app-wide but semantically wrong: calling never-reviewed learned items 'chazaros' is misleading domain terminology."
+    },
+    {
+      "screen": "curriculum_progress (CurriculumProgress ",
+      "title": "Leaf pasuk status renders 'Live' — an opaque internal-looking enum value as the learner-facing completion state",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "Lifetime Knowledge -> Bereishis -> Perek 1 -> pesukim, data:populated",
+      "detail": "Drilling to the leaf level, each learned pasuk (green dot, Pasuk 1-6) shows the right-aligned status 'Live'. 'Live' reads like an internal status enum (live/draft) rather than a meaningful learner completion state (Learned/Done/a date). For a verse a user has studied, 'Live' is ambiguous jargon with no legend; it looks like a developer value leaking into the UI. Not-yet-learned pesukim (7,8) correctly show no label."
+    },
+    {
+      "screen": "curriculum_progress (CurriculumProgress ",
+      "title": "Overall Progress header is visually unbalanced: 'Track progress:' wraps awkwardly across 3 lines while 'Lifetime: 0%' sits alone with empty space",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "all states; worse at font:1.3",
+      "detail": "The blue Overall Progress card's two headline stats are mismatched in layout: left column 'Track progress: 0%' breaks onto three lines ('Track' / 'progress:' / '0%') while right column 'Lifetime: 0%' stays one line with large empty space below it. At font_scale 1.3 it degrades further ('Lifetime:' / '0%' wraps too) but no clipping/overflow stripes occur. Cosmetic mis-alignment / poor two-up layout, not a hard break."
+    },
+    {
+      "screen": "curriculum_progress (CurriculumProgress ",
+      "title": "Hebrew-terms ON shows Hebrew-script stat label 'סיומים' next to English 'Streak'/'Lifetime' on Dashboard/Progress stat cards (mixed-script row)",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "hebrew-terms:ON, Dashboard + Progress header cards",
+      "detail": "With Hebrew Terms ON, the middle stat card label renders 'סיומים' (Hebrew script) while the flanking cards stay English 'Streak' and 'Lifetime'. Flipping Hebrew Terms OFF turns it into 'Siyumim' (so the toggle does drive it — expected). The residual issue is inconsistency: only the 'siyumim' term Hebraizes while the other two stat labels remain English, yielding a one-row mix of Hebrew-script and English chrome. Either all three stat labels should follow the toggle or none, for visual consistency."
+    },
+    {
+      "screen": "siyumim_milestones",
+      "title": "Level-counter row shows plural \"siyumim\" for count = 1 (\"1 aggregate-level siyumim\")",
+      "sense": "vision",
+      "severity": "P1",
+      "permutation": "populated grouped view, Hebrew-terms ON and OFF, font 1.0 and 1.3",
+      "detail": "The top level-counters card renders \"1 aggregate-level siyumim\" with a count of 1 but the plural Hebrew noun \"siyumim\" (singular is \"siyum\"). The rubric flags count=1 pluralization as a defect; it should read \"1 aggregate-level siyum\". Root cause confirmed in source: learning_tracker/lib/l10n/app_en.arb lines 1907/1914/1921 — siyumimLevelCurriculum/siyumimLevelAggregate/siyumimLevelUnit are all defined as plain templates \"{count} ...-level siyumim\" with NO ICU plural ({count, plural, ...}) selector. So ALL THREE rows render \"1 ... siyumim\" whenever a tier has exactly 1. Reproduced live on the aggregate row (count 1). The other two rows would show the same bug at count 1."
+    },
+    {
+      "screen": "siyumim_milestones",
+      "title": "Aggregate seder label duplicates the level word: \"Siyum Seder Seder Zeraim\" (transliteration modes only)",
+      "sense": "domain-oracle",
+      "severity": "P1",
+      "permutation": "populated grouped + timeline; Hebrew-terms OFF; both Ashkenazi and Sephardi nusach",
+      "detail": "In transliteration mode (Hebrew-terms OFF, Ashkenazi OR Sephardi) the aggregate milestone renders \"Siyum Seder Seder Zeraim\" — the word \"Seder\" appears twice. In Hebrew-terms ON mode the same row reads correctly \"סיום סדר זרעים\" (one Seder). Root cause: the Bavli level-1 content key is stored WITH the level word (\"Seder Zeraim\" — confirmed in curriculum_scopes.scope_value), and aggregateSiyumLabel() in siyum_milestone_label.dart builds '${terms.siyumSeder} $aggregateName' = \"Siyum Seder \" + \"Seder Zeraim\". In Hebrew mode the renderer substitutes the bare Hebrew name \"זרעים\" (no prefix), avoiding the duplication; the transliteration path returns the raw key verbatim. The label code comment even claims aggregateName is e.g. 'Zeraim' (bare) — but the real stored key is \"Seder Zeraim\". Affects both grouped and timeline views (shared label builder), and persists across both nuschaos."
+    },
+    {
+      "screen": "siyumim_milestones",
+      "title": "Curriculum scope stores English translation \"Genesis\" instead of transliteration (Bereishis/Bereshit)",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "data inspection of chumash track (KidTest); cross-checked against Pronunciation setting copy",
+      "detail": "The chumash learning-track scope is persisted as scope_value='Genesis' — the English translation of the sefer name. The domain oracle explicitly flags this: \"Genesis is wrong; it's Bereishis/Bereshit\". The app's own Pronunciation toggle copy uses the correct transliteration Bereishis/Bereshit, so the stored \"Genesis\" is inconsistent with the app's own naming convention. Did not surface a Siyum HaTorah row on this screen for that profile (KidTest has no chumash completions), but if a chumash sefer siyum were earned the standalone unit row would frame this raw value; the transliteration code path resolves via content keys, but the stored seed value is the translation, which is the oracle violation."
+    },
+    {
+      "screen": "siyumim_milestones",
+      "title": "Timeline month headers use hardcoded English month names, inconsistent with locale-formatted card dates",
+      "sense": "logic",
+      "severity": "P2",
+      "permutation": "populated timeline view, all nusach/terms/font permutations",
+      "detail": "The timeline groups milestones under month headers (\"June 2026\", \"May 2026\") produced by SiyumimTimelineView._monthKey(), which indexes a hardcoded English const months[] array — it never goes through DateFormat. The per-card date subtitles, by contrast, use formatMilestoneDate() => DateFormat.yMMMd(locale). This is an internal inconsistency: two date surfaces on the same screen format via different mechanisms, one locale-aware and one not. Currently masked because the UI locale is force-English (known MaterialApp locale:null bug), but it is a latent localization defect that would diverge the moment the locale bug is fixed."
+    },
+    {
+      "screen": "siyumim_milestones",
+      "title": "Aggregate subtitle reads \"All 1 complete\" (awkward count=1 phrasing)",
+      "sense": "logic",
+      "severity": "P2",
+      "permutation": "populated grouped view (Seder Zeraim aggregate contains a single masechta)",
+      "detail": "When an aggregate contains exactly one unit (Bavli Seder Zeraim has only Berakhos with gemara), the subtitle renders \"All 1 complete · Jun 9, 2026\". The template siyumimAggregateSubtitle has no plural handling, so count=1 yields the grammatically awkward \"All 1 complete\". Lower severity than the noun-pluralization issue because \"complete\" carries no number agreement, but it reads unnaturally for the single-unit seder case which is reachable in real Bavli data."
+    },
+    {
+      "screen": "siyumim_milestones",
+      "title": "Timeline represents a single completion twice as peer rows (unit Berakhos + its sole-member Seder Zeraim aggregate)",
+      "sense": "exploration",
+      "severity": "P2",
+      "permutation": "populated timeline view",
+      "detail": "In timeline mode a single masechta completion (Berakhos, the only gemara masechta in Seder Zeraim) appears as BOTH a unit milestone (Siyum Masechta Berakhos) and an aggregate milestone (Siyum Seder Zeraim) on the same date — visually the one act of finishing Berakhos shows up twice as adjacent peer rows. The grouped view avoids this by nesting Berakhos inside the aggregate (absorbedUnitKeys). Code comments state timeline intentionally \"flattens the hierarchy\" so this is likely by-design, but for single-member aggregates it reads as duplicate/redundant celebration of one milestone and is worth a product decision. Logged as P2 exploration, not a hard bug."
+    },
+    {
+      "screen": "Notifications (Settings → Notification S",
+      "title": "Saved notification preferences are NOT restored after app relaunch — screen reverts to all defaults",
+      "sense": "domain-oracle",
+      "severity": "P1",
+      "permutation": "profile=CloudUser; persisted {reminder=ON@22:00, streak=OFF, reward=OFF}; cold restart x3",
+      "detail": "Set Daily Reminder time to 10:00 PM and turned Streak Alert + Reward OFF. Verified persisted prefs on device: daily_reminder_hour_1=22, streak_alert_enabled_1=false, reward_notification_enabled_1=false (run-as cat FlutterSharedPreferences.xml). After force-stop + relaunch + re-select CloudUser + open Notifications, the screen displays ALL toggles ON and Reminder Time = 7:00 PM (the defaults). Reproduced across THREE separate cold restarts; prefs file confirmed UNCHANGED each time (still hour=22, streak=false, reward=false), so this is a load/restore defect, not a write or wipe. Accessibility dump cross-confirms: all Switch widgets checked=true, Reminder Time content-desc='7:00 PM'. Root cause is in learning_tracker/lib/features/notifications/presentation/providers/notification_providers.dart: ReminderEnabled/StreakAlertEnabled/RewardNotificationEnabled/ReminderTime/StreakAlertTime each return a hard-coded default ('return true' / 7PM/9PM) synchronously in build() and async-load from prefs under ref.watch(activeProfileIdProvider). activeProfileIdProvider returns the sentinel 0 while the profile resolves (active_profile_provider.dart: 'selected ?? 0'); _loadFromPrefs(0) reads non-existent *_0 keys → falls back to defaults, and the reload under the resolved real id (1) does not land in the displayed state. The in-code comments claim a prior fix ('Fixes the cold-start race where ref.read returned 0') but it is incomplete for the profile-selector → profile path. User impact: anyone who turns OFF streak/reward notifications or changes reminder time silently gets them reset to ON / 7PM on every restart — a real privacy/UX harm (unwanted notifications re-enable themselves)."
+    },
+    {
+      "screen": "Notifications (Settings → Notification S",
+      "title": "'HOT STREAK' badge stays shown even when Streak Alert toggle is OFF",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "Streak Alert toggled OFF, font 1.0 and 1.3",
+      "detail": "The red 'HOT STREAK' badge in the Streak Alert card header is a static label (l10n.notifHotStreakBadge, hard-wired in notifications_screen.dart as trailingTopBadge) and remains fully visible/coloured even after the Streak Alert switch is turned OFF and the Streak Alert Time row is greyed out. A disabled feature still advertising an active-sounding 'HOT STREAK' status is misleading. Cosmetic but state-inconsistent."
+    },
+    {
+      "screen": "Notifications (Settings → Notification S",
+      "title": "Daily Reminder & Streak Alert switches are not accessibility-labelled (NAF=true)",
+      "sense": "exploration",
+      "severity": "P2",
+      "permutation": "any state",
+      "detail": "In the UI hierarchy, the Daily Reminder and Streak Alert Switch nodes have content-desc='' and NAF='true' (Not Accessibility Friendly); the descriptive text ('Daily Reminder / Don't forget to learn today!') lives only on the sibling container View, not on the focusable Switch itself. The Device notifications and Reward Notifications switches DO carry their own content-desc. A screen-reader user focusing the Daily Reminder / Streak Alert switch would hear an unlabeled toggle. Inconsistent and an a11y gap."
+    },
+    {
+      "screen": "curriculum_settings (Nusach + Hebrew-ter",
+      "title": "CORE FLIP VERIFIED: curriculum terms re-render to the correct nusach/script variant",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "nusach Ashkenazi↔Sephardi and hebrewTerms OFF→ON, font 1.0",
+      "detail": "Not a defect — positive confirmation the required behaviour works. On the SAME Chumash Reorder list, the five books re-rendered live and correctly with each lever: Ashkenazi = Bereishis / Shemos (heading 'Seferim'); Sephardi = Bereshit / Shemot (heading 'Sefarim'); Hebrew-terms ON = בראשית / שמות (heading חומשים, RTL). Variant-invariant books (Vayikra, Bamidbar, Devarim) correctly stayed identical across nuschaos. Oracle checks all pass: -os/-eis (Ashk) vs -ot/-eshit (Seph) correct; no same-masechta-in-two-nuschaos; no stray Hebrew-script chars in English mode; Shabbos↔Shabbat label on the Shabbos-mode card also follows the nusach lever."
+    },
+    {
+      "screen": "curriculum_settings (Nusach + Hebrew-ter",
+      "title": "Hebrew-terms Switch has no accessibility label (NAF=true, empty content-desc)",
+      "sense": "exploration",
+      "severity": "P2",
+      "permutation": "hebrewTerms control, any state",
+      "detail": "The Hebrew-terms toggle Switch is flagged Not-Accessibility-Friendly by uiautomator and exposes an empty content-desc, so a screen-reader user gets no label announcing what the switch controls (its title 'Hebrew Terms' is a sibling node, not associated as the switch's label). The Calendar/Pronunciation/Nikud segmented controls DO expose proper labels (English/Hebrew, Ashkenazi/Sephardi, etc.), making this toggle the odd one out. Accessibility/semantics gap, not a visual break."
+    },
+    {
+      "screen": "curriculum_settings (Nusach + Hebrew-ter",
+      "title": "Inconsistent date localization on track-detail reached from curriculum settings: 'Started' is Hebrew gematriya but 'Since'/'Est. finish' stay Gregorian",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "Calendar Preference = Hebrew, Chumash track detail",
+      "detail": "With Calendar Preference set to Hebrew, the 'Started' value renders as a Hebrew gematriya date (כ\"ה סיוון תשפ\"ו) — correct — but on the SAME screen 'Since Jun 10, 2026' and 'Est. finish Aug 21, 2029' render in Gregorian English. Two date formats on one screen under one calendar preference. The Hebrew-calendar setting is applied inconsistently (only some date fields honour it). Adjacent to the curriculum-settings controls (it's the curriculum/track surface those controls drive), not the controls screen itself."
+    },
+    {
+      "screen": "curriculum_settings (Nusach + Hebrew-ter",
+      "title": "Redundant value text 'Elapsed 0 days' duplicates its own row label 'Elapsed'",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "Chumash track detail, font 1.0",
+      "detail": "Row label is 'Elapsed' and the corresponding value reads 'Elapsed 0 days', so the word 'Elapsed' is shown twice in the same row. Minor awkward phrasing / label duplication; value should likely be just '0 days'."
+    },
+    {
+      "screen": "curriculum_settings (Nusach + Hebrew-ter",
+      "title": "Bottom-nav 'DASHBOARD' clips to 'DASHBOA…' at font scale 1.3",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "font=1.3, any settings sub-state",
+      "detail": "At large text (font_scale 1.3) the bottom navigation label 'DASHBOARD' is ellipsized to 'DASHBOA…' while LEARN/PROGRESS/SETTINGS fit. The curriculum-settings controls themselves (Calendar Preference, Hebrew Terms, Pronunciation, Nikud, Add Lifetime Learning) all wrap cleanly at 1.3 with no clipping/overflow — only the shared nav chrome clips. Reported because it is consistently visible on this screen at 1.3."
+    },
+    {
+      "screen": "curriculum_settings (Nusach + Hebrew-ter",
+      "title": "Mixed-language screen title 'חומש • Reorder' in Hebrew-terms mode",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "hebrewTerms=ON, Chumash Reorder",
+      "detail": "With Hebrew terms ON the curriculum term in the app-bar title renders Hebrew (חומש) while the action word stays English ('Reorder'), producing a half-translated title 'חומש • Reorder'. This is consistent with the KNOWN logged MaterialApp locale:null bug (UI chrome stays English) so it is expected rather than a new defect — recorded only so the reviewer can correlate it with that known issue. Also a minor RTL note: in Hebrew mode the list text right-aligns but the drag-handles stay on the right (list did not mirror), so handles now sit immediately left of the right-aligned term instead of the trailing edge."
+    },
+    {
+      "screen": "recent_activity",
+      "title": "Pluralization bug: '1 Active days' (should be singular 'Active day')",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "All Time tab; reproduced with Hebrew-Terms ON and OFF, and at font 1.0 and 1.3",
+      "detail": "The All-time activity stat block renders 'Active days' with the count of 1 ('1 Active days'). For count==1 this must read 'Active day'. This is the rubric's '1 study days' pluralization defect and is independent of the terms/nusach levers. The adjacent 'done' stat is correctly invariant, so only the days-counter label needs a singular/plural form."
+    },
+    {
+      "screen": "recent_activity",
+      "title": "Half-translated, mixed-direction stat label '1 לימוד done' when Hebrew Terms ON",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "All Time tab, Hebrew-Terms ON",
+      "detail": "With Hebrew Terms ON the right-hand all-time stat is a single label that jams the RTL Hebrew domain word 'לימוד' (limud) next to the LTR English word 'done'. Because of bidi the rendered order reads visually as 'done לימוד', a confusing mixed-script / mixed-direction phrase. Toggling Hebrew Terms OFF produces a clean 'Limud done', confirming this is a half-translated composition: the verb 'done' is never localized and is concatenated to the (now Hebrew-script) noun. Should be a single fully-resolved phrase per terms mode."
+    },
+    {
+      "screen": "recent_activity",
+      "title": "Half-translated UI: Progress stat-card row mixes English and Hebrew ('Streak' / 'סיומים' / 'Lifetime')",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "Progress hub screen (entry to Recent Activity), Hebrew-Terms ON",
+      "detail": "On the Progress hub the three summary cards render 'Streak' (English), 'סיומים' (Hebrew script), 'Lifetime' (English) side by side. With Hebrew Terms ON only the middle (siyumim) label flips to Hebrew script while the flanking labels stay English, producing an inconsistent half-translated row. Either all domain labels in this row should respond to the terms toggle or none should."
+    },
+    {
+      "screen": "recent_activity",
+      "title": "Streak headline contradicts calendar under a zero-activity curriculum filter",
+      "sense": "logic",
+      "severity": "P2",
+      "permutation": "Category filter = Mishna Berurah (no completions), Last 7 Days and Last 30 Days",
+      "detail": "Filtering to a curriculum with no activity (Mishna Berurah) leaves the big headline as '1 Day Streak', the red badge '1-day streak', and 'Personal Best: 1', while the calendar marks today (Wed 10) as a hollow/empty circle (not completed) and adds the subtitle 'Streak across all curricula'. A user reading the filtered view sees a claimed 1-day streak with no filled days, which is visually contradictory. The subtitle partially explains the global nature of the streak, but the headline/badge should either reflect the filter or be visually subordinated so it does not contradict the empty calendar."
+    },
+    {
+      "screen": "recent_activity",
+      "title": "Empty filtered charts show no 'no data' placeholder",
+      "sense": "exploration",
+      "severity": "P2",
+      "permutation": "Category filter = Mishna Berurah (no completions)",
+      "detail": "Under a zero-activity filter the Limud bar chart renders as a completely blank plot area (axis labels only, no bars, no message) and the Cumulative Progress line renders a flat baseline with a single isolated dot at the far right (value 0). There is no empty-state messaging (e.g. 'No activity in this range'). The lone trailing dot on a flat zero line is an odd rendering. Functional, not broken, but a friendlier empty state would avoid a 'blank/lingering' impression."
+    }
+  ]
+}

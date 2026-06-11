@@ -1,0 +1,69 @@
+{
+  "batch": 6,
+  "findings": [
+    {
+      "screen": "city_picker (CityPickerScreen) — Setting",
+      "title": "City subtitle shows raw GeoNames admin1 CODE (e.g. \"06\", \"11\", \"08\") instead of a region name for every non-US country; the nonsense value persists into the saved Sacred Time location",
+      "sense": "domain-oracle",
+      "severity": "P1",
+      "permutation": "data: single + multi-result, font 1.0 and 1.3",
+      "detail": "Each result row subtitle is built by _subtitleFor() as `admin1 · countryCode`. The bundled cities.sqlite stores GeoNames field index 10 = the admin1 CODE (verified in tool/build_cities_db.dart:81 `final admin1 = f[10]`), NOT the human-readable admin1 name (which lives in the separate admin1CodesASCII.txt lookup that was never joined). For the US, GeoNames admin1 codes coincide with 2-letter state postal abbreviations so they read fine (\"New York City / NY · US\", \"San Diego / CA · US\"). For every other country the code is an opaque number: Jerusalem → \"06 · IL\", Paris (all 8 arrondissement rows) → \"11 · FR\", London (Canada) → \"08 · CA\", Santo Domingo → \"34 · DO\", Sanaa → \"26 · YE\", Santa Cruz de la Sierra → \"08 · BO\", Santiago de Querétaro → \"22 · MX\", New Territories → \"00 · HK\". On the \"London\" search the inconsistency is glaring on ONE screen: \"London / ENG · GB\" (UK, readable) sits directly above \"London / 08 · CA\" (Canada, raw code) — the subtitle is supposed to disambiguate identical city names but for the Canadian one it is meaningless. For Paris, all 8 rows share \"11 · FR\", giving the subtitle zero disambiguation value. Worse, the raw code is NOT transient: selecting Jerusalem persists the label and Settings then shows \"Jerusalem, 06, IL  /  Chosen from city list\" (and selecting Santiago shows \"Santiago, 12, CL\"). So a religious user setting their location for Shabbos/Yom-Tov candle-lighting times sees a permanent meaningless \"06\" in their saved city. The raw code also leaks into the accessibility label (content-desc=\"Jerusalem\\n06 · IL\"), so screen-reader users hear \"Jerusalem, zero six, IL\". Fix: join admin1 code → name via admin1CodesASCII at DB-build time, or fall back to bare countryCode when no readable region name is available."
+    },
+    {
+      "screen": "city_picker (CityPickerScreen) — Setting",
+      "title": "Search field has no clear/X affordance — the only way to clear a typed query is manual backspacing",
+      "sense": "exploration",
+      "severity": "P2",
+      "permutation": "data: any populated query, font 1.0/1.3",
+      "detail": "The picker's TextField (city_picker_screen.dart:47-62) defines only a prefixIcon (search) — no suffixIcon clear button and no clear handler. Once a query is typed (e.g. \"New York\", or a 57-char junk string), there is no one-tap way to reset to the idle \"~33,000 cities\" hint; the user must hold backspace. The audit brief explicitly lists \"clear\" as a control to exercise, and it simply does not exist on this screen. Minor usability gap; common pattern for typeahead search fields is a trailing X when text is non-empty."
+    },
+    {
+      "screen": "curriculum_list (Add-Track Step 1 \"Selec",
+      "title": "Stale 'STEP 1 OF N' denominator after selecting a program-bearing curriculum then backing up",
+      "sense": "logic",
+      "severity": "P2",
+      "permutation": "Hebrew-terms OFF, font 1.3, Sephardi (reproduced across font scales)",
+      "detail": "On first entry the curriculum-select header reads 'STEP 1 OF 6'. Selecting a curriculum that owns a study program (Mussar -> Chofetz Chaim Daily; also Bavli/Nach) expands the flow to 7 steps and advances to 'STEP 2 OF 7 — Join a Program?'. Pressing Back returns to Step 1 but the header now reads 'STEP 1 OF 7' even though NO curriculum is currently selected and 0% progress is shown. The inflated total (7) is wrong for the neutral Step-1 state — it should revert to 'OF 6' until a program-bearing curriculum is actually chosen. Confirmed not transient: a clean re-entry into the flow correctly shows 'OF 6'. User-visible inconsistency: a user who picks Mussar/Bavli/Nach, reconsiders, and goes back sees a step count that no longer matches their (empty) selection."
+    },
+    {
+      "screen": "curriculum_list (Add-Track Step 1 \"Selec",
+      "title": "Curriculum-select layout is fully clean across all nusach/terms/font permutations (positive verification)",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "all five permutations",
+      "detail": "Reported as a finding only to document the exhaustive negative result the rubric asks for. No clipping, no mid-word breaks, no RenderFlex overflow stripes (logcat confirms zero overflow exceptions), no low-contrast text, no blank icon discs (all 9 glyphs render: book/gavel/document/account_balance/self_improvement/auto_stories), no overlapping/colliding tap targets. The longest English name 'Talmud Yerushalmi' wraps to two lines and the row card grows to fit at font 1.3; the longest Hebrew name 'תלמוד ירושלמי' stays on one line. Hebrew rows are right-aligned (RTL) while the icon stays left and chevron stays right — consistent with the already-logged MaterialApp locale:null chrome-stays-LTR limitation, not a new defect."
+    },
+    {
+      "screen": "upgrade_to_cloud (UpgradeToCloudScreen)",
+      "title": "Collision 'Cancel — keep offline account' button does NOT keep the offline account or leave the flow (label/behavior mismatch)",
+      "sense": "logic",
+      "severity": "P1",
+      "permutation": "_PhaseCollision (code-reviewed; not reachable offline)",
+      "detail": "In _CollisionBlock the TextButton is labelled with l10n key upgradeToCloudCancelKeepOffline ('Cancel — keep offline account'), but its onCancel resets _phase to `const _PhaseCollision()` — i.e. it stays INSIDE the collision warning block (just clears the chosen option and the cloud-password field). It does NOT return the user to the form or out of the upgrade flow, and it does not 'keep the offline account' in any observable way. The only escape is the AppBar back arrow. Compare _VerificationRequiredBlock whose onCancel correctly does `setState(() => _phase = const _PhaseForm())` (lines 395-396). The collision-phase cancel is both mislabeled and inconsistent with the verification-phase cancel, leaving the user effectively trapped on the scary red 'A cloud account already exists' warning with a CTA that appears to be the safe exit but isn't."
+    },
+    {
+      "screen": "upgrade_to_cloud (UpgradeToCloudScreen)",
+      "title": "Screen is almost entirely hardcoded English; only ~4 strings are localized",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "all phases",
+      "detail": "Only upgradeToCloudTitle, upgradeToCloudButton, upgradeToCloudCancelKeepOffline and the verification toast (errorVerificationEmailSent) come from AppLocalizations. Everything else is hardcoded English literals: heading 'Back up your account', the entire 'You're signed in as … one-way …' body, field label 'Confirm your password', validator 'Password required', errors 'Incorrect password.'/'Upgrade failed: …'/the two internet-required messages, the whole collision block (titles, both option tiles, checkbox text, 'Upload and sign in'/'Discard local and sign in'), and the success block ('You're backed up!', 'Your data will now sync across devices automatically.'). he.arb DOES contain Hebrew for the few localized keys, so under a Hebrew locale this screen would render a jarring English/Hebrew mix. Latent today only because of the known MaterialApp locale:null bug, but it is real i18n debt and the L1 test comments explicitly flag each hardcoded string."
+    },
+    {
+      "screen": "upgrade_to_cloud (UpgradeToCloudScreen)",
+      "title": "Stale validation/error text persists after the field is corrected",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "_PhaseForm, font 1.0",
+      "detail": "After an empty-submit shows 'Password required' (red field outline), typing a valid password does NOT clear the error — the red 'Password required' text and red outline remain until the next submit re-runs validate(). Likewise the offline 'Internet connection is required…' error sits below the field while the user edits/retypes. Standard Flutter autovalidate behavior, but visually it reads as 'still wrong' even though the input is now valid; an autovalidateMode of onUserInteraction (or clearing the error in onChanged) would fix it."
+    },
+    {
+      "screen": "upgrade_to_cloud (UpgradeToCloudScreen)",
+      "title": "Collision / Verification / Success phases unverifiable on this device (no network to Firebase)",
+      "sense": "exploration",
+      "severity": "P2",
+      "permutation": "_PhaseCollision, _PhaseVerifying, _PhaseSuccess",
+      "detail": "The emulator has no real internet route (airplane mode OFF but network unreachable), so the connectivity guard short-circuits every submit before any Firebase call. The three post-network phases — email-collision resolution UI (radio tiles + cloud-password field + discard-acknowledge checkbox + execute buttons), the email-verification panel, and the success block — can never render here. These are also the screen's highest visual-overflow risk (densest layout) and the L1 widget tests skip them due to an argon2id Isolate limitation, so they are the least-verified surfaces. Recommend a follow-up pass on a device with Firebase connectivity (or a forced-state harness) to vision-audit those three blocks at font 1.0 and 1.3."
+    }
+  ]
+}
