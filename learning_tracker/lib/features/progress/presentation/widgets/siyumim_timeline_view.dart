@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
@@ -54,10 +55,14 @@ class SiyumimTimelineView extends ConsumerWidget {
       (a, b) => b.milestone.achievedAt.compareTo(a.milestone.achievedAt),
     );
 
-    // Group by month.
+    // Group by month using a locale-aware formatter (TS-13: replaced the
+    // hardcoded English month array with DateFormat.yMMM so month headers
+    // adapt to the active locale instead of always rendering English).
+    final locale = Localizations.localeOf(context).toString();
+    final monthFormatter = DateFormat.yMMM(locale);
     final byMonth = <String, List<_TimelineEntry>>{};
     for (final entry in entries) {
-      final key = _monthKey(entry.milestone.achievedAt);
+      final key = monthFormatter.format(entry.milestone.achievedAt);
       byMonth.putIfAbsent(key, () => []).add(entry);
     }
 
@@ -87,25 +92,6 @@ class SiyumimTimelineView extends ConsumerWidget {
         );
       },
     );
-  }
-
-  static String _monthKey(DateTime date) {
-    const months = [
-      '',
-      'January',
-      'February',
-      'March',
-      'April',
-      'May',
-      'June',
-      'July',
-      'August',
-      'September',
-      'October',
-      'November',
-      'December',
-    ];
-    return '${months[date.month]} ${date.year}';
   }
 }
 
