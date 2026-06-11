@@ -308,18 +308,22 @@ class _LifetimeCurriculumMarkingScreenState
   // Navigation state kept in sync via HierarchySelectionPanel callbacks.
   bool _hasNavStack = false;
   List<ContentItem> _currentDisplayItems = [];
+
+  // IL-LEVEL fix: the actual navigation depth reported by the panel. The
+  // displayed items live at hierarchy level `_navPathLength + 1` (the same
+  // value `tileBuilder` computes as `currentPath.length + 1`). The previous
+  // code derived the level from `_currentDisplayItems.length` — a folder SIZE —
+  // which (a) wrote ledger entries at the wrong level (selecting the ancestor
+  // instead of the visible items) and (b) broke the select-all toggle whenever
+  // a folder showed >4 items, because the bogus level fell past the 4-level cap
+  // and `levelValueAt` returned null for every row.
+  int _navPathLength = 0;
   final _panelKey = GlobalKey<HierarchySelectionPanelState>();
 
   CurriculumId get _curriculum => CurriculumId.values.firstWhere(
     (c) => c.storageKey == widget.curriculumId,
     orElse: () => CurriculumId.mishnayos,
   );
-
-  int get _currentLevel => ((_panelKey.currentState?.canGoBack ?? false)
-      ? _currentDisplayItems.isNotEmpty
-            ? _currentDisplayItems.length
-            : 1
-      : 1);
 
   bool _isSelected(String value, List<String> currentPath) {
     final currentLevel = currentPath.length + 1;
@@ -356,25 +360,30 @@ class _LifetimeCurriculumMarkingScreenState
     });
   }
 
-  // PP-10 fix: returns the hierarchy level the current panel is displaying so
-  // both _markAllCurrentLevel and _deselectAllCurrentLevel use the same value.
-  int get _effectiveLevel {
-    if (_currentDisplayItems.isEmpty) return 1;
-    return _currentDisplayItems.first.level1.isEmpty ? 1 : _currentLevel;
-  }
+  // PP-10 / IL-LEVEL fix: returns the hierarchy level the current panel is
+  // displaying — the navigation depth + 1, matching the `currentPath.length + 1`
+  // that `tileBuilder` uses for an individual tap. Both _markAllCurrentLevel and
+  // _deselectAllCurrentLevel use this so a "select all" writes scope entries for
+  // the VISIBLE rows, not their shared ancestor.
+  int get _effectiveLevel => _navPathLength + 1;
 
-  // PP-10 fix: true when every item in the current panel is already selected.
+  // PP-10 / IL-TOGGLE fix: true only when there is at least one selectable item
+  // in the current panel AND every such item is already selected. Requiring a
+  // selectable item prevents the toggle from vacuously reporting "all selected"
+  // (and getting stuck on "Deselect all") when nothing is selected.
   bool get _allCurrentSelected {
     if (_currentDisplayItems.isEmpty) return false;
     final level = _effectiveLevel;
+    var sawSelectable = false;
     for (final item in _currentDisplayItems) {
       final rawValue = levelValueAt(item, level) ?? '';
-      if (rawValue.isNotEmpty &&
-          !_selections.any((s) => s.level == level && s.value == rawValue)) {
+      if (rawValue.isEmpty) continue;
+      sawSelectable = true;
+      if (!_selections.any((s) => s.level == level && s.value == rawValue)) {
         return false;
       }
     }
-    return true;
+    return sawSelectable;
   }
 
   void _markAllCurrentLevel() {
@@ -660,8 +669,13 @@ class _LifetimeCurriculumMarkingScreenState
                             key: _panelKey,
                             curriculumId: _curriculum,
                             autoAdvanceSingleOption: false,
-                            onNavigationChanged: (path, _) =>
-                                setState(() => _hasNavStack = path.isNotEmpty),
+                            onNavigationChanged: (path, _) => setState(() {
+                              _hasNavStack = path.isNotEmpty;
+                              // IL-LEVEL fix: track the real navigation depth so
+                              // _effectiveLevel = depth + 1 matches the level the
+                              // panel is displaying.
+                              _navPathLength = path.length;
+                            }),
                             onDisplayItemsChanged: (items) =>
                                 // PP-10 fix: call setState so the select-all
                                 // toggle re-evaluates _allCurrentSelected when
