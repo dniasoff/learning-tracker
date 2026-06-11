@@ -6,6 +6,7 @@ import 'package:learning_tracker/app/sync_runtime/sync_lifecycle_observer.dart';
 import 'package:learning_tracker/core/analytics/streak_milestone_analytics_observer.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/navigation/router_provider.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/account/presentation/providers/magic_link_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
@@ -43,6 +44,11 @@ class _LearningTrackerAppState extends ConsumerState<LearningTrackerApp> {
     final isChildMode =
         ref.watch(selectedProfileProvider).asData?.value?.profileMode ==
         ProfileMode.child;
+    // IL-6 fix: wire the per-profile app_locale_pN pref into MaterialApp.locale
+    // so a profile set to Hebrew ('he') gets the Hebrew UI regardless of the
+    // OS device locale.  Previously this was `locale: null` (DNI-341 comment)
+    // which meant the device locale always won and the in-app switcher was inert.
+    final appLocale = ref.watch(currentAppLocaleProvider);
 
     return SyncLifecycleObserver(
       child: MaterialApp.router(
@@ -56,9 +62,7 @@ class _LearningTrackerAppState extends ConsumerState<LearningTrackerApp> {
         themeMode: ThemeMode.system,
         debugShowCheckedModeBanner: false,
         routerConfig: _routerConfig,
-        // locale: null — Flutter resolves the active locale automatically
-        // from WidgetsBinding.window.locale against supportedLocales (DNI-341).
-        locale: null,
+        locale: appLocale,
         localizationsDelegates: const [
           AppLocalizations.delegate,
           GlobalMaterialLocalizations.delegate,
