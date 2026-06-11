@@ -12,6 +12,7 @@ import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
+import 'package:learning_tracker/core/utils/hebrew_calendar_utils.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
@@ -31,6 +32,24 @@ import 'package:learning_tracker/features/tracks/setup/presentation/widgets/trac
 import 'package:learning_tracker/features/tracks/track_order/presentation/screens/track_learning_order_screen.dart';
 import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
+
+/// Formats a [date] for display in the track-detail screen.
+///
+/// TS-8 fix: the old code used DateFormat.yMMMd unconditionally everywhere,
+/// ignoring [useHebrewCalendar]. This function routes through the Hebrew
+/// calendar formatter when the preference is active, matching the same path
+/// used by [TrackInfoCard._formatDate].
+String formatTrackDate({
+  required DateTime date,
+  required String locale,
+  required bool useHebrewCalendar,
+}) {
+  final local = date.toLocal();
+  if (useHebrewCalendar) {
+    return HebrewCalendarUtils.gregorianToHebrew(local);
+  }
+  return DateFormat.yMMMd(locale).format(local);
+}
 
 final _trackGoalProvider = FutureProvider.autoDispose.family<Goal?, int>(
   (ref, trackId) =>
@@ -170,7 +189,6 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     const accent = AppColors.blueMedium;
     const icon = Icons.menu_book_rounded;
     final locale = Localizations.localeOf(context).toString();
-    final activatedDate = DateFormat.yMMMd(locale).format(track.activatedAt);
 
     final goal = ref.watch(_trackGoalProvider(track.id)).asData?.value;
     final totalScopeAsync = curriculum != null
@@ -183,6 +201,12 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     final estimatedFinish = _estimatedFinish(goal, itemsRemaining, locale);
 
     final useHebrewCalendar = ref.watch(useHebrewDateProvider);
+    // TS-8 fix: use formatTrackDate so Hebrew calendar preference is respected.
+    final activatedDate = formatTrackDate(
+      date: track.activatedAt,
+      locale: locale,
+      useHebrewCalendar: useHebrewCalendar,
+    );
     final paceCalc = ref.watch(_trackPaceCalcProvider(track)).asData?.value;
 
     return Scaffold(

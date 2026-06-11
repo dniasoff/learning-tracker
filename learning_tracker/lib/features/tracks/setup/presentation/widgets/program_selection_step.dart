@@ -6,6 +6,17 @@ import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
 
+/// Returns the text for the calendar-icon row on a program card.
+///
+/// TS-1 fix: the row must NOT display the program's own name — that was
+/// the pre-fix bug ('Starts: $name').  For calendar programs the row should
+/// read "DAILY CALENDAR"; for non-calendar programs (custom / manual) there
+/// is no meaningful start label so the row is hidden (empty string returned).
+String programStartsLabel(LearningProgramData program) {
+  if (program.isCalendarProgram) return 'DAILY CALENDAR';
+  return '';
+}
+
 /// Stage 2: Join a calendar program or continue self-paced.
 ///
 /// Loads active programs via [LearningProgramRepository]. The parent
@@ -222,15 +233,19 @@ class _FeaturedProgramCard extends ConsumerWidget {
                       color: AppTheme.brandBlueDeep,
                     ),
                     const SizedBox(width: 6),
-                    Expanded(
-                      child: Text(
-                        'Starts: $name',
-                        style: theme.textTheme.titleSmall?.copyWith(
-                          color: AppTheme.brandBlueDeep,
-                          fontWeight: FontWeight.w700,
+                    // TS-1 fix: use programStartsLabel so the row shows
+                    // "DAILY CALENDAR" (or is hidden) instead of the
+                    // program name.
+                    if (programStartsLabel(program).isNotEmpty)
+                      Expanded(
+                        child: Text(
+                          programStartsLabel(program),
+                          style: theme.textTheme.titleSmall?.copyWith(
+                            color: AppTheme.brandBlueDeep,
+                            fontWeight: FontWeight.w700,
+                          ),
                         ),
                       ),
-                    ),
                   ],
                 ),
               ],

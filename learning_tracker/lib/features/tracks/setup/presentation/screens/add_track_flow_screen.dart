@@ -36,6 +36,30 @@ import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+/// TS-11: Computes the display denominator for the "STEP n OF N" indicator.
+///
+/// On the curriculum step ([currentIndex] == 0), the program step has not been
+/// confirmed yet, so it is excluded from [fullStepCount] to prevent the total
+/// jumping to an inflated value before the user has made any choice.
+///
+/// Parameters:
+/// - [currentIndex]: 0-based index of the current step.
+/// - [fullStepCount]: total steps including any program step.
+/// - [hasProgramStep]: whether a program step is in the active steps list.
+/// - [programConfirmed]: whether the user has already confirmed a program choice.
+int computeWizardStepTotal({
+  required int currentIndex,
+  required int fullStepCount,
+  required bool hasProgramStep,
+  required bool programConfirmed,
+}) {
+  if (currentIndex == 0 && hasProgramStep && !programConfirmed) {
+    // Exclude the program step from the denominator on the curriculum step.
+    return fullStepCount - 1;
+  }
+  return fullStepCount;
+}
+
 const _kAddTrackStep = 'add_track_step';
 const _kAddTrackCurriculum = 'add_track_curriculum';
 const _kAddTrackScope = 'add_track_scope';
@@ -657,6 +681,14 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
   @override
   Widget build(BuildContext context) {
     final steps = _activeSteps;
+    // TS-11: on the curriculum step, exclude the program step from the total
+    // so the denominator doesn't jump to 7 before any program is confirmed.
+    final displayTotal = computeWizardStepTotal(
+      currentIndex: _currentIndex,
+      fullStepCount: steps.length,
+      hasProgramStep: steps.contains(AddTrackStep.program),
+      programConfirmed: _state.programId != null,
+    );
     final progress = _currentIndex.clamp(0, steps.length) / steps.length;
     final theme = Theme.of(context);
 
@@ -678,7 +710,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
                       Row(
                         children: [
                           Text(
-                            'STEP ${_currentIndex + 1} OF ${steps.length}',
+                            'STEP ${_currentIndex + 1} OF $displayTotal',
                             style: theme.textTheme.labelLarge?.copyWith(
                               color: AppTheme.brandInkMuted,
                               letterSpacing: 1.2,
@@ -911,6 +943,12 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
       curriculumId: _state.curriculumId!,
       studyDays: _state.studyDays ?? kDefaultStudyDays,
       onComplete: _onGoalComplete,
+      // TS-2 fix: pass the wizard's scope selections so the step computes
+      // item count from the selected scope, not the full-curriculum total.
+      scopeSelections: _state.scopeSelections,
+      // TS-10 fix: pass the previously-set goal so Back+Forward navigation
+      // restores the deadline/pace choice the user already made.
+      initialGoal: _state.goalResult,
     );
   }
 

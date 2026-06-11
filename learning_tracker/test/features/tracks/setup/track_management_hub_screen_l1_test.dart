@@ -330,8 +330,17 @@ void main() {
     testWidgets('long-press opens delete dialog with all three actions', (
       tester,
     ) async {
-      final track = _track();
-      await tester.pumpWidget(_buildApp(router: router, tracks: [track]));
+      // TS-16 fix: seed a second curriculum so trackDeletionAllowed returns true
+      // and all three dialog actions are shown.
+      final db = inMemoryDb();
+      await seedProfile(db);
+      final trackId = await seedTrack(db, profileId: _kProfileId);
+      await seedTrack(db, profileId: _kProfileId, curriculumId: 'bavli');
+      final track = _track(id: trackId);
+
+      await tester.pumpWidget(
+        _buildApp(router: router, tracks: [track], db: db),
+      );
       await _settle(tester);
 
       await tester.longPress(find.byType(InkWell).first);
@@ -342,6 +351,7 @@ void main() {
       expect(find.text('Cancel'), findsOneWidget);
       expect(find.text('Archive (keep history)'), findsOneWidget);
       expect(find.text('Delete and wipe history'), findsOneWidget);
+      await db.close();
       await _teardown(tester);
     });
   });

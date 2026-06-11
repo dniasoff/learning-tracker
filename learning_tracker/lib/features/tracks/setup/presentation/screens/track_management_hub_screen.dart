@@ -17,6 +17,15 @@ import 'package:learning_tracker/features/tracks/setup/presentation/screens/add_
 import 'package:learning_tracker/features/tracks/setup/presentation/widgets/learning_track_card.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
+/// TS-16: Returns true when Archive/Delete operations are allowed for the
+/// track (i.e., the profile has more than one active curriculum).
+///
+/// When [activeCurriculumCount] <= 1, the track is the last active curriculum
+/// and destructive actions must be gated rather than offered optimistically.
+bool trackDeletionAllowed({required int activeCurriculumCount}) {
+  return activeCurriculumCount > 1;
+}
+
 /// Central hub for viewing and managing tracks.
 @RoutePage()
 class TrackManagementHubScreen extends ConsumerStatefulWidget {
@@ -225,28 +234,47 @@ class _TrackManagementHubScreenState
   Future<void> _showDeleteDialog(CurriculumTrack track) async {
     final l10n = AppLocalizations.of(context)!;
 
+    // TS-16: Pre-check whether Archive/Delete is allowed before showing the
+    // dialog. When this track is the only active curriculum, surfacing the
+    // destructive actions would only produce a post-commit error snackbar.
+    final activeCurricula = await ref
+        .read(userDatabaseProvider)
+        .activeCurriculumDao
+        .getActiveCurriculaByProfile(track.profileId);
+    if (!mounted) return;
+
+    final canDelete = trackDeletionAllowed(
+      activeCurriculumCount: activeCurricula.length,
+    );
+
     // 'archive' = keep history; 'wipe' = hard-delete completions; null = cancel
     final choice = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(l10n.deleteTrackArchiveTitle),
-        content: Text(l10n.deleteTrackArchiveBody),
+        content: Text(
+          canDelete
+              ? l10n.deleteTrackArchiveBody
+              : l10n.cannotDeactivateLastCurriculum,
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: Text(l10n.actionCancel),
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, 'archive'),
-            child: Text(l10n.deleteTrackArchive),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(ctx).colorScheme.error,
+          if (canDelete) ...[
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, 'archive'),
+              child: Text(l10n.deleteTrackArchive),
             ),
-            onPressed: () => Navigator.pop(ctx, 'wipe'),
-            child: Text(l10n.deleteTrackWipe),
-          ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: Theme.of(ctx).colorScheme.error,
+              ),
+              onPressed: () => Navigator.pop(ctx, 'wipe'),
+              child: Text(l10n.deleteTrackWipe),
+            ),
+          ],
         ],
       ),
     );
@@ -274,12 +302,9 @@ class _TrackManagementHubScreenState
       }
     }
 
-    // Wipe path: still check the last-curriculum guard before purging.
-    final activeCount = await ref
-        .read(userDatabaseProvider)
-        .activeCurriculumDao
-        .getActiveCurriculaByProfile(track.profileId);
-    if (activeCount.length <= 1) {
+    // Wipe path: use the already-fetched active count (canDelete was true since
+    // the dialog showed the wipe option). Defensive guard kept for safety.
+    if (!canDelete) {
       if (!mounted) return;
       _showLastCurriculumError(l10n);
       return;

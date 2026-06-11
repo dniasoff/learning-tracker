@@ -180,8 +180,8 @@ void main() {
 
   group('TRK-HUB-04: last-curriculum guard on hub delete dialog', () {
     testWidgets(
-      'archiving the LAST active track shows "cannot remove" error snackbar '
-      'and keeps the track active in DB (guard prevents dead-end)',
+      'dialog for LAST active track shows explanation and NO Archive/Delete '
+      'buttons — guard applied up-front (TS-16)',
       (tester) async {
         final db = inMemoryDb();
         await seedProfile(db);
@@ -198,29 +198,39 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 100));
 
-        // Choose Archive (soft-delete).
-        await tester.tap(find.text('Archive (keep history)'));
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 500));
-
-        // EXPECTATION AFTER FIX: an error snackbar must appear.
-        // The snackbar text should contain the "cannot deactivate last" key.
+        // TS-16: destructive actions must NOT be offered for the last curriculum.
         expect(
-          find.byType(SnackBar),
-          findsOneWidget,
+          find.text('Archive (keep history)'),
+          findsNothing,
           reason:
-              'Hub must show a guard snackbar when user tries to archive the '
-              'last active curriculum.',
+              'TS-16: Archive button must not appear for last active curriculum',
+        );
+        expect(
+          find.text('Delete and wipe history'),
+          findsNothing,
+          reason:
+              'TS-16: Delete button must not appear for last active curriculum',
         );
 
-        // EXPECTATION AFTER FIX: the track must still be active.
+        // The dialog must show the explanation text instead.
+        expect(
+          find.textContaining('At least one curriculum must remain active'),
+          findsOneWidget,
+          reason: 'TS-16: dialog must explain why actions are blocked',
+        );
+
+        // Dismiss the dialog.
+        await tester.tap(find.text('Cancel'));
+        await tester.pump();
+
+        // EXPECTATION: the track must still be active (never touched).
         final active = await db.trackDao.getActiveTracksForProfile(_kProfileId);
         expect(
           active.any((t) => t.id == trackId),
           isTrue,
           reason:
-              'Archive of the last active curriculum must be blocked — '
-              'track must remain active.',
+              'TS-16: last active curriculum must remain active — '
+              'no destructive action was offered.',
         );
 
         await db.close();
@@ -229,8 +239,7 @@ void main() {
     );
 
     testWidgets(
-      'wiping the LAST active track shows "cannot remove" error snackbar '
-      'and keeps the track active in DB (wipe path also guarded)',
+      'dialog for LAST active track has only Cancel — wipe option hidden (TS-16)',
       (tester) async {
         final db = inMemoryDb();
         await seedProfile(db);
@@ -246,27 +255,22 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 100));
 
-        await tester.tap(find.text('Delete and wipe history'));
+        // TS-16: 'Delete and wipe history' must not be present.
+        expect(find.text('Delete and wipe history'), findsNothing);
+
+        // Only Cancel is available.
+        expect(find.text('Cancel'), findsOneWidget);
+
+        // Dismiss.
+        await tester.tap(find.text('Cancel'));
         await tester.pump();
-        await tester.pump(const Duration(milliseconds: 500));
 
-        // EXPECTATION AFTER FIX: guard snackbar shown.
-        expect(
-          find.byType(SnackBar),
-          findsOneWidget,
-          reason:
-              'Hub must show a guard snackbar when user tries to wipe the '
-              'last active curriculum.',
-        );
-
-        // EXPECTATION AFTER FIX: track row still exists.
+        // Track row still exists and is active.
         final trackRow = await db.trackDao.getTrackById(trackId);
         expect(
           trackRow,
           isNotNull,
-          reason:
-              'Wipe of the last active curriculum must be blocked — '
-              'track row must still exist.',
+          reason: 'TS-16: track row must still exist',
         );
         expect(trackRow!.state, equals('active'));
 
