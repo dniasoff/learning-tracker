@@ -5,8 +5,8 @@ import 'package:learning_tracker/core/content/content_grouping.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
+import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
-import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
@@ -144,7 +144,7 @@ class _LifetimeLibraryCategoryCard extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
-    final useHebrew = ref.watch(useHebrewTermsProvider);
+    final useHebrew = domainTermLabels(ref).isHebrew;
     final summary =
         summariesAsync.asData?.value.firstWhere(
           (s) => s.curriculumId == curriculum,
@@ -483,7 +483,7 @@ class _LifetimeCurriculumMarkingScreenState
       curriculumLedgerProvider(widget.curriculumId),
     );
     final ledger = ledgerAsync.asData?.value ?? const <LearningLedgerData>[];
-    final useHebrew = ref.watch(useHebrewTermsProvider);
+    final useHebrew = domainTermLabels(ref).isHebrew;
     final theme = Theme.of(context);
 
     return Scaffold(

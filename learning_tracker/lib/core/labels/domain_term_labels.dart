@@ -22,13 +22,35 @@ import 'package:learning_tracker/core/preferences/preference_providers.dart';
 /// The function may be called from both [WidgetRef] (widget layer) and
 /// provider-side [Ref] closures; the [DomainTermLabels] object is cheap to
 /// construct and is not cached across rebuilds.
-DomainTermLabels domainTermLabels(WidgetRef ref) =>
-    DomainTermLabels(ref.watch(useHebrewTermsProvider));
+/// Domain terms render in Hebrew SCRIPT when the device UI language is Hebrew
+/// (product decision: a Hebrew device shows Hebrew terms automatically) OR when
+/// the per-profile Hebrew-Terms toggle is on. The toggle is the user's choice in
+/// non-Hebrew locales; in Hebrew UI it is hidden and Hebrew script is forced, so
+/// the locale check below is what makes terms follow a Hebrew device.
+/// Pure decision: render domain terms in Hebrew SCRIPT when [localeIsHebrew]
+/// (a Hebrew device shows Hebrew terms automatically) OR the Hebrew-Terms
+/// [toggleOn] is set (the user's choice in non-Hebrew locales, where the toggle
+/// is shown; in Hebrew UI the toggle is hidden and the locale forces Hebrew).
+bool resolveUseHebrewTerms({
+  required bool localeIsHebrew,
+  required bool toggleOn,
+}) => localeIsHebrew || toggleOn;
+
+DomainTermLabels domainTermLabels(WidgetRef ref) => DomainTermLabels(
+  resolveUseHebrewTerms(
+    localeIsHebrew: ref.watch(currentAppLocaleProvider).languageCode == 'he',
+    toggleOn: ref.watch(useHebrewTermsProvider),
+  ),
+);
 
 /// Variant for use from inside provider / notifier closures where the
 /// parameter is a provider-side [Ref].
-DomainTermLabels domainTermLabelsFromRef(Ref ref) =>
-    DomainTermLabels(ref.watch(useHebrewTermsProvider));
+DomainTermLabels domainTermLabelsFromRef(Ref ref) => DomainTermLabels(
+  resolveUseHebrewTerms(
+    localeIsHebrew: ref.watch(currentAppLocaleProvider).languageCode == 'he',
+    toggleOn: ref.watch(useHebrewTermsProvider),
+  ),
+);
 
 /// Resolved domain term strings for the current Hebrew Terms toggle state.
 ///
