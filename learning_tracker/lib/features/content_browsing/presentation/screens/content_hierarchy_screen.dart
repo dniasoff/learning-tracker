@@ -143,179 +143,204 @@ class _ContentHierarchyScreenState
 
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
-    return Scaffold(
-      appBar: AppBar(
-        title: AppBarTitle(
-          child: Text(
-            l10n.contentHierarchyBrowseTitle,
-            style: theme.textTheme.titleLarge?.copyWith(
-              fontWeight: FontWeight.w800,
-              fontSize: 24,
-              letterSpacing: -0.2,
+    // R2 finding 6: make the Android/system Back button step up ONE hierarchy
+    // level (matching the AppBar back-arrow) instead of popping the whole route
+    // and discarding the entire drill path. Only when already at the top level
+    // (empty stack) does Back pop the route. canPop is recomputed every build,
+    // so it tracks the stack as the user drills in/out.
+    return PopScope(
+      canPop: _navigationStack.isEmpty,
+      onPopInvokedWithResult: (didPop, _) {
+        // didPop == false means the pop was blocked (canPop was false because
+        // we are drilled in); intercept it to step up one level instead.
+        if (!didPop && _navigationStack.isNotEmpty) {
+          _navigateUp();
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: AppBarTitle(
+            child: Text(
+              l10n.contentHierarchyBrowseTitle,
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w800,
+                fontSize: 24,
+                letterSpacing: -0.2,
+              ),
             ),
           ),
-        ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: _navigationStack.isNotEmpty
-              ? _navigateUp
-              : () => context.router.maybePop(),
-        ),
-        actions: [
-          IconButton(
-            key: const Key('content_hierarchy_search_icon'),
-            icon: const Icon(Icons.search),
-            tooltip: l10n.contentHierarchySearchTooltip,
-            onPressed: () => context.router.push(
-              ContentSearchRoute(curriculumId: widget.curriculumId),
-            ),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: _navigationStack.isNotEmpty
+                ? _navigateUp
+                : () => context.router.maybePop(),
           ),
-        ],
-      ),
-      body: Column(
-        children: [
-          // Breadcrumb / curriculum chip
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
-            child: Row(
-              children: [
-                // The curriculum root chip. When the user has drilled in
-                // (navigation stack non-empty) this chip is the only visible
-                // affordance for the *root* level — the breadcrumb below shows
-                // only the drill segments. Tapping it must navigate back to the
-                // curriculum root (clear the stack); previously it was a dead,
-                // non-interactive Container, so tapping the leftmost ancestor
-                // crumb did nothing.
-                _RootCurriculumChip(
-                  curriculum: curriculum,
-                  color: curriculumColor,
-                  onTap: _navigationStack.isNotEmpty ? _navigateToRoot : null,
-                ),
-                if (_navigationStack.isNotEmpty) ...[
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 6),
-                    child: Icon(
-                      Icons.chevron_right,
-                      size: 16,
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+          actions: [
+            IconButton(
+              key: const Key('content_hierarchy_search_icon'),
+              icon: const Icon(Icons.search),
+              tooltip: l10n.contentHierarchySearchTooltip,
+              onPressed: () => context.router.push(
+                ContentSearchRoute(curriculumId: widget.curriculumId),
+              ),
+            ),
+          ],
+        ),
+        body: Column(
+          children: [
+            // Breadcrumb / curriculum chip
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
+              child: Row(
+                children: [
+                  // The curriculum root chip. When the user has drilled in
+                  // (navigation stack non-empty) this chip is the only visible
+                  // affordance for the *root* level — the breadcrumb below shows
+                  // only the drill segments. Tapping it must navigate back to the
+                  // curriculum root (clear the stack); previously it was a dead,
+                  // non-interactive Container, so tapping the leftmost ancestor
+                  // crumb did nothing.
+                  _RootCurriculumChip(
+                    curriculum: curriculum,
+                    color: curriculumColor,
+                    onTap: _navigationStack.isNotEmpty ? _navigateToRoot : null,
                   ),
-                  Expanded(
-                    child: configAsync.when(
-                      data: (config) {
-                        final terms = domainTermLabels(ref);
-                        final variant = ref.watch(
-                          currentTransliterationVariantProvider,
-                        );
-                        final allCurriculumItems = ref
-                            .watch(curriculumContentProvider(curriculum))
-                            .asData
-                            ?.value;
-                        // Look up each ancestor's container ContentItem so
-                        // the renderer can use its displayNameHe (e.g.
-                        // 'סדר זרעים') instead of falling back to the raw
-                        // English value ('Seder Zeraim').
-                        final hebrewNames = _hebrewNamesForNavStack(
-                          allCurriculumItems,
-                        );
-                        final segments =
-                            CurriculumLabelRenderer.renderBreadcrumb(
-                              curriculumId: curriculum,
-                              rawSegmentValues: _navigationStack,
-                              useHebrew: terms.isHebrew,
-                              transliterationVariant: variant,
-                              hebrewNamesPerSegment: hebrewNames,
-                            );
-                        return BreadcrumbNavigation(
-                          curriculum: curriculum,
-                          levelLabels: config.levelLabels,
-                          navigationStack: segments,
-                          onBreadcrumbTap: _navigateToLevel,
-                        );
-                      },
-                      loading: () => const SizedBox.shrink(),
-                      error: (_, __) => const SizedBox.shrink(),
+                  if (_navigationStack.isNotEmpty) ...[
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 6),
+                      child: Icon(
+                        // R2 finding 4: the root-chip separator must point the
+                        // same way as the inner breadcrumb separators. Reuse the
+                        // shared direction-aware helper so in RTL it flips to
+                        // chevron_left instead of hardcoding chevron_right (which
+                        // disagreed with the inner separators in one RTL trail).
+                        breadcrumbSeparatorIcon(Directionality.of(context)),
+                        size: 16,
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
                     ),
-                  ),
+                    Expanded(
+                      child: configAsync.when(
+                        data: (config) {
+                          final terms = domainTermLabels(ref);
+                          final variant = ref.watch(
+                            currentTransliterationVariantProvider,
+                          );
+                          final allCurriculumItems = ref
+                              .watch(curriculumContentProvider(curriculum))
+                              .asData
+                              ?.value;
+                          // Look up each ancestor's container ContentItem so
+                          // the renderer can use its displayNameHe (e.g.
+                          // 'סדר זרעים') instead of falling back to the raw
+                          // English value ('Seder Zeraim').
+                          final hebrewNames = _hebrewNamesForNavStack(
+                            allCurriculumItems,
+                          );
+                          final segments =
+                              CurriculumLabelRenderer.renderBreadcrumb(
+                                curriculumId: curriculum,
+                                rawSegmentValues: _navigationStack,
+                                useHebrew: terms.isHebrew,
+                                transliterationVariant: variant,
+                                hebrewNamesPerSegment: hebrewNames,
+                              );
+                          return BreadcrumbNavigation(
+                            curriculum: curriculum,
+                            levelLabels: config.levelLabels,
+                            navigationStack: segments,
+                            onBreadcrumbTap: _navigateToLevel,
+                          );
+                        },
+                        loading: () => const SizedBox.shrink(),
+                        error: (_, __) => const SizedBox.shrink(),
+                      ),
+                    ),
+                  ],
                 ],
-              ],
+              ),
             ),
-          ),
 
-          // Content list
-          Expanded(
-            child: itemsAsync.when(
-              data: (items) {
-                if (items.isEmpty) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.inbox_outlined,
-                          size: 48,
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          l10n.contentHierarchyNoContent,
-                          style: TextStyle(
+            // Content list
+            Expanded(
+              child: itemsAsync.when(
+                data: (items) {
+                  if (items.isEmpty) {
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.inbox_outlined,
+                            size: 48,
                             color: Theme.of(
                               context,
                             ).colorScheme.onSurfaceVariant,
                           ),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                final variant = ref.watch(
-                  currentTransliterationVariantProvider,
-                );
-                // Chazara product rule: only show the review badge when at
-                // least one active track in this profile has chazara enabled.
-                final anyChazara =
-                    ref.watch(anyActiveTrackHasChazaraProvider).asData?.value ??
-                    false;
-                final groupedItems = _groupItemsByNextLevel(items, variant);
-
-                return ListView.builder(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  itemCount: groupedItems.length,
-                  itemBuilder: (context, index) {
-                    final item = groupedItems[index];
-                    return ContentItemTile(
-                      item: item,
-                      curriculum: curriculum,
-                      onTap: () => _handleItemTap(item),
-                      showReviewBadge: anyChazara,
+                          const SizedBox(height: 12),
+                          Text(
+                            l10n.contentHierarchyNoContent,
+                            style: TextStyle(
+                              color: Theme.of(
+                                context,
+                              ).colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ],
+                      ),
                     );
-                  },
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (error, stack) => Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.error,
-                      size: 48,
-                      color: AppTheme.brandCoralDeep,
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      AppLocalizations.of(
-                        context,
-                      )!.errorLoadingContent(error.toString()),
-                    ),
-                  ],
+                  }
+
+                  final variant = ref.watch(
+                    currentTransliterationVariantProvider,
+                  );
+                  // Chazara product rule: only show the review badge when at
+                  // least one active track in this profile has chazara enabled.
+                  final anyChazara =
+                      ref
+                          .watch(anyActiveTrackHasChazaraProvider)
+                          .asData
+                          ?.value ??
+                      false;
+                  final groupedItems = _groupItemsByNextLevel(items, variant);
+
+                  return ListView.builder(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    itemCount: groupedItems.length,
+                    itemBuilder: (context, index) {
+                      final item = groupedItems[index];
+                      return ContentItemTile(
+                        item: item,
+                        curriculum: curriculum,
+                        onTap: () => _handleItemTap(item),
+                        showReviewBadge: anyChazara,
+                      );
+                    },
+                  );
+                },
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (error, stack) => Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const Icon(
+                        Icons.error,
+                        size: 48,
+                        color: AppTheme.brandCoralDeep,
+                      ),
+                      const SizedBox(height: 16),
+                      Text(
+                        AppLocalizations.of(
+                          context,
+                        )!.errorLoadingContent(error.toString()),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
