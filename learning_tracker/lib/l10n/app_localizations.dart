@@ -4823,6 +4823,18 @@ abstract class AppLocalizations {
   /// **'Upgrade to Cloud'**
   String get backupUpgradeToCloud;
 
+  /// No description provided for @backupSyncCardTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Backup & Sync'**
+  String get backupSyncCardTitle;
+
+  /// No description provided for @backupSyncCardBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your learning progress is currently LOCAL ONLY. Upgrade to sync across all devices.'**
+  String get backupSyncCardBody;
+
   /// No description provided for @reauthDialogTitle.
   ///
   /// In en, this message translates to:

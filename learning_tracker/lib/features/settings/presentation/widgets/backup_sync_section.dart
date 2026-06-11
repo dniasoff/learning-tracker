@@ -219,10 +219,10 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
                 ),
               ),
               const SizedBox(height: 14),
-              const Text(
-                'Backup & Sync',
+              Text(
+                AppLocalizations.of(context)!.backupSyncCardTitle,
                 textAlign: TextAlign.center,
-                style: TextStyle(
+                style: const TextStyle(
                   color: Colors.white,
                   fontWeight: FontWeight.w700,
                   fontSize: 22,
@@ -231,8 +231,7 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
               ),
               const SizedBox(height: 10),
               Text(
-                'Your learning progress is currently LOCAL ONLY. '
-                'Upgrade to sync across all devices.',
+                AppLocalizations.of(context)!.backupSyncCardBody,
                 textAlign: TextAlign.center,
                 style: bodyTextStyle,
               ),
@@ -285,9 +284,9 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
+            Row(
               children: [
-                CircleAvatar(
+                const CircleAvatar(
                   radius: 16,
                   backgroundColor: Color(0x3A8EA4ED),
                   child: Icon(
@@ -296,14 +295,14 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
                     color: Colors.white,
                   ),
                 ),
-                SizedBox(width: 10),
+                const SizedBox(width: 10),
                 // Flexible + ellipsis so the large title never overflows the
                 // row horizontally on a narrow screen / large text.
                 Flexible(
                   child: Text(
-                    'Backup & Sync',
+                    AppLocalizations.of(context)!.backupSyncCardTitle,
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
+                    style: const TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.w700,
                       fontSize: 33,
@@ -315,7 +314,7 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
             ),
             const SizedBox(height: 10),
             Text(
-              'Your learning progress is currently\nLOCAL ONLY. Upgrade to sync\nacross all devices.',
+              AppLocalizations.of(context)!.backupSyncCardBody,
               style: bodyTextStyle,
             ),
             const SizedBox(height: 16),
@@ -403,9 +402,9 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Backup & Sync',
-                        style: TextStyle(
+                      Text(
+                        AppLocalizations.of(context)!.backupSyncCardTitle,
+                        style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.w700,
                           fontSize: 25,

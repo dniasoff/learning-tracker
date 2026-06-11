@@ -1378,6 +1378,8 @@
     }
   },
   "backupUpgradeToCloud": "Upgrade to Cloud",
+  "backupSyncCardTitle": "Backup & Sync",
+  "backupSyncCardBody": "Your learning progress is currently LOCAL ONLY. Upgrade to sync across all devices.",
 
   "reauthDialogTitle": "Verify Your Identity",
   "reauthDialogBody": "Please enter your current password to continue.",

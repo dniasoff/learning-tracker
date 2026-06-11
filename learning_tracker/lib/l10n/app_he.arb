@@ -1301,6 +1301,8 @@
     }
   },
   "backupUpgradeToCloud": "שדרג לענן",
+  "backupSyncCardTitle": "גיבוי וסנכרון",
+  "backupSyncCardBody": "התקדמות הלימוד שלך מאוחסנת כרגע במכשיר זה בלבד. שדרגו כדי לסנכרן בין כל המכשירים.",
 
   "reauthDialogTitle": "אמתו את זהותכם",
   "reauthDialogBody": "הזינו את הסיסמה הנוכחית כדי להמשיך.",
@@ -2078,7 +2080,7 @@
     }
   },
 
-  "redeemScreenTitle": "פרס הפרסים",
+  "redeemScreenTitle": "מימוש פרסים",
   "redeemScreenBalance": "היתרה שלך",
   "redeemScreenNoRewards": "עדיין לא הוגדרו פרסים.\nבקש מהורה להגדיר!",
   "redeemScreenCostLabel": "{points} נקודות",

@@ -2734,6 +2734,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get backupUpgradeToCloud => 'Upgrade to Cloud';
 
   @override
+  String get backupSyncCardTitle => 'Backup & Sync';
+
+  @override
+  String get backupSyncCardBody =>
+      'Your learning progress is currently LOCAL ONLY. Upgrade to sync across all devices.';
+
+  @override
   String get reauthDialogTitle => 'Verify Your Identity';
 
   @override

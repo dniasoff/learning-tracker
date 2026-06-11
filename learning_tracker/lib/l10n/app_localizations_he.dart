@@ -2704,6 +2704,13 @@ class AppLocalizationsHe extends AppLocalizations {
   String get backupUpgradeToCloud => 'שדרג לענן';
 
   @override
+  String get backupSyncCardTitle => 'גיבוי וסנכרון';
+
+  @override
+  String get backupSyncCardBody =>
+      'התקדמות הלימוד שלך מאוחסנת כרגע במכשיר זה בלבד. שדרגו כדי לסנכרן בין כל המכשירים.';
+
+  @override
   String get reauthDialogTitle => 'אמתו את זהותכם';
 
   @override
@@ -3706,7 +3713,7 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
-  String get redeemScreenTitle => 'פרס הפרסים';
+  String get redeemScreenTitle => 'מימוש פרסים';
 
   @override
   String get redeemScreenBalance => 'היתרה שלך';
