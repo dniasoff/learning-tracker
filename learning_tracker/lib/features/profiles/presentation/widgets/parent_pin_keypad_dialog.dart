@@ -200,7 +200,8 @@ class _ParentPinChangeDialogState extends State<_ParentPinChangeDialog> {
   String _subtitle(AppLocalizations l10n) {
     switch (_step) {
       case _ChangeStep.verifyCurrent:
-        return l10n.enterParentPinSubtitle;
+        // PP-12 fix: use change-flow subtitle, not the verify-gate subtitle.
+        return l10n.enterCurrentPinSubtitle;
       case _ChangeStep.enterNew:
         return l10n.enterNewPinSubtitle;
       case _ChangeStep.confirmNew:

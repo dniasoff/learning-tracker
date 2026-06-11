@@ -1534,6 +1534,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get enterCurrentPin => 'Enter Current PIN';
 
   @override
+  String get enterCurrentPinSubtitle =>
+      'Enter your current 4-digit PIN to change it.';
+
+  @override
   String get enterNewPin => 'Enter New PIN';
 
   @override

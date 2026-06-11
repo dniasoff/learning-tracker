@@ -2801,6 +2801,12 @@ abstract class AppLocalizations {
   /// **'Enter Current PIN'**
   String get enterCurrentPin;
 
+  /// No description provided for @enterCurrentPinSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter your current 4-digit PIN to change it.'**
+  String get enterCurrentPinSubtitle;
+
   /// No description provided for @enterNewPin.
   ///
   /// In en, this message translates to:
