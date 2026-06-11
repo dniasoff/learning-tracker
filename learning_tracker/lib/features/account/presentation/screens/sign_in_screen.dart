@@ -9,6 +9,8 @@ import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/account/presentation/notifiers/sign_in_controller.dart';
+import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
+    show authRepositoryProvider;
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
 import 'package:learning_tracker/features/account/presentation/widgets/sign_in_actions.dart';
 import 'package:learning_tracker/features/account/presentation/widgets/sign_in_form.dart';
@@ -201,6 +203,32 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         .signInWithGoogle(router: context.router, l10n: l10n);
   }
 
+  // ── Forgot password ──────────────────────────────────────────────────────────
+
+  /// AN-11: Send a Firebase password reset email for the current email field
+  /// value. Shows a snackbar on success or validation failure.
+  Future<void> _handleForgotPassword(AppLocalizations l10n) async {
+    final email = _emailController.text.trim().toLowerCase();
+    if (email.isEmpty) {
+      _showError(l10n.signInForgotPasswordNoEmail);
+      return;
+    }
+    try {
+      await ref.read(authRepositoryProvider).sendPasswordResetEmail(email);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(l10n.signInForgotPasswordSent)));
+    } catch (_) {
+      // Silently swallow — do not confirm or deny the email address exists
+      // to avoid leaking account information (Firebase's own recommendation).
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+        ..hideCurrentSnackBar()
+        ..showSnackBar(SnackBar(content: Text(l10n.signInForgotPasswordSent)));
+    }
+  }
+
   // ── Build ────────────────────────────────────────────────────────────────────
 
   @override
@@ -304,6 +332,15 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                                   }
                                   return null;
                                 },
+                                // AN-11: show "Forgot password?" for cloud
+                                // accounts (or unknown — the user may be typing
+                                // a new cloud email). Suppress for confirmed
+                                // local-born accounts (no Firebase reset).
+                                onForgotPassword:
+                                    _registryMatchKind ==
+                                        RegistryMatchKind.localBorn
+                                    ? null
+                                    : () => _handleForgotPassword(l10n),
                               ),
                               const SizedBox(height: 12),
                               SignInActions(

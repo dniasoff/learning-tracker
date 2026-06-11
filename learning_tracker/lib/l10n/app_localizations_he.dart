@@ -1791,10 +1791,20 @@ class AppLocalizationsHe extends AppLocalizations {
   String get signInPasswordLabel => 'סיסמה';
 
   @override
-  String get signInPasswordHint => '••••••••';
+  String get signInPasswordHint => 'הכניסו את הסיסמה';
 
   @override
   String get signInKeepMeSignedIn => 'השאירו אותי מחוברים';
+
+  @override
+  String get signInForgotPassword => 'שכחתי סיסמה?';
+
+  @override
+  String get signInForgotPasswordSent =>
+      'נשלח מייל לאיפוס סיסמה. בדקו את תיבת הדואר.';
+
+  @override
+  String get signInForgotPasswordNoEmail => 'נא הכניסו כתובת אימייל תחילה.';
 
   @override
   String get signInCta => 'התחברות';
@@ -1822,6 +1832,9 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get signUpPasswordLabel => 'צור סיסמה';
+
+  @override
+  String get signUpPasswordHint => 'צור סיסמה בטוחה';
 
   @override
   String get signUpCta => 'הרשמה';

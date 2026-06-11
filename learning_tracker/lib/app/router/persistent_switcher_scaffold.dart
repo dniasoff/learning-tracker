@@ -81,6 +81,24 @@ class _PersistentSwitcherScaffoldState
     return shellRouteNames.contains(topName);
   }
 
+  /// AN-8: True when the top route is an authentication surface (sign-in,
+  /// signup, account-picker, onboarding intro). These routes must NOT show the
+  /// persistent switcher bar — a logged-in account chip overlaying the sign-in
+  /// card is confusing (different identity) and the bar can obscure important
+  /// form content.
+  bool _isAuthSurface() {
+    final topName = ref.read(routerProvider).topRoute.name;
+    // These route names come from auto_route @RoutePage annotations.
+    const authRouteNames = {
+      'SignInRoute',
+      'SignupRoute',
+      'AccountPickerRoute',
+      'IntroRoute',
+      'OnboardingRoute',
+    };
+    return authRouteNames.contains(topName);
+  }
+
   @override
   Widget build(BuildContext context) {
     final isAuthenticated = ref.watch(
@@ -88,8 +106,9 @@ class _PersistentSwitcherScaffoldState
     );
 
     // Only overlay the bar on pushed sub-routes, and only once signed in. The
-    // shell owns the bar on its tab views; unauthenticated routes show nothing.
-    final showHeader = isAuthenticated && !_shellIsOnTop();
+    // shell owns the bar on its tab views; unauthenticated routes and auth
+    // surfaces (sign-in / signup / account-picker) show nothing (AN-8).
+    final showHeader = isAuthenticated && !_shellIsOnTop() && !_isAuthSurface();
     if (!showHeader) return widget.child;
 
     // TUT-04: when a tutor has entered a talmid's context, the amber "Tutor

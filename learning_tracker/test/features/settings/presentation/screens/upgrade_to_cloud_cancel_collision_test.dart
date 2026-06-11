@@ -53,14 +53,14 @@ class _CollisionCancelSimulator extends StatefulWidget {
       _CollisionCancelSimulatorState();
 }
 
-class _CollisionCancelSimulatorState
-    extends State<_CollisionCancelSimulator> {
+class _CollisionCancelSimulatorState extends State<_CollisionCancelSimulator> {
   _TestPhase _phase = _TestPhase.collision; // Start in collision phase
 
   void _onCancel() {
     setState(() {
       _phase = widget.buggyBehavior
-          ? _TestPhase.collision // BUG: stays in collision
+          ? _TestPhase
+                .collision // BUG: stays in collision
           : _TestPhase.form; // FIX: returns to form
     });
   }
@@ -70,11 +70,11 @@ class _CollisionCancelSimulatorState
     return switch (_phase) {
       _TestPhase.form => const Text('form-visible'),
       _TestPhase.collision => Column(
-          children: [
-            const Text('collision-visible'),
-            TextButton(onPressed: _onCancel, child: const Text('Cancel')),
-          ],
-        ),
+        children: [
+          const Text('collision-visible'),
+          TextButton(onPressed: _onCancel, child: const Text('Cancel')),
+        ],
+      ),
     };
   }
 }
@@ -88,7 +88,9 @@ void main() {
       (tester) async {
         await tester.pumpWidget(
           const MaterialApp(
-            home: Scaffold(body: _CollisionCancelSimulator(buggyBehavior: true)),
+            home: Scaffold(
+              body: _CollisionCancelSimulator(buggyBehavior: true),
+            ),
           ),
         );
         expect(find.text('collision-visible'), findsOneWidget);
@@ -98,10 +100,16 @@ void main() {
         await tester.pump();
 
         // BUG: collision block still visible after cancel
-        expect(find.text('collision-visible'), findsOneWidget,
-            reason: 'BUGGY: stays in collision');
-        expect(find.text('form-visible'), findsNothing,
-            reason: 'BUGGY: form never shown');
+        expect(
+          find.text('collision-visible'),
+          findsOneWidget,
+          reason: 'BUGGY: stays in collision',
+        );
+        expect(
+          find.text('form-visible'),
+          findsNothing,
+          reason: 'BUGGY: form never shown',
+        );
       },
     );
 
@@ -124,10 +132,16 @@ void main() {
         await tester.pump();
 
         // FIXED: form is visible after cancel
-        expect(find.text('form-visible'), findsOneWidget,
-            reason: 'Fixed: cancel transitions back to form');
-        expect(find.text('collision-visible'), findsNothing,
-            reason: 'Fixed: collision block dismissed by cancel');
+        expect(
+          find.text('form-visible'),
+          findsOneWidget,
+          reason: 'Fixed: cancel transitions back to form',
+        );
+        expect(
+          find.text('collision-visible'),
+          findsNothing,
+          reason: 'Fixed: collision block dismissed by cancel',
+        );
       },
     );
 
@@ -135,14 +149,14 @@ void main() {
       'AN-5 — l10n cancel label is non-empty (the button is labeled correctly)',
       (tester) async {
         await tester.pumpWidget(
-          MaterialApp(
-            localizationsDelegates: const [
+          const MaterialApp(
+            localizationsDelegates: [
               AppLocalizations.delegate,
               GlobalMaterialLocalizations.delegate,
               GlobalWidgetsLocalizations.delegate,
             ],
             supportedLocales: AppLocalizations.supportedLocales,
-            home: const Scaffold(body: SizedBox.shrink()),
+            home: Scaffold(body: SizedBox.shrink()),
           ),
         );
         await tester.pump();

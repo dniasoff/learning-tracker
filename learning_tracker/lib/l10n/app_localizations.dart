@@ -3293,6 +3293,24 @@ abstract class AppLocalizations {
   /// **'Keep me signed in'**
   String get signInKeepMeSignedIn;
 
+  /// No description provided for @signInForgotPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Forgot password?'**
+  String get signInForgotPassword;
+
+  /// No description provided for @signInForgotPasswordSent.
+  ///
+  /// In en, this message translates to:
+  /// **'Password reset email sent. Check your inbox.'**
+  String get signInForgotPasswordSent;
+
+  /// No description provided for @signInForgotPasswordNoEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter your email address first.'**
+  String get signInForgotPasswordNoEmail;
+
   /// No description provided for @signInCta.
   ///
   /// In en, this message translates to:
@@ -3346,6 +3364,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Create Password'**
   String get signUpPasswordLabel;
+
+  /// No description provided for @signUpPasswordHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a secure password'**
+  String get signUpPasswordHint;
 
   /// No description provided for @signUpCta.
   ///
