@@ -635,7 +635,7 @@
   "rewardConfigSaveReward": "שמירה",
   "rewardConfigDeleteReward": "מחיקה",
   "rewardConfigDuplicateThreshold": "פרס אחר כבר משתמש בערך נקודות זה.",
-  "rewardConfigEmptyMilestones": "עדיין אין פרסים. לחצו למטה להוספה.",
+  "rewardConfigEmptyMilestones": "עדיין אין פרסים. סגרו תפריט זה והשתמשו בטופס שלמעלה כדי להוסיף.",
   "rewardConfigSaved": "הפרסים נשמרו",
   "parentPortalTitle": "פורטל הורים",
   "rewardConfigScreenContextLabel": "הגדרת פרסים",
@@ -645,7 +645,7 @@
   "rewardConfigRewardTypeLabel": "סוג פרס",
   "rewardConfigChooseTrackLabel": "בחירת מסלול",
   "rewardConfigPreviewLabel": "תצוגה מקדימה",
-  "rewardConfigPointsPreview": "{points} נקודות",
+  "rewardConfigPointsPreview": "{points, plural, one{נקודה אחת} two{שתי נקודות} other{{points} נקודות}}",
   "@rewardConfigPointsPreview": {
     "placeholders": {
       "points": { "type": "int" }

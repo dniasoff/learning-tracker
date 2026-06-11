@@ -674,7 +674,7 @@
   "rewardConfigSaveReward": "Save",
   "rewardConfigDeleteReward": "Delete",
   "rewardConfigDuplicateThreshold": "Another reward already uses this point value.",
-  "rewardConfigEmptyMilestones": "No rewards yet. Tap below to add one.",
+  "rewardConfigEmptyMilestones": "No rewards yet. Close this menu and use the form above to add one.",
   "rewardConfigSaved": "Rewards saved",
   "parentPortalTitle": "Parent Portal",
   "rewardConfigScreenContextLabel": "Reward Configuration",
@@ -684,7 +684,7 @@
   "rewardConfigRewardTypeLabel": "Reward type",
   "rewardConfigChooseTrackLabel": "Choose track",
   "rewardConfigPreviewLabel": "PREVIEW",
-  "rewardConfigPointsPreview": "{points} Points",
+  "rewardConfigPointsPreview": "{points, plural, =1{{points} Point} other{{points} Points}}",
   "@rewardConfigPointsPreview": {
     "placeholders": {
       "points": { "type": "int" }
