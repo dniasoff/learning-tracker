@@ -34,8 +34,14 @@ String curriculumCompleteSiyumLabel({
 
 /// Resolve a localized label for an aggregate-level milestone (seder/chelek).
 ///
-/// [aggregateName] is the level-1 raw key from content data (e.g.
-/// `'Zeraim'`) — appended to the per-curriculum prefix.
+/// [aggregateName] is the level-1 key for the aggregate — either the raw
+/// content-data key (e.g. `'Seder Zeraim'`) or a variant-resolved display
+/// name.  When the key already contains the level word (Bavli / Mishnayos /
+/// Yerushalmi store level-1 as `'Seder Zeraim'`, `'Seder Moed'`, etc.),
+/// the leading `'Seder '` prefix is stripped before framing the label so the
+/// composed string does not duplicate the word ("Siyum Seder Seder Zeraim"
+/// → "Siyum Seder Zeraim").  A bare key (e.g. `'Zeraim'`) is passed through
+/// unchanged.
 String aggregateSiyumLabel({
   required CurriculumId curriculumId,
   required String aggregateName,
@@ -55,7 +61,14 @@ String aggregateSiyumLabel({
     case CurriculumId.nach:
     case CurriculumId.tanach:
     case CurriculumId.mussar:
-      return '${terms.siyumSeder} $aggregateName';
+      // TS-12: strip the leading "Seder " level word when the content data
+      // already embeds it in the key (e.g. "Seder Zeraim" → "Zeraim"), then
+      // re-prepend through [terms.siyumSeder] so the label is always exactly
+      // "Siyum Seder {name}" regardless of how the key was stored.
+      final bare = aggregateName.startsWith('Seder ')
+          ? aggregateName.substring('Seder '.length)
+          : aggregateName;
+      return '${terms.siyumSeder} $bare';
   }
 }
 

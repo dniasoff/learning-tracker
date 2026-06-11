@@ -23,6 +23,7 @@ class DashboardLevelPointsCard extends ConsumerWidget {
     required this.cumulativeLifetime,
     this.chazaraLabel,
     this.tasksReady = true,
+    this.lifetimeReady = true,
   });
 
   final ProfileMode userMode;
@@ -45,22 +46,34 @@ class DashboardLevelPointsCard extends ConsumerWidget {
 
   /// Whether the task counts are ready to display.
   ///
-  /// When `false` (initial sync has not yet completed), the OVERDUE / TODAY /
+  /// When `false` (local Drift query has not yet emitted), the OVERDUE / TODAY /
   /// CHAZARA bubbles show "…" instead of a number — never 0, never a positive
-  /// integer.  The remaining tiles (level, points, lifetime progress) are
-  /// unaffected.
+  /// integer.  The lifetime progress section is gated separately via
+  /// [lifetimeReady].
   final bool tasksReady;
+
+  /// Whether the lifetime progress data is ready to display (PP-15).
+  ///
+  /// When `false` ([lifetimeTotalsAcrossAllCurriculaProvider] has not yet
+  /// resolved), the DONE% label and the sections-detail line show "…" instead
+  /// of "0%" / "0 of 0 sections" — which are indistinguishable from "no data"
+  /// and mislead the user during the 1-2 s load window.
+  final bool lifetimeReady;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
-    // When tasksReady is false (initial sync not yet complete), show "…"
+    // When tasksReady is false (local Drift query not yet emitted), show "…"
     // instead of any numeric count — the data is incomplete and must not be
     // presented as a meaningful number to the user.
     final overdueDisplay = tasksReady ? '$overdueCount' : '…';
     final todayDisplay = tasksReady ? '$todayCount' : '…';
     final reviewDisplay = tasksReady ? '$reviewCount' : '…';
+    // PP-15: when the lifetime provider has not yet resolved, show "…" instead
+    // of the misleading "0%" / "0 of 0 sections" zeros.
+    final doneLabel = lifetimeReady ? doneDisplay : '…';
+    final sectionsLabel = lifetimeReady ? lifetimeSectionsDetail : '…';
 
     // Build bubble entries as (label, value, color, schedulerSection).
     // The chazara bubble is included only when chazaraLabel is non-null
@@ -168,7 +181,7 @@ class DashboardLevelPointsCard extends ConsumerWidget {
               ),
               const SizedBox(width: 8),
               Text(
-                doneDisplay,
+                doneLabel,
                 style: theme.textTheme.titleSmall?.copyWith(
                   color: Colors.white,
                   fontWeight: FontWeight.w800,
@@ -178,7 +191,7 @@ class DashboardLevelPointsCard extends ConsumerWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            lifetimeSectionsDetail,
+            sectionsLabel,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: theme.textTheme.labelSmall?.copyWith(
