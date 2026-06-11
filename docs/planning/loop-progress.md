@@ -282,5 +282,24 @@ the Hebrew UI-locale switch did not take effect on-device and there was NO in-ap
 - REDO PROGRESS: the 6 R1 screens are now test-covered + keystone-confirmed. Pivoted to the UNVERIFIED screens.
   Original sweep = 45 screens; R1 did 6. R2 sweep RUNNING (workflow ws5ntz2h9) over 6 high-Hebrew-risk screens:
   gamification, curriculum_settings (nusach/hebrew-terms), content_search, learning, scheduler, content_hierarchy.
-- NEXT: read R2 findings → triage real bugs → fix wave → make ci → redeploy → redo; then R3..R6 for the remaining
-  ~33 screens, iterating find→fix→redo until a sweep returns clean. Mandate: "check every screen … redo until no bugs."
+- R2 REDO RESULTS (workflow ws5ntz2h9, 6 screens, 26 findings: 4 P1/22 P2): keystone CONFIRMED clean on 3 more
+  screens; content_search clean (0 findings); Nikud + Nusach live-toggle verified. Real bugs → R2 fix wave (wlo2t68j7,
+  2 workers off 2c62ff2c, disjoint roots scheduler+l10n vs content_browsing):
+  · [P1] scheduler daily-task goal banner ("TODAY'S GOAL" + "N today tasks", scheduler_screen.dart:293) leaks English
+    under Hebrew UI → localize + pluralize.
+  · count=1 pluralization (ARB-only): tierCounter* family (streakDays/siyumimEarned/lifetimeItems/points, en+he) +
+    curriculum-settings "{count} Masechta" → ICU plural.
+  · scheduler "Next daily task" button clipped by nav-bar inset → SafeArea.
+  · content_hierarchy breadcrumb: RTL separator chevrons point opposite ways; current crumb clipped mid-word @1.3;
+    system-Back discards the whole drill path (should step one level like AppBar back) → PopScope.
+  · DEFERRED (product-decision/minor): Hebrew-Terms toggle hidden when UI=he (settings `!= 'he'` guard) — terms then
+    render transliterated with no toggle to change them (design call — ask Daniel); scheduler notification-icon red
+    disc vs pastel palette (minor); transient ghost/flash frames during font re-layout.
+  · BLOCKED on TEST DATA (not app bugs): gamification (My Achievements) is child-only and only reachable via a
+    POPULATED child dashboard's streak/flame chip — the lone child profile (Yossi) has zero tracks/points/streak, so
+    no entry point exists; needs a seeded child with an active track + non-zero streak/points (and the Parent PIN is
+    unknown to workers — 1234/0000 rejected). scheduler populated task-list was empty on 5554 this session. → seed a
+    child-with-streak + daily-tasks before re-auditing these two; pluralization bugs there were still caught by STATIC
+    l10n review. NOTE: audit brief named profile 'Shloime' but the device has 'Yossi' — brief drift, harmless.
+- NEXT: integrate R2 fix wave → make ci → push → redeploy → redo R2's fixed screens; seed gamification/scheduler data;
+  then R3..R6 for the remaining ~33 screens. Mandate: "check every screen … redo until no bugs."
