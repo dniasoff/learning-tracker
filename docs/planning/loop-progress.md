@@ -481,3 +481,23 @@ device-driven (commit 95ede74a, make ci GREEN 9900 pass):
   picker no selection-state persistence after Back + no search; Step-2 program names mixed Hebrew/Latin.
 - ON-DEVICE re-verification of R5 fixes (+ the blocked screens track_management_hub, lifetime_knowledge, text_display,
   and the FK-profile-creation bug) is PENDING the emulator restart.
+
+### R5 fixes SHIPPED + FK investigation + LOOP PAUSED on device restart (2026-06-11)
+- R5 FIX WAVE INTEGRATED + PUSHED (commit 18ef90b4, make ci GREEN 9940 pass): UpgradeToCloudScreen fully localized
+  (30+ keys, ICU {email}, friendly-mapped raw $e errors); backup_sync relative-time + 'Sign in to back up' localized
+  (local-only card title/body already use the keys — confirmed); learning-order Reset-to-Default refresh RACE fixed in
+  BOTH learning_order_screen + track_learning_order_screen (invalidate + await .future + seed, replacing the racy
+  whenData re-seed). Red→green tests added.
+- FK-PROFILE-CREATION investigated (device-free): learner_profiles.accountId is a FK → Accounts.id; createProfile was
+  called with accountId=1 but no Account row exists → SqliteException(787). Root cause = the crash left 5554 half-
+  onboarded (account creation never completed). NOT the v30 migration. It's an edge-case robustness gap reachable only
+  in an abnormal no-account state; needs DEVICE reproduction to fix correctly (understand how onboarding left no
+  account, then make account-creation atomic / detect+recover). NOT speculatively patched (would risk a wrong fix).
+  The generic "unexpected error" snackbar is acceptable (real cause is in logcat).
+- LOOP PAUSED: emulators 5556 + 5558 are DOWN (host crash). On-device work — re-verify R5 fixes + the crash-blocked
+  screens (track_management_hub, lifetime_knowledge, text_display), the FK-profile-creation repro, and R6
+  (onboarding/auth cluster — needs pm clear) — ALL require Daniel to RESTART THE EMULATORS first. All device-INDEPENDENT
+  fixes through R5 are done + green + pushed.
+- DONE THIS SESSION: both Daniel decisions (collision fix shipped+reviewed; local-vs-cloud intended); device-language
+  correction + Hebrew-script terms (verified on-device); gamification unblocked+clean; R1–R5 redo (~22/45 screens),
+  ~60 real bugs fixed and shipped green; stale audit-guidance fixed.
