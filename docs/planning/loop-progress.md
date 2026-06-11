@@ -313,3 +313,24 @@ the Hebrew UI-locale switch did not take effect on-device and there was NO in-ap
 - R3 redo RUNNING (workflow wxta2gkt4): gamification (with a child-profile SEEDING attempt to reach the streak-chip
   entry), reward_configuration, curriculum_progress, recent_activity, siyumim_milestones, lifetime_marking.
 - CUMULATIVE: 12 of ~45 screens redo-verified (R1 6, R2 6); ~30 real bugs fixed + keystone; ~33 screens remain.
+
+### PRODUCT CORRECTION (2026-06-11) — App language follows the DEVICE language
+Daniel: "App Language wasn't supposed to be configurable - it should be dependant on device language." The earlier
+"keystone" (an in-app App Language switcher + per-profile app-locale pref) was the WRONG approach. REVERTED + made
+device-driven (commit 95ede74a, make ci GREEN 9900 pass):
+- MaterialApp.locale = null → Flutter resolves the DEVICE locale against [en, he] (Hebrew device → he + RTL, else en),
+  reacting to runtime device-language changes via didChangeLocales.
+- currentAppLocaleProvider now derives from PlatformDispatcher.locales (device) for background notifications; new
+  resolveDeviceUiLocale() mirrors Flutter's resolution. Invalidated on didChangeLocales.
+- REMOVED: _AppLanguageTile, LanguageNotifier/languageProvider, AppLocalePreference + provider, per-profile
+  CurrentAppLocale binding, supportedLanguages map, settingsLanguage*/settingsAppLanguage* ARB keys, 2
+  language_provider.dart files. Rewrote locale_wiring_test (device-driven contract + no switcher); fixed
+  coverage/notifications/schema tests. Vestigial synced app_locale field left in place (removal would ripple ~30 sync
+  tests for no user benefit).
+- IMPLICATION FOR THE REDO LOOP: the R1/R1v2/R2 confirmations that "the in-app switcher flips to Hebrew" are now MOOT
+  (the switcher is gone). Hebrew/RTL must be verified by setting the DEVICE language to Hebrew (adb: `adb root` +
+  `setprop persist.sys.locale he-IL` + restart zygote), NOT an in-app toggle. The Hebrew TRANSLATION fixes all remain
+  valid (they fix the he device path). Future audit briefs must drive the device locale, not the removed tile.
+- R3 redo (wxta2gkt4) was running on the OLD (switcher) APK when this landed — its switcher observations are moot; its
+  plural/nusach/layout findings on gamification/progress/lifetime stay valid. New device-driven APK built; will install
+  + verify (device→Hebrew) after R3 completes, then continue the redo with the corrected device-locale method.
