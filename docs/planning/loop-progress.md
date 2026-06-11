@@ -348,3 +348,19 @@ device-driven (commit 95ede74a, make ci GREEN 9900 pass):
   streak chip renders → gamification/siyumim become auditable. (2) Hebrew-terms in Hebrew UI → "Hebrew script in
   Hebrew UI" → when the device locale is Hebrew, domain terms (מסכת/חזרה/סיומים) must auto-render in Hebrew SCRIPT,
   not transliteration. Real fix in core/labels (term rendering should follow the he locale).
+
+### Q2 fix + R3 fix wave + gamification reset (2026-06-11)
+- Q2 (Hebrew-script-in-Hebrew-UI) FIXED + pushed (commit 8f93e224, make ci GREEN 9904 pass): domainTermLabels() now
+  computes isHebrew = (deviceLocale==he) || hebrewTermsToggle via new pure resolveUseHebrewTerms(); lifetime_marking's
+  2 direct useHebrewTermsProvider reads routed through domainTermLabels(ref).isHebrew. New unit test. Auto-resolves the
+  R3 'Siyumim'/'Limud & Chazaros'-in-Latin-under-Hebrew findings.
+- R3 FIX WAVE (workflow wkhuea8mf, 3 workers off 8f93e224, disjoint roots): progress (curriculum-progress duplicated
+  breakdown labels P1, chazaros Sephardi-nusach, track-progress layout; recent-activity streak-calendar Hebrew-date P1,
+  '1 Active days' plural, empty-state copy), gamification (reward-config '1 Points' plural, empty-state copy/overlap),
+  settings/lifetime-marking (indeterminate ancestor checkboxes P1, breadcrumb leaf clip, 'Deselect all' toggle stuck at
+  Selected:0, sibling-daf selection-color inconsistency, suspicious 1.3%-after-1-daf denominator).
+- GAMIFICATION RESET (background agent on 5556): per Daniel "reset application data and recover the pin" → pm clear →
+  re-onboard via LOCAL path (avoid App Check on fresh install) → set known parent PIN 2580 → create child + track +
+  completion so the streak chip renders → My Achievements + Siyumim become auditable. (If onboarding forces cloud
+  sign-in, agent reports blocked.)
+- R3 STILL-BLOCKED until reset lands: gamification (My Achievements), siyumim_milestones — both need a populated child.
