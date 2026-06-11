@@ -1428,6 +1428,14 @@
       "count": { "type": "int" }
     }
   },
+  "studyDayConfigTitle": "{curriculumName} Study Days",
+  "@studyDayConfigTitle": {
+    "placeholders": {
+      "curriculumName": { "type": "String" }
+    }
+  },
+  "studyDayConfigSubtitle": "Choose which days include new learning and which are for review only.",
+  "studyDayConfigAllDaysStudy": "All days are study days for this track.",
   "studyDaysSetByProgram": "Study days set by {programName}",
   "@studyDaysSetByProgram": {
     "placeholders": {
@@ -1460,6 +1468,67 @@
   "goalNewTitle": "New Goal",
   "goalUpdateButton": "Update Goal",
   "goalCreateButton": "Create Goal",
+  "goalDeadlineDatePickerHint": "Tap to choose a date",
+  "goalDeadlineOccasionLabel": "Occasion (optional)",
+  "goalDeadlineOccasionHint": "e.g., Bar Mitzvah, Yahrzeit, Siyum",
+  "goalDeadlinePassed": "Deadline has passed",
+  "goalDeadlinePaceItems": "~{pace} items per day",
+  "@goalDeadlinePaceItems": {
+    "placeholders": {
+      "pace": { "type": "int" }
+    }
+  },
+  "goalDeadlineItemsInDays": "{items} items in {days} days",
+  "@goalDeadlineItemsInDays": {
+    "placeholders": {
+      "items": { "type": "int" },
+      "days": { "type": "int" }
+    }
+  },
+  "goalPaceHowMany": "How many {unit} per {period}?",
+  "@goalPaceHowMany": {
+    "placeholders": {
+      "unit": { "type": "String" },
+      "period": { "type": "String" }
+    }
+  },
+  "goalPaceInputLabel": "{unit} {period}",
+  "@goalPaceInputLabel": {
+    "placeholders": {
+      "unit": { "type": "String" },
+      "period": { "type": "String" }
+    }
+  },
+  "goalPaceProjectedCompletion": "Projected completion: {date}",
+  "@goalPaceProjectedCompletion": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "goalPaceItemsInDays": "{items} {unit} in ~{days} days",
+  "@goalPaceItemsInDays": {
+    "placeholders": {
+      "items": { "type": "int" },
+      "unit": { "type": "String" },
+      "days": { "type": "int" }
+    }
+  },
+  "goalTargetPercentOnly": "Complete {percent}% of the material",
+  "@goalTargetPercentOnly": {
+    "placeholders": {
+      "percent": { "type": "int" }
+    }
+  },
+  "goalTargetPercentWithCount": "Complete {percent}% of the material ({done} of {total} items)",
+  "@goalTargetPercentWithCount": {
+    "placeholders": {
+      "percent": { "type": "int" },
+      "done": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "goalLearningUnitLabel": "Learning unit",
+  "goalNoPressureLabel": "Learn at your own pace with no time pressure.",
   "trackSetGoalLabel": "Set Goal",
   "trackEditGoalLabel": "Edit Goal",
   "goalSavedSnack": "Goal saved",

@@ -2822,6 +2822,19 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
+  String studyDayConfigTitle(String curriculumName) {
+    return 'ימי לימוד — $curriculumName';
+  }
+
+  @override
+  String get studyDayConfigSubtitle =>
+      'בחר אילו ימים כוללים לימוד חדש ואילו לחזרה בלבד.';
+
+  @override
+  String get studyDayConfigAllDaysStudy =>
+      'כל הימים הם ימי לימוד עבור מסלול זה.';
+
+  @override
   String studyDaysSetByProgram(String programName) {
     return 'ימי הלימוד נקבעו על ידי $programName';
   }
@@ -2876,6 +2889,64 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get goalCreateButton => 'צור יעד';
+
+  @override
+  String get goalDeadlineDatePickerHint => 'לחץ לבחירת תאריך';
+
+  @override
+  String get goalDeadlineOccasionLabel => 'אירוע (אופציונלי)';
+
+  @override
+  String get goalDeadlineOccasionHint => 'למשל: בר מצווה, יארצייט, סיום';
+
+  @override
+  String get goalDeadlinePassed => 'המועד האחרון עבר';
+
+  @override
+  String goalDeadlinePaceItems(int pace) {
+    return '~$pace פריטים ביום';
+  }
+
+  @override
+  String goalDeadlineItemsInDays(int items, int days) {
+    return '$items פריטים ב-$days ימים';
+  }
+
+  @override
+  String goalPaceHowMany(String unit, String period) {
+    return 'כמה $unit ב$period?';
+  }
+
+  @override
+  String goalPaceInputLabel(String unit, String period) {
+    return '$unit $period';
+  }
+
+  @override
+  String goalPaceProjectedCompletion(String date) {
+    return 'סיום משוער: $date';
+  }
+
+  @override
+  String goalPaceItemsInDays(int items, String unit, int days) {
+    return '$items $unit בכ-$days ימים';
+  }
+
+  @override
+  String goalTargetPercentOnly(int percent) {
+    return 'השלם $percent% מהחומר';
+  }
+
+  @override
+  String goalTargetPercentWithCount(int percent, int done, int total) {
+    return 'השלם $percent% מהחומר ($done מתוך $total פריטים)';
+  }
+
+  @override
+  String get goalLearningUnitLabel => 'יחידת לימוד';
+
+  @override
+  String get goalNoPressureLabel => 'למד בקצב שלך, ללא לחץ זמן.';
 
   @override
   String get trackSetGoalLabel => 'הגדרת יעד';

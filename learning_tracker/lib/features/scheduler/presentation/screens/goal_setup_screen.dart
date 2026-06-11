@@ -191,7 +191,8 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
   }
 
   String _formatDateLine(DateTime? d, {required bool useHebrew}) {
-    if (d == null) return 'Tap to choose a date';
+    if (d == null)
+      return AppLocalizations.of(context)!.goalDeadlineDatePickerHint;
     if (useHebrew) {
       return HebrewCalendarUtils.gregorianToHebrew(d.toLocal());
     }
@@ -309,10 +310,11 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
         TextField(
           controller: _descriptionController,
           inputFormatters: const [TrimLeadingSpaceFormatter()],
-          decoration: const InputDecoration(
-            labelText: 'Occasion (optional)',
-            hintText: 'e.g., Bar Mitzvah, Yahrzeit, Siyum',
-            prefixIcon: Icon(Icons.label_outline),
+          decoration: InputDecoration(
+            // R1-(7): use l10n so Hebrew sees translated label/hint.
+            labelText: AppLocalizations.of(context)!.goalDeadlineOccasionLabel,
+            hintText: AppLocalizations.of(context)!.goalDeadlineOccasionHint,
+            prefixIcon: const Icon(Icons.label_outline),
           ),
         ),
         // Daily pace summary (deadline mode)
@@ -323,7 +325,8 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
               final daysRemaining = _targetDate!.difference(_now()).inDays;
               if (daysRemaining <= 0) {
                 return Text(
-                  'Deadline has passed',
+                  // R1-(7): use l10n.
+                  AppLocalizations.of(context)!.goalDeadlinePassed,
                   style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                     color: Theme.of(context).colorScheme.error,
                   ),
@@ -338,12 +341,19 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
                   child: Column(
                     children: [
                       Text(
-                        '~$pace items per day',
+                        // R1-(7): use l10n.
+                        AppLocalizations.of(
+                          context,
+                        )!.goalDeadlinePaceItems(pace),
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '$remainingItems items in $daysRemaining days',
+                        // R1-(7): use l10n.
+                        AppLocalizations.of(context)!.goalDeadlineItemsInDays(
+                          remainingItems,
+                          daysRemaining,
+                        ),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
@@ -369,7 +379,10 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
       useHebrew: useHebrewTerms,
       variant: variant,
     );
-    final perLabel = _paceUnit == 'per_day' ? 'per day' : 'per week';
+    // R1-(7): use l10n keys so Hebrew sees translated period labels.
+    final perLabel = _paceUnit == 'per_day'
+        ? AppLocalizations.of(context)!.pacePerDay
+        : AppLocalizations.of(context)!.pacePerWeek;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -382,9 +395,13 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
                 initialValue: _paceValue.toString(),
                 keyboardType: TextInputType.number,
                 decoration: InputDecoration(
-                  labelText: '$unitLabel $perLabel',
-                  helperText:
-                      'How many ${unitLabel.toLowerCase()} ${_paceUnit == 'per_day' ? 'per day' : 'per week'}?',
+                  // R1-(7): use l10n so Hebrew sees translated labels.
+                  labelText: AppLocalizations.of(
+                    context,
+                  )!.goalPaceInputLabel(unitLabel, perLabel),
+                  helperText: AppLocalizations.of(
+                    context,
+                  )!.goalPaceHowMany(unitLabel.toLowerCase(), perLabel),
                 ),
                 onChanged: (v) {
                   final parsed = int.tryParse(v);
@@ -439,12 +456,20 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
                   child: Column(
                     children: [
                       Text(
-                        'Projected completion: $formattedDate',
+                        // R1-(7): use l10n.
+                        AppLocalizations.of(
+                          context,
+                        )!.goalPaceProjectedCompletion(formattedDate),
                         style: Theme.of(context).textTheme.titleMedium,
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '$remainingItems ${unitLabel.toLowerCase()} in ~$daysToComplete days',
+                        // R1-(7): use l10n.
+                        AppLocalizations.of(context)!.goalPaceItemsInDays(
+                          remainingItems,
+                          unitLabel.toLowerCase(),
+                          daysToComplete,
+                        ),
                         style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
@@ -479,9 +504,18 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
                 children: [
                   // Target percentage slider
                   Text(
+                    // R1-(7): use l10n so Hebrew sees translated text.
                     widget.totalItems != null
-                        ? 'Complete ${_targetPercent.round()}% of the material (${(widget.totalItems! * _targetPercent / 100).ceil()} of ${widget.totalItems!} items)'
-                        : 'Complete ${_targetPercent.round()}% of the material',
+                        ? AppLocalizations.of(
+                            context,
+                          )!.goalTargetPercentWithCount(
+                            _targetPercent.round(),
+                            (widget.totalItems! * _targetPercent / 100).ceil(),
+                            widget.totalItems!,
+                          )
+                        : AppLocalizations.of(
+                            context,
+                          )!.goalTargetPercentOnly(_targetPercent.round()),
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   Slider(
@@ -498,7 +532,8 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
                   // pace count is in chapter-sized or verse-sized units.
                   if (_showUnitPicker) ...[
                     Text(
-                      'Learning unit',
+                      // R1-(7): use l10n.
+                      AppLocalizations.of(context)!.goalLearningUnitLabel,
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     const SizedBox(height: 8),
@@ -591,7 +626,8 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
                   if (_goalType == 'pace') _buildPaceSection(),
                   if (_goalType == 'none')
                     Text(
-                      'Learn at your own pace with no time pressure.',
+                      // R1-(7): use l10n.
+                      AppLocalizations.of(context)!.goalNoPressureLabel,
                       style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),

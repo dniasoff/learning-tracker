@@ -2855,6 +2855,19 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String studyDayConfigTitle(String curriculumName) {
+    return '$curriculumName Study Days';
+  }
+
+  @override
+  String get studyDayConfigSubtitle =>
+      'Choose which days include new learning and which are for review only.';
+
+  @override
+  String get studyDayConfigAllDaysStudy =>
+      'All days are study days for this track.';
+
+  @override
   String studyDaysSetByProgram(String programName) {
     return 'Study days set by $programName';
   }
@@ -2909,6 +2922,65 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get goalCreateButton => 'Create Goal';
+
+  @override
+  String get goalDeadlineDatePickerHint => 'Tap to choose a date';
+
+  @override
+  String get goalDeadlineOccasionLabel => 'Occasion (optional)';
+
+  @override
+  String get goalDeadlineOccasionHint => 'e.g., Bar Mitzvah, Yahrzeit, Siyum';
+
+  @override
+  String get goalDeadlinePassed => 'Deadline has passed';
+
+  @override
+  String goalDeadlinePaceItems(int pace) {
+    return '~$pace items per day';
+  }
+
+  @override
+  String goalDeadlineItemsInDays(int items, int days) {
+    return '$items items in $days days';
+  }
+
+  @override
+  String goalPaceHowMany(String unit, String period) {
+    return 'How many $unit per $period?';
+  }
+
+  @override
+  String goalPaceInputLabel(String unit, String period) {
+    return '$unit $period';
+  }
+
+  @override
+  String goalPaceProjectedCompletion(String date) {
+    return 'Projected completion: $date';
+  }
+
+  @override
+  String goalPaceItemsInDays(int items, String unit, int days) {
+    return '$items $unit in ~$days days';
+  }
+
+  @override
+  String goalTargetPercentOnly(int percent) {
+    return 'Complete $percent% of the material';
+  }
+
+  @override
+  String goalTargetPercentWithCount(int percent, int done, int total) {
+    return 'Complete $percent% of the material ($done of $total items)';
+  }
+
+  @override
+  String get goalLearningUnitLabel => 'Learning unit';
+
+  @override
+  String get goalNoPressureLabel =>
+      'Learn at your own pace with no time pressure.';
 
   @override
   String get trackSetGoalLabel => 'Set Goal';

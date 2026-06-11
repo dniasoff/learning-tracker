@@ -5039,6 +5039,24 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{1 study day per week} other{{count} study days per week}}'**
   String studyDaysPerWeekLabel(int count);
 
+  /// No description provided for @studyDayConfigTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{curriculumName} Study Days'**
+  String studyDayConfigTitle(String curriculumName);
+
+  /// No description provided for @studyDayConfigSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose which days include new learning and which are for review only.'**
+  String get studyDayConfigSubtitle;
+
+  /// No description provided for @studyDayConfigAllDaysStudy.
+  ///
+  /// In en, this message translates to:
+  /// **'All days are study days for this track.'**
+  String get studyDayConfigAllDaysStudy;
+
   /// No description provided for @studyDaysSetByProgram.
   ///
   /// In en, this message translates to:
@@ -5140,6 +5158,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Create Goal'**
   String get goalCreateButton;
+
+  /// No description provided for @goalDeadlineDatePickerHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to choose a date'**
+  String get goalDeadlineDatePickerHint;
+
+  /// No description provided for @goalDeadlineOccasionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Occasion (optional)'**
+  String get goalDeadlineOccasionLabel;
+
+  /// No description provided for @goalDeadlineOccasionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g., Bar Mitzvah, Yahrzeit, Siyum'**
+  String get goalDeadlineOccasionHint;
+
+  /// No description provided for @goalDeadlinePassed.
+  ///
+  /// In en, this message translates to:
+  /// **'Deadline has passed'**
+  String get goalDeadlinePassed;
+
+  /// No description provided for @goalDeadlinePaceItems.
+  ///
+  /// In en, this message translates to:
+  /// **'~{pace} items per day'**
+  String goalDeadlinePaceItems(int pace);
+
+  /// No description provided for @goalDeadlineItemsInDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{items} items in {days} days'**
+  String goalDeadlineItemsInDays(int items, int days);
+
+  /// No description provided for @goalPaceHowMany.
+  ///
+  /// In en, this message translates to:
+  /// **'How many {unit} per {period}?'**
+  String goalPaceHowMany(String unit, String period);
+
+  /// No description provided for @goalPaceInputLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'{unit} {period}'**
+  String goalPaceInputLabel(String unit, String period);
+
+  /// No description provided for @goalPaceProjectedCompletion.
+  ///
+  /// In en, this message translates to:
+  /// **'Projected completion: {date}'**
+  String goalPaceProjectedCompletion(String date);
+
+  /// No description provided for @goalPaceItemsInDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{items} {unit} in ~{days} days'**
+  String goalPaceItemsInDays(int items, String unit, int days);
+
+  /// No description provided for @goalTargetPercentOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete {percent}% of the material'**
+  String goalTargetPercentOnly(int percent);
+
+  /// No description provided for @goalTargetPercentWithCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete {percent}% of the material ({done} of {total} items)'**
+  String goalTargetPercentWithCount(int percent, int done, int total);
+
+  /// No description provided for @goalLearningUnitLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Learning unit'**
+  String get goalLearningUnitLabel;
+
+  /// No description provided for @goalNoPressureLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Learn at your own pace with no time pressure.'**
+  String get goalNoPressureLabel;
 
   /// No description provided for @trackSetGoalLabel.
   ///
