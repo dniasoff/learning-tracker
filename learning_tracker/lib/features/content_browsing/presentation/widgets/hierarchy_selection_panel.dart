@@ -198,43 +198,81 @@ class HierarchySelectionPanelState
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         if (_navigationStack.isNotEmpty)
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Row(
-              children: [
-                TextButton(
-                  onPressed: clearNavigation,
-                  child: CurriculumLabel.curriculum(widget.curriculumId),
-                ),
-                for (var i = 0; i < _navigationStack.length; i++) ...[
-                  const Icon(Icons.chevron_right, size: 16, color: Colors.grey),
-                  TextButton(
-                    onPressed: i < _navigationStack.length - 1
-                        ? () {
-                            for (
-                              var j = _navigationStack.length;
-                              j > i + 1;
-                              j--
-                            ) {
-                              _browserKey.currentState?.navigateBack();
-                            }
-                          }
-                        : null,
-                    child: Text(
-                      CurriculumLabelRenderer.renderBreadcrumb(
-                        curriculumId: widget.curriculumId,
-                        rawSegmentValues: _navigationStack.sublist(0, i + 1),
-                        useHebrew: terms.isHebrew,
-                        hebrewNamesPerSegment: _navigationStackHebrewNames
-                            .sublist(0, i + 1),
-                        transliterationVariant: variant,
-                      ).last,
+          // R2 finding 5 (P2): cap the current (last/leaf) crumb to the
+          // available width so it ellipsizes cleanly instead of being clipped
+          // mid-word at large text scales (font scale 1.3, worse in RTL). The
+          // LayoutBuilder lives OUTSIDE the horizontal scroll view so it reports
+          // the bounded viewport width; the ancestor crumbs still scroll
+          // horizontally when the trail is long.
+          LayoutBuilder(
+            builder: (context, constraints) {
+              final maxLeafCrumbWidth = constraints.hasBoundedWidth
+                  ? constraints.maxWidth
+                  : double.infinity;
+              return SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Row(
+                  children: [
+                    TextButton(
+                      onPressed: clearNavigation,
+                      child: CurriculumLabel.curriculum(widget.curriculumId),
                     ),
-                  ),
-                ],
-              ],
-            ),
+                    for (var i = 0; i < _navigationStack.length; i++) ...[
+                      const Icon(
+                        Icons.chevron_right,
+                        size: 16,
+                        color: Colors.grey,
+                      ),
+                      Builder(
+                        builder: (context) {
+                          final isLeaf = i == _navigationStack.length - 1;
+                          final label = CurriculumLabelRenderer.renderBreadcrumb(
+                            curriculumId: widget.curriculumId,
+                            rawSegmentValues: _navigationStack.sublist(0, i + 1),
+                            useHebrew: terms.isHebrew,
+                            hebrewNamesPerSegment: _navigationStackHebrewNames
+                                .sublist(0, i + 1),
+                            transliterationVariant: variant,
+                          ).last;
+                          // The current (leaf) crumb is non-clickable; constrain
+                          // + ellipsize so it is never cut mid-word at font scale
+                          // 1.3 in LTR or RTL. Ancestor crumbs stay unconstrained
+                          // and scroll.
+                          final text = isLeaf
+                              ? ConstrainedBox(
+                                  constraints: BoxConstraints(
+                                    maxWidth: maxLeafCrumbWidth,
+                                  ),
+                                  child: Text(
+                                    label,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    softWrap: false,
+                                  ),
+                                )
+                              : Text(label);
+                          return TextButton(
+                            onPressed: i < _navigationStack.length - 1
+                                ? () {
+                                    for (
+                                      var j = _navigationStack.length;
+                                      j > i + 1;
+                                      j--
+                                    ) {
+                                      _browserKey.currentState?.navigateBack();
+                                    }
+                                  }
+                                : null,
+                            child: text,
+                          );
+                        },
+                      ),
+                    ],
+                  ],
+                ),
+              );
+            },
           ),
         Expanded(
           child: contentAsync.when(
