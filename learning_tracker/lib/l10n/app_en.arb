@@ -1264,6 +1264,10 @@
   "profilesAdultLabel": "Adult",
   "profilesEnterLearnerName": "Enter learner name",
   "profilesNameFieldLabel": "Name",
+  "learnerNameRequired": "Enter a name",
+  "@learnerNameRequired": {
+    "description": "Inline validation error shown when a learner/profile name is empty or whitespace-only on Save."
+  },
   "deleteProfileTitle": "Delete Profile",
   "deleteProfileLastTitle": "Delete your only profile?",
   "deleteProfileBody": "Are you sure you want to delete \"{name}\"? All learning data for this profile will be permanently lost.",
