@@ -2329,6 +2329,8 @@
       "email": { "type": "String" }
     }
   },
+  "inviteTutorErrorUnauthenticated": "Couldn't send the invitation. Please sign in and try again.",
+  "inviteTutorErrorGeneric": "Couldn't send the invitation. Please try again.",
 
   "manageGrantsAppBarTitle": "My Tutoring Grants",
   "manageGrantsActiveSection": "Active ({count})",

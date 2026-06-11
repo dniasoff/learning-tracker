@@ -501,34 +501,88 @@ void main() {
   // ── Failure path ────────────────────────────────────────────────────────────
 
   group('InviteTutorScreen — failure path', () {
-    testWidgets('TutorGrantFailure: shows inline error message', (
-      tester,
-    ) async {
-      when(
-        () => mockUseCase(
-          tutorEmail: any(named: 'tutorEmail'),
-          childProfileId: any(named: 'childProfileId'),
-          childName: any(named: 'childName'),
-          parentName: any(named: 'parentName'),
-        ),
-      ).thenAnswer(
-        (_) async => const TutorGrantFailure(message: 'Server error occurred'),
-      );
+    testWidgets(
+      'TutorGrantFailure: raw "Unauthenticated" token never reaches the UI; '
+      'a friendly sign-in message is shown instead',
+      (tester) async {
+        // The repository surfaces the raw Firebase/gRPC status token
+        // "Unauthenticated" via TutorGrantFailure.message / code. It must NOT
+        // render verbatim — the parent sees a friendly, localized message.
+        when(
+          () => mockUseCase(
+            tutorEmail: any(named: 'tutorEmail'),
+            childProfileId: any(named: 'childProfileId'),
+            childName: any(named: 'childName'),
+            parentName: any(named: 'parentName'),
+          ),
+        ).thenAnswer(
+          (_) async => const TutorGrantFailure(
+            message: 'Unauthenticated',
+            code: 'unauthenticated',
+          ),
+        );
 
-      await _pumpScreen(tester, useCase: mockUseCase);
-      await tester.enterText(find.byType(TextFormField), 'bad@fail.com');
-      await tester.pump();
-      await tester.tap(find.byType(FilledButton));
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
+        await _pumpScreen(tester, useCase: mockUseCase);
+        await tester.enterText(find.byType(TextFormField), 'bad@fail.com');
+        await tester.pump();
+        await tester.tap(find.byType(FilledButton));
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
 
-      // Error shown in the TextField's errorText slot
-      expect(find.text('Server error occurred'), findsOneWidget);
-      // Share-link section NOT shown
-      expect(find.text('Share link (backup delivery)'), findsNothing);
+        // Raw status token must NOT leak to the UI.
+        expect(find.text('Unauthenticated'), findsNothing);
+        expect(find.textContaining('Unauthenticated'), findsNothing);
+        // Friendly, localized message is shown instead.
+        expect(
+          find.text(
+            "Couldn't send the invitation. Please sign in and try again.",
+          ),
+          findsOneWidget,
+        );
 
-      await _tearDown(tester);
-    });
+        await _tearDown(tester);
+      },
+    );
+
+    testWidgets(
+      'TutorGrantFailure (other error): generic friendly fallback shown, '
+      'raw message not leaked',
+      (tester) async {
+        when(
+          () => mockUseCase(
+            tutorEmail: any(named: 'tutorEmail'),
+            childProfileId: any(named: 'childProfileId'),
+            childName: any(named: 'childName'),
+            parentName: any(named: 'parentName'),
+          ),
+        ).thenAnswer(
+          (_) async => const TutorGrantFailure(
+            message: 'INTERNAL: gRPC deadline exceeded',
+            code: 'internal',
+          ),
+        );
+
+        await _pumpScreen(tester, useCase: mockUseCase);
+        await tester.enterText(find.byType(TextFormField), 'bad@fail.com');
+        await tester.pump();
+        await tester.tap(find.byType(FilledButton));
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        // Raw engineering string must NOT leak to the UI.
+        expect(find.textContaining('gRPC'), findsNothing);
+        expect(find.textContaining('INTERNAL'), findsNothing);
+        // Generic friendly fallback is shown.
+        expect(
+          find.text("Couldn't send the invitation. Please try again."),
+          findsOneWidget,
+        );
+        // Share-link section NOT shown
+        expect(find.text('Share link (backup delivery)'), findsNothing);
+
+        await _tearDown(tester);
+      },
+    );
 
     testWidgets('TutorGrantPreconditionError: shows inline error message', (
       tester,
@@ -583,13 +637,18 @@ void main() {
 
       await _pumpScreen(tester, useCase: mockUseCase);
 
-      // First attempt → error
+      // First attempt → error (raw 'First failure' is mapped to the generic
+      // friendly fallback; the raw token is never surfaced).
       await tester.enterText(find.byType(TextFormField), 'bad@fail.com');
       await tester.pump();
       await tester.tap(find.byType(FilledButton));
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
-      expect(find.text('First failure'), findsOneWidget);
+      expect(find.text('First failure'), findsNothing);
+      expect(
+        find.text("Couldn't send the invitation. Please try again."),
+        findsOneWidget,
+      );
 
       // Change email to a valid one and resend → success
       await tester.enterText(find.byType(TextFormField), 'ok@example.com');
@@ -599,7 +658,10 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
 
       // Error message should be gone
-      expect(find.text('First failure'), findsNothing);
+      expect(
+        find.text("Couldn't send the invitation. Please try again."),
+        findsNothing,
+      );
 
       await _tearDown(tester);
     });

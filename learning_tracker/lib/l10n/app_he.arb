@@ -2219,6 +2219,8 @@
       "email": { "type": "String" }
     }
   },
+  "inviteTutorErrorUnauthenticated": "לא הצלחנו לשלוח את ההזמנה. היכנסו לחשבון ונסו שוב.",
+  "inviteTutorErrorGeneric": "לא הצלחנו לשלוח את ההזמנה. נסו שוב.",
 
   "manageGrantsAppBarTitle": "ההדרכות שלי",
   "manageGrantsActiveSection": "פעילות ({count})",
