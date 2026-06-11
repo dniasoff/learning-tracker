@@ -2651,6 +2651,119 @@ class AppLocalizationsEn extends AppLocalizations {
   String get upgradeToCloudCancelKeepOffline => 'Cancel — keep offline account';
 
   @override
+  String get upgradeToCloudHeadline => 'Back up your account';
+
+  @override
+  String upgradeToCloudValueProp(String email) {
+    return 'You\'re signed in as $email. Upgrading will create a cloud account with the same email so your data syncs across devices. This is one-way — you can\'t switch back to offline-only after upgrading.';
+  }
+
+  @override
+  String get upgradeToCloudPasswordLabel => 'Confirm your password';
+
+  @override
+  String get upgradeToCloudPasswordRequired => 'Password required';
+
+  @override
+  String get upgradeToCloudErrorLocalBornOnly =>
+      'Only local-born accounts can be upgraded.';
+
+  @override
+  String get upgradeToCloudErrorInternetRequired =>
+      'Internet connection is required to upgrade to cloud. Your account and data stay local until you retry online.';
+
+  @override
+  String get upgradeToCloudErrorInternetRequiredShort =>
+      'Internet connection is required to upgrade to cloud.';
+
+  @override
+  String get upgradeToCloudErrorIncorrectPassword => 'Incorrect password.';
+
+  @override
+  String get upgradeToCloudErrorGeneric =>
+      'We couldn\'t complete the upgrade. Please try again.';
+
+  @override
+  String get upgradeToCloudVerifyBody =>
+      'We sent a confirmation link to your inbox. After you verify, tap \"I\'ve verified — complete upgrade\" below.';
+
+  @override
+  String get upgradeToCloudVerifiedLinkLabel =>
+      'I\'ve verified — complete upgrade';
+
+  @override
+  String get upgradeToCloudSuccessTitle => 'You\'re backed up!';
+
+  @override
+  String get upgradeToCloudSuccessBody =>
+      'Your data will now sync across devices automatically.';
+
+  @override
+  String get upgradeToCloudCollisionTitle =>
+      'A cloud account already exists with this email';
+
+  @override
+  String get upgradeToCloudCollisionBody =>
+      'We won\'t silently merge — choose how to resolve this:';
+
+  @override
+  String get upgradeToCloudCollisionUploadTitle => 'Upload local into cloud';
+
+  @override
+  String get upgradeToCloudCollisionUploadSubtitle =>
+      'Your offline progress merges with the existing cloud account.';
+
+  @override
+  String get upgradeToCloudCollisionKeepCloudTitle =>
+      'Keep cloud, discard local';
+
+  @override
+  String get upgradeToCloudCollisionKeepCloudSubtitle =>
+      'Sign in to the existing cloud account. Your local-only changes on this device are replaced with cloud data.';
+
+  @override
+  String get upgradeToCloudCloudPasswordLabel => 'Cloud account password';
+
+  @override
+  String get upgradeToCloudCloudPasswordHint =>
+      'The password for the existing cloud account';
+
+  @override
+  String get upgradeToCloudCloudPasswordRequired =>
+      'Please enter your cloud account password.';
+
+  @override
+  String get upgradeToCloudDiscardAcknowledge =>
+      'I understand that cloud data will replace any purely-local changes on this device.';
+
+  @override
+  String get upgradeToCloudDiscardAcknowledgeRequired =>
+      'Please acknowledge that local data will be replaced by cloud data.';
+
+  @override
+  String get upgradeToCloudCollisionUploadButton => 'Upload and sign in';
+
+  @override
+  String get upgradeToCloudCollisionDiscardButton =>
+      'Discard local and sign in';
+
+  @override
+  String get upgradeToCloudErrorIncorrectCloudPassword =>
+      'Incorrect cloud account password.';
+
+  @override
+  String get upgradeToCloudErrorMergeInternetRequired =>
+      'Internet connection is required to complete this merge option.';
+
+  @override
+  String get upgradeToCloudErrorMergeGeneric =>
+      'We couldn\'t complete this merge option. Please try again.';
+
+  @override
+  String get upgradeToCloudCloudNotVerifiedBody =>
+      'This cloud account is not verified yet. Check your inbox, then tap \"I\'ve verified — complete upgrade\" below.';
+
+  @override
   String get scopeSelectionSave => 'Save';
 
   @override
@@ -2763,6 +2876,27 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get backupSyncCardBody =>
       'Your learning progress is currently LOCAL ONLY. Upgrade to sync across all devices.';
+
+  @override
+  String get backupTimeAgoJustNow => 'just now';
+
+  @override
+  String backupTimeAgoMinutes(int count) {
+    return '${count}m ago';
+  }
+
+  @override
+  String backupTimeAgoHours(int count) {
+    return '${count}h ago';
+  }
+
+  @override
+  String backupTimeAgoDays(int count) {
+    return '${count}d ago';
+  }
+
+  @override
+  String get backupSyncSignInToBackUp => 'Sign in to back up';
 
   @override
   String get reauthDialogTitle => 'Verify Your Identity';

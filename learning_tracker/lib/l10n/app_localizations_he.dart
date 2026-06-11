@@ -2624,6 +2624,116 @@ class AppLocalizationsHe extends AppLocalizations {
   String get upgradeToCloudCancelKeepOffline => 'ביטול — שמור חשבון לא מקוון';
 
   @override
+  String get upgradeToCloudHeadline => 'גבו את החשבון שלכם';
+
+  @override
+  String upgradeToCloudValueProp(String email) {
+    return 'אתם מחוברים בתור $email. השדרוג ייצור חשבון ענן עם אותו אימייל כדי שהנתונים שלכם יסונכרנו בין המכשירים. זוהי פעולה חד-כיוונית — לא תוכלו לחזור למצב לא-מקוון בלבד לאחר השדרוג.';
+  }
+
+  @override
+  String get upgradeToCloudPasswordLabel => 'אשרו את הסיסמה שלכם';
+
+  @override
+  String get upgradeToCloudPasswordRequired => 'נדרשת סיסמה';
+
+  @override
+  String get upgradeToCloudErrorLocalBornOnly =>
+      'ניתן לשדרג רק חשבונות מקומיים.';
+
+  @override
+  String get upgradeToCloudErrorInternetRequired =>
+      'נדרש חיבור לאינטרנט כדי לשדרג לענן. החשבון והנתונים שלכם יישארו מקומיים עד שתנסו שוב כשתהיו מחוברים.';
+
+  @override
+  String get upgradeToCloudErrorInternetRequiredShort =>
+      'נדרש חיבור לאינטרנט כדי לשדרג לענן.';
+
+  @override
+  String get upgradeToCloudErrorIncorrectPassword => 'סיסמה שגויה.';
+
+  @override
+  String get upgradeToCloudErrorGeneric =>
+      'לא הצלחנו להשלים את השדרוג. נסו שוב.';
+
+  @override
+  String get upgradeToCloudVerifyBody =>
+      'שלחנו קישור אישור לתיבת הדואר שלכם. לאחר האימות, הקישו על \"אימתתי — השלמת השדרוג\" למטה.';
+
+  @override
+  String get upgradeToCloudVerifiedLinkLabel => 'אימתתי — השלמת השדרוג';
+
+  @override
+  String get upgradeToCloudSuccessTitle => 'הגיבוי הושלם!';
+
+  @override
+  String get upgradeToCloudSuccessBody =>
+      'הנתונים שלכם יסונכרנו כעת בין המכשירים באופן אוטומטי.';
+
+  @override
+  String get upgradeToCloudCollisionTitle => 'כבר קיים חשבון ענן עם אימייל זה';
+
+  @override
+  String get upgradeToCloudCollisionBody =>
+      'לא נמזג בשקט — בחרו כיצד לפתור זאת:';
+
+  @override
+  String get upgradeToCloudCollisionUploadTitle =>
+      'העלאת הנתונים המקומיים לענן';
+
+  @override
+  String get upgradeToCloudCollisionUploadSubtitle =>
+      'ההתקדמות הלא-מקוונת שלכם תמוזג עם חשבון הענן הקיים.';
+
+  @override
+  String get upgradeToCloudCollisionKeepCloudTitle =>
+      'שמירת הענן, מחיקת המקומי';
+
+  @override
+  String get upgradeToCloudCollisionKeepCloudSubtitle =>
+      'התחברו לחשבון הענן הקיים. השינויים המקומיים בלבד במכשיר זה יוחלפו בנתוני הענן.';
+
+  @override
+  String get upgradeToCloudCloudPasswordLabel => 'סיסמת חשבון הענן';
+
+  @override
+  String get upgradeToCloudCloudPasswordHint => 'הסיסמה של חשבון הענן הקיים';
+
+  @override
+  String get upgradeToCloudCloudPasswordRequired =>
+      'הזינו את סיסמת חשבון הענן.';
+
+  @override
+  String get upgradeToCloudDiscardAcknowledge =>
+      'אני מבין שנתוני הענן יחליפו כל שינוי מקומי בלבד במכשיר זה.';
+
+  @override
+  String get upgradeToCloudDiscardAcknowledgeRequired =>
+      'אשרו שהנתונים המקומיים יוחלפו בנתוני הענן.';
+
+  @override
+  String get upgradeToCloudCollisionUploadButton => 'העלאה והתחברות';
+
+  @override
+  String get upgradeToCloudCollisionDiscardButton => 'מחיקת המקומי והתחברות';
+
+  @override
+  String get upgradeToCloudErrorIncorrectCloudPassword =>
+      'סיסמת חשבון הענן שגויה.';
+
+  @override
+  String get upgradeToCloudErrorMergeInternetRequired =>
+      'נדרש חיבור לאינטרנט כדי להשלים אפשרות מיזוג זו.';
+
+  @override
+  String get upgradeToCloudErrorMergeGeneric =>
+      'לא הצלחנו להשלים אפשרות מיזוג זו. נסו שוב.';
+
+  @override
+  String get upgradeToCloudCloudNotVerifiedBody =>
+      'חשבון ענן זה עדיין לא אומת. בדקו את תיבת הדואר שלכם, ואז הקישו על \"אימתתי — השלמת השדרוג\" למטה.';
+
+  @override
   String get scopeSelectionSave => 'שמור';
 
   @override
@@ -2735,6 +2845,27 @@ class AppLocalizationsHe extends AppLocalizations {
   @override
   String get backupSyncCardBody =>
       'התקדמות הלימוד שלך מאוחסנת כרגע במכשיר זה בלבד. שדרגו כדי לסנכרן בין כל המכשירים.';
+
+  @override
+  String get backupTimeAgoJustNow => 'ממש עכשיו';
+
+  @override
+  String backupTimeAgoMinutes(int count) {
+    return 'לפני $count דק\'';
+  }
+
+  @override
+  String backupTimeAgoHours(int count) {
+    return 'לפני $count שע\'';
+  }
+
+  @override
+  String backupTimeAgoDays(int count) {
+    return 'לפני $count ימים';
+  }
+
+  @override
+  String get backupSyncSignInToBackUp => 'התחברו כדי לגבות';
 
   @override
   String get reauthDialogTitle => 'אמתו את זהותכם';

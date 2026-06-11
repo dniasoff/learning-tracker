@@ -4665,6 +4665,186 @@ abstract class AppLocalizations {
   /// **'Cancel — keep offline account'**
   String get upgradeToCloudCancelKeepOffline;
 
+  /// No description provided for @upgradeToCloudHeadline.
+  ///
+  /// In en, this message translates to:
+  /// **'Back up your account'**
+  String get upgradeToCloudHeadline;
+
+  /// Value-proposition paragraph on the upgrade-to-cloud screen, explaining the one-way upgrade.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re signed in as {email}. Upgrading will create a cloud account with the same email so your data syncs across devices. This is one-way — you can\'t switch back to offline-only after upgrading.'**
+  String upgradeToCloudValueProp(String email);
+
+  /// No description provided for @upgradeToCloudPasswordLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm your password'**
+  String get upgradeToCloudPasswordLabel;
+
+  /// No description provided for @upgradeToCloudPasswordRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Password required'**
+  String get upgradeToCloudPasswordRequired;
+
+  /// No description provided for @upgradeToCloudErrorLocalBornOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Only local-born accounts can be upgraded.'**
+  String get upgradeToCloudErrorLocalBornOnly;
+
+  /// No description provided for @upgradeToCloudErrorInternetRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Internet connection is required to upgrade to cloud. Your account and data stay local until you retry online.'**
+  String get upgradeToCloudErrorInternetRequired;
+
+  /// No description provided for @upgradeToCloudErrorInternetRequiredShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Internet connection is required to upgrade to cloud.'**
+  String get upgradeToCloudErrorInternetRequiredShort;
+
+  /// No description provided for @upgradeToCloudErrorIncorrectPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Incorrect password.'**
+  String get upgradeToCloudErrorIncorrectPassword;
+
+  /// Friendly fallback shown instead of a raw exception when the upgrade fails for an unexpected reason.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t complete the upgrade. Please try again.'**
+  String get upgradeToCloudErrorGeneric;
+
+  /// No description provided for @upgradeToCloudVerifyBody.
+  ///
+  /// In en, this message translates to:
+  /// **'We sent a confirmation link to your inbox. After you verify, tap \"I\'ve verified — complete upgrade\" below.'**
+  String get upgradeToCloudVerifyBody;
+
+  /// No description provided for @upgradeToCloudVerifiedLinkLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'I\'ve verified — complete upgrade'**
+  String get upgradeToCloudVerifiedLinkLabel;
+
+  /// No description provided for @upgradeToCloudSuccessTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re backed up!'**
+  String get upgradeToCloudSuccessTitle;
+
+  /// No description provided for @upgradeToCloudSuccessBody.
+  ///
+  /// In en, this message translates to:
+  /// **'Your data will now sync across devices automatically.'**
+  String get upgradeToCloudSuccessBody;
+
+  /// No description provided for @upgradeToCloudCollisionTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'A cloud account already exists with this email'**
+  String get upgradeToCloudCollisionTitle;
+
+  /// No description provided for @upgradeToCloudCollisionBody.
+  ///
+  /// In en, this message translates to:
+  /// **'We won\'t silently merge — choose how to resolve this:'**
+  String get upgradeToCloudCollisionBody;
+
+  /// No description provided for @upgradeToCloudCollisionUploadTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload local into cloud'**
+  String get upgradeToCloudCollisionUploadTitle;
+
+  /// No description provided for @upgradeToCloudCollisionUploadSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Your offline progress merges with the existing cloud account.'**
+  String get upgradeToCloudCollisionUploadSubtitle;
+
+  /// No description provided for @upgradeToCloudCollisionKeepCloudTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep cloud, discard local'**
+  String get upgradeToCloudCollisionKeepCloudTitle;
+
+  /// No description provided for @upgradeToCloudCollisionKeepCloudSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to the existing cloud account. Your local-only changes on this device are replaced with cloud data.'**
+  String get upgradeToCloudCollisionKeepCloudSubtitle;
+
+  /// No description provided for @upgradeToCloudCloudPasswordLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cloud account password'**
+  String get upgradeToCloudCloudPasswordLabel;
+
+  /// No description provided for @upgradeToCloudCloudPasswordHint.
+  ///
+  /// In en, this message translates to:
+  /// **'The password for the existing cloud account'**
+  String get upgradeToCloudCloudPasswordHint;
+
+  /// No description provided for @upgradeToCloudCloudPasswordRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter your cloud account password.'**
+  String get upgradeToCloudCloudPasswordRequired;
+
+  /// No description provided for @upgradeToCloudDiscardAcknowledge.
+  ///
+  /// In en, this message translates to:
+  /// **'I understand that cloud data will replace any purely-local changes on this device.'**
+  String get upgradeToCloudDiscardAcknowledge;
+
+  /// No description provided for @upgradeToCloudDiscardAcknowledgeRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please acknowledge that local data will be replaced by cloud data.'**
+  String get upgradeToCloudDiscardAcknowledgeRequired;
+
+  /// No description provided for @upgradeToCloudCollisionUploadButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload and sign in'**
+  String get upgradeToCloudCollisionUploadButton;
+
+  /// No description provided for @upgradeToCloudCollisionDiscardButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard local and sign in'**
+  String get upgradeToCloudCollisionDiscardButton;
+
+  /// No description provided for @upgradeToCloudErrorIncorrectCloudPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Incorrect cloud account password.'**
+  String get upgradeToCloudErrorIncorrectCloudPassword;
+
+  /// No description provided for @upgradeToCloudErrorMergeInternetRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Internet connection is required to complete this merge option.'**
+  String get upgradeToCloudErrorMergeInternetRequired;
+
+  /// Friendly fallback shown instead of a raw exception when a collision-merge option fails for an unexpected reason.
+  ///
+  /// In en, this message translates to:
+  /// **'We couldn\'t complete this merge option. Please try again.'**
+  String get upgradeToCloudErrorMergeGeneric;
+
+  /// No description provided for @upgradeToCloudCloudNotVerifiedBody.
+  ///
+  /// In en, this message translates to:
+  /// **'This cloud account is not verified yet. Check your inbox, then tap \"I\'ve verified — complete upgrade\" below.'**
+  String get upgradeToCloudCloudNotVerifiedBody;
+
   /// No description provided for @scopeSelectionSave.
   ///
   /// In en, this message translates to:
@@ -4850,6 +5030,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Your learning progress is currently LOCAL ONLY. Upgrade to sync across all devices.'**
   String get backupSyncCardBody;
+
+  /// No description provided for @backupTimeAgoJustNow.
+  ///
+  /// In en, this message translates to:
+  /// **'just now'**
+  String get backupTimeAgoJustNow;
+
+  /// Relative time for a last-synced timestamp, in minutes.
+  ///
+  /// In en, this message translates to:
+  /// **'{count}m ago'**
+  String backupTimeAgoMinutes(int count);
+
+  /// Relative time for a last-synced timestamp, in hours.
+  ///
+  /// In en, this message translates to:
+  /// **'{count}h ago'**
+  String backupTimeAgoHours(int count);
+
+  /// Relative time for a last-synced timestamp, in days.
+  ///
+  /// In en, this message translates to:
+  /// **'{count}d ago'**
+  String backupTimeAgoDays(int count);
+
+  /// No description provided for @backupSyncSignInToBackUp.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to back up'**
+  String get backupSyncSignInToBackUp;
 
   /// No description provided for @reauthDialogTitle.
   ///
