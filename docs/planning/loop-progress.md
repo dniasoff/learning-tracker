@@ -574,3 +574,19 @@ device-driven (commit 95ede74a, make ci GREEN 9900 pass):
   device-language correction + Hebrew-script-terms (verified on-device); gamification unblocked+clean; PIN-loop P0
   verified fixed; FK-profile-creation = crash artifact (non-issue); emulator fleet restored (5558 relaunched by me);
   ~62 real bugs fixed + shipped green; ~37/45 screens redo-verified.
+
+### CLOUD/TUTOR PHASE START (2026-06-12) — "do everything, squad, until clear runs"
+- Daniel: take on the cloud/tutor cluster, orchestrate a squad, iterate until audits are clean.
+- Real phone (100.72.6.10:5555 over Tailscale, Google accounts dniasoff/familyniasoff) is OFFLINE → using the
+  EMULATOR fleet with EMAIL test accounts test-loop-a/c@orvex.test / TestLoop!2026.
+- APP CHECK RECIPE (gating step; from tool/run3_tutor_extensive.workflow.js): after pm clear+launch, get the debug
+  token from logcat (`grep -oE "Enter this debug secret into the allow list[^:]*: [0-9a-f-]+"`), register via
+  `curl -X POST https://firebaseappcheck.googleapis.com/v1/projects/346569574648/apps/<APPID>/debugTokens -H
+  "Authorization: Bearer $(gcloud auth print-access-token)" -H "x-goog-user-project: torah-study-tracker" -d
+  '{"displayName":"...","token":"<TOK>"}'`. APPID=1:346569574648:android:3519edaeb5ce5df9d6130d. gcloud authed
+  (dniasoff@gmail.com). firestore.rules need auth!=null + tutor_uid==auth.uid.
+- PLAN: (1) SETUP-LEAD on 5556 — validate App Check + email sign-in test-loop-a + cloud sync (DE-RISK first). (2) if
+  OK → squad: 5556=owner test-loop-a (child+track+points+reward, invite test-loop-c), 5558=tutor test-loop-c (accept
+  invite). (3) AUDIT cloud/tutor screens: manage_tutors+invite_tutor+parent_pending_redemptions+device_restore (owner),
+  accept_invite+manage_grants (tutor), account_picker (switcher). (4) fix waves → re-audit until CLEAN.
+- RISK: if test-loop accounts don't exist → create via Firebase Admin/gcloud. If App Check fails → diagnose.
