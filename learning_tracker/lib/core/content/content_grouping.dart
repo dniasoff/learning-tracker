@@ -88,6 +88,55 @@ String? levelValueAt(ContentItem item, int level) => switch (level) {
   _ => null,
 };
 
+/// Separator for qualified lifetime-scope identifiers (matches the '|' join used
+/// by LifetimeTreeBuilder.buildHeLabelLookup).
+const String kScopeIdSeparator = '|';
+
+/// The unitIdentifier to STORE/MATCH for a lifetime SCOPE mark at [level].
+/// level1 (seder) and level2 (masechta) are unique within a curriculum -> bare.
+/// level3 (daf/perek/pasuk) and level4 (amud/mishna/seif) numbers repeat across
+/// parents -> QUALIFIED with the full ancestor path so daf 2 is not credited
+/// across every masechta.
+String scopeUnitIdentifier({
+  required int level,
+  String? level1,
+  String? level2,
+  String? level3,
+  String? level4,
+}) {
+  switch (level) {
+    case 1:
+      return level1 ?? '';
+    case 2:
+      return level2 ?? '';
+    case 3:
+      return [
+        level1,
+        level2,
+        level3,
+      ].where((s) => s != null && s.isNotEmpty).join(kScopeIdSeparator);
+    case 4:
+      return [
+        level1,
+        level2,
+        level3,
+        level4,
+      ].where((s) => s != null && s.isNotEmpty).join(kScopeIdSeparator);
+    default:
+      return '';
+  }
+}
+
+/// Builds the scope id for a leaf [item] at [level] (for matching stored marks).
+String scopeUnitIdentifierForItem(ContentItem item, int level) =>
+    scopeUnitIdentifier(
+      level: level,
+      level1: item.level1,
+      level2: item.level2,
+      level3: item.level3,
+      level4: item.level4,
+    );
+
 /// Returns the rendered display name for [item].
 ///
 /// Use only with items produced by [groupItemsByNextLevel] — those have

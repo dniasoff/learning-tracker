@@ -325,16 +325,58 @@ class _LifetimeCurriculumMarkingScreenState
     orElse: () => CurriculumId.mishnayos,
   );
 
+  /// Collision fix: a level3/level4 mark must be stored/compared with its FULL
+  /// ancestor path so daf '2' in Berakhos does not also select daf '2' in
+  /// Shabbos. level1/level2 are unique within a curriculum, so
+  /// [scopeUnitIdentifier] returns the bare value for them. [currentPath] is the
+  /// navigation path of ANCESTORS above the item; [value] is the item's own
+  /// level value at [level].
+  String _qid(int level, String value, List<String> currentPath) {
+    final l = <String?>[null, null, null, null]; // level1..level4
+    for (var i = 0; i < currentPath.length && i < 4; i++) {
+      l[i] = currentPath[i];
+    }
+    if (level >= 1 && level <= 4) l[level - 1] = value;
+    return scopeUnitIdentifier(
+      level: level,
+      level1: l[0],
+      level2: l[1],
+      level3: l[2],
+      level4: l[3],
+    );
+  }
+
+  /// Derives the current navigation path (ancestor level values, level1-first)
+  /// for the rows displayed in the panel. The displayed items live at level
+  /// `_effectiveLevel`, so their level1..level(`_effectiveLevel - 1`) values are
+  /// the shared ancestors. Used by the level-wide "all" helpers, which do not
+  /// receive `currentPath` from the panel's tileBuilder.
+  List<String> _currentNavPath() {
+    if (_currentDisplayItems.isEmpty) return const [];
+    final ancestorCount = _navPathLength; // _effectiveLevel - 1
+    final first = _currentDisplayItems.first;
+    final path = <String>[];
+    for (var lvl = 1; lvl <= ancestorCount; lvl++) {
+      final v = levelValueAt(first, lvl);
+      if (v == null || v.isEmpty) break;
+      path.add(v);
+    }
+    return path;
+  }
+
   bool _isSelected(String value, List<String> currentPath) {
     final currentLevel = currentPath.length + 1;
-    if (_selections.any((s) => s.level == currentLevel && s.value == value)) {
+    if (_selections.any(
+      (s) => s.level == currentLevel && s.value == _qid(currentLevel, value, currentPath),
+    )) {
       return true;
     }
     for (var i = 0; i < currentPath.length; i++) {
       final ancestorLevel = i + 1;
       final ancestorValue = currentPath[i];
+      final ancestorId = _qid(ancestorLevel, ancestorValue, currentPath.sublist(0, i));
       if (_selections.any(
-        (s) => s.level == ancestorLevel && s.value == ancestorValue,
+        (s) => s.level == ancestorLevel && s.value == ancestorId,
       )) {
         return true;
       }
@@ -342,20 +384,26 @@ class _LifetimeCurriculumMarkingScreenState
     return false;
   }
 
-  bool _isDirectlySelected(String value, int currentLevel) {
-    return _selections.any((s) => s.level == currentLevel && s.value == value);
+  bool _isDirectlySelected(
+    String value,
+    int currentLevel,
+    List<String> currentPath,
+  ) {
+    final id = _qid(currentLevel, value, currentPath);
+    return _selections.any((s) => s.level == currentLevel && s.value == id);
   }
 
-  void _toggleSelection(String value, int level) {
+  void _toggleSelection(String value, int level, List<String> currentPath) {
+    final id = _qid(level, value, currentPath);
     setState(() {
       final idx = _selections.indexWhere(
-        (s) => s.level == level && s.value == value,
+        (s) => s.level == level && s.value == id,
       );
       if (idx >= 0) {
         _selections.removeAt(idx);
       } else {
         _selections.removeWhere((s) => s.level > level);
-        _selections.add(ScopeEntry(level: level, value: value));
+        _selections.add(ScopeEntry(level: level, value: id));
       }
     });
   }
@@ -374,12 +422,14 @@ class _LifetimeCurriculumMarkingScreenState
   bool get _allCurrentSelected {
     if (_currentDisplayItems.isEmpty) return false;
     final level = _effectiveLevel;
+    final currentPath = _currentNavPath();
     var sawSelectable = false;
     for (final item in _currentDisplayItems) {
       final rawValue = levelValueAt(item, level) ?? '';
       if (rawValue.isEmpty) continue;
       sawSelectable = true;
-      if (!_selections.any((s) => s.level == level && s.value == rawValue)) {
+      final id = _qid(level, rawValue, currentPath);
+      if (!_selections.any((s) => s.level == level && s.value == id)) {
         return false;
       }
     }
@@ -388,12 +438,15 @@ class _LifetimeCurriculumMarkingScreenState
 
   void _markAllCurrentLevel() {
     final level = _effectiveLevel;
+    final currentPath = _currentNavPath();
     setState(() {
       _selections.removeWhere((s) => s.level == level);
       for (final item in _currentDisplayItems) {
         final rawValue = levelValueAt(item, level) ?? '';
         if (rawValue.isNotEmpty) {
-          _selections.add(ScopeEntry(level: level, value: rawValue));
+          _selections.add(
+            ScopeEntry(level: level, value: _qid(level, rawValue, currentPath)),
+          );
         }
       }
     });
@@ -412,9 +465,13 @@ class _LifetimeCurriculumMarkingScreenState
     List<LearningLedgerData> ledger,
     int level,
     String value,
+    List<String> currentPath,
   ) {
+    // Persisted level3/level4 marks store the QUALIFIED path id (collision fix),
+    // so compare against the qualified id; level1/level2 stay bare via _qid.
+    final id = _qid(level, value, currentPath);
     return ledger.any(
-      (e) => e.entryScope == 'level$level' && e.unitIdentifier == value,
+      (e) => e.entryScope == 'level$level' && e.unitIdentifier == id,
     );
   }
 
@@ -690,6 +747,7 @@ class _LifetimeCurriculumMarkingScreenState
                                 ledger,
                                 currentLevel,
                                 rawValue,
+                                currentPath,
                               );
                               final selected = _isSelected(
                                 rawValue,
@@ -698,6 +756,7 @@ class _LifetimeCurriculumMarkingScreenState
                               final directlySelected = _isDirectlySelected(
                                 rawValue,
                                 currentLevel,
+                                currentPath,
                               );
                               return LifetimeMarkingScopeRow(
                                 primary: itemDisplayName(
@@ -720,8 +779,11 @@ class _LifetimeCurriculumMarkingScreenState
                                     !persisted && selected && !directlySelected,
                                 lightSurface: true,
                                 onDrill: onDrill,
-                                onToggle: () =>
-                                    _toggleSelection(rawValue, currentLevel),
+                                onToggle: () => _toggleSelection(
+                                  rawValue,
+                                  currentLevel,
+                                  currentPath,
+                                ),
                               );
                             },
                             bottomActions: (context) => Padding(
