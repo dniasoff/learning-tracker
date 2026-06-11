@@ -235,8 +235,24 @@ class DomainTermLabels {
   /// ARB en: chazaros  |  he: chazaros
   ///
   /// Distinct from [chazara] (singular). Use this in lifetime totals such
-  /// as "1,200 total chazaros".
+  /// as "1,200 total chazaros". Returns the Ashkenazi form in English mode.
+  ///
+  /// For nusach-aware rendering use [chazarosFor] and pass
+  /// `currentTransliterationVariantProvider`.
   String get chazaros => _useHebrew ? 'חזרות' : 'Chazaros';
+
+  /// Variant-aware form of [chazaros].
+  ///
+  /// IL-2 fix: accepts [variant] so Sephardi callers receive "Chazarot" rather
+  /// than the Ashkenazi "Chazaros".  Hebrew mode is nusach-independent ("חזרות").
+  ///
+  /// Usage: `terms.chazarosFor(variant: ref.watch(currentTransliterationVariantProvider))`
+  String chazarosFor({
+    TransliterationVariant variant = TransliterationVariant.ashkenazi,
+  }) {
+    if (_useHebrew) return 'חזרות';
+    return variant == TransliterationVariant.sephardi ? 'Chazarot' : 'Chazaros';
+  }
 
   /// Canonical "Siyum" — finish-celebration of a whole unit.
   /// ARB en: siyum  |  he: siyum
@@ -256,8 +272,17 @@ class DomainTermLabels {
   /// "{count} total chazaros" / "{count} חזרות סה״כ" — lifetime-tier total
   /// review count.
   /// ARB en: totalChazaros  |  he: totalChazaros
-  String totalChazaros(int count) =>
-      _useHebrew ? '$count חזרות סה״כ' : '$count total chazaros';
+  ///
+  /// IL-2 fix: accepts [variant] so Sephardi callers get "Chazarot" not
+  /// "Chazaros".  Hebrew mode returns the Hebrew phrase regardless of variant.
+  String totalChazaros(
+    int count, {
+    TransliterationVariant variant = TransliterationVariant.ashkenazi,
+  }) {
+    if (_useHebrew) return '$count חזרות סה״כ';
+    final term = chazarosFor(variant: variant);
+    return '$count total $term';
+  }
 
   // ── Per-curriculum siyum labels (toggle-aware) ───────────────────────────
   //

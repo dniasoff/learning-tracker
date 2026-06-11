@@ -148,7 +148,9 @@ void main() {
         hebrewOn: false,
         extract: (r) => domainTermLabels(r).totalChazaros(2400),
       );
-      expect(got, '2400 total chazaros');
+      // IL-2 fix: totalChazaros now builds from chazarosFor() so the
+      // Ashkenazi form is capitalised ("Chazaros") to match the getter.
+      expect(got, '2400 total Chazaros');
     });
     testWidgets('totalChazaros(2400) — Hebrew ON', (tester) async {
       final got = await _renderWithToggle(
