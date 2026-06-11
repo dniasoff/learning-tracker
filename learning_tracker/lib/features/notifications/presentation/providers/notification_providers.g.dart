@@ -109,7 +109,7 @@ final class ReminderEnabledProvider
   }
 }
 
-String _$reminderEnabledHash() => r'52e926998770c77f9bce3b55193fd86ace39f594';
+String _$reminderEnabledHash() => r'36f73bfff7fadc6154219fb3ccd91426d263ff39';
 
 /// Manages the daily reminder enabled state.
 ///
@@ -138,6 +138,10 @@ abstract class _$ReminderEnabled extends $Notifier<bool> {
 /// Manages the daily reminder time.
 ///
 /// (WS5.key-prefs) Per-profile namespaced SharedPrefs key.
+///
+/// ST-1 fix: watch [activeProfileIdProvider] (not read) so that a cold-start
+/// 0→real-id transition or a mid-session profile switch triggers a rebuild
+/// and re-reads the stored time from the correct per-profile key.
 
 @ProviderFor(ReminderTime)
 final reminderTimeProvider = ReminderTimeProvider._();
@@ -145,11 +149,19 @@ final reminderTimeProvider = ReminderTimeProvider._();
 /// Manages the daily reminder time.
 ///
 /// (WS5.key-prefs) Per-profile namespaced SharedPrefs key.
+///
+/// ST-1 fix: watch [activeProfileIdProvider] (not read) so that a cold-start
+/// 0→real-id transition or a mid-session profile switch triggers a rebuild
+/// and re-reads the stored time from the correct per-profile key.
 final class ReminderTimeProvider
     extends $NotifierProvider<ReminderTime, TimeOfDay> {
   /// Manages the daily reminder time.
   ///
   /// (WS5.key-prefs) Per-profile namespaced SharedPrefs key.
+  ///
+  /// ST-1 fix: watch [activeProfileIdProvider] (not read) so that a cold-start
+  /// 0→real-id transition or a mid-session profile switch triggers a rebuild
+  /// and re-reads the stored time from the correct per-profile key.
   ReminderTimeProvider._()
     : super(
         from: null,
@@ -177,11 +189,15 @@ final class ReminderTimeProvider
   }
 }
 
-String _$reminderTimeHash() => r'8091937cb20aa7294097ab36e72e66b470e855f7';
+String _$reminderTimeHash() => r'67e64420ba80e954cb1bdcc0f46ecf9233aabe2d';
 
 /// Manages the daily reminder time.
 ///
 /// (WS5.key-prefs) Per-profile namespaced SharedPrefs key.
+///
+/// ST-1 fix: watch [activeProfileIdProvider] (not read) so that a cold-start
+/// 0→real-id transition or a mid-session profile switch triggers a rebuild
+/// and re-reads the stored time from the correct per-profile key.
 
 abstract class _$ReminderTime extends $Notifier<TimeOfDay> {
   TimeOfDay build();
@@ -244,7 +260,7 @@ final class StreakAlertEnabledProvider
 }
 
 String _$streakAlertEnabledHash() =>
-    r'b5392a9e9ed2a42d07fe93528d5a0900f82267ac';
+    r'a4c5b0e07de04ba3c25215a0efe66898fc85be00';
 
 /// Manages the streak alert enabled state.
 ///
@@ -271,6 +287,10 @@ abstract class _$StreakAlertEnabled extends $Notifier<bool> {
 /// Manages the streak alert time.
 ///
 /// (WS5.key-prefs) Per-profile namespaced SharedPrefs key.
+///
+/// ST-1 fix: watch [activeProfileIdProvider] (not read) so that a cold-start
+/// 0→real-id transition or a mid-session profile switch triggers a rebuild
+/// and re-reads the stored time from the correct per-profile key.
 
 @ProviderFor(StreakAlertTime)
 final streakAlertTimeProvider = StreakAlertTimeProvider._();
@@ -278,11 +298,19 @@ final streakAlertTimeProvider = StreakAlertTimeProvider._();
 /// Manages the streak alert time.
 ///
 /// (WS5.key-prefs) Per-profile namespaced SharedPrefs key.
+///
+/// ST-1 fix: watch [activeProfileIdProvider] (not read) so that a cold-start
+/// 0→real-id transition or a mid-session profile switch triggers a rebuild
+/// and re-reads the stored time from the correct per-profile key.
 final class StreakAlertTimeProvider
     extends $NotifierProvider<StreakAlertTime, TimeOfDay> {
   /// Manages the streak alert time.
   ///
   /// (WS5.key-prefs) Per-profile namespaced SharedPrefs key.
+  ///
+  /// ST-1 fix: watch [activeProfileIdProvider] (not read) so that a cold-start
+  /// 0→real-id transition or a mid-session profile switch triggers a rebuild
+  /// and re-reads the stored time from the correct per-profile key.
   StreakAlertTimeProvider._()
     : super(
         from: null,
@@ -310,11 +338,15 @@ final class StreakAlertTimeProvider
   }
 }
 
-String _$streakAlertTimeHash() => r'd3e7c9fc2e842dbb995c0583dc47357dfd65d9b1';
+String _$streakAlertTimeHash() => r'a1c8b0b8c41a878b46c544f8aa9d6ee03e4222c4';
 
 /// Manages the streak alert time.
 ///
 /// (WS5.key-prefs) Per-profile namespaced SharedPrefs key.
+///
+/// ST-1 fix: watch [activeProfileIdProvider] (not read) so that a cold-start
+/// 0→real-id transition or a mid-session profile switch triggers a rebuild
+/// and re-reads the stored time from the correct per-profile key.
 
 abstract class _$StreakAlertTime extends $Notifier<TimeOfDay> {
   TimeOfDay build();
@@ -377,7 +409,7 @@ final class RewardNotificationEnabledProvider
 }
 
 String _$rewardNotificationEnabledHash() =>
-    r'a817651d6815d59696aa70d8616a874b849f6fbd';
+    r'a22303b86b385025ffb19c0b7263426b24b05a7b';
 
 /// Manages the reward notification enabled state.
 ///
