@@ -208,9 +208,12 @@ void main() {
   });
 
   // ── idle state ────────────────────────────────────────────────────────────────
+  //
+  // SY-2 fix: idle branch now renders a CircularProgressIndicator so the user
+  // sees activity during the transient idle window, not a blank screen.
 
   group('idle state', () {
-    testWidgets('renders empty (SizedBox.shrink) — no spinner, no text', (
+    testWidgets('renders a spinner (not blank SizedBox.shrink) — SY-2 fix', (
       tester,
     ) async {
       final db = UserDatabase(NativeDatabase.memory());
@@ -227,7 +230,9 @@ void main() {
       );
       await tester.pump();
 
-      expect(find.byType(CircularProgressIndicator), findsNothing);
+      // After SY-2 fix: idle must show a spinner, not be blank.
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      // No progress bar (that's the 'restoring' state) or error/retry UI.
       expect(find.byType(LinearProgressIndicator), findsNothing);
       expect(find.byType(ElevatedButton), findsNothing);
 

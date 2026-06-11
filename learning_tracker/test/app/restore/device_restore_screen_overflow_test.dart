@@ -38,31 +38,80 @@
 @Tags(['overflow', 'restore'])
 library;
 
+import 'package:auto_route/auto_route.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/app/restore/device_restore_screen.dart';
 import 'package:learning_tracker/app/restore/restore_providers.dart';
+import 'package:learning_tracker/app/router/app_router.dart';
+import 'package:learning_tracker/app/router/router_provider.dart';
+import 'package:learning_tracker/core/navigation/guards/restore_guard.dart';
 import 'package:learning_tracker/features/sync/domain/models/restore_status.dart';
+import 'package:mocktail/mocktail.dart';
 
 import '../../helpers/overflow_harness.dart';
 
+// ── Mocks for the null-service navigation path ─────────────────────────────────
+//
+// With the SY-2 fix, _startRestore calls _navigateToApp() when
+// deviceRestoreServiceProvider returns null, and _navigateToApp uses
+// context.router.replaceAll(...). The overflow harness wraps in a bare
+// MaterialApp with no StackRouterScope, so context.router would throw.
+// We wrap the screen in a StackRouterScope (with a no-op mock router) and
+// add overrides for routerProvider so _navigateToApp can call
+// markRestoreComplete() without error.
+
+class _MockStackRouter extends Mock implements StackRouter {}
+
+class _MockRestoreGuard extends Mock implements RestoreGuard {
+  @override
+  void markRestoreComplete() {}
+}
+
+class _StubAppRouter extends Mock implements AppRouter {
+  _StubAppRouter({required this.restoreGuard});
+
+  @override
+  final RestoreGuard restoreGuard;
+}
+
+_MockStackRouter _makeRouter() {
+  final r = _MockStackRouter();
+  when(() => r.replaceAll(any())).thenAnswer((_) async => []);
+  when(() => r.push(any())).thenAnswer((_) async => null);
+  return r;
+}
+
 List<Override> _statusOverride(RestoreStatus status) => [
   restoreStatusProvider.overrideWithValue(status),
-  // Local-only: short-circuits `_startRestore` and keeps the real
-  // (Firebase-backed) restore-service provider chain from ever building.
+  // Local-only: keeps the real (Firebase-backed) restore-service provider
+  // chain from ever building.  SY-2 fix: _startRestore now calls
+  // _navigateToApp() for the null-service path, so we also override
+  // routerProvider with a stub that has a mock RestoreGuard.
   deviceRestoreServiceProvider.overrideWithValue(null),
+  routerProvider.overrideWithValue(
+    _StubAppRouter(restoreGuard: _MockRestoreGuard()),
+  ),
 ];
 
 /// The real screen with its progress-indicator tickers muted so the harness's
 /// `pumpAndSettle` can settle. Layout geometry is unchanged.
-Widget _screen() =>
-    const TickerMode(enabled: false, child: DeviceRestoreScreen());
+///
+/// Wrapped in a StackRouterScope so _navigateToApp's context.router.replaceAll
+/// resolves against a no-op mock (SY-2 fix: null service now navigates).
+Widget _screen() => StackRouterScope(
+  controller: _makeRouter(),
+  stateHash: 0,
+  child: const TickerMode(enabled: false, child: DeviceRestoreScreen()),
+);
 
 void main() {
   setUpAll(() {
     GoogleFonts.config.allowRuntimeFetching = false;
+    registerFallbackValue(const AppShellRoute());
+    registerFallbackValue(<PageRouteInfo>[const AppShellRoute()]);
   });
 
   testWidgets('restoring state does not overflow across the device matrix', (

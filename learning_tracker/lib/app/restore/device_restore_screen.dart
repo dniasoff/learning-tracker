@@ -27,8 +27,19 @@ class _DeviceRestoreScreenState extends ConsumerState<DeviceRestoreScreen> {
   }
 
   Future<void> _startRestore() async {
+    // Yield one microtask so initState() finishes before any ref.read /
+    // ref.invalidate calls.  Flutter forbids reading inherited widgets
+    // synchronously inside initState (Riverpod reads are InheritedWidget-based).
+    await Future<void>.microtask(() {});
+    if (!mounted) return;
     final service = ref.read(deviceRestoreServiceProvider);
-    if (service == null) return; // Local-only — no restore possible
+    if (service == null) {
+      // Local-only account — no Firestore restore possible.  Navigate to the
+      // app shell immediately so the user is not left on a blank idle screen.
+      // (SY-2: null-service early-return blank-screen fix.)
+      if (mounted) _navigateToApp();
+      return;
+    }
     final success = await service.restore();
     if (!mounted) return;
     if (success) {
@@ -147,7 +158,10 @@ class _DeviceRestoreScreenState extends ConsumerState<DeviceRestoreScreen> {
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(32),
           child: status.when(
-            idle: () => const SizedBox.shrink(),
+            // SY-2: render a visible spinner so the user is never left on a
+            // completely blank screen during the transient idle window while
+            // restore() initialises, or when an edge-case keeps status idle.
+            idle: () => const CircularProgressIndicator(),
             checking: () => Column(
               mainAxisSize: MainAxisSize.min,
               children: [
