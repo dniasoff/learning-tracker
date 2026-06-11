@@ -419,3 +419,15 @@ device-driven (commit 95ede74a, make ci GREEN 9900 pass):
   spot-check.
 - NEXT: integrate collision fix (make ci + review) → triage gamification/siyumim findings → fix → continue redo on the
   remaining ~26 screens.
+
+### Gamification + Siyumim AUDIT: CLEAN (2026-06-11)
+- Both previously-blocked screens audited on 5556 (seeded child) — ZERO findings (no P0/P1/P2):
+  · My Achievements (via child streak chip): pluralization correct ("1 day streak"), no clip/overflow @1.3, rapid-tap
+    + background/resume probes pass, correct Child/CHILD-MODE context. (0 rewards configured → genuine empty state;
+    the achievement-tiles/locked-badges/level-chips populated state not exercised — would need rewards seeded.)
+  · Siyumim & Milestones: empty state logically correct (1 section done, not a full masechta → 0 siyumim is right);
+    domain oracle PASS (Ashkenazi "siyumim/masechta/sefer", seder "זרעים" Hebrew script, masechtos appear once each).
+  · BONUS — Q2 (Hebrew-script terms) CONFIRMED on-device: calendar weekday letters + Hebrew numerals, סיומים, חזרות,
+    זרעים, ברכות/פאה/דמאי, משניות, שבת all render in proper Hebrew script (not romanized).
+- Redo tally: 14 of ~45 screens verified (R1 6, R2 6, gamification + siyumim 2). Remaining ~26 (R4+).
+- AWAITING: collision-fix agent (qualified-path level3/4 + v30 migration) → integrate when it completes.
