@@ -707,8 +707,9 @@ void main() {
 
       // _AllTimeSummaryCard shows this title.
       expect(find.text('All-time activity'), findsOneWidget);
-      // Active-days stat label.
-      expect(find.text('Active days'), findsOneWidget);
+      // Active-days stat — now an ICU-plural phrase (the stub seeds no active
+      // days, so the count is 0 → plural "0 Active days").
+      expect(find.text('0 Active days'), findsOneWidget);
 
       await _teardown(tester);
     });

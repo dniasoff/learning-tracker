@@ -29,6 +29,7 @@ import 'package:learning_tracker/features/content_browsing/domain/repositories/c
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/progress/presentation/screens/curriculum_progress_screen.dart';
+import 'package:learning_tracker/features/progress/presentation/widgets/overall_stats_card.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/models/stage_definition.dart'
     as domain_stage;
 import 'package:learning_tracker/features/tracks/stages/domain/repositories/stage_definition_repository.dart';
@@ -323,24 +324,43 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      // Track-progress: 1 of 4 items has completed both stages → 25%.
+      // Track-progress: 1 of 4 items has completed both stages → 25%. The
+      // dual-stats cell renders the label and the big percentage value as two
+      // separate lines (W5-A layout fix), so we assert each independently.
       expect(
-        find.text('Track progress: 25%'),
+        find.text('Track progress'),
         findsOneWidget,
         reason:
             'Track progress shows the % of items that have completed every '
             'stage (the existing "completedAllStages" bucket)',
       );
+      // The percentage is the headline value inside the OverallStatsCard — scope
+      // the matcher there so it does not collide with a hierarchy progress
+      // circle that happens to show the same percentage.
+      expect(
+        find.descendant(
+          of: find.byType(OverallStatsCard),
+          matching: find.text('25%'),
+        ),
+        findsOneWidget,
+      );
 
       // Lifetime: 2 of 4 leaves have at least one completion (live ref +
       // lifetimeOnly ref) → 50%.
       expect(
-        find.text('Lifetime: 50%'),
+        find.text('Lifetime'),
         findsOneWidget,
         reason:
             'Lifetime % includes every completion source (live + bulkInTrack '
             '+ lifetimeOnly) so the lifetimeOnly leaf is counted here even '
             'though it is excluded from Track progress',
+      );
+      expect(
+        find.descendant(
+          of: find.byType(OverallStatsCard),
+          matching: find.text('50%'),
+        ),
+        findsOneWidget,
       );
 
       // The legacy breakdown rows remain — the dual-stats row is additive.

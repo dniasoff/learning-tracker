@@ -164,13 +164,35 @@ class _DualStatCell extends StatelessWidget {
     final value = fraction == null
         ? '—'
         : formatFractionAsPercent(fraction!, decimals: 0);
-    return Text(
-      '$label: $value',
-      style: theme.textTheme.titleLarge?.copyWith(
-        color: Colors.white,
-        fontWeight: FontWeight.w800,
-        height: 1.1,
-      ),
+    // W5-A layout fix: stack the label above the percentage. Previously both
+    // were a single inline "Label: 0%" string inside an equal-width Expanded
+    // cell, so the longer "Track progress" headline wrapped to three cramped
+    // lines beside the single-line "Lifetime: N%" cell. Separating the label
+    // (which may wrap onto its own lines) from the big percentage value gives
+    // the headline room and keeps the two cells visually balanced.
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          label,
+          style: theme.textTheme.labelLarge?.copyWith(
+            color: Colors.white.withValues(alpha: 0.92),
+            fontWeight: FontWeight.w700,
+            height: 1.15,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          value,
+          maxLines: 1,
+          style: theme.textTheme.headlineSmall?.copyWith(
+            color: Colors.white,
+            fontWeight: FontWeight.w800,
+            height: 1.0,
+          ),
+        ),
+      ],
     );
   }
 }

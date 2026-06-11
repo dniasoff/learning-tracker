@@ -399,8 +399,7 @@ class _AllTimeSummaryCard extends ConsumerWidget {
     final anyTrackHasChazara =
         ref.watch(anyActiveTrackHasChazaraProvider).asData?.value ?? false;
 
-    final activeDaysLabel =
-        activeDatesAsync.asData?.value.length.toString() ?? _loading;
+    final activeDaysCount = activeDatesAsync.asData?.value.length;
     final limudCount =
         limudChazaraAsync.asData?.value
             .fold<int>(0, (sum, d) => sum + d.limudCount)
@@ -428,9 +427,15 @@ class _AllTimeSummaryCard extends ConsumerWidget {
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
             Expanded(
-              child: _AllTimeStat(
-                value: activeDaysLabel,
-                label: l10n.allTimeActiveDays,
+              // Active-days uses an ICU plural PHRASE (count==1 → singular
+              // "1 Active day" / "יום פעיל אחד") rather than a static "N Active
+              // days" label, so a single active day no longer reads as a plural.
+              // The phrase already carries the count, so this tile renders the
+              // phrase alone (no separate big number) while loading shows '…'.
+              child: _AllTimeStatPhrase(
+                phrase: activeDaysCount == null
+                    ? _loading
+                    : l10n.recentActivityActiveDaysCount(activeDaysCount),
               ),
             ),
             Expanded(
@@ -489,6 +494,33 @@ class _AllTimeStat extends StatelessWidget {
   }
 }
 
+/// Single-phrase variant of [_AllTimeStat] for stats whose value and label are
+/// fused into one localized ICU phrase (e.g. the pluralized active-days count
+/// "1 Active day" / "3 Active days"). Sized to sit alongside the big-number
+/// [_AllTimeStat] tiles in the same row.
+class _AllTimeStatPhrase extends StatelessWidget {
+  const _AllTimeStatPhrase({required this.phrase});
+
+  final String phrase;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Center(
+      child: Text(
+        phrase,
+        textAlign: TextAlign.center,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: theme.textTheme.titleMedium?.copyWith(
+          fontWeight: FontWeight.w800,
+          color: const Color(0xFF1A1F2F),
+        ),
+      ),
+    );
+  }
+}
+
 // ── Chart bodies ───────────────────────────────────────────────────────────
 
 class _LimudChazaraChartBody extends ConsumerWidget {
@@ -501,12 +533,49 @@ class _LimudChazaraChartBody extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final async = ref.watch(recentActivityLimudimChazarosProvider(window));
     return async.when(
-      data: (data) => LimudimChazarosBarChart(data: data),
+      data: (data) {
+        // Empty-filter state: the window may return one bucket per day but with
+        // zero activity in every bucket (e.g. a curriculum chip with no recent
+        // live completions). Rendering the bar chart then shows a bare/zeroed
+        // axis with no explanation — surface an explicit empty-state message
+        // instead of blank bars.
+        final hasActivity = data.any((d) => d.total > 0);
+        if (!hasActivity) {
+          return const _ChartEmptyState();
+        }
+        return LimudimChazarosBarChart(data: data);
+      },
       loading: () => LoadingIndicator(message: l10n.loading),
       error: (e, _) => ErrorDisplay(
         message: l10n.chartFailedToLoad,
         onRetry: () =>
             ref.invalidate(recentActivityLimudimChazarosProvider(window)),
+      ),
+    );
+  }
+}
+
+/// Localized empty-state shown in the Recent Activity charts when the active
+/// time-range / curriculum filter yields no live completions, so the user sees
+/// a clear message rather than a blank/zeroed chart.
+class _ChartEmptyState extends StatelessWidget {
+  const _ChartEmptyState();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final theme = Theme.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        child: Text(
+          l10n.recentActivityEmptyState,
+          textAlign: TextAlign.center,
+          style: theme.textTheme.bodyMedium?.copyWith(
+            color: const Color(0xFF778099),
+            fontWeight: FontWeight.w600,
+          ),
+        ),
       ),
     );
   }
@@ -522,7 +591,16 @@ class _CumulativeChartBody extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final async = ref.watch(recentActivityCumulativeProvider(window));
     return async.when(
-      data: (data) => CumulativeLineChart(data: data),
+      data: (data) {
+        // Same empty-filter guard as the bar chart: a flat all-zero cumulative
+        // series means no live completions in the filtered window — show the
+        // empty-state copy instead of a flat zero line.
+        final hasActivity = data.any((p) => p.total > 0);
+        if (!hasActivity) {
+          return const _ChartEmptyState();
+        }
+        return CumulativeLineChart(data: data);
+      },
       loading: () => LoadingIndicator(message: l10n.loading),
       error: (e, _) => ErrorDisplay(
         message: l10n.chartFailedToLoad,

@@ -327,6 +327,50 @@ void main() {
     },
   );
 
+  testWidgets(
+    'All Time active-days uses singular ICU plural when exactly one day is active',
+    (tester) async {
+      // Finding #5: "1 Active days" was a static plural. With the ICU-plural
+      // fix a single active day must read "1 Active day" (singular).
+      final today = DateTimeFactory.nowLocal();
+      final at = DateTime(today.year, today.month, today.day, 9);
+      await _seedLive(db, trackId: trackId, ref: 'live_one', stageId: 1, at: at);
+
+      await tester.pumpWidget(buildScreen());
+      await tester.pumpAndSettle();
+
+      // Switch to the All Time range so the summary card (with the active-days
+      // tile) renders instead of the calendar grid.
+      final allTimePill = find.text('All Time');
+      expect(allTimePill, findsOneWidget);
+      await tester.tap(allTimePill);
+      await tester.pumpAndSettle();
+
+      // Singular phrase — NOT the static "1 Active days".
+      expect(find.text('1 Active day'), findsOneWidget);
+      expect(find.text('1 Active days'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'empty filtered window shows an explicit empty-state message (not a blank chart)',
+    (tester) async {
+      // Finding #6: with no live completions in the window the charts render a
+      // zeroed/blank axis. The empty-state copy must be shown instead.
+      await tester.pumpWidget(buildScreen());
+      await tester.pumpAndSettle();
+
+      // The localized empty-state appears (both the bar + cumulative bodies
+      // render it, so at least one is present).
+      expect(
+        find.text('No learning activity in this range yet.'),
+        findsWidgets,
+      );
+      // The zeroed bar chart must NOT be shown for an empty window.
+      expect(find.byType(LimudimChazarosBarChart), findsNothing);
+    },
+  );
+
   testWidgets('switching time-range pill triggers a fresh chart fetch', (
     tester,
   ) async {
