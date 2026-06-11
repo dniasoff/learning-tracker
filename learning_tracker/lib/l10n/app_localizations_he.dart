@@ -520,6 +520,10 @@ class AppLocalizationsHe extends AppLocalizations {
   String get manageTracksDetail => 'יצירה ועריכה של מסלולי הלמידה';
 
   @override
+  String get parentManageTracksDetail =>
+      'יצירה ועריכה של מסלולי הלמידה של ילדך';
+
+  @override
   String get addTrackGoalTapToUseDeadline =>
       'מצב קצב יעד פעיל — יש ללחוץ כאן ליעד לפי תאריך יעד';
 
@@ -3061,6 +3065,10 @@ class AppLocalizationsHe extends AppLocalizations {
   String get deleteTrackArchiveBody => 'מה לעשות עם היסטוריית ההשלמות שלך?';
 
   @override
+  String get parentDeleteTrackArchiveBody =>
+      'מה לעשות עם היסטוריית ההשלמות של ילדך?';
+
+  @override
   String get deleteTrackArchive => 'ארכיון (שמור היסטוריה)';
 
   @override
@@ -4292,4 +4300,15 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get permissionPromptAllowButton => 'אפשר';
+
+  @override
+  String selectionCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count בחירות',
+      one: 'בחירה אחת',
+    );
+    return '$_temp0';
+  }
 }

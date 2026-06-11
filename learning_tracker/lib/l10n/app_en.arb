@@ -248,6 +248,7 @@
     "description": "AppBar title for the parent track-management screen, reached from both the 'Manage Tracks' and 'Manage Goals' tiles (goals are set per-track here), so the title covers both."
   },
   "manageTracksDetail": "Create and edit your learning tracks",
+  "parentManageTracksDetail": "Create and edit your child's learning tracks",
   "addTrackGoalTapToUseDeadline": "Target pace is on — tap here to use a deadline instead",
   "addTrackGoalTapToUsePace": "Deadline is on — tap here to use target pace instead",
   "addTrackChazaraStepTitle": "Add {term}?",
@@ -1564,6 +1565,7 @@
   },
   "deleteTrackArchiveTitle": "Delete Track",
   "deleteTrackArchiveBody": "What should happen to your completion history?",
+  "parentDeleteTrackArchiveBody": "What should happen to your child's completion history?",
   "deleteTrackArchive": "Archive (keep history)",
   "deleteTrackWipe": "Delete and wipe history",
   "notificationReminderTitle": "Learning Reminder",
@@ -2468,5 +2470,12 @@
   "permissionPromptAllowButton": "Allow",
   "@permissionPromptAllowButton": {
     "description": "Label on the Allow button inside each permission card on PermissionPromptScreen."
+  },
+  "selectionCount": "{count, plural, one{{count} selection} other{{count} selections}}",
+  "@selectionCount": {
+    "description": "IL-9: localized count label shown below HierarchySelectionPanel when items are selected.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
   }
 }

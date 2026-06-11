@@ -9,14 +9,31 @@ import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/parent_pin_session_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/add_profile_dialog.dart';
+import 'package:learning_tracker/features/profiles/presentation/widgets/parent_pin_keypad_dialog.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/profile_edit_delete_actions.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/tutored_children_section.dart';
 import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
+
+/// AN-2: Whether the active profile is a child with a configured Parent PIN —
+/// the guard condition that gates all escalating actions in the switcher sheet.
+///
+/// Exposed as an overridable [FutureProvider] so tests can inject a known
+/// result without touching [FlutterSecureStorage].
+final switcherSheetPinGuardRequiredProvider = FutureProvider<bool>((ref) async {
+  final profiles =
+      ref.watch(profileListStreamProvider).asData?.value ?? <ProfileModel>[];
+  final activeId = ref.watch(activeProfileIdProvider);
+  final active = profiles.where((p) => p.id == activeId).firstOrNull;
+  if (active == null || active.profileMode != ProfileMode.child) return false;
+  final pinService = ref.read(pinServiceProvider);
+  return pinService.hasProfilePin(activeId);
+});
 
 /// Opens the canonical profile switcher/manager bottom sheet.
 ///
@@ -38,6 +55,10 @@ Future<void> showProfileSwitcherSheet(BuildContext context) {
 /// the active one, and lets the user switch (tap a row), edit (pencil), or
 /// delete (trash) any profile, plus add a new profile. Switching INTO a child
 /// profile is how a parent enters parent-mode for that child.
+///
+/// AN-2: Escalating actions (switch to adult profile, edit, delete, switch
+/// account, add profile) are gated behind a Parent PIN challenge when the
+/// active profile is a child and a PIN is configured.
 class ProfileSwitcherSheet extends ConsumerWidget {
   const ProfileSwitcherSheet({super.key});
 
@@ -49,6 +70,10 @@ class ProfileSwitcherSheet extends ConsumerWidget {
     final profiles = profilesAsync.asData?.value ?? <ProfileModel>[];
     final activeProfileId = ref.watch(activeProfileIdProvider);
     final accountEmail = ref.watch(authStateProvider).currentUser?.email;
+    // AN-2: read whether the active profile is a child with a PIN set.
+    // Falls back to false (no guard) while loading or on error.
+    final pinGuardRequired =
+        ref.watch(switcherSheetPinGuardRequiredProvider).asData?.value ?? false;
 
     return DecoratedBox(
       decoration: const BoxDecoration(
@@ -130,10 +155,19 @@ class ProfileSwitcherSheet extends ConsumerWidget {
                       Icons.chevron_right_rounded,
                       color: AppColors.inkMidGrey,
                     ),
-                    onTap: () {
-                      Navigator.of(context).pop();
-                      unawaited(context.pushRoute(const AccountPickerRoute()));
-                    },
+                    // AN-2: switching account is an escalating action from child context.
+                    onTap: () => _guardEscalating(
+                      context,
+                      ref,
+                      pinGuardRequired: pinGuardRequired,
+                      activeProfileId: activeProfileId,
+                      action: () {
+                        Navigator.of(context).pop();
+                        unawaited(
+                          context.pushRoute(const AccountPickerRoute()),
+                        );
+                      },
+                    ),
                     contentPadding: EdgeInsets.zero,
                   ),
                 ),
@@ -154,11 +188,31 @@ class ProfileSwitcherSheet extends ConsumerWidget {
                   _SwitcherProfileTile(
                     profile: profile,
                     isActive: profile.id == activeProfileId,
-                    onTap: () => _switchProfile(context, ref, profile.id),
-                    onEdit: () =>
-                        unawaited(editProfileFlow(context, ref, profile)),
-                    onDelete: () =>
-                        unawaited(deleteProfileFlow(context, ref, profile)),
+                    // AN-2: switching to an adult profile from a child context
+                    // is an escalating action — require Parent PIN.
+                    onTap: () => _guardEscalating(
+                      context,
+                      ref,
+                      pinGuardRequired: pinGuardRequired,
+                      activeProfileId: activeProfileId,
+                      action: () => _switchProfile(context, ref, profile.id),
+                    ),
+                    onEdit: () => _guardEscalating(
+                      context,
+                      ref,
+                      pinGuardRequired: pinGuardRequired,
+                      activeProfileId: activeProfileId,
+                      action: () =>
+                          unawaited(editProfileFlow(context, ref, profile)),
+                    ),
+                    onDelete: () => _guardEscalating(
+                      context,
+                      ref,
+                      pinGuardRequired: pinGuardRequired,
+                      activeProfileId: activeProfileId,
+                      action: () =>
+                          unawaited(deleteProfileFlow(context, ref, profile)),
+                    ),
                   ),
                 // Talmid profiles — self-gating: renders only when the current
                 // user has ≥1 active or pending tutor grant.
@@ -190,16 +244,23 @@ class ProfileSwitcherSheet extends ConsumerWidget {
                         color: AppTheme.brandBlueDeep,
                       ),
                     ),
-                    onTap: () async {
-                      // D4 root cause: popping the sheet FIRST unmounted both
-                      // `context` and `ref`, so showAddProfileDialog's
-                      // `context.mounted` guard bailed out before createProfile —
-                      // Add Profile silently created nothing. Keep the sheet
-                      // mounted while the dialog runs (it sits behind the modal
-                      // dialog barrier), then close it afterwards.
-                      await showAddProfileDialog(context, ref);
-                      if (context.mounted) Navigator.of(context).pop();
-                    },
+                    // AN-2: adding a profile is an escalating action from child context.
+                    onTap: () => _guardEscalating(
+                      context,
+                      ref,
+                      pinGuardRequired: pinGuardRequired,
+                      activeProfileId: activeProfileId,
+                      action: () async {
+                        // D4 root cause: popping the sheet FIRST unmounted both
+                        // `context` and `ref`, so showAddProfileDialog's
+                        // `context.mounted` guard bailed out before createProfile —
+                        // Add Profile silently created nothing. Keep the sheet
+                        // mounted while the dialog runs (it sits behind the modal
+                        // dialog barrier), then close it afterwards.
+                        await showAddProfileDialog(context, ref);
+                        if (context.mounted) Navigator.of(context).pop();
+                      },
+                    ),
                     contentPadding: EdgeInsets.zero,
                   ),
                 ),
@@ -271,6 +332,35 @@ class ProfileSwitcherSheet extends ConsumerWidget {
     ref.read(parentPinAuthenticatedProfileIdProvider.notifier).clear();
     ref.read(selectedProfileIdProvider.notifier).select(profileId);
     unawaited(context.router.replaceAll([const AppShellRoute()]));
+  }
+
+  /// AN-2: Gate escalating actions behind a Parent PIN challenge when the
+  /// active profile is a child with a configured PIN.
+  ///
+  /// [pinGuardRequired] is derived from [switcherSheetPinGuardRequiredProvider]
+  /// (overridable in tests); [action] is only executed after a successful PIN
+  /// verification (or immediately when no guard is needed).
+  void _guardEscalating(
+    BuildContext context,
+    WidgetRef ref, {
+    required bool pinGuardRequired,
+    required int activeProfileId,
+    required VoidCallback action,
+  }) {
+    if (!pinGuardRequired) {
+      action();
+      return;
+    }
+    // Show Parent PIN verification; only proceed on success.
+    unawaited(
+      showParentPinVerificationDialog(
+        context,
+        profileId: activeProfileId,
+        pinService: ref.read(pinServiceProvider),
+      ).then((verified) {
+        if (verified && context.mounted) action();
+      }),
+    );
   }
 }
 

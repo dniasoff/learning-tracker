@@ -1038,6 +1038,12 @@ abstract class AppLocalizations {
   /// **'Create and edit your learning tracks'**
   String get manageTracksDetail;
 
+  /// No description provided for @parentManageTracksDetail.
+  ///
+  /// In en, this message translates to:
+  /// **'Create and edit your child\'s learning tracks'**
+  String get parentManageTracksDetail;
+
   /// No description provided for @addTrackGoalTapToUseDeadline.
   ///
   /// In en, this message translates to:
@@ -5441,6 +5447,12 @@ abstract class AppLocalizations {
   /// **'What should happen to your completion history?'**
   String get deleteTrackArchiveBody;
 
+  /// No description provided for @parentDeleteTrackArchiveBody.
+  ///
+  /// In en, this message translates to:
+  /// **'What should happen to your child\'s completion history?'**
+  String get parentDeleteTrackArchiveBody;
+
   /// No description provided for @deleteTrackArchive.
   ///
   /// In en, this message translates to:
@@ -7456,6 +7468,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Allow'**
   String get permissionPromptAllowButton;
+
+  /// IL-9: localized count label shown below HierarchySelectionPanel when items are selected.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} selection} other{{count} selections}}'**
+  String selectionCount(int count);
 }
 
 class _AppLocalizationsDelegate

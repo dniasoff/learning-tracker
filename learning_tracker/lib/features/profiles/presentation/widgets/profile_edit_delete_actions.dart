@@ -186,7 +186,10 @@ class _ProfileEditFormDialogState extends State<ProfileEditFormDialog> {
                 labelText: l10n.profilesNameFieldLabel,
                 hintText: l10n.profilesEnterLearnerName,
               ),
-              autofocus: true,
+              // PP-11: autofocus removed so the avatar picker and mode toggle
+              // stay visible below the fold at large text scale (font 1.3).
+              // The user can still tap the name field to edit it.
+              autofocus: false,
             ),
             const SizedBox(height: 16),
             SegmentedButton<String>(

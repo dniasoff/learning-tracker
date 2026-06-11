@@ -261,7 +261,8 @@ class HierarchySelectionPanelState
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             child: Text(
-              '${_selections.length} selection(s)',
+              // IL-9: use localized plural form instead of raw "selection(s)".
+              AppLocalizations.of(context)!.selectionCount(_selections.length),
               style: theme.textTheme.bodySmall,
               textAlign: TextAlign.center,
             ),

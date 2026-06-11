@@ -1,6 +1,9 @@
 import 'package:auto_route/auto_route.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/database/daos/track_dao.dart'
+    show TrackState;
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
@@ -192,8 +195,9 @@ class _ParentTrackManagementScreenState
             const SizedBox(height: 16),
             Text(l10n.noActiveTracks, style: theme.textTheme.headlineSmall),
             const SizedBox(height: 8),
+            // TS-14: use child-scoped copy in this parent-manages-child context.
             Text(
-              l10n.manageTracksDetail,
+              l10n.parentManageTracksDetail,
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
@@ -228,7 +232,8 @@ class _ParentTrackManagementScreenState
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(l10n.deleteTrackArchiveTitle),
-        content: Text(l10n.deleteTrackArchiveBody),
+        // TS-14: use child-scoped body copy ("your child's completion history").
+        content: Text(l10n.parentDeleteTrackArchiveBody),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
@@ -251,11 +256,24 @@ class _ParentTrackManagementScreenState
 
     if (choice == null || !mounted) return;
 
-    final dao = ref.read(userDatabaseProvider).trackDao;
+    final db = ref.read(userDatabaseProvider);
     if (choice == 'wipe') {
-      await dao.purgeHistory(track.id);
+      await db.trackDao.purgeHistory(track.id);
     } else {
-      await dao.deleteTrackAndData(track.id);
+      // TS-3 fix: archive = set state='archived', preserving all goal/pace/
+      // program/completion-mode config. The former dao.deleteTrackAndData()
+      // call was wrong here: it wipes stages/goals/point-configs (destroying
+      // the track config) while also leaving the track visible as active after
+      // any rebuild (state='deleted' rows are excluded by watchActiveTracksForProfile
+      // only for state='active'; archived and deleted rows are both excluded).
+      await (db.update(
+        db.curriculumTracks,
+      )..where((t) => t.id.equals(track.id))).write(
+        CurriculumTracksCompanion(
+          state: const Value(TrackState.archived),
+          stateChangedAt: Value(DateTime.now().toUtc()),
+        ),
+      );
     }
     await invalidateAfterTrackDataChange(ref, track.profileId);
   }

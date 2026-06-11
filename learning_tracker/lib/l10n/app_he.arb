@@ -245,6 +245,7 @@
   "manageTracks": "ניהול מסלולים",
   "manageTracksAndGoalsTitle": "מסלולים ומטרות",
   "manageTracksDetail": "יצירה ועריכה של מסלולי הלמידה",
+  "parentManageTracksDetail": "יצירה ועריכה של מסלולי הלמידה של ילדך",
   "addTrackGoalTapToUseDeadline": "מצב קצב יעד פעיל — יש ללחוץ כאן ליעד לפי תאריך יעד",
   "addTrackGoalTapToUsePace": "מצב תאריך יעד פעיל — יש ללחוץ כאן לקצב יעד",
   "addTrackChazaraStepTitle": "להוסיף {term}?",
@@ -1487,6 +1488,7 @@
   },
   "deleteTrackArchiveTitle": "מחיקת מסלול",
   "deleteTrackArchiveBody": "מה לעשות עם היסטוריית ההשלמות שלך?",
+  "parentDeleteTrackArchiveBody": "מה לעשות עם היסטוריית ההשלמות של ילדך?",
   "deleteTrackArchive": "ארכיון (שמור היסטוריה)",
   "deleteTrackWipe": "מחק ומחה היסטוריה",
   "notificationReminderTitle": "תזכורת לימוד",
@@ -2335,5 +2337,6 @@
   "permissionPromptLocationTitle": "מיקום",
   "permissionPromptLocationSubtitle": "זמני הדלקת נרות {shabbos} ו{havdalah} מדויקים לפי עירכם.",
   "permissionPromptCtaDone": "סיום",
-  "permissionPromptAllowButton": "אפשר"
+  "permissionPromptAllowButton": "אפשר",
+  "selectionCount": "{count, plural, one{בחירה אחת} other{{count} בחירות}}"
 }
