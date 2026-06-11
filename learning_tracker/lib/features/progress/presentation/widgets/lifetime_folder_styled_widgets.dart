@@ -471,7 +471,11 @@ class _LifetimeFolderTreeNodeState
 // --- Marking: scope row with check + folder chrome ---
 
 /// Visual state for [LifetimeMarkingScopeRow]: same green / amber / gray as the read-only tree.
-enum MarkingRowVisual { none, direct, implicit }
+///
+/// [partial] is the indeterminate state: some-but-not-all descendants under
+/// this scope are selected, so the row's checkbox renders as a dash (tristate
+/// `value: null`) rather than a full check or an empty box.
+enum MarkingRowVisual { none, direct, implicit, partial }
 
 class LifetimeMarkingScopeRow extends StatelessWidget {
   const LifetimeMarkingScopeRow({
@@ -509,16 +513,22 @@ class LifetimeMarkingScopeRow extends StatelessWidget {
         ? AppColors.statusSuccessMuted
         : switch (visual) {
             MarkingRowVisual.direct => AppColors.statusSuccessMuted,
-            MarkingRowVisual.implicit => const Color(0xFFFFD26A),
+            MarkingRowVisual.implicit ||
+            MarkingRowVisual.partial => const Color(0xFFFFD26A),
             MarkingRowVisual.none =>
               lightSurface
                   ? const Color(0xFFB8C0CC)
                   : Colors.white.withValues(alpha: 0.5),
           };
+    // Indeterminate: some-but-not-all descendants selected. Drives the
+    // tristate checkbox to a dash (value null) instead of a full check.
+    final partial = !isPersisted && visual == MarkingRowVisual.partial;
     final selected =
         isPersisted ||
         visual == MarkingRowVisual.direct ||
         visual == MarkingRowVisual.implicit;
+    // Tristate value: null = indeterminate dash, true = checked, false = empty.
+    final checkboxValue = partial ? null : selected;
 
     return Padding(
       padding: EdgeInsetsDirectional.only(start: indent, top: 4, bottom: 0),
@@ -535,14 +545,19 @@ class LifetimeMarkingScopeRow extends StatelessWidget {
               width: 40,
               child: Center(
                 child: Checkbox(
-                  value: selected,
+                  // Tristate so a partially-selected scope (some-but-not-all
+                  // descendants marked) renders an indeterminate dash rather
+                  // than a full check or an empty box.
+                  tristate: partial,
+                  value: checkboxValue,
                   onChanged: isPersisted || isImplicit
                       ? null
                       : (_) {
                           onToggle();
                         },
                   fillColor: WidgetStateProperty.resolveWith(
-                    (states) => states.contains(WidgetState.selected)
+                    (states) =>
+                        states.contains(WidgetState.selected) || partial
                         ? color
                         : Colors.transparent,
                   ),
