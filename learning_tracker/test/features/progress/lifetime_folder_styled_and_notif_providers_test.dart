@@ -1041,6 +1041,100 @@ void main() {
       await _tearDown(tester);
     });
 
+    // [P1] Indeterminate / tristate: a scope with some-but-not-all descendants
+    // selected must render the dash (value null), not a full check or empty box.
+    testWidgets('partial visual: checkbox indeterminate (tristate, value null)', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        _wrap(
+          LifetimeMarkingScopeRow(
+            primary: 'Zeraim',
+            visual: MarkingRowVisual.partial,
+            hasDrill: true,
+            onToggle: () {},
+          ),
+        ),
+      );
+
+      final checkbox = tester.widget<Checkbox>(find.byType(Checkbox));
+      expect(
+        checkbox.tristate,
+        isTrue,
+        reason: 'Partial row must use a tristate checkbox',
+      );
+      expect(
+        checkbox.value,
+        isNull,
+        reason:
+            'Partial (some-but-not-all descendants) must render the '
+            'indeterminate dash, not a full check or empty box',
+      );
+
+      await _tearDown(tester);
+    });
+
+    testWidgets('partial visual: checkbox still toggleable (onChanged non-null)', (
+      tester,
+    ) async {
+      var toggled = false;
+      await _pump(
+        tester,
+        _wrap(
+          LifetimeMarkingScopeRow(
+            primary: 'Zeraim',
+            visual: MarkingRowVisual.partial,
+            onToggle: () => toggled = true,
+          ),
+        ),
+      );
+
+      final checkbox = tester.widget<Checkbox>(find.byType(Checkbox));
+      expect(checkbox.onChanged, isNotNull);
+
+      await tester.tap(find.byType(Checkbox));
+      await tester.pump();
+      expect(
+        toggled,
+        isTrue,
+        reason: 'Tapping a partial row marks the whole scope',
+      );
+
+      await _tearDown(tester);
+    });
+
+    testWidgets('non-partial visuals keep a non-null checkbox value', (
+      tester,
+    ) async {
+      for (final v in [
+        MarkingRowVisual.none,
+        MarkingRowVisual.direct,
+        MarkingRowVisual.implicit,
+      ]) {
+        await _pump(
+          tester,
+          _wrap(
+            LifetimeMarkingScopeRow(
+              primary: 'Row',
+              visual: v,
+              isImplicit: v == MarkingRowVisual.implicit,
+              onToggle: () {},
+            ),
+          ),
+        );
+
+        final checkbox = tester.widget<Checkbox>(find.byType(Checkbox));
+        expect(
+          checkbox.value,
+          isNotNull,
+          reason: '$v must not be indeterminate',
+        );
+
+        await _tearDown(tester);
+      }
+    });
+
     testWidgets('he-locale: no overflow', (tester) async {
       tester.view.physicalSize = const Size(360, 800);
       tester.view.devicePixelRatio = 1.0;
