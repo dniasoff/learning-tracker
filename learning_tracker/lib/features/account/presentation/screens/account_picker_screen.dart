@@ -43,6 +43,14 @@ class AccountPickerScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
     final registry = ref.watch(deviceRegistryProvider);
+    // AN-4: read the active DB filename so we can pin the active account
+    // at position 0 for a stable, deterministic ordering. The remaining
+    // accounts are sorted by createdAt-equivalent (accountId UUID is v4 and
+    // not time-ordered, so we use dbFileName alphabetical as a proxy for
+    // stable creation order). lastUsedAt ordering is intentionally NOT used
+    // because it changes every time you switch accounts, causing cards to
+    // reorder between visits and making tap-target positions unpredictable.
+    final activeDbFileName = ref.watch(accountDbFileNameProvider);
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -54,7 +62,16 @@ class AccountPickerScreen extends ConsumerWidget {
             if (!snapshot.hasData) {
               return const Center(child: CircularProgressIndicator());
             }
-            final accounts = snapshot.data!;
+            // AN-4: stable deterministic ordering — active account first,
+            // remaining accounts in stable dbFileName order.
+            final rawAccounts = snapshot.data!;
+            final accounts = [
+              ...rawAccounts.where((a) => a.dbFileName == activeDbFileName),
+              ...rawAccounts
+                  .where((a) => a.dbFileName != activeDbFileName)
+                  .toList()
+                ..sort((a, b) => a.dbFileName.compareTo(b.dbFileName)),
+            ];
             if (accounts.isEmpty) {
               // No accounts left — shouldn't happen (caller should
               // route to SignInRoute), but handle gracefully.
@@ -233,12 +250,25 @@ class _DashedRRectPainter extends CustomPainter {
   }
 }
 
-class _AccountTile extends ConsumerWidget {
+class _AccountTile extends ConsumerStatefulWidget {
   const _AccountTile({required this.account});
   final DeviceAccount account;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<_AccountTile> createState() => _AccountTileState();
+}
+
+class _AccountTileState extends ConsumerState<_AccountTile> {
+  // AN-4: prevent rapid-tap / re-entrancy on account switch. A single tap
+  // can trigger network I/O (re-auth, DB swap) and navigation; a second tap
+  // before the first completes would launch a second concurrent switch into
+  // undefined state (wrong DB, duplicate route pushes, wrong profile).
+  bool _switching = false;
+
+  DeviceAccount get account => widget.account;
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
     final isCloud = account.accountTier.isCloud;
@@ -274,7 +304,9 @@ class _AccountTile extends ConsumerWidget {
         color: Colors.transparent,
         child: InkWell(
           borderRadius: BorderRadius.circular(24),
-          onTap: () => _onTap(context, ref, hasValidSession),
+          onTap: _switching
+              ? null
+              : () => _onTapGuarded(context, hasValidSession),
           child: Ink(
             padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
             decoration: BoxDecoration(
@@ -382,6 +414,18 @@ class _AccountTile extends ConsumerWidget {
     if (!isCloud) return l10n.badgeLocalAccount;
     if (!hasValidSession) return l10n.badgeSignInAgain;
     return l10n.badgeCloudAccount;
+  }
+
+  /// AN-4: Guards against rapid double-tap / re-entrant switches by
+  /// preventing a second tap while a switch is already in progress.
+  Future<void> _onTapGuarded(BuildContext context, bool hasValidSession) async {
+    if (_switching) return;
+    if (mounted) setState(() => _switching = true);
+    try {
+      await _onTap(context, ref, hasValidSession);
+    } finally {
+      if (mounted) setState(() => _switching = false);
+    }
   }
 
   Future<void> _onTap(

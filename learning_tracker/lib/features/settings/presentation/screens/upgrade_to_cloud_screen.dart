@@ -421,9 +421,15 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
                         ),
                       ),
                       onExecute: _executeCollisionChoice,
+                      // AN-5 fix: "Cancel — keep offline account" must exit the
+                      // collision block and return to the form (keeping local
+                      // data), NOT reset to _PhaseCollision which stays inside
+                      // the collision UI with no observable change for the user.
+                      // Mirrors _VerificationRequiredBlock's onCancel which
+                      // correctly returns to _PhaseForm.
                       onCancel: () {
                         _cloudPasswordController.clear();
-                        setState(() => _phase = const _PhaseCollision());
+                        setState(() => _phase = const _PhaseForm());
                       },
                     ),
                   _PhaseForm(:final error, :final isLoading) => Column(

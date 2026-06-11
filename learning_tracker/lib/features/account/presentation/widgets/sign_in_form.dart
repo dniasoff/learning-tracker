@@ -24,6 +24,7 @@ class SignInForm extends StatelessWidget {
     required this.onSubmit,
     required this.validateEmail,
     required this.validatePassword,
+    this.onForgotPassword,
   });
 
   final GlobalKey<FormState> formKey;
@@ -43,6 +44,10 @@ class SignInForm extends StatelessWidget {
   final VoidCallback onSubmit;
   final String? Function(String?) validateEmail;
   final String? Function(String?) validatePassword;
+
+  /// AN-11: optional callback invoked when the user taps "Forgot password?".
+  /// When null the link is omitted (e.g. local-born accounts have no cloud reset).
+  final VoidCallback? onForgotPassword;
 
   @override
   Widget build(BuildContext context) {
@@ -94,7 +99,33 @@ class SignInForm extends StatelessWidget {
               onPressed: onPasswordToggle,
             ),
           ),
-          const SizedBox(height: 14),
+          // AN-11: "Forgot password?" link — only shown when a callback is
+          // provided (cloud accounts). Local-born accounts have argon2id
+          // passwords with no server-side reset, so the link is suppressed.
+          if (onForgotPassword != null)
+            Align(
+              alignment: AlignmentDirectional.centerEnd,
+              child: TextButton(
+                onPressed: onForgotPassword,
+                style: TextButton.styleFrom(
+                  foregroundColor: AppTheme.brandBlue,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 4,
+                    vertical: 4,
+                  ),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                ),
+                child: Text(
+                  l10n.signInForgotPassword,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            )
+          else
+            const SizedBox(height: 14),
           Row(
             children: [
               Checkbox(
@@ -144,6 +175,7 @@ class SignInForm extends StatelessWidget {
     return TextFormField(
       controller: controller,
       validator: validator,
+      autovalidateMode: AutovalidateMode.onUserInteraction,
       keyboardType: keyboardType,
       textInputAction: textInputAction,
       obscureText: obscureText,

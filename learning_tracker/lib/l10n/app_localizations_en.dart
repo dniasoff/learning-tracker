@@ -1195,6 +1195,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileBadgeAdultMode => 'ADULT MODE';
 
   @override
+  String get profileBadgeParentMode => 'PARENT MODE';
+
+  @override
   String profileNameTaken(String name) {
     return 'A profile named \"$name\" already exists';
   }
@@ -1812,10 +1815,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String get signInPasswordLabel => 'Secret Key';
 
   @override
-  String get signInPasswordHint => '••••••••';
+  String get signInPasswordHint => 'Enter your secret key';
 
   @override
   String get signInKeepMeSignedIn => 'Keep me signed in';
+
+  @override
+  String get signInForgotPassword => 'Forgot password?';
+
+  @override
+  String get signInForgotPasswordSent =>
+      'Password reset email sent. Check your inbox.';
+
+  @override
+  String get signInForgotPasswordNoEmail =>
+      'Please enter your email address first.';
 
   @override
   String get signInCta => 'Sign In';
@@ -1843,6 +1857,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get signUpPasswordLabel => 'Create Password';
+
+  @override
+  String get signUpPasswordHint => 'Create a secure password';
 
   @override
   String get signUpCta => 'Sign Up';

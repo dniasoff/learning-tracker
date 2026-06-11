@@ -604,6 +604,7 @@
   "adultModeCardSubtitleDeepFocused": "Deep & Focused",
   "profileBadgeChildMode": "CHILD MODE",
   "profileBadgeAdultMode": "ADULT MODE",
+  "profileBadgeParentMode": "PARENT MODE",
   "profileNameTaken": "A profile named \"{name}\" already exists",
   "@profileNameTaken": {
     "placeholders": {
@@ -858,8 +859,11 @@
   "signInYourEmail": "Your Email",
   "signInEmailHint": "yourname@quest.com",
   "signInPasswordLabel": "Secret Key",
-  "signInPasswordHint": "••••••••",
+  "signInPasswordHint": "Enter your secret key",
   "signInKeepMeSignedIn": "Keep me signed in",
+  "signInForgotPassword": "Forgot password?",
+  "signInForgotPasswordSent": "Password reset email sent. Check your inbox.",
+  "signInForgotPasswordNoEmail": "Please enter your email address first.",
   "signInCta": "Sign In",
   "signInWithGoogleCta": "Sign in with Google",
   "signInNewToQuest": "New to the Quest? ",
@@ -869,6 +873,7 @@
   "signUpScholarNameHint": "Scholar Name",
   "signUpEmailAddressLabel": "Email Address",
   "signUpPasswordLabel": "Create Password",
+  "signUpPasswordHint": "Create a secure password",
   "signUpCta": "Sign Up",
   "signUpOrDivider": "OR",
   "signUpGoogleCta": "Sign Up with Google",

@@ -310,8 +310,8 @@ class _ShellNavItem extends StatelessWidget {
       child: AnimatedContainer(
         duration: const Duration(milliseconds: 220),
         curve: Curves.easeOutCubic,
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
+        margin: const EdgeInsets.symmetric(horizontal: 2),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
         decoration: BoxDecoration(
           color: selected ? const Color(0xFF0038A8) : Colors.transparent,
           borderRadius: BorderRadius.circular(14),
@@ -434,9 +434,21 @@ class ProfileSwitcherBar extends ConsumerWidget {
     // mode, and surface TUTOR when a tutored-child selection is active (the
     // signed-in adult is sitting in a talmid's context). Falls back to the adult
     // badge while the profile stream is still resolving (account-only identity).
+    //
+    // AN-3 fix: when the parent has elevated via PIN for this child profile,
+    // the badge must show PARENT MODE rather than CHILD MODE — the parent is
+    // managing the child, not acting as the child. This propagates the correct
+    // context onto every pushed parent-management sub-route rendered by
+    // PersistentSwitcherScaffold (ManageTutors, ParentSettings, etc.).
+    final parentAuthedId = ref.watch(parentPinAuthenticatedProfileIdProvider);
+    final isParentElevated =
+        parentAuthedId != null && parentAuthedId == activeProfileId;
     final String roleBadge;
     if (isTutoredContext) {
       roleBadge = l10n.tutorContextBadge;
+    } else if (activeProfile?.profileMode == ProfileMode.child &&
+        isParentElevated) {
+      roleBadge = l10n.profileBadgeParentMode;
     } else if (activeProfile?.profileMode == ProfileMode.child) {
       roleBadge = l10n.profileBadgeChildMode;
     } else {
