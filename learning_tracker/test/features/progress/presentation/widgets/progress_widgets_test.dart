@@ -74,6 +74,39 @@ void main() {
       expect(find.text('Chazara 1: 8'), findsOneWidget);
       expect(find.text('Chazara 2: 3'), findsOneWidget);
     });
+
+    testWidgets(
+      'dedupes stages that resolve to the same display label (each appears once)',
+      (tester) async {
+        // P1 regression: when two raw stage entries resolve to the SAME display
+        // form — e.g. legacy "Learn" + canonical "Limud" both → "Limud", and
+        // "Chazara 1" + alias "Review 1" both → "Chazara 1" — the breakdown
+        // previously rendered the label TWICE (one Text per raw entry). After
+        // the dedupe fix each label appears exactly once with the summed count.
+        await tester.pumpWidget(
+          _wrap(
+            const StageBreakdownRow(
+              stageBreakdown: [
+                StageBreakdownEntry(stageName: 'Learn', count: 10),
+                StageBreakdownEntry(stageName: 'Limud', count: 5),
+                StageBreakdownEntry(stageName: 'Chazara 1', count: 4),
+                StageBreakdownEntry(stageName: 'Review 1', count: 3),
+              ],
+            ),
+          ),
+        );
+
+        // "Limud" rendered ONCE with the combined 10 + 5 = 15 count.
+        expect(find.text('Limud: 15'), findsOneWidget);
+        // "Chazara 1" rendered ONCE with the combined 4 + 3 = 7 count.
+        expect(find.text('Chazara 1: 7'), findsOneWidget);
+        // No stale per-raw-entry duplicates leak through.
+        expect(find.text('Limud: 10'), findsNothing);
+        expect(find.text('Limud: 5'), findsNothing);
+        expect(find.text('Chazara 1: 4'), findsNothing);
+        expect(find.text('Chazara 1: 3'), findsNothing);
+      },
+    );
   });
 
   group('PaceIndicator', () {
@@ -245,6 +278,100 @@ void main() {
       expect(find.textContaining('chazaros'), findsOneWidget);
       expect(find.byType(LinearProgressIndicator), findsOneWidget);
     });
+
+    testWidgets(
+      'progress summary chazaros word respects Sephardi nusach (chazarot)',
+      (tester) async {
+        // IL-2 regression: the review-unit word on the progress breakdown
+        // summary line was hardcoded to the Ashkenazi "chazaros" via
+        // terms.chazaros, ignoring the Pronunciation pref. With Sephardi nusach
+        // (English mode) it must read "chazarot".
+        const level = HierarchyLevelProgress(
+          curriculumId: CurriculumId.mishnayos,
+          level: 1,
+          levelName: 'Seder Zeraim',
+          levelLabel: 'Seder',
+          totalItems: 10,
+          completedItems: 5,
+          stageBreakdown: [
+            StageBreakdownEntry(stageName: 'Learned', count: 5),
+            StageBreakdownEntry(stageName: 'Chazara 1', count: 3),
+          ],
+          trackBreakdown: {'personal': 5},
+        );
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              useHebrewTermsProvider.overrideWith(_UseHebrewTermsOff.new),
+              currentTransliterationVariantProvider.overrideWith(
+                _VariantSephardi.new,
+              ),
+            ],
+            child: MaterialApp(
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              theme: AppTheme.lightTheme(),
+              home: const Scaffold(
+                body: SingleChildScrollView(
+                  child: HierarchyProgressCard(level: level),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Sephardi: "chazarot" appears, Ashkenazi "chazaros" must NOT.
+        expect(find.textContaining('chazarot'), findsOneWidget);
+        expect(find.textContaining('chazaros'), findsNothing);
+      },
+    );
+
+    testWidgets(
+      'progress summary chazaros word uses Ashkenazi nusach by default (chazaros)',
+      (tester) async {
+        const level = HierarchyLevelProgress(
+          curriculumId: CurriculumId.mishnayos,
+          level: 1,
+          levelName: 'Seder Zeraim',
+          levelLabel: 'Seder',
+          totalItems: 10,
+          completedItems: 5,
+          stageBreakdown: [
+            StageBreakdownEntry(stageName: 'Learned', count: 5),
+            StageBreakdownEntry(stageName: 'Chazara 1', count: 3),
+          ],
+          trackBreakdown: {'personal': 5},
+        );
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              useHebrewTermsProvider.overrideWith(_UseHebrewTermsOff.new),
+              currentTransliterationVariantProvider.overrideWith(
+                _VariantAshkenazi.new,
+              ),
+            ],
+            child: MaterialApp(
+              localizationsDelegates: AppLocalizations.localizationsDelegates,
+              supportedLocales: AppLocalizations.supportedLocales,
+              theme: AppTheme.lightTheme(),
+              home: const Scaffold(
+                body: SingleChildScrollView(
+                  child: HierarchyProgressCard(level: level),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Ashkenazi default keeps the "chazaros" form (and not "chazarot").
+        expect(find.textContaining('chazaros'), findsOneWidget);
+        expect(find.textContaining('chazarot'), findsNothing);
+      },
+    );
 
     testWidgets('expandable card shows sub-levels on tap', (tester) async {
       const level = HierarchyLevelProgress(

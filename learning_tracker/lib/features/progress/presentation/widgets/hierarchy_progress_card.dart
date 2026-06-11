@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/labels/curriculum_level_name.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/features/progress/domain/models/curriculum_progress_data.dart';
@@ -208,6 +209,12 @@ class _ProgressSummaryLine extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final pct = formatFractionAsPercent(level.completionPercentage);
     final terms = domainTermLabels(ref);
+    // IL-2: the "chazaros" review-unit word must respect the Sephardi nusach in
+    // English mode ("chazarot" not "chazaros"). Route it through the
+    // variant-aware helper instead of the Ashkenazi-only [terms.chazaros]
+    // getter. In Hebrew UI chazarosFor returns the locale-correct Hebrew form
+    // (nusach-independent) so this stays correct there too.
+    final variant = ref.watch(currentTransliterationVariantProvider);
     // Chazara entries are those after the first (stageOrder > 0).
     // For single-stage tracks the breakdown has only one entry (the learn
     // stage), so the chazaros suffix is omitted entirely (Rule 8).
@@ -222,7 +229,8 @@ class _ProgressSummaryLine extends ConsumerWidget {
     final baseText = '${level.completedItems}/${level.totalItems} ($pct)';
     return Text(
       hasChazara
-          ? '$baseText · $chazarosCount ${terms.chazaros.toLowerCase()}'
+          ? '$baseText · $chazarosCount '
+                '${terms.chazarosFor(variant: variant).toLowerCase()}'
           : baseText,
       style: Theme.of(context).textTheme.bodySmall?.copyWith(
         color: AppTheme.brandInkMuted,

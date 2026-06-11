@@ -2091,6 +2091,17 @@
       "term": { "type": "String" }
     }
   },
+  "recentActivityActiveDaysCount": "{count, plural, one{יום פעיל אחד} two{יומיים פעילים} other{{count} ימים פעילים}}",
+  "@recentActivityActiveDaysCount": {
+    "description": "Active-days stat phrase in the All Time summary card (Recent Activity screen). ICU plural so count==1 is singular (\"יום פעיל אחד\").",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "recentActivityEmptyState": "אין עדיין פעילות לימוד בטווח הזה.",
+  "@recentActivityEmptyState": {
+    "description": "Empty-state message shown in the Recent Activity charts when the selected filter yields no live completions."
+  },
 
   "redeemScreenTitle": "מימוש פרסים",
   "redeemScreenBalance": "היתרה שלך",

@@ -2198,6 +2198,17 @@
       "term": { "type": "String" }
     }
   },
+  "recentActivityActiveDaysCount": "{count, plural, =1{1 Active day} other{{count} Active days}}",
+  "@recentActivityActiveDaysCount": {
+    "description": "Active-days stat phrase in the All Time summary card (Recent Activity screen). ICU plural so count==1 is singular (\"1 Active day\").",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "recentActivityEmptyState": "No learning activity in this range yet.",
+  "@recentActivityEmptyState": {
+    "description": "Empty-state message shown in the Recent Activity charts when the selected time-range/curriculum filter yields no live completions (charts would otherwise be blank/zeroed)."
+  },
 
   "redeemScreenTitle": "Redeem Prizes",
   "redeemScreenBalance": "Your Balance",

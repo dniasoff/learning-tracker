@@ -20,13 +20,30 @@ class StageBreakdownRow extends ConsumerWidget {
     }
 
     final terms = domainTermLabels(ref);
+
+    // Dedupe by resolved display name so each SRS stage label appears exactly
+    // once. Two raw stage entries can collapse to the same display form — e.g.
+    // a legacy "Learn"/"Limud" pair, a "Chazara 1"/"Review 1" alias pair, or
+    // duplicate stage-definition rows. Without this, the expanded breakdown
+    // rendered the same label twice (one Text per raw entry). We sum the counts
+    // of all entries that resolve to the same label and preserve first-seen
+    // order so the visible sequence (Limud → Chazara 1 → …) is stable.
+    final orderedNames = <String>[];
+    final countByName = <String, int>{};
+    for (final entry in stageBreakdown) {
+      final displayName = terms.resolveStoredStageName(entry.stageName);
+      if (!countByName.containsKey(displayName)) {
+        orderedNames.add(displayName);
+      }
+      countByName[displayName] = (countByName[displayName] ?? 0) + entry.count;
+    }
+
     return Wrap(
       spacing: 16,
       runSpacing: 4,
-      children: stageBreakdown.map((entry) {
-        final displayName = terms.resolveStoredStageName(entry.stageName);
+      children: orderedNames.map((displayName) {
         return Text(
-          '$displayName: ${entry.count}',
+          '$displayName: ${countByName[displayName]}',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
             color: Theme.of(context).colorScheme.onSurfaceVariant,
           ),
