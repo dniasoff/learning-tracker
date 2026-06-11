@@ -364,3 +364,23 @@ device-driven (commit 95ede74a, make ci GREEN 9900 pass):
   completion so the streak chip renders → My Achievements + Siyumim become auditable. (If onboarding forces cloud
   sign-in, agent reports blocked.)
 - R3 STILL-BLOCKED until reset lands: gamification (My Achievements), siyumim_milestones — both need a populated child.
+
+### R3 fixes integrated + lifetime follow-up + collision finding (2026-06-11)
+- R3 FIX WAVE integrated + pushed (commit f2c43829, make ci GREEN 9916 pass): progress (StageBreakdownRow dedupe;
+  chazaros→chazarosFor(variant) Sephardi-aware; OverallStatsCard dual-stat reflow; StreakCalendar→ConsumerWidget
+  honoring useHebrewDateProvider with Hebrew weekday + gematriya day numbers; recentActivity '1 Active day' ICU plural;
+  empty-state copy), gamification (reward '1 Point' ICU plural en+he; empty-state copy/overlap), settings/lifetime
+  (select-all/deselect toggle level fix). ~12 new red→green tests.
+- LIFETIME FOLLOW-UP (workflow wrklbp9va, 2 workers off f2c43829): #1 tristate/indeterminate ancestor checkboxes
+  (progress/lifetime_folder_styled_widgets.dart — was Checkbox(value:bool), no partial state), #2 breadcrumb leaf-crumb
+  hard-clip (content_browsing/hierarchy_selection_panel.dart — bare Text, no ellipsis). The prior lifetime worker
+  correctly scoped these out (they live in progress + content_browsing, not settings).
+- SIGNIFICANT FINDING (DOCUMENTED, NOT yet fixed) — LIFETIME-MARK BARE-IDENTIFIER COLLISION (data correctness): the
+  bulk lifetime-marking ledger stores a level3 (daf/perek/pasuk) mark as entryScope='level3', unitIdentifier=BARE
+  number (e.g. '2') with NO parent (masechta) context. lifetime_tree_builder.computeLearnedLeafRefs matches
+  level3Actions[leaf.level3] by that bare number against EVERY masechta's daf-2 → marking ONE daf credits daf-2 across
+  ALL ~37 Bavli masechtas (~70 amud leaves → the observed "1.3% after 1 daf"; also the sibling-daf two-color bug).
+  PROPER FIX needs QUALIFIED level3 identifiers (e.g. composite "level2:level3" or the leaf sefariaRef) at the ledger
+  WRITE path (lib/features/learning) AND every level3 match site (lifetime_tree_builder, items_learned_providers,
+  journey_providers), PLUS a legacy-data decision (existing bare marks can't recover their masechta). Risky/architectural
+  → deliberately NOT rushed into a parallel worker. Surfaced to Daniel for prioritization (fix-now-with-migration vs defer).
