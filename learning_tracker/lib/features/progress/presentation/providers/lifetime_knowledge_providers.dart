@@ -458,9 +458,12 @@ final lifetimeHeaderCountersProvider = FutureProvider.autoDispose
         lifetimeTotalsAcrossAllCurriculaProvider(profileId).future,
       );
 
-      // Total chazaros — every completion event row counts as one limud or
-      // one chazara. Use the broad profile-scoped query because we want
-      // every event regardless of curriculum.
+      // Total chazaros — only REVIEW completion events (stageId > 1).
+      // PP-4 fix: the previous `completions.length` counted ALL events,
+      // including the initial limud (stageId == 1). A user who has learned
+      // but never reviewed therefore saw a non-zero "total chazaros" equal
+      // to their learn count — contradicting the per-leaf "Live · 0 chazaros"
+      // display. Filtering to stageId > 1 gives the true review count.
       final db = ref.watch(userDatabaseProvider);
       final completions = await db.completionDao.getCompletionsByProfile(
         profileId,
@@ -468,7 +471,7 @@ final lifetimeHeaderCountersProvider = FutureProvider.autoDispose
 
       return LifetimeHeaderCounters(
         itemsLearned: totals.learnedSections,
-        totalChazaros: completions.length,
+        totalChazaros: completions.where((c) => c.stageId > 1).length,
       );
     });
 
@@ -495,9 +498,11 @@ final trackOnlyHeaderCountersProvider = FutureProvider.autoDispose
         tier: CompletionTierFilter.trackAchievement,
       );
       final distinctRefs = completions.map((c) => c.sefariaRef).toSet();
+      // PP-4 fix: count only review events (stageId > 1), not the initial
+      // limud, to match the "total chazaros" label semantics.
       return LifetimeHeaderCounters(
         itemsLearned: distinctRefs.length,
-        totalChazaros: completions.length,
+        totalChazaros: completions.where((c) => c.stageId > 1).length,
       );
     });
 
