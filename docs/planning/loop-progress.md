@@ -384,3 +384,22 @@ device-driven (commit 95ede74a, make ci GREEN 9900 pass):
   WRITE path (lib/features/learning) AND every level3 match site (lifetime_tree_builder, items_learned_providers,
   journey_providers), PLUS a legacy-data decision (existing bare marks can't recover their masechta). Risky/architectural
   → deliberately NOT rushed into a parallel worker. Surfaced to Daniel for prioritization (fix-now-with-migration vs defer).
+
+### Gamification UNBLOCKED + lifetime follow-up integrated (2026-06-11)
+- GAMIFICATION RESET SUCCEEDED (emulator-5556): per Daniel's "reset app data" decision. pm clear → re-onboarded via
+  the LOCAL/offline path → adult "Parent" (parent@local.test / Parent2580), Parent PIN = 2580 → child "Child" → added
+  a Mishnayos (Seder Zeraim) self-paced track → marked one task complete (→ 10 points, 1-day streak) → the child
+  dashboard streak/flame chip now renders and opens "My Achievements". CHILD DATA PERSISTS on 5556. Use install -r
+  (NOT pm clear) to redeploy without wiping it. CREDS for future child/gamification/siyumim audits on 5556:
+  parent PIN 2580; adult parent@local.test / Parent2580.
+- PRODUCT FINDING (flag to Daniel): the Local-vs-Cloud account choice during onboarding is gated by LIVE NETWORK
+  reachability — a fresh install WITH connectivity defaults to Cloud and offers NO in-UI way to pick Local; the
+  offline/local path is only reachable by being offline (airplane mode). May be intended, but there is no manual
+  toggle. (Also sidesteps the App Check failure on fresh-install cloud sign-in.)
+- LIFETIME FOLLOW-UP integrated: breadcrumb leaf-crumb ellipsis (content_browsing, COMPLETE); indeterminate
+  ancestor-checkbox WIDGET support added (MarkingRowVisual.partial + tests) but the CONSUMER wiring in
+  lifetime_marking_screen (compute partial from descendant selections) is DEFERRED + bundled with the bare-daf
+  collision fix (both need proper descendant/qualified-identifier tracking — same root concern).
+- NEXT: push follow-ups (after make ci) → rebuild+redeploy latest APK (install -r, keep 5556 child data) → AUDIT the
+  now-unblocked gamification (My Achievements) + siyumim_milestones on 5556 → continue redo on remaining ~28 screens.
+  PENDING DANIEL: prioritize the bare-daf collision + partial-checkbox-wiring fix (with legacy-data migration) now vs defer.
