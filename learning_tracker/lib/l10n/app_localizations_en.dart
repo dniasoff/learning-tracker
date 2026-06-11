@@ -524,6 +524,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String get manageTracksDetail => 'Create and edit your learning tracks';
 
   @override
+  String get parentManageTracksDetail =>
+      'Create and edit your child\'s learning tracks';
+
+  @override
   String get addTrackGoalTapToUseDeadline =>
       'Target pace is on — tap here to use a deadline instead';
 
@@ -3091,6 +3095,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get deleteTrackArchiveBody =>
       'What should happen to your completion history?';
+
+  @override
+  String get parentDeleteTrackArchiveBody =>
+      'What should happen to your child\'s completion history?';
 
   @override
   String get deleteTrackArchive => 'Archive (keep history)';
