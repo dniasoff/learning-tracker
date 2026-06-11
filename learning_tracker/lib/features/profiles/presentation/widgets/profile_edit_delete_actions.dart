@@ -32,9 +32,13 @@ Future<void> editProfileFlow(
 
   final repo = ref.read(profileRepositoryProvider);
   try {
+    // PP-2 fix: pass result.mode so that the selected mode (child/adult) is
+    // actually persisted. Previously mode was silently dropped, meaning a
+    // parent could believe they changed a profile's mode when nothing changed.
     await repo.updateProfile(
       id: profile.id,
       displayName: result.name,
+      mode: result.mode,
       avatarIndex: result.avatar,
     );
   } on TutorWriteException catch (e) {
