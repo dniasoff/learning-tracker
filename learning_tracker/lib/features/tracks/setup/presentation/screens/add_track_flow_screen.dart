@@ -3,11 +3,13 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/content/hierarchy_selection.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_dialog.dart';
@@ -669,7 +671,15 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
   String _getSmartDefault() {
     if (_state.programName != null) return _state.programName!;
     if (_state.scopeSelections != null && _state.scopeSelections!.isNotEmpty) {
-      return _state.scopeSelections!.last.value;
+      // R1-(1): raw scope values are Sefaria English translations (e.g. "Genesis").
+      // Transliterate through the curriculum label renderer so the toast
+      // shows "Bereishis"/"Bereshit" instead of "Genesis".
+      final rawValue = _state.scopeSelections!.last.value;
+      final variant = ref.read(currentTransliterationVariantProvider);
+      return CurriculumLabels.transliterateNamedValue(
+        rawValue,
+        variant: variant,
+      );
     }
     final c = _state.curriculumId;
     if (c == null) return '';
