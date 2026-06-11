@@ -7,7 +7,8 @@
 //   • Service is NOT called when password is empty.
 //   • Non-local-born auth state → "Only local-born accounts can be upgraded."
 //   • Error state: null hash → UpgradePasswordMismatchException → "Incorrect password."
-//   • Error state: profile not found → StateError → "Upgrade failed:" prefix.
+//   • Error state: profile not found → StateError → friendly localized fallback
+//     (raw exception NOT shown).
 //   • Error state: error text carries explicit colour; form re-enabled after error.
 //   • Offline guard: internet error shown; service not called.
 //   • Submitting state: loading indicator visible while DB lookup in-flight.
@@ -436,12 +437,15 @@ void main() {
 
   // ── Error state — generic exception (missing profile) ───────────────────────
   //
-  // Profile not seeded → getUserProfileById returns null → StateError →
-  // screen shows "Upgrade failed: Bad state: Profile missing".
+  // Profile not seeded → getUserProfileById returns null → StateError → screen
+  // shows a FRIENDLY LOCALIZED fallback (upgradeToCloudErrorGeneric), NOT the
+  // raw exception. This is the red→green guard for [P1]: the screen used to
+  // interpolate the raw exception via 'Upgrade failed: $e'.
 
   group('UpgradeToCloudScreen — error: generic exception', () {
     testWidgets(
-      'shows "Upgrade failed:" prefix when profile is missing from DB',
+      'shows friendly localized fallback (not raw exception) when profile is '
+      'missing from DB',
       (tester) async {
         // No profile seeded — getUserProfileById(1) returns null.
 
@@ -461,8 +465,22 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(milliseconds: 50));
 
-        // HARDCODED STRING: "Upgrade failed: " prefix is hardcoded in catch block.
-        expect(find.textContaining('Upgrade failed:'), findsOneWidget);
+        // RED→GREEN: the raw exception text/prefix must NEVER render.
+        expect(
+          find.textContaining('Upgrade failed:'),
+          findsNothing,
+          reason: 'The raw exception prefix must not be shown to the user',
+        );
+        expect(
+          find.textContaining('Bad state'),
+          findsNothing,
+          reason: 'The raw StateError text must not be shown to the user',
+        );
+        // The friendly localized fallback (en) is shown instead.
+        expect(
+          find.text("We couldn't complete the upgrade. Please try again."),
+          findsOneWidget,
+        );
 
         await _tearDown(tester);
       },
@@ -485,7 +503,9 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 50));
 
-      final errorFinder = find.textContaining('Upgrade failed:');
+      final errorFinder = find.text(
+        "We couldn't complete the upgrade. Please try again.",
+      );
       expect(errorFinder, findsOneWidget);
 
       final text = tester.widget<Text>(errorFinder);
@@ -737,6 +757,74 @@ void main() {
       expect(dirFinders, findsWidgets);
       final outerDir = tester.widget<Directionality>(dirFinders.first);
       expect(outerDir.textDirection, TextDirection.rtl);
+
+      await _tearDown(tester);
+    });
+
+    // RED→GREEN [P1]: the headline + value-prop were hardcoded English. Under a
+    // Hebrew UI they must render the localized Hebrew copy, not English.
+    testWidgets('he locale: headline + value-prop are localized (no English)', (
+      tester,
+    ) async {
+      await _pump(
+        tester,
+        _buildApp(
+          db: _db,
+          registry: _registry,
+          authRepo: _authRepo,
+          checker: _checker,
+          locale: const Locale('he'),
+        ),
+      );
+
+      // English literals from the previous hardcoded implementation must be gone.
+      expect(find.text('Back up your account'), findsNothing);
+      expect(find.textContaining("You're signed in as"), findsNothing);
+      // Localized Hebrew headline is shown.
+      expect(find.text('גבו את החשבון שלכם'), findsOneWidget);
+      // Value-prop still interpolates the email (ICU placeholder) under RTL.
+      expect(find.textContaining(_email), findsWidgets);
+      // Password field label is localized.
+      expect(find.text('Confirm your password'), findsNothing);
+
+      await _tearDown(tester);
+    });
+
+    // RED→GREEN [P1]: the generic catch interpolated the raw exception
+    // ('Upgrade failed: $e'). Under a Hebrew UI that leaks English + internal
+    // exception text. Profile missing → StateError → friendly localized he copy.
+    testWidgets('he locale: generic error shows localized fallback (no raw exception)', (
+      tester,
+    ) async {
+      // No profile seeded → getUserProfileById(1) returns null → StateError.
+      await _pump(
+        tester,
+        _buildApp(
+          db: _db,
+          registry: _registry,
+          authRepo: _authRepo,
+          checker: _checker,
+          locale: const Locale('he'),
+        ),
+      );
+
+      await tester.enterText(find.byType(TextFormField), _password);
+      await tester.pump();
+      await tester.tap(find.byType(FilledButton));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      expect(
+        find.textContaining('Upgrade failed:'),
+        findsNothing,
+        reason: 'Raw English exception prefix must never render under he',
+      );
+      expect(find.textContaining('Bad state'), findsNothing);
+      // Localized Hebrew fallback (upgradeToCloudErrorGeneric).
+      expect(
+        find.text('לא הצלחנו להשלים את השדרוג. נסו שוב.'),
+        findsOneWidget,
+      );
 
       await _tearDown(tester);
     });

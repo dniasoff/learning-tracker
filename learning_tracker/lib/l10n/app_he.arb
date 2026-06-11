@@ -1235,6 +1235,49 @@
   "upgradeToCloudButton": "שדרג לענן",
   "upgradeToCloudCancelKeepOffline": "ביטול — שמור חשבון לא מקוון",
 
+  "upgradeToCloudHeadline": "גבו את החשבון שלכם",
+  "upgradeToCloudValueProp": "אתם מחוברים בתור {email}. השדרוג ייצור חשבון ענן עם אותו אימייל כדי שהנתונים שלכם יסונכרנו בין המכשירים. זוהי פעולה חד-כיוונית — לא תוכלו לחזור למצב לא-מקוון בלבד לאחר השדרוג.",
+  "@upgradeToCloudValueProp": {
+    "description": "Value-proposition paragraph on the upgrade-to-cloud screen, explaining the one-way upgrade.",
+    "placeholders": {
+      "email": { "type": "String" }
+    }
+  },
+  "upgradeToCloudPasswordLabel": "אשרו את הסיסמה שלכם",
+  "upgradeToCloudPasswordRequired": "נדרשת סיסמה",
+  "upgradeToCloudErrorLocalBornOnly": "ניתן לשדרג רק חשבונות מקומיים.",
+  "upgradeToCloudErrorInternetRequired": "נדרש חיבור לאינטרנט כדי לשדרג לענן. החשבון והנתונים שלכם יישארו מקומיים עד שתנסו שוב כשתהיו מחוברים.",
+  "upgradeToCloudErrorInternetRequiredShort": "נדרש חיבור לאינטרנט כדי לשדרג לענן.",
+  "upgradeToCloudErrorIncorrectPassword": "סיסמה שגויה.",
+  "upgradeToCloudErrorGeneric": "לא הצלחנו להשלים את השדרוג. נסו שוב.",
+  "@upgradeToCloudErrorGeneric": {
+    "description": "Friendly fallback shown instead of a raw exception when the upgrade fails for an unexpected reason."
+  },
+  "upgradeToCloudVerifyBody": "שלחנו קישור אישור לתיבת הדואר שלכם. לאחר האימות, הקישו על \"אימתתי — השלמת השדרוג\" למטה.",
+  "upgradeToCloudVerifiedLinkLabel": "אימתתי — השלמת השדרוג",
+  "upgradeToCloudSuccessTitle": "הגיבוי הושלם!",
+  "upgradeToCloudSuccessBody": "הנתונים שלכם יסונכרנו כעת בין המכשירים באופן אוטומטי.",
+  "upgradeToCloudCollisionTitle": "כבר קיים חשבון ענן עם אימייל זה",
+  "upgradeToCloudCollisionBody": "לא נמזג בשקט — בחרו כיצד לפתור זאת:",
+  "upgradeToCloudCollisionUploadTitle": "העלאת הנתונים המקומיים לענן",
+  "upgradeToCloudCollisionUploadSubtitle": "ההתקדמות הלא-מקוונת שלכם תמוזג עם חשבון הענן הקיים.",
+  "upgradeToCloudCollisionKeepCloudTitle": "שמירת הענן, מחיקת המקומי",
+  "upgradeToCloudCollisionKeepCloudSubtitle": "התחברו לחשבון הענן הקיים. השינויים המקומיים בלבד במכשיר זה יוחלפו בנתוני הענן.",
+  "upgradeToCloudCloudPasswordLabel": "סיסמת חשבון הענן",
+  "upgradeToCloudCloudPasswordHint": "הסיסמה של חשבון הענן הקיים",
+  "upgradeToCloudCloudPasswordRequired": "הזינו את סיסמת חשבון הענן.",
+  "upgradeToCloudDiscardAcknowledge": "אני מבין שנתוני הענן יחליפו כל שינוי מקומי בלבד במכשיר זה.",
+  "upgradeToCloudDiscardAcknowledgeRequired": "אשרו שהנתונים המקומיים יוחלפו בנתוני הענן.",
+  "upgradeToCloudCollisionUploadButton": "העלאה והתחברות",
+  "upgradeToCloudCollisionDiscardButton": "מחיקת המקומי והתחברות",
+  "upgradeToCloudErrorIncorrectCloudPassword": "סיסמת חשבון הענן שגויה.",
+  "upgradeToCloudErrorMergeInternetRequired": "נדרש חיבור לאינטרנט כדי להשלים אפשרות מיזוג זו.",
+  "upgradeToCloudErrorMergeGeneric": "לא הצלחנו להשלים אפשרות מיזוג זו. נסו שוב.",
+  "@upgradeToCloudErrorMergeGeneric": {
+    "description": "Friendly fallback shown instead of a raw exception when a collision-merge option fails for an unexpected reason."
+  },
+  "upgradeToCloudCloudNotVerifiedBody": "חשבון ענן זה עדיין לא אומת. בדקו את תיבת הדואר שלכם, ואז הקישו על \"אימתתי — השלמת השדרוג\" למטה.",
+
   "scopeSelectionSave": "שמור",
   "scopeSelectionTrackEntireCurriculum": "עקוב אחר כל קורס הלימוד",
   "scopeSelectionChooseHierarchyLevel": "בחרו לפי איזה רמת היררכיה לסנן",
@@ -1305,6 +1348,29 @@
   "backupUpgradeToCloud": "שדרג לענן",
   "backupSyncCardTitle": "גיבוי וסנכרון",
   "backupSyncCardBody": "התקדמות הלימוד שלך מאוחסנת כרגע במכשיר זה בלבד. שדרגו כדי לסנכרן בין כל המכשירים.",
+  "backupTimeAgoJustNow": "ממש עכשיו",
+  "backupTimeAgoMinutes": "לפני {count} דק'",
+  "@backupTimeAgoMinutes": {
+    "description": "Relative time for a last-synced timestamp, in minutes.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "backupTimeAgoHours": "לפני {count} שע'",
+  "@backupTimeAgoHours": {
+    "description": "Relative time for a last-synced timestamp, in hours.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "backupTimeAgoDays": "לפני {count} ימים",
+  "@backupTimeAgoDays": {
+    "description": "Relative time for a last-synced timestamp, in days.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "backupSyncSignInToBackUp": "התחברו כדי לגבות",
 
   "reauthDialogTitle": "אמתו את זהותכם",
   "reauthDialogBody": "הזינו את הסיסמה הנוכחית כדי להמשיך.",

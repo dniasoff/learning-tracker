@@ -93,7 +93,7 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
       SyncStatusSynced(:final lastSyncedAt) => _buildCloudStatusCard(
         theme,
         icon: Icons.cloud_done_rounded,
-        subtitle: l10n.backupLastSynced(_formatTimeAgo(lastSyncedAt)),
+        subtitle: l10n.backupLastSynced(_formatTimeAgo(l10n, lastSyncedAt)),
       ),
       SyncStatusSyncing() => _buildCloudStatusCard(
         theme,
@@ -140,6 +140,7 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
     int pendingChanges,
     String reason,
   ) {
+    final l10nLocal = AppLocalizations.of(context)!;
     final identity = ref.watch(syncIdentityStatusProvider);
     if (identity.isMismatch) {
       return _buildCloudStatusCard(
@@ -148,11 +149,10 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
         subtitle: pendingChanges > 0
             ? '$reason ($pendingChanges queued)'
             : reason,
-        actionLabel: 'Sign in to back up',
+        actionLabel: l10nLocal.backupSyncSignInToBackUp,
         onTap: () => context.pushRoute(const SignInRoute()),
       );
     }
-    final l10nLocal = AppLocalizations.of(context)!;
     // ST-4 fix: the stuck-outbox reason is a raw English engineering string
     // ("outbox has N row(s) stuck after 3+ attempts") that leaks internal
     // terminology and English text into non-English UIs.  Replace it with a
@@ -465,11 +465,11 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
     );
   }
 
-  static String _formatTimeAgo(DateTime dateTime) {
+  static String _formatTimeAgo(AppLocalizations l10n, DateTime dateTime) {
     final diff = DateTimeFactory.nowLocal().difference(dateTime);
-    if (diff.inMinutes < 1) return 'just now';
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return '${diff.inHours}h ago';
-    return '${diff.inDays}d ago';
+    if (diff.inMinutes < 1) return l10n.backupTimeAgoJustNow;
+    if (diff.inMinutes < 60) return l10n.backupTimeAgoMinutes(diff.inMinutes);
+    if (diff.inHours < 24) return l10n.backupTimeAgoHours(diff.inHours);
+    return l10n.backupTimeAgoDays(diff.inDays);
   }
 }

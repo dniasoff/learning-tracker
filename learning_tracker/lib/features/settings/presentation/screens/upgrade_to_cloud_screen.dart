@@ -88,11 +88,10 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
     final checker = ref.read(internetConnectionCheckerProvider);
     final hasConnection = await checker.hasConnection;
     if (!hasConnection && mounted) {
+      final l10n = AppLocalizations.of(context)!;
       setState(
-        () => _phase = const _PhaseForm(
-          error:
-              'Internet connection is required to upgrade to cloud. '
-              'Your account and data stay local until you retry online.',
+        () => _phase = _PhaseForm(
+          error: l10n.upgradeToCloudErrorInternetRequired,
         ),
       );
     }
@@ -121,14 +120,17 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    // Resolve localizations before any async gap so we never read context
+    // after an await (lint: use_build_context_synchronously).
+    final l10n = AppLocalizations.of(context)!;
     if (!await _requireInternet()) return;
 
     final authState = ref.read(authStateProvider);
     final user = authState.currentUser;
     if (user == null || !authState.isLocalBorn) {
       setState(
-        () => _phase = const _PhaseForm(
-          error: 'Only local-born accounts can be upgraded.',
+        () => _phase = _PhaseForm(
+          error: l10n.upgradeToCloudErrorLocalBornOnly,
         ),
       );
       return;
@@ -162,27 +164,32 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
     } on UpgradeEmailNotVerifiedException {
       if (mounted) {
         setState(
-          () => _phase = const _PhaseVerifying(
-            bodyText:
-                'We sent a confirmation link to your inbox. After you verify, '
-                'tap "I\'ve verified — complete upgrade" below.',
+          () => _phase = _PhaseVerifying(
+            bodyText: l10n.upgradeToCloudVerifyBody,
           ),
         );
       }
     } on UpgradePasswordMismatchException {
       if (mounted) {
-        setState(() => _phase = const _PhaseForm(error: 'Incorrect password.'));
+        setState(
+          () => _phase = _PhaseForm(
+            error: l10n.upgradeToCloudErrorIncorrectPassword,
+          ),
+        );
       }
     } on EmailCollisionException {
       if (mounted) setState(() => _phase = const _PhaseCollision());
     } catch (e) {
       if (mounted) {
         final code = _extractFirebaseCode(e);
+        // Never surface the raw exception: map network failures to the
+        // localized offline message and everything else to a friendly,
+        // localized fallback (mirrors the ST-4 friendly-error pattern).
         setState(
           () => _phase = _PhaseForm(
             error: code == 'network-request-failed'
-                ? 'Internet connection is required to upgrade to cloud.'
-                : 'Upgrade failed: $e',
+                ? l10n.upgradeToCloudErrorInternetRequiredShort
+                : l10n.upgradeToCloudErrorGeneric,
           ),
         );
       }
@@ -242,7 +249,12 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
       }
     } on UpgradePasswordMismatchException {
       if (mounted) {
-        setState(() => _phase = const _PhaseForm(error: 'Incorrect password.'));
+        final l10n = AppLocalizations.of(context)!;
+        setState(
+          () => _phase = _PhaseForm(
+            error: l10n.upgradeToCloudErrorIncorrectPassword,
+          ),
+        );
       }
     } on EmailCollisionException {
       if (mounted) setState(() => _phase = const _PhaseCollision());
@@ -260,13 +272,16 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
     final collision = _phase;
     if (collision is! _PhaseCollision) return;
     if (collision.choice == _CollisionChoice.none) return;
+    // Resolve localizations before any async gap so we never read context
+    // after an await (lint: use_build_context_synchronously).
+    final l10n = AppLocalizations.of(context)!;
     if (!await _requireInternet()) return;
     if (_cloudPasswordController.text.isEmpty) {
       setState(
         () => _phase = _PhaseCollision(
           choice: collision.choice,
           discardAcknowledged: collision.discardAcknowledged,
-          error: 'Please enter your cloud account password.',
+          error: l10n.upgradeToCloudCloudPasswordRequired,
         ),
       );
       return;
@@ -277,8 +292,7 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
         () => _phase = _PhaseCollision(
           choice: collision.choice,
           discardAcknowledged: collision.discardAcknowledged,
-          error:
-              'Please acknowledge that local data will be replaced by cloud data.',
+          error: l10n.upgradeToCloudDiscardAcknowledgeRequired,
         ),
       );
       return;
@@ -328,25 +342,26 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
     } on UpgradeEmailNotVerifiedException {
       if (mounted) {
         setState(
-          () => _phase = const _PhaseVerifying(
-            bodyText:
-                'This cloud account is not verified yet. Check your inbox, '
-                'then tap "I\'ve verified — complete upgrade" below.',
+          () => _phase = _PhaseVerifying(
+            bodyText: l10n.upgradeToCloudCloudNotVerifiedBody,
           ),
         );
       }
     } catch (e) {
       if (mounted) {
         final code = _extractFirebaseCode(e);
+        // Never surface the raw exception: map the known Firebase codes to
+        // specific localized messages and everything else to a friendly,
+        // localized fallback (mirrors the ST-4 friendly-error pattern).
         setState(
           () => _phase = _PhaseCollision(
             choice: collision.choice,
             discardAcknowledged: collision.discardAcknowledged,
             error: code == 'wrong-password'
-                ? 'Incorrect cloud account password.'
+                ? l10n.upgradeToCloudErrorIncorrectCloudPassword
                 : code == 'network-request-failed'
-                ? 'Internet connection is required to complete this merge option.'
-                : 'Merge failed: $e',
+                ? l10n.upgradeToCloudErrorMergeInternetRequired
+                : l10n.upgradeToCloudErrorMergeGeneric,
           ),
         );
       }
@@ -356,11 +371,12 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     final authState = ref.watch(authStateProvider);
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(AppLocalizations.of(context)!.upgradeToCloudTitle),
+        title: Text(l10n.upgradeToCloudTitle),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -371,24 +387,24 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
-                  'Back up your account',
+                  l10n.upgradeToCloudHeadline,
                   style: theme.textTheme.headlineSmall,
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  "You're signed in as ${authState.currentUser?.email ?? ''}. "
-                  'Upgrading will create a cloud account with the same email '
-                  'so your data syncs across devices. This is one-way — you '
-                  "can't switch back to offline-only after upgrading.",
+                  l10n.upgradeToCloudValueProp(
+                    authState.currentUser?.email ?? '',
+                  ),
                   style: theme.textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 24),
                 switch (_phase) {
-                  _PhaseSuccess() => _SuccessBlock(theme: theme),
+                  _PhaseSuccess() => _SuccessBlock(theme: theme, l10n: l10n),
                   _PhaseVerifying(:final bodyText, :final isLoading) =>
                     _VerificationRequiredBlock(
                       email: authState.currentUser?.email,
                       bodyText: bodyText,
+                      verifiedLinkLabel: l10n.upgradeToCloudVerifiedLinkLabel,
                       isLoading: isLoading,
                       onIVerified: _submit,
                       onResend: _resendVerification,
@@ -403,6 +419,7 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
                   ) =>
                     _CollisionBlock(
                       theme: theme,
+                      l10n: l10n,
                       choice: choice,
                       cloudPasswordController: _cloudPasswordController,
                       discardAcknowledged: discardAcknowledged,
@@ -439,11 +456,11 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
                         controller: _passwordController,
                         obscureText: true,
                         inputFormatters: const [NoSpaceFormatter()],
-                        decoration: const InputDecoration(
-                          labelText: 'Confirm your password',
+                        decoration: InputDecoration(
+                          labelText: l10n.upgradeToCloudPasswordLabel,
                         ),
                         validator: (v) => (v == null || v.isEmpty)
-                            ? 'Password required'
+                            ? l10n.upgradeToCloudPasswordRequired
                             : null,
                         enabled: !isLoading,
                       ),
@@ -465,11 +482,7 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
                                   strokeWidth: 2,
                                 ),
                               )
-                            : Text(
-                                AppLocalizations.of(
-                                  context,
-                                )!.upgradeToCloudButton,
-                              ),
+                            : Text(l10n.upgradeToCloudButton),
                       ),
                     ],
                   ),
@@ -484,8 +497,9 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
 }
 
 class _SuccessBlock extends StatelessWidget {
-  const _SuccessBlock({required this.theme});
+  const _SuccessBlock({required this.theme, required this.l10n});
   final ThemeData theme;
+  final AppLocalizations l10n;
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -502,7 +516,7 @@ class _SuccessBlock extends StatelessWidget {
               Icon(Icons.cloud_done, color: theme.colorScheme.primary),
               const SizedBox(width: 8),
               Text(
-                "You're backed up!",
+                l10n.upgradeToCloudSuccessTitle,
                 style: theme.textTheme.titleMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
@@ -511,7 +525,7 @@ class _SuccessBlock extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            'Your data will now sync across devices automatically.',
+            l10n.upgradeToCloudSuccessBody,
             style: theme.textTheme.bodyMedium,
           ),
         ],
@@ -523,6 +537,7 @@ class _SuccessBlock extends StatelessWidget {
 class _CollisionBlock extends StatelessWidget {
   const _CollisionBlock({
     required this.theme,
+    required this.l10n,
     required this.choice,
     required this.cloudPasswordController,
     required this.discardAcknowledged,
@@ -535,6 +550,7 @@ class _CollisionBlock extends StatelessWidget {
   });
 
   final ThemeData theme;
+  final AppLocalizations l10n;
   final _CollisionChoice choice;
   final TextEditingController cloudPasswordController;
   final bool discardAcknowledged;
@@ -563,7 +579,7 @@ class _CollisionBlock extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'A cloud account already exists with this email',
+                  l10n.upgradeToCloudCollisionTitle,
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                   ),
@@ -573,26 +589,23 @@ class _CollisionBlock extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            "We won't silently merge — choose how to resolve this:",
+            l10n.upgradeToCloudCollisionBody,
             style: theme.textTheme.bodyMedium,
           ),
           const SizedBox(height: 12),
           _OptionTile(
             theme: theme,
             selected: choice == _CollisionChoice.upload,
-            title: 'Upload local into cloud',
-            subtitle:
-                'Your offline progress merges with the existing cloud account.',
+            title: l10n.upgradeToCloudCollisionUploadTitle,
+            subtitle: l10n.upgradeToCloudCollisionUploadSubtitle,
             onTap: isLoading ? null : () => onChoose(_CollisionChoice.upload),
           ),
           const SizedBox(height: 8),
           _OptionTile(
             theme: theme,
             selected: choice == _CollisionChoice.discard,
-            title: 'Keep cloud, discard local',
-            subtitle:
-                'Sign in to the existing cloud account. Your local-only '
-                'changes on this device are replaced with cloud data.',
+            title: l10n.upgradeToCloudCollisionKeepCloudTitle,
+            subtitle: l10n.upgradeToCloudCollisionKeepCloudSubtitle,
             onTap: isLoading ? null : () => onChoose(_CollisionChoice.discard),
           ),
           if (choice != _CollisionChoice.none) ...[
@@ -601,9 +614,9 @@ class _CollisionBlock extends StatelessWidget {
               controller: cloudPasswordController,
               obscureText: true,
               inputFormatters: const [NoSpaceFormatter()],
-              decoration: const InputDecoration(
-                labelText: 'Cloud account password',
-                hintText: 'The password for the existing cloud account',
+              decoration: InputDecoration(
+                labelText: l10n.upgradeToCloudCloudPasswordLabel,
+                hintText: l10n.upgradeToCloudCloudPasswordHint,
               ),
               enabled: !isLoading,
             ),
@@ -616,13 +629,10 @@ class _CollisionBlock extends StatelessWidget {
                     value: discardAcknowledged,
                     onChanged: isLoading ? null : onAcknowledge,
                   ),
-                  const Expanded(
+                  Expanded(
                     child: Padding(
-                      padding: EdgeInsets.only(top: 12),
-                      child: Text(
-                        'I understand that cloud data will replace any '
-                        'purely-local changes on this device.',
-                      ),
+                      padding: const EdgeInsets.only(top: 12),
+                      child: Text(l10n.upgradeToCloudDiscardAcknowledge),
                     ),
                   ),
                 ],
@@ -643,17 +653,15 @@ class _CollisionBlock extends StatelessWidget {
                     )
                   : Text(
                       choice == _CollisionChoice.upload
-                          ? 'Upload and sign in'
-                          : 'Discard local and sign in',
+                          ? l10n.upgradeToCloudCollisionUploadButton
+                          : l10n.upgradeToCloudCollisionDiscardButton,
                     ),
             ),
           ],
           const SizedBox(height: 8),
           TextButton(
             onPressed: isLoading ? null : onCancel,
-            child: Text(
-              AppLocalizations.of(context)!.upgradeToCloudCancelKeepOffline,
-            ),
+            child: Text(l10n.upgradeToCloudCancelKeepOffline),
           ),
         ],
       ),
@@ -665,6 +673,7 @@ class _VerificationRequiredBlock extends StatelessWidget {
   const _VerificationRequiredBlock({
     required this.email,
     required this.bodyText,
+    required this.verifiedLinkLabel,
     required this.isLoading,
     required this.onIVerified,
     required this.onResend,
@@ -673,6 +682,7 @@ class _VerificationRequiredBlock extends StatelessWidget {
 
   final String? email;
   final String bodyText;
+  final String verifiedLinkLabel;
   final bool isLoading;
   final Future<void> Function() onIVerified;
   final Future<void> Function() onResend;
@@ -685,7 +695,7 @@ class _VerificationRequiredBlock extends StatelessWidget {
       child: EmailVerificationConfirmPanel(
         email: email,
         bodyText: bodyText,
-        verifiedLinkLabel: "I've verified — complete upgrade",
+        verifiedLinkLabel: verifiedLinkLabel,
         actionsLocked: isLoading,
         onSendAgain: onResend,
         onCancel: onCancel,
