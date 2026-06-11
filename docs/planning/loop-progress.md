@@ -501,3 +501,15 @@ device-driven (commit 95ede74a, make ci GREEN 9900 pass):
 - DONE THIS SESSION: both Daniel decisions (collision fix shipped+reviewed; local-vs-cloud intended); device-language
   correction + Hebrew-script terms (verified on-device); gamification unblocked+clean; R1–R5 redo (~22/45 screens),
   ~60 real bugs fixed and shipped green; stale audit-guidance fixed.
+
+### Continue on single device 5554 (2026-06-11)
+- FK-PROFILE-CREATION = NON-ISSUE (resolved): a clean offline re-onboarding of 5554 (pm clear + fresh install +
+  airplane-mode local path) created the first profile SUCCESSFULLY — logcat showed NO SqliteException/787/FOREIGN KEY.
+  The earlier FK failure was purely a crash-corrupted-state artifact, NOT a code defect. No fix needed.
+- 5554 RE-SEEDED (matches 5556): local adult "Parent" + Parent PIN 2580 + child "Child" + Mishnayos Seder-Zeraim track
+  + 1 completed task (streak chip 🔥1, 10 points). Latest APK (8d28ad3e + R5 fixes) installed. (Minor harmless leftover:
+  a duplicate track on the Parent profile from the seeding attempt.)
+- AUDITING on 5554 (single device, sequential): the 3 crash-blocked screens (text_display, track_management_hub via
+  Parent Mode PIN 2580, lifetime_knowledge incl. on-device COLLISION-FIX check that 1 completion isn't over-credited),
+  + re-verify the R5 upgrade_to_cloud Hebrew localization (device→he via `cmd locale set-app-locales --locales he`).
+- STILL PENDING Daniel: restart 5556 + 5558 for full 3-device parallelism. Working on 5554 only meanwhile.
