@@ -405,37 +405,60 @@ class DashboardBody extends ConsumerWidget {
             lifetimeReady: lifetimeReady,
           ),
         const SizedBox(height: 30),
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                l10n.todaysMissions,
-                style: _iosTextStyle(
-                  context,
-                  size: 28,
-                  weight: FontWeight.w800,
-                  color: AppTheme.brandInk,
+        // R1v2-(6): the heading previously shared a horizontal Row with the
+        // pink "N remaining" pill and was capped at maxLines:1 + ellipsis, so
+        // the fixed-width pill ate the row width and the heading clipped to
+        // "Today's Mi…" / "…היום" at font scale 1.3. A 2-line heading needs
+        // (at 28 px / w800) ~240 px at 1.0 and ~310 px at 1.3 — more than the
+        // ~200 px the pill leaves on a phone-width row, so simply sharing a Row
+        // cannot fit. We use a Wrap so the pill YIELDS by flowing to its own run
+        // below the heading when there isn't room beside it; the heading is
+        // constrained to the full available width via LayoutBuilder so it wraps
+        // internally instead of clipping. Full heading shows in en + he at font
+        // 1.0 and 1.3.
+        LayoutBuilder(
+          builder: (context, constraints) {
+            return Wrap(
+              spacing: 10,
+              runSpacing: 6,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                ConstrainedBox(
+                  constraints: BoxConstraints(maxWidth: constraints.maxWidth),
+                  child: Text(
+                    l10n.todaysMissions,
+                    style: _iosTextStyle(
+                      context,
+                      size: 28,
+                      weight: FontWeight.w800,
+                      color: AppTheme.brandInk,
+                    ),
+                    maxLines: 2,
+                    softWrap: true,
+                  ),
                 ),
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            const SizedBox(width: 10),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-              decoration: BoxDecoration(
-                color: AppColors.statusDanger.withValues(alpha: 0.14),
-                borderRadius: BorderRadius.circular(999),
-              ),
-              child: Text(
-                l10n.remaining(totalRemaining),
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: AppColors.statusDanger,
-                  fontWeight: FontWeight.w700,
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.statusDanger.withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(999),
+                  ),
+                  child: Text(
+                    l10n.remaining(totalRemaining),
+                    style: theme.textTheme.labelMedium?.copyWith(
+                      color: AppColors.statusDanger,
+                      fontWeight: FontWeight.w700,
+                    ),
+                    maxLines: 1,
+                    softWrap: false,
+                  ),
                 ),
-              ),
-            ),
-          ],
+              ],
+            );
+          },
         ),
         const SizedBox(height: 14),
         MainFocusMissionCard(
