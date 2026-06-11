@@ -197,7 +197,11 @@ class StudyDayConfigScreen extends ConsumerWidget {
                           .length;
                       return Center(
                         child: Text(
-                          '$studyCount study day${studyCount == 1 ? '' : 's'} per week',
+                          // R1-(6): use ICU plural so "1 study day per week"
+                          // (not "1 study days per week").
+                          AppLocalizations.of(
+                            context,
+                          )!.studyDaysPerWeekLabel(studyCount),
                           style: theme.textTheme.titleSmall?.copyWith(
                             color: theme.colorScheme.primary,
                           ),

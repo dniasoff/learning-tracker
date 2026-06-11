@@ -1345,6 +1345,12 @@
 
   "studyDaysTitle": "ימי לימוד",
   "studyDaysSubtitle": "באילו ימים אתה לומד?",
+  "studyDaysPerWeekLabel": "{count, plural, =1{יום לימוד אחד בשבוע} two{שני ימי לימוד בשבוע} other{{count} ימי לימוד בשבוע}}",
+  "@studyDaysPerWeekLabel": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
   "studyDaysSetByProgram": "ימי הלימוד נקבעו על ידי {programName}",
   "@studyDaysSetByProgram": {
     "placeholders": {
@@ -2348,6 +2354,13 @@
     "description": "R1-(3): singular/plural unit word ('day'/'days') shown under the numeric delay in the custom-cycle review chip.",
     "placeholders": {
       "count": { "type": "int" }
+    }
+  },
+  "scopeChooseLevelPrompt": "בחרו {levelLabel}",
+  "@scopeChooseLevelPrompt": {
+    "description": "R1-(6): top-level scope breadcrumb prompt. Shown after the curriculum chip; must NOT repeat the curriculum name.",
+    "placeholders": {
+      "levelLabel": { "type": "String" }
     }
   }
 }

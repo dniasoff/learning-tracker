@@ -552,7 +552,13 @@ class AppLocalizationsEn extends AppLocalizations {
     int studyDays,
     int totalItems,
   ) {
-    return 'About $items $unit per study day, across $studyDays study days to finish the scope by the deadline (≈$totalItems items).';
+    String _temp0 = intl.Intl.pluralLogic(
+      studyDays,
+      locale: localeName,
+      other: '$studyDays study days',
+      one: '1 study day',
+    );
+    return 'About $items $unit per study day, across $_temp0 to finish the scope by the deadline (≈$totalItems items).';
   }
 
   @override
@@ -2838,6 +2844,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get studyDaysSubtitle => 'Which days do you learn?';
 
   @override
+  String studyDaysPerWeekLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count study days per week',
+      one: '1 study day per week',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String studyDaysSetByProgram(String programName) {
     return 'Study days set by $programName';
   }
@@ -4369,5 +4386,21 @@ class AppLocalizationsEn extends AppLocalizations {
       one: '$count selection',
     );
     return '$_temp0';
+  }
+
+  @override
+  String chazaraDayUnitLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Days',
+      one: 'Day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String scopeChooseLevelPrompt(String levelLabel) {
+    return 'Choose a $levelLabel';
   }
 }

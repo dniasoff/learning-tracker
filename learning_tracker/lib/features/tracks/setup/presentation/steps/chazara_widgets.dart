@@ -125,7 +125,9 @@ class CustomDayEditorChip extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  l10n.schedulerDaysLabel.toUpperCase(),
+                  // R1-(3): plural-correct unit word. count==1 → "DAY",
+                  // otherwise "DAYS" (was always "DAYS", so "1 DAYS").
+                  l10n.chazaraDayUnitLabel(day).toUpperCase(),
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: AppTheme.brandInkMuted,
                     fontWeight: FontWeight.w700,

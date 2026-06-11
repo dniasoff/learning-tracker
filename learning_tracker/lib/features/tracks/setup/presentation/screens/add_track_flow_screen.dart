@@ -868,6 +868,9 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
     return ScopeStepContent(
       curriculumId: _state.curriculumId!,
       onComplete: _onScopeComplete,
+      // R1-(7): pass the previously-chosen scope so Back+Forward navigation
+      // restores the section selection instead of discarding it.
+      initialSelections: _state.scopeSelections,
     );
   }
 

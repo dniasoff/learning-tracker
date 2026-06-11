@@ -151,13 +151,20 @@ class ScopeTopLevelView extends ConsumerWidget {
           ),
           child: Padding(
             padding: const EdgeInsets.fromLTRB(12, 12, 12, 10),
+            // R1-(5): each segment is Flexible + ellipsis so the breadcrumb
+            // never RenderFlex-overflows at large text scales (was "RIGHT
+            // OVERFLOWED BY 11 PIXELS" at 1.3).
             child: Row(
               children: [
-                CurriculumLabel.curriculum(
-                  curriculumId,
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    color: AppTheme.brandBlueDeep,
-                    fontWeight: FontWeight.w700,
+                Flexible(
+                  child: CurriculumLabel.curriculum(
+                    curriculumId,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      color: AppTheme.brandBlueDeep,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -167,13 +174,17 @@ class ScopeTopLevelView extends ConsumerWidget {
                   color: AppTheme.brandInkMuted,
                 ),
                 const SizedBox(width: 8),
-                Text(
-                  l10n.level1Selection(
-                    curriculumLabelText(ref, curriculum: curriculumId),
-                    labelForLevel(1),
-                  ),
-                  style: theme.textTheme.titleSmall?.copyWith(
-                    color: AppTheme.brandInk,
+                // R1-(6): show only the level prompt (e.g. "Choose a Sefer").
+                // The old level1Selection re-embedded the curriculum name,
+                // duplicating the chip to its left ("Chumash › Chumash → …").
+                Flexible(
+                  child: Text(
+                    l10n.scopeChooseLevelPrompt(labelForLevel(1)),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      color: AppTheme.brandInk,
+                    ),
                   ),
                 ),
               ],

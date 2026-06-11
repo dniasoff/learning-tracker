@@ -1422,6 +1422,12 @@
 
   "studyDaysTitle": "Study Days",
   "studyDaysSubtitle": "Which days do you learn?",
+  "studyDaysPerWeekLabel": "{count, plural, =1{1 study day per week} other{{count} study days per week}}",
+  "@studyDaysPerWeekLabel": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
   "studyDaysSetByProgram": "Study days set by {programName}",
   "@studyDaysSetByProgram": {
     "placeholders": {
@@ -2487,6 +2493,13 @@
     "description": "R1-(3): singular/plural unit word ('Day'/'Days') shown under the numeric delay in the custom-cycle review chip. Uppercased at render time. count==1 must be singular ('1 DAY').",
     "placeholders": {
       "count": { "type": "int" }
+    }
+  },
+  "scopeChooseLevelPrompt": "Choose a {levelLabel}",
+  "@scopeChooseLevelPrompt": {
+    "description": "R1-(6): top-level scope breadcrumb prompt. Shown after the curriculum chip; must NOT repeat the curriculum name. levelLabel is the localized level word (e.g. Sefer, Seder).",
+    "placeholders": {
+      "levelLabel": { "type": "String" }
     }
   }
 }

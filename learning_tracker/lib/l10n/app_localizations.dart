@@ -1071,7 +1071,7 @@ abstract class AppLocalizations {
   /// No description provided for @addTrackGoalDeadlinePaceLine.
   ///
   /// In en, this message translates to:
-  /// **'About {items} {unit} per study day, across {studyDays} study days to finish the scope by the deadline (≈{totalItems} items).'**
+  /// **'About {items} {unit} per study day, across {studyDays, plural, =1{1 study day} other{{studyDays} study days}} to finish the scope by the deadline (≈{totalItems} items).'**
   String addTrackGoalDeadlinePaceLine(
     int items,
     String unit,
@@ -5033,6 +5033,12 @@ abstract class AppLocalizations {
   /// **'Which days do you learn?'**
   String get studyDaysSubtitle;
 
+  /// No description provided for @studyDaysPerWeekLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 study day per week} other{{count} study days per week}}'**
+  String studyDaysPerWeekLabel(int count);
+
   /// No description provided for @studyDaysSetByProgram.
   ///
   /// In en, this message translates to:
@@ -7498,6 +7504,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, one{{count} selection} other{{count} selections}}'**
   String selectionCount(int count);
+
+  /// R1-(3): singular/plural unit word ('Day'/'Days') shown under the numeric delay in the custom-cycle review chip. Uppercased at render time. count==1 must be singular ('1 DAY').
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Day} other{Days}}'**
+  String chazaraDayUnitLabel(int count);
+
+  /// R1-(6): top-level scope breadcrumb prompt. Shown after the curriculum chip; must NOT repeat the curriculum name. levelLabel is the localized level word (e.g. Sefer, Seder).
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a {levelLabel}'**
+  String scopeChooseLevelPrompt(String levelLabel);
 }
 
 class _AppLocalizationsDelegate

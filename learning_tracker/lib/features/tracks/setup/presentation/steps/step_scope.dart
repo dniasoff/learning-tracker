@@ -23,11 +23,20 @@ class ScopeStepContent extends ConsumerStatefulWidget {
   const ScopeStepContent({
     required this.curriculumId,
     required this.onComplete,
+    this.initialSelections,
     super.key,
   });
 
   final CurriculumId curriculumId;
   final ValueChanged<List<ScopeEntry>?> onComplete;
+
+  /// TS-10 (R1-(7)): scope selections already chosen in the wizard.
+  ///
+  /// When the user navigates Back then Forward, the host re-supplies these so
+  /// the previously-selected section survives (the Continue button stays
+  /// enabled and the selection is re-submitted). Without this, the local
+  /// selection state was lost whenever the step's [State] was rebuilt fresh.
+  final List<ScopeEntry>? initialSelections;
 
   @override
   ConsumerState<ScopeStepContent> createState() => _ScopeStepContentState();
@@ -39,6 +48,19 @@ class _ScopeStepContentState extends ConsumerState<ScopeStepContent> {
   final List<ScopeEntry> _selections = [];
   final Map<String, String> _selectionLabels = {}; // rawValue → rendered label
   bool _didAutoSkip = false;
+
+  @override
+  void initState() {
+    super.initState();
+    // R1-(7): restore prior scope selections so Back+Forward does not discard
+    // the section the user already chose. Labels are resolved lazily once the
+    // content loads (the chip uses selectionLabels[value] ?? value as a
+    // fallback, so the raw value renders until then).
+    final initial = widget.initialSelections;
+    if (initial != null && initial.isNotEmpty) {
+      _selections.addAll(initial);
+    }
+  }
 
   int get _maxLevels => CurriculumLabels.depth(widget.curriculumId);
 
@@ -154,6 +176,25 @@ class _ScopeStepContentState extends ConsumerState<ScopeStepContent> {
       widget.onComplete(null);
     } else {
       widget.onComplete(List.of(_selections));
+    }
+  }
+
+  /// R1-(7): fill in [_selectionLabels] for restored selections that have no
+  /// rendered label yet (selections seeded from `initialSelections` carry only
+  /// level+value). Looks up the content item at the selection's level and uses
+  /// its display name. No-op once every selection has a label.
+  void _backfillSelectionLabels(List<ContentItem> allItems, bool useHebrew) {
+    for (final sel in _selections) {
+      if (_selectionLabels.containsKey(sel.value)) continue;
+      for (final item in allItems) {
+        if (levelValueAt(item, sel.level) == sel.value) {
+          _selectionLabels[sel.value] = itemDisplayName(
+            item,
+            useHebrew: useHebrew,
+          );
+          break;
+        }
+      }
     }
   }
 
@@ -315,6 +356,12 @@ class _ScopeStepContentState extends ConsumerState<ScopeStepContent> {
                   }
                   return const Center(child: CircularProgressIndicator());
                 }
+
+                // R1-(7): backfill rendered labels for any restored selection
+                // whose label is not yet known (e.g. after Back+Forward, where
+                // _selections was seeded from initialSelections but the labels
+                // were not). Uses the content item matching the scope level.
+                _backfillSelectionLabels(allItems, useHebrew);
 
                 final filtered = _filteredToCurrentPath(allItems);
                 final displayItems = groupItemsByNextLevel(

@@ -548,7 +548,14 @@ class AppLocalizationsHe extends AppLocalizations {
     int studyDays,
     int totalItems,
   ) {
-    return 'בערך $items $unit בכל יום לימוד, על פני $studyDays ימי לימוד עד תאריך היעד (בערך $totalItems יחידות בתחום).';
+    String _temp0 = intl.Intl.pluralLogic(
+      studyDays,
+      locale: localeName,
+      other: '$studyDays ימי לימוד',
+      two: 'יומיים של לימוד',
+      one: 'יום לימוד אחד',
+    );
+    return 'בערך $items $unit בכל יום לימוד, על פני $_temp0 עד תאריך היעד (בערך $totalItems יחידות בתחום).';
   }
 
   @override
@@ -2803,6 +2810,18 @@ class AppLocalizationsHe extends AppLocalizations {
   String get studyDaysSubtitle => 'באילו ימים אתה לומד?';
 
   @override
+  String studyDaysPerWeekLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ימי לימוד בשבוע',
+      two: 'שני ימי לימוד בשבוע',
+      one: 'יום לימוד אחד בשבוע',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String studyDaysSetByProgram(String programName) {
     return 'ימי הלימוד נקבעו על ידי $programName';
   }
@@ -4323,5 +4342,22 @@ class AppLocalizationsHe extends AppLocalizations {
       one: 'בחירה אחת',
     );
     return '$_temp0';
+  }
+
+  @override
+  String chazaraDayUnitLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ימים',
+      two: 'ימים',
+      one: 'יום',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String scopeChooseLevelPrompt(String levelLabel) {
+    return 'בחרו $levelLabel';
   }
 }
