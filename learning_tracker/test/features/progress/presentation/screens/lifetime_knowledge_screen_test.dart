@@ -272,8 +272,10 @@ void main() {
           at: DateTime.utc(2026, 5, 4, 10),
         );
 
-        // Expected: 4 distinct items learned; 6 chazaros total (4 live events
-        // + 1 bulk + 1 lifetime).
+        // Expected: 4 distinct items learned; 2 chazaros total.
+        // PP-4 fix: totalChazaros counts only REVIEW events (stageId > 1).
+        // Of the seeded rows only the two stage-2 live events are chazaros;
+        // the stage-1 live/bulk/lifetime rows are limud and are excluded.
         final container = buildContainer();
         final counters = await container.read(
           lifetimeHeaderCountersProvider(_profileId).future,
@@ -288,10 +290,11 @@ void main() {
         );
         expect(
           counters.totalChazaros,
-          6,
+          2,
           reason:
-              'Every completion_event row counts; 4 live (2 refs × 2 stages) '
-              '+ 1 bulk + 1 lifetime = 6',
+              'PP-4: only review events (stageId > 1) count as chazaros. '
+              'Of 6 event rows only the 2 stage-2 live events are chazaros; '
+              'the stage-1 live/bulk/lifetime rows are limud, not chazaros.',
         );
       },
     );
@@ -501,8 +504,11 @@ void main() {
     test('trackOnlyHeaderCountersProvider excludes lifetimeOnly imports '
         'while lifetimeHeaderCountersProvider keeps them', () async {
       // Seed: 1 live ref (2 events) + 1 bulkInTrack + 1 lifetimeOnly.
-      // All-sources expected: 3 items, 4 chazaros.
-      // Track-only expected:  2 items, 3 chazaros (lifetimeOnly dropped).
+      // PP-4: totalChazaros counts only review events (stageId > 1), so the
+      // only chazara here is the single stage-2 live event.
+      // All-sources expected: 3 items, 1 chazara.
+      // Track-only expected:  2 items, 1 chazara (lifetimeOnly item dropped;
+      // the lone chazara is a live event, present in both views).
       await _seedLive(
         db,
         trackId: trackId,
@@ -545,8 +551,10 @@ void main() {
       );
       expect(
         all.totalChazaros,
-        4,
-        reason: '2 live events + 1 bulk + 1 lifetimeOnly = 4 events',
+        1,
+        reason:
+            'PP-4: only review events (stageId > 1) count — the single '
+            'stage-2 live event; the stage-1 bulk/lifetime/live rows are limud',
       );
 
       // Track-only counters: lifetimeOnly excluded at the SQL layer via
@@ -562,13 +570,18 @@ void main() {
       );
       expect(
         track.totalChazaros,
-        3,
+        1,
         reason:
-            'Track-only chazaros = 2 live events + 1 bulk event = 3 '
-            '(lifetimeOnly event filtered out)',
+            'PP-4: Track-only chazaros = the single stage-2 live review event. '
+            'The stage-1 bulk row is limud (not a chazara) and the lifetimeOnly '
+            'event is filtered out by tier — both views see the same lone '
+            'chazara.',
       );
 
-      // Strict delta — flipping the toggle MUST move the displayed numbers.
+      // Strict delta — flipping the toggle MUST move the items count (the
+      // lifetimeOnly leaf is the distinguishing seed). The chazaros count is
+      // unaffected here because the only review event is a live event present
+      // in both views (PP-4 makes limud rows not contribute to chazaros).
       expect(
         track.itemsLearned,
         lessThan(all.itemsLearned),
@@ -577,7 +590,7 @@ void main() {
             'Track-only items count must be strictly smaller than the '
             'All-sources count',
       );
-      expect(track.totalChazaros, lessThan(all.totalChazaros));
+      expect(track.totalChazaros, lessThanOrEqualTo(all.totalChazaros));
     });
   });
 

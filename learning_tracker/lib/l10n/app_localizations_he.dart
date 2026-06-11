@@ -1537,7 +1537,7 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get enterCurrentPinSubtitle =>
-      'Enter your current 4-digit PIN to change it.';
+      'הזינו את הקוד הנוכחי בן 4 ספרות כדי לשנותו.';
 
   @override
   String get enterNewPin => 'הזינו קוד חדש';

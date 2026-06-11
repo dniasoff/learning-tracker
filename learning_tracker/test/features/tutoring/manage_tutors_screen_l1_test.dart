@@ -930,7 +930,7 @@ void main() {
   // ── Section dividers ────────────────────────────────────────────────────────
 
   testWidgets(
-    'shows "ACTIVE (1)" section header when there is one active grant',
+    'shows "Active (1)" section header when there is one active grant',
     (tester) async {
       final child = _childProfile(id: 1, displayName: 'Zelig');
       final grant = _activeGrant();
@@ -947,8 +947,8 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 
-      // l10n: manageTutorsActiveSection(1) → "ACTIVE (1)"
-      expect(find.text('ACTIVE (1)'), findsOneWidget);
+      // l10n: manageTutorsActiveSection(1) → "Active (1)" (GA-8 title-case fix)
+      expect(find.text('Active (1)'), findsOneWidget);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(Duration.zero);
@@ -1000,7 +1000,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 
-      expect(find.text('ACTIVE (1)'), findsOneWidget);
+      expect(find.text('Active (1)'), findsOneWidget);
       expect(find.text('Pending (1)'), findsOneWidget);
       expect(find.text('active@both.com'), findsOneWidget);
       expect(find.text('pending@both.com'), findsOneWidget);

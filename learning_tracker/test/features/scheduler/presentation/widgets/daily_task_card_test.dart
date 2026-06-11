@@ -68,8 +68,11 @@ void main() {
       expect(find.text('Mishnah Berakhot 1.1'), findsOneWidget);
       // Curriculum badge — English mode (useHebrew=false) renders displayNameEn.
       expect(find.text('Mishnayos'), findsOneWidget);
-      // Stage label: stageOrder 1 shows 'Learn'
-      expect(find.text('Learn'), findsOneWidget);
+      // Stage label: stageOrder 1 shows 'Limud'. IL-5 normalised the stage-0
+      // display name from the legacy DB key "Learn" to the canonical
+      // transliteration "Limud" (matching DomainTermLabels.limud) in English
+      // mode; the DB-stored stageName ("Learn") is unchanged.
+      expect(find.text('Limud'), findsOneWidget);
     });
 
     testWidgets('displays XP for effort', (tester) async {

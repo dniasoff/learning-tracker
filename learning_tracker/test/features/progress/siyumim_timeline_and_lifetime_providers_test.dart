@@ -802,10 +802,12 @@ void main() {
 
     // ── B8 lifetimeHeaderCountersProvider — totalChazaros ─────────────────
 
-    test('B8 — totalChazaros counts raw completion-event rows '
-        '(sentinel-date bulk marks count)', () async {
-      // The sentinel date 2000-01-01 is used by bulk-mark back-dating
-      // (credit policy). Those events must still count in totalChazaros.
+    test('B8 — totalChazaros counts only review (stageId > 1) rows '
+        '(sentinel-date limud bulk marks do NOT count)', () async {
+      // PP-4: totalChazaros counts only review events (stageId > 1). The
+      // sentinel date 2000-01-01 is used by bulk-mark back-dating (credit
+      // policy); a sentinel-dated *limud* (stageId == 1) event is still a
+      // limud, not a chazara, so it must NOT inflate totalChazaros.
       final sentinel = DateTime.utc(2000, 1, 1);
       final events = [
         CompletionEventsCompanion.insert(
@@ -855,10 +857,11 @@ void main() {
 
       expect(
         counters.totalChazaros,
-        2,
+        0,
         reason:
-            'Both events must be counted in totalChazaros — '
-            'including the sentinel-date (2000-01-01) bulk-mark event',
+            'PP-4: both seeded events are stageId 1 (limud), so totalChazaros '
+            'is 0 — limud rows (including the sentinel-date bulk-mark) are not '
+            'chazaros',
       );
     });
 
@@ -935,9 +938,12 @@ void main() {
         );
         expect(
           counters.totalChazaros,
-          2,
+          0,
           reason:
-              'totalChazaros must exclude the lifetimeOnly event from the count',
+              'PP-4: totalChazaros counts only review events (stageId > 1). '
+              'All three seeded events are stageId 1 (limud), and the '
+              'lifetimeOnly row is additionally excluded by tier, so the '
+              'chazaros count is 0',
         );
       },
     );

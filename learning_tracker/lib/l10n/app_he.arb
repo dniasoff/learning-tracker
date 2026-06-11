@@ -717,6 +717,7 @@
   "noActiveProfile": "אין פרופיל פעיל",
   "incorrectPin": "קוד שגוי",
   "enterCurrentPin": "הזינו את הקוד הנוכחי",
+  "enterCurrentPinSubtitle": "הזינו את הקוד הנוכחי בן 4 ספרות כדי לשנותו.",
   "enterNewPin": "הזינו קוד חדש",
   "confirmNewPin": "אשרו את הקוד החדש",
   "pinsDoNotMatch": "הקודים אינם תואמים",

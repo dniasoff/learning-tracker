@@ -177,12 +177,12 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // The localized templates render with the integer count baked in: the
-    // labels themselves are "{count} curriculum-level siyumim" etc., so the
-    // resolved strings are "1 curriculum-level siyumim", "1 aggregate-level
-    // siyumim", "2 unit-level siyumim".
-    expect(find.text('1 curriculum-level siyumim'), findsOneWidget);
-    expect(find.text('1 aggregate-level siyumim'), findsOneWidget);
+    // The localized templates are ICU plurals (IL-3): count==1 resolves to the
+    // singular "siyum", count>1 to "siyumim". With counts 1 / 1 / 2 the
+    // resolved strings are "1 curriculum-level siyum", "1 aggregate-level
+    // siyum", "2 unit-level siyumim".
+    expect(find.text('1 curriculum-level siyum'), findsOneWidget);
+    expect(find.text('1 aggregate-level siyum'), findsOneWidget);
     expect(find.text('2 unit-level siyumim'), findsOneWidget);
   });
 
@@ -220,8 +220,9 @@ void main() {
     // Under the Hebrew locale the counter labels resolve to the Hebrew
     // strings from app_he.arb — proving the previous hardcoded English
     // (F6) is gone and a Hebrew user sees a consistent Hebrew UI.
-    expect(find.text('1 סיומים ברמת מסלול'), findsOneWidget);
-    expect(find.text('1 סיומים ברמת אגד'), findsOneWidget);
+    // IL-3 ICU plural: count==1 resolves to the singular "סיום אחד …".
+    expect(find.text('סיום אחד ברמת מסלול'), findsOneWidget);
+    expect(find.text('סיום אחד ברמת אגד'), findsOneWidget);
     expect(find.text('2 סיומים ברמת יחידה'), findsOneWidget);
   });
 
@@ -263,9 +264,10 @@ void main() {
     await tester.pumpAndSettle();
 
     // Sanity: the three rows are still rendered (we did NOT hide them).
+    // IL-3 ICU plural: count 0 → "siyumim" (other), count 1 → "siyum" (one).
     expect(find.text('0 curriculum-level siyumim'), findsOneWidget);
     expect(find.text('0 aggregate-level siyumim'), findsOneWidget);
-    expect(find.text('1 unit-level siyumim'), findsOneWidget);
+    expect(find.text('1 unit-level siyum'), findsOneWidget);
 
     // The two zero-count rows must be wrapped in an Opacity widget; the
     // non-zero row must not. Walk the widget tree to confirm.
@@ -289,7 +291,7 @@ void main() {
     final zeroAggregate = opacityAncestorOf(
       find.text('0 aggregate-level siyumim'),
     );
-    final liveUnit = opacityAncestorOf(find.text('1 unit-level siyumim'));
+    final liveUnit = opacityAncestorOf(find.text('1 unit-level siyum'));
 
     expect(
       zeroCurriculum,
