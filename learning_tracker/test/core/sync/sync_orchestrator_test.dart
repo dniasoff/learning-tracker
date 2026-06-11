@@ -736,7 +736,8 @@ void main() {
     });
 
     test(
-      'error status message is the exception message for non-timeout errors',
+      'error status message is a friendly generic string for non-timeout, '
+      'non-permission-denied errors (SY-3 fix: no raw exception toString)',
       () async {
         final gw = _FakeGateway()
           ..throwWith = Exception('custom error message');
@@ -744,7 +745,22 @@ void main() {
 
         await expectLater(orchestrator.pullOnLaunch(), throwsA(anything));
         final status = orchestrator.currentStatus as SyncStatusError;
-        expect(status.message, contains('custom error message'));
+        // SY-3: the orchestrator must NOT pass raw exception.toString() into
+        // the error status message (which would expose internal class names and
+        // error details to users via the Backup & Sync card).  Instead it maps
+        // unknown exceptions to a generic friendly message.
+        expect(
+          status.message,
+          isNot(contains('custom error message')),
+          reason:
+              'Raw exception.toString() must not leak into the user-facing '
+              'SyncStatus.error.message',
+        );
+        expect(
+          status.message,
+          isNotEmpty,
+          reason: 'Error message must be a non-empty friendly string',
+        );
       },
     );
   });
