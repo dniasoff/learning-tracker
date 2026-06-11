@@ -1,0 +1,293 @@
+{
+  "batch": "R1",
+  "findings": [
+    {
+      "screen": "redo_dashboard",
+      "title": "Hebrew UI-locale switch (IL-6) does NOT take effect on-device; RTL chrome could not be verified",
+      "sense": "domain-oracle",
+      "severity": "P0",
+      "permutation": "adult / empty + populated / locale pref set to he / font 1.0 / two cold restarts",
+      "detail": "The task premise is that the Hebrew-LOCALE switch is now wired (MaterialApp.locale <- currentAppLocaleProvider, IL-6). On-device this is still inert. I set the per-profile pref flutter.app_locale_p0=he (the SAME _p0 scope whose sibling prefs ARE in effect — calendar=Hebrew and hebrew_terms=ON both render), force-stopped and cold-launched the app TWICE, and confirmed via run-as that the key persisted. The UI stayed 100% English and LTR every time: 'ADULT MODE', 'Get started', 'Add a learning track', 'Dismiss', and the nav labels all in English; switcher chip stayed left / chevrons right (no RTL mirroring). The he ARB is real (getStarted -> 'בואו נתחיל', dashboard -> 'לוח בקרה') and Locale('he') is in supportedLocales, so the strings exist but are never selected. Independent corroboration: settings_screen.dart:197 hides the Hebrew-Terms tile when localeOf==he, yet that tile remained visible (see /tmp/audit/settings2.png), proving the runtime UI locale never became he. Net: the requested RTL-chrome verification is BLOCKED because the locale never switches — a fix that did not take on-device."
+    },
+    {
+      "screen": "redo_dashboard",
+      "title": "No in-app control exists to change the UI language (setLanguage has zero callers)",
+      "sense": "exploration",
+      "severity": "P1",
+      "permutation": "adult / Settings + profile-switcher sheet / font 1.0",
+      "detail": "The task says to use 'the in-app language switcher (now wired)'. There is none reachable. Settings exposes only Calendar Preference (date format English/Hebrew), Hebrew Terms toggle, and Nikud — NO UI-language (en/he locale) picker. The profile-switcher sheet has Switch account / profiles / Add Profile / Skip to Settings — no language option. Static confirmation: grep across all of lib/ shows the ONLY reference to LanguageNotifier.setLanguage / CurrentAppLocale.set in non-generated code is the definition itself (language_provider.dart:31-33) — no widget invokes it. So even though the wiring object exists, there is no user-reachable affordance to flip the locale, compounding the P0 above."
+    },
+    {
+      "screen": "redo_dashboard",
+      "title": "RenderFlex overflow ('BOTTOM OVERFLOWED BY 59 PIXELS') on add-track Starting Position step at font 1.3",
+      "sense": "vision",
+      "severity": "P1",
+      "permutation": "adult / add-track flow (from Dashboard CTA) / Daf Yomi / step 4 of 4 / font 1.3",
+      "detail": "On the 'Starting Position' step (step 4 of 4) reached from the Dashboard's primary 'Add a learning track' CTA, font_scale 1.3 produces a yellow/black Flutter RenderFlex overflow stripe reading 'BOTTOM OVERFLOWED BY 59 PIXELS'. The stripe overlays/clips the 'Use Today' button and pushes the blue 'Start Here' button partly off the bottom edge. At font 1.0 the identical step renders cleanly with both 'Use Today' and 'Start Here 🚀' buttons fully visible and no stripe — so this is a large-text (1.3) regression on a surface directly driven by the Dashboard CTA. The column needs to be scrollable / Flexible at large text."
+    },
+    {
+      "screen": "redo_redemption (Child redemption ",
+      "title": "Short no-space reward title 'IceCream' breaks mid-word as 'IceCre / am' at font 1.3 when the wider disabled button squeezes the title column",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "font 1.3 x data:balance 0 (reward unaffordable -> wide 'Not enough points' button)",
+      "detail": "The #39 fix (softWrap:true, maxLines:2, overflow:ellipsis on reward.title, child_redemption_screen.dart lines ~345-356) prevents CLIPPING/overflow, and it works for the long token (Supercalifragilistic... ellipsizes cleanly). But for a short CamelCase single token with no space, Flutter has no word boundary to break on and falls to per-character wrapping. At font 1.3, when balance<cost the button becomes the wider 'Not enough points', stealing horizontal space, so 'IceCream' renders split across two lines as 'IceCre' / 'am' — the exact mid-word artifact the rubric calls out ('IceCre/am'). At font 1.0, or when the narrow 'Redeem' button is shown, 'IceCream' fits on one line, so the defect is conditional (font 1.3 AND disabled/wide button). No overflow stripes, fully contained in the card; cosmetic but reads as a broken word. A real 'Ice Cream' (with space) would wrap cleanly — but the parent CAN enter no-space titles and this build still shows the break."
+    },
+    {
+      "screen": "redo_redemption (Child redemption ",
+      "title": "No in-app language switcher exists — redemption screen (and whole app) cannot be switched to Hebrew UI on-device; Hebrew chrome/RTL verification is blocked",
+      "sense": "exploration",
+      "severity": "P1",
+      "permutation": "app-locale Hebrew (attempted, unreachable)",
+      "detail": "The task states the Hebrew-LOCALE switch is 'now FIXED (MaterialApp.locale wired to per-profile pref + in-app language switcher)' and that I 'SHOULD now be able to switch the UI to Hebrew.' The MaterialApp.locale wiring IS present (IL-6: locale = currentAppLocaleProvider), but a grep of the entire lib/ shows LanguageNotifier.setLanguage and the supportedLanguages {he,en} map are consumed by NO UI — there is no reachable switcher in Settings, onboarding, or the profile/account sheet. readAppLocale() also defaults to 'en' and does NOT honor the device system locale, so flipping the device locale does not help either. The child's Settings 'Calendar Preference: Hebrew' toggle and the Hebrew-Terms toggle only affect date/curriculum-label rendering, not the app CHROME (confirmed: track wizard showed Hebrew curriculum labels while the redemption screen chrome stayed English). Net: the redemption screen's Hebrew strings (he.arb) + RTL chrome could not be exercised on-device. The 'in-app language switcher' claimed by the verification brief is absent. (Reported once as an app-global blocker; not a per-screen widget bug.)"
+    },
+    {
+      "screen": "redo_redemption (Child redemption ",
+      "title": "Hebrew localization for the redeem title 'פרס הפרסים' reads as 'the prize of prizes' — likely a mistranslation of 'Redeem Prizes' (code-only; not vision-confirmed)",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "app-locale Hebrew (string inspected in source, not rendered)",
+      "detail": "The Hebrew screen title string is 'פרס הפרסים' (lit. 'prize of the prizes' / 'the prize of prizes'), a noun construct, not a redemption ACTION. 'Redeem Prizes' as a screen/CTA should be e.g. 'פדיון פרסים' (redemption of prizes) or simply 'פרסים' (Prizes). This is grammatically odd as a title. NOTE: this is a source-inspection observation only — because no Hebrew UI switcher is reachable on-device (see prior finding) I could NOT render or screenshot it, so it is unverified visually and may conceivably be intentional branding/wordplay. Flagged at low severity for the localization owner to confirm."
+    },
+    {
+      "screen": "redo_redemption (Child redemption ",
+      "title": "CONFIRMATION: reward titles, redeem buttons, balance card and confirm dialog render cleanly; reactive balance (DG-RDMP-01) verified on-device",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "font 1.0 & 1.3 x data:30/60/10/0 x English",
+      "detail": "Positive confirmation of the verify criteria on the English-chrome screen (the only reachable locale): (1) Long title 'Supercalifragilistic...' ellipsizes cleanly with no clipping/overflow stripes at both 1.0 and 1.3 — #39 holds for the long token. (2) Disabled 'Not enough points' button is legible (grey #9CA3AF on light-grey #E5E7EB) at both font sizes, no blank disc — contrast acceptable. (3) Balance card high-contrast white-on-blue, no clipping. (4) Reward icons render as proper glyphs (gift + trophy), NOT blank discs. (5) DG-RDMP-01 StreamProvider fix VERIFIED: balance updated reactively 30->20->10->0 after each self-redemption and 0->60 after a parent Adjust-Points mutation, with no manual refresh and no staleness — the Adjust-Points dialog itself also read the fresh post-redemption 0. (6) Boundary balance==cost (10==10) correctly stays affordable (inclusive >=). (7) Confirm dialog ('Redeem \"IceCream\"?' / 'This will spend 10 points...' / Cancel + 'Spend & Redeem') renders cleanly at font 1.3. No pluralization issues (counts >1 throughout)."
+    },
+    {
+      "screen": "redo_redemption (Child redemption ",
+      "title": "PROBES PASSED: rapid double-tap no double-debit; back-button discards redemption; background/resume clean; disabled button inert",
+      "sense": "logic",
+      "severity": "P2",
+      "permutation": "adversarial x data:30/0",
+      "detail": "Rapid back-to-back taps on 'Spend & Redeem' debited exactly once (30->20, not ->10): the dialog dismisses on first tap so the second hits the scrim. Hardware Back on the open confirm dialog dismissed it and left the balance at 30 (redemption correctly discarded, no debit). KEYCODE_HOME then relaunch resumed straight to the redemption screen with correct state (no stuck spinner, no lingering dialog, no stale banner). Tapping the disabled 'Not enough points' button at balance 0 is fully inert (no dialog, no snackbar, no debit) — UI-disable plus the createRedemption tutored-guard hold."
+    },
+    {
+      "screen": "redo_settings (Settings — tablet, ",
+      "title": "AN-7 CONFIRMED FIXED: Sign-Out / Delete Account icons now render real glyphs",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "Ashkenazi + Hebrew-terms ON + font 1.0",
+      "detail": "In the account-actions sheet (opened from the profile header) all four icons render proper white glyphs on their colored discs: Sign Out = exit-door-with-arrow, Delete Account = trash-can-with-X (both on red discs), Switch account = swap-arrows, Add account = person-plus (blue discs). None are the blank discs reported by AN-7. Verification PASS."
+    },
+    {
+      "screen": "redo_settings (Settings — tablet, ",
+      "title": "Daily Reminder persisted-state CONFIRMED FIXED: OFF survives force-stop relaunch",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "Notifications screen, font 1.0",
+      "detail": "Toggled Daily Reminder OFF; the dependent 'Reminder Time' row correctly greyed/disabled. Force-stopped (am force-stop) and relaunched, re-entered Avraham -> Settings -> Notifications: Daily Reminder still OFF, Streak Alert/Reward still ON. The toggle reflects the REAL persisted value, not a default-on revert. Verification PASS. (Re-enabling it correctly triggered the OS notification-permission rationale dialog — /tmp/audit/daily_restore2.png — and on Allow, Device notifications + Daily Reminder both flipped ON: /tmp/audit/perm_after.png.)"
+    },
+    {
+      "screen": "redo_settings (Settings — tablet, ",
+      "title": "IL-4 CONFIRMED FIXED: sync/backup banners use real colors, not slate-grey",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "font 1.0 and font 1.3",
+      "detail": "'Backup & Sync' banner renders in brand-blue (informational LOCAL-ONLY state), the 'Upgrade to Cloud' CTA in tan/gold, and the 'No Backup' badge/header text in amber/orange (warning). No slate-grey error/sync banner observed anywhere on the screen. Verification PASS."
+    },
+    {
+      "screen": "redo_settings (Settings — tablet, ",
+      "title": "REGRESSION (P1): Hebrew UI locale does not apply to an active profile — picker is RTL Hebrew but the in-profile UI snaps back to English LTR",
+      "sense": "exploration",
+      "severity": "P1",
+      "permutation": "app_locale=he injected into per-profile pref, relaunch",
+      "detail": "With app_locale_p0='he' injected, the profile PICKER renders correctly in Hebrew RTL ('מי לומד?', 'מצב מבוגרים', 'מעבר להגדרות', avatar/chevron mirrored, cards flow R->L) — so the l10n strings and RTL chrome themselves are healthy. But the moment a profile (Avraham) is selected, the Dashboard, bottom nav (DASHBOARD/LEARN/PROGRESS/SETTINGS) and the entire Settings screen revert to English LTR. Root cause visible in prefs: the picker reads the scope-0 pref (app_locale_p0) while the active session reads a different profile scope (app_locale_p1 appeared only after profile entry — /tmp/audit shell dump showed transliteration_variant_p1/hebrew_terms_script_p1/app_locale unset at p1), so CurrentAppLocale.build() (preference_providers.dart:177, watches activeProfileIdProvider) falls back to its defaultValue 'en' (app_locale_preference.dart:16). Net: the IL-6 'MaterialApp.locale wired to per-profile pref' fix only takes effect in the no-active-profile picker context, not in real app use."
+    },
+    {
+      "screen": "redo_settings (Settings — tablet, ",
+      "title": "P1: No in-app language switcher exists in Settings; Hebrew UI is effectively unreachable by any user action",
+      "sense": "logic",
+      "severity": "P1",
+      "permutation": "Ashkenazi + Hebrew-terms ON, English default",
+      "detail": "The task premise is that a fixed in-app language switcher lets you set the UI to Hebrew. On inspection there is NO such control: settings_screen.dart surfaces only Calendar Preference (date), Hebrew Terms, Nikud and Pronunciation/Nusach — none set MaterialApp locale. CurrentAppLocale.set() and the settings language_provider facade exist but NO screen/widget/tile consumes them (grep for currentAppLocaleProvider.notifier in features = none). Onboarding explicitly does NOT call setLocale (comment line 100-101: 'App locale is auto-detected from the device locale by MaterialApp (DNI-341). No user-driven setLocale call here.'). Yet learning_tracker_app.dart:65 now pins locale: appLocale (per-profile pref, default 'en'), which OVERRIDES the device-locale auto-detection that DNI-341 relied on. Empirically: changing the device locale to he-IL and relaunching left the app fully English (/tmp/audit/he_attempt2.png). So the app is pinned to English with no reachable path to the Hebrew UI for an active profile."
+    },
+    {
+      "screen": "redo_settings (Settings — tablet, ",
+      "title": "P2: 'No backup' badge string is not localized in Hebrew locale",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "Hebrew RTL (picker)",
+      "detail": "In the Hebrew RTL picker the backup-warning badge still reads English 'No backup'. The cloud-off icon correctly mirrors to the right edge (RTL handled), but the label is untranslated while all surrounding chrome ('מי לומד?', mode badges, 'מעבר להגדרות') is Hebrew. The task asked to verify the localized backup banner — this specific badge string is not localized."
+    },
+    {
+      "screen": "redo_settings (Settings — tablet, ",
+      "title": "Nusach (Pronunciation) control: labels semantically correct and control responsive",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "Hebrew-terms OFF -> Pronunciation revealed; toggled Ashkenazi<->Sephardi",
+      "detail": "The Nusach control is intentionally hidden while Hebrew-terms is ON (_TransliterationVariantTileSection returns SizedBox.shrink when useHebrewTerms==true) and appears when Hebrew-terms is OFF. Subtitle 'Bereishis (Ashkenazi) or Bereshit (Sephardi)' uses correct transliteration: '-is' (Bereishis) for Ashkenazi vs '-it' (Bereshit) for Sephardi — oracle PASS. Segmented control responds correctly (Sephardi selection took). No issue; recorded as positive coverage."
+    },
+    {
+      "screen": "redo_settings (Settings — tablet, ",
+      "title": "Large-text 1.3: Settings, Notifications and Backup&Sync banner all reflow cleanly (no overflow/clipping)",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "font_scale 1.3",
+      "detail": "At 1.3x, profile header (email 'audit1781139453@quest.com' not clipped, amber 'No Backup'), שבת MODE banner, Detect/Choose city buttons, Backup&Sync 3-line body + Upgrade-to-Cloud CTA, and the full Notifications list (Daily Reminder/Streak Alert/Reward toggles, HOT STREAK badge, 7:00 PM / 9:00 PM time rows) all render without RenderFlex overflow stripes, clipping or collision. No issue."
+    },
+    {
+      "screen": "redo_addtrack (Add-Track wizard)",
+      "title": "Track-created toast uses English translation \"Genesis\" instead of transliteration Bereishis/Bereshit",
+      "sense": "domain-oracle",
+      "severity": "P1",
+      "permutation": "Adult Mode + Chumash>Bereishis self-paced + Hebrew-terms ON + font 1.0",
+      "detail": "After creating a Chumash track scoped to the בראשית section, the snackbar reads exactly: Track \"Genesis\" created. The domain-oracle rubric explicitly forbids this ('Genesis is wrong; it's Bereishis/Bereshit'). Everywhere else in the wizard the section is correctly rendered as בראשית (terms ON) or Bereishis (terms OFF) — the section row, the Mark-Prior-Learning header, and the Replace-dialog all use the transliteration. ONLY the creation toast falls back to the English translation. The program-path toast was correct ('Track \"Mishnah Yomis\" created', /tmp/audit/at_starthere.png), so the bug is isolated to the section-name code path feeding the toast. This is a confirmed bug the 63 fixes did not catch."
+    },
+    {
+      "screen": "redo_addtrack (Add-Track wizard)",
+      "title": "Step-count denominator is NOT stable — jumps 6 → 7 → 4 across program-branch transitions (TS-11 only partially fixed)",
+      "sense": "vision",
+      "severity": "P1",
+      "permutation": "Adult Mode + Talmud Yerushalmi/Mishnayos program branch + font 1.0",
+      "detail": "The specific regression TS-11 guarded against — showing 1-of-7 before a program — IS fixed: step 1 correctly reads 'STEP 1 OF 6'. But the denominator is still far from stable across the flow. Selecting a curriculum that offers a program flips the header to 'STEP 2 OF 7', then selecting the program collapses it to 'STEP 3 OF 4'. So the reported total swings 6→7→4 as the user advances, which is exactly the disorienting denominator the TS-11 fix was meant to eliminate. Within a single non-branching flow (self-paced Chumash) the denominator IS stable at 6 across steps 1–6, so the instability is confined to the program-selection branch transitions."
+    },
+    {
+      "screen": "redo_addtrack (Add-Track wizard)",
+      "title": "Custom-Cycle review stepper shows \"1 DAYS\" — wrong plural for count=1",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "Both review branches (program 'Add חזרה?' and self-paced 'How do you want to Chazara?') + font 1.0",
+      "detail": "On the chazara/review step, the Custom Cycle session chips render '1 / DAYS' and '7 / DAYS'. The first should read '1 DAY' (singular). The unit label 'DAYS' is hard-coded and not singularized at value 1. By contrast the Starting-Position date stepper DOES pluralize correctly ('1 Day BACKWARDS' vs '10 Days BACKWARDS', /tmp/audit/at_datestep.png), confirming this is an isolated defect in the Custom-Cycle component, present on both the program and self-paced review screens."
+    },
+    {
+      "screen": "redo_addtrack (Add-Track wizard)",
+      "title": "Pace/deadline scope subtitle says \"across 1 study days\" — wrong plural for count=1",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "Adult Mode + Chumash>Bereishis goal step (deadline default = today) + font 1.0",
+      "detail": "On the goal step, switching to deadline mode (or reading the faint helper) shows: 'About 1533 פסוקים per study day, across 1 study days to finish the scope by the deadline (≈1533 items).' '1 study days' must be '1 study day'. The default same-day deadline yields a 1-day window, surfacing the singular case; the count is not singularized. Reproduced in transliteration mode as well ('...Pesukim... across 1 study days', /tmp/audit/at_translit_goal.png)."
+    },
+    {
+      "screen": "redo_addtrack (Add-Track wizard)",
+      "title": "Scope-step breadcrumb RenderFlex overflow (yellow/black stripe, 'RIGHT OVERFLOWED BY 11 PIXELS') at font scale 1.3",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "Adult Mode + Chumash scope step + Hebrew-terms OFF + font 1.3",
+      "detail": "At system font_scale 1.3 the scope-step breadcrumb ('Chumash > Chumash → Sefer selection') overflows its row by 11px, rendering the debug overflow hazard stripe and clipping 'selection' to 'sele…'. The breadcrumb is not wrapped in a Flexible/ellipsis container. Other large-text screens (review preset cards, goal step) reflow gracefully, so the overflow is specific to this breadcrumb row. Font reset to 1.0 afterward."
+    },
+    {
+      "screen": "redo_addtrack (Add-Track wizard)",
+      "title": "Malformed / redundant scope breadcrumb: 'Chumash → Sefer selection' repeats the curriculum and never reflects the selected section",
+      "sense": "logic",
+      "severity": "P2",
+      "permutation": "Adult Mode + Chumash scope step (both Hebrew-terms ON and OFF) + font 1.0",
+      "detail": "The breadcrumb reads like an unfilled template. In Hebrew-terms mode it shows the curriculum name three times ('חומש > חומש → חומש selection'); in transliteration it shows 'Chumash > Chumash → Sefer selection' (Chumash twice). It does not update after a section is selected (still identical after Bereishis is checked, /tmp/audit/at_bereishis_sel.png), so the second segment that should name the chosen section is effectively dead/placeholder text."
+    },
+    {
+      "screen": "redo_addtrack (Add-Track wizard)",
+      "title": "Back within the wizard loses the scope-section selection (TS-10 partial regression)",
+      "sense": "exploration",
+      "severity": "P2",
+      "permutation": "Adult Mode + Chumash>Bereishis, navigate forward to step 6 then Back to step 2 + font 1.0",
+      "detail": "Selecting בראשית on the scope step, advancing through study-days/review/goal/mark-prior, then pressing Back repeatedly to return to the scope step shows the Bereishis checkbox UNCHECKED and the CTA reverted to the disabled 'Select at least one'. The curriculum pill (Chumash) and the goal-step values (35/Pesukim/Per-week, /tmp/audit/at_ts10_back1.png) ARE preserved, so Back is partially lossy: it retains curriculum and goal but drops the section selection. The verification target 'Back preserves selections' (TS-10) is therefore not fully met for the scope step."
+    },
+    {
+      "screen": "redo_trackdetail (Track Detail — מ",
+      "title": "TS-9 Elapsed duplication is FIXED on-device",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "en 1.0, en 1.3, he 1.0",
+      "detail": "CONFIRMATION (not a bug). The summary card shows a single 'Elapsed' / 'חלף' label with '0 days' / '0 ימים' in English, large-font (1.3), and Hebrew RTL. No 'Elapsed Elapsed 0 days' duplication in any permutation. The prior TS-9 defect did not recur."
+    },
+    {
+      "screen": "redo_trackdetail (Track Detail — מ",
+      "title": "TS-8 STILL PRESENT (variant): same card mixes Hebrew + Gregorian dates; 'Est. finish' ignores the Hebrew-calendar preference",
+      "sense": "domain-oracle",
+      "severity": "P1",
+      "permutation": "he 1.0 (calendar pref = עברי/Hebrew)",
+      "detail": "With the calendar preference explicitly set to עברי (Hebrew), the SAME detail screen renders 'התחיל'(Started) and 'מאז'(Since) as Hebrew dates (כ\"ו סיוון תשפ\"ו) but 'סיום משוער'(Est. finish) as a GREGORIAN date ('9 באפר' 2030'). The projected/finish date does not honor the Hebrew-calendar pref, producing a Hebrew/Gregorian mix on one card — the same class of defect TS-8 targeted. The Edit Goal projected-completion shows the Hebrew date (ו' ניסן תש\"צ), so the data exists in Hebrew; the detail card's Est. finish simply falls back to Gregorian. Inconsistent and ignores user preference."
+    },
+    {
+      "screen": "redo_trackdetail (Track Detail — מ",
+      "title": "Delete-Track dialog has an INVERTED safety hierarchy: the destructive action is the only prominent button",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "en 1.0, en 1.3, he 1.0",
+      "detail": "In the 'Delete Track' / 'מחיקת מסלול' dialog, the irreversible 'Delete and wipe history' / 'מחק ומחה היסטוריה' is the single largest, filled RED button (visual hero), while the safe choices 'Cancel'/'ביטול' and 'Archive (keep history)'/'ארכיון (שמור היסטוריה)' are small plain-text links. Convention for destructive dialogs is to de-emphasize the dangerous action and give weight to the safe/cancel path; here the easiest, most eye-catching tap target wipes history. Behavior is identical across en, he (RTL mirrored), and font 1.3 (where the red button grows even more dominant), confirming it is structural, not a localization artifact. Labels are clear and uncut; the issue is purely the weight/emphasis."
+    },
+    {
+      "screen": "redo_trackdetail (Track Detail — מ",
+      "title": "Hebrew Edit Goal is HALF-TRANSLATED — multiple English chrome strings leak into the he locale",
+      "sense": "vision",
+      "severity": "P1",
+      "permutation": "he 1.0",
+      "detail": "Reached from the track-detail 'עריכת יעד' (Edit Goal) control. Untranslated English on an otherwise-Hebrew RTL screen: heading 'Complete 100% of the material (4192 of 4192 items)'; field label suffix 'per week' (rendered 'per week משניות'); helper 'How many …' (rendered 'How many … משניות', also truncated); projected box 'Projected completion:' (with Hebrew date); and subtext 'in ~1398 days'. This is untranslated CHROME, not the deferred Hebrew-term-beside-English design split."
+    },
+    {
+      "screen": "redo_trackdetail (Track Detail — מ",
+      "title": "Hebrew Study Days is HALF-TRANSLATED — title, full instructional subtitle, weekday abbreviations and footer remain English",
+      "sense": "vision",
+      "severity": "P1",
+      "permutation": "he 1.0",
+      "detail": "Reached from the track-detail 'ימי לימוד' (Study Days) control. In Hebrew locale the screen leaks English: title 'Study Days' (with Hebrew track name), the entire subtitle 'Choose which days include new learning and which are for review only.', all weekday rows 'Sun/Mon/Tue/Wed/Thu/Fri' (only שבת is Hebrew), and the footer 'study days per week 7'. Notably the Edit Track screen (/tmp/audit/td_he_edittrack.png) DOES render full Hebrew weekday names ('יום ראשון/שני/שלישי'), so the Hebrew strings exist — Study Days simply fails to use them. The weekday rendering is also locale-inverted: in EN mode this same screen showed שבת in Hebrew, in HE mode it shows Sun–Fri in English."
+    },
+    {
+      "screen": "redo_trackdetail (Track Detail — מ",
+      "title": "Edit Goal field label and helper are truncated/ellipsized at default font with available space",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "en 1.0",
+      "detail": "On the English Edit Goal screen, the numeric field's floating label reads 'משניות per …' (clipped with ellipsis) and the helper text reads 'How many …' (clipped). This is at font scale 1.0 with ample horizontal room, indicating a fixed/constrained label width rather than a translation issue — the strings are cut mid-phrase."
+    },
+    {
+      "screen": "redo_trackdetail (Track Detail — מ",
+      "title": "Same seder 'Kodshim' rendered in two different Hebrew spellings across screens of one track",
+      "sense": "domain-oracle",
+      "severity": "P2",
+      "permutation": "en 1.0, Hebrew-Terms ON",
+      "detail": "The Reorder Content screen renders the seder as 'קודשים' (with vav, plene) while the Mark Prior Completions screen renders the same seder as 'קדשים' (without vav, defective). Both are valid Hebrew spellings, but the SAME curriculum entity should not render in two forms across screens reached from the same track — analogous to the 'one masechta must not appear in two nuschaos' oracle rule. A spelling-consistency defect in the curriculum label data."
+    },
+    {
+      "screen": "redo_trackdetail (Track Detail — מ",
+      "title": "Study Days allows 0 study days per week with no warning (review-only-everything)",
+      "sense": "logic",
+      "severity": "P2",
+      "permutation": "en 1.0",
+      "detail": "Setting every day to 'Review only' yields footer '0 study days per week' with no validation/warning. With zero study days no new learning can ever occur, which makes the track's Est. finish projection meaningless (never). Pluralization itself is correct (0/1/N -> 'days/day/days', verified at counts 0,1,6,7), but the unguarded 0-state is a soft validation gap. May be intended for review-only tracks; flagged as low severity."
+    },
+    {
+      "screen": "redo_trackdetail (Track Detail — מ",
+      "title": "Edit Track accepts an EMPTY Track Name and proceeds to the save-confirm dialog",
+      "sense": "exploration",
+      "severity": "P2",
+      "permutation": "en 1.0",
+      "detail": "Adversarial probe: clearing the Track Name field and tapping 'Save Changes' did not block — it advanced to the 'Apply changes?' confirmation (i.e. would persist a blank-named track). No empty/whitespace validation on the name field. (I cancelled to avoid corrupting the track.) The field also accepted a 65-char junk string without an obvious max-length cap, though it scrolls within the input without overflow stripes."
+    },
+    {
+      "screen": "redo_trackdetail (Track Detail — מ",
+      "title": "Hebrew LOCALE switch (IL-6) is FIXED — RTL chrome renders correctly",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "he 1.0",
+      "detail": "CONFIRMATION (not a bug). Setting the per-profile app_locale to 'he' flips the UI to Hebrew and the chrome mirrors correctly: nav bar, back-arrow (now points →), profile switcher, list chevrons, dialog buttons, PIN keypad (digits mirrored 3-2-1 top row, backspace/Cancel swapped) all render RTL. The track-detail, settings, parent-settings, manage-tracks and delete-dialog all render cleanly RTL with no overflow stripes or clipping. The prior 'locale switch is inert' problem is resolved."
+    },
+    {
+      "screen": "redo_progress",
+      "title": "Empty-state Progress screen is visually clean on adult and child profiles (font 1.0)",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "data=empty, profile=Avraham(adult) & Shloime(child), font=1.0",
+      "detail": "Both the adult (Avraham) and child (Shloime) Progress screens render the empty state identically and cleanly: a centered trending-up icon, 'No progress yet' headline, and 'Start learning to see your progress here.' subtitle. No text clipping/ellipsis, no RenderFlex overflow stripes, good contrast, icon glyph renders (not a blank disc), nav bar labels (DASHBOARD/LEARN/PROGRESS/SETTINGS) all fit, header name + mode badge fit. No nonsense values, no pluralization (no counts present). Confirmation of clean empty state only."
+    },
+    {
+      "screen": "redo_progress",
+      "title": "Empty-state Progress scales cleanly at large text (font 1.3) — no overflow",
+      "sense": "vision",
+      "severity": "P2",
+      "permutation": "data=empty, profile=Shloime(child), font=1.3",
+      "detail": "With system font_scale=1.3 the empty Progress state grows proportionally, stays centered, and shows no clipping, no overflow stripes, and nav bar labels still fit. font_scale was reset to 1.0 afterward (verified: settings get system font_scale -> 1.0)."
+    },
+    {
+      "screen": "redo_progress",
+      "title": "Wrong parent PIN clears the entry dots (no lingering filled-dot state)",
+      "sense": "exploration",
+      "severity": "P2",
+      "permutation": "parent-PIN gate, adversarial wrong-PIN entry (1234, 0000)",
+      "detail": "Adversarial probe on the Parent PIN keypad: entered 1234 then 0000. App shows 'Incorrect PIN' in red and the four PIN dots are cleared to empty — passes the rubric's 'no leftover filled PIN dots after submit' check. Keypad and dialog render cleanly. (PINs were wrong; not brute-forced further to avoid lockout.)"
+    }
+  ]
+}
