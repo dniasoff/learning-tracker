@@ -1002,7 +1002,7 @@
   "signUpErrGeneric": "Account creation failed. Please try again.",
   "chartFailedToLoad": "Failed to load data",
   "accountPickerTitle": "Choose an Account",
-  "accountPickerSubtitle": "Select a learner to continue your journey",
+  "accountPickerSubtitle": "Select an account to continue",
   "accountPickerMaxAccountsShort": "Maximum {count} device accounts reached",
   "@accountPickerMaxAccountsShort": {
     "placeholders": {

@@ -329,7 +329,7 @@ void main() {
       // Title and subtitle
       expect(find.text('Choose an Account'), findsOneWidget);
       expect(
-        find.text('Select a learner to continue your journey'),
+        find.text('Select an account to continue'),
         findsOneWidget,
       );
 
