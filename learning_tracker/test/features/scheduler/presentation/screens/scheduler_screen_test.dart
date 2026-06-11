@@ -87,15 +87,16 @@ void main() {
       await tester.pumpWidget(_buildScreen(tasks: tasks));
       await tester.pumpAndSettle();
 
-      expect(find.text('3 today tasks'), findsOneWidget);
+      expect(find.text('3 tasks today'), findsOneWidget);
     });
 
     testWidgets('shows singular text for single task', (tester) async {
       await tester.pumpWidget(_buildScreen(tasks: [_task()]));
       await tester.pumpAndSettle();
 
-      // SCHED-GOAL-PLURAL-15: count==1 must say "task" not "tasks".
-      expect(find.text('1 today task'), findsOneWidget);
+      // SCHED-GOAL-PLURAL-15: count==1 must say "task" not "tasks"
+      // (localized via schedulerGoalTaskCount ICU plural).
+      expect(find.text('1 task today'), findsOneWidget);
     });
 
     testWidgets('has view toggle button', (tester) async {

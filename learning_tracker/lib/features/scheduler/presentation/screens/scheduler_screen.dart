@@ -265,6 +265,7 @@ class _GoalCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
@@ -290,7 +291,7 @@ class _GoalCard extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  "TODAY'S GOAL",
+                  l10n.schedulerTodaysGoal,
                   style: theme.textTheme.labelLarge?.copyWith(
                     color: Colors.white.withValues(alpha: 0.78),
                     fontWeight: FontWeight.w700,
@@ -299,7 +300,7 @@ class _GoalCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '$count today ${count == 1 ? 'task' : 'tasks'}',
+                  l10n.schedulerGoalTaskCount(count),
                   style: theme.textTheme.headlineMedium?.copyWith(
                     color: Colors.white,
                     fontWeight: FontWeight.w800,

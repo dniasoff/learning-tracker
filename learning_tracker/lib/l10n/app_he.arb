@@ -1702,31 +1702,42 @@
     "description": "Child-mode StreakWidget sub-line showing the longest streak.",
     "placeholders": { "count": { "type": "int" } }
   },
-  "tierCounterStreakDays": "רצף של {count} ימים",
-  "@tierCounterStreakDays": {
-    "description": "Engagement-tier counter — current consecutive-day streak.",
+  "schedulerTodaysGoal": "היעד של היום",
+  "@schedulerTodaysGoal": {
+    "description": "Eyebrow label on the daily-task scheduler goal banner, above the task count."
+  },
+  "schedulerGoalTaskCount": "{count, plural, one{משימה אחת היום} two{שתי משימות היום} other{{count} משימות היום}}",
+  "@schedulerGoalTaskCount": {
+    "description": "Headline count on the scheduler goal banner — number of tasks scheduled for today. ICU plural with Hebrew dual so count==1 reads 'משימה אחת היום' and count==2 reads 'שתי משימות היום'.",
     "placeholders": {
       "count": { "type": "int" }
     }
   },
-  "tierCounterSiyumimEarned": "{count} {siyumimTerm}",
+  "tierCounterStreakDays": "{count, plural, one{רצף של יום אחד} two{רצף של יומיים} other{רצף של {count} ימים}}",
+  "@tierCounterStreakDays": {
+    "description": "Engagement-tier counter — current consecutive-day streak. ICU plural with Hebrew dual so count==1 reads 'רצף של יום אחד' and count==2 reads 'רצף של יומיים'.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "tierCounterSiyumimEarned": "{count, plural, one{{siyumimTerm} אחד} two{שני {siyumimTerm}} other{{count} {siyumimTerm}}}",
   "@tierCounterSiyumimEarned": {
-    "description": "Achievement-tier counter — total siyumim earned. {siyumimTerm} is the toggle-aware domain term.",
+    "description": "Achievement-tier counter — total siyumim earned. {siyumimTerm} is the toggle-aware domain term, kept intact across forms. ICU plural with Hebrew dual so count==1 reads 'סיום אחד'-style and count==2 reads 'שני סיומים'-style.",
     "placeholders": {
       "count": { "type": "int" },
       "siyumimTerm": { "type": "String" }
     }
   },
-  "tierCounterLifetimeItems": "{count} פריטים",
+  "tierCounterLifetimeItems": "{count, plural, one{פריט אחד} two{שני פריטים} other{{count} פריטים}}",
   "@tierCounterLifetimeItems": {
-    "description": "Lifetime-tier counter — total distinct items ever learned. Short form to avoid tile truncation.",
+    "description": "Lifetime-tier counter — total distinct items ever learned. Short form to avoid tile truncation. ICU plural with Hebrew dual so count==1 reads 'פריט אחד' and count==2 reads 'שני פריטים'.",
     "placeholders": {
       "count": { "type": "int" }
     }
   },
-  "tierCounterPoints": "{count} נקודות",
+  "tierCounterPoints": "{count, plural, one{נקודה אחת} two{שתי נקודות} other{{count} נקודות}}",
   "@tierCounterPoints": {
-    "description": "Child-mode points counter.",
+    "description": "Child-mode points counter. ICU plural with Hebrew dual so count==1 reads 'נקודה אחת' and count==2 reads 'שתי נקודות'.",
     "placeholders": {
       "count": { "type": "int" }
     }
