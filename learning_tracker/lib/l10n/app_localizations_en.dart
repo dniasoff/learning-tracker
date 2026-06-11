@@ -570,6 +570,21 @@ class AppLocalizationsEn extends AppLocalizations {
       'Loading scope size to estimate per study day…';
 
   @override
+  String addTrackGoalDeadlinePaceLineNoTotal(
+    int items,
+    String unit,
+    int studyDays,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      studyDays,
+      locale: localeName,
+      other: '$studyDays study days',
+      one: '1 study day',
+    );
+    return 'About $items $unit per study day, across $_temp0 to finish the scope by the deadline.';
+  }
+
+  @override
   String get addTrack => 'Add Track';
 
   @override

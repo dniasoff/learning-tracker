@@ -1091,6 +1091,16 @@ abstract class AppLocalizations {
   /// **'Loading scope size to estimate per study day…'**
   String get addTrackGoalDeadlinePaceLineLoading;
 
+  /// Deadline pace line shown before the scope item count resolves to a positive number — omits the '(≈N items)' parenthetical so we never display '≈0 items'.
+  ///
+  /// In en, this message translates to:
+  /// **'About {items} {unit} per study day, across {studyDays, plural, =1{1 study day} other{{studyDays} study days}} to finish the scope by the deadline.'**
+  String addTrackGoalDeadlinePaceLineNoTotal(
+    int items,
+    String unit,
+    int studyDays,
+  );
+
   /// No description provided for @addTrack.
   ///
   /// In en, this message translates to:

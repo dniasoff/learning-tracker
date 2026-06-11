@@ -567,6 +567,22 @@ class AppLocalizationsHe extends AppLocalizations {
       'טוען גודל תחום לחישוב לכל יום לימוד…';
 
   @override
+  String addTrackGoalDeadlinePaceLineNoTotal(
+    int items,
+    String unit,
+    int studyDays,
+  ) {
+    String _temp0 = intl.Intl.pluralLogic(
+      studyDays,
+      locale: localeName,
+      other: '$studyDays ימי לימוד',
+      two: 'יומיים של לימוד',
+      one: 'יום לימוד אחד',
+    );
+    return 'בערך $items $unit בכל יום לימוד, על פני $_temp0 עד תאריך היעד.';
+  }
+
+  @override
   String get addTrack => 'הוסף מסלול';
 
   @override

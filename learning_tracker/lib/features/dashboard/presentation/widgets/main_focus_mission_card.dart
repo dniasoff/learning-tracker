@@ -85,13 +85,18 @@ class MainFocusMissionCard extends StatelessWidget {
                     fontWeight: FontWeight.w700,
                   ),
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text(l10n.startLearning),
-                    const SizedBox(width: 8),
-                    const Icon(Icons.arrow_forward_rounded, size: 20),
-                  ],
+                // FittedBox so the label + arrow scale down to fit the button
+                // at large text scales (font 1.3) instead of overflowing the Row.
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(l10n.startLearning),
+                      const SizedBox(width: 8),
+                      const Icon(Icons.arrow_forward_rounded, size: 20),
+                    ],
+                  ),
                 ),
               ),
             ],
