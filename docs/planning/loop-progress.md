@@ -601,3 +601,14 @@ device-driven (commit 95ede74a, make ci GREEN 9900 pass):
   confirm `dumpsys connectivity | grep "Active default network"` != none BEFORE any cloud test.
 - BONUS: test-loop-a already has a PENDING tutor invite ("TALMID PROFILES / LoopChild / Pending — tap to accept") — a
   ready-made accept-flow to audit. Mapping test-loop-c (5558) to learn who owns LoopChild / sent the invite.
+
+### Cloud/tutor SQUAD launched (2026-06-12)
+- TUTOR RELATIONSHIP mapped (both ends confirmed): test-loop-c ("Loop Test C", 5558) OWNS child "LoopChild" and
+  invited test-loop-a ("Loop Test A", 5556) as TUTOR — PENDING on both sides, ready to accept. Both emulators
+  cloud-healthy (App Check + sync). test-loop-a has child profiles RedeemKid + PinKid (cloud).
+- SQUAD (workflow wpddesp52): Handshake = 5556 accepts the invite (tutor PIN 2222) → grant ACTIVE. Then 3 parallel
+  audits: owner (5558: manage_tutors active-grant+revoke+history [verify DG-TUT-STALE-01 not stuck-Pending],
+  invite_tutor form, parent_pending_redemptions); tutor (5556: manage_grants, talmid-session SCOPE — settings hide
+  device/account items, tutor live-mark BARRED); device_restore+account_picker (5554: register App Check, sign in
+  test-loop-a on fresh device → restore flow + account switcher).
+- NEXT: triage squad findings → fix waves → re-run squad until CLEAN (Daniel: "keep going until clear runs").
