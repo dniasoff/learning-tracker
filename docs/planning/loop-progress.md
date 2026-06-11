@@ -334,3 +334,17 @@ device-driven (commit 95ede74a, make ci GREEN 9900 pass):
 - R3 redo (wxta2gkt4) was running on the OLD (switcher) APK when this landed — its switcher observations are moot; its
   plural/nusach/layout findings on gamification/progress/lifetime stay valid. New device-driven APK built; will install
   + verify (device→Hebrew) after R3 completes, then continue the redo with the corrected device-locale method.
+
+### Device-locale VERIFIED on-device + product decisions (2026-06-11)
+- DEVICE-LOCALE VERIFIED on emulator-5558 (API 29): (A) Settings has NO App Language switcher (only "Calendar
+  Preference" = date system, not UI language) — switcher removal confirmed. (B) Setting the DEVICE language → Hebrew
+  via system Settings UI made the app render fully Hebrew RTL ("מי לומד?", mirrored chrome). Restored to English. The
+  device-driven locale (MaterialApp.locale=null) WORKS on-device. NOTE for future he-audits: no adb root on these
+  production emulators → set Hebrew via the system Settings UI (am start -a android.settings.LOCALE_SETTINGS → add
+  Hebrew → drag to top); app takes ~45s on splash after a locale change. Plan: dedicate ONE device to Hebrew for he
+  audits rather than toggling per-screen.
+- DANIEL'S DECISIONS: (1) gamification/siyumim blocked-on-data → "reset application data and recover the pin that way"
+  → wipe a device's app data, re-onboard with a KNOWN parent PIN, seed a child profile + track + completion so the
+  streak chip renders → gamification/siyumim become auditable. (2) Hebrew-terms in Hebrew UI → "Hebrew script in
+  Hebrew UI" → when the device locale is Hebrew, domain terms (מסכת/חזרה/סיומים) must auto-render in Hebrew SCRIPT,
+  not transliteration. Real fix in core/labels (term rendering should follow the he locale).
