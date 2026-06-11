@@ -2234,12 +2234,12 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String sacredTimeLockGoodShabbos(String term) {
-    return '$term שלום';
+    return 'שבת שלום';
   }
 
   @override
   String sacredTimeLockShabbosSubtitle(String term) {
-    return 'האפליקציה סגורה לכבוד $term.';
+    return 'האפליקציה סגורה לכבוד שבת.';
   }
 
   @override
@@ -2250,12 +2250,12 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String sacredTimeLockShabbosYomTovGreeting(String term) {
-    return '$term שלום וחג שמח';
+    return 'שבת שלום וחג שמח';
   }
 
   @override
   String sacredTimeLockShabbosYomTovSubtitle(String term) {
-    return 'האפליקציה סגורה לכבוד $term ויום טוב.';
+    return 'האפליקציה סגורה לכבוד שבת ויום טוב.';
   }
 
   @override
@@ -2282,12 +2282,12 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String sacredTimeCardDescription(String term) {
-    return 'האפליקציה מושתקת ונעולה ב$term וביום טוב. הזמנים מחושבים מקומית לפי המיקום שלכם עם מרווח של 15 דקות.';
+    return 'האפליקציה מושתקת ונעולה בשבת וביום טוב. הזמנים מחושבים מקומית לפי המיקום שלכם עם מרווח של 15 דקות.';
   }
 
   @override
   String sacredTimeShabbosModeLabel(String term) {
-    return 'מצב $term';
+    return 'מצב שבת';
   }
 
   @override
