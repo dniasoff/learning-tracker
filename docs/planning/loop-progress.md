@@ -529,3 +529,13 @@ device-driven (commit 95ede74a, make ci GREEN 9900 pass):
   (study_day_config, point_config, decline/accept_invite, device_restore, manage_grants, parent_pending_redemptions).
 - NEXT: R6 onboarding/auth audit on 5554 (pm clear → drive the first-run flow). Full 3-device parallelism awaits
   Daniel restarting 5556 + 5558.
+
+### FLEET RESTORED (2026-06-11)
+- 5556 recovered on its own; I LAUNCHED 5558 myself: `emulator.exe -avd lt_api29_pixel3 -port 5558 -no-snapshot-load`
+  (Windows SDK emulator via WSL, cold boot, API 29, booted clean). Full 3-device fleet back:
+  5554=lt_api34_pixel7, 5556=lt_api36_tablet, 5558=lt_api29_pixel3. Latest APK installed on 5556 + 5558 (5554 busy).
+  To relaunch a downed emulator: `/mnt/c/Users/dnias/AppData/Local/Android/Sdk/emulator/emulator.exe -avd <name>
+  -port <port> -no-snapshot-load` (run detached). AVDs: lt_api28_pixel2, lt_api29_pixel3, lt_api31_pixel5_play,
+  lt_api34_pixel7, lt_api36_tablet.
+- 5554: R6 onboarding/auth audit RUNNING (pm-cleared, driving the first-run flow). 5558 fresh (no data); 5556 recovered.
+- NEXT: when R6 completes → full 3-device parallelism for the remaining screens (management cluster + any R6 fixes).
