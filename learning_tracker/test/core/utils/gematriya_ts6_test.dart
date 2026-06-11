@@ -32,7 +32,8 @@ void main() {
       expect(
         Gematriya.forYear(5786),
         'תשפ״ו',
-        reason: 'Hebrew year 5786 must render as תשפ״ו (abbreviating the '
+        reason:
+            'Hebrew year 5786 must render as תשפ״ו (abbreviating the '
             'thousands ה׳ per current-era convention)',
       );
     });
@@ -83,26 +84,36 @@ void main() {
       expect(
         result.contains('ק') && result.contains('כ'),
         isTrue,
-        reason: 'Year 6120 must contain ק and כ for the 120 remainder, got: $result',
+        reason:
+            'Year 6120 must contain ק and כ for the 120 remainder, got: $result',
       );
     });
 
     test('year 6001 includes ו׳ prefix', () {
       final result = Gematriya.forYear(6001);
-      expect(result.contains('ו׳'), isTrue,
-          reason: 'Year 6001 must contain the ו׳ thousands prefix, got: $result');
+      expect(
+        result.contains('ו׳'),
+        isTrue,
+        reason: 'Year 6001 must contain the ו׳ thousands prefix, got: $result',
+      );
     });
 
     test('year 6900 includes ו׳ prefix', () {
       final result = Gematriya.forYear(6900);
-      expect(result.contains('ו׳'), isTrue,
-          reason: 'Year 6900 must contain the ו׳ thousands prefix, got: $result');
+      expect(
+        result.contains('ו׳'),
+        isTrue,
+        reason: 'Year 6900 must contain the ו׳ thousands prefix, got: $result',
+      );
     });
 
     test('year 7000 includes ז׳ prefix', () {
       final result = Gematriya.forYear(7000);
-      expect(result.startsWith('ז׳') || result == 'ז׳', isTrue,
-          reason: 'Year 7000 must start with ז׳ thousands prefix, got: $result');
+      expect(
+        result.startsWith('ז׳') || result == 'ז׳',
+        isTrue,
+        reason: 'Year 7000 must start with ז׳ thousands prefix, got: $result',
+      );
     });
   });
 

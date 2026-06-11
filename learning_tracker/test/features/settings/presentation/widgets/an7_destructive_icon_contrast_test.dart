@@ -33,13 +33,13 @@ import 'package:learning_tracker/core/providers/registry_provider.dart';
 import 'package:learning_tracker/features/account/domain/models/app_user.dart';
 import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
 import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
+import 'package:learning_tracker/features/account/domain/services/account_management_service.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
     show authRepositoryProvider;
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart'
     show currentAccountIdProvider, profileListStreamProvider;
-import 'package:learning_tracker/features/account/domain/services/account_management_service.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/account_management_providers.dart';
 import 'package:learning_tracker/features/settings/presentation/widgets/account_actions_sheet.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';

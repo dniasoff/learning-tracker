@@ -16,9 +16,9 @@ import 'package:learning_tracker/features/progress/presentation/widgets/siyum_mi
 
 void main() {
   // English-terms (transliteration) mode.
-  final termsEn = DomainTermLabels(false);
+  const termsEn = DomainTermLabels(false);
   // Hebrew-script mode.
-  final termsHe = DomainTermLabels(true);
+  const termsHe = DomainTermLabels(true);
 
   // TS-12 red→green: duplicate "Seder" suppressed
   group('aggregateSiyumLabel — no duplicate Seder word', () {

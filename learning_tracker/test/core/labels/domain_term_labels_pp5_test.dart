@@ -32,27 +32,33 @@ void main() {
   group('PP-5 — resolveStoredStageName returns canonical Chazara N names', () {
     // ── English mode ─────────────────────────────────────────────────────────
 
-    test('חזרה א׳ (DB default stage 2) resolves to "Chazara 1" in English mode',
-        () {
-      const terms = DomainTermLabels(false);
-      expect(
-        terms.resolveStoredStageName('חזרה א׳'),
-        'Chazara 1',
-        reason: 'Hebrew-stored stage 2 must display as "Chazara 1" in English '
-            'mode, not the legacy alias "Review 1"',
-      );
-    });
+    test(
+      'חזרה א׳ (DB default stage 2) resolves to "Chazara 1" in English mode',
+      () {
+        const terms = DomainTermLabels(false);
+        expect(
+          terms.resolveStoredStageName('חזרה א׳'),
+          'Chazara 1',
+          reason:
+              'Hebrew-stored stage 2 must display as "Chazara 1" in English '
+              'mode, not the legacy alias "Review 1"',
+        );
+      },
+    );
 
-    test('חזרה ב׳ (DB default stage 3) resolves to "Chazara 2" in English mode',
-        () {
-      const terms = DomainTermLabels(false);
-      expect(
-        terms.resolveStoredStageName('חזרה ב׳'),
-        'Chazara 2',
-        reason: 'Hebrew-stored stage 3 must display as "Chazara 2" in English '
-            'mode, not the legacy alias "Review 2"',
-      );
-    });
+    test(
+      'חזרה ב׳ (DB default stage 3) resolves to "Chazara 2" in English mode',
+      () {
+        const terms = DomainTermLabels(false);
+        expect(
+          terms.resolveStoredStageName('חזרה ב׳'),
+          'Chazara 2',
+          reason:
+              'Hebrew-stored stage 3 must display as "Chazara 2" in English '
+              'mode, not the legacy alias "Review 2"',
+        );
+      },
+    );
 
     test('חזרה ג׳ resolves to "Chazara 3" in English mode', () {
       const terms = DomainTermLabels(false);
@@ -66,7 +72,8 @@ void main() {
       expect(
         terms.resolveStoredStageName('Review 1'),
         'Chazara 1',
-        reason: '"Review 1" is a legacy alias; canonical display is "Chazara 1"',
+        reason:
+            '"Review 1" is a legacy alias; canonical display is "Chazara 1"',
       );
     });
 
@@ -105,7 +112,7 @@ void main() {
       // Default DB-stored Hebrew names as written by stage_definition_repository
       // ('לימוד' / 'חזרה א׳' / 'חזרה ב׳') plus a hypothetical third chazara.
       final resolved = [
-        terms.resolveStoredStageName('לימוד'),   // stage 1
+        terms.resolveStoredStageName('לימוד'), // stage 1
         terms.resolveStoredStageName('חזרה א׳'), // stage 2
         terms.resolveStoredStageName('חזרה ב׳'), // stage 3
         terms.resolveStoredStageName('חזרה ג׳'), // stage 4
@@ -114,7 +121,8 @@ void main() {
       expect(
         distinct.length,
         equals(4),
-        reason: 'All four stage names must be distinct in English mode; '
+        reason:
+            'All four stage names must be distinct in English mode; '
             'got: $resolved',
       );
     });

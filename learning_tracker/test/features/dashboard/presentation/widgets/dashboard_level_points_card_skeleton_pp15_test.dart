@@ -147,7 +147,7 @@ void main() {
               home: StackRouterScope(
                 controller: router,
                 stateHash: 0,
-                child: Scaffold(
+                child: const Scaffold(
                   body: SingleChildScrollView(
                     child: DashboardLevelPointsCard(
                       userMode: ProfileMode.adult,

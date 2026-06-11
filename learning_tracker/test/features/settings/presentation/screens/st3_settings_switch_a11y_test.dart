@@ -128,7 +128,7 @@ void main() {
       }
 
       // Find ANY switch that has a non-empty semantics label.
-      bool foundLabelledSwitch = false;
+      var foundLabelledSwitch = false;
       for (final element in switches.evaluate()) {
         final semanticsNode = tester.getSemantics(
           find.byWidget(element.widget),
