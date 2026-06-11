@@ -61,8 +61,15 @@ class AppTheme {
 
   /// Ink/text tones.
   static const Color brandInk = Color(0xFF1B2330);
-  static const Color brandInkMuted = Color(0xFF708090);
-  static const Color brandInkSoft = Color(0xFF95A1AE);
+
+  /// Muted ink — IL-8 fix: darkened from #708090 (4.05:1 on white) to #5A6A78
+  /// (5.4:1) so it meets WCAG AA for normal body text (≥4.5:1 required).
+  static const Color brandInkMuted = Color(0xFF5A6A78);
+
+  /// Soft ink (secondary/disabled labels) — IL-8 fix: darkened from #95A1AE
+  /// (2.63:1 on white) to #7D8D9C (3.37:1) to meet WCAG AA for large text
+  /// (≥3.0:1 required).
+  static const Color brandInkSoft = Color(0xFF7D8D9C);
   static const Color transparent = Color(0x00000000);
 
   static const Color _errorColor = Color(0xFFB00020);
@@ -107,7 +114,12 @@ class AppTheme {
   static const Color curriculumBavli = Color(0xFF1B6B5A);
   static const Color curriculumYerushalmi = brandBlueBright;
   static const Color curriculumMishnaBerurah = brandGold;
-  static const Color curriculumChumash = brandCoral;
+
+  /// Chumash curriculum identity color — IL-8 fix: was `brandCoral` (slate-gray
+  /// #708090, visually indistinct from the neutral palette). Now a warm amber
+  /// #9C6B21 (Torah-parchment tone) so the Chumash icon disc is visually
+  /// distinct and carries a warm, appropriate character.
+  static const Color curriculumChumash = Color(0xFF9C6B21);
   static const Color curriculumNach = Color(0xFF0EA5A0);
   static const Color curriculumMussar = Color(0xFF7C3AED);
 
