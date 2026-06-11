@@ -127,12 +127,30 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 
-      // l10n key pendingRedemptionsEmpty — currently hardcoded English.
+      // l10n key pendingRedemptionsEmpty — body line.
       expect(find.text('No pending prize requests.'), findsOneWidget);
 
       // No action buttons visible.
       expect(find.text('Fulfil'), findsNothing);
       expect(find.text('Decline'), findsNothing);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    });
+
+    testWidgets('empty state shows icon + title + body (standard pattern)', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_buildScreen(db));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      // Icon (card_giftcard) — consistent with other empty states.
+      expect(find.byIcon(Icons.card_giftcard), findsOneWidget);
+      // Localized title (pendingRedemptionsEmptyTitle).
+      expect(find.text('No prize requests yet'), findsOneWidget);
+      // Localized body (pendingRedemptionsEmpty) retained beneath the title.
+      expect(find.text('No pending prize requests.'), findsOneWidget);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(Duration.zero);
