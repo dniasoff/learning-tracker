@@ -2570,5 +2570,73 @@
     "placeholders": {
       "levelLabel": { "type": "String" }
     }
+  },
+  "schedulerStudyDaysScreenTitle": "{curriculum} Study Days",
+  "@schedulerStudyDaysScreenTitle": {
+    "description": "AppBar title for the standalone Study Days config screen. {curriculum} is the curriculum/track display label (transliteration in English mode, Hebrew in Hebrew mode).",
+    "placeholders": {
+      "curriculum": {
+        "type": "String"
+      }
+    }
+  },
+  "schedulerStudyDaysIntro": "Choose which days include new learning and which are for review only.",
+  "@schedulerStudyDaysIntro": {
+    "description": "Instructional subtitle on the Study Days config screen explaining the study vs review-only toggle."
+  },
+  "schedulerStudyDaysAllStudyDays": "All days are study days for this track.",
+  "@schedulerStudyDaysAllStudyDays": {
+    "description": "Fallback message shown on the Study Days screen for learn-only tracks (no chazara), where review-day configuration is not applicable. Must not mention review/chazara."
+  },
+  "schedulerStudyDaysPerWeek": "{count, plural, =1{1 study day per week} other{{count} study days per week}}",
+  "@schedulerStudyDaysPerWeek": {
+    "description": "Footer summary on the Study Days screen showing how many study days are selected per week.",
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "schedulerStudyDaysZeroWarning": "No study days selected — every day is review only and no new learning will be scheduled.",
+  "@schedulerStudyDaysZeroWarning": {
+    "description": "Inline warning shown on the Study Days screen when zero study days are selected for the week."
+  },
+  "schedulerDayAbbrevSun": "Sun",
+  "@schedulerDayAbbrevSun": {
+    "description": "Short weekday label for Sunday on the Study Days screen."
+  },
+  "schedulerDayAbbrevMon": "Mon",
+  "@schedulerDayAbbrevMon": {
+    "description": "Short weekday label for Monday on the Study Days screen."
+  },
+  "schedulerDayAbbrevTue": "Tue",
+  "@schedulerDayAbbrevTue": {
+    "description": "Short weekday label for Tuesday on the Study Days screen."
+  },
+  "schedulerDayAbbrevWed": "Wed",
+  "@schedulerDayAbbrevWed": {
+    "description": "Short weekday label for Wednesday on the Study Days screen."
+  },
+  "schedulerDayAbbrevThu": "Thu",
+  "@schedulerDayAbbrevThu": {
+    "description": "Short weekday label for Thursday on the Study Days screen."
+  },
+  "schedulerDayAbbrevFri": "Fri",
+  "@schedulerDayAbbrevFri": {
+    "description": "Short weekday label for Friday on the Study Days screen."
+  },
+  "settingsAppLanguage": "App Language",
+  "settingsAppLanguageSubtitle": "English or Hebrew UI",
+  "trackEditNameRequired": "Enter a track name",
+  "trackEditReviewSummaryWithDays": "After {delays} {count, plural, =1{day} other{days}}",
+  "@trackEditReviewSummaryWithDays": {
+    "placeholders": {
+      "delays": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
   }
 }

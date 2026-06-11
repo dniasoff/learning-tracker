@@ -4475,4 +4475,70 @@ class AppLocalizationsEn extends AppLocalizations {
   String scopeChooseLevelPrompt(String levelLabel) {
     return 'Choose a $levelLabel';
   }
+
+  @override
+  String schedulerStudyDaysScreenTitle(String curriculum) {
+    return '$curriculum Study Days';
+  }
+
+  @override
+  String get schedulerStudyDaysIntro =>
+      'Choose which days include new learning and which are for review only.';
+
+  @override
+  String get schedulerStudyDaysAllStudyDays =>
+      'All days are study days for this track.';
+
+  @override
+  String schedulerStudyDaysPerWeek(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count study days per week',
+      one: '1 study day per week',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get schedulerStudyDaysZeroWarning =>
+      'No study days selected — every day is review only and no new learning will be scheduled.';
+
+  @override
+  String get schedulerDayAbbrevSun => 'Sun';
+
+  @override
+  String get schedulerDayAbbrevMon => 'Mon';
+
+  @override
+  String get schedulerDayAbbrevTue => 'Tue';
+
+  @override
+  String get schedulerDayAbbrevWed => 'Wed';
+
+  @override
+  String get schedulerDayAbbrevThu => 'Thu';
+
+  @override
+  String get schedulerDayAbbrevFri => 'Fri';
+
+  @override
+  String get settingsAppLanguage => 'App Language';
+
+  @override
+  String get settingsAppLanguageSubtitle => 'English or Hebrew UI';
+
+  @override
+  String get trackEditNameRequired => 'Enter a track name';
+
+  @override
+  String trackEditReviewSummaryWithDays(String delays, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'days',
+      one: 'day',
+    );
+    return 'After $delays $_temp0';
+  }
 }

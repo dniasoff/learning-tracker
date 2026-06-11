@@ -22,35 +22,48 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 /// Day labels in display order: Sunday first (ISO weekday 7), then Mon(1)..Sat(6).
 const _displayOrder = [7, 1, 2, 3, 4, 5, 6];
 
-/// Base English day abbreviations for non-Saturday days.
+/// Returns the localized short weekday label for a non-Saturday day.
 ///
 /// Saturday (ISO 6) is handled separately by [studyDayLabel] via the
-/// Nusach/Hebrew-Terms resolver — never from this map — to fix TS-4.
-const _baseEnglishDayLabels = {
-  1: 'Mon',
-  2: 'Tue',
-  3: 'Wed',
-  4: 'Thu',
-  5: 'Fri',
-  // 6 intentionally absent — resolved via shabbos() below
-  7: 'Sun',
-};
+/// Nusach/Hebrew-Terms resolver — never from this function — to fix TS-4.
+/// All other days are routed through the ARB so the Hebrew locale renders
+/// proper Hebrew short day names (א׳, ב׳ …) instead of English Mon/Tue.
+String _localizedDayAbbrev(AppLocalizations l10n, int isoWeekday) {
+  switch (isoWeekday) {
+    case 7:
+      return l10n.schedulerDayAbbrevSun;
+    case 1:
+      return l10n.schedulerDayAbbrevMon;
+    case 2:
+      return l10n.schedulerDayAbbrevTue;
+    case 3:
+      return l10n.schedulerDayAbbrevWed;
+    case 4:
+      return l10n.schedulerDayAbbrevThu;
+    case 5:
+      return l10n.schedulerDayAbbrevFri;
+    // 6 intentionally absent — resolved via shabbos() in [studyDayLabel].
+    default:
+      return '?';
+  }
+}
 
 /// Returns the display label for a day of the week in the Study Days screen.
 ///
 /// TS-4 fix: Saturday (ISO weekday 6) is routed through [DomainTermLabels.shabbos]
 /// so it renders "Shabbos" (Ashkenazi), "Shabbat" (Sephardi), or "שבת" (Hebrew
-/// mode) instead of the hardcoded "Sat". All other days use standard English
-/// abbreviations unchanged.
+/// mode). All other days use the localized short weekday labels so the Hebrew
+/// locale shows proper Hebrew day names rather than English abbreviations.
 String studyDayLabel({
   required int isoWeekday,
+  required AppLocalizations l10n,
   required DomainTermLabels terms,
   required TransliterationVariant variant,
 }) {
   if (isoWeekday == 6) {
     return terms.shabbos(variant: variant);
   }
-  return _baseEnglishDayLabels[isoWeekday] ?? '?';
+  return _localizedDayAbbrev(l10n, isoWeekday);
 }
 
 @RoutePage()
@@ -80,12 +93,12 @@ class StudyDayConfigScreen extends ConsumerWidget {
     // TS-4: read terms + variant so Saturday routes through nusach resolver.
     final terms = domainTermLabels(ref);
     final variant = ref.watch(currentTransliterationVariantProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
         title: AppBarTitle(
-          // R1-(7): use l10n so Hebrew shows "ימי לימוד — X" not "X Study Days".
-          text: AppLocalizations.of(context)!.studyDayConfigTitle(
+          text: l10n.schedulerStudyDaysScreenTitle(
             curriculumLabelText(ref, curriculum: curriculumId),
           ),
         ),
@@ -114,8 +127,7 @@ class StudyDayConfigScreen extends ConsumerWidget {
                 padding: const EdgeInsets.all(24),
                 child: Center(
                   child: Text(
-                    // R1-(7): use l10n so Hebrew shows Hebrew text.
-                    AppLocalizations.of(context)!.studyDayConfigAllDaysStudy,
+                    l10n.schedulerStudyDaysAllStudyDays,
                     textAlign: TextAlign.center,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
@@ -132,8 +144,7 @@ class StudyDayConfigScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    // R1-(7): use l10n so Hebrew shows Hebrew subtitle.
-                    AppLocalizations.of(context)!.studyDayConfigSubtitle,
+                    l10n.schedulerStudyDaysIntro,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
@@ -174,6 +185,7 @@ class StudyDayConfigScreen extends ConsumerWidget {
                       // "Shabbos"/"Shabbat"/"שבת" per nusach + terms.
                       dayLabel: studyDayLabel(
                         isoWeekday: dow,
+                        l10n: l10n,
                         terms: terms,
                         variant: variant,
                       ),
@@ -189,7 +201,7 @@ class StudyDayConfigScreen extends ConsumerWidget {
                     );
                   }),
                   const SizedBox(height: 24),
-                  // Summary
+                  // Summary + zero-study-day guard.
                   Builder(
                     builder: (context) {
                       final studyCount = _displayOrder
@@ -199,17 +211,27 @@ class StudyDayConfigScreen extends ConsumerWidget {
                                 DayType.study,
                           )
                           .length;
-                      return Center(
-                        child: Text(
-                          // R1-(6): use ICU plural so "1 study day per week"
-                          // (not "1 study days per week").
-                          AppLocalizations.of(
-                            context,
-                          )!.studyDaysPerWeekLabel(studyCount),
-                          style: theme.textTheme.titleSmall?.copyWith(
-                            color: theme.colorScheme.primary,
+                      return Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Center(
+                            child: Text(
+                              l10n.schedulerStudyDaysPerWeek(studyCount),
+                              style: theme.textTheme.titleSmall?.copyWith(
+                                color: theme.colorScheme.primary,
+                              ),
+                            ),
                           ),
-                        ),
+                          // Inline warning when zero study days are selected:
+                          // the week is entirely review-only and no new
+                          // learning will be scheduled.
+                          if (studyCount == 0) ...[
+                            const SizedBox(height: 16),
+                            _ZeroStudyDaysWarning(
+                              message: l10n.schedulerStudyDaysZeroWarning,
+                            ),
+                          ],
+                        ],
                       );
                     },
                   ),
@@ -393,6 +415,46 @@ class _DayToggleTile extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Inline warning banner shown when zero study days are selected for the week
+/// (everything review-only). Uses the theme error colours so it reads as a
+/// caution without blocking the user, mirroring the app's inline-warning idiom.
+class _ZeroStudyDaysWarning extends StatelessWidget {
+  const _ZeroStudyDaysWarning({required this.message});
+
+  final String message;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.errorContainer,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            Icons.warning_amber_rounded,
+            color: theme.colorScheme.onErrorContainer,
+            size: 20,
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              message,
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: theme.colorScheme.onErrorContainer,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -34,14 +34,17 @@ import 'package:learning_tracker/features/tracks/setup/presentation/steps/step_s
 import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
-/// R1-(5): Returns a non-null error message when [name] (trimmed) is empty;
-/// returns null when the name is valid.
-String? validateTrackName(String name) {
-  if (name.trim().isEmpty) return 'Track name cannot be empty.';
-  return null;
-}
+/// R1-(5): pure validation helper — returns a non-null, non-empty error
+/// message when [name] is blank or whitespace-only, else null. Extracted so the
+/// blank-name guard in [_EditTrackScreenState._save] is unit-testable; the
+/// screen surfaces the localized [AppLocalizations.trackEditNameRequired] when
+/// this returns non-null.
+String? validateTrackName(String name) =>
+    name.trim().isEmpty ? 'Track name cannot be empty.' : null;
 
-/// R1-(5): Returns the number of days in [studyDays] that are set to 'study'.
+/// R1-(5): pure helper — the number of days marked `'study'` (as opposed to
+/// `'review'`) in a study-day map. Used by [_EditTrackScreenState._save] to warn
+/// before saving a self-paced track with zero study days.
 int studyDayCount(Map<int, String> studyDays) =>
     studyDays.values.where((v) => v == 'study').length;
 
@@ -58,6 +61,10 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
   bool _loading = true;
   bool _saving = false;
   bool _hasOverdue = false;
+
+  // Inline validation error for the Track Name field. Non-null when the user
+  // has tried to save an empty/whitespace-only name; cleared as they type.
+  String? _nameError;
 
   Goal? _goal;
 
@@ -176,17 +183,21 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
   Future<void> _save() async {
     final l10n = AppLocalizations.of(context)!;
 
-    // R1-(5): validate track name is non-empty.
-    final nameError = validateTrackName(_nameController.text);
-    if (nameError != null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l10n.trackEditNameEmptyError)));
+    // Block save when the Track Name is empty or whitespace-only. Surface an
+    // inline error and abort before the save-confirm dialog so the user can
+    // never proceed with a blank name.
+    if (validateTrackName(_nameController.text) != null) {
+      setState(() => _nameError = l10n.trackEditNameRequired);
       return;
     }
+    if (_nameError != null) {
+      setState(() => _nameError = null);
+    }
 
-    // R1-(5): warn (non-blocking) when 0 study days are selected so the user
-    // knows new learning will not be scheduled.
+    // R1-(5): warn (non-blocking) when no study days are selected so the user
+    // knows new learning will not be scheduled. Program tracks pace themselves,
+    // so the warning only applies to self-paced tracks. Shown before the
+    // confirm dialog (no async gap) so the messenger context is still valid.
     if (!_isProgramTrack && studyDayCount(_editedStudyDays) == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l10n.trackEditZeroStudyDaysWarning)),
@@ -452,16 +463,25 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
               controller: _nameController,
               inputFormatters: const [TrimLeadingSpaceFormatter()],
               style: theme.textTheme.bodyLarge,
-              decoration: const InputDecoration(
-                border: OutlineInputBorder(
+              onChanged: (_) {
+                // Clear the inline error as soon as the user types a non-empty
+                // value, so the error doesn't linger once it's resolved.
+                if (_nameError != null &&
+                    _nameController.text.trim().isNotEmpty) {
+                  setState(() => _nameError = null);
+                }
+              },
+              decoration: InputDecoration(
+                errorText: _nameError,
+                border: const OutlineInputBorder(
                   borderRadius: BorderRadius.all(Radius.circular(12)),
                   borderSide: BorderSide(color: AppColors.surfaceGreyBlue),
                 ),
-                enabledBorder: OutlineInputBorder(
+                enabledBorder: const OutlineInputBorder(
                   borderRadius: BorderRadius.all(Radius.circular(12)),
                   borderSide: BorderSide(color: AppColors.surfaceGreyBlue),
                 ),
-                contentPadding: EdgeInsets.symmetric(
+                contentPadding: const EdgeInsets.symmetric(
                   horizontal: 14,
                   vertical: 12,
                 ),
@@ -828,8 +848,11 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
   String _chazaraSummary(List<int> delays, AppLocalizations l10n) {
     if (delays.isEmpty) return l10n.trackEditReviewSummaryNone;
     final joined = delays.map((d) => '$d').join(' + ');
-    final daysLabel = delays.length == 1 ? 'day' : 'days';
-    return l10n.trackEditReviewSummaryDays('$joined $daysLabel');
+    // Localize the day unit. The old code appended a hardcoded English
+    // "day"/"days", which leaked into the Hebrew locale; the unit now comes
+    // from an ICU plural inside the message itself. Pluralize on the number of
+    // review rounds, matching the prior behaviour.
+    return l10n.trackEditReviewSummaryWithDays(joined, delays.length);
   }
 
   /// Returns the locale-aware full weekday name for [dayNum].

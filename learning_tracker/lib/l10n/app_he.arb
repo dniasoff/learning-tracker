@@ -2431,5 +2431,30 @@
     "placeholders": {
       "levelLabel": { "type": "String" }
     }
+  },
+  "schedulerStudyDaysScreenTitle": "ימי לימוד {curriculum}",
+  "schedulerStudyDaysIntro": "בחרו באילו ימים יש לימוד חדש ובאילו ימים חזרה בלבד.",
+  "schedulerStudyDaysAllStudyDays": "כל הימים הם ימי לימוד במסלול זה.",
+  "schedulerStudyDaysPerWeek": "{count, plural, =1{יום לימוד אחד בשבוע} other{{count} ימי לימוד בשבוע}}",
+  "schedulerStudyDaysZeroWarning": "לא נבחרו ימי לימוד — כל הימים הם לחזרה בלבד ולא יתוזמן לימוד חדש.",
+  "schedulerDayAbbrevSun": "א׳",
+  "schedulerDayAbbrevMon": "ב׳",
+  "schedulerDayAbbrevTue": "ג׳",
+  "schedulerDayAbbrevWed": "ד׳",
+  "schedulerDayAbbrevThu": "ה׳",
+  "schedulerDayAbbrevFri": "ו׳",
+  "settingsAppLanguage": "שפת הממשק",
+  "settingsAppLanguageSubtitle": "ממשק באנגלית או בעברית",
+  "trackEditNameRequired": "יש להזין שם מסלול",
+  "trackEditReviewSummaryWithDays": "אחרי {delays} {count, plural, =1{יום} other{ימים}}",
+  "@trackEditReviewSummaryWithDays": {
+    "placeholders": {
+      "delays": {
+        "type": "String"
+      },
+      "count": {
+        "type": "int"
+      }
+    }
   }
 }

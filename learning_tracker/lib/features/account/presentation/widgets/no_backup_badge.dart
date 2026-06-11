@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Persistent "No backup" badge — shown for local-born users (always,
 /// since offline is their permanent state per v2 §4.6).
@@ -18,6 +19,7 @@ class NoBackupBadge extends ConsumerWidget {
     final authState = ref.watch(authStateProvider);
     if (!authState.isLocalBorn) return const SizedBox.shrink();
 
+    final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     return Tooltip(
       message:
@@ -46,7 +48,7 @@ class NoBackupBadge extends ConsumerWidget {
                 ),
                 const SizedBox(width: 6),
                 Text(
-                  'No backup',
+                  l10n.noBackup,
                   style: theme.textTheme.labelSmall?.copyWith(
                     color: theme.colorScheme.onErrorContainer,
                     fontWeight: FontWeight.w600,

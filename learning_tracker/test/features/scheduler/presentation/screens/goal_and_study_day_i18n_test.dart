@@ -43,7 +43,10 @@ void main() {
     });
 
     test('goalDeadlineOccasionLabel is NOT English in he', () {
-      expect(he.goalDeadlineOccasionLabel, isNot(equals('Occasion (optional)')));
+      expect(
+        he.goalDeadlineOccasionLabel,
+        isNot(equals('Occasion (optional)')),
+      );
     });
 
     test('goalDeadlinePassed defined in en', () {
@@ -63,10 +66,7 @@ void main() {
     });
 
     test('goalDeadlinePaceItems is NOT English in he', () {
-      expect(
-        he.goalDeadlinePaceItems(5),
-        isNot(equals('~5 items per day')),
-      );
+      expect(he.goalDeadlinePaceItems(5), isNot(equals('~5 items per day')));
     });
 
     test('goalPaceProjectedCompletion in en', () {

@@ -244,8 +244,14 @@ void main() {
       );
       await pumpUntilSettled(tester);
 
-      await tester.drag(find.byType(ListView), const Offset(0, -700));
-      await tester.pump(const Duration(milliseconds: 100));
+      // The App Language tile now sits at the top of the preferences card, so
+      // Notification Settings renders lower — scroll to it rather than a fixed
+      // offset that the added tile would undershoot.
+      await tester.scrollUntilVisible(
+        find.text('Notification Settings'),
+        300,
+        scrollable: find.byType(Scrollable).first,
+      );
 
       expect(find.text('Notification Settings'), findsOneWidget);
 

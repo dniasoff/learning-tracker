@@ -7618,6 +7618,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Choose a {levelLabel}'**
   String scopeChooseLevelPrompt(String levelLabel);
+
+  /// AppBar title for the standalone Study Days config screen. {curriculum} is the curriculum/track display label (transliteration in English mode, Hebrew in Hebrew mode).
+  ///
+  /// In en, this message translates to:
+  /// **'{curriculum} Study Days'**
+  String schedulerStudyDaysScreenTitle(String curriculum);
+
+  /// Instructional subtitle on the Study Days config screen explaining the study vs review-only toggle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose which days include new learning and which are for review only.'**
+  String get schedulerStudyDaysIntro;
+
+  /// Fallback message shown on the Study Days screen for learn-only tracks (no chazara), where review-day configuration is not applicable. Must not mention review/chazara.
+  ///
+  /// In en, this message translates to:
+  /// **'All days are study days for this track.'**
+  String get schedulerStudyDaysAllStudyDays;
+
+  /// Footer summary on the Study Days screen showing how many study days are selected per week.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 study day per week} other{{count} study days per week}}'**
+  String schedulerStudyDaysPerWeek(int count);
+
+  /// Inline warning shown on the Study Days screen when zero study days are selected for the week.
+  ///
+  /// In en, this message translates to:
+  /// **'No study days selected — every day is review only and no new learning will be scheduled.'**
+  String get schedulerStudyDaysZeroWarning;
+
+  /// Short weekday label for Sunday on the Study Days screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Sun'**
+  String get schedulerDayAbbrevSun;
+
+  /// Short weekday label for Monday on the Study Days screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Mon'**
+  String get schedulerDayAbbrevMon;
+
+  /// Short weekday label for Tuesday on the Study Days screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Tue'**
+  String get schedulerDayAbbrevTue;
+
+  /// Short weekday label for Wednesday on the Study Days screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Wed'**
+  String get schedulerDayAbbrevWed;
+
+  /// Short weekday label for Thursday on the Study Days screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Thu'**
+  String get schedulerDayAbbrevThu;
+
+  /// Short weekday label for Friday on the Study Days screen.
+  ///
+  /// In en, this message translates to:
+  /// **'Fri'**
+  String get schedulerDayAbbrevFri;
+
+  /// No description provided for @settingsAppLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'App Language'**
+  String get settingsAppLanguage;
+
+  /// No description provided for @settingsAppLanguageSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'English or Hebrew UI'**
+  String get settingsAppLanguageSubtitle;
+
+  /// No description provided for @trackEditNameRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a track name'**
+  String get trackEditNameRequired;
+
+  /// No description provided for @trackEditReviewSummaryWithDays.
+  ///
+  /// In en, this message translates to:
+  /// **'After {delays} {count, plural, =1{day} other{days}}'**
+  String trackEditReviewSummaryWithDays(String delays, int count);
 }
 
 class _AppLocalizationsDelegate

@@ -43,7 +43,8 @@ void main() {
         expect(
           error,
           isNull,
-          reason: 'R1-(5): a non-empty name must not produce a validation error.',
+          reason:
+              'R1-(5): a non-empty name must not produce a validation error.',
         );
       });
     });

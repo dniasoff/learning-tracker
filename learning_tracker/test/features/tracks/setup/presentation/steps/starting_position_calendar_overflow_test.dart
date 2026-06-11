@@ -14,7 +14,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/calendar_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
-import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
@@ -152,9 +151,7 @@ void main() {
           () => calendarSvc.getEntry(any(), any()),
         ).thenAnswer((_) async => null);
 
-        await tester.pumpWidget(
-          _buildApp(calendarSvc: calendarSvc),
-        );
+        await tester.pumpWidget(_buildApp(calendarSvc: calendarSvc));
         await tester.pump();
         await tester.pump(const Duration(seconds: 1));
 

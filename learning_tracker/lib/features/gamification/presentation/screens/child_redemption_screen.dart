@@ -368,25 +368,40 @@ class _RewardCard extends StatelessWidget {
               ),
             ),
             const SizedBox(width: 8),
-            FilledButton(
-              onPressed: buttonEnabled ? onRedeem : null,
-              style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF00218D),
-                disabledBackgroundColor: const Color(0xFFE5E7EB),
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 14,
-                  vertical: 10,
+            // #39 (R1): cap the action button's width so a long label
+            // ("Not enough points" / "Not available (tutor mode)") cannot grow
+            // wide enough — especially at large text scales (e.g. 1.3) — to
+            // squeeze the Expanded title column into a mid-word break. The label
+            // wraps to at most two centred lines and ellipsizes beyond that,
+            // leaving the title column adequate room.
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 132),
+              child: FilledButton(
+                onPressed: buttonEnabled ? onRedeem : null,
+                style: FilledButton.styleFrom(
+                  backgroundColor: const Color(0xFF00218D),
+                  disabledBackgroundColor: const Color(0xFFE5E7EB),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                 ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Text(
-                buttonLabel,
-                style: theme.textTheme.labelMedium?.copyWith(
-                  color: buttonEnabled ? Colors.white : const Color(0xFF9CA3AF),
-                  fontWeight: FontWeight.w700,
-                  fontSize: 13,
+                child: Text(
+                  buttonLabel,
+                  textAlign: TextAlign.center,
+                  softWrap: true,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    color: buttonEnabled
+                        ? Colors.white
+                        : const Color(0xFF9CA3AF),
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                  ),
                 ),
               ),
             ),

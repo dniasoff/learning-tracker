@@ -547,8 +547,13 @@ void main() {
         await tester.pump(const Duration(seconds: 1));
 
         // Scroll far down to ensure the Parental Controls section is in view.
-        await tester.drag(find.byType(ListView), const Offset(0, -3000));
-        await tester.pump();
+        // The App Language tile added to the preferences card shifts everything
+        // below it down, so scroll to the target rather than a fixed offset.
+        await tester.scrollUntilVisible(
+          find.text('Parent PIN'),
+          400,
+          scrollable: find.byType(Scrollable).first,
+        );
         await tester.pump(const Duration(milliseconds: 500));
 
         expect(

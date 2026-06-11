@@ -11,8 +11,14 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/features/scheduler/presentation/screens/study_day_config_screen.dart';
+import 'package:learning_tracker/l10n/app_localizations_en.dart';
 
 void main() {
+  // studyDayLabel now takes an l10n for the non-Saturday localized abbreviations
+  // (R1: Hebrew study-days screen). TS-4 asserts the EN-locale labels, so an
+  // English AppLocalizations is supplied; Saturday still routes through the
+  // nusach resolver independent of l10n.
+  final l10n = AppLocalizationsEn();
   group('TS-4 — studyDayLabel routes Saturday through nusach resolver', () {
     test('Saturday with Hebrew-Terms OFF + Ashkenazi returns Shabbos', () {
       const terms = DomainTermLabels(false); // Hebrew OFF
@@ -20,6 +26,7 @@ void main() {
 
       final label = studyDayLabel(
         isoWeekday: 6, // Saturday = 6 in ISO
+        l10n: l10n,
         terms: terms,
         variant: variant,
       );
@@ -34,6 +41,7 @@ void main() {
 
       final label = studyDayLabel(
         isoWeekday: 6,
+        l10n: l10n,
         terms: terms,
         variant: variant,
       );
@@ -47,6 +55,7 @@ void main() {
 
       final label = studyDayLabel(
         isoWeekday: 6,
+        l10n: l10n,
         terms: terms,
         variant: variant,
       );
@@ -59,16 +68,31 @@ void main() {
       const variant = TransliterationVariant.ashkenazi;
 
       expect(
-        studyDayLabel(isoWeekday: 1, terms: terms, variant: variant),
+        studyDayLabel(
+          isoWeekday: 1,
+          l10n: l10n,
+          terms: terms,
+          variant: variant,
+        ),
         equals('Mon'),
       );
       expect(
-        studyDayLabel(isoWeekday: 5, terms: terms, variant: variant),
+        studyDayLabel(
+          isoWeekday: 5,
+          l10n: l10n,
+          terms: terms,
+          variant: variant,
+        ),
         equals('Fri'),
       );
       // Sunday (ISO weekday 7) should be 'Sun', not confused with Shabbos
       expect(
-        studyDayLabel(isoWeekday: 7, terms: terms, variant: variant),
+        studyDayLabel(
+          isoWeekday: 7,
+          l10n: l10n,
+          terms: terms,
+          variant: variant,
+        ),
         equals('Sun'),
       );
     });
@@ -81,11 +105,13 @@ void main() {
 
         final satLabel = studyDayLabel(
           isoWeekday: 6,
+          l10n: l10n,
           terms: terms,
           variant: variant,
         );
         final sunLabel = studyDayLabel(
           isoWeekday: 7,
+          l10n: l10n,
           terms: terms,
           variant: variant,
         );

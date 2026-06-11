@@ -18,6 +18,7 @@ import 'package:learning_tracker/features/account/presentation/providers/auth_st
 import 'package:learning_tracker/features/account/presentation/widgets/no_backup_badge.dart';
 import 'package:learning_tracker/features/account/presentation/widgets/offline_top_banner.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Resolves the repo root from the `learning_tracker/` sub-directory so the
 /// grep test can scan all of `lib/` without depending on the cwd.
@@ -222,7 +223,11 @@ void main() {
               () => _FakeAuthStateNotifier(authState),
             ),
           ],
-          child: MaterialApp(home: Scaffold(body: child)),
+          child: MaterialApp(
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Scaffold(body: child),
+          ),
         );
 
     testWidgets('OfflineTopBanner renders nothing when visible == false', (
@@ -265,7 +270,7 @@ void main() {
         ),
       );
       await tester.pump();
-      expect(find.text('No backup'), findsOneWidget);
+      expect(find.text('No Backup'), findsOneWidget);
     });
 
     testWidgets('NoBackupBadge hidden for cloudBorn tier', (tester) async {
@@ -276,7 +281,7 @@ void main() {
         ),
       );
       await tester.pump();
-      expect(find.text('No backup'), findsNothing);
+      expect(find.text('No Backup'), findsNothing);
     });
 
     testWidgets('NoBackupBadge hidden when signed out', (tester) async {
@@ -287,7 +292,7 @@ void main() {
         ),
       );
       await tester.pump();
-      expect(find.text('No backup'), findsNothing);
+      expect(find.text('No Backup'), findsNothing);
     });
   });
 }

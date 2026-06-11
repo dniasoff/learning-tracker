@@ -198,7 +198,10 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     final itemsRemaining = totalScope != null
         ? (totalScope * (1 - cycleFraction)).ceil().clamp(0, totalScope)
         : null;
+
     final useHebrewCalendar = ref.watch(useHebrewDateProvider);
+    // TS-8 fix: Est. finish must honour the SAME hebrew-date preference the rest
+    // of the card uses, so a single card never mixes Hebrew + Gregorian dates.
     final estimatedFinish = _estimatedFinish(
       goal,
       itemsRemaining,
@@ -292,10 +295,10 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     required String lifetimeDisplay,
     required bool trackHasChazara,
     required String locale,
+    required bool useHebrewCalendar,
     Goal? goal,
     int? itemsRemaining,
     String? estimatedFinish,
-    required bool useHebrewCalendar,
   }) {
     return Container(
       padding: const EdgeInsets.all(18),
@@ -468,9 +471,10 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
       return '${goal.paceValue} · $period';
     }
     if (goal.goalType == 'deadline' && goal.targetDate != null) {
-      // TS-8 fix: route deadline date through formatTrackDate so Hebrew
-      // calendar preference is honoured (same calendar system as the "Since"
-      // date on the same screen).
+      // Show the raw deadline date; the "Est. finish" row is not shown for
+      // deadline goals to avoid repeating the same value twice.
+      // TS-8 fix: honour the same Hebrew-date preference so this date field
+      // never mixes calendars with the rest of the card.
       return formatTrackDate(
         date: goal.targetDate!,
         locale: locale,
@@ -499,13 +503,11 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
           : goal.paceValue!;
       if (weeklyRate > 0) {
         final days = (itemsRemaining / weeklyRate * 7).ceil();
-        final projectedDate = goal.createdAt.toLocal().add(
-          Duration(days: days),
-        );
-        // TS-8 fix: use formatTrackDate so projected finish also respects Hebrew
-        // calendar preference (consistent with "Since" / goal deadline rows).
+        // TS-8 fix: route through formatTrackDate so the projected finish date
+        // is rendered in the Hebrew calendar when that preference is active,
+        // matching the activated-date and the rest of the card.
         return formatTrackDate(
-          date: projectedDate,
+          date: goal.createdAt.add(Duration(days: days)),
           locale: locale,
           useHebrewCalendar: useHebrewCalendar,
         );
@@ -827,21 +829,25 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
       builder: (ctx) => AlertDialog(
         title: Text(l10n.deleteTrackArchiveTitle),
         content: Text(l10n.deleteTrackArchiveBody),
+        // Safety hierarchy: the SAFE default (Cancel) is the prominent/default
+        // action so it visually dominates, while the destructive choices are
+        // de-emphasized (plain text buttons, the hard-delete tinted with the
+        // error colour). This prevents an accidental tap on a loud delete.
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: Text(l10n.actionCancel),
-          ),
           TextButton(
             onPressed: () => Navigator.pop(ctx, 'archive'),
             child: Text(l10n.deleteTrackArchive),
           ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(ctx).colorScheme.error,
+          TextButton(
+            style: TextButton.styleFrom(
+              foregroundColor: Theme.of(ctx).colorScheme.error,
             ),
             onPressed: () => Navigator.pop(ctx, 'wipe'),
             child: Text(l10n.deleteTrackWipe),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: Text(l10n.actionCancel),
           ),
         ],
       ),

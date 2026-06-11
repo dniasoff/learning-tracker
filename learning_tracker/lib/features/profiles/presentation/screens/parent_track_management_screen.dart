@@ -9,6 +9,7 @@ import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
@@ -271,7 +272,7 @@ class _ParentTrackManagementScreenState
       )..where((t) => t.id.equals(track.id))).write(
         CurriculumTracksCompanion(
           state: const Value(TrackState.archived),
-          stateChangedAt: Value(DateTime.now().toUtc()),
+          stateChangedAt: Value(ref.read(localDayClockProvider).nowUtc()),
         ),
       );
     }

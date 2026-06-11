@@ -19,7 +19,10 @@ String smartTrackLabelForScope(
   String rawScopeValue, {
   TransliterationVariant variant = TransliterationVariant.ashkenazi,
 }) {
-  return CurriculumLabels.transliterateNamedValue(rawScopeValue, variant: variant);
+  return CurriculumLabels.transliterateNamedValue(
+    rawScopeValue,
+    variant: variant,
+  );
 }
 
 void main() {
@@ -46,8 +49,7 @@ void main() {
       expect(
         label,
         equals('Bereshit'),
-        reason:
-            'R1-(1): Sephardi variant must map "Genesis" → "Bereshit".',
+        reason: 'R1-(1): Sephardi variant must map "Genesis" → "Bereshit".',
       );
     });
 

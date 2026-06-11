@@ -4431,4 +4431,70 @@ class AppLocalizationsHe extends AppLocalizations {
   String scopeChooseLevelPrompt(String levelLabel) {
     return 'בחרו $levelLabel';
   }
+
+  @override
+  String schedulerStudyDaysScreenTitle(String curriculum) {
+    return 'ימי לימוד $curriculum';
+  }
+
+  @override
+  String get schedulerStudyDaysIntro =>
+      'בחרו באילו ימים יש לימוד חדש ובאילו ימים חזרה בלבד.';
+
+  @override
+  String get schedulerStudyDaysAllStudyDays =>
+      'כל הימים הם ימי לימוד במסלול זה.';
+
+  @override
+  String schedulerStudyDaysPerWeek(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ימי לימוד בשבוע',
+      one: 'יום לימוד אחד בשבוע',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get schedulerStudyDaysZeroWarning =>
+      'לא נבחרו ימי לימוד — כל הימים הם לחזרה בלבד ולא יתוזמן לימוד חדש.';
+
+  @override
+  String get schedulerDayAbbrevSun => 'א׳';
+
+  @override
+  String get schedulerDayAbbrevMon => 'ב׳';
+
+  @override
+  String get schedulerDayAbbrevTue => 'ג׳';
+
+  @override
+  String get schedulerDayAbbrevWed => 'ד׳';
+
+  @override
+  String get schedulerDayAbbrevThu => 'ה׳';
+
+  @override
+  String get schedulerDayAbbrevFri => 'ו׳';
+
+  @override
+  String get settingsAppLanguage => 'שפת הממשק';
+
+  @override
+  String get settingsAppLanguageSubtitle => 'ממשק באנגלית או בעברית';
+
+  @override
+  String get trackEditNameRequired => 'יש להזין שם מסלול';
+
+  @override
+  String trackEditReviewSummaryWithDays(String delays, int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ימים',
+      one: 'יום',
+    );
+    return 'אחרי $delays $_temp0';
+  }
 }
