@@ -87,10 +87,35 @@ Future<void> _writeAndPushSnapshot<T>(
 /// `core/labels/` reads here, never via `features/settings/`.
 @Riverpod(keepAlive: true)
 class UseHebrewTerms extends _$UseHebrewTerms {
+  /// Tracks whether we have bound a non-sentinel (>0) profile's observer at
+  /// least once.  Used by the IL-1 sentinel guard.
+  bool _hasBindingForRealProfile = false;
+
   @override
   bool build() {
     final profileId = ref.watch(activeProfileIdProvider);
     final pref = ref.watch(hebrewTermsPreferenceProvider);
+    // IL-1 fix: do NOT re-bind the SharedPreferences observer when profileId
+    // TRANSITIONS BACK to the sentinel value 0 after we have already seen a
+    // real (>0) profile id.  The sentinel is emitted transiently whenever
+    // userDatabaseProvider is invalidated (e.g. during the offline-signup DB
+    // switch) and then the real profile id is restored moments later.
+    // Without this guard, build() re-fires with id==0, _bindObserver reads
+    // no stored pref for the sentinel, falls back to pref.defaultValue (Hebrew
+    // ON), and overwrites the user's explicit English choice.
+    //
+    // On cold-start the profileId may be 0 from the beginning (before any
+    // profile is loaded); in that case _hasBindingForRealProfile is false so
+    // we bind normally and let the profile-0 pref (or default) drive the
+    // initial state.  The guard ONLY activates when transitioning FROM a
+    // non-zero id back to 0.
+    if (profileId == 0 && _hasBindingForRealProfile) {
+      // Transient sentinel — keep the last valid state.
+      return state;
+    }
+    if (profileId != 0) {
+      _hasBindingForRealProfile = true;
+    }
     _bindObserver(ref, pref, profileId, (value) {
       if (value != state) state = value;
     });
