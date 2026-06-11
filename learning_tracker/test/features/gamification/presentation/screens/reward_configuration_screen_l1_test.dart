@@ -10,7 +10,7 @@
 //   7. Edit-mode (editingMilestoneId set): valid save → "Reward updated" dialog.
 //   8. Duplicate threshold → shows snackbar with l10n string.
 //   9. _openManageRewardsSheet: three-dot → popup "Manage rewards" item appears.
-//  10. Manage rewards sheet → empty label when no rewards.
+//  10. Manage rewards sheet → empty label directs to the form (not "below").
 //  11. _confirmDelete: Delete Reward dialog appears with milestone title.
 //  12. _confirmDelete confirm → milestone deleted from DB.
 //  13. _confirmDelete cancel → milestone NOT deleted.
@@ -18,9 +18,9 @@
 //  15. Tutor canEditRewards=false: Save Reward tap shows permission-denied snackbar.
 //  16. He-RTL smoke: locale=he → screen renders without throwing.
 //
-// HARDCODED-STRING NOTE:
-//   "No rewards yet. Tap below to add one." (rewardConfigEmptyMilestones) is
-//   correctly sourced via l10n — not hardcoded.
+// PLURALIZATION:
+//   rewardConfigPointsPreview uses ICU plural — count==1 renders the singular
+//   "1 Point" (EN) / "נקודה אחת" (HE); other counts render the plural form.
 //
 // BUG LOG: (none detected; all tests pass)
 
@@ -406,7 +406,76 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 
-    expect(find.text('No rewards yet. Tap below to add one.'), findsOneWidget);
+    // The empty-state copy must direct the user to the actual add control —
+    // the reward form on the screen — not "below" (there is no add affordance
+    // below the text inside the bottom sheet). It must not say "Tap below".
+    expect(
+      find.text(
+        'No rewards yet. Close this menu and use the form above to add one.',
+      ),
+      findsOneWidget,
+    );
+    expect(find.textContaining('Tap below'), findsNothing);
+
+    await _tearDown(tester);
+  });
+
+  // ── Preview pluralization: count==1 → singular "1 Point" ──────────────────
+
+  testWidgets('preview shows singular "1 Point" when points is 1', (
+    tester,
+  ) async {
+    _useTallViewport(tester);
+    final fake = _FakeController(
+      initialState: const RewardForm(name: 'Single', pointsText: '1'),
+    );
+    await tester.pumpWidget(_buildFake(fake: fake));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    // Singular form — never the broken "1 Points".
+    expect(find.text('1 Point'), findsOneWidget);
+    expect(find.text('1 Points'), findsNothing);
+
+    await _tearDown(tester);
+  });
+
+  // ── Preview pluralization: count!=1 → plural "N Points" ───────────────────
+
+  testWidgets('preview shows plural "5 Points" when points is 5', (
+    tester,
+  ) async {
+    _useTallViewport(tester);
+    final fake = _FakeController(
+      initialState: const RewardForm(name: 'Many', pointsText: '5'),
+    );
+    await tester.pumpWidget(_buildFake(fake: fake));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(find.text('5 Points'), findsOneWidget);
+
+    await _tearDown(tester);
+  });
+
+  // ── Hebrew preview pluralization: count==1 → "נקודה אחת" ──────────────────
+
+  testWidgets('he preview shows singular "נקודה אחת" when points is 1', (
+    tester,
+  ) async {
+    _useTallViewport(tester);
+    final fake = _FakeController(
+      initialState: const RewardForm(name: 'יחיד', pointsText: '1'),
+    );
+    await tester.pumpWidget(
+      _buildFake(fake: fake, locale: const Locale('he')),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    // Hebrew singular: "נקודה אחת" — not "1 נקודות".
+    expect(find.text('נקודה אחת'), findsOneWidget);
+    expect(find.text('1 נקודות'), findsNothing);
 
     await _tearDown(tester);
   });
