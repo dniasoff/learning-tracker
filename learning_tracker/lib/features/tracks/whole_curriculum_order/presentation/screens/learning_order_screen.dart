@@ -166,12 +166,22 @@ class _LearningOrderScreenState extends ConsumerState<LearningOrderScreen> {
 
     final repository = ref.read(learningOrderRepositoryProvider);
     await repository.resetToDefault(widget.curriculumId);
+    if (!mounted) return;
 
-    // Reset local state so next build reloads from provider
-    setState(() {
-      _localOrder = null;
-    });
-
+    // Invalidate the provider, then await the fresh default order and seed it
+    // into local state directly. Relying on a `_localOrder = null` reset plus
+    // re-seeding via `orderAsync.whenData` in build() is racy: an invalidated
+    // FutureProvider keeps exposing its previous (custom-order) value while the
+    // refetch is loading, so a rebuild that lands first re-seeds the stale
+    // custom order and the later default emission is then ignored — leaving the
+    // UI showing the old order until manual re-navigation.
     ref.invalidate(learningOrderProvider(widget.curriculumId));
+    final defaultOrder = await ref.read(
+      learningOrderProvider(widget.curriculumId).future,
+    );
+    if (!mounted) return;
+    setState(() {
+      _localOrder = List.from(defaultOrder);
+    });
   }
 }

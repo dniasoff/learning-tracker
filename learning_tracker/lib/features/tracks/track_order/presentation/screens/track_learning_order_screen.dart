@@ -239,15 +239,33 @@ class _TrackLearningOrderScreenState
     if (!confirmed) return;
 
     final args = (trackId: widget.trackId, curriculumId: widget.curriculumId);
+    // Bump the save sequence so any in-flight sedarim persist can't resolve
+    // last and clobber the reset with its stale masechtos snapshot.
+    final mySeq = ++_sedarimSaveSeq;
     await ref
         .read(trackLearningOrderRepositoryProvider)
         .resetToDefault(widget.trackId);
+    if (!mounted || mySeq != _sedarimSaveSeq) return;
 
-    setState(() {
-      _localSedarim = null;
-      _localMasechtos = null;
-    });
+    // Invalidate both providers, then await the fresh default orders and seed
+    // them into local state directly. Relying on a `_local* = null` reset plus
+    // re-seeding via `whenData` in build() is racy: an invalidated
+    // FutureProvider keeps exposing its previous (custom-order) value while the
+    // refetch is loading, so a rebuild that lands first re-seeds the stale
+    // custom order and the later default emission is then ignored — leaving the
+    // UI showing the old order until manual re-navigation.
     ref.invalidate(trackSedarimOrderProvider(args));
     ref.invalidate(trackMasechtosOrderProvider(args));
+    final defaultSedarim = await ref.read(
+      trackSedarimOrderProvider(args).future,
+    );
+    final defaultMasechtos = await ref.read(
+      trackMasechtosOrderProvider(args).future,
+    );
+    if (!mounted || mySeq != _sedarimSaveSeq) return;
+    setState(() {
+      _localSedarim = List.from(defaultSedarim);
+      _localMasechtos = List.from(defaultMasechtos);
+    });
   }
 }
