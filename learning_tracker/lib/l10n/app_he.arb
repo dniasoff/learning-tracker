@@ -573,6 +573,7 @@
   "adultModeCardSubtitleDeepFocused": "עומק ומיקוד",
   "profileBadgeChildMode": "מצב ילדים",
   "profileBadgeAdultMode": "מצב מבוגרים",
+  "profileBadgeParentMode": "מצב הורה",
   "profileNameTaken": "כבר קיים פרופיל בשם \"{name}\"",
   "@profileNameTaken": {
     "placeholders": {

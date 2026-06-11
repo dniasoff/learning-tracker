@@ -1178,6 +1178,9 @@ class AppLocalizationsHe extends AppLocalizations {
   String get profileBadgeAdultMode => 'מצב מבוגרים';
 
   @override
+  String get profileBadgeParentMode => 'מצב הורה';
+
+  @override
   String profileNameTaken(String name) {
     return 'כבר קיים פרופיל בשם \"$name\"';
   }

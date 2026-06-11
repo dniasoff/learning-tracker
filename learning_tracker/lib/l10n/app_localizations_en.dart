@@ -1189,6 +1189,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profileBadgeAdultMode => 'ADULT MODE';
 
   @override
+  String get profileBadgeParentMode => 'PARENT MODE';
+
+  @override
   String profileNameTaken(String name) {
     return 'A profile named \"$name\" already exists';
   }

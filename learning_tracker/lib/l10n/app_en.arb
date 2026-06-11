@@ -603,6 +603,7 @@
   "adultModeCardSubtitleDeepFocused": "Deep & Focused",
   "profileBadgeChildMode": "CHILD MODE",
   "profileBadgeAdultMode": "ADULT MODE",
+  "profileBadgeParentMode": "PARENT MODE",
   "profileNameTaken": "A profile named \"{name}\" already exists",
   "@profileNameTaken": {
     "placeholders": {

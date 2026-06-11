@@ -2177,6 +2177,12 @@ abstract class AppLocalizations {
   /// **'ADULT MODE'**
   String get profileBadgeAdultMode;
 
+  /// No description provided for @profileBadgeParentMode.
+  ///
+  /// In en, this message translates to:
+  /// **'PARENT MODE'**
+  String get profileBadgeParentMode;
+
   /// No description provided for @profileNameTaken.
   ///
   /// In en, this message translates to:
