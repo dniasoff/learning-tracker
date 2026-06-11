@@ -241,7 +241,19 @@ the Hebrew UI-locale switch did not take effect on-device and there was NO in-ap
   · scheduler-studydays (r1-content2): Hebrew Study-Days full localization (title/subtitle/weekday-abbr/footer),
     0-study-days warning guard.
   · gamif (r1-gamif2): IceCream mid-word wrap fix @1.3, redeemScreenTitle he 'פרס הפרסים'→'מימוש פרסים'.
-- NEXT: integrate 4 branches serially into dev → regen l10n+codegen once → full make ci (watch analyze AND tests)
-  → push → rebuild+redeploy APK → REDO-verify R1's 6 screens (esp. the switcher now drives he-RTL) → continue redo
-  across the remaining 41 screens (R2–R6), iterating find→fix→redo until a sweep returns clean. Mandate: "finish 47
-  screen find first, bulk fix and then redo until no bugs."
+- R1 FIX INTEGRATED + PUSHED (commit 757ca4f2, dev): TWIST — the "lost" workflow w5aephf8l was actually still live
+  and committed to the SAME r1-* branches concurrently with the new w4f9xr4zj, so dev was assembled by reconciling
+  BOTH waves: cherry-picked the FULLER version of each overlap file (study_day_config←r1-content2 full he-localize
+  +zero-day guard, TS-4 Saturday-nusach preserved; track_detail/edit_track/no_backup_badge←r1-locale inline name
+  validation + Est-finish honors Hebrew-calendar + delete-dialog safety + localized review-days + localized badge;
+  child_redemption←r1-gamif2; add-track wizard+goal_setup+plurals←r1-tracks2 merged). ARB unioned additively across
+  all 4 branches via tool/merge_arb.py; kept keystone settingsLanguage tile. Restored validateTrackName/studyDayCount
+  pure helpers. Fixed 4 test failures: TS-4 l10n arg, NoBackupBadge l10n delegates+"No Backup", 2 settings scrolls →
+  scrollUntilVisible (new language tile shifted list), and a PRE-EXISTING rogue DateTime.now() in
+  parent_track_management (archive path) → localDayClockProvider.nowUtc(). make ci GREEN (9866 pass / 150 skip).
+- REDEPLOYED: debug APK (overflow stripes visible) built + installed on all 3 emulators; app launches clean past
+  seed (no OOM); "No Backup" badge renders localized. R1v2 redo-verification sweep RUNNING (workflow wtqlkdi9v) over
+  the 6 R1 screens — keystone language switcher (Settings→App Language→עברית→full RTL) checked first.
+- NEXT: read R1v2 results → if keystone+fixes confirmed on-device, extend the redo to the remaining 41 screens
+  (R2–R6) in batches, fix→redo until a sweep returns clean. Mandate: "finish 47 screen find first, bulk fix and then
+  redo until no bugs." Worktrees lt-r1-* still exist (reset to dev HEAD before any next fix wave).
