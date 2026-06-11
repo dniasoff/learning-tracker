@@ -343,7 +343,7 @@ final class UseHebrewTermsProvider
   }
 }
 
-String _$useHebrewTermsHash() => r'ae2c0a5d234e9c3839a08ec04d863778372b0e11';
+String _$useHebrewTermsHash() => r'f195c98e66067bf6e06aa6938500d0d87ab9ff69';
 
 /// Whether to render Jewish learning terms in Hebrew script for the active
 /// profile. This is the **only** `core/` entry point for the toggle —

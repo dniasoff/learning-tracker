@@ -210,7 +210,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 
-    expect(find.text('Reward configuration'), findsOneWidget);
+    expect(find.text('Reward Configuration'), findsOneWidget);
 
     await _tearDown(tester);
   });
@@ -304,7 +304,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 
-    expect(find.text('Reward configuration'), findsOneWidget);
+    expect(find.text('Reward Configuration'), findsOneWidget);
 
     await _tearDown(tester);
   });
@@ -422,7 +422,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 
-      expect(find.text('Reward configuration'), findsNothing);
+      expect(find.text('Reward Configuration'), findsNothing);
 
       await _tearDown(tester);
     },
@@ -461,7 +461,7 @@ void main() {
     expect(find.text('Manage Tracks'), findsNothing);
     expect(find.text('Manage Goals'), findsNothing);
     expect(find.text('Point Configuration'), findsNothing);
-    expect(find.text('Reward configuration'), findsNothing);
+    expect(find.text('Reward Configuration'), findsNothing);
     expect(find.text('Adjust Points'), findsNothing);
     expect(find.text('Pending Prizes'), findsNothing);
 
@@ -623,7 +623,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 
-    await tester.tap(find.text('Reward configuration'));
+    await tester.tap(find.text('Reward Configuration'));
     await tester.pump();
 
     verify(
@@ -710,7 +710,7 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
 
       expect(find.text('Manage Tracks'), findsOneWidget);
-      expect(find.text('Reward configuration'), findsNothing);
+      expect(find.text('Reward Configuration'), findsNothing);
 
       await _tearDown(tester);
     },
@@ -729,7 +729,7 @@ void main() {
     expect(find.text('Manage Goals'), findsNothing);
     expect(find.text('Point Configuration'), findsNothing);
     expect(find.text('Adjust Points'), findsNothing);
-    expect(find.text('Reward configuration'), findsNothing);
+    expect(find.text('Reward Configuration'), findsNothing);
     expect(find.text('Pending Prizes'), findsNothing);
     expect(find.text('Add Lifetime Learning'), findsNothing);
 

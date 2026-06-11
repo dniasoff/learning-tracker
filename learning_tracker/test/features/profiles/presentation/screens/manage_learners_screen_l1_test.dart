@@ -430,6 +430,7 @@ void main() {
         () => repo.updateProfile(
           id: any(named: 'id'),
           displayName: any(named: 'displayName'),
+          mode: any(named: 'mode'),
           avatarIndex: any(named: 'avatarIndex'),
         ),
       ).thenAnswer(
@@ -462,10 +463,14 @@ void main() {
       await tester.tap(find.text('Save'));
       await tester.pumpAndSettle();
 
+      // PP-2: editProfileFlow now persists the selected mode. The Edit dialog
+      // pre-selects the profile's existing mode ('adult'), so the renamed
+      // profile is saved with mode: 'adult' preserved.
       verify(
         () => repo.updateProfile(
           id: 1,
           displayName: 'Avi Renamed',
+          mode: 'adult',
           avatarIndex: any(named: 'avatarIndex'),
         ),
       ).called(1);

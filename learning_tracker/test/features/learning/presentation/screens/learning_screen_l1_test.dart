@@ -589,8 +589,10 @@ void main() {
 
       // The trackLabel value must NOT appear anywhere on the card.
       expect(find.text('Test Track'), findsNothing);
-      // The stage chip (top row of the card) still renders.
-      expect(find.text('Learn'), findsOneWidget);
+      // The stage chip (top row of the card) still renders. IL-5 normalised the
+      // stage-0 display name from the legacy DB key "Learn" to the canonical
+      // transliteration "Limud" in English mode.
+      expect(find.text('Limud'), findsOneWidget);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(Duration.zero);

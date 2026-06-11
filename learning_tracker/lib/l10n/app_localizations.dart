@@ -2348,7 +2348,7 @@ abstract class AppLocalizations {
   /// No description provided for @rewardConfigurationTitle.
   ///
   /// In en, this message translates to:
-  /// **'Reward configuration'**
+  /// **'Reward Configuration'**
   String get rewardConfigurationTitle;
 
   /// No description provided for @rewardConfigurationSubtitle.
@@ -3302,7 +3302,7 @@ abstract class AppLocalizations {
   /// No description provided for @signInPasswordHint.
   ///
   /// In en, this message translates to:
-  /// **'••••••••'**
+  /// **'Enter your secret key'**
   String get signInPasswordHint;
 
   /// No description provided for @signInKeepMeSignedIn.
@@ -6806,7 +6806,7 @@ abstract class AppLocalizations {
   /// No description provided for @manageTutorsActiveSection.
   ///
   /// In en, this message translates to:
-  /// **'ACTIVE ({count})'**
+  /// **'Active ({count})'**
   String manageTutorsActiveSection(int count);
 
   /// No description provided for @manageTutorsPendingSection.

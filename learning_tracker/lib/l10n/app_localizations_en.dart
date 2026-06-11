@@ -1287,7 +1287,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Set how many points activities are worth';
 
   @override
-  String get rewardConfigurationTitle => 'Reward configuration';
+  String get rewardConfigurationTitle => 'Reward Configuration';
 
   @override
   String get rewardConfigurationSubtitle =>
@@ -3965,7 +3965,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String manageTutorsActiveSection(int count) {
-    return 'ACTIVE ($count)';
+    return 'Active ($count)';
   }
 
   @override
