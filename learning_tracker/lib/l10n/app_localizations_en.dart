@@ -1368,7 +1368,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get rewardConfigEmptyMilestones =>
-      'No rewards yet. Tap below to add one.';
+      'No rewards yet. Close this menu and use the form above to add one.';
 
   @override
   String get rewardConfigSaved => 'Rewards saved';
@@ -1400,7 +1400,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String rewardConfigPointsPreview(int points) {
-    return '$points Points';
+    String _temp0 = intl.Intl.pluralLogic(
+      points,
+      locale: localeName,
+      other: '$points Points',
+      one: '$points Point',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -3800,6 +3806,21 @@ class AppLocalizationsEn extends AppLocalizations {
   String allTimeTermDone(String term) {
     return '$term done';
   }
+
+  @override
+  String recentActivityActiveDaysCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count Active days',
+      one: '1 Active day',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get recentActivityEmptyState =>
+      'No learning activity in this range yet.';
 
   @override
   String get redeemScreenTitle => 'Redeem Prizes';

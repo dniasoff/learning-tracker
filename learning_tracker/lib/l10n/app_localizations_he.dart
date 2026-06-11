@@ -1357,7 +1357,7 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get rewardConfigEmptyMilestones =>
-      'עדיין אין פרסים. לחצו למטה להוספה.';
+      'עדיין אין פרסים. סגרו תפריט זה והשתמשו בטופס שלמעלה כדי להוסיף.';
 
   @override
   String get rewardConfigSaved => 'הפרסים נשמרו';
@@ -1389,7 +1389,14 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String rewardConfigPointsPreview(int points) {
-    return '$points נקודות';
+    String _temp0 = intl.Intl.pluralLogic(
+      points,
+      locale: localeName,
+      other: '$points נקודות',
+      two: 'שתי נקודות',
+      one: 'נקודה אחת',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -3770,6 +3777,21 @@ class AppLocalizationsHe extends AppLocalizations {
   String allTimeTermDone(String term) {
     return '$term שנלמד';
   }
+
+  @override
+  String recentActivityActiveDaysCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ימים פעילים',
+      two: 'יומיים פעילים',
+      one: 'יום פעיל אחד',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get recentActivityEmptyState => 'אין עדיין פעילות לימוד בטווח הזה.';
 
   @override
   String get redeemScreenTitle => 'מימוש פרסים';

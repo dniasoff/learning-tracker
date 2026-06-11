@@ -2460,7 +2460,7 @@ abstract class AppLocalizations {
   /// No description provided for @rewardConfigEmptyMilestones.
   ///
   /// In en, this message translates to:
-  /// **'No rewards yet. Tap below to add one.'**
+  /// **'No rewards yet. Close this menu and use the form above to add one.'**
   String get rewardConfigEmptyMilestones;
 
   /// No description provided for @rewardConfigSaved.
@@ -2520,7 +2520,7 @@ abstract class AppLocalizations {
   /// No description provided for @rewardConfigPointsPreview.
   ///
   /// In en, this message translates to:
-  /// **'{points} Points'**
+  /// **'{points, plural, =1{{points} Point} other{{points} Points}}'**
   String rewardConfigPointsPreview(int points);
 
   /// No description provided for @rewardConfigCancel.
@@ -6416,6 +6416,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{term} done'**
   String allTimeTermDone(String term);
+
+  /// Active-days stat phrase in the All Time summary card (Recent Activity screen). ICU plural so count==1 is singular ("1 Active day").
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 Active day} other{{count} Active days}}'**
+  String recentActivityActiveDaysCount(int count);
+
+  /// Empty-state message shown in the Recent Activity charts when the selected time-range/curriculum filter yields no live completions (charts would otherwise be blank/zeroed).
+  ///
+  /// In en, this message translates to:
+  /// **'No learning activity in this range yet.'**
+  String get recentActivityEmptyState;
 
   /// No description provided for @redeemScreenTitle.
   ///
