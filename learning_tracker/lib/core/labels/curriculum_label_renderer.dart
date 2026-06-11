@@ -22,6 +22,33 @@ import 'package:learning_tracker/core/utils/gematriya.dart';
 class CurriculumLabelRenderer {
   CurriculumLabelRenderer._();
 
+  /// Default separator for left-to-right (English) breadcrumbs.
+  ///
+  /// Uses the single right-pointing angle quotation mark (U+203A).
+  /// Pass this (or any right-pointing char) to [renderForItem] when
+  /// [useHebrew] is false.
+  static const String ltrSeparator = ' › ';
+
+  /// Separator for right-to-left (Hebrew) breadcrumbs.
+  ///
+  /// IL-7 fix: uses the single left-pointing angle quotation mark (U+2039)
+  /// so the chevron visually separates segments in the correct RTL direction.
+  ///
+  /// Usage:
+  /// ```dart
+  /// CurriculumLabelRenderer.renderForItem(
+  ///   item,
+  ///   useHebrew: true,
+  ///   fullPath: true,
+  ///   separator: CurriculumLabelRenderer.rtlSeparator,
+  /// )
+  /// ```
+  ///
+  /// NOTE: the string separator alone does not fix RTL layout — the
+  /// BreadcrumbNavigation widget must also wrap in [Directionality.rtl]
+  /// when Hebrew terms are active (tracked as cross-slice IL-7).
+  static const String rtlSeparator = ' ‹ ';
+
   /// Render one (level, value) pair.
   ///
   /// [hebrewName] is the optional pre-known Hebrew name for [rawValue] when
@@ -122,7 +149,7 @@ class CurriculumLabelRenderer {
     ContentItem item, {
     required bool useHebrew,
     bool fullPath = false,
-    String separator = ' › ',
+    String separator = ltrSeparator,
     TransliterationVariant transliterationVariant =
         TransliterationVariant.ashkenazi,
   }) {
