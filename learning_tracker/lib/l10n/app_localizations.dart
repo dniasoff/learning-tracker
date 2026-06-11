@@ -1517,10 +1517,10 @@ abstract class AppLocalizations {
   /// **'Root'**
   String get breadcrumbsRoot;
 
-  /// No description provided for @lifetimeMarkSavedCount.
+  /// IL-3 fix: ICU plural to drop the (s) anti-pattern.
   ///
   /// In en, this message translates to:
-  /// **'Marked {count} lifetime selection(s).'**
+  /// **'{count, plural, one{Marked 1 lifetime selection.} other{Marked {count} lifetime selections.}}'**
   String lifetimeMarkSavedCount(int count);
 
   /// No description provided for @lifetimeMarkSaveError.
@@ -5873,22 +5873,22 @@ abstract class AppLocalizations {
   /// **'On pace'**
   String get paceOnTrack;
 
-  /// No description provided for @paceBehindByDays.
+  /// IL-3 fix: ICU plural so 1 reads 'Behind by 1 day' not 'Behind by 1 days'.
   ///
   /// In en, this message translates to:
-  /// **'Behind by {count} days'**
+  /// **'{count, plural, one{Behind by 1 day} other{Behind by {count} days}}'**
   String paceBehindByDays(int count);
 
-  /// NEW sense: distinct sefariaRefs ever touched (lifetime tier — replaces the deprecated ITEMS LEARNED stat-card sense). Distinct from the legacy `itemsLearnedTitle` screen-title key.
+  /// IL-3 fix: ICU plural so 1 reads '1 item learned' not '1 items learned'. NEW sense: distinct sefariaRefs ever touched (lifetime tier). Distinct from the legacy `itemsLearnedTitle` screen-title key.
   ///
   /// In en, this message translates to:
-  /// **'{count} items learned'**
+  /// **'{count, plural, one{1 item learned} other{{count} items learned}}'**
   String itemsLearnedCount(int count);
 
-  /// Lifetime-tier total review count — every chazara event ever (each event counts).
+  /// IL-3 fix: ICU plural so 1 reads '1 total chazara' not '1 total chazaros'. Lifetime-tier total review count.
   ///
   /// In en, this message translates to:
-  /// **'{count} total chazaros'**
+  /// **'{count, plural, one{1 total chazara} other{{count} total Chazaros}}'**
   String totalChazaros(int count);
 
   /// Top-level curriculum-complete celebration — Talmud Bavli.
@@ -5981,22 +5981,22 @@ abstract class AppLocalizations {
   /// **'Siyum Hilchos {name}'**
   String siyumHilchos(String name);
 
-  /// Top-counter row on the Siyumim & Milestones screen for the curriculum-complete tier (Siyum HaShas, Siyum HaTorah, …). `{count}` is the number of curriculum-complete siyumim across all the user's curricula.
+  /// IL-3 fix: ICU plural so 1 reads '1 curriculum-level siyum' not '1 curriculum-level siyumim'. Top-counter row on the Siyumim & Milestones screen.
   ///
   /// In en, this message translates to:
-  /// **'{count} curriculum-level siyumim'**
+  /// **'{count, plural, one{1 curriculum-level siyum} other{{count} curriculum-level siyumim}}'**
   String siyumimLevelCurriculum(int count);
 
-  /// Top-counter row on the Siyumim & Milestones screen for the aggregate tier (Siyum Seder / Siyum Chelek). `{count}` is the number of aggregate-level siyumim earned.
+  /// IL-3 fix: ICU plural so 1 reads '1 aggregate-level siyum' not '1 aggregate-level siyumim'. Top-counter row on the Siyumim & Milestones screen.
   ///
   /// In en, this message translates to:
-  /// **'{count} aggregate-level siyumim'**
+  /// **'{count, plural, one{1 aggregate-level siyum} other{{count} aggregate-level siyumim}}'**
   String siyumimLevelAggregate(int count);
 
-  /// Top-counter row on the Siyumim & Milestones screen for the unit tier (Siyum Masechta / Sefer / Siman / Hilchos). `{count}` is the number of unit-level siyumim earned.
+  /// IL-3 fix: ICU plural so 1 reads '1 unit-level siyum' not '1 unit-level siyumim'. Top-counter row on the Siyumim & Milestones screen.
   ///
   /// In en, this message translates to:
-  /// **'{count} unit-level siyumim'**
+  /// **'{count, plural, one{1 unit-level siyum} other{{count} unit-level siyumim}}'**
   String siyumimLevelUnit(int count);
 
   /// Empty-state message rendered by SiyumimGroupedView when the user has no milestones to show.

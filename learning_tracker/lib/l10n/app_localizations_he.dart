@@ -810,7 +810,13 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String lifetimeMarkSavedCount(int count) {
-    return 'סומנו $count בחירה(ות) לכל החיים.';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'סומנו $count בחירות לכל החיים.',
+      one: 'סומנה בחירה אחת לכל החיים.',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -3327,17 +3333,35 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String paceBehindByDays(int count) {
-    return 'מאחור ב-$count ימים';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'מאחור ב-$count ימים',
+      one: 'מאחור ביום אחד',
+    );
+    return '$_temp0';
   }
 
   @override
   String itemsLearnedCount(int count) {
-    return '$count פריטים נלמדו';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count פריטים נלמדו',
+      one: 'פריט אחד נלמד',
+    );
+    return '$_temp0';
   }
 
   @override
   String totalChazaros(int count) {
-    return '$count חזרות סה״כ';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count חזרות סה״כ',
+      one: 'חזרה אחת סה״כ',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -3395,17 +3419,35 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String siyumimLevelCurriculum(int count) {
-    return '$count סיומים ברמת מסלול';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count סיומים ברמת מסלול',
+      one: 'סיום אחד ברמת מסלול',
+    );
+    return '$_temp0';
   }
 
   @override
   String siyumimLevelAggregate(int count) {
-    return '$count סיומים ברמת אגד';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count סיומים ברמת אגד',
+      one: 'סיום אחד ברמת אגד',
+    );
+    return '$_temp0';
   }
 
   @override
   String siyumimLevelUnit(int count) {
-    return '$count סיומים ברמת יחידה';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count סיומים ברמת יחידה',
+      one: 'סיום אחד ברמת יחידה',
+    );
+    return '$_temp0';
   }
 
   @override

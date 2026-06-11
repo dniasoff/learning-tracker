@@ -815,7 +815,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String lifetimeMarkSavedCount(int count) {
-    return 'Marked $count lifetime selection(s).';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Marked $count lifetime selections.',
+      one: 'Marked 1 lifetime selection.',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -3364,17 +3370,35 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String paceBehindByDays(int count) {
-    return 'Behind by $count days';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Behind by $count days',
+      one: 'Behind by 1 day',
+    );
+    return '$_temp0';
   }
 
   @override
   String itemsLearnedCount(int count) {
-    return '$count items learned';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count items learned',
+      one: '1 item learned',
+    );
+    return '$_temp0';
   }
 
   @override
   String totalChazaros(int count) {
-    return '$count total chazaros';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count total Chazaros',
+      one: '1 total chazara',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -3432,17 +3456,35 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String siyumimLevelCurriculum(int count) {
-    return '$count curriculum-level siyumim';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count curriculum-level siyumim',
+      one: '1 curriculum-level siyum',
+    );
+    return '$_temp0';
   }
 
   @override
   String siyumimLevelAggregate(int count) {
-    return '$count aggregate-level siyumim';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count aggregate-level siyumim',
+      one: '1 aggregate-level siyum',
+    );
+    return '$_temp0';
   }
 
   @override
   String siyumimLevelUnit(int count) {
-    return '$count unit-level siyumim';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count unit-level siyumim',
+      one: '1 unit-level siyum',
+    );
+    return '$_temp0';
   }
 
   @override

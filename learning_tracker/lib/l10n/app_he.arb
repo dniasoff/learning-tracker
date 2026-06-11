@@ -410,8 +410,9 @@
   "contentHierarchySearchTooltip": "חיפוש",
   "noItemsAtThisLevel": "אין פריטים ברמה זו",
   "breadcrumbsRoot": "שורש",
-  "lifetimeMarkSavedCount": "סומנו {count} בחירה(ות) לכל החיים.",
+  "lifetimeMarkSavedCount": "{count, plural, one{סומנה בחירה אחת לכל החיים.} other{סומנו {count} בחירות לכל החיים.}}",
   "@lifetimeMarkSavedCount": {
+    "description": "IL-3 fix: ICU plural to drop the (ות) anti-pattern.",
     "placeholders": {
       "count": { "type": "int" }
     }
@@ -1716,22 +1717,23 @@
     }
   },
   "paceOnTrack": "בקצב הנכון",
-  "paceBehindByDays": "מאחור ב-{count} ימים",
+  "paceBehindByDays": "{count, plural, one{מאחור ביום אחד} other{מאחור ב-{count} ימים}}",
   "@paceBehindByDays": {
+    "description": "IL-3 fix: ICU plural so 1 reads 'ביום אחד' not 'ב-1 ימים'.",
     "placeholders": {
       "count": { "type": "int" }
     }
   },
-  "itemsLearnedCount": "{count} פריטים נלמדו",
+  "itemsLearnedCount": "{count, plural, one{פריט אחד נלמד} other{{count} פריטים נלמדו}}",
   "@itemsLearnedCount": {
-    "description": "NEW sense: distinct items ever touched (lifetime tier).",
+    "description": "IL-3 fix: ICU plural. NEW sense: distinct items ever touched (lifetime tier).",
     "placeholders": {
       "count": { "type": "int" }
     }
   },
-  "totalChazaros": "{count} חזרות סה״כ",
+  "totalChazaros": "{count, plural, one{חזרה אחת סה״כ} other{{count} חזרות סה״כ}}",
   "@totalChazaros": {
-    "description": "Lifetime-tier total review count.",
+    "description": "IL-3 fix: ICU plural. Lifetime-tier total review count.",
     "placeholders": {
       "count": { "type": "int" }
     }
@@ -1812,23 +1814,23 @@
     }
   },
 
-  "siyumimLevelCurriculum": "{count} סיומים ברמת מסלול",
+  "siyumimLevelCurriculum": "{count, plural, one{סיום אחד ברמת מסלול} other{{count} סיומים ברמת מסלול}}",
   "@siyumimLevelCurriculum": {
-    "description": "Top-counter row on the Siyumim & Milestones screen for the curriculum-complete tier.",
+    "description": "IL-3 fix: ICU plural. Top-counter row on the Siyumim & Milestones screen for the curriculum-complete tier.",
     "placeholders": {
       "count": { "type": "int" }
     }
   },
-  "siyumimLevelAggregate": "{count} סיומים ברמת אגד",
+  "siyumimLevelAggregate": "{count, plural, one{סיום אחד ברמת אגד} other{{count} סיומים ברמת אגד}}",
   "@siyumimLevelAggregate": {
-    "description": "Top-counter row on the Siyumim & Milestones screen for the aggregate tier.",
+    "description": "IL-3 fix: ICU plural. Top-counter row on the Siyumim & Milestones screen for the aggregate tier.",
     "placeholders": {
       "count": { "type": "int" }
     }
   },
-  "siyumimLevelUnit": "{count} סיומים ברמת יחידה",
+  "siyumimLevelUnit": "{count, plural, one{סיום אחד ברמת יחידה} other{{count} סיומים ברמת יחידה}}",
   "@siyumimLevelUnit": {
-    "description": "Top-counter row on the Siyumim & Milestones screen for the unit tier.",
+    "description": "IL-3 fix: ICU plural. Top-counter row on the Siyumim & Milestones screen for the unit tier.",
     "placeholders": {
       "count": { "type": "int" }
     }

@@ -425,8 +425,9 @@
   },
   "noItemsAtThisLevel": "No items at this level",
   "breadcrumbsRoot": "Root",
-  "lifetimeMarkSavedCount": "Marked {count} lifetime selection(s).",
+  "lifetimeMarkSavedCount": "{count, plural, one{Marked 1 lifetime selection.} other{Marked {count} lifetime selections.}}",
   "@lifetimeMarkSavedCount": {
+    "description": "IL-3 fix: ICU plural to drop the (s) anti-pattern.",
     "placeholders": {
       "count": { "type": "int" }
     }
@@ -1808,22 +1809,23 @@
     }
   },
   "paceOnTrack": "On pace",
-  "paceBehindByDays": "Behind by {count} days",
+  "paceBehindByDays": "{count, plural, one{Behind by 1 day} other{Behind by {count} days}}",
   "@paceBehindByDays": {
+    "description": "IL-3 fix: ICU plural so 1 reads 'Behind by 1 day' not 'Behind by 1 days'.",
     "placeholders": {
       "count": { "type": "int" }
     }
   },
-  "itemsLearnedCount": "{count} items learned",
+  "itemsLearnedCount": "{count, plural, one{1 item learned} other{{count} items learned}}",
   "@itemsLearnedCount": {
-    "description": "NEW sense: distinct sefariaRefs ever touched (lifetime tier — replaces the deprecated ITEMS LEARNED stat-card sense). Distinct from the legacy `itemsLearnedTitle` screen-title key.",
+    "description": "IL-3 fix: ICU plural so 1 reads '1 item learned' not '1 items learned'. NEW sense: distinct sefariaRefs ever touched (lifetime tier). Distinct from the legacy `itemsLearnedTitle` screen-title key.",
     "placeholders": {
       "count": { "type": "int" }
     }
   },
-  "totalChazaros": "{count} total chazaros",
+  "totalChazaros": "{count, plural, one{1 total chazara} other{{count} total Chazaros}}",
   "@totalChazaros": {
-    "description": "Lifetime-tier total review count — every chazara event ever (each event counts).",
+    "description": "IL-3 fix: ICU plural so 1 reads '1 total chazara' not '1 total chazaros'. Lifetime-tier total review count.",
     "placeholders": {
       "count": { "type": "int" }
     }
@@ -1904,23 +1906,23 @@
     }
   },
 
-  "siyumimLevelCurriculum": "{count} curriculum-level siyumim",
+  "siyumimLevelCurriculum": "{count, plural, one{1 curriculum-level siyum} other{{count} curriculum-level siyumim}}",
   "@siyumimLevelCurriculum": {
-    "description": "Top-counter row on the Siyumim & Milestones screen for the curriculum-complete tier (Siyum HaShas, Siyum HaTorah, …). `{count}` is the number of curriculum-complete siyumim across all the user's curricula.",
+    "description": "IL-3 fix: ICU plural so 1 reads '1 curriculum-level siyum' not '1 curriculum-level siyumim'. Top-counter row on the Siyumim & Milestones screen.",
     "placeholders": {
       "count": { "type": "int" }
     }
   },
-  "siyumimLevelAggregate": "{count} aggregate-level siyumim",
+  "siyumimLevelAggregate": "{count, plural, one{1 aggregate-level siyum} other{{count} aggregate-level siyumim}}",
   "@siyumimLevelAggregate": {
-    "description": "Top-counter row on the Siyumim & Milestones screen for the aggregate tier (Siyum Seder / Siyum Chelek). `{count}` is the number of aggregate-level siyumim earned.",
+    "description": "IL-3 fix: ICU plural so 1 reads '1 aggregate-level siyum' not '1 aggregate-level siyumim'. Top-counter row on the Siyumim & Milestones screen.",
     "placeholders": {
       "count": { "type": "int" }
     }
   },
-  "siyumimLevelUnit": "{count} unit-level siyumim",
+  "siyumimLevelUnit": "{count, plural, one{1 unit-level siyum} other{{count} unit-level siyumim}}",
   "@siyumimLevelUnit": {
-    "description": "Top-counter row on the Siyumim & Milestones screen for the unit tier (Siyum Masechta / Sefer / Siman / Hilchos). `{count}` is the number of unit-level siyumim earned.",
+    "description": "IL-3 fix: ICU plural so 1 reads '1 unit-level siyum' not '1 unit-level siyumim'. Top-counter row on the Siyumim & Milestones screen.",
     "placeholders": {
       "count": { "type": "int" }
     }
