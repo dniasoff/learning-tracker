@@ -870,6 +870,120 @@ abstract class AppLocalizations {
   /// **'Skip'**
   String get skip;
 
+  /// Onboarding intro carousel CTA label on the non-final pages (advances to the next intro page).
+  ///
+  /// In en, this message translates to:
+  /// **'Continue Journey'**
+  String get introContinueJourney;
+
+  /// All-caps label under the progress bar on the first onboarding intro page.
+  ///
+  /// In en, this message translates to:
+  /// **'SETUP PROGRESS'**
+  String get introSetupProgress;
+
+  /// First (non-highlighted) line of the daily-plan intro page title. Rendered above introDailyPlanTitleHighlight.
+  ///
+  /// In en, this message translates to:
+  /// **'Your Daily'**
+  String get introDailyPlanTitleLine1;
+
+  /// Highlighted (italic, navy) second line of the daily-plan intro page title.
+  ///
+  /// In en, this message translates to:
+  /// **'Torah Plan'**
+  String get introDailyPlanTitleHighlight;
+
+  /// Subtitle on the daily-plan intro page. {highlight} is the bolded phrase introDailyPlanSubtitleHighlight.
+  ///
+  /// In en, this message translates to:
+  /// **'Learning Tracker turns massive goals into {highlight}, so you always know what to study next.'**
+  String introDailyPlanSubtitle(String highlight);
+
+  /// Bolded phrase embedded in introDailyPlanSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'clear daily tasks'**
+  String get introDailyPlanSubtitleHighlight;
+
+  /// Prefix of the Mishna intro page title; followed by the localized Mishna domain term (italic, navy).
+  ///
+  /// In en, this message translates to:
+  /// **'Never Forget\na '**
+  String get introMishnaTitlePrefix;
+
+  /// Subtitle on the Mishna intro page. {highlight} is the bolded phrase introMishnaSubtitleHighlight.
+  ///
+  /// In en, this message translates to:
+  /// **'Master your learning with intelligent review cycles. Our {highlight} helps you retain everything you learn.'**
+  String introMishnaSubtitle(String highlight);
+
+  /// Bolded phrase embedded in introMishnaSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'spaced-repetition engine'**
+  String get introMishnaSubtitleHighlight;
+
+  /// Title of the rewards intro page.
+  ///
+  /// In en, this message translates to:
+  /// **'Earn While You Learn'**
+  String get introRewardsTitle;
+
+  /// Subtitle on the rewards intro page. {scholarTier} is the toggle-aware Talmid Chochom domain term.
+  ///
+  /// In en, this message translates to:
+  /// **'Collect points, build streaks, and unlock mystery rewards as you climb from a Novice to a {scholarTier}!'**
+  String introRewardsSubtitle(String scholarTier);
+
+  /// Decorative chip on the Mishna intro illustration showing a partial 'Review…' word.
+  ///
+  /// In en, this message translates to:
+  /// **'Review…'**
+  String get introMishnaReviewChip;
+
+  /// Title of the banner on the rewards intro page clarifying that points/rewards apply to Child profiles.
+  ///
+  /// In en, this message translates to:
+  /// **'For Child profiles only'**
+  String get introChildModeTagTitle;
+
+  /// Body of the Child-profile banner on the rewards intro page.
+  ///
+  /// In en, this message translates to:
+  /// **'Points, streaks, and rewards show up when you create a Child profile. Adult profiles focus on plain learning progress.'**
+  String get introChildModeTagBody;
+
+  /// Feature-card label on the rewards intro page (two lines).
+  ///
+  /// In en, this message translates to:
+  /// **'Badge\nCollection'**
+  String get introBadgeCollection;
+
+  /// Feature-card label on the rewards intro page (two lines).
+  ///
+  /// In en, this message translates to:
+  /// **'Mystery\nPrizes'**
+  String get introMysteryPrizes;
+
+  /// Generic header on the illustrative scholar-level card (rewards intro page).
+  ///
+  /// In en, this message translates to:
+  /// **'Scholar Progress'**
+  String get introScholarProgress;
+
+  /// Badge marking the scholar-level card as an illustrative preview, not the user's real level.
+  ///
+  /// In en, this message translates to:
+  /// **'EXAMPLE'**
+  String get introScholarExample;
+
+  /// Lowest scholar-tier label on the illustrative scholar-level card.
+  ///
+  /// In en, this message translates to:
+  /// **'NOVICE'**
+  String get introScholarNovice;
+
   /// No description provided for @joinCalendarProgram.
   ///
   /// In en, this message translates to:

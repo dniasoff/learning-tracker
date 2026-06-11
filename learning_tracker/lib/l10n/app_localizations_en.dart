@@ -438,6 +438,70 @@ class AppLocalizationsEn extends AppLocalizations {
   String get skip => 'Skip';
 
   @override
+  String get introContinueJourney => 'Continue Journey';
+
+  @override
+  String get introSetupProgress => 'SETUP PROGRESS';
+
+  @override
+  String get introDailyPlanTitleLine1 => 'Your Daily';
+
+  @override
+  String get introDailyPlanTitleHighlight => 'Torah Plan';
+
+  @override
+  String introDailyPlanSubtitle(String highlight) {
+    return 'Learning Tracker turns massive goals into $highlight, so you always know what to study next.';
+  }
+
+  @override
+  String get introDailyPlanSubtitleHighlight => 'clear daily tasks';
+
+  @override
+  String get introMishnaTitlePrefix => 'Never Forget\na ';
+
+  @override
+  String introMishnaSubtitle(String highlight) {
+    return 'Master your learning with intelligent review cycles. Our $highlight helps you retain everything you learn.';
+  }
+
+  @override
+  String get introMishnaSubtitleHighlight => 'spaced-repetition engine';
+
+  @override
+  String get introRewardsTitle => 'Earn While You Learn';
+
+  @override
+  String introRewardsSubtitle(String scholarTier) {
+    return 'Collect points, build streaks, and unlock mystery rewards as you climb from a Novice to a $scholarTier!';
+  }
+
+  @override
+  String get introMishnaReviewChip => 'Review…';
+
+  @override
+  String get introChildModeTagTitle => 'For Child profiles only';
+
+  @override
+  String get introChildModeTagBody =>
+      'Points, streaks, and rewards show up when you create a Child profile. Adult profiles focus on plain learning progress.';
+
+  @override
+  String get introBadgeCollection => 'Badge\nCollection';
+
+  @override
+  String get introMysteryPrizes => 'Mystery\nPrizes';
+
+  @override
+  String get introScholarProgress => 'Scholar Progress';
+
+  @override
+  String get introScholarExample => 'EXAMPLE';
+
+  @override
+  String get introScholarNovice => 'NOVICE';
+
+  @override
   String get joinCalendarProgram => 'Join a Calendar Program';
 
   @override

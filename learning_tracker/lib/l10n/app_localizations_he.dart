@@ -436,6 +436,70 @@ class AppLocalizationsHe extends AppLocalizations {
   String get skip => 'דלג';
 
   @override
+  String get introContinueJourney => 'ממשיכים במסע';
+
+  @override
+  String get introSetupProgress => 'התקדמות ההגדרה';
+
+  @override
+  String get introDailyPlanTitleLine1 => 'תוכנית הלימוד';
+
+  @override
+  String get introDailyPlanTitleHighlight => 'היומית שלך';
+
+  @override
+  String introDailyPlanSubtitle(String highlight) {
+    return 'מעקב הלימוד הופך יעדים גדולים ל$highlight, כך שתמיד תדעו מה ללמוד הלאה.';
+  }
+
+  @override
+  String get introDailyPlanSubtitleHighlight => 'משימות יומיות ברורות';
+
+  @override
+  String get introMishnaTitlePrefix => 'לעולם לא תשכחו\n';
+
+  @override
+  String introMishnaSubtitle(String highlight) {
+    return 'התמחו בלימוד שלכם בעזרת מחזורי חזרה חכמים. $highlight שלנו עוזר לכם לזכור כל מה שאתם לומדים.';
+  }
+
+  @override
+  String get introMishnaSubtitleHighlight => 'מנוע החזרה המרווחת';
+
+  @override
+  String get introRewardsTitle => 'מרוויחים תוך כדי לימוד';
+
+  @override
+  String introRewardsSubtitle(String scholarTier) {
+    return 'צברו נקודות, בנו רצפים ופתחו פרסים מסתוריים ככל שתתקדמו ממתחילים ועד $scholarTier!';
+  }
+
+  @override
+  String get introMishnaReviewChip => 'חזרה…';
+
+  @override
+  String get introChildModeTagTitle => 'לפרופילי ילד בלבד';
+
+  @override
+  String get introChildModeTagBody =>
+      'נקודות, רצפים ופרסים מופיעים כשיוצרים פרופיל ילד. פרופילי מבוגר מתמקדים בהתקדמות לימוד פשוטה.';
+
+  @override
+  String get introBadgeCollection => 'אוסף\nתגים';
+
+  @override
+  String get introMysteryPrizes => 'פרסים\nמסתוריים';
+
+  @override
+  String get introScholarProgress => 'התקדמות הלומד';
+
+  @override
+  String get introScholarExample => 'דוגמה';
+
+  @override
+  String get introScholarNovice => 'מתחיל';
+
+  @override
   String get joinCalendarProgram => 'הצטרף לתוכנית לוח שנה';
 
   @override
