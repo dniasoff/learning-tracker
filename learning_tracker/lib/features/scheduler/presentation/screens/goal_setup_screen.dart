@@ -387,49 +387,56 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Pace value input
-        Row(
-          children: [
-            Expanded(
-              child: TextFormField(
-                initialValue: _paceValue.toString(),
-                keyboardType: TextInputType.number,
-                decoration: InputDecoration(
-                  // R1-(7): use l10n so Hebrew sees translated labels.
-                  labelText: AppLocalizations.of(
-                    context,
-                  )!.goalPaceInputLabel(unitLabel, perLabel),
-                  helperText: AppLocalizations.of(
-                    context,
-                  )!.goalPaceHowMany(unitLabel.toLowerCase(), perLabel),
-                ),
-                onChanged: (v) {
-                  final parsed = int.tryParse(v);
-                  if (parsed != null && parsed > 0) {
-                    setState(() => _paceValue = parsed);
-                  }
-                },
-              ),
+        // Pace value input.
+        //
+        // R1v2-(5): the per-day/per-week SegmentedButton previously shared a
+        // horizontal Row with the field, taking its intrinsic width and
+        // squeezing the Expanded field so the (often long, e.g. "Amudim Per
+        // day" / "כמה עמודים ביום?") labelText + helperText were clipped —
+        // worse at font scale 1.3. The selector now sits on its own row BELOW
+        // the field so the field spans the full width, and helperMaxLines lets
+        // the helper wrap instead of ellipsizing. This holds for en + he at
+        // font scale 1.0 and 1.3.
+        TextFormField(
+          initialValue: _paceValue.toString(),
+          keyboardType: TextInputType.number,
+          decoration: InputDecoration(
+            // R1-(7): use l10n so Hebrew sees translated labels.
+            labelText: AppLocalizations.of(
+              context,
+            )!.goalPaceInputLabel(unitLabel, perLabel),
+            helperText: AppLocalizations.of(
+              context,
+            )!.goalPaceHowMany(unitLabel.toLowerCase(), perLabel),
+            // Allow the helper to wrap rather than truncate to one ellipsized
+            // line at large font scales / long Hebrew strings.
+            helperMaxLines: 2,
+          ),
+          onChanged: (v) {
+            final parsed = int.tryParse(v);
+            if (parsed != null && parsed > 0) {
+              setState(() => _paceValue = parsed);
+            }
+          },
+        ),
+        const SizedBox(height: 12),
+        // Per day / per week selector — full width on its own row so it never
+        // squeezes the pace field's label/helper above.
+        SegmentedButton<String>(
+          segments: [
+            ButtonSegment(
+              value: 'per_day',
+              label: Text(AppLocalizations.of(context)!.pacePerDay),
             ),
-            const SizedBox(width: 16),
-            // Per day / per week selector
-            SegmentedButton<String>(
-              segments: [
-                ButtonSegment(
-                  value: 'per_day',
-                  label: Text(AppLocalizations.of(context)!.pacePerDay),
-                ),
-                ButtonSegment(
-                  value: 'per_week',
-                  label: Text(AppLocalizations.of(context)!.pacePerWeek),
-                ),
-              ],
-              selected: {_paceUnit},
-              onSelectionChanged: (selected) {
-                setState(() => _paceUnit = selected.first);
-              },
+            ButtonSegment(
+              value: 'per_week',
+              label: Text(AppLocalizations.of(context)!.pacePerWeek),
             ),
           ],
+          selected: {_paceUnit},
+          onSelectionChanged: (selected) {
+            setState(() => _paceUnit = selected.first);
+          },
         ),
         // Projected completion card
         if (widget.totalItems != null) ...[

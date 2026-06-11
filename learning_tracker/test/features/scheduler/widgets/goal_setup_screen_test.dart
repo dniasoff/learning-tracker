@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
@@ -28,6 +30,60 @@ Widget _makeApp({required Widget home, List<Override> overrides = const []}) =>
         home: home,
       ),
     );
+
+/// Builds the goal screen at a specific [locale] + [textScale], used to prove
+/// the pace-input label/helper never truncate (R1v2-(5)).
+Widget _makeLocalizedApp({
+  required Widget home,
+  required Locale locale,
+  required double textScale,
+  List<Override> overrides = const [],
+}) => ProviderScope(
+  overrides: overrides,
+  child: MaterialApp(
+    locale: locale,
+    localizationsDelegates: const [
+      AppLocalizations.delegate,
+      GlobalMaterialLocalizations.delegate,
+      GlobalWidgetsLocalizations.delegate,
+      GlobalCupertinoLocalizations.delegate,
+    ],
+    supportedLocales: AppLocalizations.supportedLocales,
+    home: Builder(
+      builder: (context) => MediaQuery(
+        data: MediaQuery.of(
+          context,
+        ).copyWith(textScaler: TextScaler.linear(textScale)),
+        child: home,
+      ),
+    ),
+  ),
+);
+
+/// Asserts that NO [RenderParagraph] rendered inside the pace [TextFormField]'s
+/// InputDecorator (its label + helper) is ellipsis-truncated. Under the old
+/// layout the field shared a Row with the per-day/week SegmentedButton, which
+/// squeezed it so the long label/helper clipped — worse at font scale 1.3.
+void _expectPaceLabelsNotTruncated(WidgetTester tester) {
+  final field = find.byType(TextFormField);
+  expect(field, findsOneWidget);
+  final paragraphs = find.descendant(
+    of: field,
+    matching: find.byType(RichText),
+  );
+  expect(paragraphs, findsWidgets);
+  for (final element in paragraphs.evaluate()) {
+    final rp = element.renderObject! as RenderParagraph;
+    expect(
+      rp.didExceedMaxLines,
+      isFalse,
+      reason:
+          'Pace-input label/helper is ellipsis-truncated — give the field room '
+          'so the label and helper wrap (R1v2-(5)). Offending text: '
+          '"${rp.text.toPlainText()}"',
+    );
+  }
+}
 
 void main() {
   setUp(() {
@@ -322,5 +378,44 @@ void main() {
       expect(find.text('Edit Goal'), findsOneWidget);
       expect(find.text('Update Goal'), findsOneWidget);
     });
+
+    // R1v2-(5): the pace-input labelText ("<unit> <per>") and helperText
+    // ("How many <unit> …?") must never clip/ellipsize at default font OR
+    // font scale 1.3, in en + he. Reproduced by rendering the pace section
+    // and asserting no label/helper RenderParagraph exceeds its max lines.
+    for (final locale in const [Locale('en'), Locale('he')]) {
+      for (final scale in const [1.0, 1.3]) {
+        testWidgets(
+          'pace input label + helper are not truncated '
+          '(${locale.languageCode} @ ${scale}x)',
+          (tester) async {
+            // Bavli surfaces the longest unit words (Amudim/Dafim, עמודים/דפים)
+            // and exercises the per-day/per-week selector that previously
+            // squeezed the field.
+            tester.view.physicalSize = const Size(412, 915);
+            tester.view.devicePixelRatio = 1.0;
+            addTearDown(tester.view.reset);
+
+            await tester.pumpWidget(
+              _makeLocalizedApp(
+                locale: locale,
+                textScale: scale,
+                home: const GoalSetupScreen(
+                  curriculumId: CurriculumId.bavli,
+                  totalItems: 2711,
+                ),
+              ),
+            );
+            await tester.pumpAndSettle();
+
+            // Switch to pace mode via the speed-icon segment (locale-agnostic).
+            await tester.tap(find.byIcon(Icons.speed));
+            await tester.pumpAndSettle();
+
+            _expectPaceLabelsNotTruncated(tester);
+          },
+        );
+      }
+    }
   });
 }
