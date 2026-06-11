@@ -394,9 +394,14 @@ class _HebrewTermsTile extends ConsumerWidget {
         iconColor: AppTheme.brandBlueBright,
         iconBackground: AppTheme.brandBlueSoft,
       ),
-      trailing: Switch(
-        value: useHebrew,
-        onChanged: (v) => ref.read(useHebrewTermsProvider.notifier).set(v),
+      // ST-3 fix: wrap Switch in Semantics so assistive tech announces
+      // "Hebrew Terms, Switch, on/off" instead of an unlabeled toggle.
+      trailing: Semantics(
+        label: l10n.hebrewTermsPreference,
+        child: Switch(
+          value: useHebrew,
+          onChanged: (v) => ref.read(useHebrewTermsProvider.notifier).set(v),
+        ),
       ),
     );
   }
