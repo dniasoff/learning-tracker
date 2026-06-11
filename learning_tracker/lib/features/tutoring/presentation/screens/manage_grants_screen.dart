@@ -247,7 +247,10 @@ class _GrantRowState extends ConsumerState<_GrantRow> {
                 parentEmail: '',
                 parentUid: widget.grant.parentUid,
                 tutorName: tutorName,
-                childName: widget.grant.childProfileId,
+                // GA-5: use the human-readable display label, not the raw
+                // Firestore profile id (childProfileId was a string like
+                // "raw_firestore_profile_id_123" — not a child name).
+                childName: widget.grant.childDisplayLabel,
               ),
         );
       }

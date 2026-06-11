@@ -2513,6 +2513,18 @@ abstract class AppLocalizations {
   /// **'Save Reward'**
   String get rewardConfigSaveRewardButton;
 
+  /// No description provided for @rewardConfigUpdateRewardButton.
+  ///
+  /// In en, this message translates to:
+  /// **'Update Reward'**
+  String get rewardConfigUpdateRewardButton;
+
+  /// No description provided for @rewardConfigEditModeSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Update the icon, name, or point cost for this reward.'**
+  String get rewardConfigEditModeSubtitle;
+
   /// No description provided for @rewardConfigNamePlaceholder.
   ///
   /// In en, this message translates to:

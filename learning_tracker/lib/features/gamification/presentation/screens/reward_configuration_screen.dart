@@ -316,7 +316,10 @@ class _RewardConfigurationScreenState
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
                       Text(
-                        l10n.rewardConfigConfigureNewTitle,
+                        // GA-7: Switch heading to edit-mode copy when editing.
+                        form.isEditing
+                            ? l10n.rewardConfigEditReward
+                            : l10n.rewardConfigConfigureNewTitle,
                         style: Theme.of(context).textTheme.headlineSmall
                             ?.copyWith(
                               fontWeight: FontWeight.w800,
@@ -326,7 +329,10 @@ class _RewardConfigurationScreenState
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        l10n.rewardConfigConfigureNewSubtitle,
+                        // GA-7: Subtitle also switches to edit-mode copy.
+                        form.isEditing
+                            ? l10n.rewardConfigEditModeSubtitle
+                            : l10n.rewardConfigConfigureNewSubtitle,
                         style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                           color: _kMutedLabel,
                           height: 1.35,
@@ -434,8 +440,13 @@ class _RewardConfigurationScreenState
                         width: double.infinity,
                         height: 52,
                         child: FilledButton(
+                          // GA-7: Disable Save when form is not valid (name
+                          // empty / cost invalid) to prevent the silent no-op.
+                          // Also disable for tutors without edit permission.
                           onPressed: canEdit
-                              ? () => unawaited(_saveReward(l10n))
+                              ? (form.canSave
+                                    ? () => unawaited(_saveReward(l10n))
+                                    : null)
                               : () =>
                                     ScaffoldMessenger.of(context).showSnackBar(
                                       SnackBar(
@@ -453,7 +464,10 @@ class _RewardConfigurationScreenState
                             ),
                           ),
                           child: Text(
-                            l10n.rewardConfigSaveRewardButton,
+                            // GA-7: Use "Update Reward" button label in edit mode.
+                            form.isEditing
+                                ? l10n.rewardConfigUpdateRewardButton
+                                : l10n.rewardConfigSaveRewardButton,
                             style: const TextStyle(
                               fontWeight: FontWeight.w800,
                               fontSize: 16,

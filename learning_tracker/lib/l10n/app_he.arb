@@ -645,6 +645,8 @@
   },
   "rewardConfigCancel": "ביטול",
   "rewardConfigSaveRewardButton": "שמירת פרס",
+  "rewardConfigUpdateRewardButton": "עדכון פרס",
+  "rewardConfigEditModeSubtitle": "עדכן את הסמל, השם, או עלות הנקודות עבור פרס זה.",
   "rewardConfigNamePlaceholder": "למשל, כוכב ארד",
   "rewardConfigPointsPlaceholder": "למשל, 500",
   "rewardConfigMenuManageRewards": "ניהול פרסים",

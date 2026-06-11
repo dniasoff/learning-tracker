@@ -1380,6 +1380,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get rewardConfigSaveRewardButton => 'Save Reward';
 
   @override
+  String get rewardConfigUpdateRewardButton => 'Update Reward';
+
+  @override
+  String get rewardConfigEditModeSubtitle =>
+      'Update the icon, name, or point cost for this reward.';
+
+  @override
   String get rewardConfigNamePlaceholder => 'e.g., Bronze Star';
 
   @override

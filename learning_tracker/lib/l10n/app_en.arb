@@ -642,7 +642,7 @@
   "manageChildLearningSubtitle": "Manage tracks, points, rewards, and goals",
   "pointConfiguration": "Point Configuration",
   "pointConfigurationSubtitle": "Set how many points activities are worth",
-  "rewardConfigurationTitle": "Reward configuration",
+  "rewardConfigurationTitle": "Reward Configuration",
   "rewardConfigurationSubtitle": "Set prizes your child can redeem with their points.",
   "rewardConfigPerTrackTab": "Per track",
   "rewardConfigTotalPointsTab": "Total points",
@@ -675,6 +675,8 @@
   },
   "rewardConfigCancel": "Cancel",
   "rewardConfigSaveRewardButton": "Save Reward",
+  "rewardConfigUpdateRewardButton": "Update Reward",
+  "rewardConfigEditModeSubtitle": "Update the icon, name, or point cost for this reward.",
   "rewardConfigNamePlaceholder": "e.g., Bronze Star",
   "rewardConfigPointsPlaceholder": "e.g., 500",
   "rewardConfigMenuManageRewards": "Manage rewards",
@@ -2238,7 +2240,7 @@
     }
   },
   "manageTutorsNoTutors": "No tutors invited.",
-  "manageTutorsActiveSection": "ACTIVE ({count})",
+  "manageTutorsActiveSection": "Active ({count})",
   "@manageTutorsActiveSection": {
     "placeholders": {
       "count": { "type": "int" }
