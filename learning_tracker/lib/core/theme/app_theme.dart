@@ -25,10 +25,27 @@ class AppTheme {
   static const Color brandBlueDeep = Color(0xFF002A80);
   static const Color brandBlueSoft = Color(0xFFD9E2F4);
 
-  /// Neutral accent (Silver Slate) for secondary text and iconography.
+  /// Neutral accent (Silver Slate) for secondary text, iconography, and
+  /// navigation-bar unselected items.  The name "Coral" is a legacy misnomer —
+  /// the value is CSS SlateGray and intentionally cool-toned. Use
+  /// [brandWarning*] for error/warning surfaces (snackbars, destructive cards).
   static const Color brandCoral = Color(0xFF708090);
   static const Color brandCoralSoft = Color(0xFFD8DEE3);
   static const Color brandCoralDeep = Color(0xFF4E5E70);
+
+  /// True coral / warning palette — IL-4 fix.
+  ///
+  /// These are the CORRECT colours for error snackbars, destructive-action
+  /// cards, and any surface that must communicate urgency or data-loss risk.
+  /// The old [brandCoralDeep] (slate-gray) carried zero red/urgency and made
+  /// warning surfaces look neutral — an audit finding (IL-4).
+  ///
+  /// Migration: callers of [brandCoralDeep] / [brandCoralSoft] for warning
+  /// contexts (e.g. `_showError` snackbar backgrounds, offline data-loss cards)
+  /// should migrate to [brandWarningDeep] / [brandWarningSoft] respectively.
+  static const Color brandWarning = Color(0xFFD45700);
+  static const Color brandWarningSoft = Color(0xFFFDE8D8);
+  static const Color brandWarningDeep = Color(0xFFB33000);
 
   /// Success color (Olive Grove) for progress and streaks.
   static const Color brandGold = Color(0xFF6B8E23);
