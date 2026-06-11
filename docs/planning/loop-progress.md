@@ -444,3 +444,20 @@ device-driven (commit 95ede74a, make ci GREEN 9900 pass):
 - STATUS: both Daniel decisions delivered (collision fixed-not-patched; local-vs-cloud intended). 14/45 screens
   verified + R4's 6 in flight. Remaining after R4: ~20 (R5: upgrade_to_cloud, track_management_hub, curriculum_list,
   learning_order, text_display, lifetime_knowledge; R6: onboarding/auth cluster — needs pm clear for fresh state).
+
+### R4 redo results (2026-06-11) — parent/management cluster
+- R4 (workflow wlnmw7bqf, 6 screens, 12 findings: 3 P0/9 P2). KEY LESSON: the 3 "P0"s were FALSE POSITIVES — agents
+  flagged the ABSENCE of the in-app App Language switcher as a "keystone regression", but that switcher was
+  INTENTIONALLY REMOVED (device-language correction). Root cause: I never updated the runner's KNOWN constant after
+  that correction. FIXED tool/vision_find_pass.js KNOWN (commit c5aaf433): UI follows device language, no in-app
+  switcher (do not flag its absence); test Hebrew via `cmd locale set-app-locales <pkg> --locales he` (works on API
+  33+ e.g. 5554 — much faster than the Settings UI; reset with --locales ''). Hebrew RTL via device locale CONFIRMED
+  again on 5554. 3 screens CLEAN (invite_tutor, notifications [toggle-persistence verified], city_picker).
+- REAL R4 bugs: 2 clear → R4 fix wave (wzywqzsnu, 2 workers off c5aaf433): (#1) manage_learners edit-learner empty
+  name silently blocked, no error → inline error; (#4) manage_tutors invite failure leaks raw "Unauthenticated" token
+  → friendly localized error (ST-4 pattern). 3 NOTED as likely-intended/test-data (not auto-fixed): Set-Parent-PIN
+  dialog no Cancel (may be mandatory setup); creating a child auto-switches active profile (likely intended); cloud
+  RedeemKid shows SELF-LEARNER badge + adult email on 5558 (a pre-existing cloud test profile I don't control — test
+  data quirk); plus a low send-logs copy note on a local-only account.
+- NEXT: integrate R4 fix wave → R5 (upgrade_to_cloud, track_management_hub, curriculum_list, learning_order,
+  text_display, lifetime_knowledge) → R6 (onboarding/auth — needs pm clear for fresh state).
