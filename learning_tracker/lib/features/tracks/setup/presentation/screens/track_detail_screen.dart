@@ -4,7 +4,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
@@ -27,6 +26,7 @@ import 'package:learning_tracker/features/settings/presentation/providers/curric
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/after_track_change_invalidation.dart';
+import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/screens/edit_track_screen.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/widgets/track_info_card.dart';
 import 'package:learning_tracker/features/tracks/track_order/presentation/screens/track_learning_order_screen.dart';
@@ -133,9 +133,11 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     final curriculum = CurriculumId.values
         .where((c) => c.storageKey == track.curriculumId)
         .firstOrNull;
-    final titleText = curriculum != null
-        ? curriculumLabelText(ref, curriculum: curriculum)
-        : track.curriculumId;
+    // B-EDIT-NAME fix: the header must surface the user's custom track name
+    // (stored in Goal.description) when set, falling back to the curriculum
+    // label otherwise — it previously always showed the curriculum name,
+    // ignoring an edited name.
+    final titleText = trackDisplayTitle(ref, track);
 
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
@@ -669,6 +671,9 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
                 if (mounted) {
                   ref.invalidate(_trackGoalProvider(track.id));
                   ref.invalidate(_trackPaceCalcProvider(track));
+                  // B-EDIT-NAME: refresh the resolved title so an edited name
+                  // surfaces immediately in the header on return.
+                  ref.invalidate(trackCustomNameProvider(track.id));
                 }
               },
             ),

@@ -187,4 +187,79 @@ void main() {
       expect(find.text('Shabbat'), findsNothing);
     });
   });
+
+  // ── Day-circle AVATAR initials (finding 1: localized, no mixed script) ───────
+
+  group('StudyDaysEditable — avatar initials are localized', () {
+    /// Collects the single-grapheme text inside every day-circle CircleAvatar.
+    List<String> avatarInitials(WidgetTester tester) {
+      final texts = <String>[];
+      for (final avatar in tester.widgetList<CircleAvatar>(
+        find.byType(CircleAvatar),
+      )) {
+        final child = avatar.child;
+        if (child is Text && child.data != null) texts.add(child.data!);
+      }
+      return texts;
+    }
+
+    final hebrew = RegExp('[֐-׿]');
+    final latin = RegExp('[A-Za-z]');
+
+    testWidgets('English locale: every avatar initial is Latin (no Hebrew)', (
+      tester,
+    ) async {
+      _sizeView(tester);
+      await tester.pumpWidget(_buildStudyDaysApp());
+      await tester.pump();
+
+      final initials = avatarInitials(tester);
+      expect(initials.length, 7, reason: 'one avatar per day');
+      // Sun..Fri + Shabbos → all Latin first letters; none Hebrew.
+      for (final i in initials) {
+        expect(
+          hebrew.hasMatch(i),
+          isFalse,
+          reason: 'EN locale must not show a Hebrew avatar initial (got "$i")',
+        );
+      }
+      // Saturday's avatar in English-Ashkenazi is "S" (Shabbos), not "ש".
+      expect(initials.contains('ש'), isFalse);
+    });
+
+    testWidgets(
+      'Hebrew locale + Terms ON: every avatar initial is Hebrew (no lone '
+      'Latin)',
+      (tester) async {
+        _sizeView(tester);
+        await tester.pumpWidget(
+          _buildStudyDaysApp(
+            locale: const Locale('he'),
+            useHebrewTerms: true,
+          ),
+        );
+        await tester.pump();
+
+        final initials = avatarInitials(tester);
+        expect(initials.length, 7);
+        // Pre-fix the Sun..Fri initials were Latin 'S'/'M'/'T' (from the
+        // hardcoded English kStepStudyDayLabels) next to Shabbos' Hebrew 'ש' —
+        // a mixed-script row even in the Hebrew locale. Post-fix every initial
+        // must be Hebrew script (Sun..Fri from the he schedulerDayAbbrev keys,
+        // Sat from the שבת term).
+        for (final i in initials) {
+          expect(
+            latin.hasMatch(i),
+            isFalse,
+            reason:
+                'Hebrew locale must not show a Latin avatar initial (got '
+                '"$i") — the row must be fully Hebrew',
+          );
+          expect(hebrew.hasMatch(i), isTrue);
+        }
+        // Saturday's avatar initial is the first glyph of "שבת" → "ש".
+        expect(initials.contains('ש'), isTrue);
+      },
+    );
+  });
 }

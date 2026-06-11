@@ -676,12 +676,25 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
   }
 
   Widget _buildStudyDaysSection(ThemeData theme) {
+    final l10n = AppLocalizations.of(context)!;
+    final terms = domainTermLabels(ref);
+    final variant = ref.watch(currentTransliterationVariantProvider);
     return Column(
       children: [
         for (var i = 0; i < kStepStudyDayNumbers.length; i++) ...[
           if (i > 0) const SizedBox(height: 8),
           StudyDayCard(
-            initial: kStepStudyDayLabels[i].substring(0, 1),
+            // Avatar initial = first grapheme of the LOCALIZED short label so
+            // the column never mixes Latin initials with a lone Hebrew glyph
+            // (matches StudyDaysEditable / finding 1).
+            initial: studyDayInitial(
+              studyDayAbbrevLabel(
+                dayNum: kStepStudyDayNumbers[i],
+                l10n: l10n,
+                terms: terms,
+                variant: variant,
+              ),
+            ),
             title: _dayName(kStepStudyDayNumbers[i]),
             subtitle: '',
             subtitleColor: AppTheme.brandInkMuted,

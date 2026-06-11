@@ -338,12 +338,23 @@ class DeadlineGoalCard extends StatelessWidget {
                 )
               else
                 Text(
-                  l10n.addTrackGoalDeadlinePaceLine(
-                    itemsPerStudyDay,
-                    unitLabel,
-                    studyDaysInWindow,
-                    totalScopeItems,
-                  ),
+                  // Guard the "(≈N items)" parenthetical: until the scope count
+                  // resolves to a POSITIVE number, omit it entirely rather than
+                  // render the nonsensical "≈0 items". `scopeIsLoading` only
+                  // tracks the DB count provider; the wizard-scope path can have
+                  // a resolved-but-zero count, so this guards that gap too.
+                  totalScopeItems > 0
+                      ? l10n.addTrackGoalDeadlinePaceLine(
+                          itemsPerStudyDay,
+                          unitLabel,
+                          studyDaysInWindow,
+                          totalScopeItems,
+                        )
+                      : l10n.addTrackGoalDeadlinePaceLineNoTotal(
+                          itemsPerStudyDay,
+                          unitLabel,
+                          studyDaysInWindow,
+                        ),
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: AppTheme.brandInkMuted,
                     fontStyle: FontStyle.italic,

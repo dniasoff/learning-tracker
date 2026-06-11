@@ -276,6 +276,15 @@
   },
   "addTrackGoalDeadlineNoStudyDaysInWindow": "No study day in your week falls in the range to this deadline. Add study days or move the deadline later.",
   "addTrackGoalDeadlinePaceLineLoading": "Loading scope size to estimate per study day…",
+  "addTrackGoalDeadlinePaceLineNoTotal": "About {items} {unit} per study day, across {studyDays, plural, =1{1 study day} other{{studyDays} study days}} to finish the scope by the deadline.",
+  "@addTrackGoalDeadlinePaceLineNoTotal": {
+    "description": "Deadline pace line shown before the scope item count resolves to a positive number — omits the '(≈N items)' parenthetical so we never display '≈0 items'.",
+    "placeholders": {
+      "items": { "type": "int" },
+      "unit": { "type": "String" },
+      "studyDays": { "type": "int" }
+    }
+  },
   "addTrack": "Add Track",
   "addTrackCurriculumReplaceWarning": "You already have a track here. Choosing this curriculum again will replace your current setup and may reset your progress for it.",
   "noActiveCurricula": "No active curricula",

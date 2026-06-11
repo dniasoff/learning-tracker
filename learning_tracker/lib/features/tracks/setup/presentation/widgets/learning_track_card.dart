@@ -2,12 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
-import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
+import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Rich track row used on [TrackManagementHubScreen] and
@@ -121,26 +121,19 @@ class LearningTrackCard extends ConsumerWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (curriculum != null)
-                      CurriculumLabel.curriculum(
-                        curriculum,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          color: AppTheme.brandBlueDeep,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      )
-                    else
-                      Text(
-                        track.curriculumId,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: theme.textTheme.titleLarge?.copyWith(
-                          color: AppTheme.brandBlueDeep,
-                          fontWeight: FontWeight.w800,
-                        ),
+                    // B-EDIT-NAME fix: surface the user's custom track name
+                    // (Goal.description) when set, falling back to the
+                    // curriculum label. The card previously always showed the
+                    // curriculum name and ignored an edited name.
+                    Text(
+                      trackDisplayTitle(ref, track),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        color: AppTheme.brandBlueDeep,
+                        fontWeight: FontWeight.w800,
                       ),
+                    ),
                     if (showProgress) ...[
                       const SizedBox(height: 9),
                       if (!hasProgramEnrollment) ...[

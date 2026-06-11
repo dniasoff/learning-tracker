@@ -1194,6 +1194,75 @@ void main() {
       await _tearDown(tester);
     });
 
+    testWidgets(
+      'B-EDIT-NAME: custom track name (goal.description) surfaces as the '
+      'AppBar title, not the curriculum label',
+      (tester) async {
+        final db2 = inMemoryDb();
+        await seedProfileZero(db2);
+        addTearDown(() => db2.close());
+
+        // Seed a real track row so the goal's FK is satisfied.
+        final trackId = await seedTrack(db2, profileId: 0);
+        final track = _track(id: trackId, profileId: 0);
+        // Seed a goal whose description is a USER-CHOSEN name distinct from the
+        // curriculum label ("Mishnayos").
+        await _seedGoal(
+          db2,
+          profileId: 0,
+          trackId: trackId,
+          description: 'My Shas Journey',
+        );
+
+        await tester.pumpWidget(_buildDetailApp(track: track, db: db2));
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        // Pre-fix the header always showed the curriculum label and ignored the
+        // edited name. The custom name must now surface in the AppBar title.
+        final appBarTitle = find.descendant(
+          of: find.byType(AppBar),
+          matching: find.text('My Shas Journey'),
+        );
+        expect(appBarTitle, findsOneWidget);
+        // And the curriculum label must NOT appear as the title.
+        expect(
+          find.descendant(
+            of: find.byType(AppBar),
+            matching: find.text('Mishnayos'),
+          ),
+          findsNothing,
+        );
+
+        await _tearDown(tester);
+      },
+    );
+
+    testWidgets(
+      'B-EDIT-NAME: no custom name → falls back to the curriculum label',
+      (tester) async {
+        final db2 = inMemoryDb();
+        await seedProfileZero(db2);
+        addTearDown(() => db2.close());
+
+        final track = _track(id: 1, profileId: 0);
+        // No goal seeded → no custom name → fall back to curriculum label.
+        await tester.pumpWidget(_buildDetailApp(track: track, db: db2));
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        expect(
+          find.descendant(
+            of: find.byType(AppBar),
+            matching: find.text('Mishnayos'),
+          ),
+          findsOneWidget,
+        );
+
+        await _tearDown(tester);
+      },
+    );
+
     testWidgets('track-since date is rendered somewhere on screen', (
       tester,
     ) async {

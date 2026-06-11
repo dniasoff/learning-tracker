@@ -273,6 +273,7 @@
   },
   "addTrackGoalDeadlineNoStudyDaysInWindow": "אין יום לימוד בטווח עד תאריך היעד. הוסיפו ימי לימוד או בחרו תאריך מאוחר יותר.",
   "addTrackGoalDeadlinePaceLineLoading": "טוען גודל תחום לחישוב לכל יום לימוד…",
+  "addTrackGoalDeadlinePaceLineNoTotal": "בערך {items} {unit} בכל יום לימוד, על פני {studyDays, plural, one{יום לימוד אחד} two{יומיים של לימוד} other{{studyDays} ימי לימוד}} עד תאריך היעד.",
   "addTrack": "הוסף מסלול",
   "addTrackCurriculumReplaceWarning": "כבר יש לך מסלול כאן. בחירת הקורס שוב תחליף את ההגדרה הנוכחית ועלולה לאפס את ההתקדמות שלך בו.",
   "noActiveCurricula": "אין תוכניות לימוד פעילות",
