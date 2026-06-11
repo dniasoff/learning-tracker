@@ -71,10 +71,27 @@ class _ParentPinSetupDialogState extends ConsumerState<_ParentPinSetupDialog> {
 
     if (!_isConfirmStep) {
       if (!mounted) return;
+      // PP-1 fix: raise _busy synchronously BEFORE resetting _digits so that
+      // any 5th+ digit queued by a rapid tap is swallowed by the `_busy` guard
+      // in _appendDigit. Without this, a queued digit lands as digit-1 of the
+      // confirm PIN and produces either a spurious mismatch or an unintended
+      // leading digit.
+      //
+      // The transition lock: set _busy=true so _appendDigit immediately
+      // returns for any queued tap, then perform the step flip, then release
+      // _busy after yielding one microtask so the confirm keypad is
+      // interactive on the next frame.
       setState(() {
+        _busy = true;
         _firstPin = pin;
         _isConfirmStep = true;
         _digits = '';
+      });
+      // Release the lock after yielding — any taps queued BEFORE this await
+      // are rejected by _busy; taps after are welcome into the fresh confirm
+      // buffer (digits == '', length < 4, _busy == false).
+      await Future<void>.microtask(() {
+        if (mounted) setState(() => _busy = false);
       });
       return;
     }
