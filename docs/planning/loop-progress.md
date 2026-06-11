@@ -271,5 +271,16 @@ the Hebrew UI-locale switch did not take effect on-device and there was NO in-ap
     App-Language-tile-placement nit (it IS at top of the prefs card); Genesis/Kodshim content-DB data (asset regen).
 - INTEGRATION DISCIPLINE going forward: cherry-pick fuller file per owner; ARB union must catch MODIFICATIONS not
   just additions (tool/merge_arb.py is additive-only — verify modified keys manually, as redeemScreenTitle showed).
-- NEXT: integrate wv9q2wxxt (disjoint→clean) → make ci → push → redeploy → redo-verify R1v2's 6 screens again; then
-  extend redo to the remaining 41 screens (R2–R6) in batches, fix→redo until a sweep returns clean. Mandate stands.
+- R1v2 CLUSTER FIXES INTEGRATED + PUSHED (commit 2c62ff2c, dev): merged r1-tracks2 + r1-locale CLEANLY (disjoint
+  roots — no conflicts, unlike R1). study-day avatars localized (schedulerDayAbbrev*+shabbos, grapheme-safe initials),
+  scope-prompt script consistency (Hebrew-Terms vs locale mismatch fixed), goal "(≈0 items)" guard
+  (addTrackGoalDeadlinePaceLineNoTotal), EDITED TRACK NAME now surfaces as title (was stored in Goal.description,
+  ignored — resolveTrackTitle()/trackDisplayTitle wired into detail AppBar + track cards), Edit-Goal pace-helper
+  truncation (full-width field + helperMaxLines), dashboard "Today's Missions" wraps @1.3, + MainFocusMissionCard
+  "Start learning" button FittedBox @1.3 (pre-existing overflow the worker flagged). make ci GREEN (9886 pass, +20
+  new red→green tests). Debug APK rebuilt + installed on all 3 emulators.
+- REDO PROGRESS: the 6 R1 screens are now test-covered + keystone-confirmed. Pivoted to the UNVERIFIED screens.
+  Original sweep = 45 screens; R1 did 6. R2 sweep RUNNING (workflow ws5ntz2h9) over 6 high-Hebrew-risk screens:
+  gamification, curriculum_settings (nusach/hebrew-terms), content_search, learning, scheduler, content_hierarchy.
+- NEXT: read R2 findings → triage real bugs → fix wave → make ci → redeploy → redo; then R3..R6 for the remaining
+  ~33 screens, iterating find→fix→redo until a sweep returns clean. Mandate: "check every screen … redo until no bugs."
