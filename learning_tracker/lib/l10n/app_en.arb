@@ -745,6 +745,7 @@
   "noActiveProfile": "No active profile",
   "incorrectPin": "Incorrect PIN",
   "enterCurrentPin": "Enter Current PIN",
+  "enterCurrentPinSubtitle": "Enter your current 4-digit PIN to change it.",
   "enterNewPin": "Enter New PIN",
   "confirmNewPin": "Confirm New PIN",
   "pinsDoNotMatch": "PINs do not match",

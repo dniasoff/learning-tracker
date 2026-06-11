@@ -1529,6 +1529,9 @@ class AppLocalizationsHe extends AppLocalizations {
   String get enterCurrentPin => 'הזינו את הקוד הנוכחי';
 
   @override
+  String get enterCurrentPinSubtitle => 'הזינו את הקוד הנוכחי שלכם כדי לשנותו.';
+
+  @override
   String get enterNewPin => 'הזינו קוד חדש';
 
   @override

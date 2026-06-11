@@ -104,6 +104,18 @@ class _ContentSearchScreenState extends ConsumerState<ContentSearchScreen> {
             hintStyle: TextStyle(
               color: Theme.of(context).colorScheme.onSurface.withAlpha(128),
             ),
+            // PP-18 fix: provide a clear (X) suffix icon so the user can reset
+            // the query without backspacing through every character.
+            suffixIcon: _searchController.text.isNotEmpty
+                ? IconButton(
+                    icon: const Icon(Icons.clear),
+                    tooltip: 'Clear',
+                    onPressed: () {
+                      _searchController.clear();
+                      _onSearchChanged('');
+                    },
+                  )
+                : null,
           ),
           style: Theme.of(context).textTheme.titleMedium,
           onChanged: _onSearchChanged,
