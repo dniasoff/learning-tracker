@@ -48,6 +48,16 @@
                     android:host="torah-study-tracker.firebaseapp.com"
                     android:pathPrefix="/sign-in"/>
             </intent-filter>
+            <!-- Deep link handler for tutor invite accept — PP-7 (wave-B) -->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <category android:name="android.intent.category.BROWSABLE"/>
+                <data
+                    android:scheme="https"
+                    android:host="torah-study-tracker.firebaseapp.com"
+                    android:pathPrefix="/invite"/>
+            </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->
