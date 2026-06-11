@@ -612,3 +612,23 @@ device-driven (commit 95ede74a, make ci GREEN 9900 pass):
   device/account items, tutor live-mark BARRED); device_restore+account_picker (5554: register App Check, sign in
   test-loop-a on fresh device → restore flow + account switcher).
 - NEXT: triage squad findings → fix waves → re-run squad until CLEAN (Daniel: "keep going until clear runs").
+
+### Cloud/tutor squad RESULTS + fix wave (2026-06-12)
+- SQUAD (wpddesp52): handshake SUCCESS — accept invite works end-to-end (Pending→consent→Tutor PIN 2222→Active→
+  LoopChild tutored dashboard with real data, no permission-denied). All cloud/tutor screens REACHABLE. 14 findings.
+- P1 DROPPED (false positive): "tutor can Adjust Points" — INTENDED. TutorPermissions.canEditPoints defaults TRUE and
+  parent_settings gates Point-Config/Adjust-Points by `if (canEditPoints)`. Live-mark is a SEPARATE always-barred
+  restriction (the consent screen says so). The agent misread the model. Not a bug.
+- REAL findings → cloud/tutor fix wave (w4kfq6kux, 3 workers off 1fdd47d0, disjoint roots):
+  · [P0] DG-TUT-STALE-01 owner Manage-Tutors stale "Pending" after remote accept (outgoingTutorGrantsProvider one-shot
+    autoDispose CF doesn't re-fetch on re-entry / eventual consistency) → pull-to-refresh + invalidate-on-focus.
+  · [P2] invite-email malformed silently blocked (no inline error) → inline validation.
+  · [P2] "CloudUser" placeholder leaked where owner name belongs (Manage Grants card + Resign dialog) → owner display name.
+  · [P2] audit-log filter-chip leading-chip RTL clip → layout.
+  · [P2] parent-settings notification/display English under Hebrew → localize.
+  · [P2] account-picker subtitle "Select a learner" on an ACCOUNT picker → fix copy.
+  · [P2] pending-redemptions bare empty state → icon+title (match app pattern).
+- DEFERRED (minor/design): accept-card absent from picker (enhancement); "Good morning" at 12:39 (time copy);
+  no dedicated device-restore screen (silent restore behind sign-in spinner — design); disabled-button no tap feedback;
+  tutor sees some child-directed copy ("Ask a parent") in talmid views (copy nuance).
+- NEXT: integrate fix wave → make ci → redeploy → RE-RUN the cloud/tutor squad (esp. the P0 stale-grant) until CLEAN.
