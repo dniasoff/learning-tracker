@@ -403,3 +403,19 @@ device-driven (commit 95ede74a, make ci GREEN 9900 pass):
 - NEXT: push follow-ups (after make ci) → rebuild+redeploy latest APK (install -r, keep 5556 child data) → AUDIT the
   now-unblocked gamification (My Achievements) + siyumim_milestones on 5556 → continue redo on remaining ~28 screens.
   PENDING DANIEL: prioritize the bare-daf collision + partial-checkbox-wiring fix (with legacy-data migration) now vs defer.
+
+### Collision fix IN PROGRESS + gamification audit (2026-06-11)
+- DANIEL'S DECISIONS: (1) bare-daf collision → TACKLE NOW (with migration); (2) local-vs-cloud onboarding → INTENDED
+  (network present → cloud), no toggle needed (finding RESOLVED, not a bug). Then "keep going" (continue the redo).
+- COLLISION FIX (single coherent agent on r1-tracks2, off 88e72cc0): qualified-path level3/4 identifiers. Design:
+  new shared scopeUnitIdentifier() in core/content/content_grouping.dart (level1/2 BARE — unique within a curriculum;
+  level3/4 = level1|level2|level3[|level4]); both matchers (lifetime_tree_builder + items_learned_providers) key the
+  level3/4 action maps by the qualified leaf id; lifetime_marking_screen write+UI selection use _qid(level,value,
+  currentPath); schema v29→v30 migration DELETEs legacy bare level3/4 scope rows (unitIdentifier without '|', the
+  unrecoverable over-crediting marks); collision regression tests. Onboarding bulk-mark already resolves to unique
+  leaf sefariaRefs (no collision there); completion_detection/journey use level2 (unique) — untouched.
+- GAMIFICATION/SIYUMIM AUDIT (agent on 5556, seeded child + PIN 2580, latest APK install -r kept data): finally
+  auditing the 2 previously-blocked screens (My Achievements via the child streak chip; Siyumim) + a device-Hebrew
+  spot-check.
+- NEXT: integrate collision fix (make ci + review) → triage gamification/siyumim findings → fix → continue redo on the
+  remaining ~26 screens.
