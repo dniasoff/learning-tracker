@@ -2331,5 +2331,6 @@
   "permissionPromptLocationTitle": "מיקום",
   "permissionPromptLocationSubtitle": "זמני הדלקת נרות {shabbos} ו{havdalah} מדויקים לפי עירכם.",
   "permissionPromptCtaDone": "סיום",
-  "permissionPromptAllowButton": "אפשר"
+  "permissionPromptAllowButton": "אפשר",
+  "selectionCount": "{count, plural, one{בחירה אחת} other{{count} בחירות}}"
 }

@@ -2463,5 +2463,12 @@
   "permissionPromptAllowButton": "Allow",
   "@permissionPromptAllowButton": {
     "description": "Label on the Allow button inside each permission card on PermissionPromptScreen."
+  },
+  "selectionCount": "{count, plural, one{{count} selection} other{{count} selections}}",
+  "@selectionCount": {
+    "description": "IL-9: localized count label shown below HierarchySelectionPanel when items are selected.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
   }
 }

@@ -7,7 +7,11 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 /// adjacent curriculum chip, so duplicating it here is redundant.
 ///
 /// Example (current location is "Berachos" inside Seder Zeraim):
-///   Seder Zeraim > Berachos
+///   Seder Zeraim > Berachos (LTR)
+///   Berachos < Seder Zeraim (RTL — chevron flips to point the correct direction)
+///
+/// IL-7: the chevron separator is direction-aware: [Icons.chevron_right] in
+/// LTR layouts and [Icons.chevron_left] in RTL layouts (Hebrew terms mode).
 class BreadcrumbNavigation extends StatelessWidget {
   const BreadcrumbNavigation({
     super.key,
@@ -25,6 +29,10 @@ class BreadcrumbNavigation extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    // IL-7: flip the chevron for RTL (Hebrew terms mode) so the separator
+    // arrow points in the correct reading direction.
+    final isRtl = Directionality.of(context) == TextDirection.rtl;
+    final separatorIcon = isRtl ? Icons.chevron_left : Icons.chevron_right;
 
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -43,7 +51,7 @@ class BreadcrumbNavigation extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   child: Icon(
-                    Icons.chevron_right,
+                    separatorIcon,
                     size: 20,
                     color: theme.colorScheme.onSurfaceVariant,
                   ),

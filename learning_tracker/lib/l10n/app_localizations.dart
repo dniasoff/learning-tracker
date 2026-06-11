@@ -7462,6 +7462,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Allow'**
   String get permissionPromptAllowButton;
+
+  /// IL-9: localized count label shown below HierarchySelectionPanel when items are selected.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, one{{count} selection} other{{count} selections}}'**
+  String selectionCount(int count);
 }
 
 class _AppLocalizationsDelegate

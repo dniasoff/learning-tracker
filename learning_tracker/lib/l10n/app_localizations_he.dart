@@ -4295,4 +4295,15 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get permissionPromptAllowButton => 'אפשר';
+
+  @override
+  String selectionCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count בחירות',
+      one: 'בחירה אחת',
+    );
+    return '$_temp0';
+  }
 }
