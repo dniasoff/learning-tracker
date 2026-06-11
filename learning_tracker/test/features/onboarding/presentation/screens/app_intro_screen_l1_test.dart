@@ -8,11 +8,10 @@
 //   • "Skip" button → router.replace(SignInRoute) + sets kIntroSeen in prefs
 //   • PageView advances via CTA taps
 //   • RTL smoke: screen mounts without overflow in he locale
-//
-// Hardcoded-string findings:
-//   • 'Skip'             — hardcoded in _IntroHeader, not from ARB
-//   • 'Continue Journey' — hardcoded in AppIntroScreen.build, not from ARB
-//   • 'Get Started'      — hardcoded in AppIntroScreen.build, not from ARB
+//   • l10n: intro carousel copy is localized (he locale shows Hebrew, no
+//     English literal) — regression guard for the hardcoded-string bug where
+//     "Your Daily Torah Plan" / "Continue Journey" / "Get Started" / "Skip" /
+//     "SETUP PROGRESS" rendered English even on a Hebrew device.
 
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
@@ -101,6 +100,21 @@ Future<void> _swipeToNextPage(WidgetTester tester) async {
   await tester.pump(const Duration(milliseconds: 600));
 }
 
+/// Advance the PageView to the last page by tapping the "Continue Journey"
+/// CTA. Tapping calls `PageController.nextPage()`, which advances in logical
+/// page order regardless of text direction — unlike a raw drag, whose sign
+/// flips under RTL. Used by the Hebrew-locale tests.
+Future<void> _advanceToLastPageViaCta(
+  WidgetTester tester,
+  String continueLabel,
+) async {
+  for (var i = 0; i < 2; i++) {
+    await tester.tap(find.text(continueLabel));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 600));
+  }
+}
+
 /// Tear down helper — replace the tree with a shrunk widget and drain.
 Future<void> _tearDown(WidgetTester tester) async {
   await tester.pumpWidget(const SizedBox.shrink());
@@ -157,8 +171,7 @@ void main() {
     });
 
     testWidgets(
-      // HARDCODED-STRING: "Skip" is not from ARB — flagged for i18n.
-      'Skip button is present (hardcoded string "Skip")',
+      'Skip button is present',
       (tester) async {
         await tester.pumpWidget(_rig(router: router));
         await tester.pump();
@@ -171,8 +184,7 @@ void main() {
     );
 
     testWidgets(
-      // HARDCODED-STRING: "Continue Journey" is not from ARB.
-      'first page shows "Continue Journey" label (hardcoded string)',
+      'first page shows "Continue Journey" label',
       (tester) async {
         await tester.pumpWidget(_rig(router: router));
         await tester.pump();
@@ -200,8 +212,7 @@ void main() {
 
   group('CTA label on last page', () {
     testWidgets(
-      // HARDCODED-STRING: "Get Started" is not from ARB.
-      'shows "Get Started" on page 3 after two swipes (hardcoded string)',
+      'shows "Get Started" on page 3 after two swipes',
       (tester) async {
         await tester.pumpWidget(_rig(router: router));
         await tester.pump();
@@ -385,5 +396,81 @@ void main() {
 
       await _tearDown(tester);
     });
+  });
+
+  // ── 8. l10n: intro carousel copy is localized (Hebrew device) ────────────
+  //
+  // Regression guard for the hardcoded-English bug: the intro carousel rendered
+  // literal English ("Your Daily Torah Plan", "Continue Journey", "Get Started",
+  // "Skip", "SETUP PROGRESS") even when the device language was Hebrew. After
+  // the fix every user-facing string resolves through AppLocalizations.
+
+  group('l10n — Hebrew locale renders Hebrew, not English literals', () {
+    testWidgets(
+      'page 1 (daily plan) + chrome show Hebrew copy and no English literal',
+      (tester) async {
+        await tester.pumpWidget(
+          _rig(router: router, locale: const Locale('he')),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 900));
+
+        final he = await AppLocalizations.delegate.load(const Locale('he'));
+
+        // Hebrew chrome: Skip, Continue Journey, SETUP PROGRESS.
+        expect(find.text(he.skip), findsOneWidget);
+        expect(find.text(he.introContinueJourney), findsOneWidget);
+        expect(find.text(he.introSetupProgress), findsOneWidget);
+
+        // Hebrew daily-plan title fragments.
+        expect(find.textContaining(he.introDailyPlanTitleLine1), findsWidgets);
+
+        // The pre-fix English literals must NOT appear in a Hebrew locale.
+        expect(find.text('Skip'), findsNothing);
+        expect(find.text('Continue Journey'), findsNothing);
+        expect(find.text('SETUP PROGRESS'), findsNothing);
+        expect(find.textContaining('Your Daily'), findsNothing);
+
+        await _tearDown(tester);
+      },
+    );
+
+    testWidgets(
+      'last page CTA shows Hebrew "Get Started", not the English literal',
+      (tester) async {
+        await tester.pumpWidget(
+          _rig(router: router, locale: const Locale('he')),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 900));
+
+        final he = await AppLocalizations.delegate.load(const Locale('he'));
+        await _advanceToLastPageViaCta(tester, he.introContinueJourney);
+
+        expect(find.text(he.getStarted), findsOneWidget);
+        expect(find.text('Get Started'), findsNothing);
+
+        await _tearDown(tester);
+      },
+    );
+
+    testWidgets(
+      'rewards page (he) shows Hebrew rewards title, not English literal',
+      (tester) async {
+        await tester.pumpWidget(
+          _rig(router: router, locale: const Locale('he')),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 900));
+
+        final he = await AppLocalizations.delegate.load(const Locale('he'));
+        await _advanceToLastPageViaCta(tester, he.introContinueJourney);
+
+        expect(find.text(he.introRewardsTitle), findsOneWidget);
+        expect(find.text('Earn While You Learn'), findsNothing);
+
+        await _tearDown(tester);
+      },
+    );
   });
 }

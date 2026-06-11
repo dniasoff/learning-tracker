@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 const _kNavy = Color(0xFF1A36A5);
 const _kGreen = Color(0xFF1DB97D);
@@ -281,7 +282,7 @@ class IntroDailyPlanProgressBar extends StatelessWidget {
         ),
         const SizedBox(height: 10),
         Text(
-          'SETUP PROGRESS',
+          AppLocalizations.of(context)!.introSetupProgress,
           style: GoogleFonts.plusJakartaSans(
             color: AppTheme.brandInkSoft,
             fontSize: 10,

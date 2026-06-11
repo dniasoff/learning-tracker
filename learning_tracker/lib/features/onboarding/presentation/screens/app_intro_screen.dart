@@ -13,6 +13,7 @@ import 'package:learning_tracker/features/onboarding/presentation/widgets/glowin
 import 'package:learning_tracker/features/onboarding/presentation/widgets/intro_daily_plan_page.dart';
 import 'package:learning_tracker/features/onboarding/presentation/widgets/intro_mishna_page.dart';
 import 'package:learning_tracker/features/onboarding/presentation/widgets/intro_rewards_page.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 export 'package:learning_tracker/features/onboarding/presentation/widgets/glowing_cta_button.dart'
@@ -31,6 +32,12 @@ export 'package:learning_tracker/features/onboarding/presentation/widgets/intro_
         IntroScholarLevelCard;
 
 const kIntroSeen = 'intro_seen';
+
+/// Sentinel passed into the bold-highlight subtitle ICU getters, then split out
+/// again so the emphasised phrase can be rendered in its own [TextStyle]. Uses a
+/// Unicode Private-Use character that can never appear in real copy, keeping the
+/// split deterministic across locales.
+const _kHighlightPlaceholder = '\uE000';
 
 /// Onboarding intro palette (design mockup).
 const _kNavy = Color(0xFF1A36A5);
@@ -118,6 +125,7 @@ class _AppIntroScreenState extends State<AppIntroScreen>
   @override
   Widget build(BuildContext context) {
     final isLast = _currentPage == _pages.length - 1;
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       backgroundColor: _kBg,
@@ -152,7 +160,7 @@ class _AppIntroScreenState extends State<AppIntroScreen>
               bottom: 20,
               child: GlowingCtaButton(
                 onTap: _nextPage,
-                label: isLast ? 'Get Started' : 'Continue Journey',
+                label: isLast ? l10n.getStarted : l10n.introContinueJourney,
                 showArrow: true,
               ),
             ),
@@ -180,7 +188,7 @@ class _IntroHeader extends StatelessWidget {
           onPressed: onSkip,
           style: TextButton.styleFrom(foregroundColor: AppTheme.brandInkSoft),
           child: Text(
-            'Skip',
+            AppLocalizations.of(context)!.skip,
             style: GoogleFonts.plusJakartaSans(
               fontSize: 15,
               fontWeight: FontWeight.w500,
@@ -227,14 +235,15 @@ class _IntroPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     if (data.variant == _IntroPageVariant.dailyPlan) {
-      return _buildDailyPlanBottomAnchored(ref);
+      return _buildDailyPlanBottomAnchored(ref, l10n);
     }
-    return _buildScrolledPage(ref);
+    return _buildScrolledPage(ref, l10n);
   }
 
   /// First intro: taller hero zone, then copy + bar; scrolls on very short viewports.
-  Widget _buildDailyPlanBottomAnchored(WidgetRef ref) {
+  Widget _buildDailyPlanBottomAnchored(WidgetRef ref, AppLocalizations l10n) {
     final terms = domainTermLabels(ref);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -266,10 +275,10 @@ class _IntroPage extends ConsumerWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  _buildTitleBlock(mishnaLabel: terms.mishnah),
+                  _buildTitleBlock(l10n: l10n, mishnaLabel: terms.mishnah),
                   const SizedBox(height: 10),
                   _buildSubtitleBlock(
-                    useHebrew: terms.isHebrew,
+                    l10n: l10n,
                     talmidChochomLabel: terms.talmidChochom,
                   ),
                   const SizedBox(height: 12),
@@ -285,7 +294,7 @@ class _IntroPage extends ConsumerWidget {
   }
 
   /// Pages 2 & 3: full-page scroll.
-  Widget _buildScrolledPage(WidgetRef ref) {
+  Widget _buildScrolledPage(WidgetRef ref, AppLocalizations l10n) {
     final terms = domainTermLabels(ref);
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -305,10 +314,10 @@ class _IntroPage extends ConsumerWidget {
                   const IntroChildModeTag(),
                   const SizedBox(height: 12),
                 ],
-                _buildTitleBlock(mishnaLabel: terms.mishnah),
+                _buildTitleBlock(l10n: l10n, mishnaLabel: terms.mishnah),
                 const SizedBox(height: 14),
                 _buildSubtitleBlock(
-                  useHebrew: terms.isHebrew,
+                  l10n: l10n,
                   talmidChochomLabel: terms.talmidChochom,
                 ),
                 const SizedBox(height: 20),
@@ -336,7 +345,10 @@ class _IntroPage extends ConsumerWidget {
     }
   }
 
-  Widget _buildTitleBlock({required String mishnaLabel}) {
+  Widget _buildTitleBlock({
+    required AppLocalizations l10n,
+    required String mishnaLabel,
+  }) {
     return AnimatedBuilder(
       animation: iconAnimation,
       builder: (context, _) {
@@ -346,23 +358,30 @@ class _IntroPage extends ConsumerWidget {
         ).value;
         return Opacity(
           opacity: fade,
-          child: _titleRich(mishnaLabel: mishnaLabel),
+          child: _titleRich(l10n: l10n, mishnaLabel: mishnaLabel),
         );
       },
     );
   }
 
-  Widget _titleRich({required String mishnaLabel}) {
+  Widget _titleRich({
+    required AppLocalizations l10n,
+    required String mishnaLabel,
+  }) {
+    const highlightStyle = TextStyle(
+      color: _kNavy,
+      fontStyle: FontStyle.italic,
+    );
     switch (data.variant) {
       case _IntroPageVariant.dailyPlan:
         return Text.rich(
           TextSpan(
             style: _headStyle.copyWith(fontSize: 28, height: 1.1),
-            children: const [
-              TextSpan(text: 'Your Daily\n'),
+            children: [
+              TextSpan(text: '${l10n.introDailyPlanTitleLine1}\n'),
               TextSpan(
-                text: 'Torah Plan',
-                style: TextStyle(color: _kNavy, fontStyle: FontStyle.italic),
+                text: l10n.introDailyPlanTitleHighlight,
+                style: highlightStyle,
               ),
             ],
           ),
@@ -373,21 +392,15 @@ class _IntroPage extends ConsumerWidget {
           TextSpan(
             style: _headStyle,
             children: [
-              const TextSpan(text: 'Never Forget\na '),
-              TextSpan(
-                text: mishnaLabel,
-                style: const TextStyle(
-                  color: _kNavy,
-                  fontStyle: FontStyle.italic,
-                ),
-              ),
+              TextSpan(text: l10n.introMishnaTitlePrefix),
+              TextSpan(text: mishnaLabel, style: highlightStyle),
             ],
           ),
           textAlign: TextAlign.center,
         );
       case _IntroPageVariant.rewards:
         return Text(
-          'Earn While You Learn',
+          l10n.introRewardsTitle,
           textAlign: TextAlign.center,
           style: _headStyle,
         );
@@ -395,7 +408,7 @@ class _IntroPage extends ConsumerWidget {
   }
 
   Widget _buildSubtitleBlock({
-    bool useHebrew = false,
+    required AppLocalizations l10n,
     String talmidChochomLabel = 'Talmid Chochom',
   }) {
     return AnimatedBuilder(
@@ -408,7 +421,7 @@ class _IntroPage extends ConsumerWidget {
         return Opacity(
           opacity: fade,
           child: _subtitleRich(
-            useHebrew: useHebrew,
+            l10n: l10n,
             talmidChochomLabel: talmidChochomLabel,
           ),
         );
@@ -417,57 +430,62 @@ class _IntroPage extends ConsumerWidget {
   }
 
   Widget _subtitleRich({
-    bool useHebrew = false,
+    required AppLocalizations l10n,
     String talmidChochomLabel = 'Talmid Chochom',
   }) {
+    const highlightStyle = TextStyle(
+      color: AppTheme.brandInk,
+      fontWeight: FontWeight.w700,
+    );
     switch (data.variant) {
       case _IntroPageVariant.dailyPlan:
         return Text.rich(
-          TextSpan(
-            style: _subStyle.copyWith(fontSize: 14, height: 1.45),
-            children: const [
-              TextSpan(text: 'Learning Tracker turns massive goals into '),
-              TextSpan(
-                text: 'clear daily tasks',
-                style: TextStyle(
-                  color: AppTheme.brandInk,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              TextSpan(text: ', so you always know what to study next.'),
-            ],
+          _interpolateHighlight(
+            template: l10n.introDailyPlanSubtitle(
+              _kHighlightPlaceholder,
+            ),
+            highlight: l10n.introDailyPlanSubtitleHighlight,
+            highlightStyle: highlightStyle,
           ),
           textAlign: TextAlign.center,
+          style: _subStyle.copyWith(fontSize: 14, height: 1.45),
         );
       case _IntroPageVariant.mishna:
         return Text.rich(
-          TextSpan(
-            style: _subStyle,
-            children: const [
-              TextSpan(
-                text:
-                    'Master your learning with intelligent review cycles. Our ',
-              ),
-              TextSpan(
-                text: 'spaced-repetition engine',
-                style: TextStyle(
-                  color: AppTheme.brandInk,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              TextSpan(text: ' helps you retain everything you learn.'),
-            ],
+          _interpolateHighlight(
+            template: l10n.introMishnaSubtitle(_kHighlightPlaceholder),
+            highlight: l10n.introMishnaSubtitleHighlight,
+            highlightStyle: highlightStyle,
           ),
           textAlign: TextAlign.center,
+          style: _subStyle,
         );
       case _IntroPageVariant.rewards:
         return Text(
-          'Collect points, build streaks, and unlock mystery rewards as you '
-          'climb from a Novice to a $talmidChochomLabel!',
+          l10n.introRewardsSubtitle(talmidChochomLabel),
           textAlign: TextAlign.center,
           style: _subStyle,
         );
     }
+  }
+
+  /// Splits a localized subtitle template (containing [_kHighlightPlaceholder])
+  /// into plain + bold spans so the highlighted phrase keeps its emphasis in
+  /// both English and Hebrew without losing the ICU placeholder.
+  TextSpan _interpolateHighlight({
+    required String template,
+    required String highlight,
+    required TextStyle highlightStyle,
+  }) {
+    final parts = template.split(_kHighlightPlaceholder);
+    return TextSpan(
+      children: [
+        for (var i = 0; i < parts.length; i++) ...[
+          if (i > 0) TextSpan(text: highlight, style: highlightStyle),
+          TextSpan(text: parts[i]),
+        ],
+      ],
+    );
   }
 
   Widget _buildProgressArea() {

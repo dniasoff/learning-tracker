@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 const _kNavy = Color(0xFF1A36A5);
 const _kCoral = Color(0xFFF86B6B);
@@ -42,7 +43,7 @@ class IntroMishnaIllustration extends StatelessWidget {
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
-                    'Review…',
+                    AppLocalizations.of(context)!.introMishnaReviewChip,
                     style: GoogleFonts.plusJakartaSans(
                       color: _kNavy,
                       fontSize: 12,
