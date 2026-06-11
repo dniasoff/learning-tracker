@@ -1275,6 +1275,8 @@
     }
   },
   "backupSyncTapToRetry": "הקש לניסיון חוזר",
+  "backupSyncCloudUnavailable": "הגיבוי בענן אינו זמין כרגע.",
+  "backupSyncOutboxStuck": "חלק מהשינויים ממתינים לסנכרון. ננסה שוב באופן אוטומטי.",
   "backupConnecting": "מתחבר…",
   "backupOffline": "לא מקוון",
   "backupSyncPaused": "סנכרון מושהה — {count} ממתינים. {reason}",

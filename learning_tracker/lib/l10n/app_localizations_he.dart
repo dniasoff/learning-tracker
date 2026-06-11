@@ -2661,6 +2661,13 @@ class AppLocalizationsHe extends AppLocalizations {
   String get backupSyncTapToRetry => 'הקש לניסיון חוזר';
 
   @override
+  String get backupSyncCloudUnavailable => 'הגיבוי בענן אינו זמין כרגע.';
+
+  @override
+  String get backupSyncOutboxStuck =>
+      'חלק מהשינויים ממתינים לסנכרון. ננסה שוב באופן אוטומטי.';
+
+  @override
   String get backupConnecting => 'מתחבר…';
 
   @override

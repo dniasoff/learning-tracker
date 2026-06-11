@@ -86,6 +86,8 @@ class NotificationsScreen extends ConsumerWidget {
           const SizedBox(height: 16),
           _SettingsGroupCard(
             children: [
+              // ST-2 fix: hide the HOT STREAK badge when the toggle is OFF so
+              // it does not falsely imply an active streak alert.
               _NotificationSwitchRow(
                 key: const Key('streak_alert_toggle'),
                 icon: Icons.local_fire_department_rounded,
@@ -94,7 +96,9 @@ class NotificationsScreen extends ConsumerWidget {
                 title: l10n.notifStreakAlert,
                 subtitle: l10n.notifStreakAlertSubtitle,
                 value: streakAlertEnabled,
-                trailingTopBadge: _TopBadge(text: l10n.notifHotStreakBadge),
+                trailingTopBadge: streakAlertEnabled
+                    ? _TopBadge(text: l10n.notifHotStreakBadge)
+                    : null,
                 onChanged: (willEnable) async {
                   if (willEnable) {
                     final service = ref.read(notificationServiceProvider);
@@ -254,13 +258,20 @@ class _NotificationSwitchRow extends StatelessWidget {
                 trailingTopBadge!,
                 const SizedBox(height: 6),
               ],
-              Switch(
-                value: value,
-                activeThumbColor: Colors.white,
-                activeTrackColor: const Color(0xFF123CA5),
-                inactiveThumbColor: Colors.white,
-                inactiveTrackColor: const Color(0xFFE0E4ED),
-                onChanged: onChanged,
+              // ST-3 fix: wrap Switch in a Semantics node whose label matches
+              // the row title so that screen readers announce the toggle by
+              // name (e.g. "Daily Reminder, Switch, on") rather than as an
+              // unlabeled control.
+              Semantics(
+                label: title,
+                child: Switch(
+                  value: value,
+                  activeThumbColor: Colors.white,
+                  activeTrackColor: const Color(0xFF123CA5),
+                  inactiveThumbColor: Colors.white,
+                  inactiveTrackColor: const Color(0xFFE0E4ED),
+                  onChanged: onChanged,
+                ),
               ),
             ],
           ),

@@ -2692,6 +2692,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get backupSyncTapToRetry => 'Tap to retry';
 
   @override
+  String get backupSyncCloudUnavailable =>
+      'Cloud backup is temporarily unavailable.';
+
+  @override
+  String get backupSyncOutboxStuck =>
+      'Some changes are waiting to sync. We\'ll retry automatically.';
+
+  @override
   String get backupConnecting => 'Connecting…';
 
   @override

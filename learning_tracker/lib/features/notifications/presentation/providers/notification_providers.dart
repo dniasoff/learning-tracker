@@ -87,19 +87,26 @@ class ReminderEnabled extends _$ReminderEnabled {
 /// Manages the daily reminder time.
 ///
 /// (WS5.key-prefs) Per-profile namespaced SharedPrefs key.
+///
+/// ST-1 fix: watch [activeProfileIdProvider] (not read) so that a cold-start
+/// 0→real-id transition or a mid-session profile switch triggers a rebuild
+/// and re-reads the stored time from the correct per-profile key.
 @riverpod
 class ReminderTime extends _$ReminderTime {
   @override
   TimeOfDay build() {
-    _loadFromPrefs();
+    // Watch so that when the profile resolves (e.g. 0 → real id on cold start)
+    // or switches, build() is re-invoked and _loadFromPrefs runs under the
+    // correct profile id.  Matches the pattern used by [ReminderEnabled].
+    final profileId = ref.watch(activeProfileIdProvider);
+    _loadFromPrefs(profileId);
     return const TimeOfDay(
       hour: defaultReminderHour,
       minute: defaultReminderMinute,
     );
   }
 
-  Future<void> _loadFromPrefs() async {
-    final profileId = ref.read(activeProfileIdProvider);
+  Future<void> _loadFromPrefs(int profileId) async {
     final prefs = await SharedPreferences.getInstance();
     if (!ref.mounted) return;
     final hour =
@@ -168,19 +175,26 @@ class StreakAlertEnabled extends _$StreakAlertEnabled {
 /// Manages the streak alert time.
 ///
 /// (WS5.key-prefs) Per-profile namespaced SharedPrefs key.
+///
+/// ST-1 fix: watch [activeProfileIdProvider] (not read) so that a cold-start
+/// 0→real-id transition or a mid-session profile switch triggers a rebuild
+/// and re-reads the stored time from the correct per-profile key.
 @riverpod
 class StreakAlertTime extends _$StreakAlertTime {
   @override
   TimeOfDay build() {
-    _loadFromPrefs();
+    // Watch so that when the profile resolves (e.g. 0 → real id on cold start)
+    // or switches, build() is re-invoked and _loadFromPrefs runs under the
+    // correct profile id.  Matches the pattern used by [StreakAlertEnabled].
+    final profileId = ref.watch(activeProfileIdProvider);
+    _loadFromPrefs(profileId);
     return const TimeOfDay(
       hour: defaultStreakAlertHour,
       minute: defaultStreakAlertMinute,
     );
   }
 
-  Future<void> _loadFromPrefs() async {
-    final profileId = ref.read(activeProfileIdProvider);
+  Future<void> _loadFromPrefs(int profileId) async {
     final prefs = await SharedPreferences.getInstance();
     if (!ref.mounted) return;
     final hour =
