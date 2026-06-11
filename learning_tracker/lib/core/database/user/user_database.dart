@@ -1,4 +1,5 @@
 import 'package:drift/drift.dart';
+import 'package:learning_tracker/core/content/content_grouping.dart';
 import 'package:learning_tracker/core/database/daos/active_curriculum_dao.dart';
 import 'package:learning_tracker/core/database/daos/bookmark_dao.dart';
 import 'package:learning_tracker/core/database/daos/completion_dao.dart';
@@ -155,7 +156,7 @@ class UserDatabase extends _$UserDatabase {
   UserDatabase(super.e);
 
   @override
-  int get schemaVersion => 29;
+  int get schemaVersion => 30;
 
   // drift_dev cannot express WHERE in a Dart-defined view's `as()` body
   // (cascade `..where()` confuses the generator).  The auto-generated SQL for
@@ -272,6 +273,34 @@ class UserDatabase extends _$UserDatabase {
             'SET sync_enqueued_at = created_at '
             'WHERE ulid IS NOT NULL AND sync_enqueued_at IS NULL',
           );
+        }
+        if (from < 30) {
+          // Collision fix: lifetime level3/level4 scope marks were stored with
+          // a BARE unitIdentifier (e.g. daf '2', no parent context), so a daf-2
+          // mark in one masechta credited daf 2 in EVERY masechta (the "1.3%
+          // after one daf" over-crediting bug). New marks store the QUALIFIED
+          // path id (level1|level2|level3[|level4]). The legacy bare rows are
+          // unrecoverable (the parent context was never persisted), so drop
+          // them: rows whose scope (minus any 'unmark_' prefix) is a level3/
+          // level4 scope AND whose unitIdentifier has no '|' separator.
+          // level1/level2 (seder/masechta/sefer/siman) and sefariaRef/leaf rows
+          // are unique and left untouched.
+          // Guard: partial-schema migration paths (e.g. older upgrade tests)
+          // may not have created learning_ledger yet, so only run when present.
+          final hasLedger = await customSelect(
+            'SELECT 1 FROM sqlite_master '
+            "WHERE type = 'table' AND name = 'learning_ledger'",
+          ).get();
+          if (hasLedger.isNotEmpty) {
+            await customStatement(
+              'DELETE FROM learning_ledger '
+              "WHERE REPLACE(entry_scope, 'unmark_', '') IN "
+              "('level3', 'perek', 'daf', 'halacha', 'pasuk', "
+              "'level4', 'amud', 'mishna', 'seif', 'seif_katan') "
+              'AND instr(unit_identifier, ?) = 0',
+              [kScopeIdSeparator],
+            );
+          }
         }
         if (from >= 26 && from < 28) {
           // Tutor "talmid view" mirror columns on learner_profiles (v28).

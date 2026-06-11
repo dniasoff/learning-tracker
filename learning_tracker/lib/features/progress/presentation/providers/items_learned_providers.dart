@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/content/content_grouping.dart';
 import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -344,11 +345,14 @@ Set<String> _learnedLeafRefs({
         learnedRefs.contains(leaf.level2) ||
         learnedRefs.contains(leaf.level1);
     final refAction = refActions[leaf.sefariaRef];
+    // level3/level4 marks are stored with a QUALIFIED path id (collision fix:
+    // bare daf '2' credited every masechta). Match against the leaf's qualified
+    // id; level1/level2 stay bare (unique within a curriculum).
     final level4Action = leaf.level4 != null
-        ? level4Actions[leaf.level4!]
+        ? level4Actions[scopeUnitIdentifierForItem(leaf, 4)]
         : null;
     final level3Action = leaf.level3 != null
-        ? level3Actions[leaf.level3!]
+        ? level3Actions[scopeUnitIdentifierForItem(leaf, 3)]
         : null;
     final level2Action = leaf.level2 != null
         ? level2Actions[leaf.level2!]
