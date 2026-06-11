@@ -154,54 +154,6 @@ final class NikudPreferenceProvider
 
 String _$nikudPreferenceHash() => r'ec1c52fbf76a60d57c72a01133b73dfbe2f0a920';
 
-@ProviderFor(appLocalePreference)
-final appLocalePreferenceProvider = AppLocalePreferenceProvider._();
-
-final class AppLocalePreferenceProvider
-    extends
-        $FunctionalProvider<
-          AppLocalePreference,
-          AppLocalePreference,
-          AppLocalePreference
-        >
-    with $Provider<AppLocalePreference> {
-  AppLocalePreferenceProvider._()
-    : super(
-        from: null,
-        argument: null,
-        retry: null,
-        name: r'appLocalePreferenceProvider',
-        isAutoDispose: false,
-        dependencies: null,
-        $allTransitiveDependencies: null,
-      );
-
-  @override
-  String debugGetCreateSourceHash() => _$appLocalePreferenceHash();
-
-  @$internal
-  @override
-  $ProviderElement<AppLocalePreference> $createElement(
-    $ProviderPointer pointer,
-  ) => $ProviderElement(pointer);
-
-  @override
-  AppLocalePreference create(Ref ref) {
-    return appLocalePreference(ref);
-  }
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(AppLocalePreference value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<AppLocalePreference>(value),
-    );
-  }
-}
-
-String _$appLocalePreferenceHash() =>
-    r'bfb3886f51908d9559cca99de0b413921da28e1e';
-
 @ProviderFor(transliterationVariantPreference)
 final transliterationVariantPreferenceProvider =
     TransliterationVariantPreferenceProvider._();
@@ -471,11 +423,29 @@ abstract class _$ShowNikudPref extends $Notifier<bool> {
   }
 }
 
-@ProviderFor(CurrentAppLocale)
+/// The UI locale the app is currently rendering in — derived from the DEVICE
+/// language (there is no in-app language setting). Consumed by notification
+/// providers to localize background text where no BuildContext is available;
+/// invalidated on a runtime device-locale change by
+/// `LearningTrackerApp.didChangeLocales`.
+
+@ProviderFor(currentAppLocale)
 final currentAppLocaleProvider = CurrentAppLocaleProvider._();
 
+/// The UI locale the app is currently rendering in — derived from the DEVICE
+/// language (there is no in-app language setting). Consumed by notification
+/// providers to localize background text where no BuildContext is available;
+/// invalidated on a runtime device-locale change by
+/// `LearningTrackerApp.didChangeLocales`.
+
 final class CurrentAppLocaleProvider
-    extends $NotifierProvider<CurrentAppLocale, Locale> {
+    extends $FunctionalProvider<Locale, Locale, Locale>
+    with $Provider<Locale> {
+  /// The UI locale the app is currently rendering in — derived from the DEVICE
+  /// language (there is no in-app language setting). Consumed by notification
+  /// providers to localize background text where no BuildContext is available;
+  /// invalidated on a runtime device-locale change by
+  /// `LearningTrackerApp.didChangeLocales`.
   CurrentAppLocaleProvider._()
     : super(
         from: null,
@@ -492,7 +462,13 @@ final class CurrentAppLocaleProvider
 
   @$internal
   @override
-  CurrentAppLocale create() => CurrentAppLocale();
+  $ProviderElement<Locale> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  Locale create(Ref ref) {
+    return currentAppLocale(ref);
+  }
 
   /// {@macro riverpod.override_with_value}
   Override overrideWithValue(Locale value) {
@@ -503,25 +479,7 @@ final class CurrentAppLocaleProvider
   }
 }
 
-String _$currentAppLocaleHash() => r'79790b55a1e40fed4a22042855c6408220b06b47';
-
-abstract class _$CurrentAppLocale extends $Notifier<Locale> {
-  Locale build();
-  @$mustCallSuper
-  @override
-  void runBuild() {
-    final ref = this.ref as $Ref<Locale, Locale>;
-    final element =
-        ref.element
-            as $ClassProviderElement<
-              AnyNotifier<Locale, Locale>,
-              Locale,
-              Object?,
-              Object?
-            >;
-    element.handleCreate(ref, build);
-  }
-}
+String _$currentAppLocaleHash() => r'517ccb5e227d69aeef54681263d4e3afd113f276';
 
 @ProviderFor(CurrentTransliterationVariant)
 final currentTransliterationVariantProvider =

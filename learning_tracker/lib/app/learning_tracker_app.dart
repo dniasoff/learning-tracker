@@ -24,7 +24,8 @@ class LearningTrackerApp extends ConsumerStatefulWidget {
   ConsumerState<LearningTrackerApp> createState() => _LearningTrackerAppState();
 }
 
-class _LearningTrackerAppState extends ConsumerState<LearningTrackerApp> {
+class _LearningTrackerAppState extends ConsumerState<LearningTrackerApp>
+    with WidgetsBindingObserver {
   late final RouterConfig<Object> _routerConfig;
 
   @override
@@ -34,6 +35,23 @@ class _LearningTrackerAppState extends ConsumerState<LearningTrackerApp> {
     // Re-creating appRouter.config() during rebuilds can trigger
     // duplicate GlobalKey / root-router overlay instability.
     _routerConfig = ref.read(routerProvider).config();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeLocales(List<Locale>? locales) {
+    // The UI language follows the DEVICE language (MaterialApp.locale is null,
+    // so Flutter re-resolves the device locale automatically). Invalidate the
+    // device-locale provider so background notifications — which read it without
+    // a BuildContext — also track a runtime device-language change.
+    ref.invalidate(currentAppLocaleProvider);
+    super.didChangeLocales(locales);
   }
 
   @override
@@ -44,11 +62,6 @@ class _LearningTrackerAppState extends ConsumerState<LearningTrackerApp> {
     final isChildMode =
         ref.watch(selectedProfileProvider).asData?.value?.profileMode ==
         ProfileMode.child;
-    // IL-6 fix: wire the per-profile app_locale_pN pref into MaterialApp.locale
-    // so a profile set to Hebrew ('he') gets the Hebrew UI regardless of the
-    // OS device locale.  Previously this was `locale: null` (DNI-341 comment)
-    // which meant the device locale always won and the in-app switcher was inert.
-    final appLocale = ref.watch(currentAppLocaleProvider);
 
     return SyncLifecycleObserver(
       child: MaterialApp.router(
@@ -62,7 +75,11 @@ class _LearningTrackerAppState extends ConsumerState<LearningTrackerApp> {
         themeMode: ThemeMode.system,
         debugShowCheckedModeBanner: false,
         routerConfig: _routerConfig,
-        locale: appLocale,
+        // The UI language follows the DEVICE language: a null locale lets Flutter
+        // resolve the device locale against [supportedLocales] (Hebrew device →
+        // he + RTL, otherwise English). There is intentionally no in-app language
+        // switcher — language is not user-configurable inside the app.
+        locale: null,
         localizationsDelegates: const [
           AppLocalizations.delegate,
           GlobalMaterialLocalizations.delegate,

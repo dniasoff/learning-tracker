@@ -4393,12 +4393,6 @@ class AppLocalizationsEn extends AppLocalizations {
       'Stream last 10 min of activity to Firebase';
 
   @override
-  String get settingsLanguage => 'App Language';
-
-  @override
-  String get settingsLanguageSubtitle => 'Language for the app\'s interface';
-
-  @override
   String get settingsPronunciation => 'Pronunciation';
 
   @override
@@ -4581,12 +4575,6 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get schedulerDayAbbrevFri => 'Fri';
-
-  @override
-  String get settingsAppLanguage => 'App Language';
-
-  @override
-  String get settingsAppLanguageSubtitle => 'English or Hebrew UI';
 
   @override
   String get trackEditNameRequired => 'Enter a track name';

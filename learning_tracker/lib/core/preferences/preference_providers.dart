@@ -2,7 +2,6 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
-import 'package:learning_tracker/core/preferences/app_locale_preference.dart';
 import 'package:learning_tracker/core/preferences/hebrew_date_preference.dart';
 import 'package:learning_tracker/core/preferences/hebrew_terms_preference.dart';
 import 'package:learning_tracker/core/preferences/nikud_preference.dart';
@@ -36,13 +35,6 @@ HebrewDatePreference hebrewDatePreference(Ref ref) {
 @Riverpod(keepAlive: true)
 NikudPreference nikudPreference(Ref ref) {
   final pref = NikudPreference();
-  ref.onDispose(pref.dispose);
-  return pref;
-}
-
-@Riverpod(keepAlive: true)
-AppLocalePreference appLocalePreference(Ref ref) {
-  final pref = AppLocalePreference();
   ref.onDispose(pref.dispose);
   return pref;
 }
@@ -173,25 +165,32 @@ class ShowNikudPref extends _$ShowNikudPref {
   }
 }
 
-@Riverpod(keepAlive: true)
-class CurrentAppLocale extends _$CurrentAppLocale {
-  @override
-  Locale build() {
-    final profileId = ref.watch(activeProfileIdProvider);
-    final pref = ref.watch(appLocalePreferenceProvider);
-    _bindObserver(ref, pref, profileId, (value) {
-      if (value != state) state = value;
-    });
-    return pref.defaultValue;
-  }
+/// Supported UI locales. The app UI language follows the DEVICE language —
+/// there is intentionally no in-app switcher — so this set only resolves the
+/// device locale to a bundled translation, English by default.
+const Set<String> kSupportedUiLanguageCodes = {'en', 'he'};
 
-  Future<void> set(Locale locale) async {
-    final profileId = ref.read(activeProfileIdProvider);
-    final pref = ref.read(appLocalePreferenceProvider);
-    state = locale;
-    await _writeAndPushSnapshot(ref, pref, profileId, locale);
+/// Resolves the device's preferred locales to a supported UI locale, English by
+/// default. Mirrors Flutter's MaterialApp resolution (which drives the UI, since
+/// `MaterialApp.locale` is null) so background notifications — read without a
+/// BuildContext via [currentAppLocaleProvider] — match the on-screen language.
+Locale resolveDeviceUiLocale(List<Locale> deviceLocales) {
+  for (final locale in deviceLocales) {
+    if (kSupportedUiLanguageCodes.contains(locale.languageCode)) {
+      return Locale(locale.languageCode);
+    }
   }
+  return const Locale('en');
 }
+
+/// The UI locale the app is currently rendering in — derived from the DEVICE
+/// language (there is no in-app language setting). Consumed by notification
+/// providers to localize background text where no BuildContext is available;
+/// invalidated on a runtime device-locale change by
+/// `LearningTrackerApp.didChangeLocales`.
+@Riverpod(keepAlive: true)
+Locale currentAppLocale(Ref ref) =>
+    resolveDeviceUiLocale(PlatformDispatcher.instance.locales);
 
 @Riverpod(keepAlive: true)
 class CurrentTransliterationVariant extends _$CurrentTransliterationVariant {

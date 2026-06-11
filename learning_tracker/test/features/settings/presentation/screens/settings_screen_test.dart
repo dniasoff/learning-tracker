@@ -244,9 +244,8 @@ void main() {
       );
       await pumpUntilSettled(tester);
 
-      // The App Language tile now sits at the top of the preferences card, so
-      // Notification Settings renders lower — scroll to it rather than a fixed
-      // offset that the added tile would undershoot.
+      // Scroll to Notification Settings rather than using a fixed drag offset,
+      // which is brittle as the preferences card's contents change.
       await tester.scrollUntilVisible(
         find.text('Notification Settings'),
         300,

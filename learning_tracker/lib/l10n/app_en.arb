@@ -2488,8 +2488,6 @@
   "settingsAppPermissionsSubtitle": "Notifications and location access",
   "settingsSendDiagnosticLogs": "Send Diagnostic Logs",
   "settingsSendDiagnosticLogsSubtitle": "Stream last 10 min of activity to Firebase",
-  "settingsLanguage": "App Language",
-  "settingsLanguageSubtitle": "Language for the app's interface",
   "settingsPronunciation": "Pronunciation",
   "settingsPronunciationSubtitle": "Bereishis (Ashkenazi) or Bereshit (Sephardi)",
   "settingsPronunciationAshkenazi": "Ashkenazi",
@@ -2647,8 +2645,6 @@
   "@schedulerDayAbbrevFri": {
     "description": "Short weekday label for Friday on the Study Days screen."
   },
-  "settingsAppLanguage": "App Language",
-  "settingsAppLanguageSubtitle": "English or Hebrew UI",
   "trackEditNameRequired": "Enter a track name",
   "trackEditReviewSummaryWithDays": "After {delays} {count, plural, =1{day} other{days}}",
   "@trackEditReviewSummaryWithDays": {

@@ -146,11 +146,6 @@ class _ProfileId1 extends ActiveProfileId {
   int build() => 1;
 }
 
-class _LocaleEn extends CurrentAppLocale {
-  @override
-  Locale build() => const Locale('en');
-}
-
 DailyTask _todayTask() => const DailyTask(
   curriculumId: CurriculumId.bavli,
   contentItemSefariaRef: 'Berakhot 2a',
@@ -186,7 +181,7 @@ void main() {
     return ProviderContainer(
       overrides: [
         activeProfileIdProvider.overrideWith(_ProfileId1.new),
-        currentAppLocaleProvider.overrideWith(_LocaleEn.new),
+        currentAppLocaleProvider.overrideWithValue(const Locale('en')),
         outboxSyncWriteFacadeProvider.overrideWithValue(null),
         notificationSchedulerProvider.overrideWithValue(scheduler),
         isSacredTimeActiveProvider.overrideWithValue(sacredTimeActive),

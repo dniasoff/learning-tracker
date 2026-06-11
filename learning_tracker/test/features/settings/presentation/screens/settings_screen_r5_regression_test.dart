@@ -547,8 +547,8 @@ void main() {
         await tester.pump(const Duration(seconds: 1));
 
         // Scroll far down to ensure the Parental Controls section is in view.
-        // The App Language tile added to the preferences card shifts everything
-        // below it down, so scroll to the target rather than a fixed offset.
+        // Scroll to the target rather than a fixed offset, which is brittle as
+        // the settings list's contents change.
         await tester.scrollUntilVisible(
           find.text('Parent PIN'),
           400,

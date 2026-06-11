@@ -7437,18 +7437,6 @@ abstract class AppLocalizations {
   /// **'Stream last 10 min of activity to Firebase'**
   String get settingsSendDiagnosticLogsSubtitle;
 
-  /// No description provided for @settingsLanguage.
-  ///
-  /// In en, this message translates to:
-  /// **'App Language'**
-  String get settingsLanguage;
-
-  /// No description provided for @settingsLanguageSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Language for the app\'s interface'**
-  String get settingsLanguageSubtitle;
-
   /// No description provided for @settingsPronunciation.
   ///
   /// In en, this message translates to:
@@ -7718,18 +7706,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Fri'**
   String get schedulerDayAbbrevFri;
-
-  /// No description provided for @settingsAppLanguage.
-  ///
-  /// In en, this message translates to:
-  /// **'App Language'**
-  String get settingsAppLanguage;
-
-  /// No description provided for @settingsAppLanguageSubtitle.
-  ///
-  /// In en, this message translates to:
-  /// **'English or Hebrew UI'**
-  String get settingsAppLanguageSubtitle;
 
   /// No description provided for @trackEditNameRequired.
   ///

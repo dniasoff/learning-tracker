@@ -17,7 +17,6 @@ import 'package:learning_tracker/core/constants/curriculum_defaults.dart'
     show TransliterationVariant;
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
-import 'package:learning_tracker/core/preferences/app_locale_preference.dart';
 import 'package:learning_tracker/core/preferences/hebrew_date_preference.dart';
 import 'package:learning_tracker/core/preferences/hebrew_terms_preference.dart';
 import 'package:learning_tracker/core/preferences/nikud_preference.dart';
@@ -146,19 +145,6 @@ void main() {
       // covers lines 147-148, 150
       final override = nikudPreferenceProvider.overrideWithValue(
         NikudPreference(),
-      );
-      expect(override, isNotNull);
-    });
-
-    test('appLocalePreferenceProvider init and overrideWithValue', () {
-      // accessing it covers lines 158, 168-169
-      expect(
-        appLocalePreferenceProvider.debugGetCreateSourceHash(),
-        isNotEmpty,
-      );
-      // overrideWithValue covers 194-197
-      final override = appLocalePreferenceProvider.overrideWithValue(
-        AppLocalePreference(),
       );
       expect(override, isNotNull);
     });

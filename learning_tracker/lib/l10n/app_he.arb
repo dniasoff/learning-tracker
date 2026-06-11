@@ -2381,8 +2381,6 @@
   "settingsAppPermissionsSubtitle": "התראות וגישה למיקום",
   "settingsSendDiagnosticLogs": "שליחת יומני אבחון",
   "settingsSendDiagnosticLogsSubtitle": "שדרו את 10 הדקות האחרונות של הפעילות אל Firebase",
-  "settingsLanguage": "שפת היישום",
-  "settingsLanguageSubtitle": "השפה של ממשק היישום",
   "settingsPronunciation": "הגייה",
   "settingsPronunciationSubtitle": "בראשית (אשכנזי) או בְּרֵשִית (ספרדי)",
   "settingsPronunciationAshkenazi": "אשכנזי",
@@ -2457,8 +2455,6 @@
   "schedulerDayAbbrevWed": "ד׳",
   "schedulerDayAbbrevThu": "ה׳",
   "schedulerDayAbbrevFri": "ו׳",
-  "settingsAppLanguage": "שפת הממשק",
-  "settingsAppLanguageSubtitle": "ממשק באנגלית או בעברית",
   "trackEditNameRequired": "יש להזין שם מסלול",
   "trackEditReviewSummaryWithDays": "אחרי {delays} {count, plural, =1{יום} other{ימים}}",
   "@trackEditReviewSummaryWithDays": {

@@ -1,110 +1,95 @@
-// Regression test for IL-6: learning_tracker_app.dart had locale:null
-// (DNI-341 comment) so the UI locale was always driven by the OS device
-// locale, making the per-profile app_locale_pN preference inert.
-//
-// The fix wires currentAppLocaleProvider → MaterialApp.locale so a profile
-// that requests Hebrew ('he') gets a Hebrew UI regardless of device locale.
-//
-// These tests verify:
-//   1. The source file no longer passes `locale: null` to MaterialApp.
-//   2. AppLocalePreference correctly reports supported locales.
+// The app UI language follows the DEVICE language. There is intentionally NO
+// in-app language switcher: MaterialApp.locale is null so Flutter resolves the
+// device locale against the supported set (Hebrew device → he + RTL, otherwise
+// English). [resolveDeviceUiLocale] mirrors that resolution for background
+// notifications, which localize without a BuildContext.
 import 'dart:io';
+import 'dart:ui';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:learning_tracker/core/preferences/app_locale_preference.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
-void main() {
-  group('IL-6 — AppLocalePreference default and supported set', () {
-    test('defaultValue is English', () {
-      // ignore: prefer_const_constructors
-      final pref = AppLocalePreference();
-      expect(pref.defaultValue.languageCode, 'en');
-    });
+File _source(String relative) {
+  final file = [
+    File(relative),
+    File('../$relative'),
+  ].firstWhere((f) => f.existsSync(), orElse: () => File(relative));
+  if (!file.existsSync()) {
+    throw TestFailure('Could not locate $relative from the test cwd.');
+  }
+  return file;
+}
 
-    test('AppLocalizations.supportedLocales includes Hebrew', () {
-      // ignore: prefer_const_declarations
-      final supported = AppLocalizations.supportedLocales;
+void main() {
+  group('Device-driven UI locale — resolveDeviceUiLocale', () {
+    test('Hebrew device locale resolves to he', () {
+      expect(resolveDeviceUiLocale(const [Locale('he')]).languageCode, 'he');
       expect(
-        supported.any((l) => l.languageCode == 'he'),
-        isTrue,
-        reason: 'Hebrew must be a supported locale for the locale wire to work',
+        resolveDeviceUiLocale(const [Locale('he', 'IL')]).languageCode,
+        'he',
       );
     });
 
-    test('AppLocalizations.supportedLocales includes English', () {
+    test('English device locale resolves to en', () {
+      expect(resolveDeviceUiLocale(const [Locale('en')]).languageCode, 'en');
+    });
+
+    test('unsupported / empty device locale falls back to en', () {
+      expect(resolveDeviceUiLocale(const [Locale('fr')]).languageCode, 'en');
+      expect(resolveDeviceUiLocale(const []).languageCode, 'en');
+    });
+
+    test('first supported locale in the device preference list wins', () {
+      expect(
+        resolveDeviceUiLocale(const [
+          Locale('fr'),
+          Locale('he'),
+          Locale('en'),
+        ]).languageCode,
+        'he',
+      );
+    });
+  });
+
+  group('Supported locales', () {
+    test('include Hebrew and English', () {
       const supported = AppLocalizations.supportedLocales;
+      expect(supported.any((l) => l.languageCode == 'he'), isTrue);
       expect(supported.any((l) => l.languageCode == 'en'), isTrue);
     });
   });
 
-  group('IL-6 — learning_tracker_app.dart locale wire (source guard)', () {
-    // Read the actual source file and verify the locale is no longer null.
-    // This is the canonical RED test: it fails on current code which has
-    //   `locale: null,`
-    // and passes after the fix wires `locale: ref.watch(currentAppLocaleProvider)`.
+  group('Source guards — device-driven, no in-app switcher', () {
+    test('MaterialApp.locale is null (device drives the UI language)', () {
+      final source = _source(
+        'lib/app/learning_tracker_app.dart',
+      ).readAsStringSync();
+      final nonCommentLines = source
+          .split('\n')
+          .where((line) => !line.trimLeft().startsWith('//'))
+          .join('\n');
+      expect(
+        RegExp(r'\blocale:\s*null\b').hasMatch(nonCommentLines),
+        isTrue,
+        reason:
+            'The UI language must follow the device language: MaterialApp.locale '
+            'should be null so Flutter resolves the device locale against the '
+            'supported set.',
+      );
+    });
 
-    test(
-      'MaterialApp locale is NOT hardcoded null in learning_tracker_app.dart',
-      () {
-        // Find the source file relative to the project root.
-        final candidates = [
-          File('lib/app/learning_tracker_app.dart'),
-          File('../lib/app/learning_tracker_app.dart'),
-        ];
-        final file = candidates.firstWhere(
-          (f) => f.existsSync(),
-          orElse: () => throw TestFailure(
-            'Could not locate lib/app/learning_tracker_app.dart. '
-            'Run tests from the learning_tracker project root.',
-          ),
-        );
-
-        final source = file.readAsStringSync();
-
-        // The bug: `locale: null,` as actual code (not a comment).
-        // The fix wires a provider expression, so non-comment occurrences must
-        // be absent. We check by stripping comment lines first.
-        final nonCommentLines = source
-            .split('\n')
-            .where((line) => !line.trimLeft().startsWith('//'))
-            .join('\n');
-        final hasNullLocale = RegExp(
-          r'\blocale:\s*null\b',
-        ).hasMatch(nonCommentLines);
-        expect(
-          hasNullLocale,
-          isFalse,
-          reason:
-              'learning_tracker_app.dart must not pass locale:null to MaterialApp '
-              '(IL-6 fix: wire currentAppLocaleProvider → MaterialApp.locale)',
-        );
-      },
-    );
-
-    test(
-      'learning_tracker_app.dart references currentAppLocaleProvider for locale',
-      () {
-        final candidates = [
-          File('lib/app/learning_tracker_app.dart'),
-          File('../lib/app/learning_tracker_app.dart'),
-        ];
-        final file = candidates.firstWhere(
-          (f) => f.existsSync(),
-          orElse: () => throw TestFailure(
-            'Could not locate lib/app/learning_tracker_app.dart.',
-          ),
-        );
-
-        final source = file.readAsStringSync();
-        expect(
-          source.contains('currentAppLocaleProvider'),
-          isTrue,
-          reason:
-              'learning_tracker_app.dart must read currentAppLocaleProvider '
-              'and pass it to MaterialApp.locale (IL-6)',
-        );
-      },
-    );
+    test('Settings has no in-app App Language switcher tile', () {
+      final source = _source(
+        'lib/features/settings/presentation/screens/settings_screen.dart',
+      ).readAsStringSync();
+      expect(
+        source.contains('_AppLanguageTile'),
+        isFalse,
+        reason:
+            'There must be no in-app language switcher — language follows the '
+            'device, not a user-configurable setting.',
+      );
+    });
   });
 }

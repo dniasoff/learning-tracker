@@ -4356,12 +4356,6 @@ class AppLocalizationsHe extends AppLocalizations {
       'שדרו את 10 הדקות האחרונות של הפעילות אל Firebase';
 
   @override
-  String get settingsLanguage => 'שפת היישום';
-
-  @override
-  String get settingsLanguageSubtitle => 'השפה של ממשק היישום';
-
-  @override
   String get settingsPronunciation => 'הגייה';
 
   @override
@@ -4543,12 +4537,6 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get schedulerDayAbbrevFri => 'ו׳';
-
-  @override
-  String get settingsAppLanguage => 'שפת הממשק';
-
-  @override
-  String get settingsAppLanguageSubtitle => 'ממשק באנגלית או בעברית';
 
   @override
   String get trackEditNameRequired => 'יש להזין שם מסלול';

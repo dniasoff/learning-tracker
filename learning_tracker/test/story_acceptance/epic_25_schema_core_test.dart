@@ -17,7 +17,6 @@ library;
 
 import 'dart:convert';
 import 'dart:io';
-import 'dart:ui';
 
 import 'package:drift/drift.dart' show Value, Variable;
 import 'package:drift/native.dart';
@@ -35,7 +34,6 @@ import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
-import 'package:learning_tracker/core/preferences/app_locale_preference.dart';
 import 'package:learning_tracker/core/preferences/hebrew_date_preference.dart';
 import 'package:learning_tracker/core/preferences/hebrew_terms_preference.dart';
 import 'package:learning_tracker/core/preferences/nikud_preference.dart';
@@ -1332,13 +1330,6 @@ void main() {
         await pref.dispose();
       });
 
-      test('AppLocalePreference defaults to en', () async {
-        final pref = AppLocalePreference();
-        expect(pref.defaultValue, const Locale('en'));
-        expect(await pref.read(0), const Locale('en'));
-        await pref.dispose();
-      });
-
       test('TransliterationVariantPreference defaults to ashkenazi', () async {
         final pref = TransliterationVariantPreference();
         expect(pref.defaultValue, TransliterationVariant.ashkenazi);
@@ -1391,17 +1382,6 @@ void main() {
           await pref.dispose();
         },
       );
-
-      test(
-        'writing for profile A does not affect profile B (Locale)',
-        () async {
-          final pref = AppLocalePreference();
-          await pref.write(1, const Locale('he'));
-          expect(await pref.read(1), const Locale('he'));
-          expect(await pref.read(2), const Locale('en'));
-          await pref.dispose();
-        },
-      );
     });
 
     group('round-trip — read after write returns the written value', () {
@@ -1425,13 +1405,6 @@ void main() {
         final pref = NikudPreference();
         await pref.write(0, false);
         expect(await pref.read(0), isFalse);
-        await pref.dispose();
-      });
-
-      test('AppLocalePreference', () async {
-        final pref = AppLocalePreference();
-        await pref.write(0, const Locale('he'));
-        expect(await pref.read(0), const Locale('he'));
         await pref.dispose();
       });
 
@@ -1473,13 +1446,12 @@ void main() {
       );
 
       test('every primitive exposes a working observe stream', () async {
-        // Smoke test all six primitives share the same `(read, write, observe)`
+        // Smoke test all five primitives share the same `(read, write, observe)`
         // contract.
         final cases = <ProfileScopedPreference<Object>>[
           HebrewTermsPreference(),
           HebrewDatePreference(),
           NikudPreference(),
-          AppLocalePreference(),
           TransliterationVariantPreference(),
           TextDisplayPreference(),
         ];
@@ -1934,9 +1906,6 @@ Object _flippedValue(ProfileScopedPreference<Object> pref) {
       pref is HebrewDatePreference ||
       pref is NikudPreference) {
     return !(pref.defaultValue as bool);
-  }
-  if (pref is AppLocalePreference) {
-    return const Locale('he');
   }
   if (pref is TransliterationVariantPreference) {
     return TransliterationVariant.sephardi;
