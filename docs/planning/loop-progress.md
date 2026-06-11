@@ -539,3 +539,19 @@ device-driven (commit 95ede74a, make ci GREEN 9900 pass):
   lt_api34_pixel7, lt_api36_tablet.
 - 5554: R6 onboarding/auth audit RUNNING (pm-cleared, driving the first-run flow). 5558 fresh (no data); 5556 recovered.
 - NEXT: when R6 completes → full 3-device parallelism for the remaining screens (management cluster + any R6 fixes).
+
+### R6 onboarding/auth audit: mostly CLEAN (2026-06-11)
+- R6 (single agent on 5554, fresh pm-clear → full first-run flow). NO P0/P1 defects. Verified clean: app-intro
+  carousel (en), sign-in/auth (network-gated local/cloud — intended), create-account (SOLID validation: inline
+  "X is required" + offline-checkbox snackbar gate), profile creation, permission rationale (localized), post-onboard
+  intent. HISTORICAL P0 CONFIRMED FIXED: Set-Parent-PIN confirm does NOT loop back to itself — confirm advances, dots
+  reset (no stale), dismisses to Manage Learners. Auth + create-account screens fully Hebrew RTL-clean on a he device.
+  · [P2] onboarding INTRO CAROUSEL hardcoded English under a Hebrew device (3 welcome slides + Skip/Continue/SETUP
+    PROGRESS don't translate; layout flips RTL fine). → fixing (agent on r1-content2: localize the 4 onboarding intro
+    files + en/he ARB).
+  · [P2 soft] profile-creation empty-name gated by a DISABLED button with no inline hint (the disabled state IS
+    feedback, so borderline — noted, not auto-fixed).
+- FINAL local audit RUNNING (5556): study_day_config + point_config (the last easily-reachable local screens).
+- COVERAGE after these: ~37/45 local-observable screens. REMAINING ~8 are CLOUD/TUTOR-gated (device_restore,
+  accept/decline_invite, manage_grants, parent_pending_redemptions, cloud account_picker) — need cloud-verified test
+  accounts + App Check + a 2-device tutor flow (the original kickoff's deferred "sync" area; a dedicated setup effort).
