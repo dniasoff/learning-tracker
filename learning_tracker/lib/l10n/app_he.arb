@@ -2290,6 +2290,8 @@
   "settingsAppPermissionsSubtitle": "התראות וגישה למיקום",
   "settingsSendDiagnosticLogs": "שליחת יומני אבחון",
   "settingsSendDiagnosticLogsSubtitle": "שדרו את 10 הדקות האחרונות של הפעילות אל Firebase",
+  "settingsLanguage": "שפת היישום",
+  "settingsLanguageSubtitle": "השפה של ממשק היישום",
   "settingsPronunciation": "הגייה",
   "settingsPronunciationSubtitle": "בראשית (אשכנזי) או בְּרֵשִית (ספרדי)",
   "settingsPronunciationAshkenazi": "אשכנזי",

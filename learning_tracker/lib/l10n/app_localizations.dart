@@ -7283,6 +7283,18 @@ abstract class AppLocalizations {
   /// **'Stream last 10 min of activity to Firebase'**
   String get settingsSendDiagnosticLogsSubtitle;
 
+  /// No description provided for @settingsLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'App Language'**
+  String get settingsLanguage;
+
+  /// No description provided for @settingsLanguageSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Language for the app\'s interface'**
+  String get settingsLanguageSubtitle;
+
   /// No description provided for @settingsPronunciation.
   ///
   /// In en, this message translates to:

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/preferences/language_provider.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/talker_provider.dart';
 import 'package:learning_tracker/core/sync/providers/outbox_providers.dart';
@@ -193,6 +194,8 @@ class SettingsScreen extends ConsumerWidget {
             _SurfaceCard(
               child: Column(
                 children: [
+                  _AppLanguageTile(theme: theme),
+                  _tileDivider(theme),
                   const _HebrewDateTile(),
                   if (Localizations.localeOf(context).languageCode != 'he') ...[
                     _tileDivider(theme),
@@ -403,6 +406,35 @@ class _HebrewTermsTile extends ConsumerWidget {
           onChanged: (v) => ref.read(useHebrewTermsProvider.notifier).set(v),
         ),
       ),
+    );
+  }
+}
+
+/// In-app UI-language switcher. Writes through [LanguageNotifier.setLanguage]
+/// so the change propagates to `MaterialApp.locale` and the entire UI re-renders
+/// in the chosen language with correct RTL/LTR direction. Option labels use each
+/// language's native endonym (English / עברית) and so are not themselves
+/// localized.
+class _AppLanguageTile extends ConsumerWidget {
+  const _AppLanguageTile({required this.theme});
+
+  final ThemeData theme;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
+    final current = ref.watch(languageProvider);
+    return PreferenceSegmentedTile<String>(
+      icon: Icons.language_rounded,
+      title: l10n.settingsLanguage,
+      subtitle: l10n.settingsLanguageSubtitle,
+      options: const [
+        (value: 'en', label: 'English'),
+        (value: 'he', label: 'עברית'),
+      ],
+      value: supportedLanguages.containsKey(current) ? current : 'en',
+      onChanged: (code) =>
+          ref.read(languageProvider.notifier).setLanguage(code),
     );
   }
 }
