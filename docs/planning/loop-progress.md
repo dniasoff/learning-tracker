@@ -590,3 +590,14 @@ device-driven (commit 95ede74a, make ci GREEN 9900 pass):
   invite). (3) AUDIT cloud/tutor screens: manage_tutors+invite_tutor+parent_pending_redemptions+device_restore (owner),
   accept_invite+manage_grants (tutor), account_picker (switcher). (4) fix waves → re-audit until CLEAN.
 - RISK: if test-loop accounts don't exist → create via Firebase Admin/gcloud. If App Check fails → diagnose.
+
+### Cloud validation GREEN (2026-06-12)
+- 5556 cloud setup VALIDATED — ALL GREEN: App Check debug token registered (7065edaa-99d9-420e-bf31-d1854e7b70d4,
+  Admin API success, persists across relaunch); EMAIL sign-in test-loop-a@orvex.test / TestLoop!2026 SUCCESS (account
+  "Loop Test A" exists, has cloud child profiles RedeemKid + PinKid that synced down); Backup&Sync = "Last synced just
+  now", outbox flushed, ZERO permission-denied/App-Check errors. Cloud/tutor on emulators is FEASIBLE.
+- GOTCHA (critical): emulators boot with WiFi + mobile data OFF → app silently drops to offline/local mode + sign-in
+  fails with a misleading network error. ALWAYS run `adb -s <serial> shell svc wifi enable && svc data enable` and
+  confirm `dumpsys connectivity | grep "Active default network"` != none BEFORE any cloud test.
+- BONUS: test-loop-a already has a PENDING tutor invite ("TALMID PROFILES / LoopChild / Pending — tap to accept") — a
+  ready-made accept-flow to audit. Mapping test-loop-c (5558) to learn who owns LoopChild / sent the invite.
