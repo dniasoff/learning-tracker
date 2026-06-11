@@ -31,8 +31,13 @@ class ProfileGrid extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return GridView.builder(
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 2,
+      // PP-16 fix: use MaxCrossAxisExtent so cards never exceed ~260 logical
+      // pixels wide on tablet/landscape.  The phone 2-column layout is
+      // preserved because 2 × 260 = 520 px ≤ most phone widths; on wider
+      // viewports Flutter adds columns automatically and aspect ratio stays
+      // sensible (no ~1760 px tall cards).
+      gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+        maxCrossAxisExtent: 260,
         childAspectRatio: 0.67,
         crossAxisSpacing: 14,
         mainAxisSpacing: 14,
