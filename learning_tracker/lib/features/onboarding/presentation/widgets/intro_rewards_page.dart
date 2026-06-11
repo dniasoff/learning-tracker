@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 const _kNavy = Color(0xFF1A36A5);
 const _kCoral = Color(0xFFF86B6B);
@@ -107,7 +108,7 @@ class IntroRewardsHeroIllustration extends StatelessWidget {
                       ),
                       const SizedBox(width: 4),
                       Text(
-                        'STREAK',
+                        AppLocalizations.of(context)!.streak,
                         style: GoogleFonts.plusJakartaSans(
                           color: AppTheme.brandCreamCard,
                           fontSize: 9,
@@ -132,27 +133,28 @@ class IntroFeatureCardsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Row(
+    final l10n = AppLocalizations.of(context)!;
+    return Row(
       children: [
         Expanded(
           child: _FeatureCard(
             icon: Icons.military_tech_outlined,
-            label: 'Badge\nCollection',
+            label: l10n.introBadgeCollection,
             bottomBorder: _kNavy,
             circleColor: _kBadgeBg,
             textColor: _kNavy,
             iconColor: _kNavy,
           ),
         ),
-        SizedBox(width: 12),
+        const SizedBox(width: 12),
         Expanded(
           child: _FeatureCard(
             icon: Icons.card_giftcard_rounded,
-            label: 'Mystery\nPrizes',
+            label: l10n.introMysteryPrizes,
             bottomBorder: _kMysteryBorder,
             circleColor: _kMysteryBg,
-            textColor: Color(0xFF5C4A2A),
-            iconColor: Color(0xFF6B4E1E),
+            textColor: const Color(0xFF5C4A2A),
+            iconColor: const Color(0xFF6B4E1E),
           ),
         ),
       ],
@@ -261,7 +263,7 @@ class IntroChildModeTag extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'For Child profiles only',
+                  AppLocalizations.of(context)!.introChildModeTagTitle,
                   style: GoogleFonts.plusJakartaSans(
                     color: _kNavy,
                     fontSize: 14,
@@ -271,7 +273,7 @@ class IntroChildModeTag extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Points, streaks, and rewards show up when you create a Child profile. Adult profiles focus on plain learning progress.',
+                  AppLocalizations.of(context)!.introChildModeTagBody,
                   style: GoogleFonts.plusJakartaSans(
                     color: _kNavy.withValues(alpha: 0.75),
                     fontSize: 12.5,
@@ -302,6 +304,7 @@ class IntroScholarLevelCard extends ConsumerWidget {
     final terms = domainTermLabels(ref);
     final useHebrew = terms.isHebrew;
     final talmidChochomCapsLabel = terms.talmidChochomCaps;
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
@@ -323,7 +326,7 @@ class IntroScholarLevelCard extends ConsumerWidget {
             children: [
               Text(
                 // Generic label — avoids implying the user is at "Level 4".
-                'Scholar Progress',
+                l10n.introScholarProgress,
                 style: GoogleFonts.plusJakartaSans(
                   color: AppTheme.brandInk,
                   fontSize: 15,
@@ -339,7 +342,7 @@ class IntroScholarLevelCard extends ConsumerWidget {
                   borderRadius: BorderRadius.circular(6),
                 ),
                 child: Text(
-                  'EXAMPLE',
+                  l10n.introScholarExample,
                   style: GoogleFonts.plusJakartaSans(
                     color: _kNavy,
                     fontSize: 9,
@@ -386,7 +389,7 @@ class IntroScholarLevelCard extends ConsumerWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'NOVICE',
+                l10n.introScholarNovice,
                 style: GoogleFonts.plusJakartaSans(
                   color: AppTheme.brandInkSoft,
                   fontSize: 9,

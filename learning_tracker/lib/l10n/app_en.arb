@@ -217,6 +217,91 @@
   "selectCurricula": "Select Curricula",
   "continueButton": "Continue",
   "skip": "Skip",
+  "introContinueJourney": "Continue Journey",
+  "@introContinueJourney": {
+    "description": "Onboarding intro carousel CTA label on the non-final pages (advances to the next intro page)."
+  },
+  "introSetupProgress": "SETUP PROGRESS",
+  "@introSetupProgress": {
+    "description": "All-caps label under the progress bar on the first onboarding intro page."
+  },
+  "introDailyPlanTitleLine1": "Your Daily",
+  "@introDailyPlanTitleLine1": {
+    "description": "First (non-highlighted) line of the daily-plan intro page title. Rendered above introDailyPlanTitleHighlight."
+  },
+  "introDailyPlanTitleHighlight": "Torah Plan",
+  "@introDailyPlanTitleHighlight": {
+    "description": "Highlighted (italic, navy) second line of the daily-plan intro page title."
+  },
+  "introDailyPlanSubtitle": "Learning Tracker turns massive goals into {highlight}, so you always know what to study next.",
+  "@introDailyPlanSubtitle": {
+    "description": "Subtitle on the daily-plan intro page. {highlight} is the bolded phrase introDailyPlanSubtitleHighlight.",
+    "placeholders": {
+      "highlight": { "type": "String" }
+    }
+  },
+  "introDailyPlanSubtitleHighlight": "clear daily tasks",
+  "@introDailyPlanSubtitleHighlight": {
+    "description": "Bolded phrase embedded in introDailyPlanSubtitle."
+  },
+  "introMishnaTitlePrefix": "Never Forget\na ",
+  "@introMishnaTitlePrefix": {
+    "description": "Prefix of the Mishna intro page title; followed by the localized Mishna domain term (italic, navy)."
+  },
+  "introMishnaSubtitle": "Master your learning with intelligent review cycles. Our {highlight} helps you retain everything you learn.",
+  "@introMishnaSubtitle": {
+    "description": "Subtitle on the Mishna intro page. {highlight} is the bolded phrase introMishnaSubtitleHighlight.",
+    "placeholders": {
+      "highlight": { "type": "String" }
+    }
+  },
+  "introMishnaSubtitleHighlight": "spaced-repetition engine",
+  "@introMishnaSubtitleHighlight": {
+    "description": "Bolded phrase embedded in introMishnaSubtitle."
+  },
+  "introRewardsTitle": "Earn While You Learn",
+  "@introRewardsTitle": {
+    "description": "Title of the rewards intro page."
+  },
+  "introRewardsSubtitle": "Collect points, build streaks, and unlock mystery rewards as you climb from a Novice to a {scholarTier}!",
+  "@introRewardsSubtitle": {
+    "description": "Subtitle on the rewards intro page. {scholarTier} is the toggle-aware Talmid Chochom domain term.",
+    "placeholders": {
+      "scholarTier": { "type": "String" }
+    }
+  },
+  "introMishnaReviewChip": "Review…",
+  "@introMishnaReviewChip": {
+    "description": "Decorative chip on the Mishna intro illustration showing a partial 'Review…' word."
+  },
+  "introChildModeTagTitle": "For Child profiles only",
+  "@introChildModeTagTitle": {
+    "description": "Title of the banner on the rewards intro page clarifying that points/rewards apply to Child profiles."
+  },
+  "introChildModeTagBody": "Points, streaks, and rewards show up when you create a Child profile. Adult profiles focus on plain learning progress.",
+  "@introChildModeTagBody": {
+    "description": "Body of the Child-profile banner on the rewards intro page."
+  },
+  "introBadgeCollection": "Badge\nCollection",
+  "@introBadgeCollection": {
+    "description": "Feature-card label on the rewards intro page (two lines)."
+  },
+  "introMysteryPrizes": "Mystery\nPrizes",
+  "@introMysteryPrizes": {
+    "description": "Feature-card label on the rewards intro page (two lines)."
+  },
+  "introScholarProgress": "Scholar Progress",
+  "@introScholarProgress": {
+    "description": "Generic header on the illustrative scholar-level card (rewards intro page)."
+  },
+  "introScholarExample": "EXAMPLE",
+  "@introScholarExample": {
+    "description": "Badge marking the scholar-level card as an illustrative preview, not the user's real level."
+  },
+  "introScholarNovice": "NOVICE",
+  "@introScholarNovice": {
+    "description": "Lowest scholar-tier label on the illustrative scholar-level card."
+  },
   "joinCalendarProgram": "Join a Calendar Program",
   "joinCalendarDesc": "Follow a daily learning schedule like Daf Yomi",
   "availablePrograms": "Available Programs",
