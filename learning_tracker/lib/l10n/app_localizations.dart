@@ -5955,28 +5955,40 @@ abstract class AppLocalizations {
   /// **'{count, plural, =1{Best: 1 day} other{Best: {count} days}}'**
   String streakWidgetBest(int count);
 
-  /// Engagement-tier counter — current consecutive-day streak. Appears in the three-counter header row on Dashboard and Progress hub.
+  /// Eyebrow label on the daily-task scheduler goal banner, above the task count. Uppercase styling is applied by the text theme, not the string.
   ///
   /// In en, this message translates to:
-  /// **'{count}-day streak'**
+  /// **'TODAY\'S GOAL'**
+  String get schedulerTodaysGoal;
+
+  /// Headline count on the scheduler goal banner — number of tasks scheduled for today. ICU plural so count==1 reads '1 task today' not '1 tasks today'.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 task today} other{{count} tasks today}}'**
+  String schedulerGoalTaskCount(int count);
+
+  /// Engagement-tier counter — current consecutive-day streak. Appears in the three-counter header row on Dashboard and Progress hub. ICU plural so count==1 stays grammatical ('1-day streak').
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{{count}-day streak} other{{count}-day streak}}'**
   String tierCounterStreakDays(int count);
 
-  /// Achievement-tier counter — total siyumim earned. {siyumimTerm} is the toggle-aware domain term (Siyumim / סיומים).
+  /// Achievement-tier counter — total siyumim earned. {siyumimTerm} is the toggle-aware domain term (Siyumim / סיומים) and is already a plural noun, so the noun word is unchanged across counts; ICU plural is kept for parity with the Hebrew dual.
   ///
   /// In en, this message translates to:
-  /// **'{count} {siyumimTerm} earned'**
+  /// **'{count, plural, =1{{count} {siyumimTerm} earned} other{{count} {siyumimTerm} earned}}'**
   String tierCounterSiyumimEarned(int count, String siyumimTerm);
 
-  /// Lifetime-tier counter — total distinct items the user has ever marked learned (across live + bulkInTrack + lifetimeOnly).
+  /// Lifetime-tier counter — total distinct items the user has ever marked learned (across live + bulkInTrack + lifetimeOnly). ICU plural so count==1 reads '1 item in lifetime'.
   ///
   /// In en, this message translates to:
-  /// **'{count} items in lifetime'**
+  /// **'{count, plural, =1{1 item in lifetime} other{{count} items in lifetime}}'**
   String tierCounterLifetimeItems(int count);
 
-  /// Child-mode points counter — appears as the fourth counter in the header row when child mode is active.
+  /// Child-mode points counter — appears as the fourth counter in the header row when child mode is active. ICU plural so count==1 reads '1 pt'.
   ///
   /// In en, this message translates to:
-  /// **'{count} pts'**
+  /// **'{count, plural, =1{{count} pt} other{{count} pts}}'**
   String tierCounterPoints(int count);
 
   /// Tile-row label (short noun) under the big streak count. The big number above already shows the count, so the label is just the noun — kept short so it fits the tile width without truncation.

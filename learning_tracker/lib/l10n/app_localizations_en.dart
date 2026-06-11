@@ -3455,23 +3455,61 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get schedulerTodaysGoal => 'TODAY\'S GOAL';
+
+  @override
+  String schedulerGoalTaskCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count tasks today',
+      one: '1 task today',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String tierCounterStreakDays(int count) {
-    return '$count-day streak';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count-day streak',
+      one: '$count-day streak',
+    );
+    return '$_temp0';
   }
 
   @override
   String tierCounterSiyumimEarned(int count, String siyumimTerm) {
-    return '$count $siyumimTerm earned';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count $siyumimTerm earned',
+      one: '$count $siyumimTerm earned',
+    );
+    return '$_temp0';
   }
 
   @override
   String tierCounterLifetimeItems(int count) {
-    return '$count items in lifetime';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count items in lifetime',
+      one: '1 item in lifetime',
+    );
+    return '$_temp0';
   }
 
   @override
   String tierCounterPoints(int count) {
-    return '$count pts';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count pts',
+      one: '$count pt',
+    );
+    return '$_temp0';
   }
 
   @override

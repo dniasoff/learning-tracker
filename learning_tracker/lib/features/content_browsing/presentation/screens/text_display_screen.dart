@@ -812,117 +812,122 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
             final isTutor = _isTutorSession(ref);
             final l10n = AppLocalizations.of(context)!;
 
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // W6.17/W6.18: Wrap in Tooltip when disabled due to tutor mode.
-                Tooltip(
-                  // W6.18: Tooltip text — shown only when the button is
-                  // disabled for tutor reasons (not for "already done").
-                  message: isTutor ? l10n.tutorCannotMarkLiveCompletion : '',
-                  child: FilledButton(
-                    // W6.17: Disable for tutors regardless of isDone state.
-                    // H1: session is passed so _handleComplete routes through
-                    // MarkLiveCompletionUseCase for domain-layer enforcement.
-                    onPressed: (_saving || isDone || isTutor)
-                        ? null
-                        : () => _handleComplete(
-                            task,
-                            trackType,
-                            session: _sessionForCurrentUser(ref, isTutor),
-                          ),
-                    style: FilledButton.styleFrom(
-                      // W6.17: When in tutor mode, show a muted amber
-                      // colour to visually communicate the disabled state.
-                      backgroundColor: isTutor
-                          ? const Color(0xFFD97706).withValues(alpha: 0.3)
-                          : isDone
-                          ? AppTheme.brandGoldDeep
-                          : AppTheme.brandBlue,
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 16),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      elevation: isTutor ? 0 : 2,
-                      disabledBackgroundColor: isTutor
-                          ? const Color(0xFFD97706).withValues(alpha: 0.2)
-                          : null,
-                      disabledForegroundColor: isTutor
-                          ? const Color(0xFFD97706).withValues(alpha: 0.7)
-                          : null,
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        if (_saving)
-                          const SizedBox(
-                            width: 18,
-                            height: 18,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: AppTheme.brandCreamCard,
+            // R2: SafeArea(top:false) so the mark-complete / next-task buttons
+            // are never clipped by the system navigation-bar inset at the bottom.
+            return SafeArea(
+              top: false,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // W6.17/W6.18: Wrap in Tooltip when disabled due to tutor mode.
+                  Tooltip(
+                    // W6.18: Tooltip text — shown only when the button is
+                    // disabled for tutor reasons (not for "already done").
+                    message: isTutor ? l10n.tutorCannotMarkLiveCompletion : '',
+                    child: FilledButton(
+                      // W6.17: Disable for tutors regardless of isDone state.
+                      // H1: session is passed so _handleComplete routes through
+                      // MarkLiveCompletionUseCase for domain-layer enforcement.
+                      onPressed: (_saving || isDone || isTutor)
+                          ? null
+                          : () => _handleComplete(
+                              task,
+                              trackType,
+                              session: _sessionForCurrentUser(ref, isTutor),
                             ),
-                          )
-                        else
-                          Icon(
-                            // W6.17: When tutor, show a school/lock icon.
-                            isTutor
-                                ? Icons.school_rounded
-                                : isDone
-                                ? Icons.check_circle
-                                : Icons.check_circle_outline_rounded,
-                            size: 20,
-                          ),
-                        const SizedBox(width: 10),
-                        Text(
-                          isTutor
-                              ? l10n.markCompleteTutorUnavailable
-                              : isDone
-                              ? l10n.markCompleteCompletedStage(
-                                  domainTermLabels(
-                                    ref,
-                                  ).resolveStoredStageName(task.stageName),
-                                )
-                              : l10n.markComplete,
-                          style: const TextStyle(
-                            fontSize: 31 / 2,
-                            fontWeight: FontWeight.w700,
-                          ),
+                      style: FilledButton.styleFrom(
+                        // W6.17: When in tutor mode, show a muted amber
+                        // colour to visually communicate the disabled state.
+                        backgroundColor: isTutor
+                            ? const Color(0xFFD97706).withValues(alpha: 0.3)
+                            : isDone
+                            ? AppTheme.brandGoldDeep
+                            : AppTheme.brandBlue,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(999),
                         ),
-                      ],
+                        elevation: isTutor ? 0 : 2,
+                        disabledBackgroundColor: isTutor
+                            ? const Color(0xFFD97706).withValues(alpha: 0.2)
+                            : null,
+                        disabledForegroundColor: isTutor
+                            ? const Color(0xFFD97706).withValues(alpha: 0.7)
+                            : null,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          if (_saving)
+                            const SizedBox(
+                              width: 18,
+                              height: 18,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppTheme.brandCreamCard,
+                              ),
+                            )
+                          else
+                            Icon(
+                              // W6.17: When tutor, show a school/lock icon.
+                              isTutor
+                                  ? Icons.school_rounded
+                                  : isDone
+                                  ? Icons.check_circle
+                                  : Icons.check_circle_outline_rounded,
+                              size: 20,
+                            ),
+                          const SizedBox(width: 10),
+                          Text(
+                            isTutor
+                                ? l10n.markCompleteTutorUnavailable
+                                : isDone
+                                ? l10n.markCompleteCompletedStage(
+                                    domainTermLabels(
+                                      ref,
+                                    ).resolveStoredStageName(task.stageName),
+                                  )
+                                : l10n.markComplete,
+                            style: const TextStyle(
+                              fontSize: 31 / 2,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
-                if (nextTask != null) ...[
-                  const SizedBox(height: 10),
-                  OutlinedButton.icon(
-                    onPressed: () => context.router.replace(
-                      TextDisplayRoute(
-                        sefariaRef: nextTask.contentItemSefariaRef,
+                  if (nextTask != null) ...[
+                    const SizedBox(height: 10),
+                    OutlinedButton.icon(
+                      onPressed: () => context.router.replace(
+                        TextDisplayRoute(
+                          sefariaRef: nextTask.contentItemSefariaRef,
+                        ),
+                      ),
+                      icon: const Icon(Icons.arrow_forward_rounded, size: 20),
+                      label: Text(
+                        nextLabel,
+                        style: const TextStyle(
+                          fontSize: 31 / 2,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppTheme.brandBlue,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        side: BorderSide(
+                          color: AppTheme.brandBlue.withValues(alpha: 0.45),
+                        ),
                       ),
                     ),
-                    icon: const Icon(Icons.arrow_forward_rounded, size: 20),
-                    label: Text(
-                      nextLabel,
-                      style: const TextStyle(
-                        fontSize: 31 / 2,
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppTheme.brandBlue,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(999),
-                      ),
-                      side: BorderSide(
-                        color: AppTheme.brandBlue.withValues(alpha: 0.45),
-                      ),
-                    ),
-                  ),
+                  ],
                 ],
-              ],
+              ),
             );
           },
         );
