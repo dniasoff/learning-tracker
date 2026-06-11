@@ -2544,6 +2544,9 @@ class AppLocalizationsHe extends AppLocalizations {
   String get profilesNameFieldLabel => 'שם';
 
   @override
+  String get learnerNameRequired => 'יש להזין שם';
+
+  @override
   String get deleteProfileLastTitle => 'למחוק את הפרופיל היחיד שלך?';
 
   @override
@@ -4064,6 +4067,13 @@ class AppLocalizationsHe extends AppLocalizations {
   String inviteTutorSentSnackbar(String email) {
     return 'ההזמנה נשלחה אל $email!';
   }
+
+  @override
+  String get inviteTutorErrorUnauthenticated =>
+      'לא הצלחנו לשלוח את ההזמנה. היכנסו לחשבון ונסו שוב.';
+
+  @override
+  String get inviteTutorErrorGeneric => 'לא הצלחנו לשלוח את ההזמנה. נסו שוב.';
 
   @override
   String get manageGrantsAppBarTitle => 'ההדרכות שלי';

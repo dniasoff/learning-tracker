@@ -2571,6 +2571,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get profilesNameFieldLabel => 'Name';
 
   @override
+  String get learnerNameRequired => 'Enter a name';
+
+  @override
   String get deleteProfileLastTitle => 'Delete your only profile?';
 
   @override
@@ -4098,6 +4101,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String inviteTutorSentSnackbar(String email) {
     return 'Invite sent to $email!';
   }
+
+  @override
+  String get inviteTutorErrorUnauthenticated =>
+      'Couldn\'t send the invitation. Please sign in and try again.';
+
+  @override
+  String get inviteTutorErrorGeneric =>
+      'Couldn\'t send the invitation. Please try again.';
 
   @override
   String get manageGrantsAppBarTitle => 'My Tutoring Grants';

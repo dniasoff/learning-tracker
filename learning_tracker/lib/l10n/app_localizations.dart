@@ -4521,6 +4521,12 @@ abstract class AppLocalizations {
   /// **'Name'**
   String get profilesNameFieldLabel;
 
+  /// Inline validation error shown when a learner/profile name is empty or whitespace-only on Save.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a name'**
+  String get learnerNameRequired;
+
   /// No description provided for @deleteProfileLastTitle.
   ///
   /// In en, this message translates to:
@@ -6902,6 +6908,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Invite sent to {email}!'**
   String inviteTutorSentSnackbar(String email);
+
+  /// No description provided for @inviteTutorErrorUnauthenticated.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t send the invitation. Please sign in and try again.'**
+  String get inviteTutorErrorUnauthenticated;
+
+  /// No description provided for @inviteTutorErrorGeneric.
+  ///
+  /// In en, this message translates to:
+  /// **'Couldn\'t send the invitation. Please try again.'**
+  String get inviteTutorErrorGeneric;
 
   /// No description provided for @manageGrantsAppBarTitle.
   ///
