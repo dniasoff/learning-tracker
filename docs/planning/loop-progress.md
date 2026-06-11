@@ -513,3 +513,19 @@ device-driven (commit 95ede74a, make ci GREEN 9900 pass):
   Parent Mode PIN 2580, lifetime_knowledge incl. on-device COLLISION-FIX check that 1 completion isn't over-credited),
   + re-verify the R5 upgrade_to_cloud Hebrew localization (device→he via `cmd locale set-app-locales --locales he`).
 - STILL PENDING Daniel: restart 5556 + 5558 for full 3-device parallelism. Working on 5554 only meanwhile.
+
+### 5554 single-device audit: ALL CLEAN (2026-06-11)
+- 4 screens audited on re-seeded 5554 — ALL PASS, no defects:
+  · text_display: SafeArea/nav-inset fix HOLDS (mark-complete/next buttons clear of nav); Hebrew with/without nikud;
+    breadcrumb nusach-correct + wraps at 1.3.
+  · track_management_hub (via Parent Mode PIN 2580): "1 RUNNING" singular correct; nusach-correct names; safe delete
+    confirm (Archive / Delete+wipe / Cancel).
+  · lifetime_knowledge: COLLISION FIX VERIFIED ON-DEVICE — 1 completed mishna credits exactly
+    Mishnayos→Zeraim→Berachos→Perek-Alef and NOTHING else; % = 0% (1/4192), sane, not inflated. The architectural fix
+    works in reality.
+  · upgrade_to_cloud: R5 Hebrew localization VERIFIED ON-DEVICE (device→he via cmd locale) — entire body + entry card
+    + error UI Hebrew, NO English leak.
+- Coverage now ~30/45 screens. Remaining: onboarding/auth cluster (R6, needs fresh state) + a few management screens
+  (study_day_config, point_config, decline/accept_invite, device_restore, manage_grants, parent_pending_redemptions).
+- NEXT: R6 onboarding/auth audit on 5554 (pm clear → drive the first-run flow). Full 3-device parallelism awaits
+  Daniel restarting 5556 + 5558.
