@@ -1071,7 +1071,7 @@ abstract class AppLocalizations {
   /// No description provided for @addTrackGoalDeadlinePaceLine.
   ///
   /// In en, this message translates to:
-  /// **'About {items} {unit} per study day, across {studyDays} study days to finish the scope by the deadline (≈{totalItems} items).'**
+  /// **'About {items} {unit} per study day, across {studyDays, plural, =1{1 study day} other{{studyDays} study days}} to finish the scope by the deadline (≈{totalItems} items).'**
   String addTrackGoalDeadlinePaceLine(
     int items,
     String unit,
@@ -5033,6 +5033,30 @@ abstract class AppLocalizations {
   /// **'Which days do you learn?'**
   String get studyDaysSubtitle;
 
+  /// No description provided for @studyDaysPerWeekLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 study day per week} other{{count} study days per week}}'**
+  String studyDaysPerWeekLabel(int count);
+
+  /// No description provided for @studyDayConfigTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{curriculumName} Study Days'**
+  String studyDayConfigTitle(String curriculumName);
+
+  /// No description provided for @studyDayConfigSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose which days include new learning and which are for review only.'**
+  String get studyDayConfigSubtitle;
+
+  /// No description provided for @studyDayConfigAllDaysStudy.
+  ///
+  /// In en, this message translates to:
+  /// **'All days are study days for this track.'**
+  String get studyDayConfigAllDaysStudy;
+
   /// No description provided for @studyDaysSetByProgram.
   ///
   /// In en, this message translates to:
@@ -5134,6 +5158,90 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Create Goal'**
   String get goalCreateButton;
+
+  /// No description provided for @goalDeadlineDatePickerHint.
+  ///
+  /// In en, this message translates to:
+  /// **'Tap to choose a date'**
+  String get goalDeadlineDatePickerHint;
+
+  /// No description provided for @goalDeadlineOccasionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Occasion (optional)'**
+  String get goalDeadlineOccasionLabel;
+
+  /// No description provided for @goalDeadlineOccasionHint.
+  ///
+  /// In en, this message translates to:
+  /// **'e.g., Bar Mitzvah, Yahrzeit, Siyum'**
+  String get goalDeadlineOccasionHint;
+
+  /// No description provided for @goalDeadlinePassed.
+  ///
+  /// In en, this message translates to:
+  /// **'Deadline has passed'**
+  String get goalDeadlinePassed;
+
+  /// No description provided for @goalDeadlinePaceItems.
+  ///
+  /// In en, this message translates to:
+  /// **'~{pace} items per day'**
+  String goalDeadlinePaceItems(int pace);
+
+  /// No description provided for @goalDeadlineItemsInDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{items} items in {days} days'**
+  String goalDeadlineItemsInDays(int items, int days);
+
+  /// No description provided for @goalPaceHowMany.
+  ///
+  /// In en, this message translates to:
+  /// **'How many {unit} per {period}?'**
+  String goalPaceHowMany(String unit, String period);
+
+  /// No description provided for @goalPaceInputLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'{unit} {period}'**
+  String goalPaceInputLabel(String unit, String period);
+
+  /// No description provided for @goalPaceProjectedCompletion.
+  ///
+  /// In en, this message translates to:
+  /// **'Projected completion: {date}'**
+  String goalPaceProjectedCompletion(String date);
+
+  /// No description provided for @goalPaceItemsInDays.
+  ///
+  /// In en, this message translates to:
+  /// **'{items} {unit} in ~{days} days'**
+  String goalPaceItemsInDays(int items, String unit, int days);
+
+  /// No description provided for @goalTargetPercentOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete {percent}% of the material'**
+  String goalTargetPercentOnly(int percent);
+
+  /// No description provided for @goalTargetPercentWithCount.
+  ///
+  /// In en, this message translates to:
+  /// **'Complete {percent}% of the material ({done} of {total} items)'**
+  String goalTargetPercentWithCount(int percent, int done, int total);
+
+  /// No description provided for @goalLearningUnitLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Learning unit'**
+  String get goalLearningUnitLabel;
+
+  /// No description provided for @goalNoPressureLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Learn at your own pace with no time pressure.'**
+  String get goalNoPressureLabel;
 
   /// No description provided for @trackSetGoalLabel.
   ///
@@ -5392,6 +5500,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Save Changes'**
   String get trackEditSaveButton;
+
+  /// No description provided for @trackEditNameEmptyError.
+  ///
+  /// In en, this message translates to:
+  /// **'Track name cannot be empty.'**
+  String get trackEditNameEmptyError;
+
+  /// No description provided for @trackEditZeroStudyDaysWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'No study days selected — new learning will not be scheduled until you add at least one study day.'**
+  String get trackEditZeroStudyDaysWarning;
 
   /// No description provided for @trackEditConfirmTitle.
   ///
@@ -7486,6 +7606,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, one{{count} selection} other{{count} selections}}'**
   String selectionCount(int count);
+
+  /// R1-(3): singular/plural unit word ('Day'/'Days') shown under the numeric delay in the custom-cycle review chip. Uppercased at render time. count==1 must be singular ('1 DAY').
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{Day} other{Days}}'**
+  String chazaraDayUnitLabel(int count);
+
+  /// R1-(6): top-level scope breadcrumb prompt. Shown after the curriculum chip; must NOT repeat the curriculum name. levelLabel is the localized level word (e.g. Sefer, Seder).
+  ///
+  /// In en, this message translates to:
+  /// **'Choose a {levelLabel}'**
+  String scopeChooseLevelPrompt(String levelLabel);
 }
 
 class _AppLocalizationsDelegate

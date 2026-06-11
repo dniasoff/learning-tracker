@@ -198,9 +198,13 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     final itemsRemaining = totalScope != null
         ? (totalScope * (1 - cycleFraction)).ceil().clamp(0, totalScope)
         : null;
-    final estimatedFinish = _estimatedFinish(goal, itemsRemaining, locale);
-
     final useHebrewCalendar = ref.watch(useHebrewDateProvider);
+    final estimatedFinish = _estimatedFinish(
+      goal,
+      itemsRemaining,
+      locale,
+      useHebrewCalendar: useHebrewCalendar,
+    );
     // TS-8 fix: use formatTrackDate so Hebrew calendar preference is respected.
     final activatedDate = formatTrackDate(
       date: track.activatedAt,
@@ -254,6 +258,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
             goal: goal,
             itemsRemaining: itemsRemaining,
             estimatedFinish: estimatedFinish,
+            useHebrewCalendar: useHebrewCalendar,
           ),
           const SizedBox(height: 20),
           _buildActionsCard(
@@ -290,6 +295,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     Goal? goal,
     int? itemsRemaining,
     String? estimatedFinish,
+    required bool useHebrewCalendar,
   }) {
     return Container(
       padding: const EdgeInsets.all(18),
@@ -401,7 +407,12 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
             _configRow(
               theme,
               l10n.trackDetailConfigGoal,
-              _goalLabel(goal, l10n, locale),
+              _goalLabel(
+                goal,
+                l10n,
+                locale,
+                useHebrewCalendar: useHebrewCalendar,
+              ),
             ),
           if (itemsRemaining != null)
             _configRow(
@@ -441,7 +452,12 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     );
   }
 
-  String? _goalLabel(Goal? goal, AppLocalizations l10n, String locale) {
+  String? _goalLabel(
+    Goal? goal,
+    AppLocalizations l10n,
+    String locale, {
+    required bool useHebrewCalendar,
+  }) {
     if (goal == null) return null;
     if (goal.goalType == 'pace' &&
         goal.paceValue != null &&
@@ -452,14 +468,24 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
       return '${goal.paceValue} · $period';
     }
     if (goal.goalType == 'deadline' && goal.targetDate != null) {
-      // Show the raw deadline date; the "Est. finish" row is not shown for
-      // deadline goals to avoid repeating the same value twice.
-      return DateFormat.yMMMd(locale).format(goal.targetDate!.toLocal());
+      // TS-8 fix: route deadline date through formatTrackDate so Hebrew
+      // calendar preference is honoured (same calendar system as the "Since"
+      // date on the same screen).
+      return formatTrackDate(
+        date: goal.targetDate!,
+        locale: locale,
+        useHebrewCalendar: useHebrewCalendar,
+      );
     }
     return null;
   }
 
-  String? _estimatedFinish(Goal? goal, int? itemsRemaining, String locale) {
+  String? _estimatedFinish(
+    Goal? goal,
+    int? itemsRemaining,
+    String locale, {
+    required bool useHebrewCalendar,
+  }) {
     if (goal == null) return null;
     // Deadline goals surface their date in the "Goal" row; skip here.
     if (goal.goalType == 'deadline') return null;
@@ -473,9 +499,16 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
           : goal.paceValue!;
       if (weeklyRate > 0) {
         final days = (itemsRemaining / weeklyRate * 7).ceil();
-        return DateFormat.yMMMd(
-          locale,
-        ).format(goal.createdAt.toLocal().add(Duration(days: days)));
+        final projectedDate = goal.createdAt.toLocal().add(
+          Duration(days: days),
+        );
+        // TS-8 fix: use formatTrackDate so projected finish also respects Hebrew
+        // calendar preference (consistent with "Since" / goal deadline rows).
+        return formatTrackDate(
+          date: projectedDate,
+          locale: locale,
+          useHebrewCalendar: useHebrewCalendar,
+        );
       }
     }
     return null;

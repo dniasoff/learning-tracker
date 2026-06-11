@@ -129,7 +129,11 @@ class _StartingPositionCalendarModeState
     final daysLabel = l10n.calendarOffsetDaysCount(absDays);
     final canStart = _calendarEntry != null && !_calendarLoading;
 
-    return Padding(
+    // R1-(4): wrap in SingleChildScrollView so the column can scroll at large
+    // OS text scales instead of overflowing ("BOTTOM OVERFLOWED BY 59 PIXELS").
+    // Spacer() is incompatible with scroll views (it requires unbounded height),
+    // so replace it with a fixed-height gap.
+    return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -151,7 +155,7 @@ class _StartingPositionCalendarModeState
           _buildDateCard(theme, l10n, _dateLabel(context)),
           const SizedBox(height: 14),
           _buildOffsetStepper(theme, l10n, daysLabel),
-          const Spacer(),
+          const SizedBox(height: 24),
           FilledButton.tonal(
             onPressed: () {
               setState(() => _offsetDays = 0);

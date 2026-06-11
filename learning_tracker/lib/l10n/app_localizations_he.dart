@@ -548,7 +548,14 @@ class AppLocalizationsHe extends AppLocalizations {
     int studyDays,
     int totalItems,
   ) {
-    return 'בערך $items $unit בכל יום לימוד, על פני $studyDays ימי לימוד עד תאריך היעד (בערך $totalItems יחידות בתחום).';
+    String _temp0 = intl.Intl.pluralLogic(
+      studyDays,
+      locale: localeName,
+      other: '$studyDays ימי לימוד',
+      two: 'יומיים של לימוד',
+      one: 'יום לימוד אחד',
+    );
+    return 'בערך $items $unit בכל יום לימוד, על פני $_temp0 עד תאריך היעד (בערך $totalItems יחידות בתחום).';
   }
 
   @override
@@ -2803,6 +2810,31 @@ class AppLocalizationsHe extends AppLocalizations {
   String get studyDaysSubtitle => 'באילו ימים אתה לומד?';
 
   @override
+  String studyDaysPerWeekLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ימי לימוד בשבוע',
+      two: 'שני ימי לימוד בשבוע',
+      one: 'יום לימוד אחד בשבוע',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String studyDayConfigTitle(String curriculumName) {
+    return 'ימי לימוד — $curriculumName';
+  }
+
+  @override
+  String get studyDayConfigSubtitle =>
+      'בחר אילו ימים כוללים לימוד חדש ואילו לחזרה בלבד.';
+
+  @override
+  String get studyDayConfigAllDaysStudy =>
+      'כל הימים הם ימי לימוד עבור מסלול זה.';
+
+  @override
   String studyDaysSetByProgram(String programName) {
     return 'ימי הלימוד נקבעו על ידי $programName';
   }
@@ -2857,6 +2889,64 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get goalCreateButton => 'צור יעד';
+
+  @override
+  String get goalDeadlineDatePickerHint => 'לחץ לבחירת תאריך';
+
+  @override
+  String get goalDeadlineOccasionLabel => 'אירוע (אופציונלי)';
+
+  @override
+  String get goalDeadlineOccasionHint => 'למשל: בר מצווה, יארצייט, סיום';
+
+  @override
+  String get goalDeadlinePassed => 'המועד האחרון עבר';
+
+  @override
+  String goalDeadlinePaceItems(int pace) {
+    return '~$pace פריטים ביום';
+  }
+
+  @override
+  String goalDeadlineItemsInDays(int items, int days) {
+    return '$items פריטים ב-$days ימים';
+  }
+
+  @override
+  String goalPaceHowMany(String unit, String period) {
+    return 'כמה $unit ב$period?';
+  }
+
+  @override
+  String goalPaceInputLabel(String unit, String period) {
+    return '$unit $period';
+  }
+
+  @override
+  String goalPaceProjectedCompletion(String date) {
+    return 'סיום משוער: $date';
+  }
+
+  @override
+  String goalPaceItemsInDays(int items, String unit, int days) {
+    return '$items $unit בכ-$days ימים';
+  }
+
+  @override
+  String goalTargetPercentOnly(int percent) {
+    return 'השלם $percent% מהחומר';
+  }
+
+  @override
+  String goalTargetPercentWithCount(int percent, int done, int total) {
+    return 'השלם $percent% מהחומר ($done מתוך $total פריטים)';
+  }
+
+  @override
+  String get goalLearningUnitLabel => 'יחידת לימוד';
+
+  @override
+  String get goalNoPressureLabel => 'למד בקצב שלך, ללא לחץ זמן.';
 
   @override
   String get trackSetGoalLabel => 'הגדרת יעד';
@@ -3032,6 +3122,13 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get trackEditSaveButton => 'שמור שינויים';
+
+  @override
+  String get trackEditNameEmptyError => 'שם המסלול לא יכול להיות ריק.';
+
+  @override
+  String get trackEditZeroStudyDaysWarning =>
+      'לא נבחרו ימי לימוד — לא יתוכנן לימוד חדש עד שתוסיף לפחות יום לימוד אחד.';
 
   @override
   String get trackEditConfirmTitle => 'להחיל שינויים?';
@@ -4316,5 +4413,22 @@ class AppLocalizationsHe extends AppLocalizations {
       one: 'בחירה אחת',
     );
     return '$_temp0';
+  }
+
+  @override
+  String chazaraDayUnitLabel(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'ימים',
+      two: 'ימים',
+      one: 'יום',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String scopeChooseLevelPrompt(String levelLabel) {
+    return 'בחרו $levelLabel';
   }
 }

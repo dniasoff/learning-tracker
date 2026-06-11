@@ -353,13 +353,12 @@ void main() {
       await tester.pump(Duration.zero);
     });
 
-    // ── 4. Hardcoded-English strings audit ──────────────────────────────────
+    // ── 4. l10n body copy audit ──────────────────────────────────────────────
     //
-    // The following strings are hardcoded in the production source (not i18n).
-    // They are documented here as found. This is intentional audit output —
-    // see bugsFound in the StructuredOutput report.
+    // R1-(7) fix: body copy is now routed through AppLocalizations so Hebrew
+    // users see translated text. In English locale the output is the same string.
 
-    testWidgets('hardcoded body copy "Choose which days" is present', (
+    testWidgets('l10n body copy "Choose which days" present in en locale', (
       tester,
     ) async {
       await tester.pumpWidget(
@@ -375,7 +374,8 @@ void main() {
       expect(
         find.textContaining('Choose which days'),
         findsOneWidget,
-        reason: 'Hardcoded English body copy present (not i18n)',
+        reason:
+            'R1-(7): l10n.studyDayConfigSubtitle renders the correct en string.',
       );
 
       await tester.pumpWidget(const SizedBox.shrink());

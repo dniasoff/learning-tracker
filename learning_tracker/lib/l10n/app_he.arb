@@ -262,7 +262,7 @@
       "term": { "type": "String" }
     }
   },
-  "addTrackGoalDeadlinePaceLine": "בערך {items} {unit} בכל יום לימוד, על פני {studyDays} ימי לימוד עד תאריך היעד (בערך {totalItems} יחידות בתחום).",
+  "addTrackGoalDeadlinePaceLine": "בערך {items} {unit} בכל יום לימוד, על פני {studyDays, plural, one{יום לימוד אחד} two{יומיים של לימוד} other{{studyDays} ימי לימוד}} עד תאריך היעד (בערך {totalItems} יחידות בתחום).",
   "@addTrackGoalDeadlinePaceLine": {
     "placeholders": {
       "items": { "type": "int" },
@@ -1345,6 +1345,20 @@
 
   "studyDaysTitle": "ימי לימוד",
   "studyDaysSubtitle": "באילו ימים אתה לומד?",
+  "studyDaysPerWeekLabel": "{count, plural, =1{יום לימוד אחד בשבוע} two{שני ימי לימוד בשבוע} other{{count} ימי לימוד בשבוע}}",
+  "@studyDaysPerWeekLabel": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "studyDayConfigTitle": "ימי לימוד — {curriculumName}",
+  "@studyDayConfigTitle": {
+    "placeholders": {
+      "curriculumName": { "type": "String" }
+    }
+  },
+  "studyDayConfigSubtitle": "בחר אילו ימים כוללים לימוד חדש ואילו לחזרה בלבד.",
+  "studyDayConfigAllDaysStudy": "כל הימים הם ימי לימוד עבור מסלול זה.",
   "studyDaysSetByProgram": "ימי הלימוד נקבעו על ידי {programName}",
   "@studyDaysSetByProgram": {
     "placeholders": {
@@ -1377,6 +1391,67 @@
   "goalNewTitle": "יעד חדש",
   "goalUpdateButton": "עדכן יעד",
   "goalCreateButton": "צור יעד",
+  "goalDeadlineDatePickerHint": "לחץ לבחירת תאריך",
+  "goalDeadlineOccasionLabel": "אירוע (אופציונלי)",
+  "goalDeadlineOccasionHint": "למשל: בר מצווה, יארצייט, סיום",
+  "goalDeadlinePassed": "המועד האחרון עבר",
+  "goalDeadlinePaceItems": "~{pace} פריטים ביום",
+  "@goalDeadlinePaceItems": {
+    "placeholders": {
+      "pace": { "type": "int" }
+    }
+  },
+  "goalDeadlineItemsInDays": "{items} פריטים ב-{days} ימים",
+  "@goalDeadlineItemsInDays": {
+    "placeholders": {
+      "items": { "type": "int" },
+      "days": { "type": "int" }
+    }
+  },
+  "goalPaceHowMany": "כמה {unit} ב{period}?",
+  "@goalPaceHowMany": {
+    "placeholders": {
+      "unit": { "type": "String" },
+      "period": { "type": "String" }
+    }
+  },
+  "goalPaceInputLabel": "{unit} {period}",
+  "@goalPaceInputLabel": {
+    "placeholders": {
+      "unit": { "type": "String" },
+      "period": { "type": "String" }
+    }
+  },
+  "goalPaceProjectedCompletion": "סיום משוער: {date}",
+  "@goalPaceProjectedCompletion": {
+    "placeholders": {
+      "date": { "type": "String" }
+    }
+  },
+  "goalPaceItemsInDays": "{items} {unit} בכ-{days} ימים",
+  "@goalPaceItemsInDays": {
+    "placeholders": {
+      "items": { "type": "int" },
+      "unit": { "type": "String" },
+      "days": { "type": "int" }
+    }
+  },
+  "goalTargetPercentOnly": "השלם {percent}% מהחומר",
+  "@goalTargetPercentOnly": {
+    "placeholders": {
+      "percent": { "type": "int" }
+    }
+  },
+  "goalTargetPercentWithCount": "השלם {percent}% מהחומר ({done} מתוך {total} פריטים)",
+  "@goalTargetPercentWithCount": {
+    "placeholders": {
+      "percent": { "type": "int" },
+      "done": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "goalLearningUnitLabel": "יחידת לימוד",
+  "goalNoPressureLabel": "למד בקצב שלך, ללא לחץ זמן.",
   "trackSetGoalLabel": "הגדרת יעד",
   "trackEditGoalLabel": "עריכת יעד",
   "goalSavedSnack": "היעד נשמר",
@@ -1474,6 +1549,8 @@
   },
   "trackEditChangeReview": "שנה",
   "trackEditSaveButton": "שמור שינויים",
+  "trackEditNameEmptyError": "שם המסלול לא יכול להיות ריק.",
+  "trackEditZeroStudyDaysWarning": "לא נבחרו ימי לימוד — לא יתוכנן לימוד חדש עד שתוסיף לפחות יום לימוד אחד.",
   "trackEditConfirmTitle": "להחיל שינויים?",
   "trackEditConfirmBody": "השינויים חלים על לימוד עתידי בלבד. השלמות קיימות אינן מושפעות.",
   "trackEditClearOverdueButton": "נקה פיגורים",
@@ -2340,5 +2417,19 @@
   "permissionPromptLocationSubtitle": "זמני הדלקת נרות {shabbos} ו{havdalah} מדויקים לפי עירכם.",
   "permissionPromptCtaDone": "סיום",
   "permissionPromptAllowButton": "אפשר",
-  "selectionCount": "{count, plural, one{בחירה אחת} other{{count} בחירות}}"
+  "selectionCount": "{count, plural, one{בחירה אחת} other{{count} בחירות}}",
+  "chazaraDayUnitLabel": "{count, plural, one{יום} two{ימים} other{ימים}}",
+  "@chazaraDayUnitLabel": {
+    "description": "R1-(3): singular/plural unit word ('day'/'days') shown under the numeric delay in the custom-cycle review chip.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "scopeChooseLevelPrompt": "בחרו {levelLabel}",
+  "@scopeChooseLevelPrompt": {
+    "description": "R1-(6): top-level scope breadcrumb prompt. Shown after the curriculum chip; must NOT repeat the curriculum name.",
+    "placeholders": {
+      "levelLabel": { "type": "String" }
+    }
+  }
 }

@@ -84,8 +84,10 @@ class StudyDayConfigScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(
         title: AppBarTitle(
-          text:
-              '${curriculumLabelText(ref, curriculum: curriculumId)} Study Days',
+          // R1-(7): use l10n so Hebrew shows "ימי לימוד — X" not "X Study Days".
+          text: AppLocalizations.of(context)!.studyDayConfigTitle(
+            curriculumLabelText(ref, curriculum: curriculumId),
+          ),
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -112,7 +114,8 @@ class StudyDayConfigScreen extends ConsumerWidget {
                 padding: const EdgeInsets.all(24),
                 child: Center(
                   child: Text(
-                    'All days are study days for this track.',
+                    // R1-(7): use l10n so Hebrew shows Hebrew text.
+                    AppLocalizations.of(context)!.studyDayConfigAllDaysStudy,
                     textAlign: TextAlign.center,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
@@ -129,7 +132,8 @@ class StudyDayConfigScreen extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Choose which days include new learning and which are for review only.',
+                    // R1-(7): use l10n so Hebrew shows Hebrew subtitle.
+                    AppLocalizations.of(context)!.studyDayConfigSubtitle,
                     style: theme.textTheme.bodyMedium?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
@@ -197,7 +201,11 @@ class StudyDayConfigScreen extends ConsumerWidget {
                           .length;
                       return Center(
                         child: Text(
-                          '$studyCount study day${studyCount == 1 ? '' : 's'} per week',
+                          // R1-(6): use ICU plural so "1 study day per week"
+                          // (not "1 study days per week").
+                          AppLocalizations.of(
+                            context,
+                          )!.studyDaysPerWeekLabel(studyCount),
                           style: theme.textTheme.titleSmall?.copyWith(
                             color: theme.colorScheme.primary,
                           ),
