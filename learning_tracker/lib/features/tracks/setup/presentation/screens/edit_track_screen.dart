@@ -34,6 +34,17 @@ import 'package:learning_tracker/features/tracks/setup/presentation/steps/step_s
 import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
+/// R1-(5): Returns a non-null error message when [name] (trimmed) is empty;
+/// returns null when the name is valid.
+String? validateTrackName(String name) {
+  if (name.trim().isEmpty) return 'Track name cannot be empty.';
+  return null;
+}
+
+/// R1-(5): Returns the number of days in [studyDays] that are set to 'study'.
+int studyDayCount(Map<int, String> studyDays) =>
+    studyDays.values.where((v) => v == 'study').length;
+
 class EditTrackScreen extends ConsumerStatefulWidget {
   const EditTrackScreen({required this.track, super.key});
 
@@ -164,6 +175,24 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
 
   Future<void> _save() async {
     final l10n = AppLocalizations.of(context)!;
+
+    // R1-(5): validate track name is non-empty.
+    final nameError = validateTrackName(_nameController.text);
+    if (nameError != null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.trackEditNameEmptyError)));
+      return;
+    }
+
+    // R1-(5): warn (non-blocking) when 0 study days are selected so the user
+    // knows new learning will not be scheduled.
+    if (!_isProgramTrack && studyDayCount(_editedStudyDays) == 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.trackEditZeroStudyDaysWarning)),
+      );
+    }
+
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(

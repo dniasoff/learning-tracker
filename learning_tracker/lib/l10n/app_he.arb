@@ -262,7 +262,7 @@
       "term": { "type": "String" }
     }
   },
-  "addTrackGoalDeadlinePaceLine": "בערך {items} {unit} בכל יום לימוד, על פני {studyDays} ימי לימוד עד תאריך היעד (בערך {totalItems} יחידות בתחום).",
+  "addTrackGoalDeadlinePaceLine": "בערך {items} {unit} בכל יום לימוד, על פני {studyDays, plural, one{יום לימוד אחד} two{יומיים של לימוד} other{{studyDays} ימי לימוד}} עד תאריך היעד (בערך {totalItems} יחידות בתחום).",
   "@addTrackGoalDeadlinePaceLine": {
     "placeholders": {
       "items": { "type": "int" },
@@ -1474,6 +1474,8 @@
   },
   "trackEditChangeReview": "שנה",
   "trackEditSaveButton": "שמור שינויים",
+  "trackEditNameEmptyError": "שם המסלול לא יכול להיות ריק.",
+  "trackEditZeroStudyDaysWarning": "לא נבחרו ימי לימוד — לא יתוכנן לימוד חדש עד שתוסיף לפחות יום לימוד אחד.",
   "trackEditConfirmTitle": "להחיל שינויים?",
   "trackEditConfirmBody": "השינויים חלים על לימוד עתידי בלבד. השלמות קיימות אינן מושפעות.",
   "trackEditClearOverdueButton": "נקה פיגורים",
@@ -2340,5 +2342,12 @@
   "permissionPromptLocationSubtitle": "זמני הדלקת נרות {shabbos} ו{havdalah} מדויקים לפי עירכם.",
   "permissionPromptCtaDone": "סיום",
   "permissionPromptAllowButton": "אפשר",
-  "selectionCount": "{count, plural, one{בחירה אחת} other{{count} בחירות}}"
+  "selectionCount": "{count, plural, one{בחירה אחת} other{{count} בחירות}}",
+  "chazaraDayUnitLabel": "{count, plural, one{יום} two{ימים} other{ימים}}",
+  "@chazaraDayUnitLabel": {
+    "description": "R1-(3): singular/plural unit word ('day'/'days') shown under the numeric delay in the custom-cycle review chip.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  }
 }

@@ -3070,6 +3070,13 @@ class AppLocalizationsEn extends AppLocalizations {
   String get trackEditSaveButton => 'Save Changes';
 
   @override
+  String get trackEditNameEmptyError => 'Track name cannot be empty.';
+
+  @override
+  String get trackEditZeroStudyDaysWarning =>
+      'No study days selected — new learning will not be scheduled until you add at least one study day.';
+
+  @override
   String get trackEditConfirmTitle => 'Apply changes?';
 
   @override

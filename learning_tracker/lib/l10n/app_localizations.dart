@@ -5393,6 +5393,18 @@ abstract class AppLocalizations {
   /// **'Save Changes'**
   String get trackEditSaveButton;
 
+  /// No description provided for @trackEditNameEmptyError.
+  ///
+  /// In en, this message translates to:
+  /// **'Track name cannot be empty.'**
+  String get trackEditNameEmptyError;
+
+  /// No description provided for @trackEditZeroStudyDaysWarning.
+  ///
+  /// In en, this message translates to:
+  /// **'No study days selected — new learning will not be scheduled until you add at least one study day.'**
+  String get trackEditZeroStudyDaysWarning;
+
   /// No description provided for @trackEditConfirmTitle.
   ///
   /// In en, this message translates to:

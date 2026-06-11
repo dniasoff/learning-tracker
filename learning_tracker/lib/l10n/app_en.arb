@@ -265,7 +265,7 @@
       "term": { "type": "String" }
     }
   },
-  "addTrackGoalDeadlinePaceLine": "About {items} {unit} per study day, across {studyDays} study days to finish the scope by the deadline (≈{totalItems} items).",
+  "addTrackGoalDeadlinePaceLine": "About {items} {unit} per study day, across {studyDays, plural, =1{1 study day} other{{studyDays} study days}} to finish the scope by the deadline (≈{totalItems} items).",
   "@addTrackGoalDeadlinePaceLine": {
     "placeholders": {
       "items": { "type": "int" },
@@ -1551,6 +1551,8 @@
   },
   "trackEditChangeReview": "Change",
   "trackEditSaveButton": "Save Changes",
+  "trackEditNameEmptyError": "Track name cannot be empty.",
+  "trackEditZeroStudyDaysWarning": "No study days selected — new learning will not be scheduled until you add at least one study day.",
   "trackEditConfirmTitle": "Apply changes?",
   "trackEditConfirmBody": "Changes apply to future learning only. Existing completions are not affected.",
   "trackEditClearOverdueButton": "Clear Overdue",
@@ -2476,6 +2478,13 @@
   "selectionCount": "{count, plural, one{{count} selection} other{{count} selections}}",
   "@selectionCount": {
     "description": "IL-9: localized count label shown below HierarchySelectionPanel when items are selected.",
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "chazaraDayUnitLabel": "{count, plural, =1{Day} other{Days}}",
+  "@chazaraDayUnitLabel": {
+    "description": "R1-(3): singular/plural unit word ('Day'/'Days') shown under the numeric delay in the custom-cycle review chip. Uppercased at render time. count==1 must be singular ('1 DAY').",
     "placeholders": {
       "count": { "type": "int" }
     }

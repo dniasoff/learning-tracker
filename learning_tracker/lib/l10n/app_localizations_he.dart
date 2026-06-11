@@ -3034,6 +3034,13 @@ class AppLocalizationsHe extends AppLocalizations {
   String get trackEditSaveButton => 'שמור שינויים';
 
   @override
+  String get trackEditNameEmptyError => 'שם המסלול לא יכול להיות ריק.';
+
+  @override
+  String get trackEditZeroStudyDaysWarning =>
+      'לא נבחרו ימי לימוד — לא יתוכנן לימוד חדש עד שתוסיף לפחות יום לימוד אחד.';
+
+  @override
   String get trackEditConfirmTitle => 'להחיל שינויים?';
 
   @override
