@@ -202,3 +202,23 @@ CROSS-SLICE FINDINGS → iter11:
 
 MILESTONE: every catalog area (sync, tracks, progress, scheduler, account, tutor, gamification, profiles,
 settings, learning, i18n, nav) now has real on-device coverage. Trend is strongly validation-heavy → convergence.
+
+### VISION-AUDIT REMEDIATION (2026-06-11) — the redesigned approach
+Daniel's concern (correct): the text-only loop left the app buggy after every run. Recalibration audit proved
+it caught only 1 of 75 escaped manual bugs (~99% blind) — the bugs live in pixels (visual), meaning (domain
+terms), timing (exploration), and the 2nd device, none of which uiautomator+logcat can see.
+REDESIGN: vision (downscaled screenshots judged by a vision agent against a human rubric) + domain-term oracle
++ adversarial exploration + depth (one screen exhausted per unit). Capability proven (tool/vision_find_pass.js).
+- FIND: 47-screen vision sweep → 248 findings (2 P0, 47 P1, 199 P2). By sense: vision 75, oracle 65,
+  exploration 61, logic 47 — exactly the classes the old loop scored ~0 on. Evidence in docs/test-artifacts/vision-findings/.
+- TRIAGE: 248 → 82 clusters (63 confirmed bugs, 12 product-decisions, 7 needs-investigation). Plan:
+  docs/test-artifacts/bulk-fix-plan-2026-06-11.md.
+- BULK FIX: Wave A (45 confirmed bugs, owned-root shards) + 16 stale-test corrections + golden regen → FIRST
+  fully-green make ci (exit 0). Wave B (18 cross-root clusters incl. the child-switch-without-PIN P1 security
+  bug, gematriya year, chazara-label collision, city-build-script, deep-link manifest). 63 confirmed bugs fixed,
+  37 fix commits, pushed to dev (3b3b542c), gate green.
+- DEFERRED: 12 product-decisions (await Daniel); city cities.sqlite asset regen (needs GeoNames source download);
+  ST-3 a11y leftovers (point-config/add-learner/invite-tutor); PP-17 search aliases.
+- NEXT: rebuild+redeploy, REDO vision sweep to confirm findings resolved + catch regressions; iterate until clean.
+KEY LESSON: a green automated run means nothing without VISION + a DOMAIN ORACLE + EXPLORATION. "String present"
+is not "string correct"; the widget tree is not the rendered screen.
