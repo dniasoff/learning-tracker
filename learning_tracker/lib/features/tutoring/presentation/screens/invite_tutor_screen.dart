@@ -111,14 +111,43 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
           );
           await Navigator.of(context).maybePop();
           return;
-        case TutorGrantFailure(:final message):
-          setState(() => _errorMessage = message);
+        case TutorGrantFailure(:final message, :final code):
+          // Never surface the raw backend error token (e.g. "Unauthenticated",
+          // a Firebase/gRPC status string) to the parent. Map it to a friendly,
+          // localized message — mirrors the ST-4 pattern in backup_sync_section.
+          setState(
+            () => _errorMessage = _friendlyInviteError(
+              AppLocalizations.of(context)!,
+              code: code,
+              message: message,
+            ),
+          );
         case TutorGrantPreconditionError(:final message):
           setState(() => _errorMessage = message);
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
+  }
+
+  /// Map a backend invite failure to a friendly, localized message so raw
+  /// status tokens (e.g. the gRPC/Firebase string "Unauthenticated") never
+  /// reach the parent. Unauthenticated / permission errors get a sign-in
+  /// hint; everything else gets a generic friendly fallback.
+  String _friendlyInviteError(
+    AppLocalizations l10n, {
+    String? code,
+    required String message,
+  }) {
+    final token = '${code ?? ''} $message'.toLowerCase();
+    final isAuthError =
+        token.contains('unauthenticated') ||
+        token.contains('permission-denied') ||
+        token.contains('permission_denied') ||
+        token.contains('permission denied');
+    return isAuthError
+        ? l10n.inviteTutorErrorUnauthenticated
+        : l10n.inviteTutorErrorGeneric;
   }
 
   @override
