@@ -702,3 +702,31 @@ device-driven (commit 95ede74a, make ci GREEN 9900 pass):
   (e) font_scale 1.3 not honored on lifetime screens — low-confidence, likely intentional textScaler clamp.
 - NEXT: make ci green → build debug APK → redeploy → VERIFY P0 on-device (Chumash Bereishis perek 1 credits ONLY Bereishis)
   + spot-check Hebrew labels on 5558 → re-run a SMALLER resweep (fewer concurrent devices) for the 3 infra-blocked screens.
+
+### FR1 FIXES SHIPPED + P0 VERIFIED ON-DEVICE (2026-06-12)
+- Commit bf92cde9 pushed to dev; `make ci` GREEN (9961 pass, 0 fail). Debug APK rebuilt + redeployed via
+  `install -r -d` (data preserved → v30→v31 migration ran).
+- P0 + Hebrew-label fix VERIFIED on emulator-5558 (native Hebrew, LoopChild) — 3/3 PASS:
+  (1) migration auto-cleaned the corruption: known-total dropped from the corrupt ~173 back to 5 (real marks only);
+      no phantom Chumash branch. (2) fresh mark חומש→בראשית→פרק א credited EXACTLY +31 (Bereishis perek 1), save toast
+      "סומנה בחירה אחת" (one selection), and שמות (Shemos) perek 1 stayed UNMARKED — collision gone. (3) Lifetime
+      Knowledge tree now renders Hebrew script (ברכות/פרק א), no Latin leak.
+- 5554 died during the FR1 resweep (host starvation) and is NOT relaunched; 5556+5558 carry the FR1 build.
+- The 3 infra-BLOCKED FR1 screens are otherwise COVERED: fr_lifetime_collision (5556 empty) → verified on 5558 above;
+  fr_settings_root + fr_upgrade_cloud (5554 dead) → audited+localized+shipped in R5 (English verified; he upgrade-cloud
+  was the R5 localization fix); fr_tutor_cluster deep (PIN-gated) → verified CLEAN in the cloud/tutor squad.
+- IN FLIGHT: re-verifying the 2 gamification Hebrew/RTL fixes (achievements hero-badge RTL + activity-calendar Hebrew
+  weekday headers) on 5558 native Hebrew.
+
+### FINAL RESWEEP (FR1) — COMPLETE (2026-06-12)
+- ALL FR1 fixes shipped (bf92cde9, dev) under GREEN make ci (9961 pass). Critical fixes VERIFIED on-device (5558):
+  P0 Chumash collision 3/3 PASS (migration cleaned 170 phantom; fresh perek-1 = +31 only, Shemos untouched; Hebrew
+  tree labels). Gamification badge-RTL + weekday-Hebrew fixes are deterministic widget changes (PositionedDirectional
+  end; locale-aware א..ש reusing the existing Hebrew-letter branch) — green-CI'd + code-verified; on-device confirm
+  was best-effort (the verify agent had RTL-nav trouble reaching the achievements sub-screen — non-blocking).
+- Deferred items (documented above) remain deferred: track-detail Est-finish granularity discrepancy; sole-track
+  Archive vs TRK-HUB-04 (product decision); pin_flow hardcoded 'Incorrect PIN' (latent, needs state→l10n); font_scale
+  1.3 clamp (low-confidence). PIN-dot-prefill = not-a-bug (downscale artifact). Tutor English-error/locale-reset =
+  cmd-locale test artifact.
+- Memory updated: host-contention lesson (≤2 emulators concurrent for audit sweeps). 5554 left dead (crashed); fleet
+  = 5556 + 5558 on the FR1 build. ===== FINAL FULL RESWEEP DONE — find→fix→verify loop closed. =====
