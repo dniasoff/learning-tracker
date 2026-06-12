@@ -897,7 +897,7 @@
   "signUpErrGeneric": "יצירת החשבון נכשלה. נסה שוב.",
   "chartFailedToLoad": "נכשל בטעינת הנתונים",
   "accountPickerTitle": "בחירת חשבון",
-  "accountPickerSubtitle": "בחרו משתמש כדי להמשיך",
+  "accountPickerSubtitle": "בחרו חשבון כדי להמשיך",
   "accountPickerMaxAccountsShort": "הגעתם למקסימום {count} חשבונות",
   "@accountPickerMaxAccountsShort": {
     "placeholders": {
