@@ -730,3 +730,10 @@ device-driven (commit 95ede74a, make ci GREEN 9900 pass):
   cmd-locale test artifact.
 - Memory updated: host-contention lesson (≤2 emulators concurrent for audit sweeps). 5554 left dead (crashed); fleet
   = 5556 + 5558 on the FR1 build. ===== FINAL FULL RESWEEP DONE — find→fix→verify loop closed. =====
+
+### Gamification Hebrew/RTL fixes VERIFIED on-device too (2026-06-12)
+- The verify agent reached My Achievements (5558, native Hebrew) — 2/2 PASS: (A) progress-hero red sparkle badge now
+  top-LEFT (trailing edge in RTL), clear gap from the right-aligned header ההתקדמות שלך — no collision; (B) activity-
+  calendar (לוח פעילות) weekday headers render Hebrew letters (ה ו ש א ב ג ד), not English. ALL FR1 fixes now
+  on-device-verified (P0 collision 3/3 + Hebrew labels + badge + weekday calendar). Nav note: My Achievements is reached
+  via the small red flame chip top-left of the dashboard header (the stat tiles are not tappable — by design).
