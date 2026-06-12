@@ -579,4 +579,78 @@ void main() {
       await _teardown(tester);
     });
   });
+
+  // ── P2: RTL leading filter-chip not clipped ─────────────────────────────────
+
+  group('filter-chip row leading visibility', () {
+    Widget buildLocalized({required Locale locale}) {
+      return ProviderScope(
+        overrides: [
+          tutorAuditLogProvider(
+            _grantId,
+          ).overrideWith((ref) => Future.value(<TutorAuditLogEntry>[_entry()])),
+        ],
+        child: MaterialApp(
+          locale: locale,
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: const TutorAuditLogScreen(
+            grantId: _grantId,
+            tutorEmail: _tutorEmail,
+          ),
+        ),
+      );
+    }
+
+    testWidgets(
+      'leading FilterChip is fully on-screen in RTL (Hebrew) — not clipped at edge',
+      (tester) async {
+        await tester.pumpWidget(buildLocalized(locale: const Locale('he')));
+        await _pump(tester);
+
+        final screenWidth = tester.view.physicalSize.width /
+            tester.view.devicePixelRatio;
+        // The leading chip in RTL is the FIRST FilterChip (logical start = right).
+        final firstChip = find.byType(FilterChip).first;
+        final rect = tester.getRect(firstChip);
+
+        // Must not be clipped past either physical edge.
+        expect(
+          rect.right,
+          lessThanOrEqualTo(screenWidth + 0.5),
+          reason: 'Leading chip must not be clipped past the right (start) edge in RTL',
+        );
+        expect(
+          rect.left,
+          greaterThanOrEqualTo(-0.5),
+          reason: 'Leading chip must not be clipped past the left edge',
+        );
+
+        await _teardown(tester);
+      },
+    );
+
+    testWidgets(
+      'leading FilterChip is fully on-screen in LTR (English)',
+      (tester) async {
+        await tester.pumpWidget(buildLocalized(locale: const Locale('en')));
+        await _pump(tester);
+
+        final screenWidth = tester.view.physicalSize.width /
+            tester.view.devicePixelRatio;
+        final firstChip = find.byType(FilterChip).first;
+        final rect = tester.getRect(firstChip);
+
+        expect(rect.left, greaterThanOrEqualTo(-0.5));
+        expect(rect.right, lessThanOrEqualTo(screenWidth + 0.5));
+
+        await _teardown(tester);
+      },
+    );
+  });
 }

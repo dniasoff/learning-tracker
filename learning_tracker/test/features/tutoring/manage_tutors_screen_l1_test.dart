@@ -1415,6 +1415,97 @@ void main() {
     await tester.pump(Duration.zero);
   });
 
+  // ── DG-TUT-STALE-01 (P0): reliable re-fetch on (re)show + pull-to-refresh ───
+
+  testWidgets(
+    'P0: screen wraps the grants list in a RefreshIndicator (pull-to-refresh)',
+    (tester) async {
+      final child = _childProfile(id: 1, displayName: 'Refreshable');
+      final grant = _pendingGrant();
+
+      await tester.pumpWidget(
+        _buildApp(
+          router: router,
+          profilesState: AsyncData([child]),
+          grantsPerChild: {
+            '1': AsyncData([grant]),
+          },
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.byType(RefreshIndicator), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    },
+  );
+
+  testWidgets(
+    'P0: re-fetches outgoing grants on (re)show — provider re-runs after mount',
+    (tester) async {
+      // The screen must re-query on entry so a tutor acceptance (a remote
+      // change) flips Pending → Active rather than serving a stale cache.
+      // We count how many times the provider future is built: an initState
+      // invalidate forces a SECOND build after the initial mount build.
+      final child = _childProfile(id: 1, displayName: 'Loop Test C');
+      var buildCount = 0;
+
+      final auth = _MockAuthRepository();
+      when(() => auth.currentUser).thenReturn(null);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            profileListProvider.overrideWith((ref) => Future.value([child])),
+            outgoingTutorGrantsProvider('1').overrideWith((ref) {
+              buildCount++;
+              return Future.value(<TutorGrant>[]);
+            }),
+            authRepositoryProvider.overrideWithValue(auth),
+            revokeTutorGrantUseCaseProvider.overrideWithValue(_MockRevoke()),
+            rescindTutorInviteUseCaseProvider.overrideWithValue(_MockRescind()),
+            tutorNotificationGatewayProvider.overrideWithValue(
+              _MockNotificationGateway(),
+            ),
+          ],
+          child: MaterialApp(
+            locale: const Locale('en'),
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: StackRouterScope(
+              controller: router,
+              stateHash: 0,
+              child: const Scaffold(body: ManageTutorsScreen()),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+      // Let the post-frame initState invalidate land and the provider re-run.
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      // > 1 proves the screen forced a fresh re-fetch on show rather than
+      // relying solely on the (possibly stale) first cached result.
+      expect(
+        buildCount,
+        greaterThan(1),
+        reason: 'Screen must re-query outgoing grants on (re)show',
+      );
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    },
+  );
+
   // ── Multiple children: per-child Invite routes use correct profileId ────────
 
   testWidgets(

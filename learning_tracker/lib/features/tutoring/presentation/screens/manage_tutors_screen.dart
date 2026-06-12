@@ -109,20 +109,86 @@ class _EmptyProfilesView extends StatelessWidget {
   }
 }
 
-class _PerChildGrantsList extends ConsumerWidget {
+/// DG-TUT-STALE-01 (P0): the owner's outgoing-grants list must reliably reflect
+/// a REMOTE acceptance by the tutor. `outgoingTutorGrantsProvider` is a one-shot
+/// autoDispose FutureProvider over the `listTutorGrants` Cloud Function; the CF
+/// returns the correct (Active) state on a fresh fetch, but the view did not
+/// reliably re-query on re-entry (eventual consistency / autoDispose not always
+/// evicting). This widget forces a fresh query so the parent is never stuck
+/// seeing an accepted grant as "Pending":
+///   (a) PULL-TO-REFRESH (RefreshIndicator) invalidates every child's provider.
+///   (b) re-fetch whenever the screen is (re)shown — on initState and on
+///       app-resume — so a fresh entry always re-queries.
+class _PerChildGrantsList extends ConsumerStatefulWidget {
   const _PerChildGrantsList({required this.profiles});
 
   final List<ProfileModel> profiles;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    return ListView.builder(
-      padding: const EdgeInsets.symmetric(vertical: 12),
-      itemCount: profiles.length,
-      itemBuilder: (context, index) {
-        final profile = profiles[index];
-        return _ChildGrantsSection(profile: profile);
-      },
+  ConsumerState<_PerChildGrantsList> createState() =>
+      _PerChildGrantsListState();
+}
+
+class _PerChildGrantsListState extends ConsumerState<_PerChildGrantsList>
+    with WidgetsBindingObserver {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    // (b) Re-query on first (re)show so re-entering the screen always fetches
+    // the current grant state rather than serving a stale autoDispose cache.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _refreshAll());
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    // (b) Re-query on app-resume — a tutor may have accepted while the owner
+    // was backgrounded; refresh so the grant flips to Active on return.
+    if (state == AppLifecycleState.resumed) {
+      _refreshAll();
+    }
+  }
+
+  /// Invalidate every child's outgoing-grants provider so each re-runs the
+  /// `listTutorGrants` CF and reflects the latest server state.
+  void _refreshAll() {
+    if (!mounted) return;
+    for (final profile in widget.profiles) {
+      ref.invalidate(outgoingTutorGrantsProvider(profile.id.toString()));
+    }
+  }
+
+  Future<void> _onRefresh() async {
+    _refreshAll();
+    // Await the re-fetch of every child's provider so the RefreshIndicator
+    // spinner stays until fresh data is in (or an error surfaces).
+    await Future.wait([
+      for (final profile in widget.profiles)
+        ref.read(outgoingTutorGrantsProvider(profile.id.toString()).future),
+    ]).catchError((_) => const <List<TutorGrant>>[]);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // (a) Pull-to-refresh. AlwaysScrollableScrollPhysics so the gesture works
+    // even when the list is short and would not otherwise scroll.
+    return RefreshIndicator(
+      onRefresh: _onRefresh,
+      child: ListView.builder(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        itemCount: widget.profiles.length,
+        itemBuilder: (context, index) {
+          final profile = widget.profiles[index];
+          return _ChildGrantsSection(profile: profile);
+        },
+      ),
     );
   }
 }

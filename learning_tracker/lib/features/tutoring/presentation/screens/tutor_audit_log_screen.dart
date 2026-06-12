@@ -208,7 +208,17 @@ class _FilterBar extends StatelessWidget {
 
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      // RTL fix: a horizontal SingleChildScrollView clips its leading edge when
+      // the scroll padding is applied via plain `EdgeInsets` under RTL, hiding
+      // the FIRST chip behind the screen edge. Use EdgeInsetsDirectional so the
+      // leading (start) gap resolves to the correct physical side in both LTR
+      // and RTL, keeping the leading chip fully visible.
+      padding: const EdgeInsetsDirectional.only(
+        start: 12,
+        end: 12,
+        top: 8,
+        bottom: 8,
+      ),
       child: Row(
         children: [
           // Action filter chips

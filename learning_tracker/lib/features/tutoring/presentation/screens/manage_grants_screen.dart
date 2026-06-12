@@ -185,6 +185,13 @@ class _GrantRow extends ConsumerStatefulWidget {
 class _GrantRowState extends ConsumerState<_GrantRow> {
   bool _acting = false;
 
+  /// P2 (M3): the grant OWNER's display name for UI — the denormalised
+  /// [TutorGrant.parentName] when it is a genuine human name, otherwise a
+  /// localized relationship fallback. Never the raw UID and never a server
+  /// placeholder token like "CloudUser".
+  String _ownerLabel(AppLocalizations l10n) =>
+      widget.grant.parentName ?? l10n.tutorFallbackParent;
+
   Future<void> _resign() async {
     if (_acting) return;
 
@@ -196,7 +203,7 @@ class _GrantRowState extends ConsumerState<_GrantRow> {
         content: Text(
           l10n.manageGrantsResignBody(
             widget.grant.childDisplayLabel,
-            widget.grant.parentDisplayLabel,
+            _ownerLabel(l10n),
           ),
         ),
         actions: [
@@ -302,8 +309,10 @@ class _GrantRowState extends ConsumerState<_GrantRow> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            // M3: human parent label instead of the raw UID.
-            widget.grant.parentDisplayLabel,
+            // M3: human parent label instead of the raw UID. Falls back to a
+            // localized relationship label when the owner name is unavailable
+            // or a server placeholder (never the literal "CloudUser").
+            _ownerLabel(l10n),
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.outline,
             ),

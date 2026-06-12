@@ -435,19 +435,75 @@ void main() {
     },
   );
 
-  // ── 11. parentDisplayLabel fallback ─────────────────────────────────────────
-  // "Parent account" is a hardcoded English string in
-  // TutorGrant.parentDisplayLabel (tutor_grant_aggregate.dart line ~150).
+  // ── 11. owner label fallback ────────────────────────────────────────────────
+  // P2 (M3): when no genuine owner name is available the subtitle shows the
+  // LOCALIZED relationship fallback (l10n.tutorFallbackParent → "Parent"),
+  // never the raw UID and never a server placeholder.
 
   testWidgets(
-    'parentDisplayLabel falls back to "Parent account" when parentName is null',
+    'owner label falls back to localized "Parent" when parentName is null',
     (tester) async {
       final grant = _activeGrant(parentName: null);
       await tester.pumpWidget(buildSubject(() => Future.value([grant])));
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 
-      expect(find.text('Parent account'), findsOneWidget);
+      expect(find.text('Parent'), findsOneWidget);
+
+      await tearDownWidget(tester);
+    },
+  );
+
+  // ── 11b. "CloudUser" placeholder must never reach the UI ────────────────────
+  // P2 (M3): the server can denormalise the owner name as the placeholder token
+  // "CloudUser". The card subtitle and the Resign confirmation dialog must show
+  // the localized relationship fallback instead — never the literal "CloudUser".
+
+  testWidgets(
+    'owner "CloudUser" placeholder is replaced by localized fallback in subtitle',
+    (tester) async {
+      final grant = _activeGrant(parentName: 'CloudUser');
+      await tester.pumpWidget(buildSubject(() => Future.value([grant])));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      // The placeholder must NOT be shown anywhere.
+      expect(find.textContaining('CloudUser'), findsNothing);
+      // The localized fallback is shown instead.
+      expect(find.text('Parent'), findsOneWidget);
+
+      await tearDownWidget(tester);
+    },
+  );
+
+  testWidgets(
+    'owner "CloudUser" placeholder is replaced by localized fallback in Resign dialog',
+    (tester) async {
+      final grant = _activeGrant(parentName: 'CloudUser');
+      await tester.pumpWidget(buildSubject(() => Future.value([grant])));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      await tester.tap(find.text('Resign'));
+      await tester.pump();
+
+      // Dialog body interpolates the owner label — it must not contain the
+      // placeholder token.
+      expect(find.textContaining('CloudUser'), findsNothing);
+
+      await tearDownWidget(tester);
+    },
+  );
+
+  testWidgets(
+    'a genuine owner name is shown verbatim (not the fallback)',
+    (tester) async {
+      final grant = _activeGrant(parentName: 'Loop Test C');
+      await tester.pumpWidget(buildSubject(() => Future.value([grant])));
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.text('Loop Test C'), findsOneWidget);
 
       await tearDownWidget(tester);
     },
