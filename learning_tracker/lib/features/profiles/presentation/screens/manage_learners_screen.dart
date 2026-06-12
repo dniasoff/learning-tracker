@@ -20,7 +20,9 @@ class ManageLearnersScreen extends ConsumerWidget {
     final profilesAsync = ref.watch(profileListStreamProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const AppBarTitle(text: 'Manage Learners')),
+      appBar: AppBar(
+        title: AppBarTitle(text: AppLocalizations.of(context)!.manageProfiles),
+      ),
       floatingActionButton: Padding(
         padding: EdgeInsets.only(
           bottom: MediaQuery.of(context).viewPadding.bottom,

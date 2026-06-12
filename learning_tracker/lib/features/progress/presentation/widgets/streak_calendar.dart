@@ -35,6 +35,15 @@ class StreakCalendar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final useHebrewDate = ref.watch(useHebrewDateProvider);
+    // The weekday HEADER follows the UI locale, not just the date-system
+    // preference: on a Hebrew device the day-of-week letters (א..ש) must render
+    // in Hebrew even when the Gregorian date system is selected, so they don't
+    // leak English "Mon/Tue" into an otherwise-Hebrew screen. (Day-of-MONTH
+    // gematriya below stays tied to useHebrewDate — that IS a Hebrew-calendar
+    // concept, not just script.)
+    final headerUsesHebrewScript =
+        useHebrewDate ||
+        ref.watch(currentAppLocaleProvider).languageCode == 'he';
 
     // Build the ordered list of local dates from startDate through endDate.
     final dates = <DateTime>[];
@@ -61,7 +70,10 @@ class StreakCalendar extends ConsumerWidget {
     // for the same civil day), so we only swap the *script* of the label.
     final labelDates = rows.first;
     final weekdayLabels = labelDates
-        .map((d) => _weekdayInitial(d.weekday, useHebrewDate: useHebrewDate))
+        .map(
+          (d) =>
+              _weekdayInitial(d.weekday, useHebrewDate: headerUsesHebrewScript),
+        )
         .toList(growable: false);
 
     return Column(

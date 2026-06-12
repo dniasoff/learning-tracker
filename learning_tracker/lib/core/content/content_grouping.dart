@@ -93,10 +93,13 @@ String? levelValueAt(ContentItem item, int level) => switch (level) {
 const String kScopeIdSeparator = '|';
 
 /// The unitIdentifier to STORE/MATCH for a lifetime SCOPE mark at [level].
-/// level1 (seder) and level2 (masechta) are unique within a curriculum -> bare.
-/// level3 (daf/perek/pasuk) and level4 (amud/mishna/seif) numbers repeat across
-/// parents -> QUALIFIED with the full ancestor path so daf 2 is not credited
-/// across every masechta.
+/// level1 (seder/sefer) is the curriculum root -> unique -> bare. EVERY deeper
+/// level is QUALIFIED with its full ancestor path: level2 numbers repeat across
+/// parents in sefer>perek curricula (Chumash/Tanach/Nach: perek 1 exists in all
+/// five chumashim), so a bare level2 'perek 1' mark would cross-credit every
+/// sefer. (Masechta names in Talmud/Mishnayos are already globally unique, so
+/// prefixing their seder is harmless.) level3 (daf/pasuk) and level4
+/// (amud/mishna/seif) likewise repeat -> qualified.
 String scopeUnitIdentifier({
   required int level,
   String? level1,
@@ -108,7 +111,10 @@ String scopeUnitIdentifier({
     case 1:
       return level1 ?? '';
     case 2:
-      return level2 ?? '';
+      return [
+        level1,
+        level2,
+      ].where((s) => s != null && s.isNotEmpty).join(kScopeIdSeparator);
     case 3:
       return [
         level1,

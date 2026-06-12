@@ -36,8 +36,12 @@ class ProgressSummaryCard extends StatelessWidget {
       child: Stack(
         clipBehavior: Clip.none,
         children: [
-          Positioned(
-            right: -4,
+          // PositionedDirectional so the badge sits on the TRAILING corner in
+          // both LTR and RTL. With a plain Positioned(right:) it stayed on the
+          // visual right — the LEADING edge in Hebrew RTL — and collided with
+          // the right-aligned header text "התקדמות שלך".
+          PositionedDirectional(
+            end: -4,
             top: -8,
             child: Container(
               padding: const EdgeInsets.all(6),

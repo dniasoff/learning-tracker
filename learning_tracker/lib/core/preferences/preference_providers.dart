@@ -192,6 +192,21 @@ Locale resolveDeviceUiLocale(List<Locale> deviceLocales) {
 Locale currentAppLocale(Ref ref) =>
     resolveDeviceUiLocale(PlatformDispatcher.instance.locales);
 
+/// The EFFECTIVE Hebrew-script decision for domain/curriculum labels: Hebrew
+/// script is used when the device UI language is Hebrew (a Hebrew device shows
+/// Hebrew terms automatically, and the per-profile toggle is hidden there) OR
+/// when the per-profile Hebrew-Terms [useHebrewTermsProvider] toggle is on.
+///
+/// This is the single locale-aware source every LABEL-RENDERING path must read
+/// — the breadcrumb / curriculum-tree renderers previously read the raw
+/// [useHebrewTermsProvider] toggle, so on a Hebrew device with the toggle
+/// persisted OFF (and hidden) they leaked Latin transliteration. Mirrors the
+/// `resolveUseHebrewTerms` logic used by `DomainTermLabels`.
+@riverpod
+bool effectiveUseHebrewTerms(Ref ref) =>
+    ref.watch(currentAppLocaleProvider).languageCode == 'he' ||
+    ref.watch(useHebrewTermsProvider);
+
 @Riverpod(keepAlive: true)
 class CurrentTransliterationVariant extends _$CurrentTransliterationVariant {
   @override

@@ -156,7 +156,7 @@ class UserDatabase extends _$UserDatabase {
   UserDatabase(super.e);
 
   @override
-  int get schemaVersion => 30;
+  int get schemaVersion => 31;
 
   // drift_dev cannot express WHERE in a Dart-defined view's `as()` body
   // (cascade `..where()` confuses the generator).  The auto-generated SQL for
@@ -297,6 +297,33 @@ class UserDatabase extends _$UserDatabase {
               "WHERE REPLACE(entry_scope, 'unmark_', '') IN "
               "('level3', 'perek', 'daf', 'halacha', 'pasuk', "
               "'level4', 'amud', 'mishna', 'seif', 'seif_katan') "
+              'AND instr(unit_identifier, ?) = 0',
+              [kScopeIdSeparator],
+            );
+          }
+        }
+        if (from < 31) {
+          // Collision fix, part 2 (level2): v30 left level2 marks BARE on the
+          // assumption level2 is unique within a curriculum. That holds for
+          // Talmud/Mishnayos (level2 = masechta, globally unique) but NOT for
+          // sefer>perek curricula (Chumash/Tanach/Nach: level2 = perek, and
+          // perek '1' exists in all five chumashim). A bare level2 'perek 1'
+          // mark therefore cross-credited perek 1 of every sefer (marking
+          // Bereishis perek 1 credited 170 pesukim across all five sefarim).
+          // New marks store the QUALIFIED path id (level1|level2). The legacy
+          // bare level2 rows are unrecoverable (the parent sefer/seder was never
+          // persisted), so drop them — same treatment v30 gave bare level3/4.
+          final hasLedger = await customSelect(
+            'SELECT 1 FROM sqlite_master '
+            "WHERE type = 'table' AND name = 'learning_ledger'",
+          ).get();
+          if (hasLedger.isNotEmpty) {
+            // Only the current numeric 'level2' scope: legacy named level2
+            // scopes that repeat (Chumash 'perek') were already swept by v30's
+            // list, and level1 roots (seder/sefer) must NOT be touched.
+            await customStatement(
+              'DELETE FROM learning_ledger '
+              "WHERE REPLACE(entry_scope, 'unmark_', '') = 'level2' "
               'AND instr(unit_identifier, ?) = 0',
               [kScopeIdSeparator],
             );

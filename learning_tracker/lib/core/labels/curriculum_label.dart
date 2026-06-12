@@ -224,7 +224,7 @@ class CurriculumLabel extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     switch (_kind) {
       case _Kind.curriculum:
-        final useHebrew = ref.watch(useHebrewTermsProvider);
+        final useHebrew = ref.watch(effectiveUseHebrewTermsProvider);
         if (useHebrew) {
           return _text(_curriculumId!.displayNameHe, useHebrew: true);
         }
@@ -242,7 +242,7 @@ class CurriculumLabel extends ConsumerWidget {
           useHebrew: false,
         );
       case _Kind.calendarProgram:
-        final useHebrew = ref.watch(useHebrewTermsProvider);
+        final useHebrew = ref.watch(effectiveUseHebrewTermsProvider);
         return _text(
           useHebrew
               ? _calendarEntry!.displayNameHe
@@ -250,7 +250,7 @@ class CurriculumLabel extends ConsumerWidget {
           useHebrew: useHebrew,
         );
       case _Kind.learningProgram:
-        final useHebrew = ref.watch(useHebrewTermsProvider);
+        final useHebrew = ref.watch(effectiveUseHebrewTermsProvider);
         final program = _learningProgram!;
         final text = !useHebrew
             ? program.displayName
@@ -258,7 +258,7 @@ class CurriculumLabel extends ConsumerWidget {
                   program.displayName);
         return _text(text, useHebrew: useHebrew);
       case _Kind.level:
-        final useHebrew = ref.watch(useHebrewTermsProvider);
+        final useHebrew = ref.watch(effectiveUseHebrewTermsProvider);
         final variant = ref.watch(currentTransliterationVariantProvider);
         return _text(
           CurriculumLabelRenderer.renderValue(
@@ -273,11 +273,11 @@ class CurriculumLabel extends ConsumerWidget {
           useHebrew: useHebrew,
         );
       case _Kind.item:
-        final useHebrew = ref.watch(useHebrewTermsProvider);
+        final useHebrew = ref.watch(effectiveUseHebrewTermsProvider);
         final variant = ref.watch(currentTransliterationVariantProvider);
         return _text(_renderItem(useHebrew, variant), useHebrew: useHebrew);
       case _Kind.breadcrumb:
-        final useHebrew = ref.watch(useHebrewTermsProvider);
+        final useHebrew = ref.watch(effectiveUseHebrewTermsProvider);
         final r = _sefariaRef!;
         return ref
             .watch(renderedDisplayForRefProvider(r))
@@ -288,7 +288,7 @@ class CurriculumLabel extends ConsumerWidget {
                   _text(r.replaceAll('_', ' '), useHebrew: useHebrew),
             );
       case _Kind.local:
-        final useHebrew = ref.watch(useHebrewTermsProvider);
+        final useHebrew = ref.watch(effectiveUseHebrewTermsProvider);
         final r = _sefariaRef!;
         return ref
             .watch(renderedLeafForRefProvider(r))
@@ -299,7 +299,7 @@ class CurriculumLabel extends ConsumerWidget {
                   _text(r.replaceAll('_', ' '), useHebrew: useHebrew),
             );
       case _Kind.parent:
-        final useHebrew = ref.watch(useHebrewTermsProvider);
+        final useHebrew = ref.watch(effectiveUseHebrewTermsProvider);
         final r = _sefariaRef!;
         return ref
             .watch(renderedParentForRefProvider(r))
@@ -396,7 +396,7 @@ String _curriculumLabel(
 /// `useHebrewTerms` flag. Use inside async provider bodies where the
 /// Hebrew-terms value must be captured BEFORE an `await` (calling
 /// [curriculumLabelTextFromRef] after an async gap risks "Cannot use Ref
-/// after dispose"). Pass `ref.watch(useHebrewTermsProvider)` captured up-front.
+/// after dispose"). Pass `ref.watch(effectiveUseHebrewTermsProvider)` captured up-front.
 /// [variant] should likewise be captured from
 /// `ref.watch(currentTransliterationVariantProvider)`; it defaults to Ashkenazi
 /// so existing callers keep today's behavior.
@@ -414,7 +414,7 @@ String curriculumLabelFor(
 String curriculumLabelText(WidgetRef ref, {required CurriculumId curriculum}) =>
     _curriculumLabel(
       curriculum,
-      ref.watch(useHebrewTermsProvider),
+      ref.watch(effectiveUseHebrewTermsProvider),
       ref.watch(currentTransliterationVariantProvider),
     );
 
@@ -428,7 +428,7 @@ String curriculumLabelTextFromRef(
   required CurriculumId curriculum,
 }) => _curriculumLabel(
   curriculum,
-  ref.watch(useHebrewTermsProvider),
+  ref.watch(effectiveUseHebrewTermsProvider),
   ref.watch(currentTransliterationVariantProvider),
 );
 

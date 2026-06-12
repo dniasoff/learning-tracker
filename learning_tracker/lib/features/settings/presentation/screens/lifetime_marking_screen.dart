@@ -15,6 +15,7 @@ import 'package:learning_tracker/features/dashboard/presentation/providers/dashb
 import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_ledger_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/progress/presentation/providers/items_learned_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/journey_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/progress_providers.dart';
@@ -325,11 +326,12 @@ class _LifetimeCurriculumMarkingScreenState
     orElse: () => CurriculumId.mishnayos,
   );
 
-  /// Collision fix: a level3/level4 mark must be stored/compared with its FULL
-  /// ancestor path so daf '2' in Berakhos does not also select daf '2' in
-  /// Shabbos. level1/level2 are unique within a curriculum, so
-  /// [scopeUnitIdentifier] returns the bare value for them. [currentPath] is the
-  /// navigation path of ANCESTORS above the item; [value] is the item's own
+  /// Collision fix: a level2/level3/level4 mark must be stored/compared with its
+  /// FULL ancestor path so daf '2' in Berakhos does not also select daf '2' in
+  /// Shabbos, and perek '1' in Bereishis does not also select perek '1' in
+  /// Shemos. Only level1 (the curriculum root) is unique, so
+  /// [scopeUnitIdentifier] returns the bare value for it alone. [currentPath] is
+  /// the navigation path of ANCESTORS above the item; [value] is the item's own
   /// level value at [level].
   String _qid(int level, String value, List<String> currentPath) {
     final l = <String?>[null, null, null, null]; // level1..level4
@@ -367,14 +369,20 @@ class _LifetimeCurriculumMarkingScreenState
   bool _isSelected(String value, List<String> currentPath) {
     final currentLevel = currentPath.length + 1;
     if (_selections.any(
-      (s) => s.level == currentLevel && s.value == _qid(currentLevel, value, currentPath),
+      (s) =>
+          s.level == currentLevel &&
+          s.value == _qid(currentLevel, value, currentPath),
     )) {
       return true;
     }
     for (var i = 0; i < currentPath.length; i++) {
       final ancestorLevel = i + 1;
       final ancestorValue = currentPath[i];
-      final ancestorId = _qid(ancestorLevel, ancestorValue, currentPath.sublist(0, i));
+      final ancestorId = _qid(
+        ancestorLevel,
+        ancestorValue,
+        currentPath.sublist(0, i),
+      );
       if (_selections.any(
         (s) => s.level == ancestorLevel && s.value == ancestorId,
       )) {
@@ -467,8 +475,9 @@ class _LifetimeCurriculumMarkingScreenState
     String value,
     List<String> currentPath,
   ) {
-    // Persisted level3/level4 marks store the QUALIFIED path id (collision fix),
-    // so compare against the qualified id; level1/level2 stay bare via _qid.
+    // Persisted level2/level3/level4 marks store the QUALIFIED path id
+    // (collision fix), so compare against the qualified id; only level1 stays
+    // bare via _qid.
     final id = _qid(level, value, currentPath);
     return ledger.any(
       (e) => e.entryScope == 'level$level' && e.unitIdentifier == id,
@@ -540,6 +549,12 @@ class _LifetimeCurriculumMarkingScreenState
     ref.invalidate(dashboardLastCompletionProvider(_curriculum));
     ref.invalidate(lifetimeTotalsAcrossAllCurriculaProvider(profileId));
     ref.invalidate(curriculumLedgerProvider(widget.curriculumId));
+    // The Lifetime KNOWLEDGE screen's TREE watches these two view providers
+    // (all-sources / track-only). Without invalidating them, the headline count
+    // refreshed after a save but the tree below stayed stale until the
+    // source-filter segmented control forced a rebuild.
+    ref.invalidate(lifetimeViewSummariesProvider(profileId));
+    ref.invalidate(itemsLearnedSummariesProvider(profileId));
   }
 
   @override

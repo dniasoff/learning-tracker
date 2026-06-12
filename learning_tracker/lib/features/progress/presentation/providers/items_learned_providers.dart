@@ -345,9 +345,10 @@ Set<String> _learnedLeafRefs({
         learnedRefs.contains(leaf.level2) ||
         learnedRefs.contains(leaf.level1);
     final refAction = refActions[leaf.sefariaRef];
-    // level3/level4 marks are stored with a QUALIFIED path id (collision fix:
-    // bare daf '2' credited every masechta). Match against the leaf's qualified
-    // id; level1/level2 stay bare (unique within a curriculum).
+    // level2/level3/level4 marks are stored with a QUALIFIED path id (collision
+    // fix: bare daf '2' credited every masechta; bare perek '1' credited every
+    // sefer). Match against the leaf's qualified id; only level1 (curriculum
+    // root) stays bare.
     final level4Action = leaf.level4 != null
         ? level4Actions[scopeUnitIdentifierForItem(leaf, 4)]
         : null;
@@ -355,7 +356,7 @@ Set<String> _learnedLeafRefs({
         ? level3Actions[scopeUnitIdentifierForItem(leaf, 3)]
         : null;
     final level2Action = leaf.level2 != null
-        ? level2Actions[leaf.level2!]
+        ? level2Actions[scopeUnitIdentifierForItem(leaf, 2)]
         : null;
     final level1Action = level1Actions[leaf.level1];
     final scopedAction =

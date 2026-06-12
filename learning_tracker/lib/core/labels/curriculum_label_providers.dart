@@ -16,7 +16,7 @@ part 'curriculum_label_providers.g.dart';
 /// allows wrapping so the chain stays legible on narrow widgets.
 @riverpod
 Future<String> renderedDisplayForRef(Ref ref, String sefariaRef) async {
-  final useHebrew = ref.watch(useHebrewTermsProvider);
+  final useHebrew = ref.watch(effectiveUseHebrewTermsProvider);
   final variant = ref.watch(currentTransliterationVariantProvider);
   final item = await _findContentItem(ref, sefariaRef);
   if (item == null) {
@@ -56,7 +56,7 @@ Future<String> renderedDisplayForRef(Ref ref, String sefariaRef) async {
 /// want to duplicate it.
 @riverpod
 Future<String> renderedLeafForRef(Ref ref, String sefariaRef) async {
-  final useHebrew = ref.watch(useHebrewTermsProvider);
+  final useHebrew = ref.watch(effectiveUseHebrewTermsProvider);
   final variant = ref.watch(currentTransliterationVariantProvider);
   final item = await _findContentItem(ref, sefariaRef);
   if (item == null) {
@@ -74,7 +74,7 @@ Future<String> renderedLeafForRef(Ref ref, String sefariaRef) async {
 /// Returns null when the item is already at level 1.
 @riverpod
 Future<String?> renderedParentForRef(Ref ref, String sefariaRef) async {
-  final useHebrew = ref.watch(useHebrewTermsProvider);
+  final useHebrew = ref.watch(effectiveUseHebrewTermsProvider);
   final variant = ref.watch(currentTransliterationVariantProvider);
   final item = await _findContentItem(ref, sefariaRef);
   if (item == null) return null;
@@ -93,7 +93,7 @@ Future<List<String>> renderedBreadcrumbForRef(
   Ref ref,
   String sefariaRef,
 ) async {
-  final useHebrew = ref.watch(useHebrewTermsProvider);
+  final useHebrew = ref.watch(effectiveUseHebrewTermsProvider);
   final variant = ref.watch(currentTransliterationVariantProvider);
   final item = await _findContentItem(ref, sefariaRef);
   if (item == null) {

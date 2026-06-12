@@ -14,7 +14,7 @@
 //   • Delete cloud-born offline — deleteProfile STILL called (offline-first, R3-10)
 //   • Max-10 cap — FAB is present regardless of count (cap is repo-only)
 //   • he-RTL smoke — Hebrew locale: screen renders without overflow/crash
-//   • Hardcoded-string audit — AppBar title 'Manage Learners' is hardcoded (BUG)
+//   • AppBar title localization — title comes from l10n.manageProfiles (en + he)
 
 @Tags(['profiles', 'manage_learners'])
 library;
@@ -756,23 +756,42 @@ void main() {
     );
   });
 
-  // ── Hardcoded-string audit ────────────────────────────────────────────────────
+  // ── Localized AppBar title ────────────────────────────────────────────────────
 
-  group('Hardcoded-string audit', () {
-    testWidgets('AppBar title "Manage Learners" is hardcoded — not from l10n', (
+  group('AppBar title localization', () {
+    testWidgets('English: title comes from l10n (manageProfiles), not hardcoded', (
       tester,
     ) async {
-      // BUG: manage_learners_screen.dart line 23 uses the hardcoded string
-      // literal 'Manage Learners' instead of an l10n key. This will not
-      // translate correctly in Hebrew (or any future locale). The screen
-      // should use AppLocalizations.of(context)!.manageLearners (or similar).
+      // FR1 fix: the AppBar title now reads AppLocalizations.of(context)!
+      // .manageProfiles instead of the hardcoded literal 'Manage Learners', so
+      // it follows the device locale (resweep: English title over Hebrew body).
       await tester.pumpWidget(
         _buildApp(router: router, profilesState: const AsyncData([])),
       );
       await tester.pump();
 
-      // Assertion confirms the hardcoded string IS rendered (documents the bug).
-      expect(find.text('Manage Learners'), findsOneWidget);
+      // l10n.manageProfiles (en) = 'Manage Profiles'.
+      expect(find.text('Manage Profiles'), findsOneWidget);
+      // The old hardcoded string must no longer appear.
+      expect(find.text('Manage Learners'), findsNothing);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    });
+
+    testWidgets('Hebrew: title renders the Hebrew l10n string', (tester) async {
+      await tester.pumpWidget(
+        _buildApp(
+          router: router,
+          profilesState: const AsyncData([]),
+          locale: const Locale('he'),
+        ),
+      );
+      await tester.pump();
+
+      // l10n.manageProfiles (he) = 'ניהול פרופילים' — no English leak.
+      expect(find.text('ניהול פרופילים'), findsOneWidget);
+      expect(find.text('Manage Learners'), findsNothing);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(Duration.zero);

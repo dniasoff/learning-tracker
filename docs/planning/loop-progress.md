@@ -660,3 +660,45 @@ device-driven (commit 95ede74a, make ci GREEN 9900 pass):
   parent_pending_redemptions, account_picker, device_restore, talmid-session scope) ALL clean/fixed. Both Daniel
   decisions delivered + verified; device-language + Hebrew-script terms verified; ~70 real bugs fixed + shipped green
   across the whole session; emulator fleet self-restorable. CLEAR RUNS achieved.
+
+### FINAL FULL RESWEEP launched (2026-06-12)
+- Daniel: "final full resweeo" → comprehensive cross-cutting regression sweep on build 5b3eeede (HEAD dev).
+- Fleet recovered first: 5556 (tablet) hung → `adb emu kill` + relaunch `lt_api36_tablet -no-snapshot-load`; app
+  data + cloud account "Loop Test A" (RedeemKid/PinKid/Daniel + Talmid LoopChild) PERSISTED across cold boot;
+  re-enabled radios. 5554 (API34 English cloud) + 5558 (API29 NATIVE HEBREW, child LoopChild) healthy.
+- BATCH FR1 (workflow wefecokv2, tool/vision_find_pass.js) = 9 most-fixed/highest-risk screens, 3 rounds:
+  R1 settings-root(no app-lang tile, en+he) / lifetime-collision(sane %) / child-gamification-HE(RTL terms);
+  R2 upgrade-cloud+backup(localization, last-synced relative time, en+he) / manage-tracks+redeem(he title fix) /
+     lifetime-marking-HE(scope-id collision, gematriya); R3 profile/account-picker("Select an account", Talmid) /
+     tutor-cluster(active grant, owner name, invite inline-validation, audit-log RTL chips) / text-reader-HE(SafeArea).
+- NEXT: on completion → triage findings (drop KNOWN-deferred/false-pos) → if REAL bugs, fix wave → redeploy → re-run
+  until clean; if clean, the redo + final resweep are both DONE.
+
+### FINAL RESWEEP (FR1) RESULTS + fix wave (2026-06-12)
+- Batch FR1 (wefecokv2): 9 screens, 14 findings (1 P0, 4 P1, 9 P2). 3 screens BLOCKED by infra (5554 host CPU/RAM
+  starvation thrashed to death mid-run; 5556 empty cloud account = no lifetime data; tutor-deep behind Tutor PIN 2222
+  the agent lacked). LESSON: 3 emulators concurrently oversubscribes the host — re-verify with FEWER concurrent devices.
+- **P0 (data corruption) — scope-id collision STILL LIVE in the Chumash level2 path.** v30 fixed level3/4 but left
+  level2 BARE ("unique within curriculum"): TRUE for Talmud/Mishnayos (level2=masechta, globally unique), FALSE for
+  Chumash/Tanach/Nach (level2=perek; perek '1' is in all 5 sefarim). Marking Bereishis perek 1 cross-credited perek 1
+  of every sefer (+170 = 31+22+17+54+46). FIXED: scopeUnitIdentifier qualifies level2 → level1|level2 (only level1/root
+  bare); both matchers (lifetime_tree_builder + items_learned_providers) key level2 via scopeUnitIdentifierForItem(leaf,2);
+  migration v31 (schemaVersion 30→31) drops bare 'level2' rows. 2 new Chumash collision tests + updated level2 asserts (11 green).
+- **P1 systemic — Hebrew curriculum-label gating.** Lifetime tree + reader breadcrumb rendered Latin on a Hebrew device
+  because curriculum_label.dart (10 reads) + curriculum_label_providers.dart (4 reads) read the RAW useHebrewTermsProvider
+  toggle (persisted OFF, hidden in Hebrew UI). FIXED: new effectiveUseHebrewTermsProvider (=localeIsHebrew||toggle) in
+  preference_providers; all label-render paths route through it. Resolves breadcrumb-Latin + tree-Latin + tree-vs-marking
+  inconsistency together.
+- P1 weekday-headers-English-on-Hebrew (StreakCalendar header now follows UI locale, gematriya day# still date-pref);
+  P1 achievements hero badge RTL (Positioned right → PositionedDirectional end); P2 Manage-Learners title → l10n.manageProfiles;
+  P1 stale lifetime tree after save (_invalidateComputedViews now invalidates lifetimeViewSummariesProvider +
+  itemsLearnedSummariesProvider — the providers the tree actually watches).
+- DEFERRED (documented): (a) track-detail Est-finish 8yr discrepancy — needs granularity-aware scope count (detail divides
+  leaf/amudim by daf-rate); P2 cosmetic. (b) sole-track Archive refused — last-active-curriculum guard is INTENTIONAL
+  (TRK-HUB-04); zero-active-tracks + shared-ARB-key wording = product decision. (c) PIN-dot "first dot pre-filled" —
+  UNREPRODUCIBLE (3 dot widgets all correct i<length, init ''); downscale artifact. (d) tutor PIN English error + locale
+  reset — cmd-locale TEST ARTIFACT (no app code resets locale; native-Hebrew gate uses l10n.tutorPinIncorrect). LATENT:
+  pin_flow_controller/machine hardcode 'Incorrect PIN' (parent-PIN) — real on Hebrew, needs state→l10n map, logged.
+  (e) font_scale 1.3 not honored on lifetime screens — low-confidence, likely intentional textScaler clamp.
+- NEXT: make ci green → build debug APK → redeploy → VERIFY P0 on-device (Chumash Bereishis perek 1 credits ONLY Bereishis)
+  + spot-check Hebrew labels on 5558 → re-run a SMALLER resweep (fewer concurrent devices) for the 3 infra-blocked screens.

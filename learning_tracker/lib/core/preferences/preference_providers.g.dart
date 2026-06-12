@@ -481,6 +481,80 @@ final class CurrentAppLocaleProvider
 
 String _$currentAppLocaleHash() => r'517ccb5e227d69aeef54681263d4e3afd113f276';
 
+/// The EFFECTIVE Hebrew-script decision for domain/curriculum labels: Hebrew
+/// script is used when the device UI language is Hebrew (a Hebrew device shows
+/// Hebrew terms automatically, and the per-profile toggle is hidden there) OR
+/// when the per-profile Hebrew-Terms [useHebrewTermsProvider] toggle is on.
+///
+/// This is the single locale-aware source every LABEL-RENDERING path must read
+/// — the breadcrumb / curriculum-tree renderers previously read the raw
+/// [useHebrewTermsProvider] toggle, so on a Hebrew device with the toggle
+/// persisted OFF (and hidden) they leaked Latin transliteration. Mirrors the
+/// `resolveUseHebrewTerms` logic used by `DomainTermLabels`.
+
+@ProviderFor(effectiveUseHebrewTerms)
+final effectiveUseHebrewTermsProvider = EffectiveUseHebrewTermsProvider._();
+
+/// The EFFECTIVE Hebrew-script decision for domain/curriculum labels: Hebrew
+/// script is used when the device UI language is Hebrew (a Hebrew device shows
+/// Hebrew terms automatically, and the per-profile toggle is hidden there) OR
+/// when the per-profile Hebrew-Terms [useHebrewTermsProvider] toggle is on.
+///
+/// This is the single locale-aware source every LABEL-RENDERING path must read
+/// — the breadcrumb / curriculum-tree renderers previously read the raw
+/// [useHebrewTermsProvider] toggle, so on a Hebrew device with the toggle
+/// persisted OFF (and hidden) they leaked Latin transliteration. Mirrors the
+/// `resolveUseHebrewTerms` logic used by `DomainTermLabels`.
+
+final class EffectiveUseHebrewTermsProvider
+    extends $FunctionalProvider<bool, bool, bool>
+    with $Provider<bool> {
+  /// The EFFECTIVE Hebrew-script decision for domain/curriculum labels: Hebrew
+  /// script is used when the device UI language is Hebrew (a Hebrew device shows
+  /// Hebrew terms automatically, and the per-profile toggle is hidden there) OR
+  /// when the per-profile Hebrew-Terms [useHebrewTermsProvider] toggle is on.
+  ///
+  /// This is the single locale-aware source every LABEL-RENDERING path must read
+  /// — the breadcrumb / curriculum-tree renderers previously read the raw
+  /// [useHebrewTermsProvider] toggle, so on a Hebrew device with the toggle
+  /// persisted OFF (and hidden) they leaked Latin transliteration. Mirrors the
+  /// `resolveUseHebrewTerms` logic used by `DomainTermLabels`.
+  EffectiveUseHebrewTermsProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'effectiveUseHebrewTermsProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$effectiveUseHebrewTermsHash();
+
+  @$internal
+  @override
+  $ProviderElement<bool> $createElement($ProviderPointer pointer) =>
+      $ProviderElement(pointer);
+
+  @override
+  bool create(Ref ref) {
+    return effectiveUseHebrewTerms(ref);
+  }
+
+  /// {@macro riverpod.override_with_value}
+  Override overrideWithValue(bool value) {
+    return $ProviderOverride(
+      origin: this,
+      providerOverride: $SyncValueProvider<bool>(value),
+    );
+  }
+}
+
+String _$effectiveUseHebrewTermsHash() =>
+    r'c4b2632d09b9f1e31d351fc0f5606c99fd4fe30e';
+
 @ProviderFor(CurrentTransliterationVariant)
 final currentTransliterationVariantProvider =
     CurrentTransliterationVariantProvider._();

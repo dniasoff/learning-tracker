@@ -78,7 +78,7 @@ final class RenderedDisplayForRefProvider
 }
 
 String _$renderedDisplayForRefHash() =>
-    r'80ef15c8033d19b5a96cc72a5847dfda5acdc22a';
+    r'7ce376f0c36a994a9f22d9c65674797095f2e611';
 
 /// Renders the **full breadcrumb chain** for [sefariaRef] as a single
 /// string joined by ` › ` (e.g. "זרעים › ברכות › פרק א › משנה א" in
@@ -173,7 +173,7 @@ final class RenderedLeafForRefProvider
 }
 
 String _$renderedLeafForRefHash() =>
-    r'd80724db8f2af4f8704f075cf72aa045cd33287b';
+    r'fbd7b989cc02a8861f4ab3aa43802f0db325f5f8';
 
 /// Renders just the leaf segment of [sefariaRef] (e.g. "משנה א"). Useful
 /// when the caller already shows ancestor context elsewhere and doesn't
@@ -262,7 +262,7 @@ final class RenderedParentForRefProvider
 }
 
 String _$renderedParentForRefHash() =>
-    r'd054cfdba8b2935a3a0be8bc11d0db50390ae042';
+    r'c51c9ca08242ab972eab6410fa74e27e7839c8f0';
 
 /// Renders the parent (one level above leaf) display string for [sefariaRef].
 /// Used by the reader page's two-line AppBar — leaf big, parent small.
@@ -358,7 +358,7 @@ final class RenderedBreadcrumbForRefProvider
 }
 
 String _$renderedBreadcrumbForRefHash() =>
-    r'3bb3a985bca982bc59c8d71c7162c78eea5e7d89';
+    r'7b773929492b6567d1c866769e41a7a5b8118bea';
 
 /// Renders every breadcrumb segment for [sefariaRef] in order. Looks up
 /// the Hebrew name of every ancestor segment so each renders in Hebrew
