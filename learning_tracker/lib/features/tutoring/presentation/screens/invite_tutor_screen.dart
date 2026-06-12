@@ -51,9 +51,26 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
     super.dispose();
   }
 
-  bool get _emailValid {
+  /// Loose but real email shape check — a single `@` with non-empty local part
+  /// and a dotted domain whose TLD is at least two chars. Catches "notanemail"
+  /// (no `@`), "a@b" (no dot in domain) and "a@b." (empty TLD) while accepting
+  /// ordinary addresses.
+  static final RegExp _emailPattern = RegExp(
+    r'^[^@\s]+@[^@\s]+\.[^@\s]{2,}$',
+  );
+
+  bool get _emailValid => _emailPattern.hasMatch(_emailController.text.trim());
+
+  /// P2: inline validation feedback. Empty stays clear (Send simply disabled),
+  /// but a typed-but-invalid email shows a localized inline error so the parent
+  /// is told WHY Send is disabled instead of the button silently doing nothing.
+  void _onEmailChanged() {
     final e = _emailController.text.trim();
-    return e.isNotEmpty && e.contains('@') && e.contains('.');
+    setState(() {
+      _errorMessage = (e.isEmpty || _emailValid)
+          ? null
+          : AppLocalizations.of(context)!.inviteTutorInvalidEmail;
+    });
   }
 
   Future<void> _sendInvite() async {
@@ -203,7 +220,7 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
                 keyboardType: TextInputType.emailAddress,
                 inputFormatters: const [TrimLeadingSpaceFormatter()],
                 textInputAction: TextInputAction.done,
-                onChanged: (_) => setState(() {}),
+                onChanged: (_) => _onEmailChanged(),
                 decoration: InputDecoration(
                   labelText: l10n.inviteTutorEmailLabel,
                   hintText: l10n.inviteTutorEmailHint,

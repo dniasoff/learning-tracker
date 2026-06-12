@@ -247,6 +247,66 @@ void main() {
       await _tearDown(tester);
     });
 
+    testWidgets(
+      'P2: typing a malformed email shows the inline errorText hint',
+      (tester) async {
+        await _pumpScreen(tester, useCase: mockUseCase);
+
+        // A typed-but-invalid email must surface a localized inline error
+        // explaining WHY Send is disabled — not silently do nothing.
+        await tester.enterText(find.byType(TextFormField), 'notanemail');
+        await tester.pump();
+
+        expect(
+          find.text('Please enter a valid email address.'),
+          findsOneWidget,
+          reason: 'Invalid typed email must show inline validation feedback',
+        );
+        // Send stays disabled while invalid.
+        final button = tester.widget<FilledButton>(find.byType(FilledButton));
+        expect(button.onPressed, isNull);
+
+        await _tearDown(tester);
+      },
+    );
+
+    testWidgets(
+      'P2: empty email shows NO inline error (Send simply disabled)',
+      (tester) async {
+        await _pumpScreen(tester, useCase: mockUseCase);
+
+        // Type then clear — empty must not show the validation hint.
+        await tester.enterText(find.byType(TextFormField), 'x');
+        await tester.pump();
+        await tester.enterText(find.byType(TextFormField), '');
+        await tester.pump();
+
+        expect(find.text('Please enter a valid email address.'), findsNothing);
+
+        await _tearDown(tester);
+      },
+    );
+
+    testWidgets(
+      'P2: inline error clears once the email becomes valid and Send enables',
+      (tester) async {
+        await _pumpScreen(tester, useCase: mockUseCase);
+
+        await tester.enterText(find.byType(TextFormField), 'notanemail');
+        await tester.pump();
+        expect(find.text('Please enter a valid email address.'), findsOneWidget);
+
+        await tester.enterText(find.byType(TextFormField), 'good@example.com');
+        await tester.pump();
+
+        expect(find.text('Please enter a valid email address.'), findsNothing);
+        final button = tester.widget<FilledButton>(find.byType(FilledButton));
+        expect(button.onPressed, isNotNull);
+
+        await _tearDown(tester);
+      },
+    );
+
     testWidgets('shows l10n invalid-email error when validation fails via code', (
       tester,
     ) async {

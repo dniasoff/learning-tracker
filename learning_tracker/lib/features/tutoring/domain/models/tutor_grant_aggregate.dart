@@ -132,9 +132,6 @@ class TutorGrant {
   /// M3: denormalised child display name (from the server), or null.
   String? get childName => doc.childName;
 
-  /// M3: denormalised parent display name (from the server), or null.
-  String? get parentName => doc.parentName;
-
   /// M3: best human-readable child label — the denormalised [childName] when
   /// present, otherwise a friendly generic label (never the raw Firestore id).
   String get childDisplayLabel {
@@ -143,13 +140,34 @@ class TutorGrant {
     return 'Talmid';
   }
 
-  /// M3: best human-readable parent label — the denormalised [parentName] when
-  /// present, otherwise a friendly generic label (never the raw UID).
-  String get parentDisplayLabel {
+  /// Placeholder tokens the server may write into the denormalised name fields
+  /// before/instead of a real display name (e.g. an anonymous "CloudUser"
+  /// account label). These are NOT human names and must never be shown to the
+  /// user — they are treated as "no name available" so the UI can substitute a
+  /// localized relationship fallback.
+  static const Set<String> _namePlaceholders = {'clouduser', 'cloud user'};
+
+  /// The denormalised parent display name IF it is a genuine human name —
+  /// otherwise null. Returns null for blank names and for server placeholder
+  /// tokens (e.g. "CloudUser"), letting the UI fall back to a localized label.
+  String? get parentName {
     final name = doc.parentName?.trim();
-    if (name != null && name.isNotEmpty) return name;
-    return 'Parent account';
+    if (name == null || name.isEmpty) return null;
+    if (_namePlaceholders.contains(name.toLowerCase())) return null;
+    return name;
   }
+
+  /// True when a genuine, displayable parent/owner name is available.
+  bool get hasParentName => parentName != null;
+
+  /// M3: best human-readable parent label — the denormalised [parentName] when
+  /// present, otherwise a friendly generic label (never the raw UID and never
+  /// a server placeholder token like "CloudUser").
+  ///
+  /// NOTE: presentation code should prefer [parentName] + a localized fallback
+  /// (e.g. [AppLocalizations.tutorFallbackParent]); this getter exists for
+  /// non-localized contexts and uses a neutral English default.
+  String get parentDisplayLabel => parentName ?? 'Parent account';
 
   // ── Business guards ───────────────────────────────────────────────────────
 
