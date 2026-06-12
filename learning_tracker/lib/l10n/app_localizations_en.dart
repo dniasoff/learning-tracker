@@ -2038,8 +2038,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accountPickerTitle => 'Choose an Account';
 
   @override
-  String get accountPickerSubtitle =>
-      'Select a learner to continue your journey';
+  String get accountPickerSubtitle => 'Select an account to continue';
 
   @override
   String accountPickerMaxAccountsShort(int count) {
@@ -4071,6 +4070,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get pendingRedemptionsTitle => 'Pending Prizes';
+
+  @override
+  String get pendingRedemptionsEmptyTitle => 'No prize requests yet';
 
   @override
   String get pendingRedemptionsEmpty => 'No pending prize requests.';

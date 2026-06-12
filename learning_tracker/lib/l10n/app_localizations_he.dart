@@ -2019,7 +2019,7 @@ class AppLocalizationsHe extends AppLocalizations {
   String get accountPickerTitle => 'בחירת חשבון';
 
   @override
-  String get accountPickerSubtitle => 'בחרו משתמש כדי להמשיך';
+  String get accountPickerSubtitle => 'בחרו חשבון כדי להמשיך';
 
   @override
   String accountPickerMaxAccountsShort(int count) {
@@ -4039,6 +4039,9 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get pendingRedemptionsTitle => 'פרסים ממתינים';
+
+  @override
+  String get pendingRedemptionsEmptyTitle => 'עדיין אין בקשות פרס';
 
   @override
   String get pendingRedemptionsEmpty => 'אין בקשות פרס ממתינות.';

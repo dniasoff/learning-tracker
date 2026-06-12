@@ -3636,7 +3636,7 @@ abstract class AppLocalizations {
   /// No description provided for @accountPickerSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Select a learner to continue your journey'**
+  /// **'Select an account to continue'**
   String get accountPickerSubtitle;
 
   /// No description provided for @accountPickerMaxAccountsShort.
@@ -6836,6 +6836,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Pending Prizes'**
   String get pendingRedemptionsTitle;
+
+  /// Title for the empty state on the parent Pending Prizes screen, shown above pendingRedemptionsEmpty body when there are no pending redemption requests.
+  ///
+  /// In en, this message translates to:
+  /// **'No prize requests yet'**
+  String get pendingRedemptionsEmptyTitle;
 
   /// No description provided for @pendingRedemptionsEmpty.
   ///
