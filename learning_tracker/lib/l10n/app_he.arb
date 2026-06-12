@@ -2215,6 +2215,7 @@
   "redeemScreenTutorUnavailable": "לא זמין (מצב מדריך)",
 
   "pendingRedemptionsTitle": "פרסים ממתינים",
+  "pendingRedemptionsEmptyTitle": "עדיין אין בקשות פרס",
   "pendingRedemptionsEmpty": "אין בקשות פרס ממתינות.",
   "pendingRedemptionsCountSubtitle": "{count, plural, one{בקשת פרס אחת ממתינה} other{{count} בקשות פרס ממתינות}}",
   "@pendingRedemptionsCountSubtitle": {

@@ -86,12 +86,30 @@ class ParentPendingRedemptionsScreen extends ConsumerWidget {
             return Center(
               child: Padding(
                 padding: const EdgeInsets.all(32),
-                child: Text(
-                  l10n.pendingRedemptionsEmpty,
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: const Color(0xFF6B7280),
-                  ),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.card_giftcard,
+                      size: 80,
+                      color: theme.colorScheme.primary.withValues(alpha: 0.4),
+                    ),
+                    const SizedBox(height: 24),
+                    Text(
+                      l10n.pendingRedemptionsEmptyTitle,
+                      style: theme.textTheme.headlineSmall,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 12),
+                    Text(
+                      l10n.pendingRedemptionsEmpty,
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
                 ),
               ),
             );

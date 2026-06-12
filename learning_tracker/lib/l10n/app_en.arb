@@ -2391,6 +2391,10 @@
   "redeemScreenTutorUnavailable": "Not available (tutor mode)",
 
   "pendingRedemptionsTitle": "Pending Prizes",
+  "pendingRedemptionsEmptyTitle": "No prize requests yet",
+  "@pendingRedemptionsEmptyTitle": {
+    "description": "Title for the empty state on the parent Pending Prizes screen, shown above pendingRedemptionsEmpty body when there are no pending redemption requests."
+  },
   "pendingRedemptionsEmpty": "No pending prize requests.",
   "pendingRedemptionsCountSubtitle": "{count, plural, =1{1 prize request waiting} other{{count} prize requests waiting}}",
   "@pendingRedemptionsCountSubtitle": {
