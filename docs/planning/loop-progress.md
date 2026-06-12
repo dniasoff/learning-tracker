@@ -646,3 +646,17 @@ device-driven (commit 95ede74a, make ci GREEN 9900 pass):
 - NEXT: rebuild + install -r (keeps cloud sign-in) → VERIFY on-device: a fresh revoke→re-invite→accept cycle to confirm
   the P0 staleness is gone (owner sees Active via refresh/re-entry, no local write) + spot-check the P2 fixes → iterate
   until clean.
+
+### CLOUD/TUTOR VERIFICATION: CLEAN RUN — cluster DONE (2026-06-12)
+- VERIFIED on-device (latest build 5b3eeede + redeploy): P0 DG-TUT-STALE-01 FIXED — fresh revoke→re-invite→remote-
+  accept cycle, owner (5558) sees the grant flip to ACTIVE via BOTH pull-to-refresh AND re-entry, NO local write
+  needed. The staleness bug is gone. All P2 spot-checks PASSED (invite-email inline validation; owner display name
+  not "CloudUser" on Manage Grants card + Resign dialog; audit-log RTL leading chip visible; pending-redemptions
+  empty state icon+title; account-picker "Select an account" copy). One gap: audit-log chip LTR variant not device-
+  testable on this fleet (5558=API29/he) — but EdgeInsetsDirectional fix + worker's LTR+RTL widget tests cover it.
+- FLEET STATE now: test-loop-a is an ACTIVE tutor of LoopChild; Tutor PIN on 5556 = 2222; Owner Parent PIN on 5558 = 2580.
+- ===== ENTIRE REDO COMPLETE (~45/45 screens) =====: local-observable (R1–R6 + gamification/siyumim + blocked screens,
+  ~37) ALL clean/fixed + the CLOUD/TUTOR cluster (~8: manage_tutors, invite_tutor, accept_invite, manage_grants,
+  parent_pending_redemptions, account_picker, device_restore, talmid-session scope) ALL clean/fixed. Both Daniel
+  decisions delivered + verified; device-language + Hebrew-script terms verified; ~70 real bugs fixed + shipped green
+  across the whole session; emulator fleet self-restorable. CLEAR RUNS achieved.
