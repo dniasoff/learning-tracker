@@ -632,3 +632,17 @@ device-driven (commit 95ede74a, make ci GREEN 9900 pass):
   no dedicated device-restore screen (silent restore behind sign-in spinner — design); disabled-button no tap feedback;
   tutor sees some child-directed copy ("Ask a parent") in talmid views (copy nuance).
 - NEXT: integrate fix wave → make ci → redeploy → RE-RUN the cloud/tutor squad (esp. the P0 stale-grant) until CLEAN.
+
+### Cloud/tutor fixes SHIPPED (2026-06-12)
+- Fix wave integrated + pushed (commit 5b3eeede, make ci GREEN 9957 pass): tutoring — P0 DG-TUT-STALE-01 fixed
+  (ManageTutors _PerChildGrantsList → ConsumerStatefulWidget+WidgetsBindingObserver: RefreshIndicator pull-to-refresh
+  invalidating outgoingTutorGrantsProvider + post-frame initState + app-resume re-fetch); invite-email RegExp + inline
+  errorText; TutorGrant.parentName filters 'CloudUser' placeholder → owner name or localized tutorFallbackParent
+  fallback (card + Resign dialog); audit-log filter chips EdgeInsetsDirectional (no RTL leading-clip). profiles —
+  account-picker subtitle "Select a learner"→"Select an account" (en+he). gamification — Pending-Redemptions empty
+  state now icon+title+body. ~12 red→green tests added.
+- DROPPED: parent-settings notification/display localization (NOT reproducible — those strings are already localized;
+  R4 audited notifications clean); P1 adjust-points (intended permission model).
+- NEXT: rebuild + install -r (keeps cloud sign-in) → VERIFY on-device: a fresh revoke→re-invite→accept cycle to confirm
+  the P0 staleness is gone (owner sees Active via refresh/re-entry, no local write) + spot-check the P2 fixes → iterate
+  until clean.
