@@ -66,9 +66,32 @@ ratio) with a "{n} daf/day" label for a daf track (`track_info_card.dart`).
   daf), via `coarseUnitLeafRefs` + marking each leaf through the existing use case (per-amud
   rows/points/siyum/sync unchanged; idempotent). "Next task" skips the whole daf
   (`_nextDailyTaskAfterRefs`). Gated by `goal.paceGranularity` being coarse. +helper tests.
+- **✅ 2c (shipped) — actual/required pace velocity in daf/day** (`track_info_card.dart`),
+  via the coarse÷leaf ratio + ARB `trackInfoDafPerDay`.
 - **2b (next) — one card per daf.** Group the day's same-daf amud tasks into a single card
-  (count "1 today", not 2). Presentation-only.
-- **2c — actual-pace velocity in daf/day** (`track_info_card.dart`).
+  (count "1 today", not 2). Presentation-only. (Today the day still lists individual amud
+  cards — 2a, 2b — though marking either completes the whole daf.)
+
+### ON-DEVICE VERIFICATION (2026-06-14, emulator-5556, daf-paced Bavli track)
+Phases 1 + 2a + 2c all PASS:
+- Items remaining = **2684** (dapim, not ~5422 amudim). ✓ (Phase 1)
+- Actual pace = **"1.0 daf/day"** (not "items/day"); Required = "7 · Per week". ✓ (2c)
+- One "Mark complete" on Berakhot 2a → BOTH amudim done, reader advanced to **Berakhot 3**
+  (next daf, skipped 2b); daily task count dropped 3→1. ✓ (2a daf-atomic)
+- No crash/regression. ✓
+
+### NEW finding (during verification) — Edit-Goal screen shows amudim for a daf track
+The **Edit Goal** form's unit toggle defaults to **עמודים/amudim** ("5349 of 5349 items")
+for a daf-paced track, instead of pre-selecting **דף/daf** + the daf count. Track Detail
+(items + pace) correctly shows daf, so this is an Edit-Goal display-consistency bug — the
+form doesn't reflect the saved `goal.paceGranularity`. Folded into the remaining work
+(small: pre-select the saved granularity + show the matching count in the edit form).
+
+### REMAINING (next increments)
+- 2b — one daf card in the daily list (presentation grouping).
+- Edit-Goal unit pre-selection (the new finding above).
+- Phase 3 — reader presents/navigates by daf for a daf track (gated so free browsing stays
+  amud-by-amud).
 - Scheduler emits **one DailyTask per daf** carrying both amud refs (or a daf-keyed task),
   for daf-granularity tracks — `scheduler_engine.dart`, `daily_task.dart`.
 - Mark-complete on a daf task commits **both amudim atomically** via
