@@ -780,3 +780,11 @@ device-driven (commit 95ede74a, make ci GREEN 9900 pass):
 - NOT changed: "Items remaining 5349 (amudim) vs daf goal" — math reconciles correctly (est. date right); the amud
   internal model is established (product), side-by-side display is a clarity nit only.
 - NEXT: make ci green → commit/push → redeploy → spot-verify the P1 bar-chart Hebrew weekday on 5558.
+
+### DSWEEP follow-up fixes SHIPPED + verified (2026-06-14) — TASK COMPLETE
+- Commit 54b9b1e7 (dev), make ci GREEN (9966). APK redeployed to 5558.
+- P1 bar-chart Hebrew weekdays VERIFIED on-device: the "לימוד & חזרות" bar chart on the Recent Activity (פעילות
+  אחרונה) screen now shows Hebrew weekday letters (א ש ו ה ד ג ב), no English MON/TUE. (Nav: לוח → למידה tab → streak
+  hero card → RecentActivityRoute.) Plural ("1 day") + RTL name-bidi fixes are deterministic + CI-covered.
+- ===== "fix all deferred items + full sweep" COMPLETE: 4/4 deferred items fixed & on-device-verified; full regression
+  sweep run; 3 new sweep findings fixed (1 verified on-device, 2 green); all on dev under green CI. =====
