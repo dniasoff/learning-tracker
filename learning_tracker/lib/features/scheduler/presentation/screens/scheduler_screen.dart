@@ -2,6 +2,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'package:learning_tracker/core/content/content_index.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
@@ -21,6 +22,12 @@ class SchedulerScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final asyncTasks = ref.watch(allDailyTasksProvider);
+    // Non-blocking daf grouping: collapse a daf's amudim to one card when the
+    // goal/content data is already available; otherwise show the ungrouped list
+    // (never block the daily screen on the grouping lookups).
+    final coarsePacedIds =
+        ref.watch(coarsePacedTrackIdsProvider).asData?.value ?? const <int>{};
+    final contentIndex = ref.watch(contentIndexProvider).asData?.value;
     final section = ref.watch(schedulerTaskSectionProvider);
     final isGroupedView = ref.watch(schedulerGroupedViewProvider);
     final theme = Theme.of(context);
@@ -46,7 +53,14 @@ class SchedulerScreen extends ConsumerWidget {
       backgroundColor: AppColors.surfaceF5,
       body: SafeArea(
         child: asyncTasks.when(
-          data: (tasks) {
+          data: (rawTasks) {
+            final tasks = (coarsePacedIds.isNotEmpty && contentIndex != null)
+                ? collapseDafTasks(
+                    rawTasks,
+                    coarsePacedTrackIds: coarsePacedIds,
+                    index: contentIndex,
+                  )
+                : rawTasks;
             final visibleTasks = _filterTasks(tasks, section);
             if (visibleTasks.isEmpty) {
               return EmptyState(

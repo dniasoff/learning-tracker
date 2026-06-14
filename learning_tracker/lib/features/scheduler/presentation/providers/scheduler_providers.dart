@@ -1,6 +1,8 @@
 import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/content/content_grouping.dart';
+import 'package:learning_tracker/core/content/content_index.dart';
 import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -19,6 +21,7 @@ import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_
 import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_learning_order_repository_impl.dart';
 import 'package:learning_tracker/features/scheduler/data/repositories/scheduler_stage_repository_impl.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/pace_status.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/schedule_config.dart';
 import 'package:learning_tracker/features/scheduler/domain/projection/projection.dart';
@@ -70,6 +73,48 @@ class SchedulerTaskSectionNotifier extends Notifier<SchedulerTaskSection> {
 /// Provides the current UTC date/time. Override in tests to control time.
 @riverpod
 DateTime clock(Ref ref) => DateTimeFactory.nowUtc();
+
+/// Track ids on the active profile whose goal is COARSE-paced (daf/perek/seif).
+/// Drives daf-grouping of the daily list and daf labels on task cards.
+@riverpod
+Future<Set<int>> coarsePacedTrackIds(Ref ref) async {
+  final profileId = ref.watch(activeProfileIdProvider);
+  final goals = await ref
+      .watch(userDatabaseProvider)
+      .goalDao
+      .getGoalsByProfile(profileId);
+  return {
+    for (final g in goals)
+      if (PaceGranularity.fromStorageKey(g.paceGranularity) != null) g.trackId,
+  };
+}
+
+/// Collapse same-(track, coarse-unit, stage) leaf tasks into ONE representative
+/// (the first amud of the daf) for COARSE-paced tracks, so the daily list shows
+/// one card per daf — not one per amud. Tasks on other (fine-paced) tracks pass
+/// through unchanged. Pure and order-preserving.
+List<DailyTask> collapseDafTasks(
+  List<DailyTask> tasks, {
+  required Set<int> coarsePacedTrackIds,
+  required ContentIndex index,
+}) {
+  final seen = <String>{};
+  final out = <DailyTask>[];
+  for (final t in tasks) {
+    if (!coarsePacedTrackIds.contains(t.trackId)) {
+      out.add(t);
+      continue;
+    }
+    final item = index.lookup(t.contentItemSefariaRef);
+    final dafKey = item == null
+        ? t.contentItemSefariaRef
+        : coarseUnitKeyForItem(item);
+    // Keep stage in the key so a daf's Learn task and its Chazara task stay
+    // separate cards (only same-daf same-stage amudim collapse).
+    if (seen.add('${t.trackId}|$dafKey|${t.stageOrder}')) out.add(t);
+  }
+  return out;
+}
 
 @riverpod
 SchedulerEngine schedulerEngine(Ref ref) {

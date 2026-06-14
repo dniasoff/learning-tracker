@@ -1,6 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/content/content_grouping.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
@@ -8,6 +9,7 @@ import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
+import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 
 /// Card shown on the Daily Tasks list. Tapping opens the text page;
 /// the Mark Complete action lives on that page, not inline here.
@@ -92,7 +94,7 @@ class DailyTaskCard extends ConsumerWidget {
                               builder: (_) {
                                 // Single label renderer — same path as the
                                 // reader's AppBar and the browse screen rows.
-                                final label =
+                                var label =
                                     ref
                                         .watch(
                                           renderedDisplayForRefProvider(
@@ -105,6 +107,26 @@ class DailyTaskCard extends ConsumerWidget {
                                       '_',
                                       ' ',
                                     );
+                                // 2b: for a daf-paced (coarse) track the card
+                                // represents the whole daf, so show the daf —
+                                // the seeded day label if present, else collapse
+                                // the trailing amud off the breadcrumb.
+                                final coarseIds = ref
+                                    .watch(coarsePacedTrackIdsProvider)
+                                    .asData
+                                    ?.value;
+                                if (coarseIds != null &&
+                                    coarseIds.contains(task.trackId)) {
+                                  final useHebrew = domainTermLabels(
+                                    ref,
+                                  ).isHebrew;
+                                  final seeded = useHebrew
+                                      ? task.unitDisplayHe
+                                      : task.unitDisplayEn;
+                                  label = (seeded != null && seeded.isNotEmpty)
+                                      ? seeded
+                                      : collapseAmudLeaf(label);
+                                }
                                 return Text(
                                   label,
                                   style: theme.textTheme.headlineSmall

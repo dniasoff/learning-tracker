@@ -187,3 +187,22 @@ List<String> coarseUnitLeafRefs(List<ContentItem> items, String sefariaRef) {
 /// via [CurriculumLabelRenderer].
 String itemDisplayName(ContentItem item, {required bool useHebrew}) =>
     useHebrew ? item.displayNameHe : item.displayNameEn;
+
+/// The ` › ` separator used by the breadcrumb renderers
+/// ([renderedDisplayForRef]).
+const String kBreadcrumbSeparator = ' › ';
+
+/// Drops a trailing AMUD segment from a rendered breadcrumb so a daf-grouped
+/// card shows the daf rather than one amud — e.g.
+/// "ברכות › דף ב › עמוד א" → "ברכות › דף ב" (and "Berakhos › Daf 2 › Amud a" →
+/// "Berakhos › Daf 2"). Non-amud breadcrumbs are returned unchanged.
+String collapseAmudLeaf(String breadcrumb) {
+  final parts = breadcrumb.split(kBreadcrumbSeparator);
+  if (parts.length < 2) return breadcrumb;
+  final last = parts.last.trim();
+  final isAmud =
+      last.startsWith('עמוד') || last.toLowerCase().startsWith('amud');
+  return isAmud
+      ? parts.sublist(0, parts.length - 1).join(kBreadcrumbSeparator)
+      : breadcrumb;
+}

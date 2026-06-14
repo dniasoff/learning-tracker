@@ -121,6 +121,49 @@ final class ClockProvider
 
 String _$clockHash() => r'9468c7ed98173bba0de2531c1898d9587398c3de';
 
+/// Track ids on the active profile whose goal is COARSE-paced (daf/perek/seif).
+/// Drives daf-grouping of the daily list and daf labels on task cards.
+
+@ProviderFor(coarsePacedTrackIds)
+final coarsePacedTrackIdsProvider = CoarsePacedTrackIdsProvider._();
+
+/// Track ids on the active profile whose goal is COARSE-paced (daf/perek/seif).
+/// Drives daf-grouping of the daily list and daf labels on task cards.
+
+final class CoarsePacedTrackIdsProvider
+    extends
+        $FunctionalProvider<AsyncValue<Set<int>>, Set<int>, FutureOr<Set<int>>>
+    with $FutureModifier<Set<int>>, $FutureProvider<Set<int>> {
+  /// Track ids on the active profile whose goal is COARSE-paced (daf/perek/seif).
+  /// Drives daf-grouping of the daily list and daf labels on task cards.
+  CoarsePacedTrackIdsProvider._()
+    : super(
+        from: null,
+        argument: null,
+        retry: null,
+        name: r'coarsePacedTrackIdsProvider',
+        isAutoDispose: true,
+        dependencies: null,
+        $allTransitiveDependencies: null,
+      );
+
+  @override
+  String debugGetCreateSourceHash() => _$coarsePacedTrackIdsHash();
+
+  @$internal
+  @override
+  $FutureProviderElement<Set<int>> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
+
+  @override
+  FutureOr<Set<int>> create(Ref ref) {
+    return coarsePacedTrackIds(ref);
+  }
+}
+
+String _$coarsePacedTrackIdsHash() =>
+    r'b61b1e4e57e56f0dc10245796c0216860721c58e';
+
 @ProviderFor(schedulerEngine)
 final schedulerEngineProvider = SchedulerEngineProvider._();
 

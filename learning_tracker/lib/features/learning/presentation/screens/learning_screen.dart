@@ -2,6 +2,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:learning_tracker/core/content/content_index.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
@@ -33,7 +34,22 @@ class LearningScreen extends ConsumerWidget {
     final activeCurriculaAsync = ref.watch(
       dashboardActiveCurriculaStreamProvider,
     );
-    final dailyTasksAsync = ref.watch(allDailyTasksProvider);
+    // Non-blocking daf grouping: collapse a daf's amudim to one card when the
+    // goal/content data is ready; otherwise show the ungrouped list (never block
+    // the daily list on the grouping lookups).
+    final rawDailyTasksAsync = ref.watch(allDailyTasksProvider);
+    final coarsePacedIds =
+        ref.watch(coarsePacedTrackIdsProvider).asData?.value ?? const <int>{};
+    final contentIndex = ref.watch(contentIndexProvider).asData?.value;
+    final dailyTasksAsync = (coarsePacedIds.isNotEmpty && contentIndex != null)
+        ? rawDailyTasksAsync.whenData(
+            (t) => collapseDafTasks(
+              t,
+              coarsePacedTrackIds: coarsePacedIds,
+              index: contentIndex,
+            ),
+          )
+        : rawDailyTasksAsync;
     final streakAsync = ref.watch(dashboardStreakProvider);
     final isChildMode =
         ref.watch(selectedProfileProvider).asData?.value?.profileMode ==

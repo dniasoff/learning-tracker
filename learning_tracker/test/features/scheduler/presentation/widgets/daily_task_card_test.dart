@@ -5,6 +5,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
+import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/widgets/daily_task_card.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -37,6 +38,9 @@ Widget _wrap(Widget child) {
       // Force English mode so resolveStoredStageName returns English stage
       // names (e.g. "Learn", "Chazara 3") regardless of SharedPreferences.
       useHebrewTermsProvider.overrideWithValue(false),
+      // No daf grouping in these card tests (and avoid the DB-backed lookup):
+      // an empty set means the card never collapses the amud label to a daf.
+      coarsePacedTrackIdsProvider.overrideWith((ref) async => <int>{}),
     ],
     child: MaterialApp(
       theme: AppTheme.lightTheme(),
