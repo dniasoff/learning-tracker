@@ -2149,6 +2149,7 @@
     "description": "Sub-caption under the actual pace label."
   },
   "trackInfoItemsPerDay": "פריטים ליום",
+  "trackInfoDafPerDay": "דף ליום",
   "@trackInfoItemsPerDay": {
     "description": "Unit suffix for pace values in the TrackInfoCard."
   },

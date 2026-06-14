@@ -3994,6 +3994,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get trackInfoItemsPerDay => 'items/day';
 
   @override
+  String get trackInfoDafPerDay => 'daf/day';
+
+  @override
   String get trackInfoElapsed => 'Elapsed';
 
   @override

@@ -6723,6 +6723,12 @@ abstract class AppLocalizations {
   /// **'items/day'**
   String get trackInfoItemsPerDay;
 
+  /// No description provided for @trackInfoDafPerDay.
+  ///
+  /// In en, this message translates to:
+  /// **'daf/day'**
+  String get trackInfoDafPerDay;
+
   /// Label prefix for the elapsed-days segment in the TrackInfoCard.
   ///
   /// In en, this message translates to:

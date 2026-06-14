@@ -3963,6 +3963,9 @@ class AppLocalizationsHe extends AppLocalizations {
   String get trackInfoItemsPerDay => 'פריטים ליום';
 
   @override
+  String get trackInfoDafPerDay => 'דף ליום';
+
+  @override
   String get trackInfoElapsed => 'חלף';
 
   @override

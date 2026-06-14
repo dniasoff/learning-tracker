@@ -2325,6 +2325,7 @@
     "description": "Sub-caption under the actual pace label clarifying the measurement window and source."
   },
   "trackInfoItemsPerDay": "items/day",
+  "trackInfoDafPerDay": "daf/day",
   "@trackInfoItemsPerDay": {
     "description": "Unit suffix for pace values shown in the TrackInfoCard (e.g. '2.3 items/day')."
   },

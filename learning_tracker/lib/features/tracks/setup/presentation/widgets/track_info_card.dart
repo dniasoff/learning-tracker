@@ -3,11 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/utils/hebrew_calendar_utils.dart';
 import 'package:learning_tracker/features/progress/domain/services/pace_calculator.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Returns the VALUE string for the "Elapsed" info row.
@@ -83,6 +86,30 @@ class TrackInfoCard extends ConsumerWidget {
     final targetDate = goal?.targetDate?.toLocal();
     final remainingDays = targetDate?.difference(today).inDays;
 
+    // 2c — pace velocity in the track's unit. PaceCalculator velocities are in
+    // LEAF units (amudim). For a daf-paced track, convert to daf/day using the
+    // daf-per-amud ratio (coarse count ÷ leaf count) and label it "daf/day".
+    final curriculum = CurriculumId.values
+        .where((c) => c.storageKey == track.curriculumId)
+        .firstOrNull;
+    final isDafPaced = goal?.paceGranularity == PaceGranularity.daf.storageKey;
+    var unitPerLeaf = 1.0;
+    var paceUnit = l10n.trackInfoItemsPerDay;
+    if (isDafPaced && curriculum != null) {
+      final leafTotal = ref
+          .watch(scopedItemCountProvider(curriculum))
+          .asData
+          ?.value;
+      final coarseTotal = ref
+          .watch(scopedCoarseUnitCountProvider(curriculum))
+          .asData
+          ?.value;
+      if (leafTotal != null && leafTotal > 0 && coarseTotal != null) {
+        unitPerLeaf = coarseTotal / leafTotal;
+        paceUnit = l10n.trackInfoDafPerDay;
+      }
+    }
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -119,14 +146,26 @@ class TrackInfoCard extends ConsumerWidget {
             _infoRow(
               theme,
               label: l10n.trackInfoRequiredPace,
-              value: _requiredPaceLabel(l10n, goal!, paceCalc, today),
+              value: _requiredPaceLabel(
+                l10n,
+                goal!,
+                paceCalc,
+                today,
+                unitPerLeaf: unitPerLeaf,
+                paceUnit: paceUnit,
+              ),
             ),
 
           // ── Actual pace ───────────────────────────────────────────────────
           _infoRowWithCaption(
             theme,
             label: l10n.trackInfoActualPace,
-            value: _actualPaceLabel(l10n, paceCalc),
+            value: _actualPaceLabel(
+              l10n,
+              paceCalc,
+              unitPerLeaf: unitPerLeaf,
+              paceUnit: paceUnit,
+            ),
             caption: l10n.trackInfoActualPaceCaption,
           ),
 
@@ -149,18 +188,20 @@ class TrackInfoCard extends ConsumerWidget {
     AppLocalizations l10n,
     Goal goal,
     PaceCalculator? paceCalc,
-    DateTime today,
-  ) {
+    DateTime today, {
+    required double unitPerLeaf,
+    required String paceUnit,
+  }) {
     if (goal.goalType == 'deadline') {
       if (paceCalc == null ||
           paceCalc.requiredVelocity == 0 ||
           (goal.targetDate != null && goal.targetDate!.isBefore(today))) {
         return '—';
       }
-      return '${paceCalc.requiredVelocity.toStringAsFixed(1)} '
-          '${l10n.trackInfoItemsPerDay}';
+      final v = paceCalc.requiredVelocity * unitPerLeaf;
+      return '${v.toStringAsFixed(1)} $paceUnit';
     }
-    // Pace goal — show the user's stated target.
+    // Pace goal — show the user's stated target (already in the chosen unit).
     if (goal.paceValue != null && goal.pacePeriod != null) {
       final periodLabel = goal.pacePeriod == 'per_day'
           ? l10n.pacePerDay
@@ -170,10 +211,15 @@ class TrackInfoCard extends ConsumerWidget {
     return '—';
   }
 
-  String _actualPaceLabel(AppLocalizations l10n, PaceCalculator? paceCalc) {
+  String _actualPaceLabel(
+    AppLocalizations l10n,
+    PaceCalculator? paceCalc, {
+    required double unitPerLeaf,
+    required String paceUnit,
+  }) {
     if (paceCalc == null || paceCalc.actualVelocity == 0) return '—';
-    return '${paceCalc.actualVelocity.toStringAsFixed(1)} '
-        '${l10n.trackInfoItemsPerDay}';
+    final v = paceCalc.actualVelocity * unitPerLeaf;
+    return '${v.toStringAsFixed(1)} $paceUnit';
   }
 
   // TS-9 fix: delegate to the top-level [elapsedRemainingLabel] so the
