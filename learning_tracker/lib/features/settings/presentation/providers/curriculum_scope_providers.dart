@@ -82,3 +82,38 @@ final scopedItemCountProvider = FutureProvider.family<int, CurriculumId>((
   );
   return items.where((i) => i.isLeaf).length;
 });
+
+/// Count of DISTINCT coarse "learning units" — the leaf's PARENT level — in the
+/// scoped content. E.g. distinct dapim (not amudim) for Talmud, distinct perakim
+/// (not pesukim) for Chumash, distinct simanim (not seif-katan) for Mishna
+/// Berurah.
+///
+/// A pace goal whose granularity is a COARSE unit (daf/perek/seif — the
+/// [PaceGranularity] enum values) measures pace in these units, so a
+/// completion-date estimate must divide by THIS count, not the leaf count. The
+/// add-track wizard already does this (StepGoal._countScopeInLearningUnit); the
+/// track-detail estimate previously divided the leaf (amudim) count by the
+/// daf-per-week rate, doubling the projected timeline. This provider mirrors the
+/// wizard's coarse-branch counting so both surfaces agree.
+final scopedCoarseUnitCountProvider = FutureProvider.family<int, CurriculumId>((
+  ref,
+  curriculumId,
+) async {
+  final items = await ref.watch(
+    scopedCurriculumContentProvider(curriculumId).future,
+  );
+  final keys = <String>{};
+  for (final item in items) {
+    if (!item.isLeaf) continue;
+    // Collapse each leaf to its parent (one level up): the coarse unit.
+    final key = item.level4 != null
+        ? '${item.level1}|${item.level2}|${item.level3}'
+        : item.level3 != null
+        ? '${item.level1}|${item.level2}'
+        : item.level2 != null
+        ? item.level1
+        : item.sefariaRef;
+    keys.add(key);
+  }
+  return keys.length;
+});

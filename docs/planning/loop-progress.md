@@ -737,3 +737,22 @@ device-driven (commit 95ede74a, make ci GREEN 9900 pass):
   calendar (לוח פעילות) weekday headers render Hebrew letters (ה ו ש א ב ג ד), not English. ALL FR1 fixes now
   on-device-verified (P0 collision 3/3 + Hebrew labels + badge + weekday calendar). Nav note: My Achievements is reached
   via the small red flame chip top-left of the dashboard header (the stat tiles are not tappable — by design).
+
+### DEFERRED ITEMS FIX WAVE (2026-06-14) — "fix all deferred items then full sweep"
+- Fix 1 (P2 estimate): track-detail Est-finish divided LEAF count (amudim) by the daf-per-week rate, doubling the
+  timeline vs the wizard. Added scopedCoarseUnitCountProvider (distinct leaf-PARENT count = dapim/perakim/simanim,
+  mirroring StepGoal._countScopeInLearningUnit). track_detail now uses coarse-remaining for the estimate when the
+  goal's PaceGranularity is coarse (daf/perek/seif). 3 unit tests.
+- Fix 2 (UX): sole-track Archive offered-then-refused. track_detail._showDeleteDialog now PRE-CHECKS active-curricula
+  count and surfaces the last-curriculum explanation up-front (no archive/wipe dialog whose options would all be
+  refused). Respects the intentional TRK-HUB-04 min-1 invariant; resolves the "Track-then-curriculum" wording
+  confusion (sole track now shows only the guard message). Verify on-device.
+- Fix 3 (latent localization): parent-PIN flow showed raw English 'Incorrect PIN'/'PINs do not match'/etc. on Hebrew
+  devices (PinFlowScreen rendered the controller's BuildContext-free English sentinels). Added PinFlowScreen._resolveError
+  mapping sentinels → l10n (+ 2 new ARB keys pinFailedToSave/pinNoActiveProfile). English-locale tests unaffected (en
+  ARB == sentinel); added B4-he test asserting קוד שגוי + no English leak.
+- Fix 4 (font-scale): investigated — NO global textScaler clamp in app/theme (only app_dialog). The FR1 "1.3 not
+  honored on lifetime screens" was a low-confidence API29 test-env observation. To VERIFY on-device in the sweep
+  (set font_scale 1.3 on an API33+ device, confirm text enlarges) rather than change code.
+- NEXT: make ci green → build APK → redeploy 5556+5558 → on-device verify all 4 deferred fixes + broad regression
+  sweep (≤2 concurrent devices per the host-contention lesson). 5554 still dead.

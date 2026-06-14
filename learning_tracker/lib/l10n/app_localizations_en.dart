@@ -1663,6 +1663,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get pinsDoNotMatch => 'PINs do not match';
 
   @override
+  String get pinFailedToSave => 'Failed to save PIN';
+
+  @override
+  String get pinNoActiveProfile => 'No active profile';
+
+  @override
   String get tabBarDashboard => 'DASHBOARD';
 
   @override

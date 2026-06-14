@@ -145,7 +145,7 @@ class _PinFlowScreenState extends ConsumerState<PinFlowScreen> {
               title: _resolveTitle(state, l10n),
               subtitle: _resolveSubtitle(state, l10n),
               digits: state.digits,
-              errorMessage: state.errorMessage,
+              errorMessage: _resolveError(state.errorMessage, l10n),
               lockedOut: state.lockedOut,
               lockoutMinutes: state.lockoutMinutes,
               busy: state.busy,
@@ -165,6 +165,22 @@ class _PinFlowScreenState extends ConsumerState<PinFlowScreen> {
   // ------------------------------------------------------------------
   // Copy helpers
   // ------------------------------------------------------------------
+
+  /// Localizes the controller's error message. The PinFlowController is a
+  /// Riverpod notifier with no BuildContext, so it emits stable English
+  /// sentinels as fallbacks (see its `_incorrectPin`/`_pinsDoNotMatch`/… and
+  /// PinFlowMachine's defaults). The screen — which HAS l10n — maps those
+  /// sentinels to the localized string so a Hebrew device shows Hebrew (not raw
+  /// English). Anything unrecognized (already-localized lockout copy, etc.) is
+  /// passed through unchanged.
+  String? _resolveError(String? raw, AppLocalizations l10n) => switch (raw) {
+    null => null,
+    'Incorrect PIN' => l10n.incorrectPin,
+    'PINs do not match' => l10n.pinsDoNotMatch,
+    'Failed to save PIN' => l10n.pinFailedToSave,
+    'No active profile' => l10n.pinNoActiveProfile,
+    _ => raw,
+  };
 
   String _resolveTitle(PinFlowState state, AppLocalizations l10n) {
     switch (widget.mode) {

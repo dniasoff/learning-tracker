@@ -201,12 +201,26 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
         ? (totalScope * (1 - cycleFraction)).ceil().clamp(0, totalScope)
         : null;
 
+    // FR-fix: a pace goal whose granularity is COARSE (daf/perek/seif) measures
+    // pace in those units, so the completion-date estimate must divide the
+    // coarse-unit remaining count — NOT the leaf (amudim/pesukim) count. Dividing
+    // leaf-by-daf-rate previously doubled the projected timeline vs the wizard.
+    final paceIsCoarse =
+        goal != null &&
+        PaceGranularity.fromStorageKey(goal.paceGranularity) != null;
+    final coarseTotal = (curriculum != null && paceIsCoarse)
+        ? ref.watch(scopedCoarseUnitCountProvider(curriculum)).asData?.value
+        : null;
+    final remainingInPaceUnit = (paceIsCoarse && coarseTotal != null)
+        ? (coarseTotal * (1 - cycleFraction)).ceil().clamp(0, coarseTotal)
+        : itemsRemaining;
+
     final useHebrewCalendar = ref.watch(useHebrewDateProvider);
     // TS-8 fix: Est. finish must honour the SAME hebrew-date preference the rest
     // of the card uses, so a single card never mixes Hebrew + Gregorian dates.
     final estimatedFinish = _estimatedFinish(
       goal,
-      itemsRemaining,
+      remainingInPaceUnit,
       locale,
       useHebrewCalendar: useHebrewCalendar,
     );
@@ -488,7 +502,10 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
 
   String? _estimatedFinish(
     Goal? goal,
-    int? itemsRemaining,
+    // Remaining scope expressed in the SAME unit as the goal's pace
+    // (coarse units for daf/perek/seif goals, leaf items otherwise) so the
+    // division below matches the add-track wizard's projection.
+    int? remainingInPaceUnit,
     String locale, {
     required bool useHebrewCalendar,
   }) {
@@ -498,13 +515,13 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     if (goal.goalType == 'pace' &&
         goal.paceValue != null &&
         goal.pacePeriod != null &&
-        itemsRemaining != null &&
-        itemsRemaining > 0) {
+        remainingInPaceUnit != null &&
+        remainingInPaceUnit > 0) {
       final weeklyRate = goal.pacePeriod == 'per_day'
           ? goal.paceValue! * 7
           : goal.paceValue!;
       if (weeklyRate > 0) {
-        final days = (itemsRemaining / weeklyRate * 7).ceil();
+        final days = (remainingInPaceUnit / weeklyRate * 7).ceil();
         // TS-8 fix: route through formatTrackDate so the projected finish date
         // is rendered in the Hebrew calendar when that preference is active,
         // matching the activated-date and the rest of the card.
@@ -827,6 +844,22 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     CurriculumId? curriculum,
   ) async {
     final l10n = AppLocalizations.of(context)!;
+
+    // FR-fix: removing the LAST active track is blocked by the min-1 invariant
+    // (TRK-HUB-04) — for BOTH Archive and Delete-and-wipe. Pre-check here and
+    // surface the explanation up-front, instead of offering an Archive/Delete
+    // dialog whose every option would be refused after the tap (the resweep's
+    // "offered then refused" + Track-vs-curriculum-wording confusion).
+    final activeCurricula = await ref
+        .read(userDatabaseProvider)
+        .activeCurriculumDao
+        .getActiveCurriculaByProfile(track.profileId);
+    if (activeCurricula.length <= 1) {
+      if (!mounted) return;
+      _showLastCurriculumError(l10n);
+      return;
+    }
+    if (!mounted) return;
 
     // 'archive' = keep history; 'wipe' = hard-delete completions; null = cancel
     final choice = await showDialog<String>(

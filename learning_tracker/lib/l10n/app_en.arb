@@ -853,6 +853,8 @@
   "enterNewPin": "Enter New PIN",
   "confirmNewPin": "Confirm New PIN",
   "pinsDoNotMatch": "PINs do not match",
+  "pinFailedToSave": "Failed to save PIN",
+  "pinNoActiveProfile": "No active profile",
   "tabBarDashboard": "DASHBOARD",
   "tabBarLearn": "LEARN",
   "tabBarProgress": "PROGRESS",

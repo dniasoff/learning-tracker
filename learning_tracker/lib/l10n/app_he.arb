@@ -748,6 +748,8 @@
   "enterNewPin": "הזינו קוד חדש",
   "confirmNewPin": "אשרו את הקוד החדש",
   "pinsDoNotMatch": "הקודים אינם תואמים",
+  "pinFailedToSave": "שמירת הקוד נכשלה",
+  "pinNoActiveProfile": "אין פרופיל פעיל",
   "tabBarDashboard": "לוח",
   "tabBarLearn": "למידה",
   "tabBarProgress": "התקדמות",

@@ -1652,6 +1652,12 @@ class AppLocalizationsHe extends AppLocalizations {
   String get pinsDoNotMatch => 'הקודים אינם תואמים';
 
   @override
+  String get pinFailedToSave => 'שמירת הקוד נכשלה';
+
+  @override
+  String get pinNoActiveProfile => 'אין פרופיל פעיל';
+
+  @override
   String get tabBarDashboard => 'לוח';
 
   @override

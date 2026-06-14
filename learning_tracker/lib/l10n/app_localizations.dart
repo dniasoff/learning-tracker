@@ -2979,6 +2979,18 @@ abstract class AppLocalizations {
   /// **'PINs do not match'**
   String get pinsDoNotMatch;
 
+  /// No description provided for @pinFailedToSave.
+  ///
+  /// In en, this message translates to:
+  /// **'Failed to save PIN'**
+  String get pinFailedToSave;
+
+  /// No description provided for @pinNoActiveProfile.
+  ///
+  /// In en, this message translates to:
+  /// **'No active profile'**
+  String get pinNoActiveProfile;
+
   /// No description provided for @tabBarDashboard.
   ///
   /// In en, this message translates to:

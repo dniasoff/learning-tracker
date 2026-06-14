@@ -1597,6 +1597,14 @@ void main() {
 
       final db2 = inMemoryDb();
       await seedProfileZero(db2);
+      // Two active curricula so the delete is NOT the profile's last active
+      // track — otherwise the min-1 invariant pre-check intercepts and shows the
+      // last-curriculum explanation instead of the archive/wipe dialog.
+      await db2.activeCurriculumDao.activateByProfile(
+        CurriculumId.mishnayos,
+        0,
+      );
+      await db2.activeCurriculumDao.activateByProfile(CurriculumId.bavli, 0);
       addTearDown(() => db2.close());
 
       final track = _track(id: 1, profileId: 0);
@@ -1623,6 +1631,53 @@ void main() {
 
       await _tearDown(tester);
     });
+
+    testWidgets(
+      'tapping Delete Track on the SOLE active track shows the last-track '
+      'explanation, not the archive/wipe dialog',
+      (tester) async {
+        _setTallViewport(tester);
+        addTearDown(tester.view.resetPhysicalSize);
+        addTearDown(tester.view.resetDevicePixelRatio);
+
+        final db2 = inMemoryDb();
+        await seedProfileZero(db2);
+        // Exactly ONE active curriculum → removing it is blocked by the min-1
+        // invariant (TRK-HUB-04). The pre-check must surface the explanation
+        // up-front instead of offering Archive/Delete options that all fail.
+        await db2.activeCurriculumDao.activateByProfile(
+          CurriculumId.mishnayos,
+          0,
+        );
+        addTearDown(() => db2.close());
+
+        final track = _track(id: 1, profileId: 0);
+
+        await tester.pumpWidget(_buildDetailApp(track: track, db: db2));
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        final deleteTile = find.ancestor(
+          of: find.text('Delete Track'),
+          matching: find.byType(ListTile),
+        );
+        expect(deleteTile, findsOneWidget);
+        await tester.tap(deleteTile);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 300));
+
+        // The last-track explanation is shown…
+        expect(
+          find.text('At least one curriculum must remain active'),
+          findsOneWidget,
+        );
+        // …and the archive/wipe dialog is NOT offered (no refusable options).
+        expect(find.text('Archive (keep history)'), findsNothing);
+        expect(find.text('Delete and wipe history'), findsNothing);
+
+        await _tearDown(tester);
+      },
+    );
   });
 
   // ── No track-type labels ──────────────────────────────────────────────────

@@ -535,6 +535,43 @@ void main() {
       await _teardown(tester);
     });
 
+    testWidgets('B4-he: wrong PIN → localized Hebrew error, no English leak', (
+      tester,
+    ) async {
+      // FR fix: PinFlowScreen now maps the controller's English error sentinel
+      // to l10n, so a Hebrew device shows קוד שגוי (not raw "Incorrect PIN").
+      setViewSize(tester);
+      when(
+        () => ps.verifyProfilePin(_kProfileId, '0000'),
+      ).thenAnswer((_) async => false);
+
+      await tester.pumpWidget(
+        _buildScreen(
+          PinFlowMode.verify,
+          pinService: ps,
+          router: router,
+          appRouter: appRouter,
+          locale: const Locale('he'),
+        ),
+      );
+      await tester.pump(const Duration(seconds: 1));
+
+      await _enterPin(tester, '0000');
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(
+        find.textContaining('קוד שגוי'),
+        findsAtLeastNWidgets(1),
+        reason: 'wrong PIN must show the localized Hebrew error',
+      );
+      expect(
+        find.textContaining('Incorrect'),
+        findsNothing,
+        reason: 'no raw English error may leak in Hebrew locale',
+      );
+      await _teardown(tester);
+    });
+
     testWidgets('B5: lockout → lockedOut panel rendered with lockout minutes', (
       tester,
     ) async {
