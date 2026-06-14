@@ -2164,6 +2164,13 @@
   "@trackInfoDays": {
     "description": "Unit suffix for day counts in the TrackInfoCard."
   },
+  "trackInfoDaysCount": "{count, plural, one{יום אחד} two{יומיים} other{{count} ימים}}",
+  "@trackInfoDaysCount": {
+    "description": "Pluralized day count for the TrackInfoCard Elapsed/Remaining rows.",
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
   "allTimeActivityTitle": "פעילות כל הזמנים",
   "@allTimeActivityTitle": {
     "description": "Section heading for the All Time summary card in the Recent Activity screen."

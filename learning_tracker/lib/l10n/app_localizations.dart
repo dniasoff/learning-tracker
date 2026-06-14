@@ -6741,6 +6741,12 @@ abstract class AppLocalizations {
   /// **'days'**
   String get trackInfoDays;
 
+  /// Pluralized day count for the TrackInfoCard Elapsed/Remaining rows (avoids '1 days').
+  ///
+  /// In en, this message translates to:
+  /// **'{count, plural, =1{1 day} other{{count} days}}'**
+  String trackInfoDaysCount(int count);
+
   /// Section heading for the All Time summary card in the Recent Activity screen.
   ///
   /// In en, this message translates to:

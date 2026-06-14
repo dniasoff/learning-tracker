@@ -756,3 +756,27 @@ device-driven (commit 95ede74a, make ci GREEN 9900 pass):
   (set font_scale 1.3 on an API33+ device, confirm text enlarges) rather than change code.
 - NEXT: make ci green → build APK → redeploy 5556+5558 → on-device verify all 4 deferred fixes + broad regression
   sweep (≤2 concurrent devices per the host-contention lesson). 5554 still dead.
+
+### DEFERRED FIXES SHIPPED + DSWEEP launched (2026-06-14)
+- Deferred fix wave committed 4e075e8a (dev), make ci GREEN (9966 pass). APK rebuilt + redeployed to 5556 + 5558.
+- DSWEEP regression sweep launched (workflow wh6n4iuen, tool/vision_find_pass.js, rounds of 2 / 2 devices):
+  ds_track_detail_en (fix1 estimate consistency wizard==detail), ds_track_mgmt_delete_en (fix2 sole-track guard up-front),
+  ds_parent_pin_he (fix3 Hebrew PIN error קוד שגוי), ds_font_scale_he (fix4 does 1.3 enlarge text on lifetime screens),
+  ds_dashboard_he + ds_settings_he (regression). NEXT: triage → fix any real finding → re-verify until clean.
+
+### DSWEEP RESULTS — all 4 deferred fixes VERIFIED on-device + 3 new fixes (2026-06-14)
+- DSWEEP (wh6n4iuen, 6 screens / 2 devices): ALL 4 deferred fixes PASS on-device —
+  #1 estimate: wizard & track-detail both "Oct 19 2033" (no 2041 drift); #2 sole-track: guard explanation shown
+  IMMEDIATELY, no offered-then-refused, multi-track Archive/Wipe dialog still works; #3 parent-PIN: wrong PIN → קוד שגוי
+  (no English leak); #4 font-scale: text DOES enlarge at 1.3 on lifetime screens (FR1 "not honored" = test-env
+  artifact, confirmed NOT a bug). Settings root CLEAN en+he. Hebrew labels + collision fixes still holding.
+- 3 NEW findings from the sweep → fixed this wave:
+  · [P1] Recent-Activity "לימוד & חזרות" bar chart x-axis showed English MON/TUE/WED in Hebrew UI (a 2nd chart the
+    FR1 streak-calendar weekday fix missed) → limudim_chazaros_bar_chart now locale-aware (Hebrew letters א..ש).
+  · [P2] track-detail "Elapsed: 1 days" plural → new ICU plural key trackInfoDaysCount (en =1{1 day}; he one/two/other);
+    track_info_card uses it for Elapsed + Remaining.
+  · [P2] dashboard greeting rendered "!LoopChild" (neutral "!" on wrong side in RTL) → wrapped name in a Unicode
+    first-strong isolate (⁨…⁩) so "!" follows the name's direction.
+- NOT changed: "Items remaining 5349 (amudim) vs daf goal" — math reconciles correctly (est. date right); the amud
+  internal model is established (product), side-by-side display is a clarity nit only.
+- NEXT: make ci green → commit/push → redeploy → spot-verify the P1 bar-chart Hebrew weekday on 5558.

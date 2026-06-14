@@ -6,8 +6,11 @@ export const meta = {
 
 const ADB = '/home/daniel/bin/adb'
 // EDIT THIS BLOCK PER BATCH (args wiring unavailable for scriptPath runs)
-const BATCH = 'FR1'
-const SCREENS = [
+const BATCH = 'DSWEEP'
+// ===== FULL REGRESSION SWEEP after the deferred-item fix wave (build 4e075e8a) =====
+// HOST-CONTENTION LESSON: run only 2 devices concurrently (5556 EN cloud, 5558
+// native Hebrew). Rounds of 2 (see the i += 2 loop below). 5554 is dead.
+const SCREENS_FR1_ARCHIVED = [
   // ===== FINAL FULL RESWEEP — cross-cutting regression hunt over the most-fixed surfaces on build 5b3eeede =====
   // Device states: 5554=API34 English, cloud "Loop Test A" (RedeemKid/PinKid/Daniel + Talmid LoopChild);
   //                5556=API36 tablet English, same cloud account; 5558=API29 NATIVE HEBREW, child LoopChild dashboard.
@@ -23,6 +26,21 @@ const SCREENS = [
   { slug: 'fr_profile_account_picker', serial: 'emulator-5554', nav: 'Profile picker / "Who is learning?" (the multi-profile chooser shown on this cloud account: RedeemKid/PinKid child cards, Daniel adult card, Add Profile, and the TALMID PROFILES section with LoopChild). Verify: the account picker subtitle/copy reads "Select an account" (NOT "Select a learner") where it picks an ACCOUNT; Child/Adult mode badges correct; Talmid section renders with the right owner/tutor labels (no "CloudUser" placeholder leak). Then `cmd locale ... --locales he`, relaunch, re-audit Hebrew RTL, RESET. font 1.3, no clip.', controls: 'profile cards, mode badges, Add Profile, Talmid section, account-picker copy, en+he' },
   { slug: 'fr_tutor_cluster', serial: 'emulator-5556', nav: 'Tutor owner/parent surfaces (Adult/Parent mode → Tutors / Manage Tutors → ManageTutorsScreen). Audit the per-child grants list (LoopChild grant to test-loop-a should read ACTIVE, owner display name NOT "CloudUser"), pull-to-refresh works, Invite Tutor form (email field shows inline validation on a malformed address), and the Tutor Audit Log filter chips (leading chip not RTL-clipped — test via `cmd locale ... --locales he` then reset). No stale "Pending". font 1.3, no clip.', controls: 'grants list, active/owner-name, pull-to-refresh, invite-email inline validation, audit-log filter chips, en+he' },
   { slug: 'fr_text_reader_he', serial: 'emulator-5558', nav: 'NATIVE-HEBREW Text Display / reader (LoopChild → a track → Start Learning / Today\'s task → the daf/mishna/pasuk text reader, TextDisplayScreen). If LoopChild has no active track, add a self-paced Mishnayos track first or use any reachable track. Audit: Hebrew text body (nikud per pref), the AppBar breadcrumb chain (nusach-correct, NOT clipped, RTL), prev/next arrows (mirrored), and the bottom mark-complete / next-task buttons NOT clipped by the nav-bar inset (recently SafeArea-fixed). font 1.3.', controls: 'text body, nikud, AppBar breadcrumb, prev/next arrows, mark-complete/next buttons, RTL safe-area' },
+]
+
+const SCREENS = [
+  // ===== DSWEEP: broad regression pass after the deferred-item fixes =====
+  // 2 devices only (host-contention lesson). Rounds of 2 (i += 2 loop). Each
+  // agent ALSO double-checks the FR1 fixes still hold (no regression).
+  // ROUND 1
+  { slug: 'ds_track_detail_en', serial: 'emulator-5556', nav: 'Track detail + add-track ESTIMATE consistency (English). Adult/Parent mode → Manage Tracks. If no track exists, ADD one: Talmud Bavli, self-paced, full scope, goal pace = 7 per week using the COARSE unit (דף/daf, NOT amud). On the wizard pace step (step 6) NOTE the "Estimated finish" date. Create the track, open its Track Detail, and read the "Est. finish" row. PRIMARY CHECK (deferred fix #1): the two dates must now AGREE (same year, ~2033 — NOT an ~8-year-later ~2041). Report both dates. Also audit the detail card: Items remaining, Goal row, progress labels, no clipping at font 1.3.', controls: 'add-track wizard pace step estimate, track-detail Est. finish, items remaining, goal row, font 1.3' },
+  { slug: 'ds_dashboard_he', serial: 'emulator-5558', nav: 'NATIVE-HEBREW child dashboard regression (LoopChild). Audit the dashboard: stat cards (נקודות/ידע כולל/סיומים/רצף), points hero, statistics, today-missions, bottom nav — all Hebrew RTL, domain terms Hebrew SCRIPT, no English leak, no clipping, correct pluralization. Then open My Achievements via the red flame chip (top-left header) and confirm the progress-hero badge does NOT overlap the header (FR1 RTL fix) and the activity-calendar weekday headers are Hebrew letters (NOT Mon/Tue/Wed). font 1.0 + 1.3.', controls: 'stat cards, points hero, bottom nav, My Achievements badge, activity-calendar weekday headers, RTL, font 1.3' },
+  // ROUND 2
+  { slug: 'ds_track_mgmt_delete_en', serial: 'emulator-5556', nav: 'Track management + DELETE behaviour (English) — deferred fix #2. In Manage Tracks: with the profile having 2+ active tracks, open a track → Delete Track → CONFIRM the Archive/Delete dialog appears (Archive keep history / Delete and wipe / Cancel) and works. Then get the profile down to its LAST/SOLE active track and tap Delete Track → it must show "At least one curriculum must remain active" explanation IMMEDIATELY (no Archive/Delete dialog offered — the old "offered then refused" bug). Report both behaviours. font 1.3.', controls: 'Delete Track dialog (multi-track), sole-track guard explanation, archive/wipe options, no offered-then-refused' },
+  { slug: 'ds_parent_pin_he', serial: 'emulator-5558', nav: 'NATIVE-HEBREW parent-PIN error (deferred fix #3). Trigger the Parent PIN entry/verify (e.g. switch child→parent via the mode chip, or Settings parent gate). Enter a WRONG 4-digit PIN. PRIMARY CHECK: the error must render in HEBREW (קוד שגוי) — NOT the raw English "Incorrect PIN". Also try the change-PIN confirm-mismatch path if reachable (should show הקודים אינם תואמים, not "PINs do not match"). Report exactly what error text appears. Then enter the correct PIN 2580 to proceed. No English leak in the PIN UI.', controls: 'parent PIN keypad, wrong-PIN error (Hebrew), mismatch error, no English error leak' },
+  // ROUND 3
+  { slug: 'ds_settings_he', serial: 'emulator-5556', nav: 'Settings root regression (English + Hebrew via cmd-locale). Adult/Parent → Settings. Verify NO "App Language" tile (intentional), every tile localized + icons render, Backup&Sync card. Then `cmd locale set-app-locales com.jcom.torah.learning_tracker --locales he`, relaunch, re-audit Hebrew RTL (translated tiles, domain terms Hebrew script), RESET `--locales \'\'`. font 1.3, no clipping.', controls: 'all settings tiles, no app-language tile, Backup&Sync, en+he, font 1.3' },
+  { slug: 'ds_font_scale_he', serial: 'emulator-5558', nav: 'FONT-SCALE verification (deferred item #4) on the NATIVE-HEBREW device + Lifetime screens. FIRST capture a Lifetime Knowledge screen (Parent mode PIN 2580 → Progress → ידע כולל, drill the tree) at font_scale 1.0. THEN set `settings put system font_scale 1.3`, force-stop + relaunch the app, re-capture the SAME screen. PRIMARY CHECK: the text must be VISIBLY LARGER at 1.3 than at 1.0 (confirming the app honors OS font scaling; the FR1 "1.3 not honored" note was suspected to be a test-env artifact). Report whether text grew, with both screenshots. Also confirm Hebrew tree labels render Hebrew script (regression of the FR1 Hebrew-label fix). RESET `settings put system font_scale 1.0` when done.', controls: 'lifetime tree at 1.0 vs 1.3 (does text grow?), Hebrew labels, font-scale honored' },
 ]
 
 const RUBRIC = `VISION RUBRIC — for EVERY screenshot, judge it like a human and report each YES as a finding:
@@ -142,13 +160,14 @@ large text, populated vs empty). Return ONLY the structured report.`
 
 phase('DeepPass')
 const reports = []
-// run in rounds of 3 (3 devices), sequential rounds to avoid device contention
-for (let i = 0; i < SCREENS.length; i += 3) {
-  const round = SCREENS.slice(i, i + 3)
+// run in rounds of 2 (only 2 healthy devices — host-contention lesson), one
+// agent per device per round, sequential rounds to keep host load manageable.
+for (let i = 0; i < SCREENS.length; i += 2) {
+  const round = SCREENS.slice(i, i + 2)
   const r = await parallel(round.map(s => () =>
     agent(briefFor(s), { label: `b${BATCH}:${s.slug}`, phase: 'DeepPass', schema: FINDING_SCHEMA })))
   reports.push(...r.filter(Boolean))
-  log(`Batch ${BATCH}: round ${i / 3 + 1} done (${round.map(s => s.slug).join(', ')}).`)
+  log(`Batch ${BATCH}: round ${i / 2 + 1} done (${round.map(s => s.slug).join(', ')}).`)
 }
 
 const allFindings = reports.flatMap(r => (r.findings || []).map(f => ({ screen: r.screen, ...f })))

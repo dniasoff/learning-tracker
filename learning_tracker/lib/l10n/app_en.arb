@@ -2340,6 +2340,13 @@
   "@trackInfoDays": {
     "description": "Unit suffix for day counts in the TrackInfoCard (e.g. 'Elapsed 14 days')."
   },
+  "trackInfoDaysCount": "{count, plural, =1{1 day} other{{count} days}}",
+  "@trackInfoDaysCount": {
+    "description": "Pluralized day count for the TrackInfoCard Elapsed/Remaining rows (avoids '1 days').",
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
   "allTimeActivityTitle": "All-time activity",
   "@allTimeActivityTitle": {
     "description": "Section heading for the All Time summary card in the Recent Activity screen."

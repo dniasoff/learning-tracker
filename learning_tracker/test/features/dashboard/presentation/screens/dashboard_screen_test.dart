@@ -135,7 +135,9 @@ void main() {
       // "Good evening") and the name on a separate line. Assertion checks
       // both the name and that one of the three greetings is present, since
       // the test runs at any time of day.
-      expect(find.text('Learner!'), findsOneWidget);
+      // textContaining tolerates the bidi first-strong isolate (U+2068…U+2069)
+      // the greeting wraps the name in so "!" sits correctly in RTL.
+      expect(find.textContaining('Learner!'), findsOneWidget);
       final greetingFound =
           tester.any(find.text('Good morning')) ||
           tester.any(find.text('Good afternoon')) ||

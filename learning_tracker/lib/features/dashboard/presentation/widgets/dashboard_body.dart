@@ -274,7 +274,12 @@ class DashboardBody extends ConsumerWidget {
                     fit: BoxFit.scaleDown,
                     alignment: AlignmentDirectional.centerStart,
                     child: Text(
-                      '$name!',
+                      // Wrap "name!" in a Unicode first-strong isolate
+                      // (U+2068 … U+2069) so the trailing "!" follows the NAME's
+                      // direction. Without it, a Latin name in an RTL (Hebrew)
+                      // paragraph renders the neutral "!" on the wrong side
+                      // ("!LoopChild" instead of "LoopChild!").
+                      '\u2068$name!\u2069',
                       style: _iosTextStyle(
                         context,
                         size: 28,

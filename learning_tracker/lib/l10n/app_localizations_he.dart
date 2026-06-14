@@ -3972,6 +3972,18 @@ class AppLocalizationsHe extends AppLocalizations {
   String get trackInfoDays => 'ימים';
 
   @override
+  String trackInfoDaysCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count ימים',
+      two: 'יומיים',
+      one: 'יום אחד',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get allTimeActivityTitle => 'פעילות כל הזמנים';
 
   @override

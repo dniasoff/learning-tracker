@@ -21,10 +21,11 @@ String elapsedRemainingLabel({
   required int? remainingDays,
 }) {
   // TS-9: do NOT prepend l10n.trackInfoElapsed here — the row label
-  // already shows it.  Value = "$elapsedDays days [· Remaining M days]".
-  final elapsedStr = '$elapsedDays ${l10n.trackInfoDays}';
+  // already shows it.  Value = "N days [· Remaining M days]".
+  // Pluralized so count=1 reads "1 day", not "1 days".
+  final elapsedStr = l10n.trackInfoDaysCount(elapsedDays);
   final remainingStr = remainingDays != null && remainingDays >= 0
-      ? '${l10n.trackInfoRemaining} $remainingDays ${l10n.trackInfoDays}'
+      ? '${l10n.trackInfoRemaining} ${l10n.trackInfoDaysCount(remainingDays)}'
       : null;
   return remainingStr != null ? '$elapsedStr · $remainingStr' : elapsedStr;
 }

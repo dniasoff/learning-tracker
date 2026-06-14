@@ -4003,6 +4003,17 @@ class AppLocalizationsEn extends AppLocalizations {
   String get trackInfoDays => 'days';
 
   @override
+  String trackInfoDaysCount(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count days',
+      one: '1 day',
+    );
+    return '$_temp0';
+  }
+
+  @override
   String get allTimeActivityTitle => 'All-time activity';
 
   @override

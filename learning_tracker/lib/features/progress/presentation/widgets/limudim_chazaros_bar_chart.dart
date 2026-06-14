@@ -2,6 +2,7 @@ import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/features/progress/domain/models/chart_data.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -51,7 +52,11 @@ class LimudimChazarosBarChart extends ConsumerWidget {
     final maxY = maxTotal == 0 ? 5.0 : (maxTotal + 1).toDouble();
 
     final isShortRange = data.length <= 7;
-    const weekdayLabel = <int, String>{
+    // Weekday axis labels follow the UI locale — on a Hebrew device they must be
+    // Hebrew letters (א..ש), matching the streak calendar above, not English
+    // MON/TUE which leaked into the otherwise-Hebrew Recent Activity screen.
+    final isHebrew = ref.watch(currentAppLocaleProvider).languageCode == 'he';
+    const weekdayLabelEn = <int, String>{
       DateTime.monday: 'MON',
       DateTime.tuesday: 'TUE',
       DateTime.wednesday: 'WED',
@@ -60,6 +65,16 @@ class LimudimChazarosBarChart extends ConsumerWidget {
       DateTime.saturday: 'SAT',
       DateTime.sunday: 'SUN',
     };
+    const weekdayLabelHe = <int, String>{
+      DateTime.sunday: 'א',
+      DateTime.monday: 'ב',
+      DateTime.tuesday: 'ג',
+      DateTime.wednesday: 'ד',
+      DateTime.thursday: 'ה',
+      DateTime.friday: 'ו',
+      DateTime.saturday: 'ש',
+    };
+    final weekdayLabel = isHebrew ? weekdayLabelHe : weekdayLabelEn;
 
     return Padding(
       padding: const EdgeInsets.only(top: 8),
