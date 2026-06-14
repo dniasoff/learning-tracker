@@ -1506,6 +1506,8 @@
       "period": { "type": "String" }
     }
   },
+  "goalPacePeriodDay": "יום",
+  "goalPacePeriodWeek": "שבוע",
   "goalPaceInputLabel": "{unit} {period}",
   "@goalPaceInputLabel": {
     "placeholders": {

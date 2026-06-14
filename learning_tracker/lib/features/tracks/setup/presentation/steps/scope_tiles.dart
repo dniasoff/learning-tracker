@@ -130,6 +130,12 @@ class ScopeLevelTile extends StatelessWidget {
                       const SizedBox(height: 2),
                       Text(
                         subtitle,
+                        // Wrap the "{n} {level} • {gloss}" subtitle to two
+                        // lines so the seder gloss (e.g. "Festivals &
+                        // Sabbaths") doesn't clip to "Festivals &" at large
+                        // font scales / in a narrow tile.
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                         style: theme.textTheme.bodyMedium?.copyWith(
                           color: AppTheme.brandInkMuted,
                         ),

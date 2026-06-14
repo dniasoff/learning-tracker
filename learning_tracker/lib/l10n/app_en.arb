@@ -1660,6 +1660,14 @@
       "period": { "type": "String" }
     }
   },
+  "goalPacePeriodDay": "day",
+  "@goalPacePeriodDay": {
+    "description": "Bare period noun for the pace-helper question 'How many X per {period}?'. Distinct from pacePerDay ('Per day') used on the selector button."
+  },
+  "goalPacePeriodWeek": "week",
+  "@goalPacePeriodWeek": {
+    "description": "Bare period noun for the pace-helper question 'How many X per {period}?'. Distinct from pacePerWeek ('Per week') used on the selector button."
+  },
   "goalPaceInputLabel": "{unit} {period}",
   "@goalPaceInputLabel": {
     "placeholders": {

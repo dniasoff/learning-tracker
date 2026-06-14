@@ -51,7 +51,10 @@ class ProgramLabelResolver {
   ///   [LearningProgramData.displayName].
   String learningProgramLabel(LearningProgramData program) {
     if (!_labels.isHebrew) return program.displayName;
-    return CalendarProgramRegistry.byId(program.name)?.displayNameHe ??
+    return CalendarProgramRegistry.hebrewNameFor(
+          name: program.name,
+          apiKey: program.apiProgramKey,
+        ) ??
         program.displayName;
   }
 

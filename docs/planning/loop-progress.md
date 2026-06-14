@@ -809,3 +809,22 @@ device-driven (commit 95ede74a, make ci GREEN 9900 pass):
   · Onboarding: 'Create Offline Account' still requires email+password; 'Welcome Back!' shown to first-run users;
     display-name not carried into profile-name field; offline checkbox default unchecked despite no network — onboarding
     UX, likely partly intended (local accounts carry local credentials), needs product decision.
+
+### COSMETIC BATCH FIXED (2026-06-14) — "fix and then run the full spectrum of on-device checks"
+- 6 of the 7 triaged cosmetic nits fixed (make ci GREEN 9979 pass, 0 fail). The 7th (onboarding offline-account
+  cluster) is a genuine product decision → left for Daniel, asked separately.
+  1. Edit-Goal pace helper "How many {unit} per Per week?" → bare period noun (new ARB goalPacePeriodDay/Week);
+     en "per week", he "כמה … בשבוע?" (was "בלשבוע"). goal_setup_screen.dart.
+  2. Achievements hero "0 / 0פרסים" missing RTL space → leading ASCII space (collapsed at the RTL boundary) replaced
+     with a direction-agnostic SizedBox(width:6). progress_summary_card.dart.
+  3. Backup&Sync card title clipped "Backup & Sy…" @1.3 → the 33px header-row variant now maxLines:2 before ellipsis.
+     backup_sync_section.dart.
+  4. Progress hub lens rows stayed Latin while the stat card honored the Hebrew-Terms toggle → all three lens tiles
+     (Recent Activity / Siyumim & Milestones / Lifetime Knowledge) now select strings via effectiveUseHebrewTerms
+     (lookupAppLocalizations he/en), matching scope_views' precedent. progress_screen.dart.
+  5. Add-track program name "Mishnah Yomis" stayed Latin in Hebrew UI (sibling "פרק יומי" Hebrew) → registry key
+     mismatch (seed name `mishnah_yomis` vs registry id `mishna_yomit`=api key). New CalendarProgramRegistry.hebrewNameFor
+     falls back to the api key; wired into program_label_resolver + curriculum_label.
+  6. Add-track scope Moed gloss clipped "Festivals &" → subtitle now maxLines:2 + ellipsis. scope_tiles.dart.
+- NEXT: commit/push → rebuild+redeploy APK → full-spectrum on-device checks via sub-agents (vision sweep, ≤2
+  concurrent devices per the host-contention lesson).

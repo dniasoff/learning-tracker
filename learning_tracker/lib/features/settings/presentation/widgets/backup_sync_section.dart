@@ -301,6 +301,9 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
                 Flexible(
                   child: Text(
                     AppLocalizations.of(context)!.backupSyncCardTitle,
+                    // Wrap to a second line before ellipsizing so the 33px
+                    // title doesn't clip to "Backup & Sy…" at font scale 1.3.
+                    maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       color: Colors.white,

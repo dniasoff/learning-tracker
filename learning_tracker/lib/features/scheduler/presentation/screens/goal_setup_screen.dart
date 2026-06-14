@@ -425,9 +425,15 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
             labelText: AppLocalizations.of(
               context,
             )!.goalPaceInputLabel(unitLabel, perLabel),
-            helperText: AppLocalizations.of(
-              context,
-            )!.goalPaceHowMany(unitLabel.toLowerCase(), perLabel),
+            helperText: AppLocalizations.of(context)!.goalPaceHowMany(
+              unitLabel.toLowerCase(),
+              // The template already supplies the connective ("per"/"ב"), so
+              // pass the BARE period noun (day/week), not the selector label
+              // ("Per day") — otherwise the helper read "per Per week".
+              _paceUnit == 'per_day'
+                  ? AppLocalizations.of(context)!.goalPacePeriodDay
+                  : AppLocalizations.of(context)!.goalPacePeriodWeek,
+            ),
             // Allow the helper to wrap rather than truncate to one ellipsized
             // line at large font scales / long Hebrew strings.
             helperMaxLines: 2,

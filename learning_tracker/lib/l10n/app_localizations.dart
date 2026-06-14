@@ -5565,6 +5565,18 @@ abstract class AppLocalizations {
   /// **'How many {unit} per {period}?'**
   String goalPaceHowMany(String unit, String period);
 
+  /// Bare period noun for the pace-helper question 'How many X per {period}?'. Distinct from pacePerDay ('Per day') used on the selector button.
+  ///
+  /// In en, this message translates to:
+  /// **'day'**
+  String get goalPacePeriodDay;
+
+  /// Bare period noun for the pace-helper question 'How many X per {period}?'. Distinct from pacePerWeek ('Per week') used on the selector button.
+  ///
+  /// In en, this message translates to:
+  /// **'week'**
+  String get goalPacePeriodWeek;
+
   /// No description provided for @goalPaceInputLabel.
   ///
   /// In en, this message translates to:

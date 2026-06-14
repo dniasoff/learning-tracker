@@ -6,6 +6,7 @@ import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/curriculum_visuals.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/empty_state.dart';
@@ -211,12 +212,25 @@ class _LensTile extends StatelessWidget {
   }
 }
 
+/// Localizations for the lens tiles, selected by the Hebrew-Terms toggle
+/// rather than the device locale alone.
+///
+/// The progress stat cards above these tiles render domain terms (e.g.
+/// "Siyumim") via the Hebrew-Terms toggle, which can be ON even on an English
+/// device. Selecting the tile strings by that same toggle keeps the hub in a
+/// single script — no Latin "Siyumim & Milestones" row above a Hebrew stat
+/// card.
+AppLocalizations _lensTileL10n(WidgetRef ref) =>
+    ref.watch(effectiveUseHebrewTermsProvider)
+    ? lookupAppLocalizations(const Locale('he'))
+    : lookupAppLocalizations(const Locale('en'));
+
 class _RecentActivityLensTile extends ConsumerWidget {
   const _RecentActivityLensTile();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = _lensTileL10n(ref);
     return _LensTile(
       icon: Icons.local_fire_department_rounded,
       iconBgColor: const Color(0xFFFFE9EB),
@@ -233,7 +247,7 @@ class _SiyumimMilestonesLensTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = _lensTileL10n(ref);
     return _LensTile(
       icon: Icons.emoji_events_outlined,
       iconBgColor: const Color(0xFFFFF4E0),
@@ -250,7 +264,7 @@ class _LifetimeKnowledgeLensTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = AppLocalizations.of(context)!;
+    final l10n = _lensTileL10n(ref);
     return _LensTile(
       icon: Icons.menu_book_outlined,
       iconBgColor: const Color(0xFFEEF3FF),

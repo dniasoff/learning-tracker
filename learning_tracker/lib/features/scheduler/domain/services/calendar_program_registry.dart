@@ -217,6 +217,19 @@ class CalendarProgramRegistry {
     return matches.isNotEmpty ? matches.first : null;
   }
 
+  /// Hebrew display name for a learning program, matched by its internal
+  /// `name` first and its `apiProgramKey` second.
+  ///
+  /// Some seeds use a different `name` than the registry id, which equals the
+  /// `api_program_key` (e.g. seed name `mishnah_yomis` vs registry id /
+  /// api key `mishna_yomit`). Matching on the api key as a fallback keeps the
+  /// Hebrew label from falling back to the Latin transliteration in a Hebrew
+  /// UI. Returns null when no registered program matches either key.
+  static String? hebrewNameFor({required String name, String? apiKey}) {
+    final def = byId(name) ?? (apiKey != null ? byId(apiKey) : null);
+    return def?.displayNameHe;
+  }
+
   /// Look up a program definition by API key.
   static CalendarProgramDefinition? byApiKey(String apiKey) {
     final matches = programs.where((p) => p.apiKey == apiKey);

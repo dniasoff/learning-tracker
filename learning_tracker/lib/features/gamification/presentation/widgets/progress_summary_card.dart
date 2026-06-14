@@ -81,8 +81,11 @@ class ProgressSummaryCard extends StatelessWidget {
                       height: 1.1,
                     ),
                   ),
+                  // Direction-agnostic gap: a leading ASCII space collapsed at
+                  // the RTL boundary, rendering "0 / 0פרסים" with no space.
+                  const SizedBox(width: 6),
                   Text(
-                    ' ${l10n.achievementsRewardsLabelWord}',
+                    l10n.achievementsRewardsLabelWord,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.w600,

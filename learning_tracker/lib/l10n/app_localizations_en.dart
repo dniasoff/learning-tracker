@@ -3185,6 +3185,12 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get goalPacePeriodDay => 'day';
+
+  @override
+  String get goalPacePeriodWeek => 'week';
+
+  @override
   String goalPaceInputLabel(String unit, String period) {
     return '$unit $period';
   }

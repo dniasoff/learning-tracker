@@ -254,7 +254,10 @@ class CurriculumLabel extends ConsumerWidget {
         final program = _learningProgram!;
         final text = !useHebrew
             ? program.displayName
-            : (CalendarProgramRegistry.byId(program.name)?.displayNameHe ??
+            : (CalendarProgramRegistry.hebrewNameFor(
+                    name: program.name,
+                    apiKey: program.apiProgramKey,
+                  ) ??
                   program.displayName);
         return _text(text, useHebrew: useHebrew);
       case _Kind.level:
