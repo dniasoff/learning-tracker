@@ -57,9 +57,18 @@ Honors "track shows daf, lifetime stays amudim". Infra already exists.
 - **S3 Lifetime/progress** — **explicitly unchanged** (stays amudim, the common unit).
 - Tests: items-remaining-in-daf for a daf-paced track; stays leaf for fine/other tracks.
 
-### Phase 2 — daf-atomic daily task, marking & pace velocity (core flow; MED-HIGH risk) ← needs its own wave
+### Phase 2 — daf-atomic daily task, marking & pace velocity (core flow; MED-HIGH risk)
 "Present one daf, mark the daf." Also: **actual-pace velocity** → daf/day (× coarse/leaf
 ratio) with a "{n} daf/day" label for a daf track (`track_info_card.dart`).
+
+- **✅ 2a (shipped) — daf-atomic MARKING.** On a coarse-paced track (daf/perek/seif) the
+  reader's mark-complete now completes the WHOLE coarse unit in one action (both amudim of a
+  daf), via `coarseUnitLeafRefs` + marking each leaf through the existing use case (per-amud
+  rows/points/siyum/sync unchanged; idempotent). "Next task" skips the whole daf
+  (`_nextDailyTaskAfterRefs`). Gated by `goal.paceGranularity` being coarse. +helper tests.
+- **2b (next) — one card per daf.** Group the day's same-daf amud tasks into a single card
+  (count "1 today", not 2). Presentation-only.
+- **2c — actual-pace velocity in daf/day** (`track_info_card.dart`).
 - Scheduler emits **one DailyTask per daf** carrying both amud refs (or a daf-keyed task),
   for daf-granularity tracks — `scheduler_engine.dart`, `daily_task.dart`.
 - Mark-complete on a daf task commits **both amudim atomically** via

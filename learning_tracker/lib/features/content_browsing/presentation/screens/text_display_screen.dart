@@ -1,6 +1,7 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/content/content_grouping.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/exceptions/permission_exception.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
@@ -8,6 +9,7 @@ import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/preferences/text_display_preferences.dart';
+import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/theme/text_styles.dart';
@@ -23,6 +25,7 @@ import 'package:learning_tracker/features/learning/domain/entities/mark_completi
 import 'package:learning_tracker/features/learning/presentation/providers/completion_providers.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
+import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';
 import 'package:learning_tracker/features/tutoring/domain/models/tutor_permissions.dart';
@@ -545,6 +548,20 @@ DailyTask? _nextDailyTaskAfter(List<DailyTask> tasks, String currentRef) {
   return tasks[i];
 }
 
+/// Like [_nextDailyTaskAfter] but skips a SET of just-completed refs — used by
+/// daf-atomic completion, where one mark clears both amudim of a daf, so the
+/// next task must skip past every ref in the marked daf.
+DailyTask? _nextDailyTaskAfterRefs(List<DailyTask> tasks, Set<String> refs) {
+  final firstIdx = tasks.indexWhere(
+    (t) => refs.contains(t.contentItemSefariaRef),
+  );
+  if (firstIdx < 0) return null;
+  for (var i = firstIdx + 1; i < tasks.length; i++) {
+    if (!refs.contains(tasks[i].contentItemSefariaRef)) return tasks[i];
+  }
+  return null;
+}
+
 /// Mark completion section. Resolves the curriculum + stage for this sefariaRef
 /// from today's scheduled tasks, then records the completion directly via
 /// [markCompletionUseCaseProvider] and invalidates dashboard providers so
@@ -561,6 +578,24 @@ class _CompletionSection extends ConsumerStatefulWidget {
 class _CompletionSectionState extends ConsumerState<_CompletionSection> {
   bool _saving = false;
 
+  /// The content refs to complete for [task]. On a COARSE-paced track
+  /// (paceGranularity = daf/perek/seif) this returns every leaf of the current
+  /// coarse unit — the daf's amudim (e.g. 2a + 2b) — so one mark completes the
+  /// whole daf. On a fine/leaf-paced track it returns just the current ref.
+  Future<List<String>> _refsToMark(DailyTask task) async {
+    final goal = await ref
+        .read(userDatabaseProvider)
+        .goalDao
+        .getGoalByTrack(task.trackId);
+    final isCoarse =
+        PaceGranularity.fromStorageKey(goal?.paceGranularity) != null;
+    if (!isCoarse) return [widget.sefariaRef];
+    final items = await ref.read(
+      curriculumContentProvider(task.curriculumId).future,
+    );
+    return coarseUnitLeafRefs(items, widget.sefariaRef);
+  }
+
   Future<void> _handleComplete(
     DailyTask task,
     String trackType, {
@@ -571,9 +606,17 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
 
     try {
       final tasksBefore = await ref.read(allDailyTasksProvider.future);
-      final nextAfterComplete = _nextDailyTaskAfter(
+
+      // Phase 2a — daf-atomic marking: on a COARSE-paced track (daf/perek/seif)
+      // one mark completes the WHOLE coarse unit (e.g. both amudim 2a+2b of a
+      // daf), because the daf — not the amud — is the unit the learner marks.
+      // The primary ref is marked first (drives the celebration); siblings are
+      // marked in the same action. Each amud stays an independent completion row
+      // (idempotent), so points/siyum/sync are unchanged — just one tap.
+      final markRefs = await _refsToMark(task);
+      final nextAfterComplete = _nextDailyTaskAfterRefs(
         tasksBefore,
-        widget.sefariaRef,
+        markRefs.toSet(),
       );
 
       // H1 fix: route the live completion write through MarkLiveCompletionUseCase
@@ -586,16 +629,23 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
       );
       final completionUseCase = ref.read(markCompletionUseCaseProvider);
 
-      final result = await markLiveUseCase.call(
-        () => completionUseCase(
-          CompletionRequest(
-            curriculumId: task.curriculumId.storageKey,
-            sefariaRef: widget.sefariaRef,
-            stageId: task.stageOrder,
-            trackType: trackType,
+      final results = <MarkCompletionResult>[];
+      for (final markRef in markRefs) {
+        results.add(
+          await markLiveUseCase.call(
+            () => completionUseCase(
+              CompletionRequest(
+                curriculumId: task.curriculumId.storageKey,
+                sefariaRef: markRef,
+                stageId: task.stageOrder,
+                trackType: trackType,
+              ),
+            ),
           ),
-        ),
-      );
+        );
+      }
+      // Aggregate milestone unlocks across every amud marked in this action.
+      final newUnlocks = [for (final r in results) ...r.newMilestoneUnlocks];
 
       // Signal all completion-aware providers to rebuild (Story 26.13 — DNI-356).
       // Incrementing completionCommittedProvider replaces 14 direct
@@ -609,12 +659,11 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
 
       if (mounted) {
         final userMode = ref.read(dashboardUserModeProvider).asData?.value;
-        if (userMode == ProfileMode.child &&
-            result.newMilestoneUnlocks.isNotEmpty) {
+        if (userMode == ProfileMode.child && newUnlocks.isNotEmpty) {
           await AchievementUnlockCelebration.showForUnlockedMilestones(
             context: context,
             ref: ref,
-            newUnlocks: result.newMilestoneUnlocks,
+            newUnlocks: newUnlocks,
           );
         }
       }

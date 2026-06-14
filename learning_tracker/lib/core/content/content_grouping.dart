@@ -143,6 +143,43 @@ String scopeUnitIdentifierForItem(ContentItem item, int level) =>
       level4: item.level4,
     );
 
+/// The COARSE-unit key for a leaf [item] — its parent one level up: the daf for
+/// Bavli (Masechta|Daf), the perek for Chumash/Mishnayos (…|Perek). This is the
+/// unit a coarse-paced track learns/marks in. Mirrors the collapse in
+/// [scopedCoarseUnitCountProvider] and `SchedulerContentItem.coarseUnitKey`.
+String coarseUnitKeyForItem(ContentItem item) {
+  if (item.level4 != null) {
+    return [item.level1, item.level2, item.level3].join(kScopeIdSeparator);
+  }
+  if (item.level3 != null) {
+    return [item.level1, item.level2].join(kScopeIdSeparator);
+  }
+  if (item.level2 != null) return item.level1;
+  return item.sefariaRef;
+}
+
+/// All leaf refs that belong to the same COARSE unit (daf) as [sefariaRef] —
+/// e.g. "Berakhot 2a" → ["Berakhot 2a", "Berakhot 2b"]. Ordered by sortOrder.
+/// Returns `[sefariaRef]` when the ref isn't a known leaf (so callers can mark
+/// it alone). Used to mark a whole daf in one action on a daf-paced track.
+List<String> coarseUnitLeafRefs(List<ContentItem> items, String sefariaRef) {
+  ContentItem? current;
+  for (final i in items) {
+    if (i.sefariaRef == sefariaRef) {
+      current = i;
+      break;
+    }
+  }
+  if (current == null || !current.isLeaf) return [sefariaRef];
+  final key = coarseUnitKeyForItem(current);
+  final siblings =
+      items.where((i) => i.isLeaf && coarseUnitKeyForItem(i) == key).toList()
+        ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
+  return siblings.isEmpty
+      ? [sefariaRef]
+      : siblings.map((i) => i.sefariaRef).toList();
+}
+
 /// Returns the rendered display name for [item].
 ///
 /// Use only with items produced by [groupItemsByNextLevel] — those have
