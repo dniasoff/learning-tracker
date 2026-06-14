@@ -828,3 +828,23 @@ device-driven (commit 95ede74a, make ci GREEN 9900 pass):
   6. Add-track scope Moed gloss clipped "Festivals &" → subtitle now maxLines:2 + ellipsis. scope_tiles.dart.
 - NEXT: commit/push → rebuild+redeploy APK → full-spectrum on-device checks via sub-agents (vision sweep, ≤2
   concurrent devices per the host-contention lesson).
+
+### COSMETIC BATCH VERIFIED ON-DEVICE (2026-06-14) — 3 devices, 3 sub-agents, all PASS
+- Commit d541d4ae pushed; APK rebuilt + install -r on emulator-5556 (API36 en), 5558 (API29 he-IL), 5560 (API28).
+  Three parallel verification sub-agents (one per device) — ALL 6 fixes PASS, NO regressions:
+  · 5558 (Hebrew): #1 pace "כמה משניות בשבוע?/ביום?" single-ב ✓; #2 "0 / 0 פרסים" spaced + badge trailing-edge ✓;
+    #5 program names "משנה יומית"/"פרק יומי" Hebrew ✓. Dashboard/daily/progress/settings clean Hebrew.
+  · 5556 (English, font 1.3 + toggle): #1 "How many … per week?" ✓; #3 Backup&Sync title no clip @1.3 ✓ (inline
+    card variant — header-row/promo variants unreachable in the cloud-account state; deterministic fix + CI-covered);
+    #6 Moed gloss full "Festivals & Sabbaths" @1.3 ✓; #4 Progress lens rows all-Hebrew with Hebrew-Terms ON,
+    revert on OFF ✓. font_scale reset 1.0, toggle reset OFF (verified).
+  · 5560 (fresh regression): all 5 core flows CLEAN, 0 findings; pace helper no "per Per" artifact in wizard+EditGoal.
+- NEW finding (pre-existing P2, NOT a regression): the **Add-Track wizard chrome is largely un-localized** — step
+  labels ("STEP 1 OF 6"), screen titles/subtitles ("Select a Curriculum", "Join a Program? / Follow a global study
+  calendar…"), program descriptions, "DAILY CALENDAR" badge, "OR CHOOSE FREEDOM"/"Self-paced (no program)", and the
+  exit-confirm body stay English on a Hebrew device (program/curriculum NAMES are correctly Hebrew). Files:
+  program_selection_step.dart (hardcoded strings) + the wizard step scaffold + curriculum-select + scope-step copy +
+  seed program descriptions (the descriptions are English-only seed data → need Hebrew content). → awaiting Daniel:
+  fix now vs follow-up.
+- Onboarding offline-account cluster: NOT observable (5560 already onboarded as "E2E"; brief forbids wiping). Still a
+  product decision. → awaiting Daniel.
