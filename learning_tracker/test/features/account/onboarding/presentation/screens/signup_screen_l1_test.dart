@@ -14,7 +14,7 @@
 //   • Cloud signup path — DuplicateEmailException: shows snackbar error
 //   • Cloud signup path — generic error: shows snackbar error
 //   • Cloud signup path — [email-already-in-use] Firebase code: mapped message
-//   • Offline path — require acknowledgement before submitting
+//   • Offline path — credential-less explicit "Create Offline Account"
 //   • "Log In" link — not tappable while loading
 //   • He-locale smoke — renders without overflow in Hebrew RTL locale
 @Tags(['l1', 'signup', 'account'])
@@ -270,12 +270,18 @@ void main() {
     await tester.pump(Duration.zero);
   });
 
-  testWidgets('offline: shows acknowledgement checkbox', (tester) async {
+  testWidgets('offline: credential-less — no checkbox and no email/password/'
+      'name fields; shows explanation + retry', (tester) async {
     await tester.pumpWidget(_buildApp(online: false));
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 
-    expect(find.byType(Checkbox), findsOneWidget);
+    // Offline accounts collect nothing: no ack checkbox, no input fields.
+    expect(find.byType(Checkbox), findsNothing);
+    expect(find.byType(TextFormField), findsNothing);
+    // The explicit-offline explanation + retry affordance are shown.
+    expect(find.textContaining('offline account'), findsWidgets);
+    expect(find.widgetWithText(TextButton, 'Retry connection'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(Duration.zero);
@@ -296,7 +302,7 @@ void main() {
   });
 
   testWidgets('loading (probe in flight): defaults to the offline variant — '
-      'coral warning + checkbox, no Google button / OR divider '
+      'coral warning + Create Offline Account, no Google button / OR divider '
       '(offline-until-proven-online)', (tester) async {
     // A never-emitting stream keeps connectivity in its loading state so we
     // exercise the orElse fallback (lastKnownOnline, default false).
@@ -345,7 +351,7 @@ void main() {
       find.widgetWithText(FilledButton, 'Create Offline Account'),
       findsOneWidget,
     );
-    expect(find.byType(Checkbox), findsOneWidget);
+    expect(find.byType(Checkbox), findsNothing);
     expect(find.text('Sign Up with Google'), findsNothing);
     expect(find.text('OR'), findsNothing);
 
@@ -925,108 +931,10 @@ void main() {
     await tester.pump(Duration.zero);
   });
 
-  // ── Offline path: acknowledgement gate ────────────────────────────────────
-
-  testWidgets(
-    'offline: tapping Create Offline Account WITHOUT checkbox shows a snackbar',
-    // NOTE: This test relies on InternetConnectionChecker.instance.hasConnection
-    // returning false (no network in test environment). The actual message text
-    // "Please acknowledge the offline account warning..." is only shown when
-    // the instance check says offline AND _offlineAcknowledged==false.
-    // When the CI machine has internet, the cloud path is taken instead and
-    // the mock auth produces a snackbar from the cloud error path.
-    // We assert that ANY SnackBar appears (one of two paths fires).
-    (tester) async {
-      final auth = _MockAuthRepository();
-      when(() => auth.currentUser).thenReturn(null);
-      // If cloud path is taken, signUp throws → produces snackbar.
-      when(
-        () => auth.signUp(any(), any(), any()),
-      ).thenThrow(Exception('test error'));
-
-      await tester.pumpWidget(_buildApp(online: false, authRepo: auth));
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
-
-      await _fillValidCredentials(tester);
-
-      final button = find.widgetWithText(
-        FilledButton,
-        'Create Offline Account',
-      );
-      await tester.ensureVisible(button);
-      await tester.pump();
-      await tester.tap(button);
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
-
-      // Either the offline acknowledgement snackbar or the cloud-error snackbar
-      // must appear. Both are SnackBars.
-      expect(find.byType(SnackBar), findsOneWidget);
-
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump(Duration.zero);
-    },
-  );
-
-  testWidgets(
-    'offline: acknowledgement gate message contains "Please acknowledge" '
-    'when device has no internet',
-    // This test is only meaningful when the test runner has no internet
-    // connection. We mark it with skip: false but accept that on an online
-    // CI machine the cloud error path fires instead.
-    // The test checks for either possible snackbar.
-    (tester) async {
-      final auth = _MockAuthRepository();
-      when(() => auth.currentUser).thenReturn(null);
-      when(
-        () => auth.signUp(any(), any(), any()),
-      ).thenThrow(Exception('cloud error'));
-
-      await tester.pumpWidget(_buildApp(online: false, authRepo: auth));
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
-
-      await _fillValidCredentials(tester);
-
-      final button = find.widgetWithText(
-        FilledButton,
-        'Create Offline Account',
-      );
-      await tester.ensureVisible(button);
-      await tester.pump();
-      await tester.tap(button);
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
-
-      // Exactly one SnackBar appears — which one depends on connectivity.
-      expect(find.byType(SnackBar), findsOneWidget);
-
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump(Duration.zero);
-    },
-  );
-
-  testWidgets('offline: checking acknowledge checkbox updates its state', (
-    tester,
-  ) async {
-    await tester.pumpWidget(_buildApp(online: false));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
-
-    final checkbox = tester.widget<Checkbox>(find.byType(Checkbox));
-    // Initially unchecked
-    expect(checkbox.value, isFalse);
-
-    await tester.tap(find.byType(Checkbox));
-    await tester.pump();
-
-    final checkedBox = tester.widget<Checkbox>(find.byType(Checkbox));
-    expect(checkedBox.value, isTrue);
-
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pump(Duration.zero);
-  });
+  // (The offline "acknowledgement gate" was removed: offline accounts are now
+  // credential-less and created via an explicit "Create Offline Account"
+  // button — there is no checkbox/email/password to gate. See the offline
+  // credential-less UI test above.)
 
   // ── Loading state disables Google button ─────────────────────────────────
 
@@ -1104,8 +1012,9 @@ void main() {
     // Offline warning text must still be shown in RTL — now via l10n (iter9 fix).
     // Hebrew ARB value for authModeLocalTitle contains "חשבון מקומי בלבד".
     expect(find.textContaining('חשבון מקומי בלבד'), findsOneWidget);
-    // Acknowledgement checkbox present
-    expect(find.byType(Checkbox), findsOneWidget);
+    // Credential-less offline: no acknowledgement checkbox, no input fields.
+    expect(find.byType(Checkbox), findsNothing);
+    expect(find.byType(TextFormField), findsNothing);
 
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(Duration.zero);

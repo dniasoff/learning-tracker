@@ -52,7 +52,6 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   final _passwordController = TextEditingController();
   bool _isLoading = false;
   bool _obscurePassword = true;
-  bool _offlineAcknowledged = false;
 
   @override
   void initState() {
@@ -81,16 +80,15 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
   String? _validateDisplayName(String? value) =>
       validators.validateDisplayName(value);
 
+  /// Cloud sign-up handler — reached only from the ONLINE form (the offline
+  /// branch shows an explicit "Create offline account" button that calls
+  /// [_createOfflineAccount] directly, with no email/password).
   Future<void> _signUpWithEmail() async {
     if (!_formKey.currentState!.validate()) return;
 
     final email = _emailController.text.trim();
     final password = _passwordController.text;
     final displayName = _nameController.text.trim();
-    // Capture l10n before any async gap so context is not read across awaits.
-    final ackRequiredError = AppLocalizations.of(
-      context,
-    )!.signUpAckRequiredError;
 
     // Epic 21.5: one-shot connectivity check at tap time decides
     // which backend handles the signup. The stream keeps the UI
@@ -99,16 +97,34 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
     final isOnline = await InternetConnectionChecker.instance.hasConnection;
 
     if (!isOnline) {
-      // Offline path — local-born via argon2id.
-      if (!_offlineAcknowledged) {
-        _showError(ackRequiredError);
-        return;
-      }
-      await _signUpLocal(email, password, displayName);
+      // Race: the online form was showing but connectivity dropped between
+      // render and tap. Fall back to a credential-less offline account; the
+      // typed email/password are discarded (an offline account has neither).
+      await _createOfflineAccount();
     } else {
-      // Online path — cloud-born via Firebase.
       await _signUpCloud(email, password, displayName);
     }
+  }
+
+  /// Creates a credential-less, device-local account: no email, no password,
+  /// no account display name. An internal synthetic email/password are
+  /// generated purely so the existing local-account plumbing (registry keying,
+  /// argon2 hash column, restore-by-email) keeps working — they are never shown
+  /// to or entered by the user. Onboarding goes straight to profile creation;
+  /// the account is re-entered from the Account Picker, and can be backed up
+  /// later via Upgrade to Cloud.
+  Future<void> _createOfflineAccount() async {
+    final id = const Uuid().v4();
+    final syntheticEmail =
+        'offline_${id.replaceAll('-', '').substring(0, 12)}@offline.local';
+    final syntheticPassword = const Uuid().v4();
+    await _signUpLocal(syntheticEmail, syntheticPassword, '');
+  }
+
+  /// Forces an immediate connectivity re-probe (the stream otherwise self-probes
+  /// every few seconds while offline).
+  void _retryConnection() {
+    ref.invalidate(connectivityStreamProvider);
   }
 
   Future<void> _signUpCloud(
@@ -299,8 +315,9 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           FilledButton(
             onPressed: () {
               Navigator.of(ctx).pop();
-              setState(() => _offlineAcknowledged = true);
-              _signUpLocal(email, password, displayName);
+              // Offline accounts are credential-less; discard the typed
+              // email/password and create a device-local account.
+              _createOfflineAccount();
             },
             child: Text(l10n.createOfflineAccount),
           ),
@@ -561,111 +578,136 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                     isOnline: isOnline,
                                   ),
                                   const SizedBox(height: 22),
-                                  if (!isOnline) ...[
-                                    Container(
-                                      padding: const EdgeInsets.all(12),
-                                      decoration: BoxDecoration(
-                                        color: AppTheme.brandCoralSoft
-                                            .withValues(alpha: 0.45),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Row(
-                                        children: [
-                                          Checkbox(
-                                            value: _offlineAcknowledged,
-                                            onChanged: _isLoading
-                                                ? null
-                                                : (value) => setState(
-                                                    () => _offlineAcknowledged =
-                                                        value ?? false,
-                                                  ),
-                                          ),
-                                          const SizedBox(width: 8),
-                                          Expanded(
-                                            child: Text(l10n.signUpOfflineAck),
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                    const SizedBox(height: 16),
-                                  ],
-                                  _buildLabel(l10n.displayName),
-                                  const SizedBox(height: 8),
-                                  _buildAuthField(
-                                    controller: _nameController,
-                                    hintText: l10n.signUpScholarNameHint,
-                                    suffixIcon: const Icon(
-                                      Icons.face_outlined,
-                                      color: AppTheme.brandInkMuted,
-                                    ),
-                                    textInputAction: TextInputAction.next,
-                                    validator: _validateDisplayName,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  _buildLabel(l10n.signUpEmailAddressLabel),
-                                  const SizedBox(height: 8),
-                                  _buildAuthField(
-                                    controller: _emailController,
-                                    hintText: 'you@quest.com',
-                                    suffixIcon: const Icon(
-                                      Icons.email_rounded,
-                                      color: AppTheme.brandInkMuted,
-                                    ),
-                                    keyboardType: TextInputType.emailAddress,
-                                    textInputAction: TextInputAction.next,
-                                    validator: _validateEmail,
-                                  ),
-                                  const SizedBox(height: 16),
-                                  _buildLabel(l10n.signUpPasswordLabel),
-                                  const SizedBox(height: 8),
-                                  _buildAuthField(
-                                    controller: _passwordController,
-                                    hintText: l10n.signUpPasswordHint,
-                                    obscureText: _obscurePassword,
-                                    textInputAction: TextInputAction.done,
-                                    validator: _validatePassword,
-                                    onFieldSubmitted: (_) => _signUpWithEmail(),
-                                    suffixIcon: IconButton(
-                                      icon: Icon(
-                                        _obscurePassword
-                                            ? Icons.lock_rounded
-                                            : Icons.visibility_rounded,
+                                  if (isOnline) ...[
+                                    _buildLabel(l10n.displayName),
+                                    const SizedBox(height: 8),
+                                    _buildAuthField(
+                                      controller: _nameController,
+                                      hintText: l10n.signUpScholarNameHint,
+                                      suffixIcon: const Icon(
+                                        Icons.face_outlined,
                                         color: AppTheme.brandInkMuted,
                                       ),
-                                      onPressed: () => setState(
-                                        () => _obscurePassword =
-                                            !_obscurePassword,
+                                      textInputAction: TextInputAction.next,
+                                      validator: _validateDisplayName,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    _buildLabel(l10n.signUpEmailAddressLabel),
+                                    const SizedBox(height: 8),
+                                    _buildAuthField(
+                                      controller: _emailController,
+                                      hintText: 'you@quest.com',
+                                      suffixIcon: const Icon(
+                                        Icons.email_rounded,
+                                        color: AppTheme.brandInkMuted,
+                                      ),
+                                      keyboardType: TextInputType.emailAddress,
+                                      textInputAction: TextInputAction.next,
+                                      validator: _validateEmail,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    _buildLabel(l10n.signUpPasswordLabel),
+                                    const SizedBox(height: 8),
+                                    _buildAuthField(
+                                      controller: _passwordController,
+                                      hintText: l10n.signUpPasswordHint,
+                                      obscureText: _obscurePassword,
+                                      textInputAction: TextInputAction.done,
+                                      validator: _validatePassword,
+                                      onFieldSubmitted: (_) =>
+                                          _signUpWithEmail(),
+                                      suffixIcon: IconButton(
+                                        icon: Icon(
+                                          _obscurePassword
+                                              ? Icons.lock_rounded
+                                              : Icons.visibility_rounded,
+                                          color: AppTheme.brandInkMuted,
+                                        ),
+                                        onPressed: () => setState(
+                                          () => _obscurePassword =
+                                              !_obscurePassword,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                  const SizedBox(height: 24),
-                                  SizedBox(
-                                    height: 58,
-                                    child: DecoratedBox(
-                                      decoration: BoxDecoration(
-                                        gradient: const LinearGradient(
-                                          colors: [
-                                            AppTheme.brandBlue,
-                                            AppTheme.brandBlueBright,
+                                    const SizedBox(height: 24),
+                                    SizedBox(
+                                      height: 58,
+                                      child: DecoratedBox(
+                                        decoration: BoxDecoration(
+                                          gradient: const LinearGradient(
+                                            colors: [
+                                              AppTheme.brandBlue,
+                                              AppTheme.brandBlueBright,
+                                            ],
+                                          ),
+                                          borderRadius: BorderRadius.circular(
+                                            30,
+                                          ),
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: AppTheme.brandBlueBright
+                                                  .withValues(alpha: 0.32),
+                                              blurRadius: 18,
+                                              offset: const Offset(0, 8),
+                                            ),
                                           ],
                                         ),
-                                        borderRadius: BorderRadius.circular(30),
-                                        boxShadow: [
-                                          BoxShadow(
-                                            color: AppTheme.brandBlueBright
-                                                .withValues(alpha: 0.32),
-                                            blurRadius: 18,
-                                            offset: const Offset(0, 8),
+                                        child: FilledButton(
+                                          onPressed: _isLoading
+                                              ? null
+                                              : _signUpWithEmail,
+                                          style: FilledButton.styleFrom(
+                                            backgroundColor:
+                                                AppTheme.transparent,
+                                            shadowColor: AppTheme.transparent,
                                           ),
-                                        ],
+                                          child: _isLoading
+                                              ? const SizedBox(
+                                                  height: 20,
+                                                  width: 20,
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                        strokeWidth: 2,
+                                                        color: AppTheme
+                                                            .brandCreamCard,
+                                                      ),
+                                                )
+                                              : Text(
+                                                  l10n.signUpCta,
+                                                  style: const TextStyle(
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.w700,
+                                                  ),
+                                                ),
+                                        ),
                                       ),
+                                    ),
+                                  ] else ...[
+                                    // Offline: no email/password/name — an
+                                    // explicit, credential-less device-local
+                                    // account. Profiles are named individually
+                                    // on the next screen.
+                                    Text(
+                                      l10n.signUpOfflineExplain,
+                                      style: theme.textTheme.bodyMedium
+                                          ?.copyWith(
+                                            color: AppTheme.brandInkMuted,
+                                          ),
+                                    ),
+                                    const SizedBox(height: 20),
+                                    SizedBox(
+                                      height: 58,
                                       child: FilledButton(
                                         onPressed: _isLoading
                                             ? null
-                                            : _signUpWithEmail,
+                                            : _createOfflineAccount,
                                         style: FilledButton.styleFrom(
-                                          backgroundColor: AppTheme.transparent,
-                                          shadowColor: AppTheme.transparent,
+                                          backgroundColor: AppTheme.brandBlue,
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.circular(
+                                              30,
+                                            ),
+                                          ),
                                         ),
                                         child: _isLoading
                                             ? const SizedBox(
@@ -679,9 +721,7 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                                     ),
                                               )
                                             : Text(
-                                                isOnline
-                                                    ? l10n.signUpCta
-                                                    : l10n.createOfflineAccount,
+                                                l10n.createOfflineAccount,
                                                 style: const TextStyle(
                                                   fontSize: 16,
                                                   fontWeight: FontWeight.w700,
@@ -689,7 +729,16 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                               ),
                                       ),
                                     ),
-                                  ),
+                                    const SizedBox(height: 8),
+                                    Center(
+                                      child: TextButton(
+                                        onPressed: _isLoading
+                                            ? null
+                                            : _retryConnection,
+                                        child: Text(l10n.signUpRetryConnection),
+                                      ),
+                                    ),
+                                  ],
                                   if (isOnline) ...[
                                     const SizedBox(height: 18),
                                     Row(

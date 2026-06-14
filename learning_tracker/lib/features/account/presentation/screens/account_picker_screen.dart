@@ -332,18 +332,25 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        account.displayName,
+                        account.displayName.trim().isEmpty
+                            ? l10n.offlineAccountLabel
+                            : account.displayName,
                         style: theme.textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.w700,
                           color: AppTheme.brandInk,
                         ),
                       ),
-                      Text(
-                        account.email,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: AppTheme.brandInkMuted,
+                      // Credential-less offline accounts carry a synthetic
+                      // internal email (…@offline.local) that must never be
+                      // shown; suppress the email line for them.
+                      if (account.email.isNotEmpty &&
+                          !account.email.endsWith('@offline.local'))
+                        Text(
+                          account.email,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: AppTheme.brandInkMuted,
+                          ),
                         ),
-                      ),
                       const SizedBox(height: 4),
                       Container(
                         padding: const EdgeInsets.symmetric(

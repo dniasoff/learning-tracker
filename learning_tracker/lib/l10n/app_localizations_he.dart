@@ -2073,6 +2073,19 @@ class AppLocalizationsHe extends AppLocalizations {
       'אנא אשר את האזהרה לחשבון לא מקוון לפני יצירת חשבון אופ־ליין.';
 
   @override
+  String get signUpOfflineExplain =>
+      'אין חיבור לאינטרנט. אפשר ליצור חשבון לא מקוון שיישמר רק במכשיר הזה — ללא אימייל או סיסמה. כשתחזרו להיות מחוברים, תוכלו לגבות אותו על ידי שדרוג לחשבון ענן.';
+
+  @override
+  String get signUpOfflineConfirmTitle => 'אין אינטרנט — ליצור חשבון לא מקוון?';
+
+  @override
+  String get signUpRetryConnection => 'נסו להתחבר שוב';
+
+  @override
+  String get offlineAccountLabel => 'חשבון לא מקוון';
+
+  @override
   String get signUpVerificationEmailSent =>
       'אימייל אימות נשלח. אמת את האימייל שלך ולאחר מכן היכנס.';
 

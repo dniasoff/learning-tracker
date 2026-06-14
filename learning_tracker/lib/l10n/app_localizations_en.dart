@@ -2091,6 +2091,20 @@ class AppLocalizationsEn extends AppLocalizations {
       'Please acknowledge the offline account warning before creating an offline account.';
 
   @override
+  String get signUpOfflineExplain =>
+      'No internet connection. You can create an offline account that stays only on this device — no email or password needed. When you\'re back online, you can back it up by upgrading to a cloud account.';
+
+  @override
+  String get signUpOfflineConfirmTitle =>
+      'No internet — create an offline account?';
+
+  @override
+  String get signUpRetryConnection => 'Retry connection';
+
+  @override
+  String get offlineAccountLabel => 'Offline account';
+
+  @override
   String get signUpVerificationEmailSent =>
       'Verification email sent. Verify your email, then sign in.';
 

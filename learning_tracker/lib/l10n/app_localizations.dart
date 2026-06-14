@@ -3735,6 +3735,30 @@ abstract class AppLocalizations {
   /// **'Please acknowledge the offline account warning before creating an offline account.'**
   String get signUpAckRequiredError;
 
+  /// No description provided for @signUpOfflineExplain.
+  ///
+  /// In en, this message translates to:
+  /// **'No internet connection. You can create an offline account that stays only on this device — no email or password needed. When you\'re back online, you can back it up by upgrading to a cloud account.'**
+  String get signUpOfflineExplain;
+
+  /// No description provided for @signUpOfflineConfirmTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No internet — create an offline account?'**
+  String get signUpOfflineConfirmTitle;
+
+  /// No description provided for @signUpRetryConnection.
+  ///
+  /// In en, this message translates to:
+  /// **'Retry connection'**
+  String get signUpRetryConnection;
+
+  /// No description provided for @offlineAccountLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline account'**
+  String get offlineAccountLabel;
+
   /// No description provided for @signUpVerificationEmailSent.
   ///
   /// In en, this message translates to:
