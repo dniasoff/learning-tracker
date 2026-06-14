@@ -467,9 +467,7 @@ void main() {
     final fake = _FakeController(
       initialState: const RewardForm(name: 'יחיד', pointsText: '1'),
     );
-    await tester.pumpWidget(
-      _buildFake(fake: fake, locale: const Locale('he')),
-    );
+    await tester.pumpWidget(_buildFake(fake: fake, locale: const Locale('he')));
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 

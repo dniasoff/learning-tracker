@@ -397,17 +397,18 @@ void main() {
                 child: ElevatedButton(
                   key: const Key('open_dialog'),
                   onPressed: () async {
-                    popped = await showDialog<
-                      ({String name, String mode, int avatar})
-                    >(
-                      context: ctx,
-                      builder: (_) => ProfileEditFormDialog(
-                        title: 'Edit Learner',
-                        initialName: initialName,
-                        initialMode: 'child',
-                        initialAvatar: 0,
-                      ),
-                    );
+                    popped =
+                        await showDialog<
+                          ({String name, String mode, int avatar})
+                        >(
+                          context: ctx,
+                          builder: (_) => ProfileEditFormDialog(
+                            title: 'Edit Learner',
+                            initialName: initialName,
+                            initialMode: 'child',
+                            initialAvatar: 0,
+                          ),
+                        );
                     dialogOpen = false;
                   },
                   child: const Text('Open'),

@@ -192,55 +192,58 @@ void main() {
     });
   });
 
-  group('R2 finding 6 — system Back steps up ONE level, not the whole path', () {
-    testWidgets(
-      'drilled 3 deep: system Back goes up one level (not all the way out)',
-      (tester) async {
-        stubAllDrillLevels();
+  group(
+    'R2 finding 6 — system Back steps up ONE level, not the whole path',
+    () {
+      testWidgets(
+        'drilled 3 deep: system Back goes up one level (not all the way out)',
+        (tester) async {
+          stubAllDrillLevels();
 
-        // Start drilled THREE levels deep via deep-link params.
-        await tester.pumpWidget(
-          host(
-            locale: const Locale('en'),
-            level1: 'Seder Zeraim',
-            level2: 'Berachos',
-            level3: '1',
-          ),
-        );
-        await tester.pumpAndSettle();
+          // Start drilled THREE levels deep via deep-link params.
+          await tester.pumpWidget(
+            host(
+              locale: const Locale('en'),
+              level1: 'Seder Zeraim',
+              level2: 'Berachos',
+              level3: '1',
+            ),
+          );
+          await tester.pumpAndSettle();
 
-        // Sanity: the screen is present and breadcrumb shows the deep trail.
-        expect(find.byType(ContentHierarchyScreen), findsOneWidget);
-        expect(find.byType(BreadcrumbNavigation), findsOneWidget);
+          // Sanity: the screen is present and breadcrumb shows the deep trail.
+          expect(find.byType(ContentHierarchyScreen), findsOneWidget);
+          expect(find.byType(BreadcrumbNavigation), findsOneWidget);
 
-        // Press the Android system Back button once.
-        await tester.binding.handlePopRoute();
-        await tester.pumpAndSettle();
+          // Press the Android system Back button once.
+          await tester.binding.handlePopRoute();
+          await tester.pumpAndSettle();
 
-        // The screen must STILL be mounted (route not popped) — we only
-        // stepped up one level.
-        expect(
-          find.byType(ContentHierarchyScreen),
-          findsOneWidget,
-          reason:
-              'system Back must step up one hierarchy level, not pop the '
-              'entire route and discard the drill path',
-        );
-        // Still drilled in, so the breadcrumb (and AppBar back) remain.
-        expect(find.byType(BreadcrumbNavigation), findsOneWidget);
-        expect(find.byIcon(Icons.arrow_back), findsOneWidget);
+          // The screen must STILL be mounted (route not popped) — we only
+          // stepped up one level.
+          expect(
+            find.byType(ContentHierarchyScreen),
+            findsOneWidget,
+            reason:
+                'system Back must step up one hierarchy level, not pop the '
+                'entire route and discard the drill path',
+          );
+          // Still drilled in, so the breadcrumb (and AppBar back) remain.
+          expect(find.byType(BreadcrumbNavigation), findsOneWidget);
+          expect(find.byIcon(Icons.arrow_back), findsOneWidget);
 
-        // Step up two more times → now at root. Breadcrumb disappears.
-        await tester.binding.handlePopRoute();
-        await tester.pumpAndSettle();
-        await tester.binding.handlePopRoute();
-        await tester.pumpAndSettle();
+          // Step up two more times → now at root. Breadcrumb disappears.
+          await tester.binding.handlePopRoute();
+          await tester.pumpAndSettle();
+          await tester.binding.handlePopRoute();
+          await tester.pumpAndSettle();
 
-        // At the root the breadcrumb (drill segments) is gone, but the screen
-        // is still mounted — the route is only popped on the NEXT back press.
-        expect(find.byType(ContentHierarchyScreen), findsOneWidget);
-        expect(find.byType(BreadcrumbNavigation), findsNothing);
-      },
-    );
-  });
+          // At the root the breadcrumb (drill segments) is gone, but the screen
+          // is still mounted — the route is only popped on the NEXT back press.
+          expect(find.byType(ContentHierarchyScreen), findsOneWidget);
+          expect(find.byType(BreadcrumbNavigation), findsNothing);
+        },
+      );
+    },
+  );
 }

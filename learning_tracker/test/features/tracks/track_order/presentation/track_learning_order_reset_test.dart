@@ -61,12 +61,16 @@ class _ControlledTrackRepository implements TrackLearningOrderRepository {
   ) async => const [];
 
   @override
-  Future<void> saveSedarimOrder(int trackId, List<LearningOrderItem> items)
-      async {}
+  Future<void> saveSedarimOrder(
+    int trackId,
+    List<LearningOrderItem> items,
+  ) async {}
 
   @override
-  Future<void> saveMasechtosOrder(int trackId, List<LearningOrderItem> items)
-      async {}
+  Future<void> saveMasechtosOrder(
+    int trackId,
+    List<LearningOrderItem> items,
+  ) async {}
 
   @override
   Future<void> resetToDefault(int trackId) async {

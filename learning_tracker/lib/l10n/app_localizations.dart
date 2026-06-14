@@ -1827,6 +1827,162 @@ abstract class AppLocalizations {
   /// **'All of it, or just a section?'**
   String get selfPacedScopeTitle;
 
+  /// No description provided for @addTrackStepCounter.
+  ///
+  /// In en, this message translates to:
+  /// **'STEP {current} OF {total}'**
+  String addTrackStepCounter(int current, int total);
+
+  /// No description provided for @curriculumPickerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Select a Curriculum'**
+  String get curriculumPickerTitle;
+
+  /// No description provided for @curriculumPickerTitleOnboarding.
+  ///
+  /// In en, this message translates to:
+  /// **'What would you like to learn?'**
+  String get curriculumPickerTitleOnboarding;
+
+  /// No description provided for @curriculumPickerSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose one curriculum for this track.'**
+  String get curriculumPickerSubtitle;
+
+  /// No description provided for @programStepTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Join a Program?'**
+  String get programStepTitle;
+
+  /// No description provided for @programStepSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Follow a global study calendar, or learn at your own pace.'**
+  String get programStepSubtitle;
+
+  /// No description provided for @programStepOrChooseFreedom.
+  ///
+  /// In en, this message translates to:
+  /// **'OR CHOOSE FREEDOM'**
+  String get programStepOrChooseFreedom;
+
+  /// No description provided for @programStepSelfPaced.
+  ///
+  /// In en, this message translates to:
+  /// **'Self-paced (no program)'**
+  String get programStepSelfPaced;
+
+  /// No description provided for @programStepSelfPacedCaption.
+  ///
+  /// In en, this message translates to:
+  /// **'Recommended for personal projects, catch-up goals, or unstructured learning.'**
+  String get programStepSelfPacedCaption;
+
+  /// No description provided for @programDailyCalendarBadge.
+  ///
+  /// In en, this message translates to:
+  /// **'DAILY CALENDAR'**
+  String get programDailyCalendarBadge;
+
+  /// No description provided for @programDefaultDescriptionFeatured.
+  ///
+  /// In en, this message translates to:
+  /// **'Master the curriculum with a steady daily plan.'**
+  String get programDefaultDescriptionFeatured;
+
+  /// No description provided for @programDefaultDescriptionCompact.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily guided learning.'**
+  String get programDefaultDescriptionCompact;
+
+  /// No description provided for @exitTrackSetupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Exit Track Setup?'**
+  String get exitTrackSetupTitle;
+
+  /// No description provided for @exitTrackSetupMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'Are you sure you want to exit?\nYour setup progress will be lost.'**
+  String get exitTrackSetupMessage;
+
+  /// No description provided for @chazaraProgramNoReviewSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'{program} doesn\'t include a review schedule. Set one up now or skip.'**
+  String chazaraProgramNoReviewSubtitle(String program);
+
+  /// No description provided for @chazaraSelfPacedSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Pick a preset or build your own {chazara} schedule.'**
+  String chazaraSelfPacedSubtitle(String chazara);
+
+  /// No description provided for @scopeGlossSeedsAgriculture.
+  ///
+  /// In en, this message translates to:
+  /// **'Seeds & Agriculture'**
+  String get scopeGlossSeedsAgriculture;
+
+  /// No description provided for @scopeGlossFestivalsSabbaths.
+  ///
+  /// In en, this message translates to:
+  /// **'Festivals & Sabbaths'**
+  String get scopeGlossFestivalsSabbaths;
+
+  /// No description provided for @scopeGlossWomenMarriage.
+  ///
+  /// In en, this message translates to:
+  /// **'Women & Marriage'**
+  String get scopeGlossWomenMarriage;
+
+  /// No description provided for @scopeGlossDamagesCivil.
+  ///
+  /// In en, this message translates to:
+  /// **'Damages & Civil Law'**
+  String get scopeGlossDamagesCivil;
+
+  /// No description provided for @scopeGlossTempleSacrifices.
+  ///
+  /// In en, this message translates to:
+  /// **'Temple Service & Sacrifices'**
+  String get scopeGlossTempleSacrifices;
+
+  /// No description provided for @scopeGlossPurityRitual.
+  ///
+  /// In en, this message translates to:
+  /// **'Purity & Ritual Law'**
+  String get scopeGlossPurityRitual;
+
+  /// No description provided for @scopeGlossCoreFocus.
+  ///
+  /// In en, this message translates to:
+  /// **'Core section focus'**
+  String get scopeGlossCoreFocus;
+
+  /// No description provided for @scopeShowContentsTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Show contents'**
+  String get scopeShowContentsTooltip;
+
+  /// No description provided for @startingPositionSectionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Section'**
+  String get startingPositionSectionLabel;
+
+  /// No description provided for @trackNameRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Please enter a name'**
+  String get trackNameRequired;
+
   /// No description provided for @learnEntireCurriculumCta.
   ///
   /// In en, this message translates to:

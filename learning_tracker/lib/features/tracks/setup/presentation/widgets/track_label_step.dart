@@ -73,7 +73,7 @@ class _TrackLabelStepState extends State<TrackLabelStep> {
               ),
               validator: (value) {
                 if (value == null || value.trim().isEmpty) {
-                  return 'Please enter a name';
+                  return AppLocalizations.of(context)!.trackNameRequired;
                 }
                 return null;
               },

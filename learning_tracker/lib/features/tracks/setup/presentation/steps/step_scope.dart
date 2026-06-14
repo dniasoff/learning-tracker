@@ -253,18 +253,19 @@ class _ScopeStepContentState extends ConsumerState<ScopeStepContent> {
   }
 
   String _scopeDescription(String rawValue) {
+    final l10n = AppLocalizations.of(context)!;
     if (widget.curriculumId == CurriculumId.mishnayos) {
       return switch (rawValue.toLowerCase()) {
-        'seder zeraim' => 'Seeds & Agriculture',
-        'seder moed' => 'Festivals & Sabbaths',
-        'seder nashim' => 'Women & Marriage',
-        'seder nezikin' => 'Damages & Civil Law',
-        'seder kodashim' => 'Temple Service & Sacrifices',
-        'seder taharos' => 'Purity & Ritual Law',
-        _ => 'Core section focus',
+        'seder zeraim' => l10n.scopeGlossSeedsAgriculture,
+        'seder moed' => l10n.scopeGlossFestivalsSabbaths,
+        'seder nashim' => l10n.scopeGlossWomenMarriage,
+        'seder nezikin' => l10n.scopeGlossDamagesCivil,
+        'seder kodashim' => l10n.scopeGlossTempleSacrifices,
+        'seder taharos' => l10n.scopeGlossPurityRitual,
+        _ => l10n.scopeGlossCoreFocus,
       };
     }
-    return 'Core section focus';
+    return l10n.scopeGlossCoreFocus;
   }
 
   IconData _scopeIcon(String rawValue) {

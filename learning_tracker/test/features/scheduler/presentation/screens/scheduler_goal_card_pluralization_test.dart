@@ -54,7 +54,10 @@ DailyTask _task({String ref = 'Mishnah_Berakhot_1.1'}) {
   );
 }
 
-Widget _buildScreen(List<DailyTask> tasks, {Locale locale = const Locale('en')}) {
+Widget _buildScreen(
+  List<DailyTask> tasks, {
+  Locale locale = const Locale('en'),
+}) {
   return ProviderScope(
     overrides: [
       allDailyTasksProvider.overrideWith((ref) => Future.value(tasks)),

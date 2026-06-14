@@ -334,7 +334,13 @@ void main() {
       // fix a single active day must read "1 Active day" (singular).
       final today = DateTimeFactory.nowLocal();
       final at = DateTime(today.year, today.month, today.day, 9);
-      await _seedLive(db, trackId: trackId, ref: 'live_one', stageId: 1, at: at);
+      await _seedLive(
+        db,
+        trackId: trackId,
+        ref: 'live_one',
+        stageId: 1,
+        at: at,
+      );
 
       await tester.pumpWidget(buildScreen());
       await tester.pumpAndSettle();

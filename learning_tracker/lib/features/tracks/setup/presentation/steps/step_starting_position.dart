@@ -159,7 +159,7 @@ class _StartingPositionStepState extends ConsumerState<StartingPositionStep> {
             widget.curriculumId,
             _containerLevelIndex!,
           ).inLanguage(useHebrew: useHebrewTerms, variant: variant)
-        : 'Section';
+        : l10n.startingPositionSectionLabel;
     final leafLabel =
         _leafLevelIndex != null &&
             _leafLevelIndex! <= CurriculumLabels.depth(widget.curriculumId)

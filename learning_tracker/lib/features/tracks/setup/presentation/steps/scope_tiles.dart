@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// A single row in the hierarchy: checkbox + title + optional drill arrow.
 class HierarchyTile extends StatelessWidget {
@@ -38,7 +39,7 @@ class HierarchyTile extends StatelessWidget {
           ? IconButton(
               icon: const Icon(Icons.chevron_right),
               onPressed: onDrill,
-              tooltip: 'Show contents',
+              tooltip: AppLocalizations.of(context)!.scopeShowContentsTooltip,
             )
           : null,
       onTap: onCheck,
@@ -153,7 +154,9 @@ class ScopeLevelTile extends StatelessWidget {
                           Icons.chevron_right_rounded,
                           color: AppTheme.brandInkMuted,
                         ),
-                        tooltip: 'Show contents',
+                        tooltip: AppLocalizations.of(
+                          context,
+                        )!.scopeShowContentsTooltip,
                       ),
                     Checkbox(
                       value: selected,

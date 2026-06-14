@@ -489,6 +489,48 @@
   "dueToday": "להיום",
   "nothingDueInQueue": "אין כרגע משימות בתור הזה.",
   "selfPacedScopeTitle": "הכול, או רק חלק?",
+  "addTrackStepCounter": "שלב {current} מתוך {total}",
+  "@addTrackStepCounter": {
+    "placeholders": {
+      "current": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "curriculumPickerTitle": "בחירת תכנית לימוד",
+  "curriculumPickerTitleOnboarding": "מה תרצו ללמוד?",
+  "curriculumPickerSubtitle": "בחרו תכנית לימוד אחת למסלול זה.",
+  "programStepTitle": "להצטרף לתכנית?",
+  "programStepSubtitle": "עקבו אחר לוח לימוד עולמי, או למדו בקצב שלכם.",
+  "programStepOrChooseFreedom": "או בחרו חופש",
+  "programStepSelfPaced": "בקצב אישי (ללא תכנית)",
+  "programStepSelfPacedCaption": "מומלץ לפרויקטים אישיים, השלמת פערים, או לימוד חופשי.",
+  "programDailyCalendarBadge": "לוח יומי",
+  "programDefaultDescriptionFeatured": "שלטו בתכנית עם לוח לימוד יומי קבוע.",
+  "programDefaultDescriptionCompact": "לימוד יומי מודרך.",
+  "exitTrackSetupTitle": "לצאת מהגדרת המסלול?",
+  "exitTrackSetupMessage": "בטוחים שברצונכם לצאת?\nההתקדמות בהגדרה תאבד.",
+  "chazaraProgramNoReviewSubtitle": "{program} אינה כוללת לוח חזרות. הגדירו עכשיו או דלגו.",
+  "@chazaraProgramNoReviewSubtitle": {
+    "placeholders": {
+      "program": { "type": "String" }
+    }
+  },
+  "chazaraSelfPacedSubtitle": "בחרו תבנית מוכנה או בנו לוח {chazara} משלכם.",
+  "@chazaraSelfPacedSubtitle": {
+    "placeholders": {
+      "chazara": { "type": "String" }
+    }
+  },
+  "scopeGlossSeedsAgriculture": "זרעים וחקלאות",
+  "scopeGlossFestivalsSabbaths": "מועדים ושבתות",
+  "scopeGlossWomenMarriage": "נשים ונישואין",
+  "scopeGlossDamagesCivil": "נזיקין ודיני ממונות",
+  "scopeGlossTempleSacrifices": "עבודת המקדש וקורבנות",
+  "scopeGlossPurityRitual": "טהרות ודיני טומאה",
+  "scopeGlossCoreFocus": "מיקוד בנושא מרכזי",
+  "scopeShowContentsTooltip": "הצגת התוכן",
+  "startingPositionSectionLabel": "חלק",
+  "trackNameRequired": "נא להזין שם",
   "learnEntireCurriculumCta": "רוצה ללמוד את הכול!",
   "learnEntireCurriculumSubtitle": "בחרו את כל {name}",
   "@learnEntireCurriculumSubtitle": {

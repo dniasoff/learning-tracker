@@ -848,3 +848,30 @@ device-driven (commit 95ede74a, make ci GREEN 9900 pass):
   fix now vs follow-up.
 - Onboarding offline-account cluster: NOT observable (5560 already onboarded as "E2E"; brief forbids wiping). Still a
   product decision. → awaiting Daniel.
+
+### ADD-TRACK WIZARD LOCALIZED (2026-06-14) — Daniel: "fix the in-app strings now"
+- Localized the add-track wizard chrome (make ci GREEN 9979). New ARB keys (en byte-identical to the old hardcoded
+  strings so en-locale widget tests still match; he translated): addTrackStepCounter, curriculumPickerTitle/
+  TitleOnboarding/Subtitle, programStepTitle/Subtitle/OrChooseFreedom/SelfPaced/SelfPacedCaption,
+  programDailyCalendarBadge, programDefaultDescriptionFeatured/Compact, exitTrackSetupTitle/Message,
+  chazaraProgramNoReviewSubtitle/chazaraSelfPacedSubtitle, scopeGloss{SeedsAgriculture,FestivalsSabbaths,
+  WomenMarriage,DamagesCivil,TempleSacrifices,PurityRitual,CoreFocus}, scopeShowContentsTooltip,
+  startingPositionSectionLabel, trackNameRequired. Wired: program_selection_step (+programStartsLabel now takes l10n;
+  test updated), curriculum_picker_step, add_track_flow_screen (step counter + exit dialog + both chazara subtitles),
+  step_scope (seder glosses), scope_tiles (Show-contents tooltip ×2), step_starting_position ("Section"),
+  track_label_step (name-required validator). he smoke test updated (counter now "שלב 1 מתוך N", not "STEP 1 OF").
+- NOT changed (internal sentinel, already surfaced as localized trackEditNameRequired): edit_track validateTrackName.
+- STILL un-localized (smaller follow-up, deeper screens): step_chazara preset labels/descriptions ("Learn Only",
+  "No scheduled reviews." …), step_starting_position_calendar "No local calendar entry…", program DESCRIPTIONS
+  (English-only seed data — needs Hebrew content per program, separate content task).
+- NEXT: commit/push → redeploy → verify wizard Hebrew on 5558.
+
+### ONBOARDING OFFLINE-ACCOUNT FACTS CAPTURED (2026-06-14, 5560 wiped+airplane)
+Per Daniel's decision to gather facts. Confirmed on a fresh wipe, fully offline:
+(a) First account screen says **"Welcome Back!"** ("Ready for your next learning adventure?") on a first-ever run —
+    a Sign In form is the default landing; a new user must spot "Register Here".
+(b) Offline path = Register → "Create Account"; checking "Offline mode" changes the button to "Create Offline
+    Account" but **still requires Email + Password** (empty → "Email is required"/"Password is required").
+(c) "Offline mode" checkbox **defaults UNCHECKED** even with no network (airplane mode on).
+(d) Registration **Display Name is NOT carried** into the first profile's name field (placeholder "Enter name").
+Static info banners ("Local account only: no cloud backup…") present. → awaiting Daniel's product call on which to change.

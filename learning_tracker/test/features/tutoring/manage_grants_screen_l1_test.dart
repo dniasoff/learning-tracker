@@ -495,19 +495,18 @@ void main() {
     },
   );
 
-  testWidgets(
-    'a genuine owner name is shown verbatim (not the fallback)',
-    (tester) async {
-      final grant = _activeGrant(parentName: 'Loop Test C');
-      await tester.pumpWidget(buildSubject(() => Future.value([grant])));
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
+  testWidgets('a genuine owner name is shown verbatim (not the fallback)', (
+    tester,
+  ) async {
+    final grant = _activeGrant(parentName: 'Loop Test C');
+    await tester.pumpWidget(buildSubject(() => Future.value([grant])));
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
 
-      expect(find.text('Loop Test C'), findsOneWidget);
+    expect(find.text('Loop Test C'), findsOneWidget);
 
-      await tearDownWidget(tester);
-    },
-  );
+    await tearDownWidget(tester);
+  });
 
   // ── 12. Resign failure shows snackbar ────────────────────────────────────────
 

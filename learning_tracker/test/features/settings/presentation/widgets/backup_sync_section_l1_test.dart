@@ -195,30 +195,31 @@ void main() {
     // RED→GREEN [P2]: the relative-time strings ('just now', 'Xm ago', 'Xh ago',
     // 'Xd ago') were hardcoded English. Under a Hebrew UI they must render the
     // localized Hebrew form, never the English literal.
-    testWidgets('he locale: minutes-ago relative time is localized (no English)', (
-      tester,
-    ) async {
-      final lastSynced = DateTime.now().subtract(const Duration(minutes: 5));
-      await _pump(
-        tester,
-        _buildHarness(
-          syncStatus: SyncStatus.synced(lastSyncedAt: lastSynced),
-          authState: _kCloudUser,
-          locale: const Locale('he'),
-        ),
-      );
+    testWidgets(
+      'he locale: minutes-ago relative time is localized (no English)',
+      (tester) async {
+        final lastSynced = DateTime.now().subtract(const Duration(minutes: 5));
+        await _pump(
+          tester,
+          _buildHarness(
+            syncStatus: SyncStatus.synced(lastSyncedAt: lastSynced),
+            authState: _kCloudUser,
+            locale: const Locale('he'),
+          ),
+        );
 
-      expect(
-        find.textContaining('m ago'),
-        findsNothing,
-        reason: 'Hardcoded English relative-time must not leak into he UI',
-      );
-      // Localized Hebrew minutes-ago form (backupTimeAgoMinutes → "לפני 5 דק'").
-      expect(find.textContaining('דק'), findsOneWidget);
+        expect(
+          find.textContaining('m ago'),
+          findsNothing,
+          reason: 'Hardcoded English relative-time must not leak into he UI',
+        );
+        // Localized Hebrew minutes-ago form (backupTimeAgoMinutes → "לפני 5 דק'").
+        expect(find.textContaining('דק'), findsOneWidget);
 
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump(Duration.zero);
-    });
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(Duration.zero);
+      },
+    );
 
     testWidgets('he locale: "just now" is localized (no English literal)', (
       tester,

@@ -129,9 +129,7 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
     final user = authState.currentUser;
     if (user == null || !authState.isLocalBorn) {
       setState(
-        () => _phase = _PhaseForm(
-          error: l10n.upgradeToCloudErrorLocalBornOnly,
-        ),
+        () => _phase = _PhaseForm(error: l10n.upgradeToCloudErrorLocalBornOnly),
       );
       return;
     }
@@ -164,9 +162,8 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
     } on UpgradeEmailNotVerifiedException {
       if (mounted) {
         setState(
-          () => _phase = _PhaseVerifying(
-            bodyText: l10n.upgradeToCloudVerifyBody,
-          ),
+          () =>
+              _phase = _PhaseVerifying(bodyText: l10n.upgradeToCloudVerifyBody),
         );
       }
     } on UpgradePasswordMismatchException {
@@ -375,9 +372,7 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
     final authState = ref.watch(authStateProvider);
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(l10n.upgradeToCloudTitle),
-      ),
+      appBar: AppBar(title: Text(l10n.upgradeToCloudTitle)),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),

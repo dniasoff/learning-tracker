@@ -1013,6 +1013,95 @@ class AppLocalizationsEn extends AppLocalizations {
   String get selfPacedScopeTitle => 'All of it, or just a section?';
 
   @override
+  String addTrackStepCounter(int current, int total) {
+    return 'STEP $current OF $total';
+  }
+
+  @override
+  String get curriculumPickerTitle => 'Select a Curriculum';
+
+  @override
+  String get curriculumPickerTitleOnboarding => 'What would you like to learn?';
+
+  @override
+  String get curriculumPickerSubtitle =>
+      'Choose one curriculum for this track.';
+
+  @override
+  String get programStepTitle => 'Join a Program?';
+
+  @override
+  String get programStepSubtitle =>
+      'Follow a global study calendar, or learn at your own pace.';
+
+  @override
+  String get programStepOrChooseFreedom => 'OR CHOOSE FREEDOM';
+
+  @override
+  String get programStepSelfPaced => 'Self-paced (no program)';
+
+  @override
+  String get programStepSelfPacedCaption =>
+      'Recommended for personal projects, catch-up goals, or unstructured learning.';
+
+  @override
+  String get programDailyCalendarBadge => 'DAILY CALENDAR';
+
+  @override
+  String get programDefaultDescriptionFeatured =>
+      'Master the curriculum with a steady daily plan.';
+
+  @override
+  String get programDefaultDescriptionCompact => 'Daily guided learning.';
+
+  @override
+  String get exitTrackSetupTitle => 'Exit Track Setup?';
+
+  @override
+  String get exitTrackSetupMessage =>
+      'Are you sure you want to exit?\nYour setup progress will be lost.';
+
+  @override
+  String chazaraProgramNoReviewSubtitle(String program) {
+    return '$program doesn\'t include a review schedule. Set one up now or skip.';
+  }
+
+  @override
+  String chazaraSelfPacedSubtitle(String chazara) {
+    return 'Pick a preset or build your own $chazara schedule.';
+  }
+
+  @override
+  String get scopeGlossSeedsAgriculture => 'Seeds & Agriculture';
+
+  @override
+  String get scopeGlossFestivalsSabbaths => 'Festivals & Sabbaths';
+
+  @override
+  String get scopeGlossWomenMarriage => 'Women & Marriage';
+
+  @override
+  String get scopeGlossDamagesCivil => 'Damages & Civil Law';
+
+  @override
+  String get scopeGlossTempleSacrifices => 'Temple Service & Sacrifices';
+
+  @override
+  String get scopeGlossPurityRitual => 'Purity & Ritual Law';
+
+  @override
+  String get scopeGlossCoreFocus => 'Core section focus';
+
+  @override
+  String get scopeShowContentsTooltip => 'Show contents';
+
+  @override
+  String get startingPositionSectionLabel => 'Section';
+
+  @override
+  String get trackNameRequired => 'Please enter a name';
+
+  @override
   String get learnEntireCurriculumCta => 'I want to learn everything!';
 
   @override

@@ -913,7 +913,11 @@ void main() {
         final prompt = promptText(tester);
         expect(prompt.isNotEmpty, isTrue, reason: 'prompt must render');
         // Fully Hebrew: starts with "בחרו" and carries NO Latin chrome.
-        expect(prompt.startsWith('בחרו'), isTrue, reason: 'prompt was: $prompt');
+        expect(
+          prompt.startsWith('בחרו'),
+          isTrue,
+          reason: 'prompt was: $prompt',
+        );
         expect(
           latin.hasMatch(prompt),
           isFalse,

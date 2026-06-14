@@ -1606,8 +1606,10 @@ void main() {
       );
       await _settle(tester);
 
-      // No exceptions thrown. The step counter must still be present.
-      expect(find.textContaining('STEP 1 OF'), findsOneWidget);
+      // No exceptions thrown. The step counter must still be present — and,
+      // post-localization, it renders in Hebrew ("שלב 1 מתוך N") rather than
+      // the English "STEP 1 OF N".
+      expect(find.textContaining('שלב 1 מתוך'), findsOneWidget);
       addTearDown(() => _tearDown(tester));
     });
   });

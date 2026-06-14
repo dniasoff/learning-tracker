@@ -793,41 +793,42 @@ void main() {
     // RED→GREEN [P1]: the generic catch interpolated the raw exception
     // ('Upgrade failed: $e'). Under a Hebrew UI that leaks English + internal
     // exception text. Profile missing → StateError → friendly localized he copy.
-    testWidgets('he locale: generic error shows localized fallback (no raw exception)', (
-      tester,
-    ) async {
-      // No profile seeded → getUserProfileById(1) returns null → StateError.
-      await _pump(
-        tester,
-        _buildApp(
-          db: _db,
-          registry: _registry,
-          authRepo: _authRepo,
-          checker: _checker,
-          locale: const Locale('he'),
-        ),
-      );
+    testWidgets(
+      'he locale: generic error shows localized fallback (no raw exception)',
+      (tester) async {
+        // No profile seeded → getUserProfileById(1) returns null → StateError.
+        await _pump(
+          tester,
+          _buildApp(
+            db: _db,
+            registry: _registry,
+            authRepo: _authRepo,
+            checker: _checker,
+            locale: const Locale('he'),
+          ),
+        );
 
-      await tester.enterText(find.byType(TextFormField), _password);
-      await tester.pump();
-      await tester.tap(find.byType(FilledButton));
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 50));
+        await tester.enterText(find.byType(TextFormField), _password);
+        await tester.pump();
+        await tester.tap(find.byType(FilledButton));
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 50));
 
-      expect(
-        find.textContaining('Upgrade failed:'),
-        findsNothing,
-        reason: 'Raw English exception prefix must never render under he',
-      );
-      expect(find.textContaining('Bad state'), findsNothing);
-      // Localized Hebrew fallback (upgradeToCloudErrorGeneric).
-      expect(
-        find.text('לא הצלחנו להשלים את השדרוג. נסו שוב.'),
-        findsOneWidget,
-      );
+        expect(
+          find.textContaining('Upgrade failed:'),
+          findsNothing,
+          reason: 'Raw English exception prefix must never render under he',
+        );
+        expect(find.textContaining('Bad state'), findsNothing);
+        // Localized Hebrew fallback (upgradeToCloudErrorGeneric).
+        expect(
+          find.text('לא הצלחנו להשלים את השדרוג. נסו שוב.'),
+          findsOneWidget,
+        );
 
-      await _tearDown(tester);
-    });
+        await _tearDown(tester);
+      },
+    );
   });
 }
 

@@ -441,9 +441,7 @@ class _IntroPage extends ConsumerWidget {
       case _IntroPageVariant.dailyPlan:
         return Text.rich(
           _interpolateHighlight(
-            template: l10n.introDailyPlanSubtitle(
-              _kHighlightPlaceholder,
-            ),
+            template: l10n.introDailyPlanSubtitle(_kHighlightPlaceholder),
             highlight: l10n.introDailyPlanSubtitleHighlight,
             highlightStyle: highlightStyle,
           ),

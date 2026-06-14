@@ -294,7 +294,10 @@ void main() {
 
         await tester.enterText(find.byType(TextFormField), 'notanemail');
         await tester.pump();
-        expect(find.text('Please enter a valid email address.'), findsOneWidget);
+        expect(
+          find.text('Please enter a valid email address.'),
+          findsOneWidget,
+        );
 
         await tester.enterText(find.byType(TextFormField), 'good@example.com');
         await tester.pump();

@@ -328,10 +328,7 @@ void main() {
 
       // Title and subtitle
       expect(find.text('Choose an Account'), findsOneWidget);
-      expect(
-        find.text('Select an account to continue'),
-        findsOneWidget,
-      );
+      expect(find.text('Select an account to continue'), findsOneWidget);
 
       // Account tile content
       expect(find.text('Local Learner'), findsOneWidget);

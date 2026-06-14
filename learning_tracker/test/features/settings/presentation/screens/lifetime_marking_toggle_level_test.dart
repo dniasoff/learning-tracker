@@ -185,40 +185,37 @@ void main() {
     },
   );
 
-  testWidgets(
-    'IL-LEVEL: a 1–4 row folder selects exactly the visible rows (no '
-    'duplicated ancestor entries)',
-    (tester) async {
-      // Two dafim => exercises the small-folder path that previously wrote
-      // duplicate masechta-level entries instead of two daf-level entries.
-      await tester.pumpWidget(
-        _buildScreen(_bavliLikeContent(dafim: const ['2', '3'])),
-      );
-      await _settle(tester);
+  testWidgets('IL-LEVEL: a 1–4 row folder selects exactly the visible rows (no '
+      'duplicated ancestor entries)', (tester) async {
+    // Two dafim => exercises the small-folder path that previously wrote
+    // duplicate masechta-level entries instead of two daf-level entries.
+    await tester.pumpWidget(
+      _buildScreen(_bavliLikeContent(dafim: const ['2', '3'])),
+    );
+    await _settle(tester);
 
-      await tester.tap(find.byIcon(Icons.navigate_next_rounded).first);
-      await _settle(tester);
-      await tester.tap(find.byIcon(Icons.navigate_next_rounded).first);
-      await _settle(tester);
+    await tester.tap(find.byIcon(Icons.navigate_next_rounded).first);
+    await _settle(tester);
+    await tester.tap(find.byIcon(Icons.navigate_next_rounded).first);
+    await _settle(tester);
 
-      expect(find.text('Daf 2'), findsOneWidget);
-      await tester.tap(find.text('Select all in this list'));
-      await _settle(tester);
+    expect(find.text('Daf 2'), findsOneWidget);
+    await tester.tap(find.text('Select all in this list'));
+    await _settle(tester);
 
-      // Two visible dafim => Selected: 2 (distinct daf rows, not the masechta).
-      expect(
-        find.text('Selected: 2'),
-        findsOneWidget,
-        reason:
-            'Select all on a two-daf folder must select the two dafim, not the '
-            'shared masechta value twice',
-      );
+    // Two visible dafim => Selected: 2 (distinct daf rows, not the masechta).
+    expect(
+      find.text('Selected: 2'),
+      findsOneWidget,
+      reason:
+          'Select all on a two-daf folder must select the two dafim, not the '
+          'shared masechta value twice',
+    );
 
-      // Deselecting clears just this level back to zero.
-      await tester.tap(find.text('Deselect all in this list'));
-      await _settle(tester);
-      expect(find.text('Selected: 0'), findsOneWidget);
-      expect(find.text('Select all in this list'), findsOneWidget);
-    },
-  );
+    // Deselecting clears just this level back to zero.
+    await tester.tap(find.text('Deselect all in this list'));
+    await _settle(tester);
+    expect(find.text('Selected: 0'), findsOneWidget);
+    expect(find.text('Select all in this list'), findsOneWidget);
+  });
 }

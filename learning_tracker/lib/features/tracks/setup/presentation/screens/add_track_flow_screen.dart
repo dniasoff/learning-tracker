@@ -407,10 +407,8 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
       final l10n = AppLocalizations.of(context)!;
       final shouldExit = await showAppConfirmDialog(
         context: context,
-        title: 'Exit Track Setup?',
-        message:
-            'Are you sure you want to exit?\n'
-            'Your setup progress will be lost.',
+        title: l10n.exitTrackSetupTitle,
+        message: l10n.exitTrackSetupMessage,
         confirmLabel: l10n.actionExit,
         cancelLabel: l10n.actionCancel,
         icon: Icons.exit_to_app_rounded,
@@ -701,6 +699,7 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
     );
     final progress = _currentIndex.clamp(0, steps.length) / steps.length;
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     return PopScope(
       canPop: false,
@@ -720,7 +719,10 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
                       Row(
                         children: [
                           Text(
-                            'STEP ${_currentIndex + 1} OF $displayTotal',
+                            l10n.addTrackStepCounter(
+                              _currentIndex + 1,
+                              displayTotal,
+                            ),
                             style: theme.textTheme.labelLarge?.copyWith(
                               color: AppTheme.brandInkMuted,
                               letterSpacing: 1.2,
@@ -938,9 +940,8 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
         ? l10n.addTrackChazaraStepTitle(chazaraTerm)
         : l10n.addTrackChazaraStepQuestion(chazaraTerm);
     final headerSubtitle = _isProgramTrack
-        ? '${_state.programName} doesn\'t include a review schedule. '
-              'Set one up now or skip.'
-        : 'Pick a preset or build your own ${domainTermLabels(ref).chazara} schedule.';
+        ? l10n.chazaraProgramNoReviewSubtitle(_state.programName ?? '')
+        : l10n.chazaraSelfPacedSubtitle(chazaraTerm);
 
     return ChazaraInlineSetup(
       curriculumId: _state.curriculumId!,

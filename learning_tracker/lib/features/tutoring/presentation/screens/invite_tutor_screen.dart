@@ -55,9 +55,7 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
   /// and a dotted domain whose TLD is at least two chars. Catches "notanemail"
   /// (no `@`), "a@b" (no dot in domain) and "a@b." (empty TLD) while accepting
   /// ordinary addresses.
-  static final RegExp _emailPattern = RegExp(
-    r'^[^@\s]+@[^@\s]+\.[^@\s]{2,}$',
-  );
+  static final RegExp _emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]{2,}$');
 
   bool get _emailValid => _emailPattern.hasMatch(_emailController.text.trim());
 

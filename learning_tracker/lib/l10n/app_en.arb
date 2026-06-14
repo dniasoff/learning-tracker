@@ -584,6 +584,48 @@
   "dueToday": "Due today",
   "nothingDueInQueue": "Nothing due in this queue right now.",
   "selfPacedScopeTitle": "All of it, or just a section?",
+  "addTrackStepCounter": "STEP {current} OF {total}",
+  "@addTrackStepCounter": {
+    "placeholders": {
+      "current": { "type": "int" },
+      "total": { "type": "int" }
+    }
+  },
+  "curriculumPickerTitle": "Select a Curriculum",
+  "curriculumPickerTitleOnboarding": "What would you like to learn?",
+  "curriculumPickerSubtitle": "Choose one curriculum for this track.",
+  "programStepTitle": "Join a Program?",
+  "programStepSubtitle": "Follow a global study calendar, or learn at your own pace.",
+  "programStepOrChooseFreedom": "OR CHOOSE FREEDOM",
+  "programStepSelfPaced": "Self-paced (no program)",
+  "programStepSelfPacedCaption": "Recommended for personal projects, catch-up goals, or unstructured learning.",
+  "programDailyCalendarBadge": "DAILY CALENDAR",
+  "programDefaultDescriptionFeatured": "Master the curriculum with a steady daily plan.",
+  "programDefaultDescriptionCompact": "Daily guided learning.",
+  "exitTrackSetupTitle": "Exit Track Setup?",
+  "exitTrackSetupMessage": "Are you sure you want to exit?\nYour setup progress will be lost.",
+  "chazaraProgramNoReviewSubtitle": "{program} doesn't include a review schedule. Set one up now or skip.",
+  "@chazaraProgramNoReviewSubtitle": {
+    "placeholders": {
+      "program": { "type": "String" }
+    }
+  },
+  "chazaraSelfPacedSubtitle": "Pick a preset or build your own {chazara} schedule.",
+  "@chazaraSelfPacedSubtitle": {
+    "placeholders": {
+      "chazara": { "type": "String" }
+    }
+  },
+  "scopeGlossSeedsAgriculture": "Seeds & Agriculture",
+  "scopeGlossFestivalsSabbaths": "Festivals & Sabbaths",
+  "scopeGlossWomenMarriage": "Women & Marriage",
+  "scopeGlossDamagesCivil": "Damages & Civil Law",
+  "scopeGlossTempleSacrifices": "Temple Service & Sacrifices",
+  "scopeGlossPurityRitual": "Purity & Ritual Law",
+  "scopeGlossCoreFocus": "Core section focus",
+  "scopeShowContentsTooltip": "Show contents",
+  "startingPositionSectionLabel": "Section",
+  "trackNameRequired": "Please enter a name",
   "learnEntireCurriculumCta": "I want to learn everything!",
   "learnEntireCurriculumSubtitle": "Select the entire {name}",
   "@learnEntireCurriculumSubtitle": {

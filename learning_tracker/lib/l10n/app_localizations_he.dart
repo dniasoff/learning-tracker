@@ -1008,6 +1008,94 @@ class AppLocalizationsHe extends AppLocalizations {
   String get selfPacedScopeTitle => 'הכול, או רק חלק?';
 
   @override
+  String addTrackStepCounter(int current, int total) {
+    return 'שלב $current מתוך $total';
+  }
+
+  @override
+  String get curriculumPickerTitle => 'בחירת תכנית לימוד';
+
+  @override
+  String get curriculumPickerTitleOnboarding => 'מה תרצו ללמוד?';
+
+  @override
+  String get curriculumPickerSubtitle => 'בחרו תכנית לימוד אחת למסלול זה.';
+
+  @override
+  String get programStepTitle => 'להצטרף לתכנית?';
+
+  @override
+  String get programStepSubtitle =>
+      'עקבו אחר לוח לימוד עולמי, או למדו בקצב שלכם.';
+
+  @override
+  String get programStepOrChooseFreedom => 'או בחרו חופש';
+
+  @override
+  String get programStepSelfPaced => 'בקצב אישי (ללא תכנית)';
+
+  @override
+  String get programStepSelfPacedCaption =>
+      'מומלץ לפרויקטים אישיים, השלמת פערים, או לימוד חופשי.';
+
+  @override
+  String get programDailyCalendarBadge => 'לוח יומי';
+
+  @override
+  String get programDefaultDescriptionFeatured =>
+      'שלטו בתכנית עם לוח לימוד יומי קבוע.';
+
+  @override
+  String get programDefaultDescriptionCompact => 'לימוד יומי מודרך.';
+
+  @override
+  String get exitTrackSetupTitle => 'לצאת מהגדרת המסלול?';
+
+  @override
+  String get exitTrackSetupMessage =>
+      'בטוחים שברצונכם לצאת?\nההתקדמות בהגדרה תאבד.';
+
+  @override
+  String chazaraProgramNoReviewSubtitle(String program) {
+    return '$program אינה כוללת לוח חזרות. הגדירו עכשיו או דלגו.';
+  }
+
+  @override
+  String chazaraSelfPacedSubtitle(String chazara) {
+    return 'בחרו תבנית מוכנה או בנו לוח $chazara משלכם.';
+  }
+
+  @override
+  String get scopeGlossSeedsAgriculture => 'זרעים וחקלאות';
+
+  @override
+  String get scopeGlossFestivalsSabbaths => 'מועדים ושבתות';
+
+  @override
+  String get scopeGlossWomenMarriage => 'נשים ונישואין';
+
+  @override
+  String get scopeGlossDamagesCivil => 'נזיקין ודיני ממונות';
+
+  @override
+  String get scopeGlossTempleSacrifices => 'עבודת המקדש וקורבנות';
+
+  @override
+  String get scopeGlossPurityRitual => 'טהרות ודיני טומאה';
+
+  @override
+  String get scopeGlossCoreFocus => 'מיקוד בנושא מרכזי';
+
+  @override
+  String get scopeShowContentsTooltip => 'הצגת התוכן';
+
+  @override
+  String get startingPositionSectionLabel => 'חלק';
+
+  @override
+  String get trackNameRequired => 'נא להזין שם';
+
+  @override
   String get learnEntireCurriculumCta => 'רוצה ללמוד את הכול!';
 
   @override

@@ -613,8 +613,8 @@ void main() {
         await tester.pumpWidget(buildLocalized(locale: const Locale('he')));
         await _pump(tester);
 
-        final screenWidth = tester.view.physicalSize.width /
-            tester.view.devicePixelRatio;
+        final screenWidth =
+            tester.view.physicalSize.width / tester.view.devicePixelRatio;
         // The leading chip in RTL is the FIRST FilterChip (logical start = right).
         final firstChip = find.byType(FilterChip).first;
         final rect = tester.getRect(firstChip);
@@ -623,7 +623,8 @@ void main() {
         expect(
           rect.right,
           lessThanOrEqualTo(screenWidth + 0.5),
-          reason: 'Leading chip must not be clipped past the right (start) edge in RTL',
+          reason:
+              'Leading chip must not be clipped past the right (start) edge in RTL',
         );
         expect(
           rect.left,
@@ -635,22 +636,21 @@ void main() {
       },
     );
 
-    testWidgets(
-      'leading FilterChip is fully on-screen in LTR (English)',
-      (tester) async {
-        await tester.pumpWidget(buildLocalized(locale: const Locale('en')));
-        await _pump(tester);
+    testWidgets('leading FilterChip is fully on-screen in LTR (English)', (
+      tester,
+    ) async {
+      await tester.pumpWidget(buildLocalized(locale: const Locale('en')));
+      await _pump(tester);
 
-        final screenWidth = tester.view.physicalSize.width /
-            tester.view.devicePixelRatio;
-        final firstChip = find.byType(FilterChip).first;
-        final rect = tester.getRect(firstChip);
+      final screenWidth =
+          tester.view.physicalSize.width / tester.view.devicePixelRatio;
+      final firstChip = find.byType(FilterChip).first;
+      final rect = tester.getRect(firstChip);
 
-        expect(rect.left, greaterThanOrEqualTo(-0.5));
-        expect(rect.right, lessThanOrEqualTo(screenWidth + 0.5));
+      expect(rect.left, greaterThanOrEqualTo(-0.5));
+      expect(rect.right, lessThanOrEqualTo(screenWidth + 0.5));
 
-        await _teardown(tester);
-      },
-    );
+      await _teardown(tester);
+    });
   });
 }

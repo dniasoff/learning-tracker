@@ -556,8 +556,7 @@ class LifetimeMarkingScopeRow extends StatelessWidget {
                           onToggle();
                         },
                   fillColor: WidgetStateProperty.resolveWith(
-                    (states) =>
-                        states.contains(WidgetState.selected) || partial
+                    (states) => states.contains(WidgetState.selected) || partial
                         ? color
                         : Colors.transparent,
                   ),

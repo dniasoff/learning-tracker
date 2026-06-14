@@ -49,15 +49,15 @@ class CurriculumPickerStep extends StatelessWidget {
         children: [
           Text(
             isOnboarding
-                ? 'What would you like to learn?'
-                : 'Select a Curriculum',
+                ? AppLocalizations.of(context)!.curriculumPickerTitleOnboarding
+                : AppLocalizations.of(context)!.curriculumPickerTitle,
             style: theme.textTheme.headlineLarge?.copyWith(
               fontWeight: FontWeight.w800,
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            'Choose one curriculum for this track.',
+            AppLocalizations.of(context)!.curriculumPickerSubtitle,
             style: theme.textTheme.titleMedium?.copyWith(
               color: AppTheme.brandInkMuted,
             ),

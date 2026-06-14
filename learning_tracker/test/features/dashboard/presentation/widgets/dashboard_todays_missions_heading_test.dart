@@ -79,10 +79,7 @@ JourneyViewModel _journey() => const JourneyViewModel(
   curriculumLevelSiyumimCount: 0,
 );
 
-Widget _buildApp({
-  required _MockStackRouter router,
-  required Locale locale,
-}) {
+Widget _buildApp({required _MockStackRouter router, required Locale locale}) {
   final track = _track();
   return ProviderScope(
     overrides: [

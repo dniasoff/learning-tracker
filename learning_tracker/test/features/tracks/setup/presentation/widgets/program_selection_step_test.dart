@@ -10,11 +10,14 @@
 /// correct value the test goes GREEN.
 library;
 
+import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/widgets/program_selection_step.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 void main() {
+  final l10n = lookupAppLocalizations(const Locale('en'));
   LearningProgramData makeProgram({
     required String name,
     required String displayName,
@@ -42,7 +45,7 @@ void main() {
         isCalendarProgram: true,
       );
 
-      final label = programStartsLabel(program);
+      final label = programStartsLabel(l10n, program);
 
       expect(
         label,
@@ -61,7 +64,7 @@ void main() {
           isCalendarProgram: false,
         );
 
-        final label = programStartsLabel(program);
+        final label = programStartsLabel(l10n, program);
 
         expect(
           label,
@@ -79,7 +82,7 @@ void main() {
         isCalendarProgram: true,
       );
 
-      final label = programStartsLabel(program);
+      final label = programStartsLabel(l10n, program);
 
       expect(label, isNot(contains('Mishnah Yomit')));
       expect(label, equals('DAILY CALENDAR'));

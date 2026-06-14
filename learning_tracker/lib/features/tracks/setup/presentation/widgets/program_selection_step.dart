@@ -5,6 +5,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Returns the text for the calendar-icon row on a program card.
 ///
@@ -12,8 +13,8 @@ import 'package:learning_tracker/features/scheduler/domain/services/learning_pro
 /// the pre-fix bug ('Starts: $name').  For calendar programs the row should
 /// read "DAILY CALENDAR"; for non-calendar programs (custom / manual) there
 /// is no meaningful start label so the row is hidden (empty string returned).
-String programStartsLabel(LearningProgramData program) {
-  if (program.isCalendarProgram) return 'DAILY CALENDAR';
+String programStartsLabel(AppLocalizations l10n, LearningProgramData program) {
+  if (program.isCalendarProgram) return l10n.programDailyCalendarBadge;
   return '';
 }
 
@@ -58,6 +59,7 @@ class _ProgramSelectionStepState extends ConsumerState<ProgramSelectionStep> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
 
     if (_programs.isEmpty) {
       if (!_didAutoSkip) {
@@ -75,14 +77,14 @@ class _ProgramSelectionStepState extends ConsumerState<ProgramSelectionStep> {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Text(
-            'Join a Program?',
+            l10n.programStepTitle,
             style: theme.textTheme.headlineLarge?.copyWith(
               fontWeight: FontWeight.w800,
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            'Follow a global study calendar, or learn at your own pace.',
+            l10n.programStepSubtitle,
             style: theme.textTheme.titleMedium?.copyWith(
               color: AppTheme.brandInkMuted,
             ),
@@ -119,7 +121,7 @@ class _ProgramSelectionStepState extends ConsumerState<ProgramSelectionStep> {
                 const SizedBox(height: 18),
                 Center(
                   child: Text(
-                    'OR CHOOSE FREEDOM',
+                    l10n.programStepOrChooseFreedom,
                     style: theme.textTheme.labelLarge?.copyWith(
                       color: AppTheme.brandInkMuted,
                       letterSpacing: 2,
@@ -141,14 +143,17 @@ class _ProgramSelectionStepState extends ConsumerState<ProgramSelectionStep> {
                     ),
                   ),
                   icon: const Icon(Icons.directions_walk_rounded),
-                  label: const Text(
-                    'Self-paced (no program)',
-                    style: TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
+                  label: Text(
+                    l10n.programStepSelfPaced,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 17,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  'Recommended for personal projects, catch-up goals, or unstructured learning.',
+                  l10n.programStepSelfPacedCaption,
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: AppTheme.brandInkMuted,
                   ),
@@ -219,7 +224,9 @@ class _FeaturedProgramCard extends ConsumerWidget {
                 Text(
                   program.description.isNotEmpty
                       ? program.description
-                      : 'Master the curriculum with a steady daily plan.',
+                      : AppLocalizations.of(
+                          context,
+                        )!.programDefaultDescriptionFeatured,
                   style: theme.textTheme.bodyLarge?.copyWith(
                     color: AppTheme.brandInkMuted,
                   ),
@@ -236,10 +243,16 @@ class _FeaturedProgramCard extends ConsumerWidget {
                     // TS-1 fix: use programStartsLabel so the row shows
                     // "DAILY CALENDAR" (or is hidden) instead of the
                     // program name.
-                    if (programStartsLabel(program).isNotEmpty)
+                    if (programStartsLabel(
+                      AppLocalizations.of(context)!,
+                      program,
+                    ).isNotEmpty)
                       Expanded(
                         child: Text(
-                          programStartsLabel(program),
+                          programStartsLabel(
+                            AppLocalizations.of(context)!,
+                            program,
+                          ),
                           style: theme.textTheme.titleSmall?.copyWith(
                             color: AppTheme.brandBlueDeep,
                             fontWeight: FontWeight.w700,
@@ -314,7 +327,9 @@ class _CompactProgramCard extends ConsumerWidget {
                 Text(
                   program.description.isNotEmpty
                       ? program.description
-                      : 'Daily guided learning.',
+                      : AppLocalizations.of(
+                          context,
+                        )!.programDefaultDescriptionCompact,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.bodyMedium?.copyWith(
@@ -332,7 +347,7 @@ class _CompactProgramCard extends ConsumerWidget {
                     const SizedBox(width: 5),
                     Expanded(
                       child: Text(
-                        'DAILY CALENDAR',
+                        AppLocalizations.of(context)!.programDailyCalendarBadge,
                         style: theme.textTheme.labelMedium?.copyWith(
                           color: AppTheme.brandBlueDeep,
                           fontWeight: FontWeight.w800,

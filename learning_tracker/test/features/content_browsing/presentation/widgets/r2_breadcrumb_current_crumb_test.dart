@@ -99,22 +99,23 @@ void main() {
       expect(tester.takeException(), isNull);
     });
 
-    testWidgets('RTL: long Hebrew current crumb ellipsizes (no mid-word clip)', (
-      tester,
-    ) async {
-      const longHe = 'ברכות מסכת ארוכה מאוד שגולשת מעבר לרוחב המסך הזמין כאן';
-      await tester.pumpWidget(
-        _host(
-          textDirection: TextDirection.rtl,
-          stack: const ['סדר זרעים', longHe],
-        ),
-      );
-      await tester.pump();
+    testWidgets(
+      'RTL: long Hebrew current crumb ellipsizes (no mid-word clip)',
+      (tester) async {
+        const longHe = 'ברכות מסכת ארוכה מאוד שגולשת מעבר לרוחב המסך הזמין כאן';
+        await tester.pumpWidget(
+          _host(
+            textDirection: TextDirection.rtl,
+            stack: const ['סדר זרעים', longHe],
+          ),
+        );
+        await tester.pump();
 
-      final text = _currentCrumbText(tester, longHe);
-      expect(text.overflow, TextOverflow.ellipsis);
-      expect(text.maxLines, 1);
-      expect(tester.takeException(), isNull);
-    });
+        final text = _currentCrumbText(tester, longHe);
+        expect(text.overflow, TextOverflow.ellipsis);
+        expect(text.maxLines, 1);
+        expect(tester.takeException(), isNull);
+      },
+    );
   });
 }

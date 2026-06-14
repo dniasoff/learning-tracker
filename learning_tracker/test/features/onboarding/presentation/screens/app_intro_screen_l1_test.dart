@@ -170,32 +170,26 @@ void main() {
       await _tearDown(tester);
     });
 
-    testWidgets(
-      'Skip button is present',
-      (tester) async {
-        await tester.pumpWidget(_rig(router: router));
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 900));
+    testWidgets('Skip button is present', (tester) async {
+      await tester.pumpWidget(_rig(router: router));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 900));
 
-        expect(find.text('Skip'), findsOneWidget);
+      expect(find.text('Skip'), findsOneWidget);
 
-        await _tearDown(tester);
-      },
-    );
+      await _tearDown(tester);
+    });
 
-    testWidgets(
-      'first page shows "Continue Journey" label',
-      (tester) async {
-        await tester.pumpWidget(_rig(router: router));
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 900));
+    testWidgets('first page shows "Continue Journey" label', (tester) async {
+      await tester.pumpWidget(_rig(router: router));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 900));
 
-        expect(find.text('Continue Journey'), findsOneWidget);
-        expect(find.text('Get Started'), findsNothing);
+      expect(find.text('Continue Journey'), findsOneWidget);
+      expect(find.text('Get Started'), findsNothing);
 
-        await _tearDown(tester);
-      },
-    );
+      await _tearDown(tester);
+    });
 
     testWidgets('PageView is present and shows 3 pages', (tester) async {
       await tester.pumpWidget(_rig(router: router));
@@ -211,22 +205,21 @@ void main() {
   // ── 2. "Get Started" appears on last page ──────────────────────────────────
 
   group('CTA label on last page', () {
-    testWidgets(
-      'shows "Get Started" on page 3 after two swipes',
-      (tester) async {
-        await tester.pumpWidget(_rig(router: router));
-        await tester.pump();
-        await tester.pump(const Duration(milliseconds: 900));
+    testWidgets('shows "Get Started" on page 3 after two swipes', (
+      tester,
+    ) async {
+      await tester.pumpWidget(_rig(router: router));
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 900));
 
-        await _swipeToNextPage(tester); // page 1 → 2
-        await _swipeToNextPage(tester); // page 2 → 3
+      await _swipeToNextPage(tester); // page 1 → 2
+      await _swipeToNextPage(tester); // page 2 → 3
 
-        expect(find.text('Get Started'), findsOneWidget);
-        expect(find.text('Continue Journey'), findsNothing);
+      expect(find.text('Get Started'), findsOneWidget);
+      expect(find.text('Continue Journey'), findsNothing);
 
-        await _tearDown(tester);
-      },
-    );
+      await _tearDown(tester);
+    });
   });
 
   // ── 3. Skip → PermissionPrompt then replace(SignInRoute) ────────────────────

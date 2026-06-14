@@ -233,10 +233,7 @@ void main() {
       (tester) async {
         _sizeView(tester);
         await tester.pumpWidget(
-          _buildStudyDaysApp(
-            locale: const Locale('he'),
-            useHebrewTerms: true,
-          ),
+          _buildStudyDaysApp(locale: const Locale('he'), useHebrewTerms: true),
         );
         await tester.pump();
 

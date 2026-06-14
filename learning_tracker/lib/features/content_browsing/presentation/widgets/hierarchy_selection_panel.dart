@@ -227,14 +227,21 @@ class HierarchySelectionPanelState
                       Builder(
                         builder: (context) {
                           final isLeaf = i == _navigationStack.length - 1;
-                          final label = CurriculumLabelRenderer.renderBreadcrumb(
-                            curriculumId: widget.curriculumId,
-                            rawSegmentValues: _navigationStack.sublist(0, i + 1),
-                            useHebrew: terms.isHebrew,
-                            hebrewNamesPerSegment: _navigationStackHebrewNames
-                                .sublist(0, i + 1),
-                            transliterationVariant: variant,
-                          ).last;
+                          final label =
+                              CurriculumLabelRenderer.renderBreadcrumb(
+                                curriculumId: widget.curriculumId,
+                                rawSegmentValues: _navigationStack.sublist(
+                                  0,
+                                  i + 1,
+                                ),
+                                useHebrew: terms.isHebrew,
+                                hebrewNamesPerSegment:
+                                    _navigationStackHebrewNames.sublist(
+                                      0,
+                                      i + 1,
+                                    ),
+                                transliterationVariant: variant,
+                              ).last;
                           // The current (leaf) crumb is non-clickable; constrain
                           // + ellipsize so it is never cut mid-word at font scale
                           // 1.3 in LTR or RTL. Ancestor crumbs stay unconstrained
