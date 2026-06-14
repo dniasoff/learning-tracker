@@ -317,6 +317,49 @@ void main() {
       expect(find.text('דפים'), findsNothing);
     });
 
+    testWidgets('editing a daf-paced goal pre-selects Daf (not Amud)', (
+      tester,
+    ) async {
+      // Regression: GoalSetupForm.initState used _defaultUnit ('amud' for Bavli)
+      // regardless of the saved goal, so editing a daf-paced track wrongly
+      // showed amudim. It must restore the saved paceGranularity (daf).
+      final dafGoal = GoalEntity(
+        curriculumId: CurriculumId.bavli,
+        goalType: 'pace',
+        paceValue: 7,
+        pacePeriod: 'per_week',
+        paceGranularity: PaceGranularity.daf,
+        createdAt: DateTime.utc(2026, 1, 1),
+        updatedAt: DateTime.utc(2026, 1, 1),
+      );
+      await tester.pumpWidget(
+        _makeApp(
+          overrides: [
+            useHebrewTermsProvider.overrideWithValue(false),
+            currentTransliterationVariantProvider.overrideWithValue(
+              TransliterationVariant.ashkenazi,
+            ),
+          ],
+          home: GoalSetupScreen(
+            curriculumId: CurriculumId.bavli,
+            existingGoal: dafGoal,
+            totalItems: 2711,
+          ),
+        ),
+      );
+
+      await tester.tap(find.text('Pace'));
+      await tester.pump();
+
+      // The unit SegmentedButton (segments amud/daf) must have 'daf' selected.
+      final unitPicker = tester
+          .widgetList<SegmentedButton<String>>(
+            find.byType(SegmentedButton<String>),
+          )
+          .firstWhere((s) => s.segments.any((seg) => seg.value == 'daf'));
+      expect(unitPicker.selected, {'daf'});
+    });
+
     testWidgets('daf unit pill renders Dapim under Sefardi nusach', (
       tester,
     ) async {
@@ -385,36 +428,33 @@ void main() {
     // and asserting no label/helper RenderParagraph exceeds its max lines.
     for (final locale in const [Locale('en'), Locale('he')]) {
       for (final scale in const [1.0, 1.3]) {
-        testWidgets(
-          'pace input label + helper are not truncated '
-          '(${locale.languageCode} @ ${scale}x)',
-          (tester) async {
-            // Bavli surfaces the longest unit words (Amudim/Dafim, עמודים/דפים)
-            // and exercises the per-day/per-week selector that previously
-            // squeezed the field.
-            tester.view.physicalSize = const Size(412, 915);
-            tester.view.devicePixelRatio = 1.0;
-            addTearDown(tester.view.reset);
+        testWidgets('pace input label + helper are not truncated '
+            '(${locale.languageCode} @ ${scale}x)', (tester) async {
+          // Bavli surfaces the longest unit words (Amudim/Dafim, עמודים/דפים)
+          // and exercises the per-day/per-week selector that previously
+          // squeezed the field.
+          tester.view.physicalSize = const Size(412, 915);
+          tester.view.devicePixelRatio = 1.0;
+          addTearDown(tester.view.reset);
 
-            await tester.pumpWidget(
-              _makeLocalizedApp(
-                locale: locale,
-                textScale: scale,
-                home: const GoalSetupScreen(
-                  curriculumId: CurriculumId.bavli,
-                  totalItems: 2711,
-                ),
+          await tester.pumpWidget(
+            _makeLocalizedApp(
+              locale: locale,
+              textScale: scale,
+              home: const GoalSetupScreen(
+                curriculumId: CurriculumId.bavli,
+                totalItems: 2711,
               ),
-            );
-            await tester.pumpAndSettle();
+            ),
+          );
+          await tester.pumpAndSettle();
 
-            // Switch to pace mode via the speed-icon segment (locale-agnostic).
-            await tester.tap(find.byIcon(Icons.speed));
-            await tester.pumpAndSettle();
+          // Switch to pace mode via the speed-icon segment (locale-agnostic).
+          await tester.tap(find.byIcon(Icons.speed));
+          await tester.pumpAndSettle();
 
-            _expectPaceLabelsNotTruncated(tester);
-          },
-        );
+          _expectPaceLabelsNotTruncated(tester);
+        });
       }
     }
   });

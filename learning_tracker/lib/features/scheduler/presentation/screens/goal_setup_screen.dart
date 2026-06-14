@@ -100,7 +100,10 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
         widget.existingGoal?.paceValue ??
         (CurriculumDefaults.defaultDailyTargets[widget.curriculumId] ?? 1);
     _paceUnit = widget.existingGoal?.pacePeriod ?? 'per_day';
-    _paceGranularity = _defaultUnit;
+    // Restore the saved learning unit when editing (e.g. daf for a daf-paced
+    // Bavli track) — without this the picker always reset to _defaultUnit
+    // ('amud' for Bavli), so editing a daf goal wrongly showed amudim.
+    _paceGranularity = widget.existingGoal?.paceGranularityKey ?? _defaultUnit;
   }
 
   /// Whether this curriculum's pace is set in Pasuk/Perek units (Tanakh
