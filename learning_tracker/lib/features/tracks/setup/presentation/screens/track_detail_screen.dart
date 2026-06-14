@@ -275,7 +275,10 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
             trackHasChazara: trackHasChazara,
             locale: locale,
             goal: goal,
-            itemsRemaining: itemsRemaining,
+            // Pass the count in the goal's PACE unit (daf for a daf-paced track),
+            // so "Items remaining" matches the Est. finish basis. Lifetime
+            // aggregates stay in amudim elsewhere — this is track-scoped only.
+            itemsRemaining: remainingInPaceUnit,
             estimatedFinish: estimatedFinish,
             useHebrewCalendar: useHebrewCalendar,
           ),
@@ -437,6 +440,8 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
             _configRow(
               theme,
               l10n.trackDetailConfigItemsRemaining,
+              // Caller passes the count in the track's PACE unit: dapim for a
+              // daf-paced Bavli track (not amudim), aligning with Est. finish.
               '$itemsRemaining',
             ),
           if (estimatedFinish != null)

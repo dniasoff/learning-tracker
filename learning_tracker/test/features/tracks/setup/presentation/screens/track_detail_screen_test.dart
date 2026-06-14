@@ -316,6 +316,79 @@ void main() {
     });
   });
 
+  group('Track Detail — Items remaining in the pace unit (daf)', () {
+    testWidgets(
+      'daf-paced Bavli track shows DAF count for Items remaining, not amudim',
+      (tester) async {
+        final track = _track(curriculum: CurriculumId.bavli);
+
+        // FK: the goal row references curriculum_tracks(id).
+        await db
+            .into(db.curriculumTracks)
+            .insert(
+              CurriculumTracksCompanion.insert(
+                id: Value(track.id),
+                profileId: track.profileId,
+                curriculumId: track.curriculumId,
+                state: Value(track.state),
+                stateChangedAt: track.stateChangedAt,
+                activatedAt: track.activatedAt,
+              ),
+            );
+        // Daf-granularity pace goal.
+        await db
+            .into(db.goals)
+            .insert(
+              GoalsCompanion.insert(
+                profileId: track.profileId,
+                curriculumId: track.curriculumId,
+                trackId: track.id,
+                description: const Value('Daf goal'),
+                goalType: const Value('pace'),
+                paceValue: const Value(7),
+                pacePeriod: const Value('per_week'),
+                paceGranularity: const Value('daf'),
+                createdAt: DateTime.utc(2026, 1, 1),
+                updatedAt: DateTime.utc(2026, 1, 1),
+              ),
+            );
+
+        final overrides = [
+          ..._overridesFor(
+            db: db,
+            track: track,
+            curriculum: CurriculumId.bavli,
+            currentCycle: 0.0, // 0% → remaining == total
+            lifetime: 0.0,
+          ),
+          // 100 amudim (leaf) collapse to 50 dapim (coarse).
+          scopedCoarseUnitCountProvider(
+            CurriculumId.bavli,
+          ).overrideWith((ref) async => 50),
+        ];
+
+        await tester.pumpWidget(_wrap(track: track, overrides: overrides));
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.pump(const Duration(milliseconds: 100));
+
+        // Items remaining must show the DAF count (50), not the amud count (100).
+        expect(
+          find.text('50'),
+          findsOneWidget,
+          reason:
+              'A daf-paced track must show "Items remaining" in dapim (50), '
+              'matching the Est. finish basis — not amudim.',
+        );
+        expect(
+          find.text('100'),
+          findsNothing,
+          reason: 'The amud (leaf) count must not leak into a daf-paced track.',
+        );
+      },
+    );
+  });
+
   group('Track Detail — differentiated bulk-prior tile (Task #16)', () {
     testWidgets(
       'bulk-prior tile uses outlined/secondary styling with new "previously learned" copy',

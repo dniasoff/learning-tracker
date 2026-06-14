@@ -1,115 +1,87 @@
-# Scope: Daf as the natural display unit for Talmud (amud → daf rollup)
+# Scope: Daf as the learning & display unit for Talmud (amud → daf)
 
-**Status:** Scoping / awaiting product sign-off
-**Author:** loop (2026-06-14)
-**Origin:** DSWEEP finding — track-detail "Items remaining 5349" shows *amudim* for a
-Talmud Bavli track whose goal is "7 **daf**/week". For daf-based learning the natural
-unit is the **daf**; two amudim (a/b) should roll up to one daf in user-facing counts.
+**Status:** Scoped, product decisions made (2026-06-14). Phase 1 in progress.
+**Origin:** DSWEEP finding — a daf-paced Bavli track shows "Items remaining 5349" in
+*amudim*. For Talmud the unit a learner thinks in is the **daf**.
 
----
+## Product model (decided with Daniel)
 
-## 1. Problem
+The unit hierarchy has TWO levels that must each be honored:
 
-The Talmud is *learned and counted in dapim*, but the app models, stores, and in several
-places *displays* the **amud** (half-daf) as the unit. A user doing Daf Yomi sees "5349
-items remaining" (amudim) instead of "~2711 dapim", and pace reads as "X items/day" rather
-than "X dafim/day". This is a leaky abstraction: the amud is an internal storage unit, not
-the unit a learner thinks in.
+- **Amud = the atomic / common unit.** **Lifetime & cross-track aggregates stay in amudim.**
+  Rationale: lifetime spans *all* tracks; a learner may have a daf track AND an amud track.
+  Mixing "dapim" and "amudim" in one aggregate is confusing and unsustainable, so the
+  aggregate uses the common denominator — the amud (1 daf = 2 amudim). **No change to
+  lifetime counts** (they already show leaf = amud).
+- **Daf = the track unit for a daf track.** A daf track *presents, paces, counts, and is
+  marked-done in dapim*. When showing "what to learn", show **one daf**, not two amudim —
+  combine them. **The daf is the unit of marking**: marking a daf done completes both
+  amudim in one action. A structurally single-amud daf is **still one daf** (never present
+  or count a lone amud to the user in a daf track).
 
-This is **specific to curricula whose leaf is an amud** — i.e. **Talmud Bavli** (L1=Masechta,
-L2=Daf, **L3=Amud=leaf**). For other curricula the leaf *is* the natural unit (a mishna, a
-pasuk, a halacha, a seif) and needs no rollup.
+**Breadth:** Bavli only (the only amud-leaf curriculum). Other curricula keep their natural
+leaf unit. Yerushalmi's mislabeled "daf" (it's modeled Perek→Halacha) is a **separate**
+content/label fix, out of scope.
 
-## 2. Current model (verified in code)
+## Current state (verified in code)
 
-| Layer | Behaviour | Evidence |
-|---|---|---|
-| Content hierarchy (Bavli) | L1=Masechta, L2=Daf (number), L3=Amud (`a`/`b`) = **leaf** | `build/seeded_content/bavli.json`; `content_item.dart` |
-| Completion | **One `completion_events` row per amud (leaf sefariaRef)** — natural key `(profileId, sefariaRef, stageId, trackType, curriculumId)`. A daf is never a stored unit. | `core/database/tables/completion_events.dart`; `features/learning/data/completion_writer.dart` |
-| Scheduler pacing | **Already daf-aware**: when `goal.paceGranularity == 'daf'` the daily batch is *all amudim under the next N dapim* ("1 daf/day" emits the whole daf). | `scheduler/domain/services/scheduler_engine.dart`; `SchedulerContentItem.coarseUnitKey` |
-| Daily task | unit = leaf (amud); carries seeded `unitDisplayHe/En` collapsed-to-daf label ("חולין דף כ״ה") | `scheduler/domain/models/daily_task.dart` |
-| Reader nav | prev/next steps **amud-by-amud** (same leaf depth) | `content_browsing/.../content_providers.dart` `adjacentContentRefsProvider` |
-| Add-track wizard | User **picks daf vs amud** (Bavli defaults to `daf`, fine choice `amud`); projected finish already counts in the chosen unit | `tracks/setup/.../steps/step_goal.dart`, `goal_cards.dart`, `paceUnitOptionsFor()` |
+Storage is **amud-atomic** and stays that way (no migration):
+- Completion = one `completion_events` row per amud leaf — `completion_writer.dart`.
+- Bavli hierarchy L1=Masechta, L2=Daf, **L3=Amud=leaf** — `bavli.json`.
 
-### Rollup infrastructure that already exists (reusable)
-- `collapseAmudToDaf(breadcrumb)` — strips the "› Amud a" leaf for display — `dashboard/.../dashboard_helpers.dart`.
-- `programUnitDayLabel(task)` — seeded collapsed daf label — same file.
-- `scopedCoarseUnitCountProvider(curriculumId)` — **distinct daf count** (collapses leaf→parent) — `settings/.../curriculum_scope_providers.dart` (added in the deferred-fix wave).
-- `SchedulerContentItem.coarseUnitKey` — groups leaves by their coarse parent.
-- `PaceGranularity { perek, daf, seif }` + `paceUnitOptionsFor(curriculumId)`.
+The **learn/mark flow is currently amud-atomic** (this is the gap, not display-only):
+- Scheduler batches a daf's amudim into one *day* BUT emits **two separate `DailyTask`s**
+  (2a, 2b) — `scheduler_engine.dart:268-308`.
+- Dashboard/learning list shows **2 task cards per daf**; tapping opens a single amud —
+  `active_track_card.dart`, `learning_screen.dart`, `daily_task_card.dart`.
+- Reader shows **one amud**, prev/next steps **amud-by-amud**, mark-complete commits a
+  **single** amud — `text_display_screen.dart:564-596,~56,~86`; `adjacentContentRefsProvider`.
+- All Bavli dapim currently have 2 amudim; single-amud handling is forward-compatible
+  (`coarseUnitKey` already groups a coarse unit with any leaf count).
 
-## 3. Surfaces inventory (what still shows amud)
+Already daf-correct (reuse): scheduler **paces** in dafim; program dashboard "today" pill
+collapses to daf (`collapseAmudToDaf`); `scopedCoarseUnitCountProvider` = distinct daf count;
+add-track wizard pace step (daf default, projected finish in daf); all **percentages**.
 
-| # | Surface | File:line | Current unit | Target |
-|---|---|---|---|---|
-| S1 | Track detail **Items remaining** | `track_detail_screen.dart:~436` (src `scopedItemCountProvider`) | amud (leaf) | **daf** for Bavli — and align with the already-daf "Est. finish" on the same card |
-| S2 | Track detail **Required / Actual pace** ("X items/day") | `track_info_card.dart:~160,175` (src `PaceCalculator`) | amud/day, unlabeled | **daf/day** + unit-labeled ("dafim/day") |
-| S3 | Lifetime Knowledge **"N items learned"** + per-curriculum **"X of Y"** | `lifetime_knowledge_screen.dart:~224`; `curriculum_breakdown_list.dart:~186` | amud (leaf) | **daf** for Bavli |
-| S4 (opt) | Dashboard **self-paced "current focus"** pill | `active_track_card.dart:~171` | leaf ref | daf-collapsed (program pill already is) |
+## Phased plan (by risk)
 
-**Already correct (no change):** add-track wizard pace step; Est. finish (uses coarse count);
-program dashboard "today" pill (collapses to daf); daily-task batching; all **percentages**
-(proportion, unit-independent); task-count chips ("2 today").
+### Phase 1 — track "Items remaining" in the pace unit (display; LOW risk) ← SHIPPED
+Honors "track shows daf, lifetime stays amudim". Infra already exists.
+- **S1** Track-detail **Items remaining** → the goal's pace unit (daf for a daf-paced Bavli
+  track), mirroring the already-daf "Est. finish" via `scopedCoarseUnitCountProvider`.
+  `track_detail_screen.dart`. (Generic: follows the goal's granularity, so it's coherent
+  with the estimate on the same card; lifetime is separate and stays amudim.)
+- **Required pace** for a *pace* goal already shows the user's stated daf value
+  ("7 · Per week") — no change. Only the **actual-velocity** number is still amud/day →
+  folded into Phase 2 (needs the amud→daf ratio + a "{n} daf/day" label).
+- **S3 Lifetime/progress** — **explicitly unchanged** (stays amudim, the common unit).
+- Tests: items-remaining-in-daf for a daf-paced track; stays leaf for fine/other tracks.
 
-## 4. Design
+### Phase 2 — daf-atomic daily task, marking & pace velocity (core flow; MED-HIGH risk) ← needs its own wave
+"Present one daf, mark the daf." Also: **actual-pace velocity** → daf/day (× coarse/leaf
+ratio) with a "{n} daf/day" label for a daf track (`track_info_card.dart`).
+- Scheduler emits **one DailyTask per daf** carrying both amud refs (or a daf-keyed task),
+  for daf-granularity tracks — `scheduler_engine.dart`, `daily_task.dart`.
+- Mark-complete on a daf task commits **both amudim atomically** via
+  `completion_writer.commitBatch` — `mark_completion_use_case.dart`, the dashboard/reader
+  mark handlers. (Single-amud daf → commits its one amud, still "the daf".)
+- Dashboard/learning list shows **one card per daf**.
+- Heavy test + on-device verification (core learning flow).
 
-### Principle — "natural display unit" per curriculum
-Introduce a single source of truth: each curriculum has a **natural display unit** for
-user-facing counts. Bavli → **daf** (roll up amudim); all others → leaf (mishna/pasuk/
-halacha/seif — unchanged). This is a *display/aggregation* concept layered on the unchanged
-amud-level storage — **no data-model or completion migration**.
+### Phase 3 — reader presents/navigates by daf (MED risk) ← after Phase 2
+- For a daf track the reader shows the daf (both amudim) with a single "mark daf complete";
+  prev/next steps **daf-by-daf** — `text_display_screen.dart`, `adjacentContentRefsProvider`
+  (needs track-granularity context, since the reader is also used for free browsing where
+  amud nav stays correct).
 
-Concretely: a `curriculumDisplayUnit(curriculumId)` + count helpers that the four surfaces
-read, backed by the existing `coarseUnitKey` collapse for Bavli and identity for the rest.
+## Risks / notes
+- No storage migration (completion stays amud-level; daf is an aggregation/UX construct).
+- Reader is shared by daily-learning AND free browsing — daf nav must be gated to daf-track
+  learning context, not applied to browsing.
+- Test churn: Phase 1 ≈ a few count/label tests; Phase 2/3 touch scheduler + completion +
+  reader (larger).
 
-### The one real semantic decision — partial dapim
-A daf has two amudim. When counting **learned/remaining dapim**, how is a daf with only
-**one** amud done treated?
-- **(A) Strict** — a daf counts as learned only when **both** amudim are done. "X of Y dafim"
-  = fully-complete dapim. Cleanest meaning; a half-done daf shows as not-yet-learned.
-- **(B) Touched** — a daf counts once **any** amud is done. Counts converge faster but
-  "learned" overstates.
-Recommendation: **(A) Strict** for "learned/remaining" counts (matches "I finished the daf"),
-while **pace** (S2) is rate-of-progress and can stay amud-derived then ÷2 to dafim/day
-(a fractional rate like "3.5 daf/day" is fine, or round for display).
-
-### Scope-breadth options
-- **Tier 1 (minimal):** S1 + S2 — fixes the reported track-detail inconsistency only.
-- **Tier 2 (recommended):** S1 + S2 + S3 — daf everywhere a Bavli **count** is shown
-  (track + progress/lifetime). Coherent; this is what "daf not amud" really means.
-- **Tier 3:** + S4 self-paced pill — full parity with program tracks.
-
-## 5. Phased plan (Tier 2)
-
-1. **Core helper** — `curriculumDisplayUnit(id)` + `dafFromAmud` rollup; reuse
-   `coarseUnitKey`. Add `learnedDisplayUnitCount` / `totalDisplayUnitCount` (strict-daf for
-   Bavli, leaf otherwise) next to the existing leaf counters. *(core, well-tested)*
-2. **S1 Items remaining** — swap to display-unit count for Bavli; align with Est. finish.
-3. **S2 Pace** — thread `paceGranularity`/display-unit into `PaceCalculator` output + label
-   strings ("{n} daf/day" — new ICU plural keys, en+he).
-4. **S3 Lifetime/progress counts** — daf-aware `learnedLeafCount`/`totalLeafCount` variants
-   for Bavli in `lifetimeHeaderCountersProvider` + `curriculum_breakdown_list`.
-5. **(Tier 3) S4** — apply `collapseAmudToDaf` to the self-paced focus pill.
-6. **Tests** — unit tests for strict-daf rollup (full/partial/edge), widget tests per surface
-   in en+he; on-device verify a Bavli track shows ~2711 dafim remaining + "daf/day" pace.
-
-## 6. Risks / notes
-- **No storage migration** — purely display/aggregation; completion stays amud-level, so
-  existing data and sync are untouched. Low blast radius.
-- **Percentages unaffected** (ratios are unit-independent) — avoids double-work.
-- **Yerushalmi caveat:** modeled as Perek→Halacha (leaf=halacha), but `paceUnitOptionsFor`
-  forces its coarse label to `daf`. That label↔model mismatch is **out of scope here**;
-  flagged for a separate content/label fix.
-- **Siyumim** unit references not fully inventoried — confirm during impl whether any
-  siyum/milestone copy says "amud".
-- Test churn: any test asserting an amud-based count on S1–S3 must update.
-
-## 7. Effort (rough)
-Tier 2 ≈ 1 focused implementation wave: ~6–8 files + l10n + tests, comparable to the
-deferred-fix wave. Tier 1 ≈ half that. No migration.
-
-## 8. Open decisions (need product sign-off)
-1. **Breadth:** Tier 1 / **Tier 2 (recommended)** / Tier 3?
-2. **Partial daf:** **(A) Strict** (recommended) vs (B) Touched for learned/remaining counts.
-3. **Scope of "daf-based":** Bavli only (recommended — it's the only amud-leaf curriculum),
-   or also force Yerushalmi's "daf" label (needs the separate content fix first)?
+## Effort
+Phase 1 ≈ small (mostly wiring existing infra). Phase 2 ≈ a focused wave (scheduler + batch
+completion + list UI). Phase 3 ≈ medium (reader). Phases 2–3 each warrant their own
+implement→ci→on-device-verify cycle.
