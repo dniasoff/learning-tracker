@@ -5,6 +5,7 @@ import 'package:learning_tracker/app/router/persistent_switcher_scaffold.dart';
 import 'package:learning_tracker/app/sync_runtime/sync_lifecycle_observer.dart';
 import 'package:learning_tracker/core/analytics/streak_milestone_analytics_observer.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+import 'package:learning_tracker/core/navigation/root_scaffold_messenger.dart';
 import 'package:learning_tracker/core/navigation/router_provider.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
@@ -65,6 +66,7 @@ class _LearningTrackerAppState extends ConsumerState<LearningTrackerApp>
 
     return SyncLifecycleObserver(
       child: MaterialApp.router(
+        scaffoldMessengerKey: rootScaffoldMessengerKey,
         onGenerateTitle: (context) =>
             AppLocalizations.of(context)?.appTitle ?? 'Torah Learning Tracker',
         theme: AppTheme.themeFor(

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/app/router/app_router.dart';
 import 'package:learning_tracker/app/router/router_provider.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+import 'package:learning_tracker/core/navigation/root_scaffold_messenger.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
@@ -161,7 +162,12 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!mounted) return;
         final l10n = AppLocalizations.of(context)!;
-        final messenger = ScaffoldMessenger.of(context);
+        // Use the ROOT messenger (keyed on MaterialApp.router): the shell build
+        // context sits above AutoTabsScaffold, so ScaffoldMessenger.of(context)
+        // resolves to an ancestor messenger with no visible host and the banner
+        // silently no-ops.
+        final messenger = rootScaffoldMessengerKey.currentState;
+        if (messenger == null) return;
         messenger.showMaterialBanner(
           MaterialBanner(
             content: Text(l10n.upgradePromptOnlineBody),
