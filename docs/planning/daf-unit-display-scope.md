@@ -100,7 +100,32 @@ form doesn't reflect the saved `goal.paceGranularity`. Folded into the remaining
 - Dashboard/learning list shows **one card per daf**.
 - Heavy test + on-device verification (core learning flow).
 
-### Phase 3 — reader presents/navigates by daf (MED risk) ← after Phase 2
+### ✅ 2b (shipped) — one card per daf in the daily list
+coarsePacedTrackIdsProvider + collapseDafTasks collapse a daf's amudim to one
+representative card (Learn vs Chazara stay separate; per-track); the card shows the daf
+label (seeded unitDisplay* or breadcrumb with the trailing amud collapsed). Applied
+NON-BLOCKING in scheduler + learning screens (degrade to ungrouped if goals/content not
+ready). Counts now reflect dapim; lifetime stays amudim. +tests.
+
+### ✅ Edit-Goal (shipped) — pre-selects the saved pace unit (daf, not amud)
+GoalSetupForm now restores goal.paceGranularityKey instead of always defaulting to amud.
+
+### Phase 3 — reader presents/navigates by daf (MED risk) — EVALUATED, see below
+
+**Decision (2026-06-14): the daf reader flow is already coherent after 2a+2b; a stacked
+both-amudim reader rewrite is NOT warranted now.** Reasoning:
+- The daily list shows ONE daf card (2b); tapping it opens the reader at the daf's first
+  amud; prev/next reads amud-by-amud (the authentic way a Talmud page is read — both amudim
+  are distinct pages); the breadcrumb identifies the daf; "Mark complete" completes the
+  WHOLE daf (2a) and advances to the NEXT daf. So "present the daf / navigate by daf" is
+  substantially met.
+- A "both amudim stacked on one screen" view is a debatable UX change (very long scroll vs.
+  natural paging), rewrites the core SHARED reader (also used for free browsing), and can't
+  be safely unit-tested — high regression risk for marginal benefit.
+- OPTIONAL future enhancement (needs its own focused, on-device-heavy pass): a true
+  daf-page view (both amudim + single mark) gated strictly to daf-track learning context.
+
+### Phase 3 (original sketch — superseded by the decision above)
 - For a daf track the reader shows the daf (both amudim) with a single "mark daf complete";
   prev/next steps **daf-by-daf** — `text_display_screen.dart`, `adjacentContentRefsProvider`
   (needs track-granularity context, since the reader is also used for free browsing where

@@ -11,6 +11,7 @@ import 'package:learning_tracker/core/widgets/learning_date_picker_theme.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
 import 'package:learning_tracker/features/scheduler/presentation/widgets/hebrew_date_picker.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Screen for creating or editing a learning goal.
@@ -126,6 +127,22 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
     // naturally than 1 pasuk/day for most learners).
     if (_isPasukPerekCurriculum) return 'perek';
     return 'item';
+  }
+
+  /// Scope total expressed in the SELECTED pace unit: the coarse-unit count
+  /// (dapim/perakim) when a coarse unit (daf/perek/seif) is selected, else the
+  /// leaf total. Keeps the "X of Y" count and the projected-completion estimate
+  /// consistent with the chosen unit (a daf goal must read in dapim, not amudim).
+  int? get _effectiveTotal {
+    final isCoarse = PaceGranularity.fromStorageKey(_paceGranularity) != null;
+    if (!isCoarse) return widget.totalItems;
+    final coarse = ref
+        .watch(scopedCoarseUnitCountProvider(widget.curriculumId))
+        .asData
+        ?.value;
+    // Fall back to the leaf total until the coarse count is loaded (>0); keeps
+    // the count sane when content isn't available yet (and in widget tests).
+    return (coarse != null && coarse > 0) ? coarse : widget.totalItems;
   }
 
   /// Whether the curriculum supports a unit picker on the goal screen.
@@ -321,7 +338,7 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
           ),
         ),
         // Daily pace summary (deadline mode)
-        if (_targetDate != null && widget.totalItems != null) ...[
+        if (_targetDate != null && _effectiveTotal != null) ...[
           const SizedBox(height: 16),
           Builder(
             builder: (context) {
@@ -335,7 +352,7 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
                   ),
                 );
               }
-              final remainingItems = (widget.totalItems! * _targetPercent / 100)
+              final remainingItems = (_effectiveTotal! * _targetPercent / 100)
                   .ceil();
               final pace = (remainingItems / daysRemaining).ceil();
               return Card(
@@ -442,11 +459,11 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
           },
         ),
         // Projected completion card
-        if (widget.totalItems != null) ...[
+        if (_effectiveTotal != null) ...[
           const SizedBox(height: 16),
           Builder(
             builder: (context) {
-              final remainingItems = (widget.totalItems! * _targetPercent / 100)
+              final remainingItems = (_effectiveTotal! * _targetPercent / 100)
                   .ceil();
               final dailyRate = _paceUnit == 'per_day'
                   ? _paceValue.toDouble()
@@ -515,13 +532,13 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
                   // Target percentage slider
                   Text(
                     // R1-(7): use l10n so Hebrew sees translated text.
-                    widget.totalItems != null
+                    _effectiveTotal != null
                         ? AppLocalizations.of(
                             context,
                           )!.goalTargetPercentWithCount(
                             _targetPercent.round(),
-                            (widget.totalItems! * _targetPercent / 100).ceil(),
-                            widget.totalItems!,
+                            (_effectiveTotal! * _targetPercent / 100).ceil(),
+                            _effectiveTotal!,
                           )
                         : AppLocalizations.of(
                             context,

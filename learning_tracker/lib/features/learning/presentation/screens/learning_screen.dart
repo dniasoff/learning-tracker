@@ -2,6 +2,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:learning_tracker/core/content/content_grouping.dart';
 import 'package:learning_tracker/core/content/content_index.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -375,9 +376,19 @@ class _LearnTaskCard extends ConsumerWidget {
     // the rest of the breadcrumb (e.g. "חולין › דף כה › עמוד א").
     const breadcrumbSep = ' › ';
     final sepIdx = rendered.indexOf(breadcrumbSep);
-    final taskTitle = sepIdx == -1
+    var taskTitle = sepIdx == -1
         ? rendered
         : rendered.substring(sepIdx + breadcrumbSep.length);
+    // For a daf-paced (coarse) track this card represents the whole daf, so name
+    // the daf — the seeded day label if present, else drop the trailing amud.
+    final coarseIds = ref.watch(coarsePacedTrackIdsProvider).asData?.value;
+    if (coarseIds != null && coarseIds.contains(task.trackId)) {
+      final useHebrew = domainTermLabels(ref).isHebrew;
+      final seeded = useHebrew ? task.unitDisplayHe : task.unitDisplayEn;
+      taskTitle = (seeded != null && seeded.isNotEmpty)
+          ? seeded
+          : collapseAmudLeaf(taskTitle);
+    }
     final isOverdue = task.isOverdue;
     final stageLabel = domainTermLabels(
       ref,

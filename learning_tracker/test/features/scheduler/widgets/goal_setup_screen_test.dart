@@ -9,6 +9,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/presentation/screens/goal_setup_screen.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -317,6 +318,48 @@ void main() {
       expect(find.text('דפים'), findsNothing);
     });
 
+    testWidgets('daf-paced goal shows the count in dapim, not amudim', (
+      tester,
+    ) async {
+      // FR fix: the "X of Y" count + projection use the SELECTED unit. For a
+      // daf goal they must read in dapim (coarse count), not amudim (leaf).
+      final dafGoal = GoalEntity(
+        curriculumId: CurriculumId.bavli,
+        goalType: 'pace',
+        paceValue: 7,
+        pacePeriod: 'per_week',
+        paceGranularity: PaceGranularity.daf,
+        createdAt: DateTime.utc(2026, 1, 1),
+        updatedAt: DateTime.utc(2026, 1, 1),
+      );
+      await tester.pumpWidget(
+        _makeApp(
+          overrides: [
+            useHebrewTermsProvider.overrideWithValue(false),
+            currentTransliterationVariantProvider.overrideWithValue(
+              TransliterationVariant.ashkenazi,
+            ),
+            // 5422 amudim collapse to 2711 dapim.
+            scopedCoarseUnitCountProvider(
+              CurriculumId.bavli,
+            ).overrideWith((ref) async => 2711),
+          ],
+          home: GoalSetupScreen(
+            curriculumId: CurriculumId.bavli,
+            existingGoal: dafGoal,
+            totalItems: 5422,
+          ),
+        ),
+      );
+      // Let the coarse-count FutureProvider resolve.
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 50));
+
+      // The material count reads dapim (2711), never the amud total (5422).
+      expect(find.textContaining('2711'), findsWidgets);
+      expect(find.textContaining('5422'), findsNothing);
+    });
+
     testWidgets('editing a daf-paced goal pre-selects Daf (not Amud)', (
       tester,
     ) async {
@@ -339,6 +382,9 @@ void main() {
             currentTransliterationVariantProvider.overrideWithValue(
               TransliterationVariant.ashkenazi,
             ),
+            scopedCoarseUnitCountProvider(
+              CurriculumId.bavli,
+            ).overrideWith((ref) async => 2711),
           ],
           home: GoalSetupScreen(
             curriculumId: CurriculumId.bavli,
