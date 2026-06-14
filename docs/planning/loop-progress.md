@@ -788,3 +788,24 @@ device-driven (commit 95ede74a, make ci GREEN 9900 pass):
   hero card → RecentActivityRoute.) Plural ("1 day") + RTL name-bidi fixes are deterministic + CI-covered.
 - ===== "fix all deferred items + full sweep" COMPLETE: 4/4 deferred items fixed & on-device-verified; full regression
   sweep run; 3 new sweep findings fixed (1 verified on-device, 2 green); all on dev under green CI. =====
+
+### COMPLETE TESTING + E2E (2026-06-14) — make ci green + 3-device E2E sweep
+- make ci GREEN (9979 pass, 0 fail) on HEAD.
+- 3-device E2E vision sweep (workflow wv36l8s4b): 5560=API28 FRESH (onboarding/add-track/settings/browse),
+  5556=API36 English (dashboard/track-detail/reader/progress), 5558=API29 Hebrew (gamification/lifetime/reader/profiles/redeem).
+  12 screens, 42 findings (2 P1, 40 P2). All 3 devices survived (5560 swiftshader + lighter API28 fixed the
+  3-emulator contention that killed lt_api34). DAF-UNIT WORK CONFIRMED CLEAN E2E: daf-atomic completion works
+  (one tap clears the daf, advances to next daf), one-card-per-daf + daf labels, items-remaining/pace/edit-goal in
+  dapim, lifetime scope-credit correct, gematriya correct, free-browse + reader correct, mark buttons not clipped.
+- FIXED (clear P1): hardcoded 'Overdue'/'OVERDUE' badge → l10n (daily_task_card → l10n.overdue, learning_screen
+  _LearnTaskCard → l10n.bubbleOverdue; he = באיחור/איחור). daily_task_card_test got localization delegates.
+- PRE-EXISTING cosmetic findings surfaced (NOT regressions from the daf work) — triaged for follow-up:
+  · Edit-Goal pace helper "How many {unit} per Per week?" — duplicated 'per Per' (template + period label).
+  · achievements hero "0 / 0פרסים" — missing space before פרסים (RTL).
+  · Backup&Sync card title ellipsizes "Backup & Sy…" at font 1.3 (single-line, no wrap).
+  · Progress hub: 'Siyumim & Milestones' nav row stays Latin while the stat card honors Hebrew-terms toggle (same-screen 2 scripts).
+  · Add-track 'Join a Program?': 'פרק יומי' in Hebrew script while sibling 'Mishnah Yomis' transliterated (EN mode).
+  · Add-track scope: Moed seder gloss clipped 'Festivals &' (truncated not wrapped).
+  · Onboarding: 'Create Offline Account' still requires email+password; 'Welcome Back!' shown to first-run users;
+    display-name not carried into profile-name field; offline checkbox default unchecked despite no network — onboarding
+    UX, likely partly intended (local accounts carry local credentials), needs product decision.

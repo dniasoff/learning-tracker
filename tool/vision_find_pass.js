@@ -6,10 +6,8 @@ export const meta = {
 
 const ADB = '/home/daniel/bin/adb'
 // EDIT THIS BLOCK PER BATCH (args wiring unavailable for scriptPath runs)
-const BATCH = 'DSWEEP'
-// ===== FULL REGRESSION SWEEP after the deferred-item fix wave (build 4e075e8a) =====
-// HOST-CONTENTION LESSON: run only 2 devices concurrently (5556 EN cloud, 5558
-// native Hebrew). Rounds of 2 (see the i += 2 loop below). 5554 is dead.
+const BATCH = 'E2E'
+// ===== FULL E2E across 3 devices (5556 EN, 5558 HE, 5560 fresh/API28). Rounds of 3. =====
 const SCREENS_FR1_ARCHIVED = [
   // ===== FINAL FULL RESWEEP — cross-cutting regression hunt over the most-fixed surfaces on build 5b3eeede =====
   // Device states: 5554=API34 English, cloud "Loop Test A" (RedeemKid/PinKid/Daniel + Talmid LoopChild);
@@ -29,18 +27,27 @@ const SCREENS_FR1_ARCHIVED = [
 ]
 
 const SCREENS = [
-  // ===== DSWEEP: broad regression pass after the deferred-item fixes =====
-  // 2 devices only (host-contention lesson). Rounds of 2 (i += 2 loop). Each
-  // agent ALSO double-checks the FR1 fixes still hold (no regression).
-  // ROUND 1
-  { slug: 'ds_track_detail_en', serial: 'emulator-5556', nav: 'Track detail + add-track ESTIMATE consistency (English). Adult/Parent mode → Manage Tracks. If no track exists, ADD one: Talmud Bavli, self-paced, full scope, goal pace = 7 per week using the COARSE unit (דף/daf, NOT amud). On the wizard pace step (step 6) NOTE the "Estimated finish" date. Create the track, open its Track Detail, and read the "Est. finish" row. PRIMARY CHECK (deferred fix #1): the two dates must now AGREE (same year, ~2033 — NOT an ~8-year-later ~2041). Report both dates. Also audit the detail card: Items remaining, Goal row, progress labels, no clipping at font 1.3.', controls: 'add-track wizard pace step estimate, track-detail Est. finish, items remaining, goal row, font 1.3' },
-  { slug: 'ds_dashboard_he', serial: 'emulator-5558', nav: 'NATIVE-HEBREW child dashboard regression (LoopChild). Audit the dashboard: stat cards (נקודות/ידע כולל/סיומים/רצף), points hero, statistics, today-missions, bottom nav — all Hebrew RTL, domain terms Hebrew SCRIPT, no English leak, no clipping, correct pluralization. Then open My Achievements via the red flame chip (top-left header) and confirm the progress-hero badge does NOT overlap the header (FR1 RTL fix) and the activity-calendar weekday headers are Hebrew letters (NOT Mon/Tue/Wed). font 1.0 + 1.3.', controls: 'stat cards, points hero, bottom nav, My Achievements badge, activity-calendar weekday headers, RTL, font 1.3' },
-  // ROUND 2
-  { slug: 'ds_track_mgmt_delete_en', serial: 'emulator-5556', nav: 'Track management + DELETE behaviour (English) — deferred fix #2. In Manage Tracks: with the profile having 2+ active tracks, open a track → Delete Track → CONFIRM the Archive/Delete dialog appears (Archive keep history / Delete and wipe / Cancel) and works. Then get the profile down to its LAST/SOLE active track and tap Delete Track → it must show "At least one curriculum must remain active" explanation IMMEDIATELY (no Archive/Delete dialog offered — the old "offered then refused" bug). Report both behaviours. font 1.3.', controls: 'Delete Track dialog (multi-track), sole-track guard explanation, archive/wipe options, no offered-then-refused' },
-  { slug: 'ds_parent_pin_he', serial: 'emulator-5558', nav: 'NATIVE-HEBREW parent-PIN error (deferred fix #3). Trigger the Parent PIN entry/verify (e.g. switch child→parent via the mode chip, or Settings parent gate). Enter a WRONG 4-digit PIN. PRIMARY CHECK: the error must render in HEBREW (קוד שגוי) — NOT the raw English "Incorrect PIN". Also try the change-PIN confirm-mismatch path if reachable (should show הקודים אינם תואמים, not "PINs do not match"). Report exactly what error text appears. Then enter the correct PIN 2580 to proceed. No English leak in the PIN UI.', controls: 'parent PIN keypad, wrong-PIN error (Hebrew), mismatch error, no English error leak' },
-  // ROUND 3
-  { slug: 'ds_settings_he', serial: 'emulator-5556', nav: 'Settings root regression (English + Hebrew via cmd-locale). Adult/Parent → Settings. Verify NO "App Language" tile (intentional), every tile localized + icons render, Backup&Sync card. Then `cmd locale set-app-locales com.jcom.torah.learning_tracker --locales he`, relaunch, re-audit Hebrew RTL (translated tiles, domain terms Hebrew script), RESET `--locales \'\'`. font 1.3, no clipping.', controls: 'all settings tiles, no app-language tile, Backup&Sync, en+he, font 1.3' },
-  { slug: 'ds_font_scale_he', serial: 'emulator-5558', nav: 'FONT-SCALE verification (deferred item #4) on the NATIVE-HEBREW device + Lifetime screens. FIRST capture a Lifetime Knowledge screen (Parent mode PIN 2580 → Progress → ידע כולל, drill the tree) at font_scale 1.0. THEN set `settings put system font_scale 1.3`, force-stop + relaunch the app, re-capture the SAME screen. PRIMARY CHECK: the text must be VISIBLY LARGER at 1.3 than at 1.0 (confirming the app honors OS font scaling; the FR1 "1.3 not honored" note was suspected to be a test-env artifact). Report whether text grew, with both screenshots. Also confirm Hebrew tree labels render Hebrew script (regression of the FR1 Hebrew-label fix). RESET `settings put system font_scale 1.0` when done.', controls: 'lifetime tree at 1.0 vs 1.3 (does text grow?), Hebrew labels, font-scale honored' },
+  // ===== E2E "WHOLE BANG LOT" — full-app end-to-end across 3 devices, rounds of 3 =====
+  // Device roles: 5560 = API28 FRESH install (onboarding/first-run, builds its own
+  // state); 5556 = API36 English (has a daf-paced Bavli track + cloud account);
+  // 5558 = API29 NATIVE HEBREW (child LoopChild, gamification/lifetime data).
+  // Each agent drives the REAL flow end-to-end and vision-judges every state.
+  // ROUND 1 — entry / dashboards
+  { slug: 'e2e_onboarding_fresh', serial: 'emulator-5560', nav: 'FRESH-INSTALL ONBOARDING (this device has NO account/profile yet). Launch the app from cold. Drive the first-run/onboarding flow end-to-end: welcome/intro screens → choose the LOCAL/offline path (enable airplane mode first if it tries to force cloud: `cmd connectivity` or toggle wifi/data off, then on after) → create an ADULT profile (name "E2E", set a Parent PIN 1234) → land on the dashboard/empty state. Vision-judge every step (no clipping/overflow, buttons reachable, copy sensible, no raw tokens). Report each screen + where you ended up.', controls: 'welcome/intro, local-vs-cloud path, profile creation, parent PIN setup, first dashboard/empty state' },
+  { slug: 'e2e_dashboard_en', serial: 'emulator-5556', nav: 'ENGLISH dashboard + daily learning E2E (adult "Daniel" profile, has a daf-paced Bavli track). Enter the adult profile → Dashboard: audit active-track card (progress, today/overdue chips), stat cards, greeting. Then the Learning tab → daily tasks: confirm ONE card per daf naming the daf ("Berakhos › Daf N", no "Amud a"). Tap it → reader. Vision-judge all (no clipping at font 1.0; sane numbers; daf labels).', controls: 'dashboard active-track card, stat cards, greeting, daily daf cards (one per daf, daf label), nav' },
+  { slug: 'e2e_dashboard_he', serial: 'emulator-5558', nav: 'NATIVE-HEBREW child dashboard + gamification E2E (LoopChild). Dashboard: stat cards (נקודות/ידע כולל/סיומים/רצף), points hero, statistics, today-missions, bottom nav — all Hebrew RTL, domain terms Hebrew SCRIPT, no English leak, correct pluralization. Open My Achievements via the red flame chip: progress-hero badge must NOT overlap the header; activity-calendar weekday headers must be Hebrew letters (NOT Mon/Tue). font 1.0 + 1.3.', controls: 'stat cards, points hero, missions, My Achievements badge RTL, activity-calendar Hebrew weekdays, font 1.3' },
+  // ROUND 2 — content creation / management
+  { slug: 'e2e_add_track', serial: 'emulator-5560', nav: 'ADD-TRACK WIZARD end-to-end (on the profile created in round 1; if onboarding did not complete, create an adult profile first). Adult mode → add a track: pick a curriculum (Mishnayos or Chumash), Self-paced, scope, study days, chazara default, a PACE goal, skip prior-learning, finish. Vision-judge EVERY wizard step (step counter sane, no clipping, controls reachable, projected-finish shows). Confirm the track appears in Manage Tracks afterward.', controls: 'curriculum picker, program/self-paced, scope, study days, chazara, pace step, projected finish, finish → track created' },
+  { slug: 'e2e_track_detail_en', serial: 'emulator-5556', nav: 'ENGLISH Track Detail + Manage Tracks + Edit-Goal E2E (daf-paced Bavli track). Manage Tracks → open the Bavli track → Track Detail: "Items remaining" in DAPIM (~2684, not ~5349 amudim), "Actual/Required pace" in daf-based units, Est. finish, progress labels. Open Edit Goal: the unit toggle shows DAF selected + count in dapim. font 1.3, no clipping. Report the exact numbers.', controls: 'track detail items-remaining (daf), pace (daf/day), est finish, edit-goal daf unit + daf count, font 1.3' },
+  { slug: 'e2e_lifetime_he', serial: 'emulator-5558', nav: 'NATIVE-HEBREW Lifetime Knowledge + Marking E2E (Parent mode via mode chip + PIN 2580). Progress → ידע כולל: drill the tree (Hebrew-script labels, sane counts — collision fix held), provenance. Then Lifetime Marking: select a unit, save, confirm it credits ONLY the right scope (no cross-scope inflation), Hebrew labels + gematriya correct. font 1.3.', controls: 'lifetime tree Hebrew labels, sane counts, drill, lifetime-marking scope credit, gematriya, font 1.3' },
+  // ROUND 3 — reading / completion / settings
+  { slug: 'e2e_reader_complete_en', serial: 'emulator-5556', nav: 'ENGLISH reader + daf-atomic completion E2E. From the daily list (Bavli daf track) open today\'s daf in the text reader. Audit: text body, AppBar breadcrumb (names the daf), prev/next arrows, mark-complete button not clipped by nav inset. Tap "Mark complete" ONCE → confirm it completes the WHOLE daf and advances to the NEXT daf (not the sibling amud). Report before/after. font 1.0.', controls: 'reader text, breadcrumb, prev/next, mark-complete (daf-atomic), advance to next daf' },
+  { slug: 'e2e_settings_en', serial: 'emulator-5560', nav: 'SETTINGS root E2E (English, on the freshly-onboarded profile). Adult → Settings: audit EVERY tile (Calendar Preference, Nusach, Hebrew Terms, Notifications, Display/font, Backup & Sync card, Manage Tracks/Goals, Tutors, About). VERIFY no "App Language" tile (intentional). All localized, icons render (no blank discs), nothing clipped at font 1.3. Open Backup & Sync + a couple sub-tiles. Report any defect.', controls: 'all settings tiles, no app-language tile, Backup&Sync, sub-tiles, font 1.3' },
+  { slug: 'e2e_reader_he', serial: 'emulator-5558', nav: 'NATIVE-HEBREW reader E2E (LoopChild child mode → Learning → today\'s task → text reader). Audit: Hebrew text body (nikud per pref), AppBar breadcrumb (nusach-correct, RTL, not clipped), prev/next mirrored, bottom mark-complete/next NOT clipped by the nav-bar inset. Toggle nikud in settings and confirm the reader reflects it. font 1.3.', controls: 'Hebrew text body, nikud toggle, breadcrumb RTL, prev/next mirrored, mark/next buttons safe-area, font 1.3' },
+  // ROUND 4 — progress / profiles / rewards / cross-cutting
+  { slug: 'e2e_progress_en', serial: 'emulator-5556', nav: 'ENGLISH Progress hub E2E. Progress tab: overall stats, per-curriculum progress %, the dual-progress (track vs lifetime), recent activity (the "לימוד & חזרות" bar chart weekday axis — English here), streak calendar. Drill a curriculum. Vision-judge all (sane %, no clipping, no nonsense values). font 1.3.', controls: 'progress overall stats, per-curriculum %, dual progress, recent-activity bar chart, streak calendar, drill, font 1.3' },
+  { slug: 'e2e_profiles_he', serial: 'emulator-5558', nav: 'NATIVE-HEBREW profiles + redeem E2E. Profile picker ("מי לומד?"): profile cards, mode badges (מצב ילדים/מבוגרים), Add Profile, account/Talmid sections — Hebrew RTL, no English/placeholder leak. Then child Rewards/Redeem (מימוש פרסים): title correct, points balance, reward cards, redeem-guard when insufficient points. font 1.3.', controls: 'profile cards, mode badges, add-profile, account picker copy, redeem title/cards/guard, RTL, font 1.3' },
+  { slug: 'e2e_browse_fresh', serial: 'emulator-5560', nav: 'BROWSE CONTENT + free reader E2E (fresh profile). From the Learning/Browse section, browse the curriculum catalog (drill curriculum → masechta/sefer → daf/perek → leaf), open a text in the reader via free browse (NOT a daily task). Confirm browse navigation works, labels render, reader opens, prev/next steps amud-by-amud in free-browse. Vision-judge for clipping/overflow/nonsense. font 1.0.', controls: 'browse catalog drill-down, labels, free-browse reader, prev/next amud-by-amud, no daily-task context' },
 ]
 
 const RUBRIC = `VISION RUBRIC — for EVERY screenshot, judge it like a human and report each YES as a finding:
@@ -160,14 +167,14 @@ large text, populated vs empty). Return ONLY the structured report.`
 
 phase('DeepPass')
 const reports = []
-// run in rounds of 2 (only 2 healthy devices — host-contention lesson), one
-// agent per device per round, sequential rounds to keep host load manageable.
-for (let i = 0; i < SCREENS.length; i += 2) {
-  const round = SCREENS.slice(i, i + 2)
+// run in rounds of 3 (one agent per device per round, parallel), sequential
+// rounds to keep host load manageable across the 3 emulators.
+for (let i = 0; i < SCREENS.length; i += 3) {
+  const round = SCREENS.slice(i, i + 3)
   const r = await parallel(round.map(s => () =>
     agent(briefFor(s), { label: `b${BATCH}:${s.slug}`, phase: 'DeepPass', schema: FINDING_SCHEMA })))
   reports.push(...r.filter(Boolean))
-  log(`Batch ${BATCH}: round ${i / 2 + 1} done (${round.map(s => s.slug).join(', ')}).`)
+  log(`Batch ${BATCH}: round ${i / 3 + 1} done (${round.map(s => s.slug).join(', ')}).`)
 }
 
 const allFindings = reports.flatMap(r => (r.findings || []).map(f => ({ screen: r.screen, ...f })))

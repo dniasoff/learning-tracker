@@ -457,7 +457,7 @@ class _LearnTaskCard extends ConsumerWidget {
                               borderRadius: BorderRadius.circular(999),
                             ),
                             child: Text(
-                              'OVERDUE',
+                              AppLocalizations.of(context)!.bubbleOverdue,
                               style: theme.textTheme.labelSmall?.copyWith(
                                 fontWeight: FontWeight.w800,
                                 color: const Color(0xFFC22840),

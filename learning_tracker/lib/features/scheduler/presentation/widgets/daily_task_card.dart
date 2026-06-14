@@ -10,6 +10,7 @@ import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Card shown on the Daily Tasks list. Tapping opens the text page;
 /// the Mark Complete action lives on that page, not inline here.
@@ -150,7 +151,7 @@ class DailyTaskCard extends ConsumerWidget {
                                 borderRadius: BorderRadius.circular(999),
                               ),
                               child: Text(
-                                'Overdue',
+                                AppLocalizations.of(context)!.overdue,
                                 style: theme.textTheme.labelSmall?.copyWith(
                                   color: Colors.white,
                                   fontWeight: FontWeight.w800,
