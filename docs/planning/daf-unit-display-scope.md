@@ -142,3 +142,20 @@ both-amudim reader rewrite is NOT warranted now.** Reasoning:
 Phase 1 ≈ small (mostly wiring existing infra). Phase 2 ≈ a focused wave (scheduler + batch
 completion + list UI). Phase 3 ≈ medium (reader). Phases 2–3 each warrant their own
 implement→ci→on-device-verify cycle.
+
+### FINAL STATUS (2026-06-14) — daf-unit work COMPLETE
+All shipped to dev under green make ci and verified on-device (emulator-5556, daf-paced
+Bavli track):
+- Phase 1 — Items remaining in dapim (2684, not amudim). ✓
+- Phase 2a — daf-atomic marking: one tap completes the whole daf, advances to the next daf. ✓
+- Phase 2b — one card per daf in the daily list; card names the DAF (e.g. "ברכות › דף ד"),
+  no amud suffix; count reflects dapim. ✓
+- Phase 2c — actual pace in daf/day. ✓
+- Edit-Goal — Daf unit pre-selected; material count + projection in dapim (2684). ✓
+- Lifetime / Progress aggregate stays in amudim (the common cross-track unit) — confirmed
+  ("Total Items 5349" on the Progress stats is correct per the product model). ✓
+- Phase 3 (reader) — EVALUATED: the daf reader flow is coherent as-is (read amud-by-amud →
+  one mark completes the daf → next daf); a "both amudim stacked" reader is documented as an
+  OPTIONAL future enhancement (debatable UX, high core-reader risk), not done.
+Commits: ffba2a26 (P1) · 5e6ada50 (2a) · f8ec2828 (2c) · c6e28970 (Edit-Goal + 2b) ·
+053957a3 (daf labels + goal count + Phase 3 decision).
