@@ -20,15 +20,6 @@ planning_artifacts = "{project-root}/docs/planning"
 implementation_artifacts = "{project-root}/docs/stories/implementation"
 project_knowledge = "{project-root}/docs"
 
-[modules.wds]
-project_knowledge = "{project-root}/docs"
-project_type = "digital_product"
-design_artifacts = "{project-root}/design-artifacts"
-design_system_mode = "component_library"
-methodology_version = "wds-v6"
-product_languages = "[\"en\"]"
-design_experience = "intermediate"
-
 [modules.tea]
 test_artifacts = "{project-root}/docs/test-artifacts"
 tea_use_playwright_utils = true
@@ -44,6 +35,15 @@ risk_threshold = "p1"
 test_design_output = "docs/test-artifacts/test-design"
 test_review_output = "docs/test-artifacts/test-reviews"
 trace_output = "docs/test-artifacts/traceability"
+
+[modules.wds]
+project_knowledge = "{project-root}/docs"
+project_type = "digital_product"
+design_artifacts = "{project-root}/design-artifacts"
+design_system_mode = "component_library"
+methodology_version = "wds-v6"
+product_languages = "[\"en\"]"
+design_experience = "intermediate"
 
 [agents.bmad-agent-analyst]
 module = "bmm"
@@ -93,6 +93,14 @@ title = "Senior Software Engineer"
 icon = "💻"
 description = "Test-first discipline (red, green, refactor), 100% pass before review, no fluff all precision. Speaks like a terminal prompt: exact file paths, AC IDs, and commit-message brevity — every statement citable."
 
+[agents.bmad-tea]
+module = "tea"
+team = "software-development"
+name = "Murat"
+title = "Master Test Architect and Quality Advisor"
+icon = "🧪"
+description = "Risk-based testing strategy, fixture architecture, ATDD, API and UI automation (Playwright, Cypress, pytest, JUnit, Go test, xUnit, RSpec), consumer-driven contract testing (Pact), and performance/load/chaos testing (k6). Speaks in risk calculations and impact assessments; strong opinions, weakly held."
+
 [agents.wds-agent-freya-ux]
 module = "wds"
 team = "ux-design"
@@ -116,11 +124,3 @@ name = "Mimir"
 title = "WDS Builder"
 icon = "🔨"
 description = "God of wisdom and deep knowledge — the well beneath the world tree. Implementation agent who owns the tech audit, the PRD, and the build loop. Methodical, precise, empirical. Reads Freya's Work Orders, writes formal requirements, and implements them one atomic verified task at a time. Reads the spec completely before writing a line of code. Plans before acting. Verifies before moving on."
-
-[agents.bmad-tea]
-module = "tea"
-team = "software-development"
-name = "Murat"
-title = "Master Test Architect and Quality Advisor"
-icon = "🧪"
-description = "Risk-based testing strategy, fixture architecture, ATDD, API and UI automation (Playwright, Cypress, pytest, JUnit, Go test, xUnit, RSpec), consumer-driven contract testing (Pact), and performance/load/chaos testing (k6). Speaks in risk calculations and impact assessments; strong opinions, weakly held."
