@@ -42,6 +42,11 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
   // who later adds a profile starts back on Dashboard.
   bool _didJumpToSettings = false;
 
+  // Convert-on-reconnect prompt (offline-account back-up nudge): shown at most
+  // once per shell session, when a signed-in local-born account is confirmed
+  // online. Routes into the existing Upgrade-to-Cloud flow.
+  bool _upgradePromptShown = false;
+
   @override
   Widget build(BuildContext context) {
     // When the Firebase uid changes (account switch or sign-out), clear any
@@ -138,6 +143,46 @@ class _AppShellScreenState extends ConsumerState<AppShellScreen> {
       orElse: () => true,
     );
     final offlineBannerVisible = isCloudBorn && !isOnline;
+
+    // Convert-on-reconnect: a signed-in, credential-less local-born account
+    // that is now confirmed online (data-only — not the optimistic default) is
+    // nudged once to back up via Upgrade to Cloud. Shown as a dismissible
+    // MaterialBanner so it doesn't disturb the appBar PreferredSize math.
+    final authState = ref.watch(authStateProvider);
+    final onlineConfirmed = connectivity.maybeWhen(
+      data: (online) => online,
+      orElse: () => false,
+    );
+    if (authState.isSignedIn &&
+        authState.isLocalBorn &&
+        onlineConfirmed &&
+        !_upgradePromptShown) {
+      _upgradePromptShown = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        final l10n = AppLocalizations.of(context)!;
+        final messenger = ScaffoldMessenger.of(context);
+        messenger.showMaterialBanner(
+          MaterialBanner(
+            content: Text(l10n.upgradePromptOnlineBody),
+            leading: const Icon(Icons.cloud_upload_outlined),
+            actions: [
+              TextButton(
+                onPressed: messenger.hideCurrentMaterialBanner,
+                child: Text(l10n.upgradePromptDismiss),
+              ),
+              FilledButton(
+                onPressed: () {
+                  messenger.hideCurrentMaterialBanner();
+                  context.router.push(const UpgradeToCloudRoute());
+                },
+                child: Text(l10n.upgradePromptBackup),
+              ),
+            ],
+          ),
+        );
+      });
+    }
 
     return SacredTimeLockOverlay(
       child: AutoTabsScaffold(

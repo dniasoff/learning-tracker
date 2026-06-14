@@ -1298,6 +1298,9 @@
   "completionButtonCompleted": "הושלם",
   "completionButtonMarkComplete": "סמן כהושלם",
 
+  "upgradePromptOnlineBody": "אתם מחוברים — גבו את החשבון כדי לא לאבד את הלימוד אם המכשיר יאבד.",
+  "upgradePromptBackup": "גיבוי",
+  "upgradePromptDismiss": "לא עכשיו",
   "upgradeToCloudTitle": "שדרג לענן",
   "upgradeToCloudButton": "שדרג לענן",
   "upgradeToCloudCancelKeepOffline": "ביטול — שמור חשבון לא מקוון",

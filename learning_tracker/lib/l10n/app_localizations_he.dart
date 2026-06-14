@@ -2786,6 +2786,16 @@ class AppLocalizationsHe extends AppLocalizations {
   String get completionButtonMarkComplete => 'סמן כהושלם';
 
   @override
+  String get upgradePromptOnlineBody =>
+      'אתם מחוברים — גבו את החשבון כדי לא לאבד את הלימוד אם המכשיר יאבד.';
+
+  @override
+  String get upgradePromptBackup => 'גיבוי';
+
+  @override
+  String get upgradePromptDismiss => 'לא עכשיו';
+
+  @override
   String get upgradeToCloudTitle => 'שדרג לענן';
 
   @override

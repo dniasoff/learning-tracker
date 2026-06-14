@@ -1446,6 +1446,9 @@
   "completionButtonCompleted": "Completed",
   "completionButtonMarkComplete": "Mark Complete",
 
+  "upgradePromptOnlineBody": "You're online — back up your account so you don't lose your learning if this device is lost.",
+  "upgradePromptBackup": "Back up",
+  "upgradePromptDismiss": "Not now",
   "upgradeToCloudTitle": "Upgrade to Cloud",
   "upgradeToCloudButton": "Upgrade to Cloud",
   "upgradeToCloudCancelKeepOffline": "Cancel — keep offline account",

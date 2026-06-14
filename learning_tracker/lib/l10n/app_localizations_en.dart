@@ -2814,6 +2814,16 @@ class AppLocalizationsEn extends AppLocalizations {
   String get completionButtonMarkComplete => 'Mark Complete';
 
   @override
+  String get upgradePromptOnlineBody =>
+      'You\'re online — back up your account so you don\'t lose your learning if this device is lost.';
+
+  @override
+  String get upgradePromptBackup => 'Back up';
+
+  @override
+  String get upgradePromptDismiss => 'Not now';
+
+  @override
   String get upgradeToCloudTitle => 'Upgrade to Cloud';
 
   @override

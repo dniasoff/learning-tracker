@@ -4953,6 +4953,24 @@ abstract class AppLocalizations {
   /// **'Mark Complete'**
   String get completionButtonMarkComplete;
 
+  /// No description provided for @upgradePromptOnlineBody.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re online — back up your account so you don\'t lose your learning if this device is lost.'**
+  String get upgradePromptOnlineBody;
+
+  /// No description provided for @upgradePromptBackup.
+  ///
+  /// In en, this message translates to:
+  /// **'Back up'**
+  String get upgradePromptBackup;
+
+  /// No description provided for @upgradePromptDismiss.
+  ///
+  /// In en, this message translates to:
+  /// **'Not now'**
+  String get upgradePromptDismiss;
+
   /// No description provided for @upgradeToCloudTitle.
   ///
   /// In en, this message translates to:

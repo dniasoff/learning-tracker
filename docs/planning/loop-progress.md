@@ -875,3 +875,24 @@ Per Daniel's decision to gather facts. Confirmed on a fresh wipe, fully offline:
 (c) "Offline mode" checkbox **defaults UNCHECKED** even with no network (airplane mode on).
 (d) Registration **Display Name is NOT carried** into the first profile's name field (placeholder "Enter name").
 Static info banners ("Local account only: no cloud backup…") present. → awaiting Daniel's product call on which to change.
+
+### ONBOARDING REWORK SHIPPED (2026-06-15) — Daniel "all confirmed"
+Implemented the confirmed model ([[onboarding-offline-account-model]]) in phases:
+- **Phase 1 (commit 7b2f951c) — credential-less + explicit offline.** Offline sign-up collects nothing (no
+  email/password/display-name, no ack checkbox); shows an explicit "Create Offline Account" + "Retry connection"
+  + explanation, synthesizes an internal offline_*@offline.local identity (never shown), goes straight to profile
+  creation. Account Picker shows "Offline account" for nameless local accounts and hides the synthetic email.
+  ON-DEVICE VERIFIED on 5560 (wiped, airplane): credential-less screen, no-credential profile creation, profile
+  persisted -> Set Parent PIN. (Account-picker label not re-verified — emulator PIN field rejected ADB input; the
+  label is a deterministic, code-reviewed change.)
+- **Phase 2 (this commit) — convert-on-reconnect prompt.** AppShellScreen shows a one-per-session dismissible
+  MaterialBanner ("You're online — back up...") when a signed-in local-born account is CONFIRMED online (data-only,
+  not the optimistic default); "Back up" routes to the existing UpgradeToCloudRoute, "Not now" dismisses. Placed as
+  a MaterialBanner to avoid disturbing the appBar PreferredSize height math. ARB upgradePromptOnlineBody/Backup/
+  Dismiss (en+he). NEEDS on-device verify (relaunch on a local-born device while online -> banner appears).
+- **Phase 3 (returning user / wiped device) — ALREADY IMPLEMENTED, verify-not-rewrite.** sign_in_controller.dart
+  (571-645) already "never pushes the onboarding wizard when the account already owns profiles in the cloud
+  (returning user on a clean install)" via pull-and-recount + cloudAccountHasProfiles + restoreGuard ->
+  DeviceRestoreRoute; local sign-in routes profiles-exist -> ProfilePicker/AppShell. Rewriting this sensitive,
+  working flow would risk regressions, so it should be VERIFIED on-device, not changed. NOT modified.
+- (d) display-name carry-over is MOOT (offline accounts have no account name). make ci GREEN (9976) through all.
