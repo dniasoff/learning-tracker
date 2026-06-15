@@ -19,13 +19,11 @@
 //   9. Offline-debounce — a transient <300 ms offline blip (startup noise)
 //      does NOT flash the banner; a persistent offline DOES show it.
 //
-// HARDCODED STRINGS AUDIT:
-//   offline_top_banner.dart line 26:
-//     "Offline — changes will sync when you're back online"   ← semantics label
-//   offline_top_banner.dart line 38:
-//     "Offline — changes will sync when you're back"          ← banner text
-//   Both strings are hardcoded English, not drawn from AppLocalizations.
-//   Reported in bugsFound as low-severity i18n gaps.
+// LOCALIZATION (fixed):
+//   The banner text and its Semantics label are now drawn from
+//   AppLocalizations (l10n.offlineBannerMessage / l10n.offlineBannerSemantics)
+//   instead of hardcoded English. The He-RTL test below asserts the Hebrew
+//   string renders and the old English literal no longer appears.
 
 @Tags(['l1', 'offline_banner', 'account'])
 library;
@@ -565,9 +563,13 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(seconds: 1));
 
-        // Banner renders; icon and text are present.
+        // Banner renders; icon and the localized Hebrew text are present.
+        final he = await AppLocalizations.delegate.load(const Locale('he'));
         expect(find.byIcon(Icons.cloud_off), findsOneWidget);
-        expect(find.textContaining('Offline'), findsOneWidget);
+        expect(find.text(he.offlineBannerMessage), findsOneWidget);
+        // The pre-fix hardcoded English literal must NOT appear on a Hebrew
+        // device (regression guard for the localization fix).
+        expect(find.textContaining('Offline'), findsNothing);
 
         // Directionality inside the banner should be RTL.
         final bannerFinder = find.byType(OfflineTopBanner);

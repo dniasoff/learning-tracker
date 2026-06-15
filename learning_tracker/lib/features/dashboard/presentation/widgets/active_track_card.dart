@@ -162,8 +162,10 @@ class ActiveTrackCard extends ConsumerWidget {
       // the rendered display string — keeps this locale-independent.
       final orderedTasks = [...curriculumTasks]
         ..sort(
-          (a, b) =>
-              compareSefariaRefs(a.contentItemSefariaRef, b.contentItemSefariaRef),
+          (a, b) => compareSefariaRefs(
+            a.contentItemSefariaRef,
+            b.contentItemSefariaRef,
+          ),
         );
       final rendered = <String>[
         for (final t in orderedTasks)

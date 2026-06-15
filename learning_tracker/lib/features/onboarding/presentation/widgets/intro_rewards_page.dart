@@ -33,14 +33,17 @@ class IntroRewardsHeroIllustration extends StatelessWidget {
         return Transform.scale(scale: s, child: child);
       },
       child: SizedBox(
-        height: 200,
+        // Compact hero so the reward cards below clear the pinned CTA on a
+        // typical phone at first paint (was 200 — pushed the cards under the
+        // fixed "Get Started" button).
+        height: 150,
         child: Stack(
           clipBehavior: Clip.none,
           alignment: Alignment.center,
           children: [
             Container(
-              width: 168,
-              height: 168,
+              width: 132,
+              height: 132,
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
                 color: _kNavy,
@@ -55,7 +58,7 @@ class IntroRewardsHeroIllustration extends StatelessWidget {
               child: const Icon(
                 Icons.emoji_events_rounded,
                 color: _kGoldTrophy,
-                size: 84,
+                size: 68,
               ),
             ),
             Positioned(

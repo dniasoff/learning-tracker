@@ -2006,6 +2006,14 @@ class AppLocalizationsEn extends AppLocalizations {
       'No cloud backup or device sync. Your data stays only on this device.';
 
   @override
+  String get offlineBannerMessage =>
+      'Offline — changes will sync when you\'re back';
+
+  @override
+  String get offlineBannerSemantics =>
+      'Offline — changes will sync when you\'re back online';
+
+  @override
   String get signInWelcomeBack => 'Welcome Back!';
 
   @override

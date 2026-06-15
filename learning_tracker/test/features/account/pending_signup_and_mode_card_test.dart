@@ -28,11 +28,11 @@
 //   3. mode=cloudOffline renders cloud-off icon + offline text
 //   4. mode=cloudOffline does NOT render cloud-done icon
 //   5. mode=local renders warning icon + local title text
-//   6. mode=local also renders the danger icon + local body text (two containers)
+//   6. mode=local renders a SINGLE card (redundant duplicate body card removed)
 //   7. mode=unknown renders SizedBox.shrink (no visible content)
 //   8. mode=cloud → mode=cloudOffline rebuild replaces cloud icon with cloud-off
 //   9. Hebrew locale smoke: mode=cloud renders Hebrew l10n text without crash
-//  10. Hebrew locale smoke: mode=local renders both Hebrew strings
+//  10. Hebrew locale smoke: mode=local renders the single Hebrew local notice
 //
 // BUG LOG: None.
 
@@ -446,23 +446,31 @@ void main() {
       await _tearDownWidget(tester);
     });
 
-    // 6. local mode shows danger icon + local body text (two containers)
-    testWidgets('6. local mode also renders danger icon and local body text', (
-      tester,
-    ) async {
-      await tester.pumpWidget(_buildCard(SignInModeHint.local));
-      await tester.pump();
-      await tester.pump(const Duration(seconds: 1));
+    // 6. local mode shows ONE card only — the redundant duplicate "No cloud
+    // backup / no device sync" body card was removed. The title card alone
+    // conveys the local-account notice.
+    testWidgets(
+      '6. local mode renders a single card (no redundant body card)',
+      (tester) async {
+        await tester.pumpWidget(_buildCard(SignInModeHint.local));
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
 
-      expect(find.byIcon(Icons.dangerous_rounded), findsOneWidget);
-      expect(
-        find.textContaining('No cloud backup'),
-        findsWidgets,
-        reason: 'local mode must display the local body text',
-      );
+        // The second (danger) icon + duplicate body text must be gone.
+        expect(find.byIcon(Icons.dangerous_rounded), findsNothing);
+        expect(
+          find.textContaining('No cloud backup'),
+          findsNothing,
+          reason:
+              'the redundant duplicate local-account body card must be removed',
+        );
+        // The single title card remains.
+        expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget);
+        expect(find.textContaining('Local account'), findsOneWidget);
 
-      await _tearDownWidget(tester);
-    });
+        await _tearDownWidget(tester);
+      },
+    );
   });
 
   group('SignInModeCard — unknown mode', () {
@@ -537,9 +545,9 @@ void main() {
       },
     );
 
-    // 10. Hebrew + local mode renders both Hebrew strings
+    // 10. Hebrew + local mode renders the single Hebrew local-account notice
     testWidgets(
-      '10. Hebrew locale + local mode renders both Hebrew local strings',
+      '10. Hebrew locale + local mode renders the single Hebrew local notice',
       (tester) async {
         await tester.pumpWidget(
           _buildCard(SignInModeHint.local, locale: const Locale('he')),
@@ -551,14 +559,14 @@ void main() {
         // Hebrew local title contains 'מקומי'
         expect(
           find.textContaining('מקומי'),
-          findsWidgets,
-          reason: 'Hebrew local mode must render local account title',
+          findsOneWidget,
+          reason: 'Hebrew local mode must render the local account title',
         );
-        // Hebrew local body mentions device
+        // The redundant duplicate body card is gone.
         expect(
-          find.textContaining('מכשיר'),
-          findsWidgets,
-          reason: 'Hebrew local mode must render local body text about device',
+          find.byIcon(Icons.dangerous_rounded),
+          findsNothing,
+          reason: 'the redundant local-account body card must be removed',
         );
 
         await _tearDownWidget(tester);

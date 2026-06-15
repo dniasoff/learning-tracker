@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/labels/domain_term_labels.dart';
+import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
@@ -11,6 +14,7 @@ import 'package:learning_tracker/core/utils/hebrew_calendar_utils.dart';
 import 'package:learning_tracker/features/progress/domain/services/pace_calculator.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';
+import 'package:learning_tracker/features/tracks/setup/presentation/steps/goal_helpers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Returns the VALUE string for the "Elapsed" info row.
@@ -31,6 +35,37 @@ String elapsedRemainingLabel({
       ? '${l10n.trackInfoRemaining} ${l10n.trackInfoDaysCount(remainingDays)}'
       : null;
   return remainingStr != null ? '$elapsedStr · $remainingStr' : elapsedStr;
+}
+
+/// Returns the unit noun for a pace goal's stored granularity (e.g. "daf",
+/// "mishnayos", "halachos"), localized through the same domain-term / nusach
+/// renderer the rest of the UI uses.
+///
+/// 5: the Track-Detail required-pace row previously read "{n} · Per week" with
+/// no unit noun. This resolves the noun so the row reads "{n} daf · Per week".
+///
+/// Returns null when there is no pace-goal granularity to render a noun for
+/// (deadline goals, missing curriculum, or no stored granularity) — callers
+/// then fall back to the bare number.
+String? paceGoalUnitNoun({
+  required CurriculumId? curriculum,
+  required String goalType,
+  required int? paceValue,
+  required String? paceGranularity,
+  required bool useHebrew,
+  required TransliterationVariant variant,
+}) {
+  if (curriculum == null) return null;
+  if (goalType == 'deadline') return null;
+  if (paceGranularity == null || paceGranularity.isEmpty) return null;
+  final options = paceUnitOptionsFor(curriculum);
+  final labels = options.levelFor(paceGranularity);
+  final plural = paceValue != null && paceValue != 1;
+  return labels.inLanguage(
+    useHebrew: useHebrew,
+    plural: plural,
+    variant: variant,
+  );
 }
 
 /// Info card shown at the TOP of the Track Detail screen, surfacing key pace
@@ -92,6 +127,20 @@ class TrackInfoCard extends ConsumerWidget {
     final curriculum = CurriculumId.values
         .where((c) => c.storageKey == track.curriculumId)
         .firstOrNull;
+    // 5: the pace-goal row previously read "{n} · Per week" with no unit noun.
+    // Resolve the unit noun for the goal's stored granularity (e.g. "daf",
+    // "mishnayos", "halachos") through the same domain-term / nusach renderer
+    // every other label uses, so the row reads "{n} daf · Per week".
+    final useHebrewTerms = domainTermLabels(ref).isHebrew;
+    final paceVariant = ref.watch(currentTransliterationVariantProvider);
+    final paceUnitNoun = paceGoalUnitNoun(
+      curriculum: curriculum,
+      goalType: goal?.goalType ?? 'deadline',
+      paceValue: goal?.paceValue,
+      paceGranularity: goal?.paceGranularity,
+      useHebrew: useHebrewTerms,
+      variant: paceVariant,
+    );
     final isDafPaced = goal?.paceGranularity == PaceGranularity.daf.storageKey;
     var unitPerLeaf = 1.0;
     var paceUnit = l10n.trackInfoItemsPerDay;
@@ -153,6 +202,7 @@ class TrackInfoCard extends ConsumerWidget {
                 today,
                 unitPerLeaf: unitPerLeaf,
                 paceUnit: paceUnit,
+                paceGoalUnitNoun: paceUnitNoun,
               ),
             ),
 
@@ -191,6 +241,7 @@ class TrackInfoCard extends ConsumerWidget {
     DateTime today, {
     required double unitPerLeaf,
     required String paceUnit,
+    required String? paceGoalUnitNoun,
   }) {
     if (goal.goalType == 'deadline') {
       if (paceCalc == null ||
@@ -206,7 +257,13 @@ class TrackInfoCard extends ConsumerWidget {
       final periodLabel = goal.pacePeriod == 'per_day'
           ? l10n.pacePerDay
           : l10n.pacePerWeek;
-      return '${goal.paceValue} · $periodLabel';
+      // 5: include the unit noun so the value reads "7 daf · Per week" rather
+      // than a bare "7 · Per week". Falls back to the bare number only when the
+      // curriculum/granularity could not be resolved.
+      final amount = paceGoalUnitNoun != null
+          ? '${goal.paceValue} $paceGoalUnitNoun'
+          : '${goal.paceValue}';
+      return '$amount · $periodLabel';
     }
     return '—';
   }

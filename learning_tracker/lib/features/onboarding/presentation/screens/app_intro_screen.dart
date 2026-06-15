@@ -294,8 +294,17 @@ class _IntroPage extends ConsumerWidget {
   }
 
   /// Pages 2 & 3: full-page scroll.
+  ///
+  /// The rewards page (page 3) is content-rich — hero + child-mode tag + title
+  /// + subtitle + two reward cards + a scholar-level card. With the generous
+  /// hero/gap spacing the reward cards were pushed into (and under) the pinned
+  /// bottom CTA at rest, so the cards the page is "selling" were covered until
+  /// the user scrolled. Tighten the lead spacing on the rewards page so the
+  /// cards sit higher and clear the overlaid CTA on first paint, while the
+  /// bottom CTA spacer still guarantees everything clears when scrolled.
   Widget _buildScrolledPage(WidgetRef ref, AppLocalizations l10n) {
     final terms = domainTermLabels(ref);
+    final isRewards = data.variant == _IntroPageVariant.rewards;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: CustomScrollView(
@@ -307,20 +316,20 @@ class _IntroPage extends ConsumerWidget {
           SliverToBoxAdapter(
             child: Column(
               children: [
-                const SizedBox(height: 8),
+                SizedBox(height: isRewards ? 0 : 8),
                 _buildHero(),
-                const SizedBox(height: 24),
-                if (data.variant == _IntroPageVariant.rewards) ...[
+                SizedBox(height: isRewards ? 14 : 24),
+                if (isRewards) ...[
                   const IntroChildModeTag(),
                   const SizedBox(height: 12),
                 ],
                 _buildTitleBlock(l10n: l10n, mishnaLabel: terms.mishnah),
-                const SizedBox(height: 14),
+                SizedBox(height: isRewards ? 8 : 14),
                 _buildSubtitleBlock(
                   l10n: l10n,
                   talmidChochomLabel: terms.talmidChochom,
                 ),
-                const SizedBox(height: 20),
+                SizedBox(height: isRewards ? 14 : 20),
                 _buildProgressArea(),
                 const SizedBox(height: 24),
               ],

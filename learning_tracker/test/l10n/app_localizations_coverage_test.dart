@@ -426,6 +426,8 @@ void main() {
       ignore = en.authModeCloudOffline;
       ignore = en.authModeLocalTitle;
       ignore = en.authModeLocalBody;
+      ignore = en.offlineBannerMessage;
+      ignore = en.offlineBannerSemantics;
       ignore = en.signInWelcomeBack;
       ignore = en.signInReady;
       ignore = en.signInYourEmail;
@@ -1159,6 +1161,8 @@ void main() {
       ignore = he.authModeCloudOffline;
       ignore = he.authModeLocalTitle;
       ignore = he.authModeLocalBody;
+      ignore = he.offlineBannerMessage;
+      ignore = he.offlineBannerSemantics;
       ignore = he.signInWelcomeBack;
       ignore = he.signInReady;
       ignore = he.signInYourEmail;

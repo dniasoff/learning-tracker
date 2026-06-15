@@ -1003,6 +1003,14 @@
   "authModeCloudOffline": "Cloud account is offline right now. We will try local cached data until internet returns.",
   "authModeLocalTitle": "Local account only: no cloud backup and no device sync.",
   "authModeLocalBody": "No cloud backup or device sync. Your data stays only on this device.",
+  "offlineBannerMessage": "Offline — changes will sync when you're back",
+  "@offlineBannerMessage": {
+    "description": "Slim top banner shown to cloud-born users while the device is offline."
+  },
+  "offlineBannerSemantics": "Offline — changes will sync when you're back online",
+  "@offlineBannerSemantics": {
+    "description": "Accessibility (screen reader) label for the offline top banner."
+  },
   "signInWelcomeBack": "Welcome Back!",
   "signInReady": "Ready for your next learning adventure?",
   "signInYourEmail": "Your Email",

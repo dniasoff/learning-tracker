@@ -149,25 +149,21 @@ void main() {
       expect(compareSefariaRefs('Genesis 1.6', 'Genesis 1:7'), lessThan(0));
     });
 
-    test(
-      'sorting a reversed verse list yields an ascending range (regression: '
-      'Pasuk 7 – Pasuk 6 was shown reversed)',
-      () {
-        // Refs arrive high→low (the bug condition). After sorting ascending
-        // the collapsed range must read low→high.
-        final refs = ['Genesis 1:7', 'Genesis 1:6']
-          ..sort(compareSefariaRefs);
-        expect(refs, ['Genesis 1:6', 'Genesis 1:7']);
+    test('sorting a reversed verse list yields an ascending range (regression: '
+        'Pasuk 7 – Pasuk 6 was shown reversed)', () {
+      // Refs arrive high→low (the bug condition). After sorting ascending
+      // the collapsed range must read low→high.
+      final refs = ['Genesis 1:7', 'Genesis 1:6']..sort(compareSefariaRefs);
+      expect(refs, ['Genesis 1:6', 'Genesis 1:7']);
 
-        final rendered = [
-          for (final r in refs)
-            r == 'Genesis 1:6'
-                ? 'בראשית › פרק א › פסוק ו'
-                : 'בראשית › פרק א › פסוק ז',
-        ];
-        // Ascending: Pasuk ו (6) first, Pasuk ז (7) last — never reversed.
-        expect(collapseRefRange(rendered), 'פסוק ו – פסוק ז');
-      },
-    );
+      final rendered = [
+        for (final r in refs)
+          r == 'Genesis 1:6'
+              ? 'בראשית › פרק א › פסוק ו'
+              : 'בראשית › פרק א › פסוק ז',
+      ];
+      // Ascending: Pasuk ו (6) first, Pasuk ז (7) last — never reversed.
+      expect(collapseRefRange(rendered), 'פסוק ו – פסוק ז');
+    });
   });
 }

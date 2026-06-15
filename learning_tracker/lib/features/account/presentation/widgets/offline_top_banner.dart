@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Slim top banner shown above the app bar when a cloud-born user is
 /// temporarily offline. Local-born users never see this banner — being
@@ -17,13 +18,14 @@ class OfflineTopBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return AnimatedSize(
       duration: const Duration(milliseconds: 250),
       curve: Curves.easeOut,
       child: visible
           ? Semantics(
               liveRegion: true,
-              label: "Offline — changes will sync when you're back online",
+              label: l10n.offlineBannerSemantics,
               child: Container(
                 width: double.infinity,
                 height: 32,
@@ -35,7 +37,7 @@ class OfflineTopBanner extends StatelessWidget {
                     const Icon(Icons.cloud_off, size: 16),
                     const SizedBox(width: 8),
                     Text(
-                      "Offline — changes will sync when you're back",
+                      l10n.offlineBannerMessage,
                       style: Theme.of(context).textTheme.labelMedium,
                     ),
                   ],

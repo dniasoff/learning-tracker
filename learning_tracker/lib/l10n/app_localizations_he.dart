@@ -1990,6 +1990,14 @@ class AppLocalizationsHe extends AppLocalizations {
       'ללא גיבוי לענן. הנתונים נשארים רק במכשיר הזה.';
 
   @override
+  String get offlineBannerMessage =>
+      'לא מקוונים — השינויים יסונכרנו כשתחזרו לרשת';
+
+  @override
+  String get offlineBannerSemantics =>
+      'לא מקוונים — השינויים יסונכרנו כשתחזרו להיות מחוברים לרשת';
+
+  @override
   String get signInWelcomeBack => 'ברוכים השבים!';
 
   @override

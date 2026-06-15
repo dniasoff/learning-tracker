@@ -3573,6 +3573,18 @@ abstract class AppLocalizations {
   /// **'No cloud backup or device sync. Your data stays only on this device.'**
   String get authModeLocalBody;
 
+  /// Slim top banner shown to cloud-born users while the device is offline.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline — changes will sync when you\'re back'**
+  String get offlineBannerMessage;
+
+  /// Accessibility (screen reader) label for the offline top banner.
+  ///
+  /// In en, this message translates to:
+  /// **'Offline — changes will sync when you\'re back online'**
+  String get offlineBannerSemantics;
+
   /// No description provided for @signInWelcomeBack.
   ///
   /// In en, this message translates to:
