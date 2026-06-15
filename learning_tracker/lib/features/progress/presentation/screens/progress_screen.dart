@@ -6,9 +6,9 @@ import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/curriculum_visuals.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
-import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/core/widgets/empty_state.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
@@ -212,25 +212,12 @@ class _LensTile extends StatelessWidget {
   }
 }
 
-/// Localizations for the lens tiles, selected by the Hebrew-Terms toggle
-/// rather than the device locale alone.
-///
-/// The progress stat cards above these tiles render domain terms (e.g.
-/// "Siyumim") via the Hebrew-Terms toggle, which can be ON even on an English
-/// device. Selecting the tile strings by that same toggle keeps the hub in a
-/// single script — no Latin "Siyumim & Milestones" row above a Hebrew stat
-/// card.
-AppLocalizations _lensTileL10n(WidgetRef ref) =>
-    ref.watch(effectiveUseHebrewTermsProvider)
-    ? lookupAppLocalizations(const Locale('he'))
-    : lookupAppLocalizations(const Locale('en'));
-
 class _RecentActivityLensTile extends ConsumerWidget {
   const _RecentActivityLensTile();
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = _lensTileL10n(ref);
+    final l10n = AppLocalizations.of(context)!;
     return _LensTile(
       icon: Icons.local_fire_department_rounded,
       iconBgColor: const Color(0xFFFFE9EB),
@@ -247,7 +234,7 @@ class _SiyumimMilestonesLensTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = _lensTileL10n(ref);
+    final l10n = AppLocalizations.of(context)!;
     return _LensTile(
       icon: Icons.emoji_events_outlined,
       iconBgColor: const Color(0xFFFFF4E0),
@@ -264,7 +251,7 @@ class _LifetimeKnowledgeLensTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final l10n = _lensTileL10n(ref);
+    final l10n = AppLocalizations.of(context)!;
     return _LensTile(
       icon: Icons.menu_book_outlined,
       iconBgColor: const Color(0xFFEEF3FF),
@@ -340,8 +327,11 @@ class _PerTrackRow extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
     final theme = Theme.of(context);
     final curriculum = metric.curriculumId;
-    final trackPct = (metric.currentCyclePercentage * 100).round();
-    final lifetimePct = (metric.lifetimePercentage * 100).round();
+    // Adaptive precision via the shared formatter so a small non-zero fraction
+    // (e.g. 7/5846) reads "0.1%" here exactly as it does on Lifetime Knowledge
+    // and track-detail — previously `.round()` floored it to "0%" (Bug 3).
+    final trackPct = formatFractionAsPercent(metric.currentCyclePercentage);
+    final lifetimePct = formatFractionAsPercent(metric.lifetimePercentage);
 
     return InkWell(
       borderRadius: BorderRadius.circular(16),
@@ -396,14 +386,14 @@ class _PerTrackRow extends ConsumerWidget {
                     runSpacing: 2,
                     children: [
                       Text(
-                        '${l10n.trackProgress}: $trackPct%',
+                        '${l10n.trackProgress}: $trackPct',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: AppTheme.brandInkMuted,
                           fontWeight: FontWeight.w600,
                         ),
                       ),
                       Text(
-                        '${l10n.lifetimeLabel}: $lifetimePct%',
+                        '${l10n.lifetimeLabel}: $lifetimePct',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: AppTheme.brandInkMuted,
                           fontWeight: FontWeight.w600,

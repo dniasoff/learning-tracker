@@ -10,11 +10,14 @@ import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
+import 'package:learning_tracker/features/content_browsing/domain/strategies/composite_curriculum_strategy.dart';
+import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/widgets/hierarchy_selection_panel.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
 import 'package:learning_tracker/features/learning/presentation/providers/learning_ledger_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/progress/domain/services/lifetime_tree_builder.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/items_learned_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/journey_providers.dart';
 import 'package:learning_tracker/features/progress/presentation/providers/lifetime_knowledge_providers.dart';
@@ -416,6 +419,68 @@ class _LifetimeCurriculumMarkingScreenState
     });
   }
 
+  /// Returns `true` when SOME-but-not-all leaves beneath the non-leaf row at
+  /// [currentLevel]/[value] (under [currentPath]) are credited (by a current
+  /// session selection OR a persisted ledger mark), and the row is not itself
+  /// directly/implicitly fully selected.
+  ///
+  /// Drives the indeterminate ([MarkingRowVisual.partial]) checkbox so a parent
+  /// container (e.g. Tanach→Torah) renders a dash — never a full check — when
+  /// only some children (e.g. Bereishis) are marked. Without this a 1-of-N
+  /// parent looked fully complete, which is what led users to (over-)mark the
+  /// synthetic container directly.
+  bool _isPartial(
+    List<ContentItem> allLeaves,
+    String value,
+    int currentLevel,
+    List<String> currentPath,
+    List<LearningLedgerData> ledger,
+  ) {
+    if (allLeaves.isEmpty) return false;
+    // Full ancestor path of this row (level1-first), including the row itself.
+    final path = <String>[...currentPath, value];
+    bool underRow(ContentItem leaf) {
+      for (var i = 0; i < path.length; i++) {
+        if (levelValueAt(leaf, i + 1) != path[i]) return false;
+      }
+      return true;
+    }
+
+    final descendants = allLeaves.where(underRow).toList();
+    if (descendants.isEmpty) return false;
+
+    // Build a learned-leaf set under this row from BOTH the persisted ledger and
+    // the current session selections (modelled as ledger rows so the same
+    // qualified-id matching logic applies).
+    final sessionEntries = _selections.map((s) {
+      return LearningLedgerData(
+        id: 0,
+        profileId: 0,
+        ulid: '',
+        curriculumId: _curriculum.storageKey,
+        entryScope: 'level${s.level}',
+        unitIdentifier: s.value,
+        unitDisplayNameHe: '',
+        unitDisplayNameEn: '',
+        trackType: 'personal',
+        trackId: null,
+        completedAt: DateTime.utc(2000),
+        completionNumber: 1,
+        markedBy: 0,
+        isManual: true,
+        createdAt: DateTime.utc(2000),
+      );
+    }).toList();
+
+    const builder = LifetimeTreeBuilder();
+    final learned = builder.computeLearnedLeafRefs(
+      leaves: descendants,
+      completedRefs: const {},
+      ledgerEntries: [...ledger, ...sessionEntries],
+    );
+    return learned.isNotEmpty && learned.length < descendants.length;
+  }
+
   // PP-10 / IL-LEVEL fix: returns the hierarchy level the current panel is
   // displaying — the navigation depth + 1, matching the `currentPath.length + 1`
   // that `tileBuilder` uses for an individual tap. Both _markAllCurrentLevel and
@@ -496,6 +561,19 @@ class _LifetimeCurriculumMarkingScreenState
       for (final selection in selections) {
         final key = '${selection.level}:${selection.value}';
         if (!unique.add(key)) continue;
+        // P0 over-credit guard: never persist a blanket mark on a composite
+        // curriculum's SYNTHETIC level1 container (e.g. Tanach→'Torah'). Such a
+        // row credits every leaf beneath the synthetic section (the whole Torah
+        // from a single mark). The real learning belongs in the source
+        // curriculum (Chumash), which propagates up to the composite by
+        // canonical leaf. Drilling in and marking the concrete books still works.
+        if (selection.level == 1 &&
+            CompositeCurriculumStrategy.isSyntheticContainerLevel1(
+              _curriculum.storageKey,
+              selection.value,
+            )) {
+          continue;
+        }
         batchItems.add(
           LedgerManualBatchItem(
             curriculumId: _curriculum.storageKey,
@@ -564,6 +642,17 @@ class _LifetimeCurriculumMarkingScreenState
       curriculumLedgerProvider(widget.curriculumId),
     );
     final ledger = ledgerAsync.asData?.value ?? const <LearningLedgerData>[];
+    // All leaves for the active curriculum — used to derive the indeterminate
+    // (partial) parent state. Falls back to empty until the content asset loads
+    // (rows then simply render non-partial, never wrongly fully-checked).
+    final allLeaves =
+        ref
+            .watch(curriculumContentProvider(_curriculum))
+            .asData
+            ?.value
+            .where((i) => i.isLeaf)
+            .toList() ??
+        const <ContentItem>[];
     final useHebrew = domainTermLabels(ref).isHebrew;
     final theme = Theme.of(context);
 
@@ -773,6 +862,21 @@ class _LifetimeCurriculumMarkingScreenState
                                 currentLevel,
                                 currentPath,
                               );
+                              // Indeterminate parent: a non-leaf row (has drill)
+                              // that is not itself fully selected, but some of
+                              // its descendant leaves are marked. Leaves and
+                              // already-selected rows skip this check.
+                              final partial =
+                                  onDrill != null &&
+                                  !persisted &&
+                                  !selected &&
+                                  _isPartial(
+                                    allLeaves,
+                                    rawValue,
+                                    currentLevel,
+                                    currentPath,
+                                    ledger,
+                                  );
                               return LifetimeMarkingScopeRow(
                                 primary: itemDisplayName(
                                   item,
@@ -788,6 +892,8 @@ class _LifetimeCurriculumMarkingScreenState
                                     ? MarkingRowVisual.implicit
                                     : selected
                                     ? MarkingRowVisual.direct
+                                    : partial
+                                    ? MarkingRowVisual.partial
                                     : MarkingRowVisual.none,
                                 isPersisted: persisted,
                                 isImplicit:

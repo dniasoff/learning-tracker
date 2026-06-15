@@ -138,7 +138,11 @@ class _RecentActivityScreenState extends ConsumerState<RecentActivityScreen> {
             const SizedBox(height: 14),
             _ChartSection(
               title: l10n.chartCumulativeProgress,
-              subtitle: l10n.recentActivityLiveOnlyDisclaimer,
+              // Bug 2: distinct, accurate subtitle. The bar chart above carries
+              // the live-only scope disclaimer; the cumulative chart describes
+              // what its running line actually plots — total completions over
+              // time — instead of repeating the same disclaimer string.
+              subtitle: l10n.chartCumulativeProgressSubtitle,
               child: SizedBox(
                 height: 150,
                 child: _CumulativeChartBody(window: window),

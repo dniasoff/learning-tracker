@@ -80,6 +80,24 @@ class CompositeCurriculumStrategy {
   static bool isComposite(String storageKey) =>
       _registry.containsKey(storageKey);
 
+  /// Returns `true` if a `level1` mark with [level1Value] on the composite
+  /// curriculum [compositeKey] targets a SYNTHETIC preamble container (e.g.
+  /// Tanach's 'Torah' section) rather than a real source curriculum unit.
+  ///
+  /// Marking such a synthetic container as a single blanket `level1` ledger row
+  /// over-credits every leaf beneath it (the whole Torah from a one-book mark);
+  /// the canonical place to record that learning is the underlying source
+  /// curriculum (Chumash), which propagates up to the composite by canonical
+  /// leaf. Callers use this to refuse persisting the synthetic-container mark.
+  static bool isSyntheticContainerLevel1(
+    String compositeKey,
+    String level1Value,
+  ) {
+    final strategy = _registry[compositeKey];
+    if (strategy == null) return false;
+    return strategy.preamble.any((p) => p.level1 == level1Value);
+  }
+
   // ── Default remapper ─────────────────────────────────────────────────────
 
   /// Applies the composite curriculum's [remapSource] to [item], or falls

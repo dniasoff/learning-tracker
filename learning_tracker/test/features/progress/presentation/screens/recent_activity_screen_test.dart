@@ -216,16 +216,28 @@ void main() {
     // override in [buildScreen]).
     expect(find.text('Recent Activity'), findsOneWidget);
 
-    // Disclaimer used on both the limud+chazara bar chart and the cumulative
-    // chart card — so it appears at least once. Post-tier-unification copy:
-    // recent-activity counts track learning (live + bulk-mark).
+    // Bug 2: the two charts now carry DISTINCT subtitles. The live-only scope
+    // disclaimer sits on the Limudim & Chazaros bar chart ONLY (post-tier-
+    // unification copy: counts track learning, live + bulk-mark) — it must
+    // appear exactly once, not be duplicated onto the cumulative chart.
     expect(
       find.text(
         'Counts track learning (live + bulk-mark). Lifetime-only imports '
         'appear under Lifetime Knowledge.',
       ),
-      findsWidgets,
+      findsOneWidget,
     );
+
+    // The cumulative chart has its own accurate subtitle describing what its
+    // running line plots. It sits lower in the lazily-built ListView, so
+    // scroll it into view before asserting.
+    final cumulativeSubtitle = find.text('Total completions over time');
+    await tester.scrollUntilVisible(
+      cumulativeSubtitle,
+      200,
+      scrollable: find.byType(Scrollable).first,
+    );
+    expect(cumulativeSubtitle, findsOneWidget);
 
     // Limud/Chazaros title is built from the toggle-aware terms (English
     // default): "Limud & Chazaros".

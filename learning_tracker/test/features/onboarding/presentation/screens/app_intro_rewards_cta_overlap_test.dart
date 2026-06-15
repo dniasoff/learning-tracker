@@ -65,26 +65,39 @@ Widget _rig(_MockStackRouter router, {double textScale = 1.0}) {
   );
 }
 
-/// Asserts [target] is not painted behind (overlapped by) the pinned CTA.
+/// Asserts the VISIBLE portion of [target] is not painted behind the pinned CTA.
 ///
-/// With the non-overlapping Column layout the scroll viewport ends at the CTA's
-/// top edge, so any visible widget is fully above the CTA. A widget scrolled off
-/// the bottom is clipped (its rect sits at/below the CTA top but it is NOT
-/// drawn on top of the CTA). The forbidden state — what the bug produced — is a
-/// widget whose painted rect *straddles* the CTA top edge (partly visible,
-/// partly under the CTA). We assert the target does not straddle the CTA top.
-void _expectNotCoveredByCta(WidgetTester tester, Finder target) {
+/// The bug was a Positioned CTA overlay drawing on top of the scroll content, so
+/// the reward cards' visible pixels were partly hidden behind the CTA. The fix
+/// puts the scroll view and the CTA in a non-overlapping Column: the scroll
+/// Viewport clips its content at its own bottom edge, which sits ABOVE the CTA's
+/// top edge. So a card may extend below the viewport (it is then clipped and
+/// reachable by scrolling — NOT drawn over the CTA), but its visible region must
+/// never reach into the CTA.
+///
+/// Visible region = target rect intersected with the scroll Viewport rect. We
+/// assert the bottom of that visible region is at or above the CTA's top edge.
+void _expectVisiblePortionAboveCta(WidgetTester tester, Finder target) {
   final ctaTop = tester.getRect(find.byType(GlowingCtaButton)).top;
-  final rect = tester.getRect(target);
-  final straddlesCta = rect.top < ctaTop && rect.bottom > ctaTop;
+  final viewport = tester.getRect(
+    find
+        .descendant(
+          of: find.byType(CustomScrollView),
+          matching: find.byType(Viewport),
+        )
+        .first,
+  );
+  final cardRect = tester.getRect(target);
+  final visibleBottom = cardRect.bottom < viewport.bottom
+      ? cardRect.bottom
+      : viewport.bottom;
   expect(
-    straddlesCta,
-    isFalse,
+    visibleBottom,
+    lessThanOrEqualTo(ctaTop),
     reason:
-        'Widget rect $rect straddles the CTA top edge ($ctaTop): it is partly '
-        'visible and partly hidden behind the pinned CTA. The reward cards must '
-        'be either fully visible above the CTA or fully off-screen, never '
-        'clipped by the CTA overlay.',
+        'Visible portion of $target (bottom $visibleBottom, clipped to viewport '
+        '$viewport) reaches into the pinned CTA (top $ctaTop). The reward cards '
+        'must never be drawn behind the CTA at first paint.',
   );
 }
 
@@ -109,51 +122,54 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  testWidgets('Badge/Mystery reward cards clear the pinned CTA at first paint '
-      '(no scroll) on a phone viewport', (tester) async {
-    // Small/typical phone: 360x720 logical (1080x2160 @ 3x).
-    tester.view.physicalSize = const Size(1080, 2160);
-    tester.view.devicePixelRatio = 3.0;
+  // Representative 1080x1920 / 420dpi phone (the device from the bug report):
+  // 1080x1920 physical @ 2.625 dpr -> ~411x731 logical.
+  void useBugReportPhone(WidgetTester tester) {
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 2.625;
     addTearDown(tester.view.reset);
+  }
 
-    await tester.pumpWidget(_rig(router));
+  Future<void> pumpToRewardsPage(
+    WidgetTester tester, {
+    double textScale = 1.0,
+  }) async {
+    await tester.pumpWidget(_rig(router, textScale: textScale));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 900));
-
-    // Advance to the rewards page (page 3) without scrolling the page.
+    // Advance to the rewards page (page 3) WITHOUT scrolling the page.
     await _swipeToNextPage(tester);
     await _swipeToNextPage(tester);
+  }
 
-    final ctaTop = tester.getRect(find.byType(GlowingCtaButton)).top;
-    final cardsBottom = tester
-        .getRect(find.byType(IntroFeatureCardsRow))
-        .bottom;
+  for (final scale in const [1.0, 1.3]) {
+    testWidgets('reward cards are NOT covered by the pinned CTA at FIRST PAINT '
+        '(no scroll) at font scale $scale', (tester) async {
+      useBugReportPhone(tester);
 
-    expect(
-      cardsBottom,
-      lessThanOrEqualTo(ctaTop),
-      reason:
-          'At rest (no scroll) the Badge Collection / Mystery Prizes cards '
-          'must not be covered by the pinned "Get Started" CTA.',
-    );
+      await pumpToRewardsPage(tester, textScale: scale);
 
-    await tester.pumpWidget(const SizedBox.shrink());
-    await tester.pump(Duration.zero);
-  });
+      // The bug: at first paint the CTA overlay clipped the reward cards
+      // (the Badge/Mystery row, and at 1.3 the whole row + subtitle line).
+      // With the non-overlapping layout no VISIBLE content is ever drawn behind
+      // the CTA — the scroll viewport clips above the CTA's top edge.
+      _expectVisiblePortionAboveCta(tester, find.byType(IntroFeatureCardsRow));
+      _expectVisiblePortionAboveCta(tester, find.byType(IntroScholarLevelCard));
 
-  testWidgets('rewards cards clear the pinned CTA when scrolled to the end', (
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    });
+  }
+
+  testWidgets('reward cards clear the pinned CTA when scrolled to the end', (
     tester,
   ) async {
-    await tester.pumpWidget(_rig(router));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 900));
+    useBugReportPhone(tester);
 
-    // Advance to the rewards page (page 3).
-    await _swipeToNextPage(tester);
-    await _swipeToNextPage(tester);
+    await pumpToRewardsPage(tester);
 
-    // Scroll the rewards page to its maximum extent so the reward cards
-    // are lifted above the overlaid CTA.
+    // Scroll the rewards page to its maximum extent so every reward card is
+    // lifted into the viewport above the CTA.
     final scrollable = find.descendant(
       of: find.byType(CustomScrollView),
       matching: find.byType(Scrollable),

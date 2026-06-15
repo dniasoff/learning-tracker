@@ -83,8 +83,8 @@ LifetimeTotals _lifetime({int learned = 0, int total = 0}) => LifetimeTotals(
 
 List<TrackDualProgressMetric> _metrics({
   required List<CurriculumId> curricula,
-  double cyclePct = 0.31,
-  double lifetimePct = 0.33,
+  required double cyclePct,
+  required double lifetimePct,
 }) {
   return [
     for (var i = 0; i < curricula.length; i++)
@@ -107,6 +107,10 @@ Widget _wrap({
   ProfileMode userMode = ProfileMode.adult,
   int points = 0,
   StackRouter? router,
+  bool useHebrew = false,
+  double cyclePct = 0.31,
+  double lifetimePct = 0.33,
+  Locale locale = const Locale('en'),
 }) {
   final scope = ProviderScope(
     overrides: [
@@ -114,7 +118,7 @@ Widget _wrap({
         () => _ProfileIdOverride(_profileId),
       ),
       useHebrewTermsProvider.overrideWith(
-        () => _UseHebrewTermsOverride(useHebrew: false),
+        () => _UseHebrewTermsOverride(useHebrew: useHebrew),
       ),
       dashboardActiveCurriculaProvider.overrideWith(
         (ref) => Future.value(activeCurricula),
@@ -134,10 +138,17 @@ Widget _wrap({
         _profileId,
       ).overrideWith((ref) => Future.value(totals)),
       trackDualProgressMetricsProvider(_profileId).overrideWith(
-        (ref) => Future.value(_metrics(curricula: activeCurricula)),
+        (ref) => Future.value(
+          _metrics(
+            curricula: activeCurricula,
+            cyclePct: cyclePct,
+            lifetimePct: lifetimePct,
+          ),
+        ),
       ),
     ],
     child: MaterialApp(
+      locale: locale,
       localizationsDelegates: const [
         AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
@@ -356,5 +367,107 @@ void main() {
         );
       },
     );
+  });
+
+  // ── Bug 1 (regression) — lens tiles follow device locale, not the
+  //    Hebrew-Terms toggle ────────────────────────────────────────────────
+  group('Bug 1 — lens tiles use locale-based l10n (not the Hebrew-Terms '
+      'toggle)', () {
+    testWidgets(
+      'English locale + Hebrew-Terms toggle ON → lens tiles stay English',
+      (tester) async {
+        await tester.pumpWidget(
+          _wrap(
+            activeCurricula: const [CurriculumId.mishnayos],
+            journey: _journey(),
+            totals: _lifetime(learned: 5),
+            streak: 1,
+            // The toggle being ON used to flip the WHOLE tile (title +
+            // subtitle) to Hebrew even though the device UI is English.
+            useHebrew: true,
+            locale: const Locale('en'),
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Titles render in English (locale-based) regardless of the toggle.
+        expect(find.text('Recent Activity'), findsOneWidget);
+        expect(find.text('Siyumim & Milestones'), findsOneWidget);
+        expect(find.text('Lifetime Knowledge'), findsOneWidget);
+
+        // The generic English subtitle on the Recent Activity tile is present
+        // (it used to render in Hebrew when the toggle was on).
+        expect(find.text('Completions, trends, and more'), findsOneWidget);
+
+        // No Hebrew tile strings leak onto the English hub.
+        expect(find.text('פעילות אחרונה'), findsNothing);
+        expect(find.text('השלמות, מגמות ועוד'), findsNothing);
+      },
+    );
+
+    testWidgets('Hebrew locale → lens tiles render Hebrew (standard locale '
+        'behaviour)', (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          activeCurricula: const [CurriculumId.mishnayos],
+          journey: _journey(),
+          totals: _lifetime(learned: 5),
+          streak: 1,
+          useHebrew: true,
+          locale: const Locale('he'),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Hebrew device locale → Hebrew tile strings (normal locale resolution).
+      expect(find.text('פעילות אחרונה'), findsOneWidget);
+      expect(find.text('Recent Activity'), findsNothing);
+    });
+  });
+
+  // ── Bug 3 — small non-zero fraction renders "0.1%" on the hub, not "0%" ──
+  group('Bug 3 — per-track percentages use adaptive precision', () {
+    testWidgets(
+      'a tiny non-zero fraction (7/5846) renders "0.1%" instead of "0%"',
+      (tester) async {
+        const tiny = 7 / 5846; // ≈ 0.0011974 → 0.1%
+        await tester.pumpWidget(
+          _wrap(
+            activeCurricula: const [CurriculumId.mishnayos],
+            journey: _journey(),
+            totals: _lifetime(),
+            streak: 0,
+            cyclePct: tiny,
+            lifetimePct: tiny,
+          ),
+        );
+        await tester.pumpAndSettle();
+
+        // Previously `.round()` floored both to "0%"; the shared adaptive
+        // formatter now matches the Lifetime Knowledge breakdown ("0.1%").
+        expect(find.text('Track progress: 0.1%'), findsOneWidget);
+        expect(find.text('Lifetime: 0.1%'), findsOneWidget);
+        expect(find.text('Track progress: 0%'), findsNothing);
+      },
+    );
+
+    testWidgets('a whole-number percentage still renders without a decimal', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _wrap(
+          activeCurricula: const [CurriculumId.mishnayos],
+          journey: _journey(),
+          totals: _lifetime(),
+          streak: 0,
+          cyclePct: 0.5,
+          lifetimePct: 0.5,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Track progress: 50%'), findsOneWidget);
+      expect(find.text('Lifetime: 50%'), findsOneWidget);
+    });
   });
 }

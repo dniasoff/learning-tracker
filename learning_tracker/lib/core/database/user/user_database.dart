@@ -156,7 +156,7 @@ class UserDatabase extends _$UserDatabase {
   UserDatabase(super.e);
 
   @override
-  int get schemaVersion => 31;
+  int get schemaVersion => 32;
 
   // drift_dev cannot express WHERE in a Dart-defined view's `as()` body
   // (cascade `..where()` confuses the generator).  The auto-generated SQL for
@@ -326,6 +326,41 @@ class UserDatabase extends _$UserDatabase {
               "WHERE REPLACE(entry_scope, 'unmark_', '') = 'level2' "
               'AND instr(unit_identifier, ?) = 0',
               [kScopeIdSeparator],
+            );
+          }
+        }
+        if (from < 32) {
+          // Composite over-credit fix (P0): a COMPOSITE curriculum (Tanach) is
+          // assembled at runtime from real source curricula (Chumash + Nach)
+          // with the Chumash books re-parented under a SYNTHETIC level1 section
+          // container 'Torah' that exists in no real curriculum. A lifetime mark
+          // recorded directly against that synthetic container —
+          // `curriculum_id='tanach', entry_scope='level1', unit_identifier='Torah'`
+          // — blanket-credited the ENTIRE Torah (all five chumashim, ~5846
+          // pesukim) even when the user had only marked a single book. The
+          // canonical place to record "I learned Torah/Chumash" is the real
+          // `chumash` curriculum, which now propagates UP to Tanach by canonical
+          // leaf (sefariaRef) via the subset-ledger union in
+          // lifetime_knowledge_providers — so these synthetic-container rows are
+          // redundant at best and an over-credit at worst.
+          //
+          // Conservative + reversible: scoped to the single known synthetic
+          // preamble container (composite key 'tanach', level1 'Torah'). Real
+          // marks (any chumash/nach row, any deeper Tanach scope, any other
+          // curriculum) are left untouched. This does NOT delete legitimate
+          // book/perek/pasuk marks — only the blanket synthetic-section row.
+          // Guard: only run when learning_ledger exists (partial-schema upgrade
+          // paths in older tests may not have created it yet).
+          final hasLedger = await customSelect(
+            'SELECT 1 FROM sqlite_master '
+            "WHERE type = 'table' AND name = 'learning_ledger'",
+          ).get();
+          if (hasLedger.isNotEmpty) {
+            await customStatement(
+              'DELETE FROM learning_ledger '
+              "WHERE curriculum_id = 'tanach' "
+              "AND REPLACE(entry_scope, 'unmark_', '') = 'level1' "
+              "AND unit_identifier = 'Torah'",
             );
           }
         }

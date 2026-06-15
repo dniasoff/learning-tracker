@@ -188,6 +188,42 @@ final lifetimeDataProvider = FutureProvider.autoDispose
         allEventRefs.addAll(subsetCompletions.map((c) => c.sefariaRef));
       }
 
+      // P0 (composite-credit) fix: completions are unioned across subsets above,
+      // but LIFETIME LEDGER marks were NOT — a lifetime mark made in the
+      // standalone Chumash UI (e.g. sefer Bereishis) credited only the `chumash`
+      // curriculum and never propagated to its superset Tanach, while a mark made
+      // in the Tanach UI used Tanach's synthetic `Torah`-shifted hierarchy.
+      //
+      // We bridge the two by computing each subset's learned leaf refs from the
+      // subset's OWN leaves + OWN ledger (its native, collision-safe hierarchy)
+      // and unioning the resulting canonical `sefariaRef`s into [completedRefs].
+      // Because a leaf carries the SAME sefariaRef in every curriculum it belongs
+      // to, a single Bereishis mark — made via Chumash or via Tanach→Torah —
+      // credits exactly Bereishis's leaves in the composite, so the Tanach total
+      // matches the standalone Chumash total. Set semantics keep each ref counted
+      // once regardless of how many paths reach it.
+      if (subsets.isNotEmpty) {
+        const subsetBuilder = LifetimeTreeBuilder();
+        for (final subset in subsets) {
+          final subsetLeaves = await _safeLoadLeaves(repo, subset);
+          if (subsetLeaves == null || subsetLeaves.isEmpty) continue;
+          final subsetLedger = await db.learningLedgerDao
+              .getEntriesByCurriculum(profileId, subset.storageKey);
+          if (subsetLedger.isEmpty) continue;
+          final subsetCompleted =
+              (completionsByCurriculum[subset.storageKey] ??
+                      const <Completion>[])
+                  .map((c) => c.sefariaRef)
+                  .toSet();
+          final subsetLearned = subsetBuilder.computeLearnedLeafRefs(
+            leaves: subsetLeaves,
+            completedRefs: subsetCompleted,
+            ledgerEntries: subsetLedger,
+          );
+          completedRefs = completedRefs.union(subsetLearned);
+        }
+      }
+
       // Per-leaf provenance: read all imports for this profile in one query
       // (coalesced via [priorImportsByProfileProvider]) and partition by
       // (curriculumId, source). We classify each leaf by the strongest source

@@ -161,9 +161,11 @@ class _DualStatCell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final value = fraction == null
-        ? '—'
-        : formatFractionAsPercent(fraction!, decimals: 0);
+    // Adaptive precision (matches the Lifetime Knowledge curriculum
+    // breakdown): small non-zero fractions render "0.1%" instead of being
+    // floored to "0%", so the same fraction reads consistently across the
+    // Progress hub, track-detail and Lifetime Knowledge surfaces (Bug 3).
+    final value = fraction == null ? '—' : formatFractionAsPercent(fraction!);
     // W5-A layout fix: stack the label above the percentage. Previously both
     // were a single inline "Label: 0%" string inside an equal-width Expanded
     // cell, so the longer "Track progress" headline wrapped to three cramped

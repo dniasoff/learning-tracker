@@ -389,6 +389,83 @@ void main() {
     );
   });
 
+  group('Track Detail — Goal row shows the pace unit noun (P1 iter-2)', () {
+    testWidgets(
+      'daf-paced Bavli goal row reads "7 Dafim · Per week", not bare "7 · …"',
+      (tester) async {
+        final track = _track(curriculum: CurriculumId.bavli);
+
+        // FK: the goal row references curriculum_tracks(id).
+        await db
+            .into(db.curriculumTracks)
+            .insert(
+              CurriculumTracksCompanion.insert(
+                id: Value(track.id),
+                profileId: track.profileId,
+                curriculumId: track.curriculumId,
+                state: Value(track.state),
+                stateChangedAt: track.stateChangedAt,
+                activatedAt: track.activatedAt,
+              ),
+            );
+        // 7-daf-per-week pace goal — the granularity carries the unit noun.
+        await db
+            .into(db.goals)
+            .insert(
+              GoalsCompanion.insert(
+                profileId: track.profileId,
+                curriculumId: track.curriculumId,
+                trackId: track.id,
+                description: const Value('Daf goal'),
+                goalType: const Value('pace'),
+                paceValue: const Value(7),
+                pacePeriod: const Value('per_week'),
+                paceGranularity: const Value('daf'),
+                createdAt: DateTime.utc(2026, 1, 1),
+                updatedAt: DateTime.utc(2026, 1, 1),
+              ),
+            );
+
+        final overrides = [
+          ..._overridesFor(
+            db: db,
+            track: track,
+            curriculum: CurriculumId.bavli,
+            currentCycle: 0.0,
+            lifetime: 0.0,
+          ),
+          scopedCoarseUnitCountProvider(
+            CurriculumId.bavli,
+          ).overrideWith((ref) async => 50),
+        ];
+
+        await tester.pumpWidget(_wrap(track: track, overrides: overrides));
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.pump(const Duration(milliseconds: 100));
+        await tester.pump(const Duration(milliseconds: 100));
+
+        // The Goal config row must read the same unit-noun format as the
+        // Required-pace row in TrackInfoCard (iter-1 fix) — "7 Dafim · Per week".
+        expect(
+          find.text('7 Dafim · Per week'),
+          findsWidgets,
+          reason:
+              'The Track-Detail Goal row must include the pace unit noun '
+              '("7 Dafim · Per week"), matching the Required-pace row — not the '
+              'bare "7 · Per week".',
+        );
+        // The bare, noun-less format must NOT appear anywhere on the screen.
+        expect(
+          find.text('7 · Per week'),
+          findsNothing,
+          reason:
+              'The bare noun-less pace value ("7 · Per week") must no longer '
+              'render on the Track-Detail screen.',
+        );
+      },
+    );
+  });
+
   group('Track Detail — differentiated bulk-prior tile (Task #16)', () {
     testWidgets(
       'bulk-prior tile uses outlined/secondary styling with new "previously learned" copy',
