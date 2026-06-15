@@ -502,6 +502,24 @@ device-driven (commit 95ede74a, make ci GREEN 9900 pass):
   correction + Hebrew-script terms (verified on-device); gamification unblocked+clean; R1–R5 redo (~22/45 screens),
   ~60 real bugs fixed and shipped green; stale audit-guidance fixed.
 
+### AUTONOMOUS E2E CAMPAIGN restarted (2026-06-15) — Daniel: "run the complete e2e device tests, 3 devices, autonomous, ~2 days; find→fix→push; fix App Check"
+- DECISIONS: full loop find→fix→verify→PUSH to dev (each fix gated by green make ci); diagnose+fix App Check (not work around).
+- APP CHECK FIXED (root cause + fix in [[appcheck-debug-token-fix]]): debug APK uses AndroidDebugProvider whose token
+  lives in SharedPreferences and REGENERATES on every pm clear → this session's repeated wipes produced unregistered
+  tokens → Firestore PERMISSION_DENIED / 403 "attestation failed" / "too many attempts". Read the 3 devices' current
+  tokens via run-as, pruned 11 stale loop tokens (20-cap), registered the current 3 via the App Check API
+  (x-goog-user-project header required). VERIFIED on 5558: Firestore reads now succeed (sync_listener_snapshot_size
+  completions=5, tracks=1, goals=1…), ZERO permission-denied. NOTE: SyncStatus still shows offline because
+  internet_connection_checker pings demo hosts via ICMP that emulator NAT blocks — false-negative, Firestore TCP works.
+  WIPE CAVEAT: every pm clear re-breaks the token; canonical loop token 535c876a-…-dab6 is registered — re-pin it into
+  the appcheck prefs after any wipe (recipe in the memory) to keep App Check valid across wipes.
+- LOOP MECHANISM: chain via Workflow completion — iteration = vision FIND sweep (tool/vision_find_pass.js) → triage →
+  FIX (owned-root sharded agents) → make ci → push → on-device verify → log here → launch next iteration. Runs
+  unattended (each Workflow completion re-invokes the orchestrator). ITERATION 1 (FIND) LAUNCHED: workflow wcn36afeq
+  (13-screen E2E across 5556/5558/5560, rounds of 3). Device drift noted (5556 mid-onboarding, 5558 cloud Loop Test C
+  Hebrew, 5560 offline "Abba"); agents self-seed/report blocked where needed; will normalize seeding in later iters.
+- NEXT (on wcn36afeq completion): triage findings → shard fixes → make ci → push → verify → iteration 2.
+
 ### Continue on single device 5554 (2026-06-11)
 - FK-PROFILE-CREATION = NON-ISSUE (resolved): a clean offline re-onboarding of 5554 (pm clear + fresh install +
   airplane-mode local path) created the first profile SUCCESSFULLY — logcat showed NO SqliteException/787/FOREIGN KEY.
