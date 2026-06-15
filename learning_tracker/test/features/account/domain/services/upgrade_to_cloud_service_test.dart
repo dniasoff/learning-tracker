@@ -1123,4 +1123,146 @@ void main() {
       },
     );
   });
+
+  // ── upgradeWithNewCredentials() — credential-less (offline) path ──────────────
+
+  group('upgradeWithNewCredentials() — credential-less path', () {
+    const syntheticEmail = 'offline_abc123def456@offline.local';
+    const realEmail = 'real@example.com';
+
+    Future<int> seedSynthetic() => db
+        .into(db.accounts)
+        .insert(
+          AccountsCompanion.insert(
+            email: syntheticEmail,
+            tier: UserTier.localBorn.dbValue,
+            displayName: '',
+            passwordHash: const Value('synthetic-hash'),
+            createdAt: DateTimeFactory.nowUtc(),
+            updatedAt: DateTimeFactory.nowUtc(),
+          ),
+        );
+
+    test('registers entered email+password, flips tier, replaces synthetic '
+        'email, and never verifies a local password', () async {
+      final profileId = await seedSynthetic();
+      final profile = (await dao.getUserProfileById(profileId))!;
+      final verifiedUser = _FakeAppUser(
+        uid: _uid,
+        emailVerified: true,
+        emailOverride: realEmail,
+      );
+
+      when(
+        () => auth.createUserAccount(realEmail, _password),
+      ).thenAnswer((_) async => _uid);
+      when(
+        () => auth.reloadCurrentUser(),
+      ).thenAnswer((_) async => verifiedUser);
+      when(() => auth.sendEmailVerification()).thenAnswer((_) async {});
+      when(() => auth.signOut()).thenAnswer((_) async {});
+
+      final svc = _buildService(dao: dao, auth: auth, hasher: hasher);
+      final result = await svc.upgradeWithNewCredentials(
+        profile: profile,
+        email: realEmail,
+        password: _password,
+      );
+
+      expect(result.tier, equals(UserTier.cloudBorn.dbValue));
+      expect(result.firebaseUid, equals(_uid));
+      // Synthetic @offline.local email replaced with the real one.
+      expect(result.email, equals(realEmail));
+      verify(() => auth.createUserAccount(realEmail, _password)).called(1);
+      // No local password to verify on the credential-less path.
+      verifyNever(() => hasher.verify(any<String>(), any<String>()));
+    });
+
+    test('updates the device registry email when registry+accountId are '
+        'provided', () async {
+      final profileId = await seedSynthetic();
+      final profile = (await dao.getUserProfileById(profileId))!;
+      await registry.addAccount(
+        DeviceAccountsCompanion.insert(
+          accountId: _accountId,
+          email: syntheticEmail,
+          displayName: '',
+          tier: 'localBorn',
+          createdAt: DateTimeFactory.nowUtc(),
+          lastUsedAt: DateTimeFactory.nowUtc(),
+          dbFileName: 'user_$_accountId.db',
+        ),
+      );
+      final verifiedUser = _FakeAppUser(
+        uid: _uid,
+        emailVerified: true,
+        emailOverride: realEmail,
+      );
+      when(
+        () => auth.createUserAccount(realEmail, _password),
+      ).thenAnswer((_) async => _uid);
+      when(
+        () => auth.reloadCurrentUser(),
+      ).thenAnswer((_) async => verifiedUser);
+      when(() => auth.sendEmailVerification()).thenAnswer((_) async {});
+      when(() => auth.signOut()).thenAnswer((_) async {});
+
+      final svc = _buildService(
+        dao: dao,
+        auth: auth,
+        hasher: hasher,
+        registry: registry,
+        accountId: _accountId,
+      );
+      await svc.upgradeWithNewCredentials(
+        profile: profile,
+        email: realEmail,
+        password: _password,
+      );
+
+      final updated = await registry.findById(_accountId);
+      expect(updated!.tier, equals('cloudBorn'));
+      expect(updated.firebaseUid, equals(_uid));
+      expect(updated.email, equals(realEmail));
+    });
+
+    test('email-already-in-use surfaces EmailCollisionException for the '
+        'entered email', () async {
+      final profileId = await seedSynthetic();
+      final profile = (await dao.getUserProfileById(profileId))!;
+      when(
+        () => auth.createUserAccount(realEmail, _password),
+      ).thenThrow(_FakeFirebaseException('email-already-in-use'));
+
+      final svc = _buildService(dao: dao, auth: auth, hasher: hasher);
+      await expectLater(
+        () => svc.upgradeWithNewCredentials(
+          profile: profile,
+          email: realEmail,
+          password: _password,
+        ),
+        throwsA(
+          isA<EmailCollisionException>().having(
+            (e) => e.email,
+            'email',
+            realEmail,
+          ),
+        ),
+      );
+    });
+
+    test('rejects a non-local-born profile', () async {
+      final profileId = await _seedCloudBorn(db);
+      final profile = (await dao.getUserProfileById(profileId))!;
+      final svc = _buildService(dao: dao, auth: auth, hasher: hasher);
+      await expectLater(
+        () => svc.upgradeWithNewCredentials(
+          profile: profile,
+          email: realEmail,
+          password: _password,
+        ),
+        throwsA(isA<StateError>()),
+      );
+    });
+  });
 }

@@ -120,7 +120,49 @@ class UpgradeToCloudService {
     }
   }
 
-  Future<UserProfile> _finalizeUpgrade(UserProfile profile, String uid) async {
+  /// Register fresh cloud credentials for a CREDENTIAL-LESS local account
+  /// (e.g. an offline account with a synthetic `@offline.local` email and no
+  /// user-known password) — the "full sign-in at conversion" path.
+  ///
+  /// Unlike [upgrade] there is no local password to verify; the user supplies
+  /// a real [email] + [password] now, a Firebase account is created with them,
+  /// and the synthetic email is replaced. Throws [EmailCollisionException] (on
+  /// the entered email) when that email already has a Firebase account — the
+  /// caller resolves it via the merge flow, passing the entered email.
+  Future<UserProfile> upgradeWithNewCredentials({
+    required UserProfile profile,
+    required String email,
+    required String password,
+  }) async {
+    if (profile.tier != UserTier.localBorn.dbValue) {
+      throw StateError(
+        'upgradeWithNewCredentials() requires a local-born profile',
+      );
+    }
+    final normalized = email.trim().toLowerCase();
+    try {
+      final uid = await _auth.createUserAccount(normalized, password);
+      final signedIn = await _auth.reloadCurrentUser();
+      if (signedIn == null || !signedIn.emailVerified) {
+        await _auth.sendEmailVerification();
+        await _auth.signOut();
+        throw const UpgradeEmailNotVerifiedException();
+      }
+      return await _finalizeUpgrade(profile, uid, email: normalized);
+    } catch (e) {
+      final code = _extractFirebaseCode(e);
+      if (code == 'email-already-in-use') {
+        throw EmailCollisionException(normalized);
+      }
+      rethrow;
+    }
+  }
+
+  Future<UserProfile> _finalizeUpgrade(
+    UserProfile profile,
+    String uid, {
+    String? email,
+  }) async {
     final refreshed = await _auth.reloadCurrentUser();
     if (refreshed == null || !refreshed.emailVerified) {
       await _auth.sendEmailVerification();
@@ -132,6 +174,7 @@ class UpgradeToCloudService {
       profileId: profile.id,
       firebaseUid: refreshed.uid,
       updatedAt: DateTimeFactory.nowUtc(),
+      email: email,
     );
 
     if (registry != null && accountId != null) {
@@ -139,6 +182,7 @@ class UpgradeToCloudService {
         accountId!,
         'cloudBorn',
         firebaseUid: refreshed.uid,
+        email: email,
       );
     }
 
@@ -256,8 +300,12 @@ class UpgradeToCloudService {
   Future<UserProfile> executeUploadLocalIntoCloud({
     required UserProfile localProfile,
     required String cloudPassword,
+    String? cloudEmail,
   }) async {
-    await _auth.signInAndGetUser(localProfile.email, cloudPassword);
+    // Credential-less accounts pass the user-entered [cloudEmail]; others
+    // reuse the local profile's real email.
+    final email = cloudEmail ?? localProfile.email;
+    await _auth.signInAndGetUser(email, cloudPassword);
     final refreshed = await _auth.reloadCurrentUser();
     if (refreshed == null || !refreshed.emailVerified) {
       await _auth.sendEmailVerification();
@@ -268,6 +316,7 @@ class UpgradeToCloudService {
       profileId: localProfile.id,
       firebaseUid: refreshed.uid,
       updatedAt: DateTimeFactory.nowUtc(),
+      email: cloudEmail,
     );
 
     if (registry != null && accountId != null) {
@@ -275,6 +324,7 @@ class UpgradeToCloudService {
         accountId!,
         'cloudBorn',
         firebaseUid: refreshed.uid,
+        email: cloudEmail,
       );
     }
 
@@ -288,8 +338,10 @@ class UpgradeToCloudService {
   Future<UserProfile> executeKeepCloudDiscardLocal({
     required UserProfile localProfile,
     required String cloudPassword,
+    String? cloudEmail,
   }) async {
-    await _auth.signInAndGetUser(localProfile.email, cloudPassword);
+    final email = cloudEmail ?? localProfile.email;
+    await _auth.signInAndGetUser(email, cloudPassword);
     final refreshed = await _auth.reloadCurrentUser();
     if (refreshed == null || !refreshed.emailVerified) {
       await _auth.sendEmailVerification();
@@ -301,6 +353,7 @@ class UpgradeToCloudService {
       profileId: localProfile.id,
       firebaseUid: refreshed.uid,
       updatedAt: DateTimeFactory.nowUtc(),
+      email: cloudEmail,
     );
 
     if (registry != null && accountId != null) {
@@ -308,6 +361,7 @@ class UpgradeToCloudService {
         accountId!,
         'cloudBorn',
         firebaseUid: refreshed.uid,
+        email: cloudEmail,
       );
     }
 

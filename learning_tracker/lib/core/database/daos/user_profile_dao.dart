@@ -107,6 +107,7 @@ class UserProfileDao extends DatabaseAccessor<UserDatabase>
     required int profileId,
     required String firebaseUid,
     required DateTime updatedAt,
+    String? email,
   }) async {
     await transaction(() async {
       await (update(accounts)..where((t) => t.id.equals(profileId))).write(
@@ -114,6 +115,9 @@ class UserProfileDao extends DatabaseAccessor<UserDatabase>
           tier: Value(UserTier.cloudBorn.dbValue),
           firebaseUid: Value(firebaseUid),
           passwordHash: const Value(null),
+          // Credential-less offline accounts upgrade with a real email the
+          // user supplies now; replace the synthetic one. Absent = unchanged.
+          email: email == null ? const Value.absent() : Value(email),
           updatedAt: Value(updatedAt),
         ),
       );

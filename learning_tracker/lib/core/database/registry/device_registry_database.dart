@@ -127,11 +127,16 @@ class DeviceRegistryDatabase extends _$DeviceRegistryDatabase {
     String accountId,
     String tier, {
     String? firebaseUid,
+    String? email,
   }) => (update(deviceAccounts)..where((t) => t.accountId.equals(accountId)))
       .write(
         DeviceAccountsCompanion(
           tier: Value(tier),
           firebaseUid: Value(firebaseUid),
+          // When a credential-less offline account upgrades, replace its
+          // synthetic @offline.local email with the real one. Absent =
+          // unchanged.
+          email: email == null ? const Value.absent() : Value(email),
         ),
       );
 

@@ -81,8 +81,22 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
   final _formKey = GlobalKey<FormState>();
   final _passwordController = TextEditingController();
   final _cloudPasswordController = TextEditingController();
+  // Credential-less (offline) accounts supply a real email here at conversion.
+  final _emailController = TextEditingController();
+  // Remembered for the collision merge path so it signs into the entered email,
+  // not the account's synthetic @offline.local address.
+  String? _enteredEmail;
 
   _UpgradePhase _phase = const _PhaseForm();
+
+  /// A credential-less offline account has a synthetic `@offline.local` email
+  /// and no user-known password, so it upgrades by registering fresh
+  /// credentials ("full sign-in at conversion") rather than confirming an
+  /// existing password.
+  bool get _isCredentialLess =>
+      (ref.read(authStateProvider).currentUser?.email ?? '').endsWith(
+        '@offline.local',
+      );
 
   Future<bool> _requireInternet() async {
     final checker = ref.read(internetConnectionCheckerProvider);
@@ -115,6 +129,7 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
   void dispose() {
     _passwordController.dispose();
     _cloudPasswordController.dispose();
+    _emailController.dispose();
     super.dispose();
   }
 
@@ -186,6 +201,77 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
           () => _phase = _PhaseForm(
             error: code == 'network-request-failed'
                 ? l10n.upgradeToCloudErrorInternetRequiredShort
+                : l10n.upgradeToCloudErrorGeneric,
+          ),
+        );
+      }
+    }
+  }
+
+  /// Credential-less path: register the user-supplied email + password as a
+  /// fresh cloud account ("full sign-in at conversion").
+  Future<void> _submitNewCredentials() async {
+    if (!_formKey.currentState!.validate()) return;
+    final l10n = AppLocalizations.of(context)!;
+    if (!await _requireInternet()) return;
+
+    final authState = ref.read(authStateProvider);
+    final user = authState.currentUser;
+    if (user == null || !authState.isLocalBorn) {
+      setState(
+        () => _phase = _PhaseForm(error: l10n.upgradeToCloudErrorLocalBornOnly),
+      );
+      return;
+    }
+
+    final email = _emailController.text.trim();
+    _enteredEmail = email;
+    setState(() => _phase = const _PhaseForm(isLoading: true));
+
+    try {
+      final dao = ref.read(userDatabaseProvider).userProfileDao;
+      final profile = await dao.getUserProfileById(user.profileId);
+      if (profile == null) throw StateError('Profile missing');
+      final registry = ref.read(deviceRegistryProvider);
+      final account = await registry.findByEmail(profile.email);
+
+      final service = UpgradeToCloudService(
+        dao: dao,
+        authRepository: ref.read(authRepositoryProvider),
+        registry: registry,
+        accountId: account?.accountId,
+      );
+      final upgraded = await service.upgradeWithNewCredentials(
+        profile: profile,
+        email: email,
+        password: _passwordController.text,
+      );
+
+      ref
+          .read(authStateProvider.notifier)
+          .setCloudBornSession(profile: upgraded);
+      await _pushLocalDataAfterUpgrade();
+      if (mounted) setState(() => _phase = const _PhaseSuccess());
+    } on UpgradeEmailNotVerifiedException {
+      if (mounted) {
+        setState(
+          () =>
+              _phase = _PhaseVerifying(bodyText: l10n.upgradeToCloudVerifyBody),
+        );
+      }
+    } on EmailCollisionException {
+      if (mounted) setState(() => _phase = const _PhaseCollision());
+    } catch (e) {
+      if (mounted) {
+        final code = _extractFirebaseCode(e);
+        setState(
+          () => _phase = _PhaseForm(
+            error: code == 'network-request-failed'
+                ? l10n.upgradeToCloudErrorInternetRequiredShort
+                : code == 'weak-password'
+                ? l10n.signUpErrWeakPassword
+                : code == 'invalid-email'
+                ? l10n.upgradeToCloudEmailInvalid
                 : l10n.upgradeToCloudErrorGeneric,
           ),
         );
@@ -321,14 +407,19 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
         accountId: account?.accountId,
       );
 
+      // Credential-less accounts merge into the email the user entered on the
+      // form, not the synthetic @offline.local on the profile row.
+      final cloudEmail = _isCredentialLess ? _enteredEmail : null;
       final upgraded = collision.choice == _CollisionChoice.upload
           ? await service.executeUploadLocalIntoCloud(
               localProfile: profile,
               cloudPassword: _cloudPasswordController.text,
+              cloudEmail: cloudEmail,
             )
           : await service.executeKeepCloudDiscardLocal(
               localProfile: profile,
               cloudPassword: _cloudPasswordController.text,
+              cloudEmail: cloudEmail,
             );
 
       ref
@@ -387,9 +478,14 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  l10n.upgradeToCloudValueProp(
-                    authState.currentUser?.email ?? '',
-                  ),
+                  // Credential-less offline accounts have no real email to
+                  // show — use a generic value prop instead of "signed in as
+                  // offline_xxx@offline.local".
+                  _isCredentialLess
+                      ? l10n.upgradeToCloudValuePropNew
+                      : l10n.upgradeToCloudValueProp(
+                          authState.currentUser?.email ?? '',
+                        ),
                   style: theme.textTheme.bodyMedium,
                 ),
                 const SizedBox(height: 24),
@@ -447,18 +543,55 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
                   _PhaseForm(:final error, :final isLoading) => Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      TextFormField(
-                        controller: _passwordController,
-                        obscureText: true,
-                        inputFormatters: const [NoSpaceFormatter()],
-                        decoration: InputDecoration(
-                          labelText: l10n.upgradeToCloudPasswordLabel,
+                      // Credential-less (offline) account: collect a real email
+                      // + new password ("full sign-in at conversion"). Others
+                      // confirm their existing local password.
+                      if (_isCredentialLess) ...[
+                        TextFormField(
+                          controller: _emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          inputFormatters: const [NoSpaceFormatter()],
+                          decoration: InputDecoration(
+                            labelText: l10n.upgradeToCloudEmailLabel,
+                          ),
+                          validator: (v) {
+                            final value = v?.trim() ?? '';
+                            if (value.isEmpty) {
+                              return l10n.upgradeToCloudEmailRequired;
+                            }
+                            final ok = RegExp(
+                              r'^[^@\s]+@[^@\s]+\.[^@\s]+$',
+                            ).hasMatch(value);
+                            return ok ? null : l10n.upgradeToCloudEmailInvalid;
+                          },
+                          enabled: !isLoading,
                         ),
-                        validator: (v) => (v == null || v.isEmpty)
-                            ? l10n.upgradeToCloudPasswordRequired
-                            : null,
-                        enabled: !isLoading,
-                      ),
+                        const SizedBox(height: 16),
+                        TextFormField(
+                          controller: _passwordController,
+                          obscureText: true,
+                          inputFormatters: const [NoSpaceFormatter()],
+                          decoration: InputDecoration(
+                            labelText: l10n.upgradeToCloudNewPasswordLabel,
+                          ),
+                          validator: (v) => (v == null || v.isEmpty)
+                              ? l10n.upgradeToCloudPasswordRequired
+                              : null,
+                          enabled: !isLoading,
+                        ),
+                      ] else
+                        TextFormField(
+                          controller: _passwordController,
+                          obscureText: true,
+                          inputFormatters: const [NoSpaceFormatter()],
+                          decoration: InputDecoration(
+                            labelText: l10n.upgradeToCloudPasswordLabel,
+                          ),
+                          validator: (v) => (v == null || v.isEmpty)
+                              ? l10n.upgradeToCloudPasswordRequired
+                              : null,
+                          enabled: !isLoading,
+                        ),
                       if (error != null) ...[
                         const SizedBox(height: 12),
                         Text(
@@ -468,7 +601,11 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
                       ],
                       const SizedBox(height: 24),
                       FilledButton(
-                        onPressed: isLoading ? null : _submit,
+                        onPressed: isLoading
+                            ? null
+                            : (_isCredentialLess
+                                  ? _submitNewCredentials
+                                  : _submit),
                         child: isLoading
                             ? const SizedBox(
                                 height: 20,

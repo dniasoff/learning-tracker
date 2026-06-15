@@ -2796,6 +2796,22 @@ class AppLocalizationsHe extends AppLocalizations {
   String get upgradePromptDismiss => 'לא עכשיו';
 
   @override
+  String get upgradeToCloudValuePropNew =>
+      'צרו חשבון ענן כדי לגבות את הלימוד ולסנכרן אותו בין מכשירים. זו פעולה חד-כיוונית — לא ניתן לחזור לחשבון לא מקוון לאחר השדרוג.';
+
+  @override
+  String get upgradeToCloudEmailLabel => 'כתובת אימייל';
+
+  @override
+  String get upgradeToCloudNewPasswordLabel => 'בחרו סיסמה';
+
+  @override
+  String get upgradeToCloudEmailRequired => 'נדרש אימייל';
+
+  @override
+  String get upgradeToCloudEmailInvalid => 'הזינו כתובת אימייל תקינה';
+
+  @override
   String get upgradeToCloudTitle => 'שדרג לענן';
 
   @override

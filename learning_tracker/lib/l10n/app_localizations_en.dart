@@ -2824,6 +2824,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get upgradePromptDismiss => 'Not now';
 
   @override
+  String get upgradeToCloudValuePropNew =>
+      'Create a cloud account to back up your learning and sync it across devices. This is one-way — you can\'t switch back to offline-only after upgrading.';
+
+  @override
+  String get upgradeToCloudEmailLabel => 'Email address';
+
+  @override
+  String get upgradeToCloudNewPasswordLabel => 'Create a password';
+
+  @override
+  String get upgradeToCloudEmailRequired => 'Email is required';
+
+  @override
+  String get upgradeToCloudEmailInvalid => 'Enter a valid email address';
+
+  @override
   String get upgradeToCloudTitle => 'Upgrade to Cloud';
 
   @override

@@ -4971,6 +4971,36 @@ abstract class AppLocalizations {
   /// **'Not now'**
   String get upgradePromptDismiss;
 
+  /// No description provided for @upgradeToCloudValuePropNew.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a cloud account to back up your learning and sync it across devices. This is one-way — you can\'t switch back to offline-only after upgrading.'**
+  String get upgradeToCloudValuePropNew;
+
+  /// No description provided for @upgradeToCloudEmailLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Email address'**
+  String get upgradeToCloudEmailLabel;
+
+  /// No description provided for @upgradeToCloudNewPasswordLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Create a password'**
+  String get upgradeToCloudNewPasswordLabel;
+
+  /// No description provided for @upgradeToCloudEmailRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Email is required'**
+  String get upgradeToCloudEmailRequired;
+
+  /// No description provided for @upgradeToCloudEmailInvalid.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid email address'**
+  String get upgradeToCloudEmailInvalid;
+
   /// No description provided for @upgradeToCloudTitle.
   ///
   /// In en, this message translates to:
