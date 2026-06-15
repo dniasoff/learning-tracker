@@ -548,6 +548,31 @@ isolation, gematriya 15=טו/16=טז, settings clean, reader RTL clean). Real ac
   (read-only P0 root-cause). Progress-display P2s (rounding/duplicate-subtitle/Chazaros-label) + the P0 fix retained
   by orchestrator for the consolidation pass.
 
+#### Iteration 1 CONSOLIDATED + pushed (commit 292c8209, make ci GREEN 9995)
+- Shipped: dashboard CURRENT-FOCUS range now ascending (active_track_card + dashboard_helpers.compareSefariaRefs);
+  track-detail pace row unit noun "N Dafim · Per week" (track_info_card.paceGoalUnitNoun); offline top-banner he;
+  deduped local-account notice cards on both auth screens; onboarding intro Get-Started no longer overlaps reward
+  cards. +regression tests (no-gap invariant, pace-unit, range order, CTA-clear). 3 shards disjoint (no ARB clobber —
+  fix-tracks made no ARB edits).
+- FALSE-POSITIVES / already-fixed (the sweep flagged stale-screenshot or toggle-ON states): curriculum picker
+  "Hebrew-only" + track-created toast = Hebrew-Terms toggle ON (intended; all curricula have transliterations); Moed
+  gloss + browse breadcrumb clips = fixed at HEAD; wizard Hebrew chrome = already localized. Lesson: the vision sweep
+  judged some screenshots taken before the relevant fix deployed — re-verify in the NEXT find pass (the loop self-checks).
+- DEFERRED (carried to iter2): P0 Chumash↔Tanach over-count — composite-curriculum ledger NOT unioned across subsets
+  (completions ARE) AND builder matches ledger by hierarchy-shifted scope-path so a naive union won't credit; needs
+  device-data repro (exact counts + marking-path checkbox states) before a correct fix. Pasuk-9 daily gap = content
+  layer (Genesis 1:9 order), not scheduler (proven gap-free + invariant test). progress P2s (rounding 0.1 vs 0,
+  duplicate Recent-Activity subtitle, lifetime "Chazaros" mislabel).
+- App Check: 5560 was pm-cleared by the iter1 onboarding agent → token regenerated → re-registered new token
+  79c125c0-… (allowlist now ~13/20). 5556/5558 tokens unchanged + valid. APK rebuilt + install -r on all 3.
+
+#### Iteration 2 (FIND) LAUNCHED — workflow wipmj670x (9 screens, rounds of 3)
+Re-verifies iter-1 fixes (dashboard range/pace, deduped cards, intro CTA) + captures device-data for the P0
+(r2_p0_tanach_collision_he: exact Chumash/Tanach/Torah/Nach totals + marking checkbox state per path + DB rows if
+reachable) + Pasuk-9 content-gap check + NEW coverage (notifications, reward-config, manage-learners/tutors he,
+progress sub-screens for the P2s, reader-completion he, browse+search). Old E2E batch archived as SCREENS_E2E_R1_ARCHIVED.
+NEXT (on wipmj670x completion): triage → fix (incl. the now-data-backed P0) → make ci → push → iteration 3.
+
 ### Continue on single device 5554 (2026-06-11)
 - FK-PROFILE-CREATION = NON-ISSUE (resolved): a clean offline re-onboarding of 5554 (pm clear + fresh install +
   airplane-mode local path) created the first profile SUCCESSFULLY — logcat showed NO SqliteException/787/FOREIGN KEY.
