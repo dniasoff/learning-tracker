@@ -600,6 +600,27 @@ transient state artifact, resolved).
 - ITER-3 FIX WAVE dispatched (4 parallel, disjoint files, no push): fix-goalrow (tracks), fix-introcta (onboarding),
   fix-progress-display (progress presentation: lens revert + 3 P2s), fix-p0-tanach (data-correctness P0 — reviewed).
 
+#### Iteration 3 CONSOLIDATED + pushed (commit d66f706a, make ci GREEN 10006)
+- **P0 Tanach over-count FIXED** (reviewed the diff): (1) lifetime_knowledge_providers unions each SUBSET curriculum's
+  learned leaf refs computed in its OWN collision-safe hierarchy, then unions canonical sefariaRefs — sidesteps the
+  Torah-level1 hierarchy shift entirely; a Bereishis mark credits exactly Bereishis in Tanach == standalone Chumash.
+  (2) lifetime_marking_screen guards against writing a level1 mark on a composite SYNTHETIC container + renders non-leaf
+  parents indeterminate (MarkingRowVisual.partial) for partial selections. (3) composite_curriculum_strategy
+  isSyntheticContainerLevel1. (4) DB migration v31→v32 deletes the spurious tanach/level1/'Torah' rows (narrow,
+  sqlite_master-guarded, handles unmark_ prefix). +composite invariant test + v31→v32 migration test. Migration runs
+  on devices via install -r (cleans 5558's data).
+- Track-detail "Goal" row unit noun (matches Required-pace). Intro "Get Started" CTA overlap properly fixed
+  (Stack/Positioned → non-overlapping Column; tested @1.0 + 1.3). Progress: lens-tile regression reverted, distinct
+  cumulative-chart subtitle, unified percent rounding. "Chazaros mislabel" = not reproducible (header counters are
+  correct). Tree integrity audited after an agent's stray git-stash-pop (no conflict markers, pubspec clean, stash intact).
+- APK rebuilt + install -r on all 3 (v32 migration applied). No wipes → App Check tokens still valid.
+
+#### Iteration 4 (FIND) LAUNCHED — workflow wsibrqv47 (9 screens, rounds of 3)
+Re-verifies iter-3: P0 Tanach now ≈ Chumash + parent partial state (5558); goal-row + pace + rounding + lens-English
++ distinct subtitles (5556); intro CTA no overlap @1.0/1.3 (5560). NEW coverage: sacred-time/study-days, curriculum/
+nusach settings (he), point-config, content hierarchy, learning-order (he), city-picker + content-search. Old R2 batch
+archived as SCREENS_E2E_R2_ARCHIVED. NEXT (on wsibrqv47 completion): triage → fix → make ci → push → iteration 5.
+
 ### Continue on single device 5554 (2026-06-11)
 - FK-PROFILE-CREATION = NON-ISSUE (resolved): a clean offline re-onboarding of 5554 (pm clear + fresh install +
   airplane-mode local path) created the first profile SUCCESSFULLY — logcat showed NO SqliteException/787/FOREIGN KEY.
