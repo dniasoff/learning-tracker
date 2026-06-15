@@ -641,6 +641,19 @@ archived as SCREENS_E2E_R2_ARCHIVED. NEXT (on wsibrqv47 completion): triage → 
 - ITER-5 plan: consolidate P0 read-time re-fix + fix-i18n-r4 → make ci → push → rebuild → iter5 FIND re-verifies P0 on
   5558 + re-runs the 4 rate-limited screens + new coverage.
 
+#### Iteration 4 CONSOLIDATED + pushed (commit 98d5e64b, make ci GREEN 10008); Iteration 5 (FIND) LAUNCHED w1y6ixqqi
+- P0 Tanach over-count RE-FIXED read-time (provider + marking screen filter synthetic-container level1 rows;
+  migration-independent). 3 P1 Hebrew i18n leftovers fixed (reorder title, mark-prior picker, study-days snackbar @1.3).
+  APK rebuilt + install -r on all 3 (no wipes; App Check valid).
+- Iteration 5 (w1y6ixqqi, 9 screens): r4_p0_tanach_reverify_he = THE critical on-device proof (Tanach==Chumash ~1533,
+  Torah tree only-Bereishis, marking parent partial, headline ~1542, child==parent); re-runs the 4 iter-4 rate-limited
+  screens (content_hierarchy, city_picker, point_config, learning_order); re-verifies the 3 P1 i18n fixes; + new
+  coverage (siyumim/percent-consistency, manage-profiles). Old R3 batch archived as SCREENS_E2E_R3_ARCHIVED.
+  NEXT (on w1y6ixqqi completion): triage → fix → make ci → push → iteration 6.
+- LOOP HEALTH: 5 find→fix→verify iterations done. Pattern working — each iteration verifies the prior fixes on-device
+  and catches regressions (incl. 2 fixes that passed CI but failed on-device: the back-up banner render + this P0).
+  Server-side API rate-limiting truncated iter-4 (4 screens); re-queued. App Check fixed + stable (no wipes since).
+
 ### Continue on single device 5554 (2026-06-11)
 - FK-PROFILE-CREATION = NON-ISSUE (resolved): a clean offline re-onboarding of 5554 (pm clear + fresh install +
   airplane-mode local path) created the first profile SUCCESSFULLY — logcat showed NO SqliteException/787/FOREIGN KEY.
