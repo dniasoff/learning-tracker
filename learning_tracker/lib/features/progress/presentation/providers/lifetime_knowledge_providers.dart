@@ -20,6 +20,7 @@ import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
+import 'package:learning_tracker/features/content_browsing/domain/strategies/composite_curriculum_strategy.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/calendar_position_providers.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_tier_filter.dart';
@@ -166,10 +167,30 @@ final lifetimeDataProvider = FutureProvider.autoDispose
       final completions =
           completionsByCurriculum[curriculum.storageKey] ??
           const <Completion>[];
-      final ledger = await db.learningLedgerDao.getEntriesByCurriculum(
-        profileId,
-        curriculum.storageKey,
-      );
+      // P0 (composite over-credit) READ-TIME guard. A COMPOSITE curriculum
+      // (Tanach) re-parents its source leaves under a SYNTHETIC level1 container
+      // (e.g. 'Torah') that exists in no real curriculum. A stray
+      // `tanach/level1/'Torah'` ledger row blanket-credits the ENTIRE Torah
+      // (~5846) from a single-book mark — and the v32 migration that deletes it
+      // only runs once per account DB, so it cannot be relied on (a row that
+      // survived an earlier-upgraded DB persists). Defensively DROP any
+      // synthetic-container level1 (and its unmark_) row here so the builder
+      // never credits it; the real per-book learning still flows in via the
+      // subset-ledger union below (by canonical sefariaRef).
+      final ledger =
+          (await db.learningLedgerDao.getEntriesByCurriculum(
+            profileId,
+            curriculum.storageKey,
+          )).where((e) {
+            final scope = e.entryScope.startsWith('unmark_')
+                ? e.entryScope.substring('unmark_'.length)
+                : e.entryScope;
+            if (scope != 'level1') return true;
+            return !CompositeCurriculumStrategy.isSyntheticContainerLevel1(
+              curriculum.storageKey,
+              e.unitIdentifier,
+            );
+          }).toList();
 
       // I-4: Union in completions from subset curricula so that, e.g., a ref
       // completed via a Chumash track is also credited to Tanach. Deduplication

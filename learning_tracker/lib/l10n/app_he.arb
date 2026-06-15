@@ -1699,7 +1699,7 @@
   "trackEditChangeReview": "שנה",
   "trackEditSaveButton": "שמור שינויים",
   "trackEditNameEmptyError": "שם המסלול לא יכול להיות ריק.",
-  "trackEditZeroStudyDaysWarning": "לא נבחרו ימי לימוד — לא יתוכנן לימוד חדש עד שתוסיף לפחות יום לימוד אחד.",
+  "trackEditZeroStudyDaysWarning": "לא נבחרו ימי לימוד — הוסיפו לפחות יום אחד כדי לתזמן לימוד חדש.",
   "trackEditConfirmTitle": "להחיל שינויים?",
   "trackEditConfirmBody": "השינויים חלים על לימוד עתידי בלבד. השלמות קיימות אינן מושפעות.",
   "trackEditClearOverdueButton": "נקה פיגורים",
@@ -2613,6 +2613,9 @@
     }
   },
   "schedulerStudyDaysScreenTitle": "ימי לימוד {curriculum}",
+  "trackReorderScreenTitle": "{curriculum} • סדר מחדש",
+  "bulkMarkScreenTitle": "סימון לימוד קודם — {curriculum}",
+  "bulkMarkSelectHeading": "בחרו תוכן שכבר למדתם",
   "schedulerStudyDaysIntro": "בחרו באילו ימים יש לימוד חדש ובאילו ימים חזרה בלבד.",
   "schedulerStudyDaysAllStudyDays": "כל הימים הם ימי לימוד במסלול זה.",
   "schedulerStudyDaysPerWeek": "{count, plural, =1{יום לימוד אחד בשבוע} other{{count} ימי לימוד בשבוע}}",

@@ -3540,7 +3540,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get trackEditZeroStudyDaysWarning =>
-      'No study days selected — new learning will not be scheduled until you add at least one study day.';
+      'No study days selected — add at least one to schedule new learning.';
 
   @override
   String get trackEditConfirmTitle => 'Apply changes?';
@@ -4929,6 +4929,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String schedulerStudyDaysScreenTitle(String curriculum) {
     return '$curriculum Study Days';
   }
+
+  @override
+  String trackReorderScreenTitle(String curriculum) {
+    return '$curriculum • Reorder';
+  }
+
+  @override
+  String bulkMarkScreenTitle(String curriculum) {
+    return 'Mark Prior Completions — $curriculum';
+  }
+
+  @override
+  String get bulkMarkSelectHeading =>
+      'Select content you\'ve already completed';
 
   @override
   String get schedulerStudyDaysIntro =>

@@ -252,5 +252,41 @@ void main() {
         expect(find.textContaining('Lifetime Knowledge'), findsOneWidget);
       },
     );
+
+    // Hebrew locale: the AppBar title and selection heading must be localized
+    // (no leftover hardcoded English "Mark Prior Completions" / "Select content
+    // you've already completed").
+    testWidgets('title and heading are localized in Hebrew locale', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            curriculumContentProvider.overrideWith(
+              (ref, curriculumId) => Future.value([]),
+            ),
+            contentSearchProvider.overrideWith((ref, args) => Future.value([])),
+            completionRepositoryProvider.overrideWithValue(completionRepo),
+            activeProfileIdProvider.overrideWithValue(1),
+          ],
+          child: const MaterialApp(
+            locale: Locale('he'),
+            localizationsDelegates: AppLocalizations.localizationsDelegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: BulkMarkScreen(curriculumId: CurriculumId.mishnayos),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // English source strings must NOT appear.
+      expect(find.textContaining('Mark Prior Completions'), findsNothing);
+      expect(
+        find.text('Select content you\'ve already completed'),
+        findsNothing,
+      );
+      // Localized Hebrew heading is present.
+      expect(find.text('בחרו תוכן שכבר למדתם'), findsOneWidget);
+    });
   });
 }

@@ -641,7 +641,23 @@ class _LifetimeCurriculumMarkingScreenState
     final ledgerAsync = ref.watch(
       curriculumLedgerProvider(widget.curriculumId),
     );
-    final ledger = ledgerAsync.asData?.value ?? const <LearningLedgerData>[];
+    // Drop any stray SYNTHETIC-container level1 rows (e.g. a composite's
+    // Tanach→'Torah') so a parent never reads as fully-checked off a blanket
+    // container mark — the row's true state must come from its real descendant
+    // marks (rendered as indeterminate via [_isPartial]). Mirrors the read-time
+    // guard in lifetime_knowledge_providers; independent of the v32 migration.
+    final ledger = (ledgerAsync.asData?.value ?? const <LearningLedgerData>[])
+        .where((e) {
+          final scope = e.entryScope.startsWith('unmark_')
+              ? e.entryScope.substring('unmark_'.length)
+              : e.entryScope;
+          if (scope != 'level1') return true;
+          return !CompositeCurriculumStrategy.isSyntheticContainerLevel1(
+            _curriculum.storageKey,
+            e.unitIdentifier,
+          );
+        })
+        .toList();
     // All leaves for the active curriculum — used to derive the indeterminate
     // (partial) parent state. Falls back to empty until the content asset loads
     // (rows then simply render non-partial, never wrongly fully-checked).

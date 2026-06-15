@@ -786,6 +786,26 @@ void main() {
       await _teardown(tester);
     });
 
+    testWidgets('17b-he. AppBar title is localized in Hebrew locale', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _buildOrderApp(
+          repo: repo,
+          sedarimFactory: () => Future.value([_orderItem('Seder Zeraim', 0)]),
+          locale: const Locale('he'),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      // The hardcoded English "Reorder" must not appear; the Hebrew label does.
+      expect(find.textContaining('Reorder'), findsNothing);
+      expect(find.textContaining('סדר מחדש'), findsOneWidget);
+
+      await _teardown(tester);
+    });
+
     // 17c. The P2 fix: the L2 reorder section header is nusach-aware. In the
     // default Ashkenazi nusach Mishnayos shows "Masechtos"; under Sephardi it
     // must switch to "Masekhtot" (proving topSectionHeader /

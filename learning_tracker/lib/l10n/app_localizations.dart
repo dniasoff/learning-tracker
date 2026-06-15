@@ -6126,7 +6126,7 @@ abstract class AppLocalizations {
   /// No description provided for @trackEditZeroStudyDaysWarning.
   ///
   /// In en, this message translates to:
-  /// **'No study days selected — new learning will not be scheduled until you add at least one study day.'**
+  /// **'No study days selected — add at least one to schedule new learning.'**
   String get trackEditZeroStudyDaysWarning;
 
   /// No description provided for @trackEditConfirmTitle.
@@ -8282,6 +8282,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{curriculum} Study Days'**
   String schedulerStudyDaysScreenTitle(String curriculum);
+
+  /// AppBar title for the per-track learning-order reorder screen. {curriculum} is the curriculum/track display label (transliteration in English mode, Hebrew in Hebrew mode).
+  ///
+  /// In en, this message translates to:
+  /// **'{curriculum} • Reorder'**
+  String trackReorderScreenTitle(String curriculum);
+
+  /// AppBar title for the bulk prior-completions picker screen. {curriculum} is the curriculum/track display label (transliteration in English mode, Hebrew in Hebrew mode).
+  ///
+  /// In en, this message translates to:
+  /// **'Mark Prior Completions — {curriculum}'**
+  String bulkMarkScreenTitle(String curriculum);
+
+  /// Heading on the selection phase of the bulk prior-completions picker, prompting the user to tick content they have already learned.
+  ///
+  /// In en, this message translates to:
+  /// **'Select content you\'ve already completed'**
+  String get bulkMarkSelectHeading;
 
   /// Instructional subtitle on the Study Days config screen explaining the study vs review-only toggle.
   ///

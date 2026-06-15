@@ -427,8 +427,9 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
                 onChanged: (value) => setState(() => _searchQuery = value),
               )
             : AppBarTitle(
-                text:
-                    'Mark Prior Completions — ${curriculumLabelText(ref, curriculum: widget.curriculumId)}',
+                text: AppLocalizations.of(context)!.bulkMarkScreenTitle(
+                  curriculumLabelText(ref, curriculum: widget.curriculumId),
+                ),
               ),
         leading: _phase == _Phase.selection && _hasNavStack
             ? IconButton(
@@ -474,7 +475,7 @@ class _BulkMarkScreenState extends ConsumerState<BulkMarkScreen> {
           Padding(
             padding: const EdgeInsets.fromLTRB(24, 16, 24, 8),
             child: Text(
-              'Select content you\'ve already completed',
+              l10n.bulkMarkSelectHeading,
               style: theme.textTheme.titleMedium,
               textAlign: TextAlign.center,
             ),

@@ -1865,7 +1865,7 @@
   "trackEditChangeReview": "Change",
   "trackEditSaveButton": "Save Changes",
   "trackEditNameEmptyError": "Track name cannot be empty.",
-  "trackEditZeroStudyDaysWarning": "No study days selected — new learning will not be scheduled until you add at least one study day.",
+  "trackEditZeroStudyDaysWarning": "No study days selected — add at least one to schedule new learning.",
   "trackEditConfirmTitle": "Apply changes?",
   "trackEditConfirmBody": "Changes apply to future learning only. Existing completions are not affected.",
   "trackEditClearOverdueButton": "Clear Overdue",
@@ -2851,6 +2851,28 @@
         "type": "String"
       }
     }
+  },
+  "trackReorderScreenTitle": "{curriculum} • Reorder",
+  "@trackReorderScreenTitle": {
+    "description": "AppBar title for the per-track learning-order reorder screen. {curriculum} is the curriculum/track display label (transliteration in English mode, Hebrew in Hebrew mode).",
+    "placeholders": {
+      "curriculum": {
+        "type": "String"
+      }
+    }
+  },
+  "bulkMarkScreenTitle": "Mark Prior Completions — {curriculum}",
+  "@bulkMarkScreenTitle": {
+    "description": "AppBar title for the bulk prior-completions picker screen. {curriculum} is the curriculum/track display label (transliteration in English mode, Hebrew in Hebrew mode).",
+    "placeholders": {
+      "curriculum": {
+        "type": "String"
+      }
+    }
+  },
+  "bulkMarkSelectHeading": "Select content you've already completed",
+  "@bulkMarkSelectHeading": {
+    "description": "Heading on the selection phase of the bulk prior-completions picker, prompting the user to tick content they have already learned."
   },
   "schedulerStudyDaysIntro": "Choose which days include new learning and which are for review only.",
   "@schedulerStudyDaysIntro": {

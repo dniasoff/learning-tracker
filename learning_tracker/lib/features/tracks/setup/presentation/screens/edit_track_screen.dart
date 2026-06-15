@@ -200,7 +200,13 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
     // confirm dialog (no async gap) so the messenger context is still valid.
     if (!_isProgramTrack && studyDayCount(_editedStudyDays) == 0) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(l10n.trackEditZeroStudyDaysWarning)),
+        SnackBar(
+          // Allow the warning to wrap onto multiple lines instead of being
+          // clipped off-screen at large text scales (e.g. font scale 1.3).
+          content: Text(l10n.trackEditZeroStudyDaysWarning, maxLines: 4),
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 6),
+        ),
       );
     }
 

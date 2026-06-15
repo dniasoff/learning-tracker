@@ -3503,7 +3503,7 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get trackEditZeroStudyDaysWarning =>
-      'לא נבחרו ימי לימוד — לא יתוכנן לימוד חדש עד שתוסיף לפחות יום לימוד אחד.';
+      'לא נבחרו ימי לימוד — הוסיפו לפחות יום אחד כדי לתזמן לימוד חדש.';
 
   @override
   String get trackEditConfirmTitle => 'להחיל שינויים?';
@@ -4888,6 +4888,19 @@ class AppLocalizationsHe extends AppLocalizations {
   String schedulerStudyDaysScreenTitle(String curriculum) {
     return 'ימי לימוד $curriculum';
   }
+
+  @override
+  String trackReorderScreenTitle(String curriculum) {
+    return '$curriculum • סדר מחדש';
+  }
+
+  @override
+  String bulkMarkScreenTitle(String curriculum) {
+    return 'סימון לימוד קודם — $curriculum';
+  }
+
+  @override
+  String get bulkMarkSelectHeading => 'בחרו תוכן שכבר למדתם';
 
   @override
   String get schedulerStudyDaysIntro =>

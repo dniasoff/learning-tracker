@@ -60,7 +60,9 @@ class _TrackLearningOrderScreenState
     return Scaffold(
       appBar: AppBar(
         title: Text(
-          '${curriculumLabelText(ref, curriculum: widget.curriculumId)} • Reorder',
+          AppLocalizations.of(context)!.trackReorderScreenTitle(
+            curriculumLabelText(ref, curriculum: widget.curriculumId),
+          ),
         ),
         actions: [
           IconButton(

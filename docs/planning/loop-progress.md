@@ -621,6 +621,26 @@ Re-verifies iter-3: P0 Tanach now ≈ Chumash + parent partial state (5558); goa
 nusach settings (he), point-config, content hierarchy, learning-order (he), city-picker + content-search. Old R2 batch
 archived as SCREENS_E2E_R2_ARCHIVED. NEXT (on wsibrqv47 completion): triage → fix → make ci → push → iteration 5.
 
+#### Iteration 4 FIND results (wsibrqv47) — 5/9 screens (4 rate-limited by server), 16 findings (5 P0, 3 P1, 8 P2)
+- VERIFIED iter-3 fixes HELD: goal-row + Required-pace unit noun (both rows); lens tiles stay ENGLISH under Hebrew-Terms
+  toggle ON (iter-2 regression revert confirmed); Recent-Activity two charts distinct subtitles; font 1.3 layout clean.
+- **P0 Tanach fix DID NOT TAKE on-device (5 P0s, same root):** user_version=32 (migration ran) BUT ledger row id=88
+  tanach/level1/'Torah' SURVIVED → over-count persists (Tanach=5846 not ~1533; Torah tree all-5-green; marking תורה
+  parent FULL-checked not partial; headline 5855; child home 1,542 vs parent 5,855 — 4× disagreement). Root: the v32
+  DELETE only runs once per-account-DB and didn't purge this DB's row, AND the aggregation + marking still HONOR the
+  level1 row at READ time. → RE-FIXED (read-time, migration-independent): lifetime_knowledge_providers + lifetime_
+  marking_screen now FILTER OUT synthetic-container level1 rows (CompositeCurriculumStrategy.isSyntheticContainerLevel1)
+  before the builder/checkbox see them. The subset-ledger union still credits real per-book marks by canonical
+  sefariaRef, so Tanach==Chumash, the Torah tree shows only Bereishis, the parent renders partial, and the headline
+  total (lifetimeTotalsAcrossAllCurricula unions learnedLeafRefs) drops to ~1542 — all from one read-time filter.
+  make-ci-green; to be RE-VERIFIED on-device iter 5.
+- NEW P1s → fix-i18n-r4 agent: untranslated "Reorder • {curr}" title (he); untranslated Mark-Prior-Completions picker
+  title+heading (he); 0-study-days warning snackbar clipped off-screen @1.3.
+- P2 carry: cross-surface lifetime percent 0.2% vs 0.3% (different metrics/surfaces — investigate). 4 screens
+  (point_config, city_picker, learning_order, content_hierarchy) RATE-LIMITED — re-queue in iter 5.
+- ITER-5 plan: consolidate P0 read-time re-fix + fix-i18n-r4 → make ci → push → rebuild → iter5 FIND re-verifies P0 on
+  5558 + re-runs the 4 rate-limited screens + new coverage.
+
 ### Continue on single device 5554 (2026-06-11)
 - FK-PROFILE-CREATION = NON-ISSUE (resolved): a clean offline re-onboarding of 5554 (pm clear + fresh install +
   airplane-mode local path) created the first profile SUCCESSFULLY — logcat showed NO SqliteException/787/FOREIGN KEY.
