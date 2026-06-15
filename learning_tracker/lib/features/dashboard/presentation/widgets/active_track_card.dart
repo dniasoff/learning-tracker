@@ -156,8 +156,17 @@ class ActiveTrackCard extends ConsumerWidget {
     // ref. Program tracks already carry a clean day-level label.
     final String selfPacedRangeValue;
     if (!hasProgramEnrollment && curriculumTasks.length > 1) {
+      // Order the day's refs ascending by their canonical (numeric) Sefaria
+      // ref before rendering so the collapsed range label reads low → high
+      // (e.g. "Pasuk 6 – Pasuk 7"), never reversed. Sorting on the ref — not
+      // the rendered display string — keeps this locale-independent.
+      final orderedTasks = [...curriculumTasks]
+        ..sort(
+          (a, b) =>
+              compareSefariaRefs(a.contentItemSefariaRef, b.contentItemSefariaRef),
+        );
       final rendered = <String>[
-        for (final t in curriculumTasks)
+        for (final t in orderedTasks)
           _trimSederFromBreadcrumb(
             ref
                     .watch(

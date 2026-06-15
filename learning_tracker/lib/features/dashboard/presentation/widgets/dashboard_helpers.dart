@@ -146,12 +146,51 @@ String collapseAmudToDaf(String breadcrumb) {
   return segments.sublist(0, segments.length - 1).join(kBreadcrumbSep);
 }
 
+/// Numeric sort key for a canonical Sefaria ref so a self-paced day's refs can
+/// be ordered ascending (chapter, then verse/segment) before being collapsed
+/// into a range label.
+///
+/// Sefaria refs are canonical English with numeric components separated by
+/// `:`, `.` or spaces (e.g. "Genesis 1:7", "Genesis 1.7", "Kelim 5:7"). This
+/// extracts every numeric run and returns it as an ordered list so two refs
+/// can be compared component-by-component. Non-numeric prefixes (the book
+/// name) are ignored, so the ordering is locale-independent — it never depends
+/// on the rendered Hebrew/English display string, which is not numerically
+/// sortable.
+List<int> sefariaRefSortKey(String ref) {
+  final matches = RegExp(r'\d+').allMatches(ref);
+  return [for (final m in matches) int.parse(m.group(0)!)];
+}
+
+/// Compares two Sefaria refs by their numeric components (chapter, verse, …).
+///
+/// Used to sort a self-paced day's tasks ascending so the collapsed range
+/// label always reads low → high (e.g. "Pasuk 6 – Pasuk 7"), never reversed,
+/// regardless of the order the tasks arrive in.
+int compareSefariaRefs(String a, String b) {
+  final ka = sefariaRefSortKey(a);
+  final kb = sefariaRefSortKey(b);
+  final n = ka.length < kb.length ? ka.length : kb.length;
+  for (var i = 0; i < n; i++) {
+    final c = ka[i].compareTo(kb[i]);
+    if (c != 0) return c;
+  }
+  // Shared prefix equal — shorter ref (fewer components) sorts first, then
+  // fall back to a stable lexical compare on the raw ref.
+  final lc = ka.length.compareTo(kb.length);
+  return lc != 0 ? lc : a.compareTo(b);
+}
+
 /// Collapses a set of rendered refs into a single first–last range label.
 ///
 /// For a self-paced multi-unit day, render "<first> – <last>" using the leaf
 /// segment of each end so the pill reads e.g. "משנה ה׳ – משנה ט׳" rather than
 /// listing every ref or showing only the first. A single ref (or all-equal
 /// leaves) is returned unchanged.
+///
+/// The caller is responsible for passing the rendered refs already ordered
+/// ascending (see [compareSefariaRefs]); the endpoints are taken as the
+/// first and last entries.
 String collapseRefRange(List<String> rendered) {
   final cleaned = rendered.where((r) => r.trim().isNotEmpty).toList();
   if (cleaned.isEmpty) return '';

@@ -520,6 +520,34 @@ device-driven (commit 95ede74a, make ci GREEN 9900 pass):
   Hebrew, 5560 offline "Abba"); agents self-seed/report blocked where needed; will normalize seeding in later iters.
 - NEXT (on wcn36afeq completion): triage findings → shard fixes → make ci → push → verify → iteration 2.
 
+#### Iteration 1 FIND results (wcn36afeq) — 12 screens, 49 findings (2 P0, 6 P1, 41 P2)
+Many P2s are POSITIVE confirmations (daf-unit items-remaining=2684, gamification badge/weekday fixes, lifetime scope
+isolation, gematriya 15=טו/16=טז, settings clean, reader RTL clean). Real actionable bugs:
+- **P0 Chumash↔Tanach cross-curriculum collision** (e2e_lifetime_he): same Torah content shows different learned-state
+  via standalone חומש (Bereishis only, 1533) vs תנ"ך→תורה (whole Chumash 5846) → Tanach over-counts ~4313 phantom;
+  marking via the two paths can double-credit. NOT the earlier within-curriculum scope-id collision — this is content
+  shared across two curricula. → read-only INVESTIGATION agent dispatched (root-cause + fix proposal) before fixing.
+- **P0 reader mark-complete BLOCKED** (e2e_reader_complete_en): daily list was empty ("all caught up") so no daf to
+  open; via free-browse there's no mark button (by design). Largely a test-STATE issue + design (free-browse ≠ daily).
+  → triage as state/design, re-check once a device has due daily tasks; not auto-fixed.
+- **P1 dashboard "CURRENT FOCUS" reversed** "Pasuk 7 – Pasuk 6" (end<start) → fix-sched agent.
+- **P1 daily queue skips Pasuk 9 (8→10)** scheduler dropped a valid contiguous section → fix-sched agent.
+- **P1 curriculum picker Hebrew-script-only** under English chrome (no transliteration) → fix-tracks agent (core/labels).
+- **P1 Moed seder gloss clipped "Festivals &"** (prior maxLines fix may target the wrong tile) → fix-tracks agent.
+- **P1 lifetime-marking checkbox inconsistent across the two Chumash paths** → same root as the P0; investigation.
+- **P1 completion circle in amud list not interactive** (opens reader) → design question, triage with reader work.
+- P2 actionable: track-created toast raw Hebrew in EN mode; wizard Hebrew chrome leftovers; "7 · Per week" missing
+  unit noun; "~1 days" plural; offline top-banner English on Hebrew UI; onboarding duplicate cloud-backup banner pair;
+  intro "Get Started" overlaps reward cards; browse breadcrumb clip @1.3; progress rounding 0.1 vs 0; duplicate
+  Recent-Activity chart subtitle; lifetime items mislabeled "Chazaros". (Fresh-install lands on Sign-In = product, Daniel
+  undecided — NOT auto-fixed.)
+- FIX WAVE dispatched (parallel, owned-root disjoint, no push — orchestrator consolidates + full make ci + push):
+  fix-sched (scheduler/dashboard: reversed range + Pasuk-9 gap), fix-tracks (tracks/content_browsing/core-labels:
+  curriculum transliteration + Moed gloss + toast + wizard chrome + pace unit noun + breadcrumb clip), fix-i18n
+  (account/onboarding: offline banner he + dedupe cloud-backup banner + intro CTA overlap), investigate-collision
+  (read-only P0 root-cause). Progress-display P2s (rounding/duplicate-subtitle/Chazaros-label) + the P0 fix retained
+  by orchestrator for the consolidation pass.
+
 ### Continue on single device 5554 (2026-06-11)
 - FK-PROFILE-CREATION = NON-ISSUE (resolved): a clean offline re-onboarding of 5554 (pm clear + fresh install +
   airplane-mode local path) created the first profile SUCCESSFULLY — logcat showed NO SqliteException/787/FOREIGN KEY.

@@ -133,4 +133,41 @@ void main() {
       expect(collapseRefRange(['', '  ']), '');
     });
   });
+
+  group('compareSefariaRefs (current-focus range ordering)', () {
+    test('orders by verse number ascending within a chapter', () {
+      expect(compareSefariaRefs('Genesis 1:6', 'Genesis 1:7'), lessThan(0));
+      expect(compareSefariaRefs('Genesis 1:7', 'Genesis 1:6'), greaterThan(0));
+      expect(compareSefariaRefs('Genesis 1:7', 'Genesis 1:7'), 0);
+    });
+
+    test('orders by chapter before verse', () {
+      expect(compareSefariaRefs('Genesis 1:9', 'Genesis 2:1'), lessThan(0));
+    });
+
+    test('handles dot and colon separators identically', () {
+      expect(compareSefariaRefs('Genesis 1.6', 'Genesis 1:7'), lessThan(0));
+    });
+
+    test(
+      'sorting a reversed verse list yields an ascending range (regression: '
+      'Pasuk 7 – Pasuk 6 was shown reversed)',
+      () {
+        // Refs arrive high→low (the bug condition). After sorting ascending
+        // the collapsed range must read low→high.
+        final refs = ['Genesis 1:7', 'Genesis 1:6']
+          ..sort(compareSefariaRefs);
+        expect(refs, ['Genesis 1:6', 'Genesis 1:7']);
+
+        final rendered = [
+          for (final r in refs)
+            r == 'Genesis 1:6'
+                ? 'בראשית › פרק א › פסוק ו'
+                : 'בראשית › פרק א › פסוק ז',
+        ];
+        // Ascending: Pasuk ו (6) first, Pasuk ז (7) last — never reversed.
+        expect(collapseRefRange(rendered), 'פסוק ו – פסוק ז');
+      },
+    );
+  });
 }
