@@ -573,6 +573,33 @@ reachable) + Pasuk-9 content-gap check + NEW coverage (notifications, reward-con
 progress sub-screens for the P2s, reader-completion he, browse+search). Old E2E batch archived as SCREENS_E2E_R1_ARCHIVED.
 NEXT (on wipmj670x completion): triage → fix (incl. the now-data-backed P0) → make ci → push → iteration 3.
 
+#### Iteration 2 FIND results (wipmj670x) — 9 screens, 38 findings (3 P0, 6 P1, 29 P2)
+VERIFIED iter-1 fixes that HELD: track-detail "Required pace" unit noun (7 Dafim · Per week); deduped local-account
+card (both auth screens); manage-tutors owner name (LoopChild not CloudUser); reader daily-task mark-complete works
+(rapid-tap fires once, survives relaunch); Pasuk-9 gap NOT reproducible (daily list contiguous 1-30 — iter-1 P1 was a
+transient state artifact, resolved). 
+- **P0 Tanach over-count — QUANTIFIED with DB evidence:** Tanach is composite (chumash+nach, Chumash remapped under a
+  synthetic level1 "Torah"). learning_ledger has `tanach/level1/'Torah'` (id19) which credits the ENTIRE Torah (5846)
+  from a single-book mark; standalone חומש correctly = 1533. Tracks-only filter → 6 (all 5846 are manual marks). The
+  תורה parent renders FULLY-checked when only 1/5 children marked. Ledger also stores translation 'Genesis' not
+  transliteration 'Bereishis'. → fix-p0-tanach agent (marking-write + parent-rollup + aggregation + guarded migration;
+  orchestrator reviews diff).
+- **P1 REGRESSION (my iter-1 over-correction):** progress lens tiles now render WHOLE tiles (titles+generic subtitles)
+  in Hebrew under English UI when Hebrew-Terms toggle ON (my `_lensTileL10n` change). → fix-progress-display REVERTS to
+  locale-based; the "Siyumim row script-consistency" is deferred as a product question (can't satisfy both findings).
+- **P1 track-detail "Goal" row still bare "7 · Per week"** (iter-1 fix reached Required-pace row only) → fix-goalrow.
+- **P1 intro "Get Started" CTA STILL overlaps reward cards** at first paint (worse @1.3 — iter-1 hero-shrink
+  insufficient on 1080x1920/420dpi) → fix-introcta (reserve CTA space, scale with textScaler).
+- P1 not-code: Reward Config unreachable (Redeem launches a Google system sign-in for a DIFFERENT account than the app
+  session — test-env account mismatch, not a code bug). CURRENT-FOCUS ascending-range unverifiable (no projection
+  state constructible). 
+- P2s confirmed still-present (carried, now in fix-progress-display): duplicate Recent-Activity chart subtitle,
+  rounding 0.1% vs 0%, lifetime header mislabeled "Chazaros". P2 misc: edit-learner empty-name silent no-op (he);
+  stale back-up banner after going offline w/o relaunch; 8px transient dashboard STATS overflow stripe; content-search
+  flattens subtree into context-free rows.
+- ITER-3 FIX WAVE dispatched (4 parallel, disjoint files, no push): fix-goalrow (tracks), fix-introcta (onboarding),
+  fix-progress-display (progress presentation: lens revert + 3 P2s), fix-p0-tanach (data-correctness P0 — reviewed).
+
 ### Continue on single device 5554 (2026-06-11)
 - FK-PROFILE-CREATION = NON-ISSUE (resolved): a clean offline re-onboarding of 5554 (pm clear + fresh install +
   airplane-mode local path) created the first profile SUCCESSFULLY — logcat showed NO SqliteException/787/FOREIGN KEY.

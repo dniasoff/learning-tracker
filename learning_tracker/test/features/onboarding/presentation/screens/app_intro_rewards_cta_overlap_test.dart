@@ -1,13 +1,17 @@
 // Layout regression test for the rewards intro page ("Earn While You Learn").
 //
-// Bug (vision sweep): the pinned bottom "Get Started" CTA overlapped the
-// reward cards (Badge Collection / Mystery Prizes + the scholar-level card)
-// the page is selling. The fix reserves bottom scroll inset so that, once the
-// page is scrolled to the end, every reward card clears the overlaid CTA.
+// Bug (P1): the pinned bottom "Get Started" CTA was a Positioned overlay drawing
+// ON TOP of the scrolling page content. At FIRST PAINT it covered the Badge
+// Collection / Mystery Prizes reward cards (clipping their second label line),
+// and at font scale 1.3 it covered the subtitle's last line and the entire
+// reward-card row. The fix makes the CTA a non-overlapping Column sibling below
+// the scroll view, so the scroll viewport's bottom edge IS the CTA's top edge
+// and nothing can ever be painted behind the CTA — at any text scale.
 //
-// This test scrolls the rewards page to its maximum extent and asserts that
-// neither IntroFeatureCardsRow nor IntroScholarLevelCard vertically overlaps
-// the GlowingCtaButton.
+// These tests assert, at FIRST PAINT (no scroll) at BOTH font scale 1.0 and
+// 1.3, that the visible reward cards do not vertically intersect (i.e. are not
+// covered by) the GlowingCtaButton, and that scrolling reveals them above the
+// CTA.
 
 @Tags(['l1', 'onboarding', 'intro', 'layout'])
 library;
@@ -32,7 +36,7 @@ class _FalseUseHebrewTerms extends UseHebrewTerms {
   bool build() => false;
 }
 
-Widget _rig(_MockStackRouter router) {
+Widget _rig(_MockStackRouter router, {double textScale = 1.0}) {
   return ProviderScope(
     overrides: [
       useHebrewTermsProvider.overrideWith(() => _FalseUseHebrewTerms()),
@@ -46,12 +50,41 @@ Widget _rig(_MockStackRouter router) {
         GlobalCupertinoLocalizations.delegate,
       ],
       supportedLocales: AppLocalizations.supportedLocales,
+      builder: (context, child) => MediaQuery(
+        data: MediaQuery.of(
+          context,
+        ).copyWith(textScaler: TextScaler.linear(textScale)),
+        child: child!,
+      ),
       home: StackRouterScope(
         controller: router,
         stateHash: 0,
         child: const AppIntroScreen(),
       ),
     ),
+  );
+}
+
+/// Asserts [target] is not painted behind (overlapped by) the pinned CTA.
+///
+/// With the non-overlapping Column layout the scroll viewport ends at the CTA's
+/// top edge, so any visible widget is fully above the CTA. A widget scrolled off
+/// the bottom is clipped (its rect sits at/below the CTA top but it is NOT
+/// drawn on top of the CTA). The forbidden state — what the bug produced — is a
+/// widget whose painted rect *straddles* the CTA top edge (partly visible,
+/// partly under the CTA). We assert the target does not straddle the CTA top.
+void _expectNotCoveredByCta(WidgetTester tester, Finder target) {
+  final ctaTop = tester.getRect(find.byType(GlowingCtaButton)).top;
+  final rect = tester.getRect(target);
+  final straddlesCta = rect.top < ctaTop && rect.bottom > ctaTop;
+  expect(
+    straddlesCta,
+    isFalse,
+    reason:
+        'Widget rect $rect straddles the CTA top edge ($ctaTop): it is partly '
+        'visible and partly hidden behind the pinned CTA. The reward cards must '
+        'be either fully visible above the CTA or fully off-screen, never '
+        'clipped by the CTA overlay.',
   );
 }
 

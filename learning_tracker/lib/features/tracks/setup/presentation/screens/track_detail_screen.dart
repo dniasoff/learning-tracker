@@ -193,6 +193,26 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     final locale = Localizations.localeOf(context).toString();
 
     final goal = ref.watch(_trackGoalProvider(track.id)).asData?.value;
+
+    // P1 (iter-2): the Track-Detail "Goal" config row previously read
+    // "{n} · Per week" with no unit noun, while the Required-pace row in
+    // TrackInfoCard already reads "{n} Dafim · Per week" (iter-1 fix). Resolve
+    // the goal's unit noun through the SAME [paceGoalUnitNoun] helper so both
+    // pace rows on this screen read consistently — honouring the Hebrew-terms
+    // toggle, the nusach/transliteration variant, and plural/singular.
+    final useHebrewTerms = domainTermLabels(ref).isHebrew;
+    final paceVariant = ref.watch(currentTransliterationVariantProvider);
+    final goalPaceUnitNoun = goal == null
+        ? null
+        : paceGoalUnitNoun(
+            curriculum: curriculum,
+            goalType: goal.goalType,
+            paceValue: goal.paceValue,
+            paceGranularity: goal.paceGranularity,
+            useHebrew: useHebrewTerms,
+            variant: paceVariant,
+          );
+
     final totalScopeAsync = curriculum != null
         ? ref.watch(scopedItemCountProvider(curriculum))
         : null;
@@ -275,6 +295,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
             trackHasChazara: trackHasChazara,
             locale: locale,
             goal: goal,
+            goalPaceUnitNoun: goalPaceUnitNoun,
             // Pass the count in the goal's PACE unit (daf for a daf-paced track),
             // so "Items remaining" matches the Est. finish basis. Lifetime
             // aggregates stay in amudim elsewhere — this is track-scoped only.
@@ -316,6 +337,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     required String locale,
     required bool useHebrewCalendar,
     Goal? goal,
+    String? goalPaceUnitNoun,
     int? itemsRemaining,
     String? estimatedFinish,
   }) {
@@ -434,6 +456,7 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
                 l10n,
                 locale,
                 useHebrewCalendar: useHebrewCalendar,
+                paceUnitNoun: goalPaceUnitNoun,
               ),
             ),
           if (itemsRemaining != null)
@@ -481,6 +504,12 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
     AppLocalizations l10n,
     String locale, {
     required bool useHebrewCalendar,
+    // P1 (iter-2): unit noun for the pace goal (e.g. "Dafim"/"Daf"), resolved
+    // via [paceGoalUnitNoun] in build(). When non-null the value reads
+    // "7 Dafim · Per week" — matching the Required-pace row — instead of the
+    // bare "7 · Per week". Null falls back to the bare number (deadline goals,
+    // or curriculum/granularity that could not be resolved).
+    String? paceUnitNoun,
   }) {
     if (goal == null) return null;
     if (goal.goalType == 'pace' &&
@@ -489,7 +518,10 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
       final period = goal.pacePeriod == 'per_day'
           ? l10n.pacePerDay
           : l10n.pacePerWeek;
-      return '${goal.paceValue} · $period';
+      final amount = paceUnitNoun != null
+          ? '${goal.paceValue} $paceUnitNoun'
+          : '${goal.paceValue}';
+      return '$amount · $period';
     }
     if (goal.goalType == 'deadline' && goal.targetDate != null) {
       // Show the raw deadline date; the "Est. finish" row is not shown for

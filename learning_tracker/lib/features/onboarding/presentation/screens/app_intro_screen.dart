@@ -33,6 +33,12 @@ export 'package:learning_tracker/features/onboarding/presentation/widgets/intro_
 
 const kIntroSeen = 'intro_seen';
 
+/// Horizontal inset for the pinned CTA region (matches the page content gutter).
+const _kIntroCtaHInset = 24.0;
+
+/// Vertical inset above/below the pinned CTA region.
+const _kIntroCtaVInset = 20.0;
+
 /// Sentinel passed into the bold-highlight subtitle ICU getters, then split out
 /// again so the emphasised phrase can be rendered in its own [TextStyle]. Uses a
 /// Unicode Private-Use character that can never appear in real copy, keeping the
@@ -43,11 +49,10 @@ const _kHighlightPlaceholder = '\uE000';
 const _kNavy = Color(0xFF1A36A5);
 const _kBg = Color(0xFFF8F9FB);
 
-/// End padding so scroll content clears the overlaid bottom CTA (not in Column flex).
-const _kIntroScrollCtaSpacer = 112.0;
-
-/// Overlaid CTA: bottom inset + `GlowingCtaButton` height + small gap.
-const _kIntroCtaOverlayReserve = 82.0;
+/// Breathing room at the bottom of the scroll content above the pinned CTA.
+/// The CTA is now a non-overlapping Column sibling (not an overlay), so this is
+/// just visual padding — not a clearance reserve.
+const _kIntroScrollBottomGap = 16.0;
 
 @RoutePage()
 class AppIntroScreen extends StatefulWidget {
@@ -131,33 +136,35 @@ class _AppIntroScreenState extends State<AppIntroScreen>
       backgroundColor: _kBg,
       resizeToAvoidBottomInset: false,
       body: SafeArea(
-        child: Stack(
-          clipBehavior: Clip.hardEdge,
+        // Non-overlapping layout: the PageView (Expanded) sits above the pinned
+        // CTA in a Column, so the scroll viewport's bottom edge is the CTA's top
+        // edge. Nothing can ever be hidden behind the CTA at first paint — at
+        // any text scale — because the CTA is no longer a Positioned overlay
+        // drawing on top of the scroll content (the old bug: the rewards page's
+        // reward cards were clipped by the overlaid CTA at rest, worse at 1.3).
+        child: Column(
           children: [
-            Positioned.fill(
-              child: Column(
-                children: [
-                  _IntroHeader(onSkip: _skip),
-                  Expanded(
-                    child: PageView.builder(
-                      controller: _pageController,
-                      onPageChanged: _onPageChanged,
-                      itemCount: _pages.length,
-                      itemBuilder: (context, index) {
-                        return _IntroPage(
-                          data: _pages[index],
-                          iconAnimation: _iconController,
-                        );
-                      },
-                    ),
-                  ),
-                ],
+            _IntroHeader(onSkip: _skip),
+            Expanded(
+              child: PageView.builder(
+                controller: _pageController,
+                onPageChanged: _onPageChanged,
+                itemCount: _pages.length,
+                itemBuilder: (context, index) {
+                  return _IntroPage(
+                    data: _pages[index],
+                    iconAnimation: _iconController,
+                  );
+                },
               ),
             ),
-            Positioned(
-              left: 24,
-              right: 24,
-              bottom: 20,
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                _kIntroCtaHInset,
+                _kIntroCtaVInset,
+                _kIntroCtaHInset,
+                _kIntroCtaVInset,
+              ),
               child: GlowingCtaButton(
                 onTap: _nextPage,
                 label: isLast ? l10n.getStarted : l10n.introContinueJourney,
@@ -283,7 +290,7 @@ class _IntroPage extends ConsumerWidget {
                   ),
                   const SizedBox(height: 12),
                   const IntroDailyPlanProgressBar(),
-                  const SizedBox(height: _kIntroCtaOverlayReserve),
+                  const SizedBox(height: _kIntroScrollBottomGap),
                 ],
               ),
             ),
@@ -296,12 +303,13 @@ class _IntroPage extends ConsumerWidget {
   /// Pages 2 & 3: full-page scroll.
   ///
   /// The rewards page (page 3) is content-rich — hero + child-mode tag + title
-  /// + subtitle + two reward cards + a scholar-level card. With the generous
-  /// hero/gap spacing the reward cards were pushed into (and under) the pinned
-  /// bottom CTA at rest, so the cards the page is "selling" were covered until
-  /// the user scrolled. Tighten the lead spacing on the rewards page so the
-  /// cards sit higher and clear the overlaid CTA on first paint, while the
-  /// bottom CTA spacer still guarantees everything clears when scrolled.
+  /// + subtitle + two reward cards + a scholar-level card. The pinned CTA is a
+  /// non-overlapping Column sibling below this scroll view, so the scroll
+  /// viewport ends where the CTA begins and the reward cards can never be hidden
+  /// behind it — at any text scale. When the content is taller than the viewport
+  /// (e.g. font scale 1.3) the page simply scrolls; the cards are reachable and
+  /// uncovered. The rewards page keeps tighter lead spacing so as much content
+  /// as possible is visible on first paint.
   Widget _buildScrolledPage(WidgetRef ref, AppLocalizations l10n) {
     final terms = domainTermLabels(ref);
     final isRewards = data.variant == _IntroPageVariant.rewards;
@@ -336,7 +344,7 @@ class _IntroPage extends ConsumerWidget {
             ),
           ),
           const SliverToBoxAdapter(
-            child: SizedBox(height: _kIntroScrollCtaSpacer),
+            child: SizedBox(height: _kIntroScrollBottomGap),
           ),
         ],
       ),
