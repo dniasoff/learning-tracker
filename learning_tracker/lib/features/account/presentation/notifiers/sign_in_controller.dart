@@ -528,23 +528,41 @@ class SignInController extends Notifier<SignInState> {
       // will get permission-denied from fetchLearnerProfiles (the rules
       // require the document to exist). Treat any error as "no remote profiles"
       // so sign-in is never blocked by a Firestore permission error here.
+      //
+      // RETURNING-USER ROBUSTNESS: a *thrown* fetch (transient permission-denied
+      // from an App Check token blip / a flaky network at sign-in) is
+      // indistinguishable from a genuinely-new account here, and falling
+      // straight through would dump a RETURNING user into first-profile
+      // onboarding. So retry the fetch a few times with backoff before
+      // concluding "no remote profiles": a transient failure recovers, while a
+      // genuinely doc-less new account keeps denying on every attempt and still
+      // (correctly) lands on onboarding. Only *errors* are retried — a timeout
+      // resolves to an empty list (no throw) and is not retried.
       var remoteProfiles = const <Map<String, dynamic>>[];
-      try {
-        remoteProfiles =
-            await _ref
-                .read(firestoreGatewayProvider)
-                ?.fetchLearnerProfiles()
-                .timeout(
-                  const Duration(seconds: 8),
-                  onTimeout: () => const <Map<String, dynamic>>[],
-                ) ??
-            const <Map<String, dynamic>>[];
-      } catch (e, stackTrace) {
-        AppLogger.instance.warning(
-          event: 'navigate_after_sign_in_fetch_profiles_failed',
-          exception: e,
-          stackTrace: stackTrace,
-        );
+      const maxFetchAttempts = 3;
+      for (var attempt = 1; attempt <= maxFetchAttempts; attempt++) {
+        try {
+          remoteProfiles =
+              await _ref
+                  .read(firestoreGatewayProvider)
+                  ?.fetchLearnerProfiles()
+                  .timeout(
+                    const Duration(seconds: 8),
+                    onTimeout: () => const <Map<String, dynamic>>[],
+                  ) ??
+              const <Map<String, dynamic>>[];
+          break;
+        } catch (e, stackTrace) {
+          AppLogger.instance.warning(
+            event: 'navigate_after_sign_in_fetch_profiles_failed',
+            exception: e,
+            stackTrace: stackTrace,
+            fields: {'attempt': attempt, 'maxAttempts': maxFetchAttempts},
+          );
+          if (attempt < maxFetchAttempts) {
+            await Future<void>.delayed(Duration(milliseconds: 1200 * attempt));
+          }
+        }
       }
       cloudAccountHasProfiles = remoteProfiles.isNotEmpty;
 
