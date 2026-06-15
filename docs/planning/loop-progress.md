@@ -915,6 +915,9 @@ Implemented the confirmed model ([[onboarding-offline-account-model]]) in phases
   registers a fresh Firebase account (no local-password verify) and replaces the synthetic email in BOTH the account
   DB (upgradeLocalToCloud email param) and the device registry (updateAccountTier email param); collision/merge
   methods thread the entered email (cloudEmail param). Generic value-prop (no synthetic email shown). +4 service unit
-  tests. make ci GREEN (9980). On-device verify of the new Upgrade UI (email+password form, generic prop) IN FLIGHT.
+  tests. make ci GREEN (9980). ON-DEVICE VERIFIED (5560, offline "Abba"): Upgrade screen shows generic value-prop
+  (no synthetic email) + Email + "Create a password" fields (not confirm-password); entering a real email+password
+  proceeded end-to-end to the "Confirm Your Email" verification screen, no error. 3/3 PASS.
+  ===== ONBOARDING REWORK COMPLETE: phases 1, 2, 2b shipped + on-device verified; phase 3 already-implemented. =====
 - Phase 3 (returning user) still: ALREADY IMPLEMENTED in sign_in_controller — verify-not-rewrite (not done on-device;
   needs a wiped device + cloud test account).
