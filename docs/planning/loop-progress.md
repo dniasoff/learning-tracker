@@ -896,3 +896,25 @@ Implemented the confirmed model ([[onboarding-offline-account-model]]) in phases
   DeviceRestoreRoute; local sign-in routes profiles-exist -> ProfilePicker/AppShell. Rewriting this sensitive,
   working flow would risk regressions, so it should be VERIFIED on-device, not changed. NOT modified.
 - (d) display-name carry-over is MOOT (offline accounts have no account name). make ci GREEN (9976) through all.
+
+### ONBOARDING REWORK — on-device verified + 2 follow-on fixes (2026-06-15)
+- Phase 1 ON-DEVICE VERIFIED (5560 wiped/airplane): credential-less screen (no email/password/name/checkbox),
+  no-credential profile creation → Set Parent PIN. (Account-picker label code-reviewed only — emulator PIN field
+  rejects ADB input.)
+- Phase 2 banner FIX (commit 97e910d2): on-device the banner never rendered — ScaffoldMessenger.of(context) from the
+  shell build resolves above AutoTabsScaffold to a hostless messenger, so showMaterialBanner silently no-op'd (gate
+  was correct + CI-green). Added a root scaffoldMessengerKey on MaterialApp.router (new lib/core/navigation/
+  root_scaffold_messenger.dart) and target it directly. RE-VERIFIED ON-DEVICE (5560, offline adult "Abba"): banner
+  renders ("You're online — back up..."), "Back up" → Upgrade to Cloud, "Not now" dismisses + stays gone. 3/3 PASS.
+  LESSON: a CI-green widget gate can still never render to a user — the messenger-resolution bug was only visible
+  on-device.
+- Phase 2b CONVERT-COMPLETION (commit 7d0b93bb): on-device verify exposed that the Upgrade-to-Cloud flow assumed a
+  real email + user-known password — a credential-less account (synthetic @offline.local + synthetic password) could
+  NEVER complete it (and it showed the synthetic email). Added "full sign-in at conversion": for a credential-less
+  account the Upgrade screen collects a real email + new password, UpgradeToCloudService.upgradeWithNewCredentials()
+  registers a fresh Firebase account (no local-password verify) and replaces the synthetic email in BOTH the account
+  DB (upgradeLocalToCloud email param) and the device registry (updateAccountTier email param); collision/merge
+  methods thread the entered email (cloudEmail param). Generic value-prop (no synthetic email shown). +4 service unit
+  tests. make ci GREEN (9980). On-device verify of the new Upgrade UI (email+password form, generic prop) IN FLIGHT.
+- Phase 3 (returning user) still: ALREADY IMPLEMENTED in sign_in_controller — verify-not-rewrite (not done on-device;
+  needs a wiped device + cloud test account).
