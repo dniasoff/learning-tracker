@@ -919,5 +919,22 @@ Implemented the confirmed model ([[onboarding-offline-account-model]]) in phases
   (no synthetic email) + Email + "Create a password" fields (not confirm-password); entering a real email+password
   proceeded end-to-end to the "Confirm Your Email" verification screen, no error. 3/3 PASS.
   ===== ONBOARDING REWORK COMPLETE: phases 1, 2, 2b shipped + on-device verified; phase 3 already-implemented. =====
+
+### PHASE 3 ROBUSTNESS FIX (2026-06-15) — found by on-device verify
+- On-device Phase 3 check (wipe 5556 → sign in cloud test-loop-a@orvex.test) FAILED: the returning user was dropped
+  into the new-user wizard ("What should we call you?"). Root cause in logcat: post-sign-in fetchLearnerProfiles threw
+  permission-denied (App Check token blip) and sign_in_controller treated any throw as "no remote profiles" → fell
+  through to first-profile onboarding. Real robustness gap matching Daniel's "returning user shouldn't hit the
+  brand-new-user widget" concern.
+- FIX (commit dce9c5e2, make ci GREEN 9980): retry fetchLearnerProfiles up to 3× with backoff (1.2s/2.4s) before
+  concluding new-user. Transient failures recover; a genuinely doc-less new account still denies every attempt and
+  correctly onboards. Timeouts resolve to empty (no throw) and are NOT retried (bounded cost). Cannot cleanly
+  distinguish a persistent transient failure from a new account client-side, so a STILL-failing fetch after retries
+  falls through to onboarding (documented limitation).
+- RE-VERIFY BLOCKED (environment, NOT code): the retry loop is confirmed running on-device (3 attempts logged), but
+  App Check now returns 403 "App attestation failed" on 5556 after the session's repeated wipes → every fetch denied,
+  so the returning-user PASS can't be demonstrated until App Check attestation recovers. Production (working App Check)
+  takes the fetch-success path the code already handles. → re-verify later on a non-throttled device; do NOT keep
+  wiping (worsens the throttle). 5556 left mid-onboarding; 5560 has the offline "Abba" local account.
 - Phase 3 (returning user) still: ALREADY IMPLEMENTED in sign_in_controller — verify-not-rewrite (not done on-device;
   needs a wiped device + cloud test account).
