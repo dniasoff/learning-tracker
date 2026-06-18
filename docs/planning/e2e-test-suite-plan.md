@@ -1,6 +1,6 @@
 # E2E Test Suite — Master Journey Catalog
 
-**Consolidates:** learning+content_browsing audit (J1–J15) + settings audit (J1–J15)  
+**Consolidates:** learning+content_browsing audit (J1–J15) + settings audit (J1–J15) + account-auth audit (J1–J16)  
 **Scope:** 48 routed `@RoutePage` screens · 53 AutoRoute entries · ~54 dialog/sheet surfaces · 16 feature areas  
 **Date:** 2026-06-18 · **Status:** Planning — Wave 1 implementation ready
 
@@ -73,6 +73,9 @@ Every journey can be run in one or more of the following dimensions. The journey
 | E2E-105 | Account picker — switch account | P1 | ad | en | AccountPickerScreen lists 2 accounts; tap second → shell switches profile | 2 seeded accounts |
 | E2E-106 | Upgrade to cloud flow | P1 | ad | en | UpgradeToCloudScreen renders; email→magic link sent; error state mapped from Firebase error code | Local-born account |
 | E2E-107 | Sign out via account actions sheet | P1 | ad | en | Swipe up account sheet; tap Sign Out; confirm → returns to intro | Signed-in account |
+| E2E-108 | Magic link — cold-start deep link consumed | P1 | ad | en | App cold-starts with email-link URI; MagicLinkService processes; user signed in | AppLinks stub with pending URI |
+| E2E-109 | Magic link — warm-start deep link consumed | P2 | ad | en | App in foreground; email-link deep link arrives; user signed in without re-launch | AppLinks stub emitting warm URI |
+| E2E-110 | Google Sign-In watchdog — picker abandoned 45s | P2 | ad | en | Google picker held >45s; watchdog fires SignInTimeout; UI shows error; subsequent completion attempt no-ops gracefully | signInWithGoogle stub with 50s delay |
 
 ### Area 2 — Onboarding
 
@@ -255,7 +258,7 @@ Every journey can be run in one or more of the following dimensions. The journey
 | E2E-1606 | Guard fail-safe — no lockout on guard exception | P1 | ad | en | Guard throws; top-level try/catch allows navigation to proceed | AuthGuard throws |
 | E2E-1607 | Deep link — /invite?token=X routes to AcceptInvite | P0 | tu | en | AcceptInviteRoute has no auth guard; loads without sign-in | Unauthenticated |
 
-**Total journeys: 100**
+**Total journeys: 103**
 
 ---
 
@@ -289,7 +292,7 @@ Waves are ordered P0 → P1 → P2 and grouped so each is a reviewable commit ba
 
 All remaining P1 journeys not in Wave 1. Adds dimension variants (offline, he-RTL, tutor). Includes:
 
-- Auth errors, account-picker, upgrade-to-cloud (E2E-102–E2E-107)
+- Auth errors, account-picker, upgrade-to-cloud, magic-link cold-start (E2E-102–E2E-109)
 - Full onboarding variants, restore (E2E-205–E2E-208)
 - Dashboard offline, tutor indicator (E2E-303, E2E-304, E2E-305, E2E-307)
 - Learning: skip/undo, daf-paced, offline, he-RTL (E2E-403–E2E-408)
@@ -311,6 +314,7 @@ All remaining P1 journeys not in Wave 1. Adds dimension variants (offline, he-RT
 - Sacred time lock + notification suppression (E2E-1402, E2E-1403)
 - Notifications empty (E2E-1502)
 - Sync degraded card (E2E-1305)
+- Magic link warm-start + Google watchdog timeout (E2E-109, E2E-110)
 - All `he-RTL` dimension variants not already covered
 - `expectNoOverflowAcrossDevices` sweep across all 48 screens + all named dialogs
 - Golden baselines (en + he-RTL) for all 48 `@RoutePage` screens once baselined on CI
@@ -391,6 +395,40 @@ completionCommittedProvider,  // watch + assert increments
 markCompletionUseCaseProvider.overrideWith((_) => stubUseCase),
 ```
 
+### Account-auth specific overrides (from account-auth audit)
+
+```dart
+// Magic link — inject fake AppLinks via constructor param
+magicLinkInitializationProvider.overrideWith((ref) => Future<void>.value()),
+// For cold-start link test: stub AppLinks stream with a pending URI
+// appLinksProvider.overrideWith((_) => Stream.value(Uri.parse('https://...')))
+
+// Device registry / account DB
+deviceRegistryProvider.overrideWithValue(inMemoryDeviceRegistry),
+userDatabaseProvider.overrideWithValue(db),
+accountDbFileNameProvider.overrideWithValue('e2e_test.db'),
+
+// Connectivity (internet checker + stream together)
+internetConnectionCheckerProvider.overrideWith((_) => fakeChecker),
+connectivityStreamProvider.overrideWith((_) => Stream.value(true)),
+// Seed helpers for connectivity window fallback:
+//   debugSetLastKnownOnline(true) / debugResetLastKnownOnline()
+
+// Tutor grants (offline union: CF + mirror)
+incomingTutorGrantsProvider.overrideWith((_) => AsyncValue.data(grants)),
+tutorGrantRepositoryProvider.overrideWithValue(stubTutorGrantRepo),
+
+// Firestore gateway (profile fetch on cloud sign-in)
+firestoreGatewayProvider.overrideWithValue(stubGateway), // returns []
+
+// Clock (for upgrade/sign-in updatedAt assertions)
+// DateTimeFactory.nowUtc() must be overridden via clock injection in test setup
+
+// SharedPreferences keys to pre-seed:
+// kOnboardingComplete, kOnboardingSkipped, kIntroSeen, kPermissionsPrompted,
+// kMagicLinkPendingEmail, kPendingVerifyEmailOobCode, kMagicLinkPendingDisplayName
+```
+
 ### Navigation pattern for E2E
 
 ```dart
@@ -465,6 +503,14 @@ Every `@RoutePage` screen must be reached by at least one journey. Screens marke
 | AcceptInviteScreen (`/invite`) | E2E-1202, E2E-1607 | |
 | DeclineInviteScreen (`/tutor/decline`) | E2E-1203 | |
 
+**Tutoring non-routed screens (shown via Navigator push / dialog within tutor flows):**
+
+| Screen | Journey IDs | Gap / notes |
+|---|---|---|
+| TutorPinSetupScreen | E2E-1210 | Navigator push from tutoring settings |
+| TutorPinResetScreen | E2E-1211 | Navigator push from tutoring settings |
+| TutorPinEntryDialog / TutorPinEntryGate | E2E-1210 | Modal gate before talmid session entry |
+
 **Non-routed screens (Navigator push — no AutoRoute path):**
 
 | Screen | Journey IDs | Gap / notes |
@@ -502,7 +548,6 @@ Every `@RoutePage` screen must be reached by at least one journey. Screens marke
 
 1. `LearningProcessWizardScreen` — onboarding bulk-mark wizard; no journey assigned
 2. `TrackLearningOrderScreen` — reorder content within a track; distinct route from `LearningOrderScreen`
-3. `TutorPinEntryGate` (TutorPinVerificationDialog modal) — covered by E2E-1210 but confirm separate widget test
 
 ---
 
@@ -549,6 +594,21 @@ The audits surfaced the following risks that journey tests should specifically a
 | R-S4 | BackupSyncSection stuck-outbox detection via English string match | E2E-1305 | Assert degraded card appears; fragile coupling flagged |
 | R-S5 | showDeleteAccountDialog uses bare showDialog (not showAppDialog) | E2E-107 overflow | Add to overflow guard sweep |
 | R-S6 | Sign-out test skipped in epic_14 (contract changed) | E2E-107 | New E2E journey fills the gap |
+
+### From account-auth audit
+
+| # | Risk | Assigned journey | Note |
+|---|---|---|---|
+| R-AA1 | EmailVerificationConfirmPanel title hardcoded "Confirm Your Email" — not l10n | E2E-106, he variant | Assert Hebrew locale shows localized title, not English literal |
+| R-AA2 | UpgradeToCloudScreen._extractFirebaseCode uses simpler regex; wrong-password branch never fires | E2E-106 error | Assert wrong-password error banner appears (not generic fallback) |
+| R-AA3 | AccountPickerScreen FutureBuilder re-fires on every rebuild (stale account list) | E2E-105 | Assert second account remains visible after unrelated connectivity change |
+| R-AA4 | DeviceRestoreScreen (/restore) has no authGuard — unauthenticated deep link reaches _startRestore() | E2E-207, E2E-1605 | Assert unauthenticated /restore navigates safely to /intro, not crash |
+| R-AA5 | OnboardingProfileCreationStep strings "What should we call you?" hardcoded English | E2E-203 he variant | Assert Hebrew locale shows localised label |
+| R-AA6 | PendingLocalSignupStore.rollbackIfIncomplete fires on back-pop from onboarding — silent account deletion | E2E-203, E2E-204 abandon | Assert user sees warning or account is not silently deleted when abandoning mid-onboarding |
+| R-AA7 | Google Sign-In watchdog fires at 45s but actual Firebase sign-in may succeed after — UI stuck in error state | E2E-110 | Assert UI resets to idle / correct state after watchdog + late completion |
+| R-AA8 | EmptyLoginScreen stale account count on second account added/removed while showing | E2E-205 | Assert switch-account icon updates after background account change |
+| R-AA9 | signInControllerProvider autoDispose — re-entry during in-flight sign-in creates new controller with no callbacks | E2E-101 concurrency | Assert rapid double sign-in attempt does not crash or navigate incorrectly |
+| R-AA10 | AccountLifecycleService.removeCloudFromDevice (soft-remove) leaves no test coverage for re-register same email | E2E-105 | Add sub-case: remove cloud account, re-add same email, confirm new entry created |
 
 ---
 
