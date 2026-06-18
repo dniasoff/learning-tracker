@@ -6,6 +6,7 @@ import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/sefaria_ref.dart';
+import 'package:learning_tracker/core/sync/codec/completion_event_codec.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_command.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
@@ -53,6 +54,8 @@ class CompletionWriter {
 
   final UserDatabase _db;
   final AnalyticsService _analytics;
+
+  static const _codec = CompletionEventCodec();
 
   /// Batch-commit [commands] in a SINGLE Drift transaction (RC1 fix).
   ///
@@ -743,20 +746,25 @@ class CompletionWriter {
   static String _outboxEntityKey(CompletionCommand cmd) =>
       '${cmd.profileId}:${cmd.sefariaRef}:${cmd.stageId}:${cmd.trackType}:${cmd.curriculumId}';
 
-  /// Builds the Firestore completion-document payload.
+  /// Builds the canonical Firestore completion-document payload by routing
+  /// through [CompletionEventCodec.encode].
   ///
   /// Keys are **snake_case** — the canonical Firestore schema convention. The
   /// merge path (`_mergeCompletions`) and `firestore.rules` both read
   /// snake_case keys; emitting camelCase here causes every pulled completion
   /// to be skipped (`insertedCount:0`).
-  static Map<String, Object?> _outboxPayload(CompletionCommand cmd) => {
-    'profile_id': cmd.profileId,
-    'curriculum_id': cmd.curriculumId,
-    'sefaria_ref': cmd.sefariaRef,
-    'stage_id': cmd.stageId,
-    'track_type': cmd.trackType,
-    'track_id': cmd.trackId,
-    'completed_at': cmd.completedAt.toUtc().toIso8601String(),
-    'points': cmd.points,
-  };
+  static Map<String, dynamic> _outboxPayload(CompletionCommand cmd) =>
+      _codec.encode(
+        CompletionEventRow(
+          profileId: cmd.profileId,
+          curriculumId: cmd.curriculumId,
+          sefariaRef: cmd.sefariaRef,
+          stageId: cmd.stageId,
+          trackType: cmd.trackType,
+          trackId: cmd.trackId,
+          eventTimestamp: cmd.completedAt,
+          points: cmd.points,
+          priorMarkOnly: cmd.priorMarkOnly,
+        ),
+      );
 }

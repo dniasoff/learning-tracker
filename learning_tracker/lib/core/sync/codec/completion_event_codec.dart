@@ -12,20 +12,26 @@ import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 class CompletionEventRow {
   const CompletionEventRow({
     this.firestoreId,
+    required this.profileId,
     required this.curriculumId,
     required this.sefariaRef,
     required this.stageId,
     required this.trackType,
+    this.trackId,
     required this.eventTimestamp,
     this.points = 0,
     this.priorMarkOnly = false,
   });
 
   final String? firestoreId;
+  final int profileId;
   final String curriculumId;
   final String sefariaRef;
   final int stageId;
   final String trackType;
+
+  /// Nullable — absent from legacy rows that pre-date the trackId column.
+  final int? trackId;
   final DateTime eventTimestamp;
   final int points;
   final bool priorMarkOnly;
@@ -62,10 +68,12 @@ class CompletionEventCodec extends EntityCodec<CompletionEventRow> {
 
     return CompletionEventRow(
       firestoreId: raw['firestore_id'] as String?,
+      profileId: FirestoreCodec.parseInt(raw['profile_id']) ?? 0,
       curriculumId: curriculumId,
       sefariaRef: sefariaRef,
       stageId: stageId,
       trackType: trackType,
+      trackId: FirestoreCodec.parseInt(raw['track_id']),
       eventTimestamp: eventTs,
       points: FirestoreCodec.parseInt(raw['points']) ?? 0,
       priorMarkOnly: FirestoreCodec.parseBool(raw['prior_mark_only']) ?? false,
@@ -74,10 +82,12 @@ class CompletionEventCodec extends EntityCodec<CompletionEventRow> {
 
   @override
   Map<String, dynamic> encode(CompletionEventRow model) => {
+    'profile_id': model.profileId,
     'curriculum_id': model.curriculumId,
     'sefaria_ref': model.sefariaRef,
     'stage_id': model.stageId,
     'track_type': model.trackType,
+    if (model.trackId != null) 'track_id': model.trackId,
     'completed_at': FirestoreCodec.encodeDateTime(model.eventTimestamp),
     'points': model.points,
     if (model.priorMarkOnly) 'prior_mark_only': true,

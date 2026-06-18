@@ -227,6 +227,16 @@ class DriftMergeStore implements MergeStore {
     final eventTs = _parseDateTime(
       fields['completed_at'] ?? fields['event_timestamp'],
     );
+    // track_id is optional — absent from legacy rows and from Firestore docs
+    // written before Phase B; null is the correct fallback.
+    final trackId =
+        fields['track_id'] as int? ??
+        int.tryParse(fields['track_id']?.toString() ?? '');
+    // points defaults to 0 when absent (legacy rows pre-date this field).
+    final points =
+        fields['points'] as int? ??
+        int.tryParse(fields['points']?.toString() ?? '') ??
+        0;
 
     if (curriculumId == null ||
         sefariaRef == null ||
@@ -269,6 +279,8 @@ class DriftMergeStore implements MergeStore {
         sefariaRef: sefariaRef,
         stageId: stageId,
         trackType: trackType,
+        trackId: Value(trackId),
+        points: Value(points),
         eventTimestamp: eventTs,
       ),
     );
