@@ -14,8 +14,16 @@
 //   • Admin-SDK-only tutor_grants / tutor_active_access.
 //
 // Coverage: 24/24 match paths in firestore.rules.
+//
+// Hardening additions (emulator-hardening plan):
+//   C-EXTRA: PAYLOADS fixture derived from Dart codec encode() outputs —
+//     single source of truth for valid doc shapes, consumed by Phase D and E.
+//   PHASE D: Zero-denial oracle — all legitimate owner writes must succeed.
+//   PHASE E: Cross-device replication round-trip — device-1 writes, device-2
+//     reads back the same document successfully.
 
 import { readFileSync } from 'node:fs';
+import { strict as assert } from 'node:assert';
 import { after, before, beforeEach, describe, test } from 'node:test';
 import {
   assertFails,
@@ -32,6 +40,35 @@ import {
 } from 'firebase/firestore';
 
 setLogLevel('error'); // silence the verbose Firestore SDK chatter
+
+// ── C-EXTRA: canonical write-payload fixtures ─────────────────────────────────
+// Derived from Dart codec encode() outputs and LocalDataUploadService map
+// literals. ISO-8601 strings are converted to Firestore Timestamps so that
+// time-comparison rules (completed_at <= request.time) evaluate correctly.
+// Re-generate: cd learning_tracker && make emit-fixtures
+const _rawPayloads = JSON.parse(
+  readFileSync('functions/test/fixtures/write_payloads.json', 'utf8'),
+);
+
+// Walk a JSON object and convert any ISO-8601 date string to a Firestore
+// Timestamp so time-comparison rules evaluate correctly.
+function convertTimestamps(obj) {
+  if (obj === null || typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(convertTimestamps);
+  const out = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (typeof v === 'string' && /^\d{4}-\d{2}-\d{2}T/.test(v)) {
+      out[k] = Timestamp.fromDate(new Date(v));
+    } else {
+      out[k] = convertTimestamps(v);
+    }
+  }
+  return out;
+}
+
+// PAYLOADS: each collection's canonical write payload with Timestamp objects.
+// Fields intentionally match what the app actually pushes to Firestore.
+const PAYLOADS = convertTimestamps(_rawPayloads);
 
 const OWNER = 'owner-uid';
 const TUTOR = 'tutor-uid';
@@ -682,4 +719,169 @@ describe('tutor_grants/{grantId}/audit_log/{entryId} — read-only for parties; 
     await assertFails(deleteDoc(doc(owner(), AUDIT_PATH)));
     await assertFails(deleteDoc(doc(tutor(), AUDIT_PATH)));
   });
+});
+
+// ── PHASE D — permission-denied oracle ───────────────────────────────────────
+//
+// A legitimate owner must be able to write every whitelisted collection
+// without a single permission-denied error. If a future payload or rules
+// change causes a legitimate write to be denied, the first test here breaks
+// immediately — the zero-denial oracle catches it before it reaches production.
+//
+// The second test (canary) proves the oracle can fail: adding an unknown
+// key to a hasOnly-guarded collection IS denied, so the positive test is
+// not trivially green.
+describe('PHASE D — permission-denied oracle: all legitimate owner writes succeed', () => {
+  test('owner can write all whitelisted collections without a single denial', async () => {
+    const db = owner();
+    const profilePath = `users/${OWNER}/learner_profiles/${PROFILE}`;
+
+    // 1. learner_profiles document itself
+    await assertSucceeds(setDoc(doc(db, profilePath), { name: 'Alice' }));
+    // 2. completions — requires Timestamp for completed_at <= request.time rule
+    await assertSucceeds(setDoc(doc(db, `${LP}/completions/d1`), { points: 5, completed_at: pastTs }));
+    // 3. bookmarks — minimal codec shape; hasOnly allows these keys
+    await assertSucceeds(setDoc(doc(db, `${LP}/bookmarks/bk_d`), PAYLOADS.bookmarks));
+    // 4. settings — open bag; no whitelist
+    await assertSucceeds(setDoc(doc(db, `${LP}/settings/c1`), PAYLOADS.settings));
+    // 5. curriculum_tracks — whitelist allows profile_id, track_id, curriculum_id, state, ...
+    await assertSucceeds(setDoc(doc(db, `${LP}/curriculum_tracks/c1`), PAYLOADS.curriculum_tracks));
+    // 6. stage_definitions — whitelist allows curriculum_id, track_id, stage_order, ...
+    await assertSucceeds(setDoc(doc(db, `${LP}/stage_definitions/t1_1`), PAYLOADS.stage_definitions));
+    // 7. study_day_configs — whitelist allows profile_id, curriculum_id, track_id, day_of_week, day_type, updated_at
+    await assertSucceeds(setDoc(doc(db, `${LP}/study_day_configs/c1_1_1`), PAYLOADS.study_day_configs));
+    // 8. goals — wide hasOnly whitelist (camelCase + snake_case)
+    await assertSucceeds(setDoc(doc(db, `${GOALS}/g1`), PAYLOADS.goals));
+    // 9. learning_order — whitelist allows curriculum_id, sefaria_ref, user_sort_order, updated_at
+    await assertSucceeds(setDoc(doc(db, `${LP}/learning_order/c1_ref`), PAYLOADS.learning_order));
+    // 10. profile_programs — whitelist allows profile_id, curriculum_id, program_id, tracking_start_date, tracking_start_ref
+    await assertSucceeds(setDoc(doc(db, `${LP}/profile_programs/c1`), PAYLOADS.profile_programs));
+    // 11. learning_ledger — no hasOnly; open write (append-only by ULID doc-id)
+    await assertSucceeds(setDoc(doc(db, `${LP}/learning_ledger/ULID001`), PAYLOADS.learning_ledger));
+    // 12. streak_events — no hasOnly; append-only
+    await assertSucceeds(setDoc(doc(db, `${LP}/streak_events/ULID002`), PAYLOADS.streak_events));
+    // 13. preferences — no hasOnly; open bag
+    await assertSucceeds(setDoc(doc(db, `${LP}/preferences/notification_settings`), { enabled: true }));
+    // 14. import_metadata — whitelist allows profile_id, curriculum_id, item_count, imported_at
+    await assertSucceeds(setDoc(doc(db, `${LP}/import_metadata/c1`), PAYLOADS.import_metadata));
+    // 15. curriculum_scopes — open write + delete
+    await assertSucceeds(setDoc(doc(db, `${LP}/curriculum_scopes/sc1`), { curriculum_id: 'c1' }));
+  });
+
+  test('oracle canary: unknown key in hasOnly-guarded collection is denied (oracle is live, not trivially green)', async () => {
+    const db = owner();
+    // bookmarks hasOnly denies any key not in its allowlist
+    await assertFails(setDoc(doc(db, `${LP}/bookmarks/canary`), {
+      ...PAYLOADS.bookmarks,
+      canary_unknown_field: true,
+    }));
+    // curriculum_tracks hasOnly also denies unknown keys
+    await assertFails(setDoc(doc(db, `${LP}/curriculum_tracks/canary`), {
+      ...PAYLOADS.curriculum_tracks,
+      canary_unknown_field: true,
+    }));
+  });
+});
+
+// ── PHASE E — cross-device replication round-trip ────────────────────────────
+//
+// For each whitelisted per-profile collection: device-1 writes a document,
+// device-2 (a separate Firestore client instance with the same uid) reads it
+// back and asserts the key field has the expected value.
+//
+// In @firebase/rules-unit-testing, each call to
+// env.authenticatedContext(uid).firestore() returns a fresh client instance
+// with the same auth token — correctly modelling a second device signed in
+// with the same account.
+//
+// synced_at is intentionally omitted from all payloads: rules permit it
+// (hasOnly lists it as allowed) but do NOT require it. Using pastTs rather
+// than FieldValue.serverTimestamp() avoids flakiness.
+describe('PHASE E — cross-device replication round-trip (same uid, two Firestore contexts)', () => {
+  // Each test case: a collection, the full Firestore path, the write payload,
+  // and one key+value to assert on read-back.
+  const COLLECTIONS = [
+    {
+      name: 'completions',
+      path: `${LP}/completions/rt1`,
+      // completions rules validate completed_at <= request.time: use pastTs
+      payload: { points: 10, completed_at: pastTs },
+      assertField: 'points',
+      assertValue: 10,
+    },
+    {
+      name: 'bookmarks',
+      path: `${LP}/bookmarks/bk_e`,
+      payload: { ...PAYLOADS.bookmarks },
+      assertField: 'curriculum_id',
+      assertValue: 'c1',
+    },
+    {
+      name: 'settings',
+      path: `${LP}/settings/c1_e`,
+      payload: { ...PAYLOADS.settings },
+      assertField: 'curriculum_id',
+      assertValue: 'c1',
+    },
+    {
+      name: 'curriculum_tracks',
+      path: `${LP}/curriculum_tracks/c1_e`,
+      payload: { ...PAYLOADS.curriculum_tracks },
+      assertField: 'state',
+      assertValue: 'active',
+    },
+    {
+      name: 'stage_definitions',
+      path: `${LP}/stage_definitions/t1_1_e`,
+      payload: { ...PAYLOADS.stage_definitions },
+      assertField: 'stage_order',
+      assertValue: 1,
+    },
+    {
+      name: 'study_day_configs',
+      path: `${LP}/study_day_configs/c1_1_1_e`,
+      payload: { ...PAYLOADS.study_day_configs },
+      assertField: 'day_type',
+      assertValue: 'study',
+    },
+    {
+      name: 'goals',
+      path: `${GOALS}/goal_e`,
+      payload: { ...PAYLOADS.goals },
+      assertField: 'profile_id',
+      // profile_id was written as string '5' (matching the path-segment constant)
+      assertValue: PROFILE,
+    },
+    {
+      name: 'learning_order',
+      path: `${LP}/learning_order/c1_Berakhot_2a`,
+      payload: { ...PAYLOADS.learning_order },
+      assertField: 'user_sort_order',
+      assertValue: 1,
+    },
+    {
+      name: 'profile_programs',
+      path: `${LP}/profile_programs/c1_e`,
+      payload: { ...PAYLOADS.profile_programs },
+      assertField: 'curriculum_id',
+      assertValue: 'c1',
+    },
+    {
+      name: 'learning_ledger',
+      path: `${LP}/learning_ledger/ULID0001`,
+      payload: { ...PAYLOADS.learning_ledger },
+      assertField: 'ulid',
+      assertValue: 'ULID0001',
+    },
+  ];
+
+  for (const tc of COLLECTIONS) {
+    test(`${tc.name}: device-1 write is readable by device-2`, async () => {
+      const device1 = env.authenticatedContext(OWNER).firestore();
+      const device2 = env.authenticatedContext(OWNER).firestore();
+      await assertSucceeds(setDoc(doc(device1, tc.path), tc.payload));
+      const snap = await assertSucceeds(getDoc(doc(device2, tc.path)));
+      assert.strictEqual(snap.data()[tc.assertField], tc.assertValue);
+    });
+  }
 });
