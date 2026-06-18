@@ -38,6 +38,7 @@ void main() {
   // completions — codec encode() shape (what the outbox processor writes).
   final completions = const CompletionEventCodec().encode(
     CompletionEventRow(
+      profileId: 5,
       curriculumId: 'c1',
       sefariaRef: 'Berakhot.2a',
       stageId: 1,
@@ -169,10 +170,15 @@ void main() {
       ulid: 'ULID0001',
       profileId: 5,
       curriculumId: 'c1',
-      sefariaRef: 'Berakhot.2a',
-      entryType: 'completion',
-      points: 10,
-      createdAt: past,
+      entryScope: 'unit',
+      unitIdentifier: 'Berakhot.2a',
+      unitDisplayNameHe: 'ברכות ב',
+      unitDisplayNameEn: 'Berakhot 2',
+      trackType: 'primary',
+      completedAt: past,
+      completionNumber: 1,
+      markedBy: 5,
+      isManual: false,
     ),
   );
   // Augment with the LocalDataUploadService push-shape fields.
