@@ -1,4 +1,5 @@
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/sync/codec/bookmark_codec.dart';
 
 /// Domain entity representing a user's current position in a curriculum.
 ///
@@ -29,16 +30,27 @@ class BookmarkEntity {
   String get firestoreId => curriculumId.storageKey;
 
   /// Convert to Firestore document map.
+  ///
+  /// Phase B: routes through [BookmarkCodec.encode] so the write shape is
+  /// identical to the merge read-key (`sefaria_ref`) — removes the
+  /// push↔merge key mismatch that caused cross-device bookmark loss.
   Map<String, dynamic> toFirestore() {
-    return {
-      'curriculum_id': curriculumId.storageKey,
-      'content_item_id': sefariaRef,
-      'updated_at': updatedAt.toIso8601String(),
-    };
+    return const BookmarkCodec().encode(
+      BookmarkRow(
+        curriculumId: curriculumId.storageKey,
+        sefariaRef: sefariaRef,
+        updatedAt: updatedAt,
+      ),
+    );
   }
 
   /// Create from Firestore document.
+  ///
+  /// Accepts both `sefaria_ref` (canonical, codec-written) and the legacy
+  /// `content_item_id` key so old Firestore documents still round-trip.
   static BookmarkEntity fromFirestore(Map<String, dynamic> data) {
+    final ref =
+        (data['sefaria_ref'] ?? data['content_item_id']) as String? ?? '';
     return BookmarkEntity(
       curriculumId: CurriculumId.values.firstWhere(
         (c) => c.storageKey == data['curriculum_id'] as String,
@@ -46,7 +58,7 @@ class BookmarkEntity {
           'Unknown curriculumId: ${data['curriculum_id']}',
         ),
       ),
-      sefariaRef: data['content_item_id'] as String,
+      sefariaRef: ref,
       updatedAt: DateTime.parse(data['updated_at'] as String),
     );
   }

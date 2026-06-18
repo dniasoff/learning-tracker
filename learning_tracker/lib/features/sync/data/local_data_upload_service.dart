@@ -2,6 +2,7 @@ import 'package:learning_tracker/core/analytics/parent_analytics_repository.dart
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/core/sync/codec/bookmark_codec.dart';
 import 'package:learning_tracker/core/sync/codec/goal_codec.dart';
 import 'package:learning_tracker/core/sync/codec/profile_program_codec.dart';
 import 'package:learning_tracker/core/sync/codec/streak_event_codec.dart';
@@ -83,17 +84,24 @@ class LocalDataUploadService {
     );
 
     // ── Bookmarks ─────────────────────────────────────────────────────────
+    // Phase B: route through BookmarkCodec.encode() so the bulk-upload shape
+    // is identical to the per-save shape in BookmarkEntity.toFirestore().
+    const bookmarkCodec = BookmarkCodec();
     final bookmarks = await _database.bookmarkDao.getAllBookmarks();
     for (final b in bookmarks) {
       final track = await (_database.select(
         _database.curriculumTracks,
       )..where((t) => t.id.equals(b.trackId))).getSingleOrNull();
       if (track == null) continue;
-      await _facade.pushBookmark({
-        'curriculum_id': b.curriculumId,
-        'content_item_id': b.sefariaRef,
-        'updated_at': b.updatedAt.toIso8601String(),
-      });
+      await _facade.pushBookmark(
+        bookmarkCodec.encode(
+          BookmarkRow(
+            curriculumId: b.curriculumId,
+            sefariaRef: b.sefariaRef,
+            updatedAt: b.updatedAt,
+          ),
+        ),
+      );
     }
     _logger?.debug(
       event: 'local_data_upload_bookmarks_queued',

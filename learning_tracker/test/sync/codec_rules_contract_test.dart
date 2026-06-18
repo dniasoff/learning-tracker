@@ -62,9 +62,9 @@ const _codecForCollection = <String, String>{
 ///
 /// `goals` was removed from this map after Phase B unified the write path
 /// through GoalCodec.encode() — it is now solely covered by _codecForCollection.
-const _toFirestoreForCollection = <String, String>{
-  'bookmarks': 'lib/features/learning/domain/entities/bookmark.dart',
-};
+/// `bookmarks` was removed after Phase B unified the write path through
+/// BookmarkCodec.encode() — BookmarkEntity.toFirestore() now delegates to it.
+const _toFirestoreForCollection = <String, String>{};
 
 /// Keys injected outside the serializer (gateway `FieldValue.serverTimestamp()`,
 /// or repo/facade layers that add the doc id and scope keys after

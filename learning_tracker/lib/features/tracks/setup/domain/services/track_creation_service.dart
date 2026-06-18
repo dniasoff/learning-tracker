@@ -5,6 +5,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/program_starting_position.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/core/sync/codec/bookmark_codec.dart';
 import 'package:learning_tracker/core/sync/firestore_gateway.dart';
 import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
@@ -216,11 +217,16 @@ class TrackCreationService {
       if (bookmarkRef != null && bookmarkRef.isNotEmpty) {
         // Phase 1 — route the bookmark write through the outbox so offline
         // track-creates do not silently drop the bookmark.
-        await _syncFacade?.pushBookmark({
-          'curriculum_id': curriculum.storageKey,
-          'content_item_id': bookmarkRef,
-          'updated_at': DateTimeFactory.nowUtc().toIso8601String(),
-        });
+        // Phase B — use BookmarkCodec.encode() as the canonical serializer.
+        await _syncFacade?.pushBookmark(
+          const BookmarkCodec().encode(
+            BookmarkRow(
+              curriculumId: curriculum.storageKey,
+              sefariaRef: bookmarkRef,
+              updatedAt: DateTimeFactory.nowUtc(),
+            ),
+          ),
+        );
       }
       // Phase 1 — route the profile-program assignment through syncFacade so
       // tutored sessions call tutorSetProfileProgram instead of the outbox.
