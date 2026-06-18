@@ -63,7 +63,9 @@ class GoalCodec extends EntityCodec<GoalRow> {
       updatedAt: updatedAt,
       createdAt: createdAt,
       paceValue: FirestoreCodec.parseInt(raw['pace_value']),
-      pacePeriod: raw['pace_period'] as String?,
+      // Live writers emit `pace_unit` (the rule-legal key). `pace_period` is a
+      // legacy alias kept only as a read fallback for any pre-fix documents.
+      pacePeriod: (raw['pace_unit'] ?? raw['pace_period']) as String?,
       targetDate: FirestoreCodec.parseDateTime(raw['target_date']),
       isActive: FirestoreCodec.parseBool(raw['is_active']) ?? true,
     );
@@ -71,14 +73,15 @@ class GoalCodec extends EntityCodec<GoalRow> {
 
   @override
   Map<String, dynamic> encode(GoalRow model) => {
-    'firestore_id': model.firestoreId,
+    // Only rule-legal keys (see `goals` hasOnly() in firestore.rules). The
+    // doc id carries the firestore_id; `is_active` is not a synced field on
+    // the live write path; pace unit is keyed `pace_unit` (NOT `pace_period`).
     'profile_id': model.profileId,
     'curriculum_id': model.curriculumId,
     'updated_at': FirestoreCodec.encodeDateTime(model.updatedAt),
     'created_at': FirestoreCodec.encodeDateTime(model.createdAt),
-    'is_active': model.isActive,
     if (model.paceValue != null) 'pace_value': model.paceValue,
-    if (model.pacePeriod != null) 'pace_period': model.pacePeriod,
+    if (model.pacePeriod != null) 'pace_unit': model.pacePeriod,
     if (model.targetDate != null)
       'target_date': FirestoreCodec.encodeDateTime(model.targetDate),
   };

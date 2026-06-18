@@ -167,3 +167,7 @@ tags:
   # Multi-device overflow guard (test/overflow/)
   overflow:
   settings:
+
+  # Sync schema contract (test/sync/codec_rules_contract_test.dart):
+  # asserts every codec's encode() ⊆ the firestore.rules hasOnly() allowlist.
+  contract:

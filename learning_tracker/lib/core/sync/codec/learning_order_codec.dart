@@ -66,13 +66,13 @@ class LearningOrderCodec extends EntityCodec<LearningOrderRow> {
 
   @override
   Map<String, dynamic> encode(LearningOrderRow model) => {
+    // Only rule-legal keys (see `learning_order` hasOnly() in firestore.rules).
+    // `is_custom_ordered` / `display_name_*` are local-only enrichments and are
+    // intentionally NOT synced (the live writer never emitted them either).
     'curriculum_id': model.curriculumId,
     'sefaria_ref': model.sefariaRef,
     'user_sort_order': model.userSortOrder,
-    'is_custom_ordered': model.isCustomOrdered,
     if (model.updatedAt != null)
       'updated_at': FirestoreCodec.encodeDateTime(model.updatedAt),
-    if (model.displayNameHe != null) 'display_name_he': model.displayNameHe,
-    if (model.displayNameEn != null) 'display_name_en': model.displayNameEn,
   };
 }
