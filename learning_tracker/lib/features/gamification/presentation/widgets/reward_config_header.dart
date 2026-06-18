@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
-const Color _kNavy = Color(0xFF00218D);
+const Color _kNavy = AppTheme.brandBlueDeep;
 
 /// App-bar-style header for [RewardConfigurationScreen] with a back button,
 /// centred title, and a three-dot menu that opens the "Manage rewards" sheet.

@@ -15,6 +15,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
+import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/gamification/domain/reward_milestone_icons.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
@@ -228,7 +229,7 @@ class _RedemptionCardState extends State<_RedemptionCard> {
               ),
               child: Icon(
                 RewardMilestoneIcons.iconForIndex(redemption.iconIndex),
-                color: const Color(0xFF00218D),
+                color: AppTheme.brandBlueDeep,
                 size: 28,
               ),
             ),
@@ -261,7 +262,7 @@ class _RedemptionCardState extends State<_RedemptionCard> {
                 FilledButton(
                   onPressed: _busy ? null : () => _run(widget.onFulfil),
                   style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFF00218D),
+                    backgroundColor: AppTheme.brandBlueDeep,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
                       vertical: 8,

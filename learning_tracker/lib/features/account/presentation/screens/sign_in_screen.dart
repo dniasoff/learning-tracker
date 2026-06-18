@@ -176,7 +176,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
       ..showSnackBar(
         SnackBar(
           content: Text(message),
-          backgroundColor: AppTheme.brandCoralDeep,
+          backgroundColor: AppTheme.brandWarningDeep,
           duration: const Duration(seconds: 5),
           behavior: SnackBarBehavior.floating,
         ),

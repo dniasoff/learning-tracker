@@ -660,16 +660,18 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                             backgroundColor:
                                                 AppTheme.transparent,
                                             shadowColor: AppTheme.transparent,
+                                            foregroundColor:
+                                                theme.colorScheme.onPrimary,
                                           ),
                                           child: _isLoading
-                                              ? const SizedBox(
+                                              ? SizedBox(
                                                   height: 20,
                                                   width: 20,
                                                   child:
                                                       CircularProgressIndicator(
                                                         strokeWidth: 2,
-                                                        color: AppTheme
-                                                            .brandCreamCard,
+                                                        color: theme.colorScheme
+                                                            .onPrimary,
                                                       ),
                                                 )
                                               : Text(
@@ -768,8 +770,8 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
                                           : _signUpWithGoogle,
                                       style: OutlinedButton.styleFrom(
                                         foregroundColor: AppTheme.brandInk,
-                                        side: const BorderSide(
-                                          color: Color(0xFFC8CCD8),
+                                        side: BorderSide(
+                                          color: theme.colorScheme.outline,
                                         ),
                                         shape: RoundedRectangleBorder(
                                           borderRadius: BorderRadius.circular(

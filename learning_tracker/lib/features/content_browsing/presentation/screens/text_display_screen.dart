@@ -723,7 +723,7 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
             content: Text(
               AppLocalizations.of(context)!.couldNotSave(e.toString()),
             ),
-            backgroundColor: AppTheme.brandCoralDeep,
+            backgroundColor: AppTheme.brandWarningDeep,
           ),
         );
       }
@@ -792,7 +792,7 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
         children: [
           const Icon(
             Icons.error_outline,
-            color: AppTheme.brandCoralDeep,
+            color: AppTheme.brandWarning,
             size: 20,
           ),
           const SizedBox(width: 12),

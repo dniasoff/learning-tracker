@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
+import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 import 'package:learning_tracker/features/gamification/domain/reward_milestone_icons.dart';
@@ -16,7 +17,7 @@ import 'package:learning_tracker/features/gamification/presentation/widgets/rewa
 import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
-const Color _kNavy = Color(0xFF00218D);
+const Color _kNavy = AppTheme.brandBlueDeep;
 const Color _kOrange = Color(0xFFF2994A);
 const Color _kPageBg = AppColors.surfaceF4b;
 const Color _kFieldFill = Color(0xFFF2F4F8);

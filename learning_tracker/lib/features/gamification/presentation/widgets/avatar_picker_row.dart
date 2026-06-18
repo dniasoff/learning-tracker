@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/gamification/domain/reward_milestone_icons.dart';
 
-const Color _kNavy = Color(0xFF00218D);
+const Color _kNavy = AppTheme.brandBlueDeep;
 const Color _kFieldFill = Color(0xFFF2F4F8);
 const Color _kMutedLabel = Color(0xFF6B7280);
 

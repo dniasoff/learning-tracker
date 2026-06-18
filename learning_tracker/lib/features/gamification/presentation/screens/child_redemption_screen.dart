@@ -13,6 +13,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
+import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 import 'package:learning_tracker/features/gamification/domain/reward_milestone_icons.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
@@ -333,7 +334,7 @@ class _RewardCard extends StatelessWidget {
               ),
               child: Icon(
                 RewardMilestoneIcons.iconForIndex(reward.iconIndex),
-                color: const Color(0xFF00218D),
+                color: AppTheme.brandBlueDeep,
                 size: 28,
               ),
             ),
@@ -379,7 +380,7 @@ class _RewardCard extends StatelessWidget {
               child: FilledButton(
                 onPressed: buttonEnabled ? onRedeem : null,
                 style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFF00218D),
+                  backgroundColor: AppTheme.brandBlueDeep,
                   disabledBackgroundColor: const Color(0xFFE5E7EB),
                   padding: const EdgeInsets.symmetric(
                     horizontal: 14,

@@ -15,21 +15,27 @@ Future<CrashlyticsService> bootstrapFirebase() async {
   try {
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
-    );
+    ).timeout(const Duration(seconds: 15));
     // Activate App Check before any Firestore/Functions/Storage use so the
     // SDK attaches attestation tokens to every request. Debug builds (incl.
     // sideloaded `flutter run`) use the debug provider, whose token must be
     // registered in the console; release builds attest via Play Integrity /
     // App Attest. Non-fatal: a failure must not block local-first startup.
+    //
+    // Timeout guards against FirebearStorageCryptoHelper decryption failures
+    // (corrupted Firebase Installation ID from a previous install) which cause
+    // activate() to hang indefinitely rather than throw.
     try {
-      await FirebaseAppCheck.instance.activate(
-        providerAndroid: kDebugMode
-            ? const AndroidDebugProvider()
-            : const AndroidPlayIntegrityProvider(),
-        providerApple: kDebugMode
-            ? const AppleDebugProvider()
-            : const AppleAppAttestProvider(),
-      );
+      await FirebaseAppCheck.instance
+          .activate(
+            providerAndroid: kDebugMode
+                ? const AndroidDebugProvider()
+                : const AndroidPlayIntegrityProvider(),
+            providerApple: kDebugMode
+                ? const AppleDebugProvider()
+                : const AppleAppAttestProvider(),
+          )
+          .timeout(const Duration(seconds: 10));
     } catch (_) {
       // App Check unavailable — continue; sync may be rejected if enforced.
     }
