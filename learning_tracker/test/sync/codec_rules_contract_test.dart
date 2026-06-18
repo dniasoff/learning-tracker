@@ -59,8 +59,10 @@ const _codecForCollection = <String, String>{
 /// `_serverInjectedKeys` so they don't read as drift. This is the half of the
 /// contract that guards what the app *actually writes* today; Phase B will
 /// collapse encode()/toFirestore() into one serializer so both maps converge.
+///
+/// `goals` was removed from this map after Phase B unified the write path
+/// through GoalCodec.encode() — it is now solely covered by _codecForCollection.
 const _toFirestoreForCollection = <String, String>{
-  'goals': 'lib/features/scheduler/domain/models/goal_entity.dart',
   'bookmarks': 'lib/features/learning/domain/entities/bookmark.dart',
 };
 
@@ -125,11 +127,9 @@ void main() {
           reason: 'Failed to parse any encoded keys from $codecPath',
         );
 
-        final offending = emitted
-            .difference(allowed)
-            .difference(_serverInjectedKeys)
-            .toList()
-          ..sort();
+        final offending =
+            emitted.difference(allowed).difference(_serverInjectedKeys).toList()
+              ..sort();
 
         expect(
           offending,
@@ -167,11 +167,9 @@ void main() {
           reason: 'Failed to parse toFirestore() keys from $sourcePath',
         );
 
-        final offending = emitted
-            .difference(allowed)
-            .difference(_serverInjectedKeys)
-            .toList()
-          ..sort();
+        final offending =
+            emitted.difference(allowed).difference(_serverInjectedKeys).toList()
+              ..sort();
 
         expect(
           offending,
@@ -263,8 +261,7 @@ Set<String> _parseMethodMapKeys(String src, String method) {
 
   final body = src.substring(mapStart + 1, mapEnd);
   // Keys are `'name':` — the colon disambiguates them from string *values*.
-  return RegExp(r"'([^']+)'\s*:")
-      .allMatches(body)
-      .map((m) => m.group(1)!)
-      .toSet();
+  return RegExp(
+    r"'([^']+)'\s*:",
+  ).allMatches(body).map((m) => m.group(1)!).toSet();
 }

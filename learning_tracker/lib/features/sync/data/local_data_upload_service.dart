@@ -2,6 +2,7 @@ import 'package:learning_tracker/core/analytics/parent_analytics_repository.dart
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/core/sync/codec/goal_codec.dart';
 import 'package:learning_tracker/core/sync/codec/profile_program_codec.dart';
 import 'package:learning_tracker/core/sync/codec/streak_event_codec.dart';
 import 'package:learning_tracker/core/sync/codec/track_codec.dart';
@@ -100,26 +101,36 @@ class LocalDataUploadService {
     );
 
     // ── Goals ─────────────────────────────────────────────────────────────
+    // Phase B: route through the canonical GoalCodec.encode() serializer so
+    // the bulk-upload shape is identical to the per-save shape in
+    // goal_repository_impl._syncGoal. `id` is injected post-encode (matches
+    // FirestoreGateway.pushGoal's doc-id convention).
+    const goalCodec = GoalCodec();
     final goals = await _database.goalDao.getAllGoals();
     for (final g in goals) {
       final firestoreId =
           '${g.curriculumId}_${g.targetPercent.toStringAsFixed(1)}_'
           '${g.createdAt.millisecondsSinceEpoch}';
-      await _facade.pushGoal({
-        'id': firestoreId,
-        'profile_id': g.profileId,
-        'track_id': g.trackId,
-        'curriculum_id': g.curriculumId,
-        'description': g.description,
-        'target_percent': g.targetPercent,
-        'target_date': g.targetDate?.toIso8601String(),
-        'date_type': g.dateType,
-        'goal_type': g.goalType,
-        'pace_value': g.paceValue,
-        'pace_unit': g.pacePeriod,
-        'created_at': g.createdAt.toIso8601String(),
-        'updated_at': g.updatedAt.toIso8601String(),
-      });
+      final payload = goalCodec.encode(
+        GoalRow(
+          firestoreId: firestoreId,
+          profileId: g.profileId,
+          curriculumId: g.curriculumId,
+          trackId: g.trackId,
+          targetPercent: g.targetPercent,
+          description: g.description,
+          dateType: g.dateType,
+          goalType: g.goalType,
+          paceValue: g.paceValue,
+          pacePeriod: g.pacePeriod,
+          paceGranularity: g.paceGranularity,
+          targetDate: g.targetDate,
+          createdAt: g.createdAt,
+          updatedAt: g.updatedAt,
+        ),
+      );
+      payload['id'] = firestoreId;
+      await _facade.pushGoal(payload);
     }
     _logger?.debug(
       event: 'local_data_upload_goals_queued',

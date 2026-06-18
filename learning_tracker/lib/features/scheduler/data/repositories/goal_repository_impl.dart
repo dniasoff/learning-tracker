@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart' as drift;
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/sync/codec/goal_codec.dart';
 import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
@@ -209,23 +210,35 @@ class GoalRepositoryImpl implements GoalRepository {
   Future<void> _syncGoal(GoalEntity entity) async {
     if (_syncEngine == null) return;
 
-    // Route to the `goals` subcollection, NOT `settings`. The pull-side
-    // listener (`SyncEngine._onGoalsUpdate`) subscribes to `goals` directly,
-    // so a goal pushed via `pushSettings` lands somewhere the listener never
-    // looks and silently never replicates (fixed 2026-05-19).
+    // Route to the `goals` subcollection through the canonical write serializer
+    // (GoalCodec.encode). This is the Phase B unification: a single serializer
+    // drives both the live repo push and the local_data_upload bulk path so the
+    // two write shapes can never drift from each other or from the merger's
+    // read-keys.
     //
-    // `id` (not `_id`) is what `FirestoreGateway.pushGoal` reads to pick the
-    // deterministic doc id — passing `_id` falls through to `collection.add`
-    // and creates a new duplicate doc per save.
-    final data = entity.toFirestore();
+    // `id` is injected post-encode (it is in _serverInjectedKeys in the contract
+    // test and is the doc-id used by FirestoreGateway.pushGoal to pick the
+    // deterministic Firestore document path).
+    const codec = GoalCodec();
+    final data = codec.encode(
+      GoalRow(
+        firestoreId: entity.firestoreId,
+        profileId: _profileId,
+        curriculumId: entity.curriculumId.storageKey,
+        trackId: entity.trackId,
+        targetPercent: entity.targetPercent,
+        description: entity.description,
+        dateType: entity.dateType,
+        goalType: entity.goalType,
+        paceValue: entity.paceValue,
+        pacePeriod: entity.pacePeriod,
+        paceGranularity: entity.paceGranularityKey,
+        targetDate: entity.targetDate,
+        createdAt: entity.createdAt,
+        updatedAt: entity.updatedAt,
+      ),
+    );
     data['id'] = entity.firestoreId;
-    // Denormalise profile_id into the document so it is consistent with sibling
-    // per-profile entities (tracks, bookmarks, study_day_configs, etc.).
-    // Pull-side scoping is purely path-based (GoalMerger.merge receives profileId
-    // as a parameter from PullPipeline and never reads this field), so the field
-    // is defensive/cosmetic rather than load-bearing — but its absence is a
-    // detectable inconsistency and it future-proofs Firestore security-rule audits.
-    data['profile_id'] = _profileId;
     await _syncEngine.pushGoal(data);
   }
 
