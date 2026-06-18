@@ -4,6 +4,7 @@ import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/codec/bookmark_codec.dart';
 import 'package:learning_tracker/core/sync/codec/goal_codec.dart';
+import 'package:learning_tracker/core/sync/codec/learning_ledger_codec.dart';
 import 'package:learning_tracker/core/sync/codec/profile_program_codec.dart';
 import 'package:learning_tracker/core/sync/codec/streak_event_codec.dart';
 import 'package:learning_tracker/core/sync/codec/track_codec.dart';
@@ -204,27 +205,33 @@ class LocalDataUploadService {
     );
 
     // ── Learning-ledger entries ───────────────────────────────────────────
-    // W3.18/W3.19: push with snake_case field names so the pull-side
-    // LearningLedgerMerger can decode them correctly.
+    // Phase B: route through LearningLedgerCodec.encode() so the bulk-upload
+    // shape is identical to the per-save shape in _ledgerDataToSyncMap
+    // (LearningLedgerRepositoryImpl). Single canonical write serializer.
+    const ledgerCodec = LearningLedgerCodec();
     final ledgerEntries = await _database
         .select(_database.learningLedger)
         .get();
     for (final e in ledgerEntries) {
-      await _facade.enqueueLedgerEntry({
-        'ulid': e.ulid,
-        'profile_id': e.profileId,
-        'curriculum_id': e.curriculumId,
-        'entry_scope': e.entryScope,
-        'unit_identifier': e.unitIdentifier,
-        'unit_display_name_he': e.unitDisplayNameHe,
-        'unit_display_name_en': e.unitDisplayNameEn,
-        'track_type': e.trackType,
-        'track_id': e.trackId,
-        'completed_at': e.completedAt.toIso8601String(),
-        'completion_number': e.completionNumber,
-        'marked_by': e.markedBy,
-        'is_manual': e.isManual,
-      });
+      await _facade.enqueueLedgerEntry(
+        ledgerCodec.encode(
+          LearningLedgerRow(
+            ulid: e.ulid,
+            profileId: e.profileId,
+            curriculumId: e.curriculumId,
+            entryScope: e.entryScope,
+            unitIdentifier: e.unitIdentifier,
+            unitDisplayNameHe: e.unitDisplayNameHe,
+            unitDisplayNameEn: e.unitDisplayNameEn,
+            trackType: e.trackType,
+            trackId: e.trackId,
+            completedAt: e.completedAt,
+            completionNumber: e.completionNumber,
+            markedBy: e.markedBy,
+            isManual: e.isManual,
+          ),
+        ),
+      );
     }
     _logger?.debug(
       event: 'local_data_upload_ledger_entries_queued',

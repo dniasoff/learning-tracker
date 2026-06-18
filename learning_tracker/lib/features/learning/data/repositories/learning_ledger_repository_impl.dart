@@ -1,6 +1,7 @@
 import 'package:drift/drift.dart' as drift;
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+import 'package:learning_tracker/core/sync/codec/learning_ledger_codec.dart';
 import 'package:learning_tracker/core/time/ulid.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
@@ -46,20 +47,26 @@ class LearningLedgerRepositoryImpl implements LearningLedgerRepository {
     }
   }
 
-  Map<String, dynamic> _ledgerDataToSyncMap(LearningLedgerData entry) => {
-    'ulid': entry.ulid,
-    'curriculum_id': entry.curriculumId,
-    'entry_scope': entry.entryScope,
-    'unit_identifier': entry.unitIdentifier,
-    'unit_display_name_he': entry.unitDisplayNameHe,
-    'unit_display_name_en': entry.unitDisplayNameEn,
-    'track_type': entry.trackType,
-    'track_id': entry.trackId,
-    'completed_at': entry.completedAt.toIso8601String(),
-    'completion_number': entry.completionNumber,
-    'marked_by': entry.markedBy,
-    'is_manual': entry.isManual,
-  };
+  static const _codec = LearningLedgerCodec();
+
+  Map<String, dynamic> _ledgerDataToSyncMap(LearningLedgerData entry) =>
+      _codec.encode(
+        LearningLedgerRow(
+          ulid: entry.ulid,
+          profileId: entry.profileId,
+          curriculumId: entry.curriculumId,
+          entryScope: entry.entryScope,
+          unitIdentifier: entry.unitIdentifier,
+          unitDisplayNameHe: entry.unitDisplayNameHe,
+          unitDisplayNameEn: entry.unitDisplayNameEn,
+          trackType: entry.trackType,
+          trackId: entry.trackId,
+          completedAt: entry.completedAt,
+          completionNumber: entry.completionNumber,
+          markedBy: entry.markedBy,
+          isManual: entry.isManual,
+        ),
+      );
 
   Future<void> _syncLedgerEntry(LearningLedgerData entry) async {
     await _outboxFacade?.enqueueLedgerEntry(_ledgerDataToSyncMap(entry));
