@@ -486,7 +486,14 @@ class DriftMergeStore implements MergeStore {
     Map<String, dynamic> fields,
   ) async {
     final curriculumId = fields['curriculum_id'] as String?;
-    final sefariaRef = fields['sefaria_ref'] as String?;
+    // Dual-key: the live writers (BookmarkEntity.toFirestore,
+    // LocalDataUploadService, TrackCreationService) persist the ref under
+    // `content_item_id`, while the codec / legacy docs use `sefaria_ref`. Read
+    // BOTH or every live-written bookmark is dropped here as 'malformed_fields'
+    // and never replicates cross-device (the value is identical under either
+    // key). Rules allow both, so this was invisible to the rules/contract tests.
+    final sefariaRef =
+        (fields['sefaria_ref'] ?? fields['content_item_id']) as String?;
     final updatedAt = _parseDateTime(fields['updated_at']);
 
     if (curriculumId == null || sefariaRef == null || updatedAt == null) {
