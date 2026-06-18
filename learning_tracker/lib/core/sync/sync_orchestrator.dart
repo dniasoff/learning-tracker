@@ -666,6 +666,17 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
 
   @override
   Future<void> pullOnLaunch({bool triggeredFromResume = false}) async {
+    // Identity guard (mirrors the outbox drain's skip-on-mismatch): when the
+    // live Firebase token belongs to a DIFFERENT account than the active one,
+    // every Firestore read is denied by the rules (request.auth.uid != path
+    // uid). Pulling anyway throws FirestorePermissionDeniedException and emits
+    // the misleading generic "Cloud backup is temporarily unavailable — tap to
+    // retry" (which can NEVER succeed via retry — the identity is wrong, not the
+    // network). Instead, surface the actionable "sign in as <account>" status
+    // and skip the pull. The once-per-launch guard is intentionally NOT consumed
+    // so a subsequent re-auth (matched identity) re-runs the pull normally.
+    if (await _skipPullOnIdentityMismatch()) return;
+
     if (triggeredFromResume) {
       try {
         final prefs = await SharedPreferences.getInstance();
@@ -1070,6 +1081,49 @@ class SyncOrchestratorImpl implements SyncOrchestrator {
         stackTrace: st,
       );
     }
+  }
+
+  /// Returns true (and emits an actionable identity-mismatch status) when the
+  /// live Firebase identity does not match the active account — in which case
+  /// the caller must NOT attempt a Firestore pull (every read would be denied).
+  ///
+  /// Best-effort outbox depth is read for the `pendingChanges` count; any DB
+  /// error there is swallowed (depth defaults to 0) since the actionable
+  /// re-auth message — not the count — is the point.
+  Future<bool> _skipPullOnIdentityMismatch() async {
+    final identity = _resolveIdentityStatus?.call();
+    if (identity == null || !identity.isMismatch) return false;
+
+    var depth = 0;
+    try {
+      final dao = _resolveOutboxDao?.call();
+      if (dao != null) {
+        depth = await dao.depth(_profileId);
+        if (_profileId != 0) depth += await dao.depth(0);
+      }
+    } catch (_) {
+      // Best-effort — the message matters more than an exact pending count.
+    }
+
+    final activeEmail = identity.activeAccountEmail;
+    _logger?.info(
+      event: 'sync_orchestrator_pull_skipped_identity_mismatch',
+      fields: {
+        'activeAccountEmail': activeEmail,
+        'signedInEmail': identity.signedInEmail,
+        'pendingChanges': depth,
+      },
+    );
+    _safeEmitStatus(
+      SyncStatus.degraded(
+        pendingChanges: depth,
+        reason: activeEmail != null
+            ? 'Signed in as ${identity.signedInEmail ?? 'a different account'}'
+                  ' — sign in as $activeEmail to back up this account.'
+            : 'Signed in as the wrong account — sign in again to back up.',
+      ),
+    );
+    return true;
   }
 
   Future<void> _recomputeOutboxStatus() async {
