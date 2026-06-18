@@ -285,7 +285,7 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
         alignment: AlignmentDirectional.centerEnd,
         padding: const EdgeInsetsDirectional.only(end: 20),
         decoration: BoxDecoration(
-          color: const Color(0xFFF3CCD1),
+          color: AppColors.statusErrorSoft,
           borderRadius: BorderRadius.circular(22),
         ),
         child: Text(
@@ -310,7 +310,7 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
           child: Ink(
             padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: theme.colorScheme.surface,
               borderRadius: BorderRadius.circular(24),
               border: Border.all(
                 color: AppTheme.brandOutline.withValues(alpha: 0.4),
@@ -381,7 +381,7 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
                             : Icons.warning_rounded)
                       : Icons.lock_outline_rounded,
                   color: isCloud && !hasValidSession
-                      ? const Color(0xFFBA273A)
+                      ? AppColors.statusError
                       : AppTheme.brandInkMuted,
                   size: 22,
                 ),
@@ -413,7 +413,7 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
 
   Color _pillFg(bool isCloud, bool hasValidSession) {
     if (!isCloud) return AppTheme.brandInkMuted;
-    if (!hasValidSession) return const Color(0xFFBA273A);
+    if (!hasValidSession) return AppColors.statusError;
     return AppTheme.brandBlueDeep;
   }
 

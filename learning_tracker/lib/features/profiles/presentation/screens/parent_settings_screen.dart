@@ -54,12 +54,12 @@ final activeProfilePointsBalanceProvider = StreamProvider.autoDispose<int>((
 class ParentSettingsScreen extends ConsumerWidget {
   const ParentSettingsScreen({super.key});
 
-  static const Color _pageBg = Color(0xFFF2F3F7);
+  static const Color _pageBg = AppColors.surfaceF3;
   static const Color _managePurple = Color(0xFF7B5FD9);
-  static const Color _iconCircleMuted = Color(0xFFE8EBF2);
-  static const Color _iconMutedFg = Color(0xFF6B7280);
+  static const Color _iconCircleMuted = AppColors.surfaceE9;
+  static const Color _iconMutedFg = AppTheme.brandInkMuted;
   static const Color _chevronMuted = Color(0xFFC2C9D3);
-  static const Color _dangerIconBg = Color(0xFFFFE8EA);
+  static const Color _dangerIconBg = AppColors.statusErrorSoft;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -232,7 +232,7 @@ class ParentSettingsScreen extends ConsumerWidget {
                     if (canEditTracks || canEditGoals || canEditPoints)
                       _rowDivider(),
                     _ManageRow(
-                      iconBackground: const Color(0xFFFFE8CC),
+                      iconBackground: AppColors.peachTint,
                       icon: Icons.card_giftcard_rounded,
                       iconColor: const Color(0xFFB45309),
                       title: l10n.rewardConfigurationTitle,
@@ -316,7 +316,7 @@ class ParentSettingsScreen extends ConsumerWidget {
               child: Text(
                 l10n.sectionAccountSafety,
                 style: theme.textTheme.labelSmall?.copyWith(
-                  color: const Color(0xFF9AA3B0),
+                  color: AppColors.inkMidGrey,
                   fontWeight: FontWeight.w700,
                   letterSpacing: 1.4,
                   fontSize: 11,
@@ -514,7 +514,7 @@ class _WhitePanel extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.brandCreamCard,
         borderRadius: BorderRadius.circular(20),
         boxShadow: const [
           BoxShadow(

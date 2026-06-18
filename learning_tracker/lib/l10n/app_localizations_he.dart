@@ -1359,7 +1359,7 @@ class AppLocalizationsHe extends AppLocalizations {
   String get adultModeCardTitle => 'מצב מבוגרים';
 
   @override
-  String get adultModeCardSubtitleDeepFocused => 'עומק ומיקוד';
+  String get adultModeCardSubtitleDeepFocused => 'מיקוד';
 
   @override
   String get profileBadgeChildMode => 'מצב ילדים';

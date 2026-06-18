@@ -196,19 +196,17 @@ class SignInForm extends StatelessWidget {
         ),
         prefixIcon: Icon(prefixIcon, color: AppTheme.brandInkMuted),
         suffixIcon: suffixIcon,
-        filled: true,
-        fillColor: const Color(0xFFF0F1F6),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 14,
           vertical: 14,
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: Color(0xFFDCE0EA)),
+          borderSide: const BorderSide(color: AppTheme.brandOutline),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: Color(0xFFDCE0EA)),
+          borderSide: const BorderSide(color: AppTheme.brandOutline),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),

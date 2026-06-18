@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
@@ -37,7 +38,7 @@ Future<Set<DateTime>> streakCalendar(Ref ref) async {
   return streakService.getStreakCalendar(startUtc: thirtyDaysAgo, endUtc: now);
 }
 
-const Color _kPageBg = Color(0xFFF0F2F5);
+const Color _kPageBg = AppColors.surfaceF5;
 
 String _curriculumLabel(
   BuildContext context,

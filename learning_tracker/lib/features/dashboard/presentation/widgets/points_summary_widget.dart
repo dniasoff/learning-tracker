@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 
 /// Dashboard points summary for child mode.
 ///
@@ -21,10 +22,14 @@ class PointsSummaryWidget extends StatelessWidget {
               width: 44,
               height: 44,
               decoration: BoxDecoration(
-                color: Colors.amber.withValues(alpha: 0.15),
+                color: AppColors.goldTrophy.withValues(alpha: 0.15),
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Icon(Icons.star, color: Colors.amber, size: 24),
+              child: const Icon(
+                Icons.star,
+                color: AppColors.goldTrophy,
+                size: 24,
+              ),
             ),
             const SizedBox(width: 12),
             Column(
@@ -47,7 +52,7 @@ class PointsSummaryWidget extends StatelessWidget {
             const Spacer(),
             Icon(
               Icons.stars,
-              color: Colors.amber.withValues(alpha: 0.5),
+              color: AppColors.goldTrophy.withValues(alpha: 0.5),
               size: 32,
             ),
           ],

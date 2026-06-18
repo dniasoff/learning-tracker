@@ -485,8 +485,8 @@ class DashboardBody extends ConsumerWidget {
             count: reviewCount,
             color: AppTheme.brandGold,
             labelColor: AppTheme.brandGoldDeep,
-            backgroundColor: const Color(0xFFF1F2F5),
-            borderColor: const Color(0xFFD4D7DE),
+            backgroundColor: AppTheme.brandCreamSoft,
+            borderColor: AppTheme.brandOutline,
             onTap: () {
               ref
                   .read(schedulerTaskSectionProvider.notifier)

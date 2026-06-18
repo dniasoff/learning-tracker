@@ -68,12 +68,10 @@ class _LifetimeKnowledgeScreenState
         : ref.watch(trackOnlyHeaderCountersProvider(profileId));
 
     return Scaffold(
-      backgroundColor: AppTheme.brandCream,
       appBar: AppBar(
         elevation: 0,
         scrolledUnderElevation: 0,
         surfaceTintColor: Colors.transparent,
-        backgroundColor: AppTheme.brandCream,
         foregroundColor: AppTheme.brandInk,
         title: Text(
           l10n.tierLensLifetimeKnowledge,

@@ -120,7 +120,7 @@ class PaceGoalCard extends StatelessWidget {
     final l10n = AppLocalizations.of(context)!;
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: isActive ? AppTheme.brandBlueBright : AppColors.surfaceE9,
@@ -253,7 +253,7 @@ class DeadlineGoalCard extends StatelessWidget {
     final theme = Theme.of(context);
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: isActive ? AppTheme.brandBlueBright : AppColors.surfaceE9,

@@ -16,6 +16,7 @@
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/tutor_pin_providers.dart';
@@ -128,7 +129,7 @@ class _TutorPinResetScreenState extends ConsumerState<TutorPinResetScreen> {
         const SizedBox(height: 16),
         const CircleAvatar(
           radius: 36,
-          backgroundColor: Color(0xFFFFF3CD),
+          backgroundColor: AppColors.statusWarningSoft,
           child: Icon(
             Icons.lock_reset_rounded,
             size: 36,

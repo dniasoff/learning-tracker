@@ -960,8 +960,6 @@ class _SignupScreenState extends ConsumerState<SignupScreen> {
           fontWeight: FontWeight.w500,
         ),
         suffixIcon: suffixIcon,
-        filled: true,
-        fillColor: const Color(0xFFF0F1F6),
         contentPadding: const EdgeInsets.symmetric(
           horizontal: 16,
           vertical: 14,

@@ -19,6 +19,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
@@ -209,7 +210,7 @@ class _DeclineInviteScreenState extends ConsumerState<DeclineInviteScreen> {
                   const SizedBox(height: 16),
                   const CircleAvatar(
                     radius: 36,
-                    backgroundColor: Color(0xFFFFF3CD),
+                    backgroundColor: AppColors.statusWarningSoft,
                     child: Icon(
                       Icons.do_not_disturb_on_rounded,
                       size: 36,

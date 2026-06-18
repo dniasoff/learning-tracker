@@ -45,9 +45,9 @@ class DashboardAllCaughtUpCard extends StatelessWidget {
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
                     colors: [
-                      Color(0xFF1E52D4),
+                      AppColors.blueMedium,
                       AppColors.blueLight,
-                      Color(0xFF0E266F),
+                      AppColors.blueDeepNavy,
                     ],
                   ),
                 ),
@@ -136,9 +136,9 @@ class DashboardAllCaughtUpCard extends StatelessWidget {
                         child: AnimatedProgressBar(
                           value: cumulativeLifetime,
                           color: kAllCaughtUpProgressFill,
-                          backgroundColor: const Color(
-                            0xFF0A1F4D,
-                          ).withValues(alpha: 0.55),
+                          backgroundColor: AppColors.blueNavy.withValues(
+                            alpha: 0.55,
+                          ),
                           height: 12,
                           duration: const Duration(milliseconds: 700),
                           curve: Curves.easeOutCubic,

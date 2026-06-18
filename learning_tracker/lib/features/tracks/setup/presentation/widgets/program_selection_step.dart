@@ -180,7 +180,7 @@ class _FeaturedProgramCard extends ConsumerWidget {
     final name = learningProgramLabelText(ref, program: program);
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(28),
         border: Border.all(color: AppColors.surfaceE9),
         boxShadow: const [
@@ -289,7 +289,7 @@ class _CompactProgramCard extends ConsumerWidget {
     final name = learningProgramLabelText(ref, program: program);
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: AppColors.surfaceE9),
       ),

@@ -87,7 +87,7 @@ class ContentItemTile extends ConsumerWidget {
   void _showStageBreakdown(BuildContext context, WidgetRef ref) {
     showModalBottomSheet<void>(
       context: context,
-      backgroundColor: AppTheme.brandCreamCard,
+      backgroundColor: Theme.of(context).colorScheme.surface,
       // Scroll-controlled so the sheet can grow with its content and the
       // _StageBreakdownSheet's internal SingleChildScrollView gets a bounded
       // height to scroll within (capped at 80% of screen) instead of

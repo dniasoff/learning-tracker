@@ -27,6 +27,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
+import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/parent_pin_keypad_dialog.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -165,13 +166,14 @@ Future<void> _teardown(WidgetTester tester) async {
 /// Counts how many of the 4 PIN dots are filled (navy colour).
 ///
 /// Strategy: the filled dot is a Container with BoxDecoration(shape: circle,
-/// color: brandInk = 0xFF1B2330, border: ...) and NO child.  The empty dot
-/// has color 0xFFE8EBF0 and has a child (the inner 4×4 centre dot).
+/// color: AppTheme.brandInk, border: ...) and NO child.  The empty dot has a
+/// lighter color and a child (the inner 4×4 centre dot).
 ///
-/// We detect filled by counting Containers that have the specific navy color
-/// AND circular BoxDecoration shape.
+/// We detect filled by counting Containers that have the brand-ink color AND
+/// circular BoxDecoration shape. Reference AppTheme.brandInk directly (not a
+/// hardcoded hex) so the test survives design-system colour changes.
 int _filledDotCount(WidgetTester tester) {
-  const filledColor = Color(0xFF1B2330); // AppTheme.brandInk
+  const filledColor = AppTheme.brandInk;
   var filled = 0;
   for (final widget in tester.allWidgets) {
     if (widget is Container) {

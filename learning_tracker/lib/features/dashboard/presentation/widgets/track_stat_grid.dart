@@ -47,9 +47,9 @@ class TrackStatGrid extends StatelessWidget {
               count: buckets.review.length,
               label: chazaraLabel!,
               valueColor: buckets.review.isNotEmpty
-                  ? const Color(0xFFB45309)
+                  ? AppColors.goldAmber
                   : AppTheme.brandInk,
-              valueBg: const Color(0xFFFFE7D1),
+              valueBg: AppTheme.brandWarningSoft,
               onTap: buckets.review.isNotEmpty
                   ? () => _openFirst(context, buckets.review)
                   : null,
@@ -64,7 +64,7 @@ class TrackStatGrid extends StatelessWidget {
             valueColor: buckets.dueTodayLane.isNotEmpty
                 ? kActiveTrackPrimaryBlue
                 : AppTheme.brandInk,
-            valueBg: const Color(0xFFDFE9FD),
+            valueBg: AppTheme.brandBlueSoft,
             onTap: buckets.dueTodayLane.isNotEmpty
                 ? () => _openFirst(context, buckets.dueTodayLane)
                 : null,
@@ -76,7 +76,7 @@ class TrackStatGrid extends StatelessWidget {
             count: buckets.missedProgram.length,
             label: l10n.activeTrackMetricOverdue,
             valueColor: AppColors.statusError,
-            valueBg: const Color(0xFFFFE0EB),
+            valueBg: AppColors.statusErrorSoft,
             countMutedWhenZero: true,
             onTap: buckets.missedProgram.isNotEmpty
                 ? () => _openFirst(context, buckets.missedProgram)

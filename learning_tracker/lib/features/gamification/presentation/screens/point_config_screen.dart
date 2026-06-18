@@ -244,7 +244,6 @@ class _PointConfigScreenState extends ConsumerState<PointConfigScreen> {
         elevation: 0,
         scrolledUnderElevation: 0,
         surfaceTintColor: Colors.transparent,
-        backgroundColor: Colors.white,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
           color: AppTheme.brandBlueDeep,
@@ -489,7 +488,7 @@ class _CurriculumPointsCard extends ConsumerWidget {
     final terms = domainTermLabels(ref);
     final resolvedStageName = terms.resolveStoredStageName(primaryStageName);
     return Material(
-      color: Colors.white,
+      color: Theme.of(context).colorScheme.surface,
       elevation: 2,
       shadowColor: Colors.black26,
       borderRadius: BorderRadius.circular(22),
@@ -639,7 +638,7 @@ class _StepperControl extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(999),
         boxShadow: [
           BoxShadow(

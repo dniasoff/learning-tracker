@@ -105,9 +105,7 @@ class _PermissionPromptScreenState
     final havdalah = terms.havdalah(variant: variant);
 
     return Scaffold(
-      backgroundColor: AppTheme.brandCreamCard,
       appBar: AppBar(
-        backgroundColor: AppTheme.brandCreamCard,
         elevation: 0,
         title: Text(
           widget.isOnboarding

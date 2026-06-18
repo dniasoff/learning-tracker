@@ -286,7 +286,7 @@ class _TutorPinDotsRow extends StatelessWidget {
             height: 18,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              color: filled ? AppTheme.brandInk : const Color(0xFFE8EBF0),
+              color: filled ? AppTheme.brandInk : AppTheme.brandOutlineMuted,
               border: Border.all(
                 color: filled
                     ? AppTheme.brandInk

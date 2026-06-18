@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/animated_progress_bar.dart';
 import 'package:learning_tracker/features/dashboard/presentation/widgets/dashboard_stat_bubble.dart';
@@ -95,7 +96,7 @@ class DashboardLevelPointsCard extends ConsumerWidget {
         (
           chazaraLabel!,
           reviewDisplay,
-          const Color(0xFFFFC107),
+          AppColors.goldTrophy,
           SchedulerTaskSection.review,
         ),
     ];
@@ -106,7 +107,11 @@ class DashboardLevelPointsCard extends ConsumerWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [Color(0xFF1B46C8), Color(0xFF143DB6), Color(0xFF11349D)],
+          colors: [
+            AppColors.blueMedium,
+            AppColors.blueLight,
+            AppColors.blueMid,
+          ],
         ),
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
@@ -210,7 +215,7 @@ class DashboardLevelPointsCard extends ConsumerWidget {
                 borderRadius: BorderRadius.circular(999),
                 child: AnimatedProgressBar(
                   value: cumulativeLifetime,
-                  color: const Color(0xFFF4C163),
+                  color: AppColors.goldTrophy,
                   backgroundColor: Colors.white.withValues(alpha: 0.22),
                   height: 12,
                   duration: const Duration(milliseconds: 700),

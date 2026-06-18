@@ -67,7 +67,6 @@ class CurriculumProgressScreen extends ConsumerWidget {
         elevation: 0,
         scrolledUnderElevation: 0,
         surfaceTintColor: Colors.transparent,
-        backgroundColor: AppTheme.brandCream,
         foregroundColor: AppTheme.brandInk,
         title: AppBarTitle(
           child: Column(

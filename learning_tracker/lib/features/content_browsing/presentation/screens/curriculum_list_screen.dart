@@ -47,7 +47,7 @@ class CurriculumListScreen extends ConsumerWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(
-              color: AppTheme.brandCreamCard,
+              color: theme.colorScheme.surface,
               borderRadius: BorderRadius.circular(12),
               border: Border.all(color: AppTheme.brandOutline),
             ),
@@ -323,7 +323,7 @@ class _RecentActivityPlaceholder extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppTheme.brandCreamCard,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: AppTheme.brandOutline),
       ),

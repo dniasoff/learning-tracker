@@ -20,6 +20,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
+import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_resume_store.dart'
     show kPermissionsPrompted;
 import 'package:learning_tracker/features/onboarding/presentation/screens/app_intro_screen.dart';
@@ -154,8 +155,10 @@ void main() {
       await tester.pump(const Duration(milliseconds: 900));
 
       final scaffold = tester.widget<Scaffold>(find.byType(Scaffold).first);
-      // Intro palette background — const _kBg = Color(0xFFF8F9FB).
-      expect(scaffold.backgroundColor, const Color(0xFFF8F9FB));
+      // Intro background is the design-system cream (AppTheme.brandCream).
+      // Reference the constant, not a hardcoded hex, so the test tracks the
+      // theme instead of breaking on every palette change.
+      expect(scaffold.backgroundColor, AppTheme.brandCream);
 
       await _tearDown(tester);
     });

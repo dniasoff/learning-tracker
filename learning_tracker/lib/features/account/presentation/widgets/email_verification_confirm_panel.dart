@@ -315,7 +315,6 @@ class _EmailVerificationConfirmPanelState
                     onPressed: busy ? null : widget.onCancel,
                     style: OutlinedButton.styleFrom(
                       foregroundColor: AppTheme.brandInk,
-                      backgroundColor: Colors.white,
                       side: const BorderSide(
                         color: AppTheme.brandOutline,
                         width: 1.2,

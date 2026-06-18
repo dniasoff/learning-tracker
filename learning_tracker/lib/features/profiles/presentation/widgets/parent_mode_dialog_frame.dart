@@ -31,7 +31,7 @@ class ParentModeDialogFrame extends StatelessWidget {
     final maxH = MediaQuery.sizeOf(context).height * 0.88;
 
     return Dialog(
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.brandCreamCard,
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),

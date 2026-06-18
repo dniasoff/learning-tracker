@@ -114,7 +114,7 @@ class ChildRedemptionScreen extends ConsumerWidget {
                         l10n.redeemScreenNoRewards,
                         textAlign: TextAlign.center,
                         style: theme.textTheme.bodyMedium?.copyWith(
-                          color: const Color(0xFF6B7280),
+                          color: AppTheme.brandInkMuted,
                         ),
                       ),
                     ),
@@ -360,8 +360,8 @@ class _RewardCard extends StatelessWidget {
                     l10n.redeemScreenCostLabel(reward.pointsCost),
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: canAfford
-                          ? const Color(0xFF1E52D4)
-                          : const Color(0xFF9CA3AF),
+                          ? AppTheme.brandBlue
+                          : AppTheme.brandInkSoft,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -381,7 +381,7 @@ class _RewardCard extends StatelessWidget {
                 onPressed: buttonEnabled ? onRedeem : null,
                 style: FilledButton.styleFrom(
                   backgroundColor: AppTheme.brandBlueDeep,
-                  disabledBackgroundColor: const Color(0xFFE5E7EB),
+                  disabledBackgroundColor: AppTheme.brandCreamSoft,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 14,
                     vertical: 10,
@@ -399,7 +399,7 @@ class _RewardCard extends StatelessWidget {
                   style: theme.textTheme.labelMedium?.copyWith(
                     color: buttonEnabled
                         ? Colors.white
-                        : const Color(0xFF9CA3AF),
+                        : AppTheme.brandInkMuted,
                     fontWeight: FontWeight.w700,
                     fontSize: 13,
                   ),

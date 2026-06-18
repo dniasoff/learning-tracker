@@ -23,7 +23,7 @@ class RewardConfigHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Material(
-      color: Colors.white,
+      color: Theme.of(context).colorScheme.surface,
       elevation: 0,
       child: Padding(
         padding: EdgeInsets.only(

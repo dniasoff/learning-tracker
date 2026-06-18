@@ -58,60 +58,69 @@ class EmptyLoginScreen extends ConsumerWidget {
           ),
         ],
       ),
-      body: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              AppTheme.brandCreamCard,
-              AppTheme.brandBlueSoft.withValues(alpha: 0.2),
-              AppTheme.brandCream,
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Primary CTA: reuse the existing skipped-onboarding banner
-                // (it surfaces "Set up a learning track" + "Accept a tutor invite").
-                const SkippedOnboardingCtaBanner(),
-
-                const SizedBox(height: 24),
-                const Divider(),
-                const SizedBox(height: 16),
-
-                // Tutor entry point stub — WS3 will wire the full invitation flow.
-                OutlinedButton.icon(
-                  key: const Key('empty_login_tutor_entry'),
-                  icon: const Icon(Icons.school_outlined),
-                  label: Text(l10n.emptyLoginTutorEntry),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AppTheme.brandBlueDeep,
-                    side: const BorderSide(color: AppTheme.brandBlue),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    shape: const StadiumBorder(),
+      body: Builder(
+        builder: (context) {
+          final isDark = Theme.of(context).brightness == Brightness.dark;
+          return DecoratedBox(
+            decoration: isDark
+                ? const BoxDecoration()
+                : BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        AppTheme.brandCreamCard,
+                        AppTheme.brandBlueSoft.withValues(alpha: 0.2),
+                        AppTheme.brandCream,
+                      ],
+                    ),
                   ),
-                  onPressed: () {
-                    // S6: route to the picker — TALMID PROFILES section shows
-                    // active grants. Profile creation remains optional from there.
-                    unawaited(
-                      context.router.replaceAll([const ProfilePickerRoute()]),
-                    );
-                  },
-                ),
+            child: SafeArea(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Primary CTA: reuse the existing skipped-onboarding banner
+                    // (it surfaces "Set up a learning track" + "Accept a tutor invite").
+                    const SkippedOnboardingCtaBanner(),
 
-                // Device-level OS notification permission is requested up front
-                // in the first-run intro flow (see AppIntroScreen) and can be
-                // managed afterwards under Settings → Notification Settings, so
-                // no device-notification toggle is surfaced on this landing.
-              ],
+                    const SizedBox(height: 24),
+                    const Divider(),
+                    const SizedBox(height: 16),
+
+                    // Tutor entry point stub — WS3 will wire the full invitation flow.
+                    OutlinedButton.icon(
+                      key: const Key('empty_login_tutor_entry'),
+                      icon: const Icon(Icons.school_outlined),
+                      label: Text(l10n.emptyLoginTutorEntry),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppTheme.brandBlueDeep,
+                        side: const BorderSide(color: AppTheme.brandBlue),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: const StadiumBorder(),
+                      ),
+                      onPressed: () {
+                        // S6: route to the picker — TALMID PROFILES section shows
+                        // active grants. Profile creation remains optional from there.
+                        unawaited(
+                          context.router.replaceAll([
+                            const ProfilePickerRoute(),
+                          ]),
+                        );
+                      },
+                    ),
+
+                    // Device-level OS notification permission is requested up front
+                    // in the first-run intro flow (see AppIntroScreen) and can be
+                    // managed afterwards under Settings → Notification Settings, so
+                    // no device-notification toggle is surfaced on this landing.
+                  ],
+                ),
+              ),
             ),
-          ),
-        ),
+          );
+        },
       ),
     );
   }

@@ -47,7 +47,7 @@ Future<void> showSignOutConfirmation(
         backgroundColor: Colors.transparent,
         child: Container(
           decoration: BoxDecoration(
-            color: AppTheme.brandCreamCard,
+            color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(34),
           ),
           clipBehavior: Clip.antiAlias,

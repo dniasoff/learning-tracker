@@ -47,7 +47,6 @@ const _kHighlightPlaceholder = '\uE000';
 
 /// Onboarding intro palette (design mockup).
 const _kNavy = Color(0xFF1A36A5);
-const _kBg = Color(0xFFF8F9FB);
 
 /// Breathing room at the bottom of the scroll content above the pinned CTA.
 /// The CTA is now a non-overlapping Column sibling (not an overlay), so this is
@@ -133,7 +132,7 @@ class _AppIntroScreenState extends State<AppIntroScreen>
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      backgroundColor: _kBg,
+      backgroundColor: AppTheme.brandCream,
       resizeToAvoidBottomInset: false,
       body: SafeArea(
         // Non-overlapping layout: the PageView (Expanded) sits above the pinned

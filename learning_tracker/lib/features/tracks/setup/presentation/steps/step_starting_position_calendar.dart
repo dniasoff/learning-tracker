@@ -208,7 +208,7 @@ class _StartingPositionCalendarModeState
       children: [
         DecoratedBox(
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: theme.colorScheme.surface,
             borderRadius: BorderRadius.circular(28),
             boxShadow: const [
               BoxShadow(
@@ -293,7 +293,7 @@ class _StartingPositionCalendarModeState
   ) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(28),
         border: Border.all(color: const Color(0xFFE7EAF1)),
       ),

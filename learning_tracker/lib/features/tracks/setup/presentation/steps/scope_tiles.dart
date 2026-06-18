@@ -74,7 +74,7 @@ class ScopeLevelTile extends StatelessWidget {
     final theme = Theme.of(context);
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(22),
         border: Border.all(color: AppColors.surfaceE9),
       ),

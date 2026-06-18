@@ -108,7 +108,7 @@ class _IntentCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Material(
-      color: Colors.white,
+      color: theme.colorScheme.surface,
       borderRadius: BorderRadius.circular(20),
       elevation: 1,
       shadowColor: Colors.black12,

@@ -248,7 +248,7 @@ class _RedemptionCardState extends State<_RedemptionCard> {
                   Text(
                     l10n.pendingRedemptionsCost(redemption.pointsCost),
                     style: theme.textTheme.bodySmall?.copyWith(
-                      color: const Color(0xFF1E52D4),
+                      color: AppTheme.brandBlue,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -285,7 +285,7 @@ class _RedemptionCardState extends State<_RedemptionCard> {
                 TextButton(
                   onPressed: _busy ? null : () => _run(widget.onDecline),
                   style: TextButton.styleFrom(
-                    foregroundColor: const Color(0xFF6B7280),
+                    foregroundColor: AppTheme.brandInkMuted,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
                       vertical: 4,

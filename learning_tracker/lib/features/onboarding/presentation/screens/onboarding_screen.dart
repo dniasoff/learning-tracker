@@ -311,94 +311,102 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         _phase != _ScreenPhase.intentChooser &&
         !isCombinedProfilePhase;
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     return Scaffold(
       appBar: showAppBar ? AppBar(title: appBarTitle) : null,
-      body: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [
-              AppTheme.brandCreamCard,
-              AppTheme.brandBlueSoft.withValues(alpha: 0.2),
-              AppTheme.brandCream,
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: switch (_phase) {
-            _ScreenPhase.profileCreation => OnboardingProfileCreationStep(
-              onCreated:
-                  ({
-                    required profile,
-                    required isChildMode,
-                    required useHebrewCalendar,
-                    required useHebrewTerms,
-                    required showNikud,
-                    required transliterationVariant,
-                  }) => _onProfileCreated(
-                    profile: profile,
-                    isChildMode: isChildMode,
-                    useHebrewCalendar: useHebrewCalendar,
-                    useHebrewTerms: useHebrewTerms,
-                    showNikud: showNikud,
-                    transliterationVariant: transliterationVariant,
+      body: Builder(
+        builder: (context) => DecoratedBox(
+          decoration: isDark
+              ? const BoxDecoration()
+              : BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      AppTheme.brandCreamCard,
+                      AppTheme.brandBlueSoft.withValues(alpha: 0.2),
+                      AppTheme.brandCream,
+                    ],
                   ),
-              // WS2.skip: wire skip at the profile-creation phase so the user
-              // can bypass profile creation entirely and land on the
-              // empty-login surface.
-              onSkipProfileCreation: () =>
-                  unawaited(_navigateToDashboardSkipped(joinedToTutor: false)),
-            ),
-            _ScreenPhase.parentPinSetup => OnboardingParentPinStep(
-              profileId: _createdProfileId ?? 0,
-              childName: _profileName ?? '',
-              onComplete: _onPinSetupComplete,
-            ),
-            // W6.1: branch chooser
-            _ScreenPhase.intentChooser => OnboardingIntentStep(
-              onChosen: (intent) {
-                switch (intent) {
-                  case OnboardingIntent.trackMyLearning:
-                    setState(() => _phase = _ScreenPhase.addTrack);
-                    unawaited(_saveState());
-                  case OnboardingIntent.joiningToTutor:
-                    unawaited(_navigateToDashboardSkipped(joinedToTutor: true));
-                  case OnboardingIntent.skipForNow:
-                    unawaited(
-                      _navigateToDashboardSkipped(joinedToTutor: false),
-                    );
-                }
-              },
-            ),
-            _ScreenPhase.addTrack => AddTrackFlow(
-              profileId: _createdProfileId ?? 0,
-              isOnboarding: true,
-              onComplete: _onAddTrackComplete,
-              onCancel: _onAddTrackCancel,
-            ),
-            _ScreenPhase.addAnotherPrompt => OnboardingAddAnotherPromptStep(
-              trackCount: _trackCount,
-              lastTrackLabel: _lastTrackLabel,
-              onStartLearning: _onStartLearning,
-              onAddAnotherTrack: _onAddAnotherTrack,
-            ),
-            _ScreenPhase.permissionPrompt => _PermissionPromptPhase(
-              isChildMode: _isChildMode,
-              onChildModeComplete: () {
-                setState(() => _phase = _ScreenPhase.handoff);
-                unawaited(_saveState());
-              },
-              onAdultModeComplete: _navigateToDashboard,
-            ),
-            _ScreenPhase.handoff => OnboardingHandoffStep(
-              profileName: _profileName,
-              onStartLearning: _navigateToDashboard,
-              onAddAnotherTrack: _onAddAnotherTrack,
-              onAddAnotherLearner: _addAnotherLearner,
-            ),
-            _ScreenPhase.done => const OnboardingDoneStep(),
-          },
+                ),
+          child: SafeArea(
+            child: switch (_phase) {
+              _ScreenPhase.profileCreation => OnboardingProfileCreationStep(
+                onCreated:
+                    ({
+                      required profile,
+                      required isChildMode,
+                      required useHebrewCalendar,
+                      required useHebrewTerms,
+                      required showNikud,
+                      required transliterationVariant,
+                    }) => _onProfileCreated(
+                      profile: profile,
+                      isChildMode: isChildMode,
+                      useHebrewCalendar: useHebrewCalendar,
+                      useHebrewTerms: useHebrewTerms,
+                      showNikud: showNikud,
+                      transliterationVariant: transliterationVariant,
+                    ),
+                // WS2.skip: wire skip at the profile-creation phase so the user
+                // can bypass profile creation entirely and land on the
+                // empty-login surface.
+                onSkipProfileCreation: () => unawaited(
+                  _navigateToDashboardSkipped(joinedToTutor: false),
+                ),
+              ),
+              _ScreenPhase.parentPinSetup => OnboardingParentPinStep(
+                profileId: _createdProfileId ?? 0,
+                childName: _profileName ?? '',
+                onComplete: _onPinSetupComplete,
+              ),
+              // W6.1: branch chooser
+              _ScreenPhase.intentChooser => OnboardingIntentStep(
+                onChosen: (intent) {
+                  switch (intent) {
+                    case OnboardingIntent.trackMyLearning:
+                      setState(() => _phase = _ScreenPhase.addTrack);
+                      unawaited(_saveState());
+                    case OnboardingIntent.joiningToTutor:
+                      unawaited(
+                        _navigateToDashboardSkipped(joinedToTutor: true),
+                      );
+                    case OnboardingIntent.skipForNow:
+                      unawaited(
+                        _navigateToDashboardSkipped(joinedToTutor: false),
+                      );
+                  }
+                },
+              ),
+              _ScreenPhase.addTrack => AddTrackFlow(
+                profileId: _createdProfileId ?? 0,
+                isOnboarding: true,
+                onComplete: _onAddTrackComplete,
+                onCancel: _onAddTrackCancel,
+              ),
+              _ScreenPhase.addAnotherPrompt => OnboardingAddAnotherPromptStep(
+                trackCount: _trackCount,
+                lastTrackLabel: _lastTrackLabel,
+                onStartLearning: _onStartLearning,
+                onAddAnotherTrack: _onAddAnotherTrack,
+              ),
+              _ScreenPhase.permissionPrompt => _PermissionPromptPhase(
+                isChildMode: _isChildMode,
+                onChildModeComplete: () {
+                  setState(() => _phase = _ScreenPhase.handoff);
+                  unawaited(_saveState());
+                },
+                onAdultModeComplete: _navigateToDashboard,
+              ),
+              _ScreenPhase.handoff => OnboardingHandoffStep(
+                profileName: _profileName,
+                onStartLearning: _navigateToDashboard,
+                onAddAnotherTrack: _onAddAnotherTrack,
+                onAddAnotherLearner: _addAnotherLearner,
+              ),
+              _ScreenPhase.done => const OnboardingDoneStep(),
+            },
+          ),
         ),
       ),
     );

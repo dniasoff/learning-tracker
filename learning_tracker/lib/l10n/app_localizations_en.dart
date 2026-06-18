@@ -1369,7 +1369,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get adultModeCardTitle => 'Adult Mode';
 
   @override
-  String get adultModeCardSubtitleDeepFocused => 'Deep & Focused';
+  String get adultModeCardSubtitleDeepFocused => 'Focused';
 
   @override
   String get profileBadgeChildMode => 'CHILD MODE';

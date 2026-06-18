@@ -4,121 +4,107 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 
 /// Material 3 theme for the Torah learning app.
 ///
-/// Light palette:
-/// - Primary: Techelet Blue (#0038A8)
-/// - Secondary background: Stone White (#F9F9FB)
-/// - Accent: Silver Slate (#708090)
-/// - Success: Olive Grove (#6B8E23)
-///
-/// Dark palette is derived from the same brand hues, brightened for use on
-/// dark surfaces, with ink/surface roles inverted (DNI-341 / Story 25.20).
+/// Palette sourced from the Orvex Design System (orvex-ds.css):
+///   Light: near-white canvas (#FAFAFB), indigo brand (#5658D6), terracotta CTA.
+///   Dark:  near-black canvas (#08090C), lifted indigo (#8385EE), translucent
+///          surfaces approximated as solid values for Flutter's Material layer.
 class AppTheme {
   AppTheme._();
 
   // ---------------------------------------------------------------------------
-  // Canonical light palette
+  // Light palette — Orvex Design System (light tokens)
   // ---------------------------------------------------------------------------
 
-  /// Primary brand blue (Techelet Blue).
-  static const Color brandBlue = Color(0xFF0038A8);
-  static const Color brandBlueBright = Color(0xFF1A57C2);
-  static const Color brandBlueDeep = Color(0xFF002A80);
-  static const Color brandBlueSoft = Color(0xFFD9E2F4);
+  /// Primary brand indigo (Orvex --brand).
+  static const Color brandBlue = Color(0xFF5658D6);
+  static const Color brandBlueBright = Color(0xFF6F6BD8);
+  static const Color brandBlueDeep = Color(0xFF3F41AB);
+  static const Color brandBlueSoft = Color(0xFFECEDF9); // --brand-tint
 
-  /// Neutral accent (Silver Slate) for secondary text, iconography, and
-  /// navigation-bar unselected items.  The name "Coral" is a legacy misnomer —
-  /// the value is CSS SlateGray and intentionally cool-toned. Use
-  /// [brandWarning*] for error/warning surfaces (snackbars, destructive cards).
-  static const Color brandCoral = Color(0xFF708090);
-  static const Color brandCoralSoft = Color(0xFFD8DEE3);
-  static const Color brandCoralDeep = Color(0xFF4E5E70);
+  /// Neutral accent — Orvex --muted (warm grey, replaces legacy SlateGray).
+  static const Color brandCoral = Color(0xFF6A6A76);
+  static const Color brandCoralSoft = Color(0xFFF3F3F5);
+  static const Color brandCoralDeep = Color(0xFF3F3F48);
 
-  /// True coral / warning palette — IL-4 fix.
-  ///
-  /// These are the CORRECT colours for error snackbars, destructive-action
-  /// cards, and any surface that must communicate urgency or data-loss risk.
-  /// The old [brandCoralDeep] (slate-gray) carried zero red/urgency and made
-  /// warning surfaces look neutral — an audit finding (IL-4).
-  ///
-  /// Migration: callers of [brandCoralDeep] / [brandCoralSoft] for warning
-  /// contexts (e.g. `_showError` snackbar backgrounds, offline data-loss cards)
-  /// should migrate to [brandWarningDeep] / [brandWarningSoft] respectively.
-  static const Color brandWarning = Color(0xFFD45700);
-  static const Color brandWarningSoft = Color(0xFFFDE8D8);
-  static const Color brandWarningDeep = Color(0xFFB33000);
+  /// Warning / CTA palette — Orvex --cta terracotta-coral.
+  static const Color brandWarning = Color(0xFFC8593B); // --cta
+  static const Color brandWarningSoft = Color(0xFFFBEEE8); // --cta-tint
+  static const Color brandWarningDeep = Color(0xFFB04D32); // --cta-600
 
-  /// Success color (Olive Grove) for progress and streaks.
+  /// Success / progress (Olive Grove — kept for curriculum identity).
   static const Color brandGold = Color(0xFF6B8E23);
   static const Color brandGoldSoft = Color(0xFFDCE7C7);
   static const Color brandGoldDeep = Color(0xFF4F6E1A);
 
-  /// Secondary background and neutral surfaces.
-  static const Color brandCream = Color(0xFFF9F9FB);
-  static const Color brandCreamCard = Color(0xFFFFFFFF);
-  static const Color brandCreamSoft = Color(0xFFF1F3F7);
-  static const Color brandOutline = Color(0xFFC3CBD3);
-  static const Color brandOutlineMuted = Color(0xFFA4AFBA);
+  /// Canvas & surface (Orvex --bg / --surface).
+  static const Color brandCream = Color(0xFFFAFAFB); // --bg
+  static const Color brandCreamCard = Color(0xFFFFFFFF); // --surface
+  static const Color brandCreamSoft = Color(0xFFF3F3F5); // --bg-soft
+  static const Color brandOutline = Color(0xFFECECEF); // --line
+  static const Color brandOutlineMuted = Color(0xFFE0E0E5); // --line-2
 
-  /// Ink/text tones.
-  static const Color brandInk = Color(0xFF1B2330);
-
-  /// Muted ink — IL-8 fix: darkened from #708090 (4.05:1 on white) to #5A6A78
-  /// (5.4:1) so it meets WCAG AA for normal body text (≥4.5:1 required).
-  static const Color brandInkMuted = Color(0xFF5A6A78);
-
-  /// Soft ink (secondary/disabled labels) — IL-8 fix: darkened from #95A1AE
-  /// (2.63:1 on white) to #7D8D9C (3.37:1) to meet WCAG AA for large text
-  /// (≥3.0:1 required).
-  static const Color brandInkSoft = Color(0xFF7D8D9C);
+  /// Ink / text tones (Orvex --ink / --muted / --faint).
+  static const Color brandInk = Color(0xFF18181D); // --ink
+  static const Color brandInk2 = Color(0xFF3F3F48); // --ink-2 (body)
+  static const Color brandInkMuted = Color(0xFF6A6A76); // --muted
+  static const Color brandInkSoft = Color(0xFF84848F); // --faint
   static const Color transparent = Color(0x00000000);
 
-  static const Color _errorColor = Color(0xFFB00020);
+  static const Color _errorColor = Color(0xFFB42318); // Orvex --status-danger
 
   // ---------------------------------------------------------------------------
-  // Dark palette — Material 3 dark surfaces with brand hues raised for AA
-  // contrast on dark backgrounds.
+  // Dark palette — Orvex Design System (dark tokens)
+  // Translucent web values (rgba) approximated as solid colours on #08090C.
   // ---------------------------------------------------------------------------
 
-  /// Brightened brand blue for dark surfaces (primary on dark).
-  static const Color brandBlueDark = Color(0xFF7AA7FF);
-  static const Color brandBlueDarkContainer = Color(0xFF002C75);
-  static const Color brandBlueOnContainerDark = Color(0xFFD9E2F4);
+  /// Primary indigo on dark (Orvex dark --brand).
+  static const Color brandBlueDark = Color(0xFF8385EE);
+  static const Color brandBlueDarkContainer = Color(
+    0xFF1C1D30,
+  ); // dark --brand-tint
+  static const Color brandBlueOnContainerDark = Color(
+    0xFFBCBDF9,
+  ); // dark --brand-700
 
-  static const Color brandCoralDark = Color(0xFFB6C2CE);
-  static const Color brandCoralDarkContainer = Color(0xFF394755);
-  static const Color brandCoralOnContainerDark = Color(0xFFE2E8EE);
+  static const Color brandCoralDark = Color(0xFF888F99); // dark --muted
+  static const Color brandCoralDarkContainer = Color(0xFF1E2026);
+  static const Color brandCoralOnContainerDark = Color(0xFFBCC2CB);
 
-  static const Color brandGoldDark = Color(0xFFB6D17A);
-  static const Color brandGoldDarkContainer = Color(0xFF3B5210);
-  static const Color brandGoldOnContainerDark = Color(0xFFE6F0CC);
+  static const Color brandGoldDark = Color(
+    0xFF5CC790,
+  ); // Orvex dark --status-success
+  static const Color brandGoldDarkContainer = Color(0xFF0D2B1A);
+  static const Color brandGoldOnContainerDark = Color(0xFFB6E8CE);
 
-  /// Dark surfaces and outlines.
-  static const Color darkSurface = Color(0xFF12161D);
-  static const Color darkSurfaceCard = Color(0xFF1B2230);
-  static const Color darkSurfaceSoft = Color(0xFF232A39);
-  static const Color darkOutline = Color(0xFF3A4452);
-  static const Color darkOutlineMuted = Color(0xFF2A3140);
+  /// Dark canvas and surfaces.
+  /// rgba(21,23,28,.72) on #08090C ≈ #15171C (solid).
+  /// rgba(29,31,37,.62) on #08090C ≈ #1D1F25 (solid).
+  static const Color darkSurface = Color(0xFF08090C); // --bg
+  static const Color darkSurfaceCard = Color(0xFF15171C); // --surface (solid)
+  static const Color darkSurfaceSoft = Color(0xFF1D1F25); // --surface-2 (solid)
 
-  /// Ink on dark surfaces.
-  static const Color darkInk = Color(0xFFEFF1F5);
-  static const Color darkInkMuted = Color(0xFFB6C2CE);
-  static const Color darkInkSoft = Color(0xFF8893A0);
+  /// rgba(255,255,255,.09) on #08090C ≈ #1E1F22.
+  /// rgba(255,255,255,.15) on #08090C ≈ #2D2E30.
+  static const Color darkOutline = Color(0xFF1E1F22); // --line (solid)
+  static const Color darkOutlineMuted = Color(0xFF2D2E30); // --line-2 (solid)
 
-  static const Color _errorColorDark = Color(0xFFE57373);
+  /// Ink on dark surfaces (Orvex dark --ink / --ink-2 / --muted).
+  static const Color darkInk = Color(0xFFE9EDF2); // --ink
+  static const Color darkInkMuted = Color(0xFFBCC2CB); // --ink-2
+  static const Color darkInkSoft = Color(0xFF888F99); // --muted
+
+  static const Color _errorColorDark = Color(
+    0xFFE59690,
+  ); // dark --status-danger
 
   // ---------------------------------------------------------------------------
-  // Curriculum / track colors (identity colors — same in light and dark)
+  // Curriculum / track colours (domain identity — same in both themes)
   // ---------------------------------------------------------------------------
 
   static const Color curriculumMishna = Color(0xFF2D8C46);
   static const Color curriculumBavli = Color(0xFF1B6B5A);
-  static const Color curriculumYerushalmi = brandBlueBright;
+  static const Color curriculumYerushalmi = Color(0xFF1A57C2);
   static const Color curriculumMishnaBerurah = brandGold;
-
-  /// Chumash curriculum identity color — IL-8 fix: was `brandCoral` (slate-gray
-  /// #708090, visually indistinct from the neutral palette). Now a warm amber
-  /// #9C6B21 (Torah-parchment tone) so the Chumash icon disc is visually
-  /// distinct and carries a warm, appropriate character.
   static const Color curriculumChumash = Color(0xFF9C6B21);
   static const Color curriculumNach = Color(0xFF0EA5A0);
   static const Color curriculumMussar = Color(0xFF7C3AED);
@@ -204,14 +190,13 @@ class AppTheme {
         : _lightTheme(accent: accent);
   }
 
-  /// Back-compat entry points.
   static ThemeData lightTheme([Color accent = brandBlue]) =>
       _lightTheme(accent: accent);
   static ThemeData darkTheme([Color accent = brandBlueDark]) =>
       _darkTheme(accent: accent);
 
   // ---------------------------------------------------------------------------
-  // Light theme
+  // Light theme — Orvex light palette
   // ---------------------------------------------------------------------------
 
   static ThemeData _lightTheme({required Color accent}) {
@@ -226,11 +211,11 @@ class AppTheme {
         primaryContainer: brandBlueSoft,
         onPrimaryContainer: brandBlueDeep,
         secondary: brandCoral,
-        onSecondary: brandCream,
+        onSecondary: Colors.white,
         secondaryContainer: brandCoralSoft,
         onSecondaryContainer: brandCoralDeep,
         tertiary: brandGold,
-        onTertiary: brandCream,
+        onTertiary: Colors.white,
         tertiaryContainer: brandGoldSoft,
         onTertiaryContainer: brandGoldDeep,
         error: _errorColor,
@@ -240,7 +225,7 @@ class AppTheme {
         onSurfaceVariant: brandInkMuted,
         outline: brandOutline,
         outlineVariant: brandOutlineMuted,
-        shadow: Colors.black.withValues(alpha: 0.08),
+        shadow: Colors.black.withValues(alpha: 0.07),
       ),
       scaffoldBackgroundColor: brandCream,
       textTheme: textTheme,
@@ -351,12 +336,12 @@ class AppTheme {
       ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: transparent,
-        indicatorColor: brandBlue.withValues(alpha: 0.14),
+        indicatorColor: accent.withValues(alpha: 0.12),
         iconTheme: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
             return IconThemeData(color: accent);
           }
-          return const IconThemeData(color: brandCoral);
+          return const IconThemeData(color: brandInkMuted);
         }),
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           final base = GoogleFonts.plusJakartaSans(
@@ -366,7 +351,10 @@ class AppTheme {
           if (states.contains(WidgetState.selected)) {
             return base.copyWith(color: accent, fontWeight: FontWeight.w700);
           }
-          return base.copyWith(color: brandCoral, fontWeight: FontWeight.w500);
+          return base.copyWith(
+            color: brandInkMuted,
+            fontWeight: FontWeight.w500,
+          );
         }),
         surfaceTintColor: transparent,
         elevation: 0,
@@ -453,7 +441,7 @@ class AppTheme {
   }
 
   // ---------------------------------------------------------------------------
-  // Dark theme — Material 3 dark palette built from the brand hues.
+  // Dark theme — Orvex dark palette
   // ---------------------------------------------------------------------------
 
   static ThemeData _darkTheme({required Color accent}) {
@@ -464,7 +452,7 @@ class AppTheme {
       brightness: Brightness.dark,
       colorScheme: ColorScheme.dark(
         primary: accent,
-        onPrimary: brandBlueDeep,
+        onPrimary: Colors.white,
         primaryContainer: brandBlueDarkContainer,
         onPrimaryContainer: brandBlueOnContainerDark,
         secondary: brandCoralDark,
@@ -482,7 +470,7 @@ class AppTheme {
         onSurfaceVariant: darkInkMuted,
         outline: darkOutline,
         outlineVariant: darkOutlineMuted,
-        shadow: Colors.black.withValues(alpha: 0.35),
+        shadow: Colors.black.withValues(alpha: 0.5),
       ),
       scaffoldBackgroundColor: darkSurface,
       textTheme: textTheme,
@@ -512,7 +500,7 @@ class AppTheme {
         style: ElevatedButton.styleFrom(
           elevation: 0,
           backgroundColor: accent,
-          foregroundColor: brandBlueDeep,
+          foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(30),
@@ -527,7 +515,7 @@ class AppTheme {
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           backgroundColor: accent,
-          foregroundColor: brandBlueDeep,
+          foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(30),
@@ -622,7 +610,7 @@ class AppTheme {
         selectedColor: accent,
         labelStyle: GoogleFonts.plusJakartaSans(color: darkInk, fontSize: 13),
         secondaryLabelStyle: GoogleFonts.plusJakartaSans(
-          color: brandBlueDeep,
+          color: Colors.white,
           fontSize: 13,
         ),
         shape: RoundedRectangleBorder(
@@ -638,7 +626,7 @@ class AppTheme {
             return darkSurfaceCard;
           }),
           foregroundColor: WidgetStateProperty.resolveWith((states) {
-            if (states.contains(WidgetState.selected)) return brandBlueDeep;
+            if (states.contains(WidgetState.selected)) return Colors.white;
             return darkInk;
           }),
         ),
@@ -648,7 +636,7 @@ class AppTheme {
           if (states.contains(WidgetState.selected)) return accent;
           return Colors.transparent;
         }),
-        checkColor: WidgetStateProperty.all(brandBlueDeep),
+        checkColor: WidgetStateProperty.all(Colors.white),
         side: const BorderSide(color: darkInkMuted),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
       ),

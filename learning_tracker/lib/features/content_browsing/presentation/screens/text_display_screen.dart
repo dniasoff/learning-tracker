@@ -262,7 +262,7 @@ class _TextContentView extends StatelessWidget {
                       baseStyle: AppTextStyles.hebrewBodyLarge.copyWith(
                         fontSize: 26 * fontSize.multiplier,
                         height: 1.65,
-                        color: const Color(0xFF1A1D24),
+                        color: AppTheme.brandInk,
                       ),
                     ),
                   ),
@@ -487,7 +487,7 @@ class _ReaderSectionCard extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.fromLTRB(20, 26, 20, 18),
           decoration: BoxDecoration(
-            color: AppTheme.brandCreamCard,
+            color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(28),
             boxShadow: [
               BoxShadow(
@@ -695,7 +695,7 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
             return AlertDialog(
               icon: const Icon(
                 Icons.school_rounded,
-                color: Color(0xFFD97706), // Amber-600 — tutor accent
+                color: AppColors.goldAmber, // tutor accent
                 size: 32,
               ),
               title: Text(l10n.tutorWriteForbiddenTitle),
@@ -888,7 +888,7 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
                         // W6.17: When in tutor mode, show a muted amber
                         // colour to visually communicate the disabled state.
                         backgroundColor: isTutor
-                            ? const Color(0xFFD97706).withValues(alpha: 0.3)
+                            ? AppColors.goldAmber.withValues(alpha: 0.3)
                             : isDone
                             ? AppTheme.brandGoldDeep
                             : AppTheme.brandBlue,
@@ -899,10 +899,10 @@ class _CompletionSectionState extends ConsumerState<_CompletionSection> {
                         ),
                         elevation: isTutor ? 0 : 2,
                         disabledBackgroundColor: isTutor
-                            ? const Color(0xFFD97706).withValues(alpha: 0.2)
+                            ? AppColors.goldAmber.withValues(alpha: 0.2)
                             : null,
                         disabledForegroundColor: isTutor
-                            ? const Color(0xFFD97706).withValues(alpha: 0.7)
+                            ? AppColors.goldAmber.withValues(alpha: 0.7)
                             : null,
                       ),
                       child: Row(

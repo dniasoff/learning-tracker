@@ -149,7 +149,7 @@ class _OnboardingProfileCreationStepState
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     const cardRadius = 20.0;
-    const prefsBg = Color(0xFFF0F1F6);
+    const prefsBg = AppTheme.brandCreamSoft;
 
     Widget pillPair({
       required String leftLabel,
@@ -161,7 +161,7 @@ class _OnboardingProfileCreationStepState
       Widget pill(String label, bool selected, VoidCallback onTap) {
         return Expanded(
           child: Material(
-            color: selected ? Colors.white : const Color(0xFFE4E7EF),
+            color: selected ? theme.colorScheme.surface : AppTheme.brandOutline,
             borderRadius: BorderRadius.circular(22),
             child: InkWell(
               onTap: onTap,
@@ -185,7 +185,7 @@ class _OnboardingProfileCreationStepState
       return Container(
         padding: const EdgeInsets.all(4),
         decoration: BoxDecoration(
-          color: const Color(0xFFE4E7EF),
+          color: AppTheme.brandOutline,
           borderRadius: BorderRadius.circular(26),
         ),
         child: Row(
@@ -215,7 +215,7 @@ class _OnboardingProfileCreationStepState
           clipBehavior: Clip.none,
           children: [
             Material(
-              color: Colors.white,
+              color: theme.colorScheme.surface,
               borderRadius: BorderRadius.circular(cardRadius),
               elevation: selected ? 0 : 1,
               shadowColor: Colors.black26,
@@ -318,26 +318,10 @@ class _OnboardingProfileCreationStepState
               autocorrect: false,
               enableSuggestions: false,
               inputFormatters: const [TrimLeadingSpaceFormatter()],
+              style: const TextStyle(color: AppTheme.brandInk),
               decoration: InputDecoration(
                 hintText: 'Enter name',
-                filled: true,
-                fillColor: Colors.white,
                 errorText: _nameError,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: const BorderSide(color: Color(0xFFC8CCD8)),
-                ),
-                enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: const BorderSide(color: Color(0xFFC8CCD8)),
-                ),
-                focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(16),
-                  borderSide: const BorderSide(
-                    color: AppTheme.brandBlue,
-                    width: 1.5,
-                  ),
-                ),
                 suffixIcon: const Icon(
                   Icons.edit_outlined,
                   color: AppTheme.brandBlue,
@@ -375,7 +359,7 @@ class _OnboardingProfileCreationStepState
                 modeCard(
                   isChild: false,
                   icon: Icons.menu_book_rounded,
-                  iconBgMuted: const Color(0xFFE4E7EF),
+                  iconBgMuted: AppTheme.brandOutline,
                   title: 'Adult Mode',
                   subtitle: 'Deep & Scholarly',
                 ),

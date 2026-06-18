@@ -2,6 +2,7 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
+import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/features/notifications/presentation/providers/notification_providers.dart';
 import 'package:learning_tracker/features/notifications/presentation/widgets/device_notification_toggle.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
@@ -168,7 +169,7 @@ class _SettingsGroupCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.brandCreamCard,
         borderRadius: BorderRadius.circular(22),
         boxShadow: const [
           BoxShadow(
@@ -267,9 +268,9 @@ class _NotificationSwitchRow extends StatelessWidget {
                 child: Switch(
                   value: value,
                   activeThumbColor: Colors.white,
-                  activeTrackColor: const Color(0xFF123CA5),
+                  activeTrackColor: AppColors.blueMid,
                   inactiveThumbColor: Colors.white,
-                  inactiveTrackColor: const Color(0xFFE0E4ED),
+                  inactiveTrackColor: AppColors.surfaceE9,
                   onChanged: onChanged,
                 ),
               ),
@@ -306,7 +307,7 @@ class _SettingsTimeRow extends StatelessWidget {
       key: key,
       enabled: enabled,
       contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 2),
-      leading: Icon(icon, size: 18, color: const Color(0xFF163A9D)),
+      leading: Icon(icon, size: 18, color: AppColors.blueLight),
       title: Text(
         title,
         style: TextStyle(

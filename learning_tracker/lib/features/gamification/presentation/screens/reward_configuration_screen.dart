@@ -18,12 +18,10 @@ import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 const Color _kNavy = AppTheme.brandBlueDeep;
-const Color _kOrange = Color(0xFFF2994A);
+const Color _kOrange = AppTheme.brandWarning;
 const Color _kPageBg = AppColors.surfaceF4b;
-const Color _kFieldFill = Color(0xFFF2F4F8);
 const Color _kPreviewBg = Color(0xFFEEF3FA);
-const Color _kMutedLabel = Color(0xFF6B7280);
-const Color _kCardWhite = Color(0xFFFFFFFF);
+const Color _kMutedLabel = AppTheme.brandInkMuted;
 
 @RoutePage()
 class RewardConfigurationScreen extends ConsumerStatefulWidget {
@@ -91,7 +89,6 @@ class _RewardConfigurationScreenState
     await showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.white,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
@@ -301,7 +298,7 @@ class _RewardConfigurationScreenState
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: _kCardWhite,
+                  color: Theme.of(context).colorScheme.surface,
                   borderRadius: BorderRadius.circular(22),
                   boxShadow: const [
                     BoxShadow(
@@ -369,12 +366,6 @@ class _RewardConfigurationScreenState
                         inputFormatters: const [TrimLeadingSpaceFormatter()],
                         decoration: InputDecoration(
                           hintText: l10n.rewardConfigNamePlaceholder,
-                          filled: true,
-                          fillColor: _kFieldFill,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
                           contentPadding: const EdgeInsets.symmetric(
                             horizontal: 16,
                             vertical: 14,
@@ -399,12 +390,6 @@ class _RewardConfigurationScreenState
                         ],
                         decoration: InputDecoration(
                           hintText: l10n.rewardConfigPointsPlaceholder,
-                          filled: true,
-                          fillColor: _kFieldFill,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
                           contentPadding: const EdgeInsets.symmetric(
                             horizontal: 16,
                             vertical: 14,

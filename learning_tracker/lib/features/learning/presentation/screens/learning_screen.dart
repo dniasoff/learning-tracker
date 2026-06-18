@@ -246,7 +246,7 @@ class _StreakHeroCard extends StatelessWidget {
                   vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFF4CFA4),
+                  color: AppColors.peachMid,
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
@@ -260,7 +260,7 @@ class _StreakHeroCard extends StatelessWidget {
                   // RTL-safe: no emoji; localised via ARB.
                   l10n.learnStreakKeepItUp,
                   style: theme.textTheme.labelMedium?.copyWith(
-                    color: const Color(0xFF5A3E22),
+                    color: AppColors.peachDark,
                     fontWeight: FontWeight.w700,
                   ),
                 ),
@@ -403,7 +403,7 @@ class _LearnTaskCard extends ConsumerWidget {
         child: Ink(
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppTheme.brandCreamCard,
             borderRadius: BorderRadius.circular(22),
             boxShadow: [
               BoxShadow(
@@ -453,7 +453,7 @@ class _LearnTaskCard extends ConsumerWidget {
                               vertical: 2,
                             ),
                             decoration: BoxDecoration(
-                              color: const Color(0xFFFCDDE0),
+                              color: AppColors.statusErrorSoft,
                               borderRadius: BorderRadius.circular(999),
                             ),
                             child: Text(
@@ -471,7 +471,7 @@ class _LearnTaskCard extends ConsumerWidget {
                             vertical: 2,
                           ),
                           decoration: BoxDecoration(
-                            color: const Color(0xFFEFF0F4),
+                            color: AppTheme.brandCreamSoft,
                             borderRadius: BorderRadius.circular(999),
                           ),
                           child: Text(
@@ -479,7 +479,7 @@ class _LearnTaskCard extends ConsumerWidget {
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
                             style: theme.textTheme.labelSmall?.copyWith(
-                              color: const Color(0xFF6A7282),
+                              color: AppTheme.brandInkMuted,
                               fontWeight: FontWeight.w700,
                             ),
                           ),
@@ -493,7 +493,7 @@ class _LearnTaskCard extends ConsumerWidget {
                       overflow: TextOverflow.ellipsis,
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
-                        color: const Color(0xFF171C25),
+                        color: AppTheme.brandInk,
                         fontSize: 22,
                       ),
                     ),
@@ -579,7 +579,7 @@ class _CurriculumBrowseCard extends StatelessWidget {
         child: Ink(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: AppTheme.brandCreamCard,
             borderRadius: BorderRadius.circular(18),
             boxShadow: [
               BoxShadow(
@@ -607,7 +607,7 @@ class _CurriculumBrowseCard extends StatelessWidget {
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.w700,
                     fontSize: 20,
-                    color: const Color(0xFF171C25),
+                    color: AppTheme.brandInk,
                   ),
                 ),
               ),
@@ -641,7 +641,7 @@ class _InfoCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.brandCreamCard,
         borderRadius: BorderRadius.circular(16),
       ),
       child: Row(

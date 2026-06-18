@@ -53,7 +53,7 @@ Future<ProfileModel?> showAddProfileDialog(
         }
 
         final theme = Theme.of(ctx);
-        const surfaceGrey = Color(0xFFF2F4F7);
+        const surfaceGrey = AppTheme.brandCreamSoft;
         const labelGrey = Color(0xFF333333);
         final canSubmit = ctrl.text.trim().isNotEmpty && err == null;
         final createProfileButton = SizedBox(

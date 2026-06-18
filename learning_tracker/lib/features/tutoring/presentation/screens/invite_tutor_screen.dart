@@ -222,24 +222,7 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
                 decoration: InputDecoration(
                   labelText: l10n.inviteTutorEmailLabel,
                   hintText: l10n.inviteTutorEmailHint,
-                  filled: true,
-                  fillColor: Colors.white,
                   prefixIcon: const Icon(Icons.email_rounded),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(color: Color(0xFFC8CCD8)),
-                  ),
-                  enabledBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(color: Color(0xFFC8CCD8)),
-                  ),
-                  focusedBorder: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: const BorderSide(
-                      color: AppTheme.brandBlue,
-                      width: 1.5,
-                    ),
-                  ),
                   errorText: _errorMessage,
                 ),
               ),
@@ -260,7 +243,6 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
                   _isLoading ? l10n.inviteTutorSending : l10n.inviteTutorSend,
                 ),
                 style: FilledButton.styleFrom(
-                  backgroundColor: AppTheme.brandBlue,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   shape: const StadiumBorder(),
                 ),

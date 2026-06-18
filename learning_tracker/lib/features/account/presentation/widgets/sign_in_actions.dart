@@ -99,7 +99,7 @@ class SignInActions extends StatelessWidget {
                 TextSpan(
                   text: l10n.signInRegisterHere,
                   style: const TextStyle(
-                    color: Color(0xFF8E6425),
+                    color: AppTheme.brandBlue,
                     fontWeight: FontWeight.w700,
                   ),
                   recognizer: TapGestureRecognizer()

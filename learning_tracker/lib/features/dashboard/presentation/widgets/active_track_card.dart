@@ -197,7 +197,6 @@ class ActiveTrackCard extends ConsumerWidget {
       elevation: 5,
       shadowColor: Colors.black26,
       surfaceTintColor: Colors.transparent,
-      color: AppTheme.brandCreamCard,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
       margin: EdgeInsets.zero,
       child: InkWell(

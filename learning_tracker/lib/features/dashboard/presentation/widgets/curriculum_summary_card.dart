@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
+import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/percentage_formatter.dart';
 import 'package:learning_tracker/core/widgets/animated_progress_bar.dart';
@@ -137,9 +138,9 @@ class _PaceBadge extends StatelessWidget {
       },
     };
     final (color, icon) = switch (pace.status) {
-      PaceStatusType.ahead => (Colors.green, Icons.trending_up),
-      PaceStatusType.behind => (Colors.orange, Icons.trending_down),
-      PaceStatusType.onPace => (Colors.blue, Icons.trending_flat),
+      PaceStatusType.ahead => (AppColors.statusSuccess, Icons.trending_up),
+      PaceStatusType.behind => (AppColors.statusWarning, Icons.trending_down),
+      PaceStatusType.onPace => (AppTheme.brandBlue, Icons.trending_flat),
     };
 
     return Container(

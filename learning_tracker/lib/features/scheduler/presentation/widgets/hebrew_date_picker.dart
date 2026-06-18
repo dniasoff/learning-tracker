@@ -126,7 +126,7 @@ class _HebrewDatePickerState extends State<HebrewDatePicker> {
         48;
 
     return Dialog(
-      backgroundColor: AppTheme.brandCreamCard,
+      backgroundColor: theme.colorScheme.surface,
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
       insetPadding: const EdgeInsets.symmetric(horizontal: 24, vertical: 24),

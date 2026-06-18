@@ -6,6 +6,7 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
+import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/widgets/error_display.dart';
 import 'package:learning_tracker/core/widgets/loading_indicator.dart';
@@ -670,7 +671,7 @@ class _Card extends StatelessWidget {
     return Container(
       padding: padding ?? const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
@@ -762,7 +763,7 @@ class _FilterPill extends StatelessWidget {
       onSelected: onSelected,
       showCheckmark: false,
       side: BorderSide.none,
-      backgroundColor: Colors.white,
+      backgroundColor: AppTheme.brandCreamSoft,
       selectedColor: AppColors.blueMid,
       labelStyle: Theme.of(context).textTheme.labelMedium?.copyWith(
         color: selected ? Colors.white : const Color(0xFF4D5668),

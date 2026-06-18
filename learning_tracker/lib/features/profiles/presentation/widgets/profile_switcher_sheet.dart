@@ -77,7 +77,7 @@ class ProfileSwitcherSheet extends ConsumerWidget {
 
     return DecoratedBox(
       decoration: const BoxDecoration(
-        color: Colors.white,
+        color: AppTheme.brandCreamCard,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       // Bound the sheet height, then scroll the WHOLE body inside that bound.

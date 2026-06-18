@@ -35,7 +35,7 @@ class ChildPointsRewardsTabCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(28),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF1E52D4).withValues(alpha: 0.28),
+            color: AppColors.blueMedium.withValues(alpha: 0.28),
             blurRadius: 18,
             offset: const Offset(0, 10),
           ),
@@ -87,7 +87,7 @@ class ChildPointsRewardsTabCard extends StatelessWidget {
                         ),
                         child: const Icon(
                           Icons.emoji_events_rounded,
-                          color: Color(0xFFFFC107),
+                          color: AppColors.goldTrophy,
                           size: 30,
                         ),
                       ),
