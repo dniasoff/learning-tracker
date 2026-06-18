@@ -36,16 +36,13 @@ class SignInActions extends StatelessWidget {
           height: 58,
           child: DecoratedBox(
             decoration: BoxDecoration(
-              gradient: LinearGradient(
-                colors: [
-                  theme.colorScheme.primary,
-                  theme.colorScheme.primary.withValues(alpha: 0.85),
-                ],
+              gradient: const LinearGradient(
+                colors: [AppTheme.brandBlue, AppTheme.brandBlueBright],
               ),
               borderRadius: BorderRadius.circular(30),
               boxShadow: [
                 BoxShadow(
-                  color: theme.colorScheme.primary.withValues(alpha: 0.32),
+                  color: AppTheme.brandBlueBright.withValues(alpha: 0.32),
                   blurRadius: 18,
                   offset: const Offset(0, 8),
                 ),
@@ -56,15 +53,15 @@ class SignInActions extends StatelessWidget {
               style: FilledButton.styleFrom(
                 backgroundColor: AppTheme.transparent,
                 shadowColor: AppTheme.transparent,
-                foregroundColor: theme.colorScheme.onPrimary,
+                foregroundColor: Colors.white,
               ),
               child: isLoading
-                  ? SizedBox(
+                  ? const SizedBox(
                       height: 20,
                       width: 20,
                       child: CircularProgressIndicator(
                         strokeWidth: 2,
-                        color: theme.colorScheme.onPrimary,
+                        color: Colors.white,
                       ),
                     )
                   : Text(
@@ -84,8 +81,8 @@ class SignInActions extends StatelessWidget {
             icon: const Icon(Icons.g_mobiledata_rounded),
             label: Text(l10n.signInWithGoogleCta),
             style: OutlinedButton.styleFrom(
-              foregroundColor: theme.colorScheme.onSurface,
-              side: BorderSide(color: theme.colorScheme.outline),
+              foregroundColor: AppTheme.brandInk,
+              side: const BorderSide(color: AppTheme.brandInkSoft),
             ),
           ),
           const SizedBox(height: 20),
