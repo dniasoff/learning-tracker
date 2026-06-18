@@ -3,6 +3,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/codec/profile_program_codec.dart';
+import 'package:learning_tracker/core/sync/codec/streak_event_codec.dart';
 import 'package:learning_tracker/core/sync/codec/track_codec.dart';
 import 'package:learning_tracker/core/time/ulid.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
@@ -155,20 +156,28 @@ class LocalDataUploadService {
     // H7 fix (V3-W1 / W3.37): streak_events is a per-event collection.
     // Enqueue each local streak event as a separate outbox row with the
     // correct per-event fields (event_type, study_date, created_at, profile_id,
-    // ulid). The old snapshot format (current_count, max_count,
-    // last_completion_date) is garbage in this collection schema.
+    // ulid). Payload is built via StreakEventCodec.encode() so this path
+    // and the per-completion _appendStreakEvent path share the same canonical
+    // write shape (Phase B serialization-unify).
+    const streakCodec = StreakEventCodec();
     final streakEvents = await _database.streakEventDao.getEventsByProfile(
       _profileId,
     );
     for (final e in streakEvents) {
-      final ulid = newUlid(e.eventTimestamp);
-      await _facade.enqueueStreakPayload({
-        'ulid': ulid,
-        'profile_id': _profileId,
-        'event_type': e.eventType,
-        'study_date': e.eventTimestamp.toIso8601String(),
-        'created_at': e.createdAt.toIso8601String(),
-      });
+      final payload = streakCodec.encode(
+        StreakEventRow(
+          profileId: _profileId,
+          eventType: e.eventType,
+          studyDate: DateTime.utc(
+            e.eventTimestamp.year,
+            e.eventTimestamp.month,
+            e.eventTimestamp.day,
+          ),
+          createdAt: e.createdAt,
+          ulid: newUlid(e.eventTimestamp),
+        ),
+      );
+      await _facade.enqueueStreakPayload(payload);
     }
     _logger?.debug(
       event: 'local_data_upload_streak_queued',

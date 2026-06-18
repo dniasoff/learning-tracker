@@ -16,14 +16,20 @@ class StreakEventRow {
     required this.eventType,
     required this.studyDate,
     required this.createdAt,
-    this.firestoreId,
+    this.ulid,
   });
 
   final int profileId;
   final String eventType;
   final DateTime studyDate;
   final DateTime createdAt;
-  final String? firestoreId;
+
+  /// ULID used as the Firestore document-id for this event.
+  ///
+  /// Carried in the payload so the gateway can set a stable doc-id
+  /// (`streak_events/{ulid}`) and idempotent retries overwrite the same
+  /// document instead of creating duplicates.
+  final String? ulid;
 }
 
 /// Codec for the `streak_events` Firestore collection.
@@ -55,7 +61,7 @@ class StreakEventCodec extends EntityCodec<StreakEventRow> {
       eventType: eventType,
       studyDate: studyDate,
       createdAt: createdAt,
-      firestoreId: raw['firestore_id'] as String?,
+      ulid: raw['ulid'] as String?,
     );
   }
 
@@ -65,6 +71,6 @@ class StreakEventCodec extends EntityCodec<StreakEventRow> {
     'event_type': model.eventType,
     'study_date': FirestoreCodec.encodeDateTime(model.studyDate),
     'created_at': FirestoreCodec.encodeDateTime(model.createdAt),
-    if (model.firestoreId != null) 'firestore_id': model.firestoreId,
+    if (model.ulid != null) 'ulid': model.ulid,
   };
 }

@@ -5,6 +5,7 @@ import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/sync/codec/streak_event_codec.dart';
 import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/core/time/ulid.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
@@ -725,8 +726,10 @@ class CompletionRepositoryImpl implements CompletionRepository {
   /// once-per-upgrade `LocalDataUploadService.pushAllLocalData` shipped them
   /// to Firestore, so day-to-day streaks never replicated and a second
   /// device saw a frozen streak. The outbox enqueue closes that gap: the
-  /// payload shape matches `streak_event_codec.dart` and the gateway writes
-  /// to `streak_events/{ulid}`.
+  /// payload is built via [StreakEventCodec.encode] so the push shape is
+  /// canonical and the gateway writes to `streak_events/{ulid}`.
+  static const _streakCodec = StreakEventCodec();
+
   Future<void> _appendStreakEvent({
     required int profileId,
     required DateTime at,
@@ -750,14 +753,16 @@ class CompletionRepositoryImpl implements CompletionRepository {
       // logical day collapse to one Firestore doc.
       final facade = _outboxFacade;
       if (facade != null) {
-        final ulid = newUlid(at);
-        await facade.enqueueStreakPayload({
-          'ulid': ulid,
-          'profile_id': profileId,
-          'event_type': 'completion',
-          'study_date': dayUtc.toIso8601String(),
-          'created_at': at.toIso8601String(),
-        });
+        final payload = _streakCodec.encode(
+          StreakEventRow(
+            profileId: profileId,
+            eventType: 'completion',
+            studyDate: dayUtc,
+            createdAt: at,
+            ulid: newUlid(at),
+          ),
+        );
+        await facade.enqueueStreakPayload(payload);
       }
     } catch (_) {
       // Defensive: never let a telemetry tee block the primary write.
