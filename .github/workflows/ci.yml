@@ -300,14 +300,19 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      - name: Check if firestore-rules test directory exists
+      # Runs the CANONICAL rules suite — learning_tracker/functions/test/firestore_rules.test.mjs
+      # — against the LIVE rules at learning_tracker/firestore.rules. The old
+      # test/firestore-rules/*.js suite was obsolete (accounts/{uid} model) AND read a
+      # non-existent repo-root firestore.rules, so this job errored ENOENT on every run —
+      # silently un-gating rules drift. See `make test-rules`.
+      - name: Check if firestore-rules suite exists
         id: check-dir
         run: |
-          if [ -d "test/firestore-rules" ]; then
+          if [ -f "learning_tracker/functions/test/firestore_rules.test.mjs" ]; then
             echo "exists=true" >> "$GITHUB_OUTPUT"
           else
             echo "exists=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::test/firestore-rules/ not found — skipping firestore-rules job"
+            echo "::notice::firestore_rules.test.mjs not found — skipping firestore-rules job"
           fi
 
       - name: Setup Java (required by Firebase emulator)
@@ -323,7 +328,7 @@ jobs:
         with:
           node-version: '22'
           cache: 'npm'
-          cache-dependency-path: test/firestore-rules/package-lock.json
+          cache-dependency-path: learning_tracker/functions/package-lock.json
 
       - name: Install Firebase CLI
         if: steps.check-dir.outputs.exists == 'true'
@@ -338,16 +343,17 @@ jobs:
 
       - name: Install test dependencies
         if: steps.check-dir.outputs.exists == 'true'
-        working-directory: test/firestore-rules
+        working-directory: learning_tracker/functions
         run: npm ci
 
       - name: Run Firestore rules tests against emulator
         if: steps.check-dir.outputs.exists == 'true'
+        working-directory: learning_tracker
         run: |
           firebase emulators:exec \
             --only firestore \
-            --project learning-tracker-rules-test \
-            "cd test/firestore-rules && FIRESTORE_EMULATOR_HOST=localhost:9090 npm test"
+            --project demo-rules \
+            "node --test functions/test/firestore_rules.test.mjs"
 
   # ── 9. arb-parity ──────────────────────────────────────────────────────────
   arb-parity:

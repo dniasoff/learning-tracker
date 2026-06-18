@@ -419,10 +419,12 @@ describe('curriculum_tracks — owner write with key whitelist, tutor read, dele
 
 // ── Path 15: bookmarks (with hasOnly whitelist) ───────────────────────────────
 describe('bookmarks — owner write with key whitelist, tutor read, delete denied', () => {
+  // NOTE: no `track_type` — removed from the schema (W3.22) and absent from the
+  // bookmarks hasOnly() allowlist. A stale fixture carrying track_type made this
+  // rules test red on dev (invisible because test-rules isn't wired into `make ci`).
   const validBookmark = {
     profile_id: PROFILE,
     curriculum_id: 'c1',
-    track_type: 'primary',
     content_item_id: 'item1',
     sefaria_ref: 'Berakhot.2a',
     stage_id: 's1',

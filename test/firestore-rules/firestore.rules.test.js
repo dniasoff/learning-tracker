@@ -29,7 +29,15 @@ import path from 'path';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const RULES_PATH = path.resolve(__dirname, '../../firestore.rules');
+// DEPRECATED SUITE — superseded by learning_tracker/functions/test/firestore_rules.test.mjs
+// (the canonical 70-test suite that tracks the current users/{uid}/learner_profiles
+// rules model). This file targets an obsolete `accounts/{uid}` layout and the path
+// below pointed at a non-existent repo-root firestore.rules (ENOENT). CI now runs the
+// .mjs suite instead; kept only for reference until removed.
+const RULES_PATH = path.resolve(
+  __dirname,
+  '../../learning_tracker/firestore.rules',
+);
 
 // ── Constants ──────────────────────────────────────────────────────────────
 
