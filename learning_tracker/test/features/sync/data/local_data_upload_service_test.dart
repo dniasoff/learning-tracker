@@ -230,7 +230,9 @@ void main() {
 
       final payload = jsonDecode(rows.first.payload) as Map<String, dynamic>;
       expect(payload['curriculum_id'], 'mishnayos');
-      expect(payload['content_item_id'], 'Mishnah Berakhot 1:1');
+      // Phase B: the bookmark ref is now written under the canonical `sefaria_ref`
+      // key (BookmarkCodec.encode); all readers accept sefaria_ref ?? content_item_id.
+      expect(payload['sefaria_ref'], 'Mishnah Berakhot 1:1');
       // Drift may return local vs UTC ISO depending on the environment; just
       // verify the date fragment is present (YYYY-MM-DD).
       expect(payload['updated_at'], startsWith('2026-05-29'));
@@ -272,7 +274,7 @@ void main() {
     });
 
     test(
-      'payload includes curriculum_id, content_item_id, updated_at keys',
+      'payload includes curriculum_id, sefaria_ref, updated_at keys',
       () async {
         final trackId = await seedTrack(db, profileId: _profileId);
         await db
@@ -293,7 +295,7 @@ void main() {
         final payloads = await _payloadsOf(db, OutboxEntityKind.bookmark);
         expect(
           payloads.first.keys,
-          containsAll(['curriculum_id', 'content_item_id', 'updated_at']),
+          containsAll(['curriculum_id', 'sefaria_ref', 'updated_at']),
         );
       },
     );
@@ -359,6 +361,10 @@ void main() {
 
       final payloads = await _payloadsOf(db, OutboxEntityKind.goal);
       final p = payloads.first;
+      // Phase B: GoalCodec.encode omits null optional fields (the old hand-built
+      // map wrote them as null). This is a DEADLINE goal with no pace, so
+      // pace_value/pace_unit are correctly absent (the merger reads them
+      // null-safely). All non-pace required fields must be present.
       expect(
         p.keys,
         containsAll([
@@ -371,8 +377,6 @@ void main() {
           'target_date',
           'date_type',
           'goal_type',
-          'pace_value',
-          'pace_unit',
           'created_at',
           'updated_at',
         ]),

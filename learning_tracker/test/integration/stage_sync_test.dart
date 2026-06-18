@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -99,7 +101,13 @@ void main() {
         final stage4 =
             stages.firstWhere((s) => (s as Map)['stage_order'] == 4) as Map;
         expect(stage4['stage_name'], 'Chazara 3');
-        expect(stage4['delay_days'], 30);
+        // Phase B: the schedule is now serialized as a single JSON `schedule`
+        // string (W3.27 consolidation) rather than a top-level `delay_days`
+        // field. The delay lives inside it; decode + all consumers parse it.
+        expect(
+          (jsonDecode(stage4['schedule'] as String) as Map)['delay_days'],
+          30,
+        );
         expect(stage4['is_default'], false);
       },
     );
