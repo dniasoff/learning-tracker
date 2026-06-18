@@ -76,5 +76,7 @@ class ProfileProgramCodec extends EntityCodec<ProfileProgramRow> {
       ),
     if (model.trackingStartRef != null)
       'tracking_start_ref': model.trackingStartRef,
+    if (model.updatedAt != null)
+      'updated_at': FirestoreCodec.encodeDateTime(model.updatedAt),
   };
 }

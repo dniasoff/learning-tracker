@@ -2,6 +2,7 @@ import 'package:learning_tracker/core/analytics/parent_analytics_repository.dart
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/core/sync/codec/profile_program_codec.dart';
 import 'package:learning_tracker/core/time/ulid.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/learning/data/completion_writer.dart';
@@ -124,16 +125,25 @@ class LocalDataUploadService {
     );
 
     // ── Profile programs ──────────────────────────────────────────────────
+    const profileProgramCodec = ProfileProgramCodec();
     final profilePrograms = await _database.profileProgramDao
         .getProgramsForProfile(_profileId);
     for (final p in profilePrograms) {
-      await _facade.enqueueProfileProgram({
-        'profile_id': p.profileId,
-        'curriculum_id': p.curriculumType,
-        'program_id': p.programId,
-        'tracking_start_date': p.trackingStartDate?.toIso8601String(),
-        'tracking_start_ref': p.trackingStartRef,
-      });
+      final payload = profileProgramCodec.encode(
+        ProfileProgramRow(
+          profileId: p.profileId,
+          curriculumId: p.curriculumType,
+          programId: p.programId,
+          trackingStartDate: p.trackingStartDate,
+          trackingStartRef: p.trackingStartRef,
+          // The local DB has no stored updated_at — use now() so the
+          // remote document carries a valid LWW timestamp. The merger
+          // falls back to trackingStartDate for pre-codec rows, so this
+          // is strictly additive and safe to back-fill.
+          updatedAt: DateTimeFactory.nowUtc(),
+        ),
+      );
+      await _facade.enqueueProfileProgram(payload);
     }
     _logger?.debug(
       event: 'local_data_upload_profile_programs_queued',
