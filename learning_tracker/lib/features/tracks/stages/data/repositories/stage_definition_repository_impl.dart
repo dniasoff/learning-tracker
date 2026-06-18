@@ -6,6 +6,7 @@ import 'package:learning_tracker/core/database/daos/stage_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart' as db;
 import 'package:learning_tracker/core/domain/value_objects/schedule_spec.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/sync/codec/stage_definition_codec.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/exceptions/protected_stage_exception.dart';
 import 'package:learning_tracker/features/tracks/stages/domain/exceptions/stage_limit_exceeded_exception.dart';
@@ -395,6 +396,8 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
   CurriculumId _curriculumFromStorageKey(String key) =>
       CurriculumId.values.firstWhere((c) => c.storageKey == key);
 
+  static const _codec = StageDefinitionCodec();
+
   @override
   Future<void> pushStagesForTrack({
     required int trackId,
@@ -407,7 +410,9 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
     if (stages.isEmpty) return;
 
     final now = DateTimeFactory.nowUtc();
-    final stagePayloads = stages.map(_stagePushPayload).toList();
+    final stagePayloads = stages
+        .map((s) => _stagePushPayload(s, curriculumId, now))
+        .toList();
     await push(
       trackId: trackId,
       curriculumId: curriculumId.storageKey,
@@ -429,7 +434,9 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
     // curriculum per profile post-W3.22). Pick the first row's trackId.
     final trackId = stages.first.trackId;
     final now = DateTimeFactory.nowUtc();
-    final stagePayloads = stages.map(_stagePushPayload).toList();
+    final stagePayloads = stages
+        .map((s) => _stagePushPayload(s, curriculumId, now))
+        .toList();
 
     await push(
       trackId: trackId,
@@ -439,20 +446,29 @@ class StageDefinitionRepositoryImpl implements StageDefinitionRepository {
     );
   }
 
-  /// Builds the Firestore push payload for one stage row.
-  Map<String, dynamic> _stagePushPayload(db.StageDefinition s) {
-    final spec = _decodeSchedule(s.schedule);
-    return <String, dynamic>{
-      'stage_order': s.stageOrder,
-      'stage_name': s.stageName,
-      'schedule': jsonDecode(s.schedule),
-      'is_default': s.isDefault,
-      // Legacy fields for backwards-compat with old Firestore readers.
-      'delay_days': spec.delayDays,
-      'schedule_type': spec.storageKey,
-      if (spec.daysOfWeek != null) 'days_of_week': spec.daysOfWeek,
-      if (spec.rollingWindowSize != null)
-        'rolling_window_size': spec.rollingWindowSize,
-    };
+  /// Builds the Firestore push payload for one stage row via the canonical
+  /// [StageDefinitionCodec].
+  ///
+  /// Phase B unification: routes through [StageDefinitionCodec.encode] so the
+  /// push shape is identical to the codec's canonical write shape (schedule as
+  /// a JSON String, no legacy quartet). The facade's [pushStageDefinitions]
+  /// method redundantly spreads `track_id`, `curriculum_id`, and `updated_at`
+  /// on top — those are already present and match, so the spread is a no-op.
+  static Map<String, dynamic> _stagePushPayload(
+    db.StageDefinition s,
+    CurriculumId curriculumId,
+    DateTime updatedAt,
+  ) {
+    return _codec.encode(
+      StageDefinitionRow(
+        curriculumId: curriculumId.storageKey,
+        trackId: s.trackId,
+        stageOrder: s.stageOrder,
+        stageName: s.stageName,
+        schedule: s.schedule,
+        isDefault: s.isDefault,
+        updatedAt: updatedAt,
+      ),
+    );
   }
 }
