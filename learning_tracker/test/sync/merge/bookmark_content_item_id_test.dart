@@ -81,7 +81,8 @@ void main() {
       expect(
         updatedAt,
         _ts,
-        reason: 'bookmark written under content_item_id must be persisted on '
+        reason:
+            'bookmark written under content_item_id must be persisted on '
             'pull (cross-device replication), not skipped as malformed',
       );
     });

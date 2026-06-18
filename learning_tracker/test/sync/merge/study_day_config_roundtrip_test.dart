@@ -90,14 +90,13 @@ void main() {
 
         // Assert: the row materialised in the DB — not skipped.
         final result =
-            await (db.select(db.studyDayConfigs)
-                  ..where(
-                    (t) =>
-                        t.profileId.equals(_profileId) &
-                        t.curriculumId.equals(_curriculumId) &
-                        t.dayOfWeek.equals(1) &
-                        t.trackId.equals(trackId),
-                  ))
+            await (db.select(db.studyDayConfigs)..where(
+                  (t) =>
+                      t.profileId.equals(_profileId) &
+                      t.curriculumId.equals(_curriculumId) &
+                      t.dayOfWeek.equals(1) &
+                      t.trackId.equals(trackId),
+                ))
                 .getSingleOrNull();
 
         expect(
@@ -137,13 +136,13 @@ void main() {
 
         await merger.merge(profileId: _profileId, rows: payloads);
 
-        final rows = await (db.select(db.studyDayConfigs)
-              ..where(
-                (t) =>
-                    t.profileId.equals(_profileId) &
-                    t.curriculumId.equals(_curriculumId),
-              ))
-            .get();
+        final rows =
+            await (db.select(db.studyDayConfigs)..where(
+                  (t) =>
+                      t.profileId.equals(_profileId) &
+                      t.curriculumId.equals(_curriculumId),
+                ))
+                .get();
 
         expect(
           rows.length,
@@ -185,14 +184,13 @@ void main() {
         await merger.merge(profileId: _profileId, rows: [_codec.encode(older)]);
 
         final result =
-            await (db.select(db.studyDayConfigs)
-                  ..where(
-                    (t) =>
-                        t.profileId.equals(_profileId) &
-                        t.curriculumId.equals(_curriculumId) &
-                        t.dayOfWeek.equals(3) &
-                        t.trackId.equals(trackId),
-                  ))
+            await (db.select(db.studyDayConfigs)..where(
+                  (t) =>
+                      t.profileId.equals(_profileId) &
+                      t.curriculumId.equals(_curriculumId) &
+                      t.dayOfWeek.equals(3) &
+                      t.trackId.equals(trackId),
+                ))
                 .getSingleOrNull();
 
         expect(
@@ -205,42 +203,38 @@ void main() {
       },
     );
 
-    test(
-      'row with mismatched profileId is rejected',
-      () async {
-        // Encode with a different profileId — the merger must reject it.
-        const wrongProfileId = 99;
-        final row = StudyDayConfigRow(
-          profileId: wrongProfileId,
-          curriculumId: _curriculumId,
-          trackId: trackId,
-          dayOfWeek: 2,
-          dayType: 'study',
-          updatedAt: _updatedAt,
-        );
-        final payload = _codec.encode(row);
+    test('row with mismatched profileId is rejected', () async {
+      // Encode with a different profileId — the merger must reject it.
+      const wrongProfileId = 99;
+      final row = StudyDayConfigRow(
+        profileId: wrongProfileId,
+        curriculumId: _curriculumId,
+        trackId: trackId,
+        dayOfWeek: 2,
+        dayType: 'study',
+        updatedAt: _updatedAt,
+      );
+      final payload = _codec.encode(row);
 
-        // Merge with profileId=1 while the payload claims profileId=99.
-        await merger.merge(profileId: _profileId, rows: [payload]);
+      // Merge with profileId=1 while the payload claims profileId=99.
+      await merger.merge(profileId: _profileId, rows: [payload]);
 
-        final result =
-            await (db.select(db.studyDayConfigs)
-                  ..where(
-                    (t) =>
-                        t.profileId.equals(_profileId) &
-                        t.curriculumId.equals(_curriculumId) &
-                        t.dayOfWeek.equals(2),
-                  ))
-                .getSingleOrNull();
+      final result =
+          await (db.select(db.studyDayConfigs)..where(
+                (t) =>
+                    t.profileId.equals(_profileId) &
+                    t.curriculumId.equals(_curriculumId) &
+                    t.dayOfWeek.equals(2),
+              ))
+              .getSingleOrNull();
 
-        expect(
-          result,
-          isNull,
-          reason:
-              'A payload whose profile_id does not match the merge scope must '
-              'be rejected — the merger must not insert it under the wrong profile',
-        );
-      },
-    );
+      expect(
+        result,
+        isNull,
+        reason:
+            'A payload whose profile_id does not match the merge scope must '
+            'be rejected — the merger must not insert it under the wrong profile',
+      );
+    });
   });
 }

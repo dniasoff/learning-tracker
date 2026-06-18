@@ -112,7 +112,8 @@ void main() {
       expect(
         gateway.fetchPageCalled,
         isFalse,
-        reason: 'pullOnLaunch must NOT read from Firestore under an identity '
+        reason:
+            'pullOnLaunch must NOT read from Firestore under an identity '
             'mismatch — every read would be permission-denied',
       );
 
@@ -120,7 +121,8 @@ void main() {
       expect(
         statuses.whereType<SyncStatusError>(),
         isEmpty,
-        reason: 'An identity mismatch is not a transient error — it must not '
+        reason:
+            'An identity mismatch is not a transient error — it must not '
             'emit SyncStatus.error (the misleading retry banner)',
       );
 

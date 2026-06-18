@@ -156,34 +156,31 @@ void main() {
       },
     );
 
-    test(
-      'row without updated_at falls back to trackingStartDate for LWW '
-      '(legacy payload compatibility)',
-      () async {
-        // A legacy Firestore doc with no updated_at but with tracking_start_date.
-        // The merger must still apply it on first sync (no local row).
-        const legacyPayload = <String, dynamic>{
-          'profile_id': _profileId,
-          'curriculum_id': _curriculumId,
-          'program_id': _programId,
-          'tracking_start_date': '2026-01-01T00:00:00.000Z',
-          // no updated_at
-        };
+    test('row without updated_at falls back to trackingStartDate for LWW '
+        '(legacy payload compatibility)', () async {
+      // A legacy Firestore doc with no updated_at but with tracking_start_date.
+      // The merger must still apply it on first sync (no local row).
+      const legacyPayload = <String, dynamic>{
+        'profile_id': _profileId,
+        'curriculum_id': _curriculumId,
+        'program_id': _programId,
+        'tracking_start_date': '2026-01-01T00:00:00.000Z',
+        // no updated_at
+      };
 
-        await merger.merge(profileId: _profileId, rows: [legacyPayload]);
+      await merger.merge(profileId: _profileId, rows: [legacyPayload]);
 
-        final result = await db.profileProgramDao
-            .getProgramForProfileAndCurriculum(_profileId, _curriculumId);
+      final result = await db.profileProgramDao
+          .getProgramForProfileAndCurriculum(_profileId, _curriculumId);
 
-        expect(
-          result,
-          isNotNull,
-          reason:
-              'Legacy payload without updated_at must still land in DB on '
-              'first sync (no local row exists to beat)',
-        );
-        expect(result!.programId, _programId);
-      },
-    );
+      expect(
+        result,
+        isNotNull,
+        reason:
+            'Legacy payload without updated_at must still land in DB on '
+            'first sync (no local row exists to beat)',
+      );
+      expect(result!.programId, _programId);
+    });
   });
 }
