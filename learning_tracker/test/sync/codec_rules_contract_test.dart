@@ -52,10 +52,30 @@ const _codecForCollection = <String, String>{
   'curriculum_tracks': 'lib/core/sync/codec/track_codec.dart',
 };
 
-/// Keys the gateway injects server-side at push time (e.g.
-/// `FieldValue.serverTimestamp()`), which appear in the rule allowlist but never
-/// in a codec's `encode()`. Allowed everywhere so they don't count as drift.
-const _serverInjectedKeys = <String>{'synced_at'};
+/// LIVE write-path serializers: the `toFirestore()` method that actually builds
+/// the push payload for a collection (distinct from the codec's `encode()`,
+/// which is currently decode-companion for some entities). Repos layer a few
+/// rule-legal keys on top (id/profile_id/sefaria_ref/stage_id) — those are in
+/// `_serverInjectedKeys` so they don't read as drift. This is the half of the
+/// contract that guards what the app *actually writes* today; Phase B will
+/// collapse encode()/toFirestore() into one serializer so both maps converge.
+const _toFirestoreForCollection = <String, String>{
+  'goals': 'lib/features/scheduler/domain/models/goal_entity.dart',
+  'bookmarks': 'lib/features/learning/domain/entities/bookmark.dart',
+};
+
+/// Keys injected outside the serializer (gateway `FieldValue.serverTimestamp()`,
+/// or repo/facade layers that add the doc id and scope keys after
+/// `toFirestore()`). All are themselves rule-legal; listing them here keeps the
+/// ⊆-check from flagging them as drift just because they're added elsewhere.
+const _serverInjectedKeys = <String>{
+  'synced_at',
+  'id',
+  'goal_id',
+  'profile_id',
+  'sefaria_ref',
+  'stage_id',
+};
 
 void main() {
   group('codec ↔ firestore.rules contract', () {
@@ -94,8 +114,9 @@ void main() {
 
       test('$collection: codec emits only fields the rule accepts', () {
         final allowed = ruleWhitelists[collection] ?? const <String>{};
-        final emitted = _parseCodecEncodeKeys(
+        final emitted = _parseMethodMapKeys(
           File(codecPath).readAsStringSync(),
+          'encode',
         );
 
         expect(
@@ -124,6 +145,48 @@ void main() {
               'FIX: either add the field(s) to the `$collection` hasOnly() list '
               'in firestore.rules AND `firebase deploy --only firestore:rules`, '
               'or stop emitting them from the codec.\n',
+        );
+      });
+    }
+
+    // ── Live write path — toFirestore() builders ────────────────────────────
+    for (final entry in _toFirestoreForCollection.entries) {
+      final collection = entry.key;
+      final sourcePath = entry.value;
+
+      test('$collection: live toFirestore() emits only fields the rule accepts', () {
+        final allowed = ruleWhitelists[collection] ?? const <String>{};
+        final emitted = _parseMethodMapKeys(
+          File(sourcePath).readAsStringSync(),
+          'toFirestore',
+        );
+
+        expect(
+          emitted,
+          isNotEmpty,
+          reason: 'Failed to parse toFirestore() keys from $sourcePath',
+        );
+
+        final offending = emitted
+            .difference(allowed)
+            .difference(_serverInjectedKeys)
+            .toList()
+          ..sort();
+
+        expect(
+          offending,
+          isEmpty,
+          reason:
+              '\n\nPERMISSION_DENIED RISK — $collection (LIVE write path)\n'
+              '$sourcePath toFirestore() emits field(s) NOT in the '
+              'firestore.rules hasOnly() allowlist:\n'
+              '    ${offending.join(', ')}\n\n'
+              'This is the payload the app ACTUALLY writes — a real device will '
+              'get PERMISSION_DENIED and the failure is swallowed (offline-first), '
+              'so it only shows as a "Backup & Sync unavailable" banner.\n'
+              'FIX: add the field(s) to the `$collection` hasOnly() list in '
+              'firestore.rules AND `firebase deploy --only firestore:rules`, or '
+              'stop emitting them.\n',
         );
       });
     }
@@ -157,14 +220,15 @@ Map<String, Set<String>> _parseRuleWhitelists(String rules) {
   return result;
 }
 
-/// Extract the top-level string keys from a codec's `encode()` map literal.
+/// Extract the top-level string keys from a serializer method's returned map
+/// literal (e.g. `encode(...)` or `toFirestore(...)`).
 ///
 /// Handles both `=> { ... }` and `{ return { ... }; }` forms via a
 /// balanced-brace scan, so conditional (`if (x != null) 'k': ...`) keys are
-/// captured too. The sync codecs emit flat maps, so every `'key':` found is
+/// captured too. The serializers emit flat maps, so every `'key':` found is
 /// top-level.
-Set<String> _parseCodecEncodeKeys(String src) {
-  final encodeIdx = src.indexOf(RegExp(r'\bencode\s*\('));
+Set<String> _parseMethodMapKeys(String src, String method) {
+  final encodeIdx = src.indexOf(RegExp('\\b$method\\s*\\('));
   if (encodeIdx < 0) return const <String>{};
 
   // Find where the returned map begins: first `{` after `=>` or `return`.
