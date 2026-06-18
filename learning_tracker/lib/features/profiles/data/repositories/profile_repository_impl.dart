@@ -2,6 +2,7 @@ import 'package:drift/drift.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/core/sync/codec/learner_profile_codec.dart';
 import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
@@ -23,16 +24,20 @@ class ProfileRepositoryImpl implements ProfileRepository {
     : _syncEngine = syncEngine;
 
   static const int maxProfilesPerAccount = 10;
+  static const _codec = LearnerProfileCodec();
 
-  Map<String, dynamic> _toFirestorePayload(ProfileModel profile) => {
-    'profile_id': profile.id,
-    'account_id': profile.accountId,
-    'display_name': profile.displayName,
-    'mode': profile.mode,
-    'avatar_index': profile.avatarIndex,
-    'created_at': profile.createdAt.toIso8601String(),
-    'updated_at': profile.updatedAt.toIso8601String(),
-  };
+  Map<String, dynamic> _toFirestorePayload(ProfileModel profile) =>
+      _codec.encode(
+        LearnerProfileRow(
+          profileId: profile.id,
+          accountId: profile.accountId,
+          displayName: profile.displayName,
+          mode: profile.mode,
+          avatarIndex: profile.avatarIndex,
+          createdAt: profile.createdAt,
+          updatedAt: profile.updatedAt,
+        ),
+      );
 
   @override
   Future<List<ProfileModel>> getProfilesByAccount(int accountId) async {
