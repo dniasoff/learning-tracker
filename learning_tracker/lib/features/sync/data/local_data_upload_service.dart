@@ -3,6 +3,7 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/codec/profile_program_codec.dart';
+import 'package:learning_tracker/core/sync/codec/track_codec.dart';
 import 'package:learning_tracker/core/time/ulid.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/learning/data/completion_writer.dart';
@@ -203,17 +204,22 @@ class LocalDataUploadService {
     );
 
     // ── Curriculum tracks ─────────────────────────────────────────────────
+    const trackCodec = TrackCodec();
     final tracks = await _database.trackDao.getAllForProfile(_profileId);
     for (final t in tracks) {
-      await _facade.pushCurriculumTrack({
-        'profile_id': t.profileId,
-        'track_id': t.id,
-        'curriculum_id': t.curriculumId,
-        'state': t.state,
-        'state_changed_at': t.stateChangedAt.toIso8601String(),
-        'activated_at': t.activatedAt.toIso8601String(),
-        'pace_reset_date': t.paceResetDate?.toIso8601String(),
-      });
+      await _facade.pushCurriculumTrack(
+        trackCodec.encode(
+          TrackRow(
+            profileId: t.profileId,
+            trackId: t.id,
+            curriculumId: t.curriculumId,
+            state: t.state,
+            stateChangedAt: t.stateChangedAt,
+            activatedAt: t.activatedAt,
+            paceResetDate: t.paceResetDate,
+          ),
+        ),
+      );
     }
     _logger?.debug(
       event: 'local_data_upload_curriculum_tracks_queued',

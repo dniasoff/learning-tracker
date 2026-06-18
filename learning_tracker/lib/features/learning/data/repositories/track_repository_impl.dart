@@ -1,5 +1,6 @@
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/sync/codec/track_codec.dart';
 import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/track_repository.dart';
 
@@ -31,6 +32,8 @@ class TrackRepositoryImpl implements TrackRepository {
     return all.isEmpty ? null : all.first;
   }
 
+  static const _trackCodec = TrackCodec();
+
   Future<void> _pushCurriculumTrackIfCloud(
     CurriculumId curriculumId, {
     int? profileId,
@@ -42,15 +45,19 @@ class TrackRepositoryImpl implements TrackRepository {
     final row = await _resolveTrackRowForSync(curriculumId, profileId: pid);
     if (row == null) return;
 
-    await engine.pushCurriculumTrack({
-      'profile_id': row.profileId,
-      'track_id': row.id,
-      'curriculum_id': row.curriculumId,
-      'state': row.state,
-      'state_changed_at': row.stateChangedAt.toIso8601String(),
-      'activated_at': row.activatedAt.toIso8601String(),
-      'pace_reset_date': row.paceResetDate?.toIso8601String(),
-    });
+    await engine.pushCurriculumTrack(
+      _trackCodec.encode(
+        TrackRow(
+          profileId: row.profileId,
+          trackId: row.id,
+          curriculumId: row.curriculumId,
+          state: row.state,
+          stateChangedAt: row.stateChangedAt,
+          activatedAt: row.activatedAt,
+          paceResetDate: row.paceResetDate,
+        ),
+      ),
+    );
   }
 
   @override

@@ -3,6 +3,7 @@ import 'package:learning_tracker/core/database/daos/track_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
+import 'package:learning_tracker/core/sync/codec/track_codec.dart';
 import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/track_repository.dart';
@@ -221,19 +222,25 @@ class CurriculumActivationService {
     }
   }
 
+  static const _trackCodec = TrackCodec();
+
   Future<void> _syncTracksToFirestore() async {
     if (_pushCurriculumTrack == null) return;
     final tracks = await _database.trackDao.getAllForProfile(_profileId);
     for (final track in tracks) {
-      await _pushCurriculumTrack.call({
-        'profile_id': track.profileId,
-        'track_id': track.id,
-        'curriculum_id': track.curriculumId,
-        'state': track.state,
-        'state_changed_at': track.stateChangedAt.toIso8601String(),
-        'activated_at': track.activatedAt.toIso8601String(),
-        'pace_reset_date': track.paceResetDate?.toIso8601String(),
-      });
+      await _pushCurriculumTrack.call(
+        _trackCodec.encode(
+          TrackRow(
+            profileId: track.profileId,
+            trackId: track.id,
+            curriculumId: track.curriculumId,
+            state: track.state,
+            stateChangedAt: track.stateChangedAt,
+            activatedAt: track.activatedAt,
+            paceResetDate: track.paceResetDate,
+          ),
+        ),
+      );
     }
   }
 }

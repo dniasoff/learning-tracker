@@ -11,6 +11,8 @@ import 'package:learning_tracker/core/sync/merge/entity_merger.dart';
 /// Decoded shape for a curriculum track row (W3.22/W3.28).
 class TrackRow {
   const TrackRow({
+    required this.profileId,
+    required this.trackId,
     required this.curriculumId,
     required this.state,
     required this.activatedAt,
@@ -18,6 +20,12 @@ class TrackRow {
     this.paceResetDate,
     this.syncedAt,
   });
+
+  /// Local profile id (FK: learner_profiles.id).
+  final int profileId;
+
+  /// Local track id (FK: curriculum_tracks.id).
+  final int trackId;
 
   final String curriculumId;
 
@@ -68,7 +76,23 @@ class TrackCodec extends EntityCodec<TrackRow> {
         FirestoreCodec.parseDateTime(raw['deactivated_at']) ??
         activatedAt;
 
+    // profile_id / track_id are local FK values injected at push time;
+    // Firestore documents don't carry the local autoincrement id (they use
+    // the stored profile_id from the push payload). Parse them from raw if
+    // present (pull side), otherwise default to 0 — the merger ignores these
+    // fields for the upsert path (it uses the injected profileId param).
+    final profileId =
+        raw['profile_id'] as int? ??
+        int.tryParse(raw['profile_id']?.toString() ?? '') ??
+        0;
+    final trackId =
+        raw['track_id'] as int? ??
+        int.tryParse(raw['track_id']?.toString() ?? '') ??
+        0;
+
     return TrackRow(
+      profileId: profileId,
+      trackId: trackId,
       curriculumId: curriculumId,
       state: state,
       activatedAt: activatedAt,
@@ -80,6 +104,8 @@ class TrackCodec extends EntityCodec<TrackRow> {
 
   @override
   Map<String, dynamic> encode(TrackRow model) => {
+    'profile_id': model.profileId,
+    'track_id': model.trackId,
     'curriculum_id': model.curriculumId,
     'state': model.state,
     'activated_at': FirestoreCodec.encodeDateTime(model.activatedAt),
