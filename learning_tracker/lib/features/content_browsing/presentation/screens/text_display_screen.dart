@@ -84,6 +84,7 @@ class TextDisplayScreen extends ConsumerWidget {
         ),
         actions: [
           IconButton(
+            key: const Key('text_display_prev_button'),
             icon: const Icon(Icons.chevron_left),
             tooltip: AppLocalizations.of(context)!.textReaderTooltipPrevious,
             onPressed: adj?.prev != null
@@ -93,6 +94,7 @@ class TextDisplayScreen extends ConsumerWidget {
                 : null,
           ),
           IconButton(
+            key: const Key('text_display_next_button'),
             icon: const Icon(Icons.chevron_right),
             tooltip: AppLocalizations.of(context)!.textReaderTooltipNext,
             onPressed: adj?.next != null
