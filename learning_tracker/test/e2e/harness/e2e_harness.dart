@@ -290,6 +290,7 @@ class E2EHarness {
   late UserDatabase _db;
   late ContentDatabase _contentDb;
   late AppRouter _router;
+  late PinGuard _pinGuard;
 
   // ── Setup ─────────────────────────────────────────────────────────────────
 
@@ -407,6 +408,28 @@ class E2EHarness {
   /// Returns the [AppRouter] for low-level navigation assertions.
   AppRouter get router => _router;
 
+  /// Marks the parent-mode PIN as authenticated for the current identity's
+  /// profile, so PIN-gated routes (`/parent-mode/*`) can be reached in tests
+  /// without going through the real PIN-entry flow.
+  ///
+  /// Call **after** [pumpApp] (so the identity profileId is resolved and the
+  /// [_pinGuard] is built) but **before** navigating to a PIN-gated route.
+  /// Use router-level navigation ([router.push]) for PIN-gated screens — a
+  /// second [pumpApp] call rebuilds the guard and resets the session:
+  ///
+  /// ```dart
+  /// await h.pumpApp(path: '/dashboard', extraOverrides: [...]);
+  /// h.markPinAuthenticated();  // prime the cache for /parent-mode/* routes
+  /// await h.router.push(const RewardConfigurationRoute());
+  /// await h.pump(const Duration(milliseconds: 500));
+  /// ```
+  void markPinAuthenticated() {
+    final profileId = _identity?._resolvedProfileId;
+    if (profileId != null) {
+      _pinGuard.markAuthenticated(profileId);
+    }
+  }
+
   /// Seeds rows into the in-memory [ContentDatabase] via a caller-supplied
   /// async callback.
   ///
@@ -455,6 +478,16 @@ class E2EHarness {
         const StreakRecoveryInfo(wasRecovered: false, currentStreak: 0),
       ),
     ),
+    // dashboardGlobalPointsProvider is a @riverpod (autoDispose) Stream<int>
+    // backed by PointsBalanceDao.watchBalance — a Drift reactive stream.
+    // For child-mode profiles the provider subscribes watchBalance which creates
+    // a StreamQueryStore cleanup timer when the provider auto-disposes. In
+    // testWidgets, _verifyInvariants runs before addTearDown, so the cleanup
+    // timer (created during h.dispose() → pumpWidget(SizedBox.shrink()) →
+    // ProviderScope.dispose) is visible to the invariant check and causes a
+    // false "pending timer" failure. Overriding with Stream.value(0) prevents
+    // any Drift reactive subscription.
+    dashboardGlobalPointsProvider.overrideWith((ref) => Stream.value(0)),
   ];
 
   // ── Private builders ───────────────────────────────────────────────────────
@@ -497,6 +530,11 @@ class E2EHarness {
       hasCloudAccount: () => false,
     )..markRestoreComplete();
 
+    _pinGuard = PinGuard(
+      pinService: _NullPinService(),
+      promptForPin: () async => false,
+      getScope: () => profileId != null ? PinScope.parent(profileId) : null,
+    );
     return AppRouter(
       authGuard: AuthGuard(),
       restoreGuard: restoreGuard,
@@ -512,11 +550,7 @@ class E2EHarness {
         getDatabase: () => _db,
         getSelectedProfileId: () => profileId,
       ),
-      pinGuard: PinGuard(
-        pinService: _NullPinService(),
-        promptForPin: () async => false,
-        getScope: () => profileId != null ? PinScope.parent(profileId) : null,
-      ),
+      pinGuard: _pinGuard,
     );
   }
 
