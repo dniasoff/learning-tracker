@@ -4,7 +4,8 @@
 ///
 /// Boots the REAL router (AppRouter with its auth/profile/restore guards), the
 /// REAL screens and the REAL Riverpod providers — but with a controllable
-/// in-memory Drift [UserDatabase] and a null / no-op Firebase back-end.
+/// in-memory Drift [UserDatabase] + [ContentDatabase] and a null / no-op
+/// Firebase back-end.
 ///
 /// ## What is real
 /// - AppRouter + all route guards (AuthGuard, RestoreGuard, ProfileGuard, …)
@@ -13,6 +14,9 @@
 ///
 /// ## What is stubbed / overridden
 /// - [UserDatabase] → in-memory NativeDatabase (no file I/O)
+/// - [ContentDatabase] → in-memory NativeDatabase (no bundled seed file).
+///   Seed content rows with [E2EHarness.seedContent] when a journey needs
+///   content browsing or text display.
 /// - [authStateProvider] → caller-supplied [AuthState] (no Firebase)
 /// - [authRepositoryProvider] → [_StubAuthRepository] (returns null user,
 ///   stream never fires)
@@ -28,6 +32,8 @@
 /// - SharedPreferences → in-memory mock (onboarding_complete = true so AuthGuard
 ///   passes through on the happy path)
 /// - path_provider → mocked to /tmp so Drift guards don't panic
+/// - [rootScaffoldMessengerKey] → wired into [MaterialApp.router]
+///   so SnackBar / MaterialBanner assertions via the root messenger work.
 ///
 /// ## Usage
 ///
@@ -41,15 +47,40 @@
 /// });
 /// ```
 ///
-/// ## Limitations
+/// ## Seeding content
 ///
-/// A full-app boot is achievable headless when deep-link-forcing via
-/// [AppRouter.config(deepLinkBuilder: …)].  Screens that contact Firestore,
-/// Firebase Auth, FlutterSecureStorage, or the real notification plugin crash
-/// unless their providers are overridden (done here for the common set).
-/// Device-only capabilities (push notifications, Google Sign-In interactive
-/// picker) cannot be tested headless; use an integration_test device test for
-/// those.
+/// Journeys that exercise content browsing (E2E-305, E2E-306) or text display
+/// (E2E-308, E2E-311) need rows in the content database.  Call
+/// [E2EHarness.seedContent] **before** [pumpApp]:
+///
+/// ```dart
+/// await h.seedContent([
+///   TextCacheCompanion.insert(
+///     sefariaRef: 'Berakhot 2a',
+///     hebrewText: 'ברכות',
+///     englishText: 'Berakhot',
+///     fetchedAt: DateTime.utc(2026, 1, 1),
+///   ),
+/// ]);
+/// ```
+///
+/// ## Headless limitations — device-only surfaces
+///
+/// The following surfaces require a physical / emulator device via
+/// `integration_test` and **cannot** be exercised by this harness:
+///
+/// - **[PersistentSwitcherScaffold]** — mounted in [LearningTrackerApp]'s
+///   `MaterialApp.router builder` slot.  The harness constructs a plain
+///   [MaterialApp.router] without that builder, so the persistent role-label
+///   bar at the top of the screen is absent.  Journeys that assert the
+///   switcher bar is "present on all tabs" (e.g. E2E-1117) or that tapping it
+///   opens a sheet must run as device integration tests.
+///
+/// - **[SacredTimeLockOverlay]** — rendered by [AppShell] when
+///   `currentSacredWindowProvider` emits an active window.  Because the harness
+///   does not mount [AppShell] directly the overlay is not in the tree.
+///   Journeys that assert the lock overlay appears / auto-dismisses
+///   (e.g. E2E-1103) must run as device integration tests.
 library;
 
 import 'package:auto_route/auto_route.dart';
@@ -69,6 +100,7 @@ import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/analytics/streak_milestone_analytics_observer.dart'
     show streakMilestoneAnalyticsObserverProvider;
+import 'package:learning_tracker/core/database/content/content_database.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/navigation/guards/child_mode_guard.dart';
@@ -76,6 +108,7 @@ import 'package:learning_tracker/core/navigation/guards/pin_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/profile_guard.dart';
 import 'package:learning_tracker/core/navigation/guards/restore_guard.dart';
 import 'package:learning_tracker/core/navigation/pin_scope.dart';
+import 'package:learning_tracker/core/navigation/root_scaffold_messenger.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/sync/providers/sync_orchestrator_providers.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
@@ -248,12 +281,14 @@ class E2EHarness {
     E2EIdentity? identity,
   }) : _identity = identity {
     _db = UserDatabase(NativeDatabase.memory());
+    _contentDb = ContentDatabase(NativeDatabase.memory());
   }
 
   final WidgetTester _tester;
   final E2EIdentity? _identity;
 
   late UserDatabase _db;
+  late ContentDatabase _contentDb;
   late AppRouter _router;
 
   // ── Setup ─────────────────────────────────────────────────────────────────
@@ -295,7 +330,7 @@ class E2EHarness {
     await pump();
   }
 
-  /// Disposes the in-memory database and collapses the widget tree.
+  /// Disposes the in-memory databases and collapses the widget tree.
   ///
   /// Register with [addTearDown] at the start of the test:
   /// ```dart
@@ -305,6 +340,7 @@ class E2EHarness {
     await _tester.pumpWidget(const SizedBox.shrink());
     await _tester.pump(Duration.zero);
     await _db.close();
+    await _contentDb.close();
   }
 
   // ── Interaction helpers ────────────────────────────────────────────────────
@@ -365,8 +401,35 @@ class E2EHarness {
   /// Returns the active [UserDatabase] for direct data assertions.
   UserDatabase get db => _db;
 
+  /// Returns the in-memory [ContentDatabase] for direct content assertions.
+  ContentDatabase get contentDb => _contentDb;
+
   /// Returns the [AppRouter] for low-level navigation assertions.
   AppRouter get router => _router;
+
+  /// Seeds rows into the in-memory [ContentDatabase] via a caller-supplied
+  /// async callback.
+  ///
+  /// Call **before** [pumpApp] when a journey needs content browsing or
+  /// text display.  The callback receives the live [ContentDatabase] so callers
+  /// can use fully-typed companions without extra generic constraints:
+  ///
+  /// ```dart
+  /// import 'package:learning_tracker/core/database/content/content_database.dart';
+  ///
+  /// await h.seedContent((db) async {
+  ///   await db.into(db.textCache).insert(
+  ///     TextCacheCompanion.insert(
+  ///       sefariaRef: 'Berakhot 2a',
+  ///       hebrewText: 'ברכות',
+  ///       englishText: 'Berakhot',
+  ///       fetchedAt: DateTime.utc(2026, 1, 1),
+  ///     ),
+  ///   );
+  /// });
+  /// ```
+  Future<void> seedContent(Future<void> Function(ContentDatabase db) seed) =>
+      seed(_contentDb);
 
   // ── Dashboard silence overrides ────────────────────────────────────────────
 
@@ -491,6 +554,10 @@ class E2EHarness {
       userDatabaseProvider.overrideWithValue(_db),
       // ignore: deprecated_member_use
       appDatabaseProvider.overrideWithValue(_db),
+      // Override the content database with an in-memory NativeDatabase so
+      // content-browsing and text-display journeys work without the bundled
+      // seed file.  Seed rows via [seedContent] when a journey needs them.
+      contentDatabaseProvider.overrideWithValue(_contentDb),
 
       // ── Auth ──────────────────────────────────────────────────────────────
       authStateProvider.overrideWithValue(authState),
@@ -536,6 +603,10 @@ class E2EHarness {
 
   MaterialApp _buildMaterialApp(RouterConfig<Object> routerConfig) {
     return MaterialApp.router(
+      // Wire the root messenger key so SnackBar / MaterialBanner assertions
+      // that target rootScaffoldMessengerKey (e.g. UpgradeToCloud banner)
+      // work in the headless harness.
+      scaffoldMessengerKey: rootScaffoldMessengerKey,
       routerConfig: routerConfig,
       debugShowCheckedModeBanner: false,
       locale: const Locale('en'),
