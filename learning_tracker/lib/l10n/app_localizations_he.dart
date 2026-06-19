@@ -4333,6 +4333,13 @@ class AppLocalizationsHe extends AppLocalizations {
       'הוזמנתם להדריך ילד. באישור ההזמנה תקבלו גישה לצפייה ולניהול של פרופיל הלמידה שלו.';
 
   @override
+  String acceptInviteBodyFromParentForChild(
+    String parentLabel,
+    String childLabel,
+  ) =>
+      '$parentLabel הזמין/ה אתכם להדריך את $childLabel. באישור ההזמנה תקבלו גישה לצפייה ולניהול של פרופיל הלמידה שלו.';
+
+  @override
   String get acceptInvitePermissionViewData =>
       'צפייה בכל נתוני הלמידה וההתקדמות';
 

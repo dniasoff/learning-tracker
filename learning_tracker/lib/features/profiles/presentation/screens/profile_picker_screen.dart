@@ -170,6 +170,7 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
       children: [
         for (final grant in pending) ...[
           _PendingInviteCard(
+            grant: grant,
             onAccept: () => unawaited(_acceptPendingInvite(grant)),
           ),
           const SizedBox(height: 16),
@@ -477,14 +478,25 @@ class _ProfilePickerScreenState extends ConsumerState<ProfilePickerScreen> {
 /// addressed to this account. Tapping Accept hands off to the existing
 /// accept-invite flow (which also handles Tutor PIN setup).
 class _PendingInviteCard extends StatelessWidget {
-  const _PendingInviteCard({required this.onAccept});
+  const _PendingInviteCard({required this.grant, required this.onAccept});
 
+  final TutorGrant grant;
   final VoidCallback onAccept;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final l10n = AppLocalizations.of(context)!;
+
+    // Surface parent name (or fallback) and child name (or fallback) so a
+    // user with multiple pending invites can tell them apart.
+    final parentLabel = grant.parentName ?? l10n.tutorFallbackParent;
+    final childLabel = grant.childDisplayLabel;
+    final bodyText = l10n.acceptInviteBodyFromParentForChild(
+      parentLabel,
+      childLabel,
+    );
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -518,7 +530,7 @@ class _PendingInviteCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            l10n.acceptInviteBody,
+            bodyText,
             style: theme.textTheme.bodyMedium?.copyWith(
               color: AppTheme.brandInkMuted,
               height: 1.35,

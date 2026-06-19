@@ -689,4 +689,117 @@ void main() {
       await tester.pump(Duration.zero);
     },
   );
+
+  // ── R-TU-CARD-EMAIL: pending invite card shows parent + child names ─────────
+
+  TutorGrant makePendingGrant({
+    String grantId = 'g1',
+    String? parentName,
+    String? childName,
+  }) {
+    final doc = TutorGrantDoc(
+      grantId: grantId,
+      parentUid: 'p_uid',
+      childProfileId: 'child_remote_id',
+      tutorEmail: 'tutor@test.com',
+      state: TutorGrantState.pending,
+      invitedAt: _epoch,
+      updatedAt: _epoch,
+      parentName: parentName,
+      childName: childName,
+    );
+    return TutorGrant.fromDoc(doc);
+  }
+
+  testWidgets(
+    'pending invite card shows parent name and child name in body text',
+    (tester) async {
+      final grant = makePendingGrant(parentName: 'Chana', childName: 'Avi');
+
+      await tester.pumpWidget(
+        _buildApp(router: router, profiles: [], pendingInvites: [grant]),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      // The body must contain both the parent name and the child name so the
+      // user can distinguish multiple pending invites.
+      expect(
+        find.textContaining('Chana'),
+        findsOneWidget,
+        reason: 'parent name must appear in the pending invite card body',
+      );
+      expect(
+        find.textContaining('Avi'),
+        findsOneWidget,
+        reason: 'child name must appear in the pending invite card body',
+      );
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    },
+  );
+
+  testWidgets(
+    'pending invite card falls back to generic labels when names are absent',
+    (tester) async {
+      // No parentName or childName supplied — server has not denormalised them.
+      final grant = makePendingGrant();
+
+      await tester.pumpWidget(
+        _buildApp(router: router, profiles: [], pendingInvites: [grant]),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      // Should show l10n fallback for parent ("Parent") and generic child label.
+      expect(
+        find.textContaining('Parent'),
+        findsOneWidget,
+        reason: 'should fall back to "Parent" label when parentName is null',
+      );
+      expect(
+        find.textContaining('Talmid'),
+        findsOneWidget,
+        reason: 'should fall back to "Talmid" label when childName is null',
+      );
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    },
+  );
+
+  testWidgets(
+    'two pending invites show distinct parent+child labels so user can tell them apart',
+    (tester) async {
+      final grant1 = makePendingGrant(
+        grantId: 'g1',
+        parentName: 'Chana',
+        childName: 'Avi',
+      );
+      final grant2 = makePendingGrant(
+        grantId: 'g2',
+        parentName: 'Rivka',
+        childName: 'Moshe',
+      );
+
+      await tester.pumpWidget(
+        _buildApp(
+          router: router,
+          profiles: [],
+          pendingInvites: [grant1, grant2],
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(find.textContaining('Chana'), findsOneWidget);
+      expect(find.textContaining('Avi'), findsOneWidget);
+      expect(find.textContaining('Rivka'), findsOneWidget);
+      expect(find.textContaining('Moshe'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    },
+  );
 }

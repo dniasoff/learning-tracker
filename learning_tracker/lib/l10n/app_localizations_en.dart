@@ -4368,6 +4368,13 @@ class AppLocalizationsEn extends AppLocalizations {
       'You have been invited to tutor a child. By accepting, you will have access to view and manage their learning profile.';
 
   @override
+  String acceptInviteBodyFromParentForChild(
+    String parentLabel,
+    String childLabel,
+  ) =>
+      '$parentLabel has invited you to tutor $childLabel. By accepting, you will have access to view and manage their learning profile.';
+
+  @override
   String get acceptInvitePermissionViewData =>
       'View all learning data and progress';
 

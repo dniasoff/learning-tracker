@@ -2528,6 +2528,13 @@
   "acceptInviteAccepting": "Accepting invite…",
   "acceptInviteHeading": "Accept tutor invite",
   "acceptInviteBody": "You have been invited to tutor a child. By accepting, you will have access to view and manage their learning profile.",
+  "acceptInviteBodyFromParentForChild": "{parentLabel} has invited you to tutor {childLabel}. By accepting, you will have access to view and manage their learning profile.",
+  "@acceptInviteBodyFromParentForChild": {
+    "placeholders": {
+      "parentLabel": {"type": "String"},
+      "childLabel": {"type": "String"}
+    }
+  },
   "acceptInvitePermissionViewData": "View all learning data and progress",
   "acceptInvitePermissionConfigure": "Configure tracks, points, and rewards (if permitted)",
   "acceptInvitePermissionBulkMark": "Perform bulk-mark corrections",

@@ -2337,6 +2337,13 @@
   "acceptInviteAccepting": "מאשר הזמנה…",
   "acceptInviteHeading": "אישור הזמנת מדריך",
   "acceptInviteBody": "הוזמנתם להדריך ילד. באישור ההזמנה תקבלו גישה לצפייה ולניהול של פרופיל הלמידה שלו.",
+  "acceptInviteBodyFromParentForChild": "{parentLabel} הזמין/ה אתכם להדריך את {childLabel}. באישור ההזמנה תקבלו גישה לצפייה ולניהול של פרופיל הלמידה שלו.",
+  "@acceptInviteBodyFromParentForChild": {
+    "placeholders": {
+      "parentLabel": {"type": "String"},
+      "childLabel": {"type": "String"}
+    }
+  },
   "acceptInvitePermissionViewData": "צפייה בכל נתוני הלמידה וההתקדמות",
   "acceptInvitePermissionConfigure": "הגדרת מסלולים, נקודות ופרסים (אם הותר)",
   "acceptInvitePermissionBulkMark": "ביצוע תיקוני סימון מרוכזים",

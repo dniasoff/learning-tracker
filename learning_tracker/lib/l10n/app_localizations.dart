@@ -7341,6 +7341,15 @@ abstract class AppLocalizations {
   /// **'You have been invited to tutor a child. By accepting, you will have access to view and manage their learning profile.'**
   String get acceptInviteBody;
 
+  /// No description provided for @acceptInviteBodyFromParentForChild.
+  ///
+  /// In en, this message translates to:
+  /// **'{parentLabel} has invited you to tutor {childLabel}. By accepting, you will have access to view and manage their learning profile.'**
+  String acceptInviteBodyFromParentForChild(
+    String parentLabel,
+    String childLabel,
+  );
+
   /// No description provided for @acceptInvitePermissionViewData.
   ///
   /// In en, this message translates to:
