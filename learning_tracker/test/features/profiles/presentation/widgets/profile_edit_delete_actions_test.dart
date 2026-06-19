@@ -1,14 +1,18 @@
-// Regression test for R3-10: offline-first profile deletion.
+// Regression tests for:
+//   R3-10: offline-first profile deletion.
+//   R-PR4: child→adult mode change must clear stale per-profile PIN from
+//          FlutterSecureStorage.
 //
 // Deleting a cloud-account profile while offline must succeed — the local Drift
 // delete happens immediately and the cloud delete is queued to the outbox.
 // The previous code blocked deletion with an error snackbar when !isOnline.
-@Tags(['l1', 'profiles', 'offline_first', 'r3_10'])
+@Tags(['l1', 'profiles', 'offline_first', 'r3_10', 'r_pr4'])
 library;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
@@ -16,12 +20,53 @@ import 'package:learning_tracker/features/account/domain/models/auth_state.dart'
 import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
+import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/profile_edit_delete_actions.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
 
 import '../../../../helpers/test_database.dart';
+
+// ---------------------------------------------------------------------------
+// Shared mock storage factory (in-memory back-end for PinService).
+// ---------------------------------------------------------------------------
+
+class _MockFlutterSecureStorage extends Mock implements FlutterSecureStorage {}
+
+_MockFlutterSecureStorage _createMockStorage() {
+  final mock = _MockFlutterSecureStorage();
+  final store = <String, String>{};
+
+  when(
+    () => mock.write(
+      key: any(named: 'key'),
+      value: any(named: 'value'),
+    ),
+  ).thenAnswer((invocation) async {
+    final key = invocation.namedArguments[#key] as String;
+    final value = invocation.namedArguments[#value] as String?;
+    if (value == null) {
+      store.remove(key);
+    } else {
+      store[key] = value;
+    }
+  });
+
+  when(() => mock.read(key: any(named: 'key'))).thenAnswer((invocation) async {
+    final key = invocation.namedArguments[#key] as String;
+    return store[key];
+  });
+
+  when(() => mock.delete(key: any(named: 'key'))).thenAnswer((
+    invocation,
+  ) async {
+    final key = invocation.namedArguments[#key] as String;
+    store.remove(key);
+  });
+
+  return mock;
+}
 
 class _MockProfileRepository extends Mock implements ProfileRepository {}
 
@@ -482,5 +527,337 @@ void main() {
         await tester.pump(Duration.zero);
       },
     );
+  });
+
+  // ── R-PR4: child→adult mode change must clear stale per-profile PIN ───────
+  //
+  // ROOT CAUSE: editProfileFlow updated the profile mode in the database but
+  // never cleared the per-profile parent PIN (and tutor PIN) from
+  // FlutterSecureStorage. After the mode change, hasProfilePin(id) still
+  // returned true, so the PinGuard would incorrectly prompt for a PIN on
+  // what is now an adult profile.
+  //
+  // FIX: when result.mode == 'adult' and the previous profile.mode == 'child',
+  // call clearProfilePin(id) and clearTutorPin(id) before returning.
+
+  group('R-PR4 — child→adult mode change clears stale profile PIN', () {
+    testWidgets(
+      'editProfileFlow: after child→adult change, hasProfilePin returns false',
+      (tester) async {
+        tester.view.physicalSize = const Size(1080, 2340);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+
+        const profileId = 5;
+        const accountId = 1;
+
+        final mockStorage = _createMockStorage();
+        final pinService = PinService(mockStorage);
+
+        // Pre-seed: the child profile has a parent PIN set.
+        await pinService.setProfilePin(profileId, '1234');
+        expect(
+          await pinService.hasProfilePin(profileId),
+          isTrue,
+          reason: 'precondition: PIN must be set before the mode change',
+        );
+
+        final childProfile = ProfileModel(
+          id: profileId,
+          accountId: accountId,
+          displayName: 'Yosef',
+          mode: 'child',
+          avatarIndex: 0,
+          createdAt: DateTime(2024, 1, 1),
+          updatedAt: DateTime(2024, 1, 1),
+        );
+        final updatedAdultProfile = childProfile.copyWith(mode: 'adult');
+
+        final repo = _MockProfileRepository();
+        when(
+          () => repo.updateProfile(
+            id: any(named: 'id'),
+            displayName: any(named: 'displayName'),
+            mode: any(named: 'mode'),
+            avatarIndex: any(named: 'avatarIndex'),
+          ),
+        ).thenAnswer((_) async => updatedAdultProfile);
+        when(
+          () => repo.getProfilesByAccount(any()),
+        ).thenAnswer((_) async => [updatedAdultProfile]);
+        when(
+          () => repo.getProfileById(any()),
+        ).thenAnswer((_) async => updatedAdultProfile);
+        when(
+          () => repo.countProfilesForAccount(any()),
+        ).thenAnswer((_) async => 1);
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              // Override secure storage so the real PinService uses our
+              // in-memory store and we can observe clearProfilePin's effect.
+              flutterSecureStorageProvider.overrideWithValue(mockStorage),
+              profileRepositoryProvider.overrideWithValue(repo),
+              selectedProfileIdProvider.overrideWith(
+                () => _FixedSelectedProfileId(profileId),
+              ),
+              currentAccountIdProvider.overrideWithValue(accountId),
+            ],
+            child: MaterialApp(
+              locale: const Locale('en'),
+              localizationsDelegates: const [
+                AppLocalizations.delegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Consumer(
+                builder: (ctx, ref, _) => Scaffold(
+                  body: Center(
+                    child: ElevatedButton(
+                      key: const Key('trigger_edit'),
+                      onPressed: () => editProfileFlow(ctx, ref, childProfile),
+                      child: const Text('Edit'),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump(const Duration(milliseconds: 100));
+
+        // Open the edit dialog.
+        await tester.tap(find.byKey(const Key('trigger_edit')));
+        await tester.pump(const Duration(milliseconds: 300));
+
+        // The dialog is open. Switch from "Child" to "Adult".
+        final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+        await tester.tap(find.text(l10n.profilesAdultLabel).first);
+        await tester.pump(const Duration(milliseconds: 100));
+
+        // Tap Save.
+        await tester.tap(find.text(l10n.actionSave));
+        await tester.pump(const Duration(milliseconds: 300));
+
+        // R-PR4 fix: the profile PIN must now be absent.
+        expect(
+          await pinService.hasProfilePin(profileId),
+          isFalse,
+          reason:
+              'R-PR4: promoting a child profile to adult must clear the stale '
+              'per-profile parent PIN from FlutterSecureStorage',
+        );
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(Duration.zero);
+      },
+    );
+
+    testWidgets(
+      'editProfileFlow: after child→adult change, hasTutorPin returns false',
+      (tester) async {
+        tester.view.physicalSize = const Size(1080, 2340);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(tester.view.resetPhysicalSize);
+
+        const profileId = 6;
+        const accountId = 1;
+
+        final mockStorage = _createMockStorage();
+        final pinService = PinService(mockStorage);
+
+        // Pre-seed: the child profile also has a tutor PIN.
+        await pinService.setTutorPin(profileId, '5678');
+        expect(await pinService.hasTutorPin(profileId), isTrue);
+
+        final childProfile = ProfileModel(
+          id: profileId,
+          accountId: accountId,
+          displayName: 'Rivka',
+          mode: 'child',
+          avatarIndex: 1,
+          createdAt: DateTime(2024, 1, 1),
+          updatedAt: DateTime(2024, 1, 1),
+        );
+        final updatedAdultProfile = childProfile.copyWith(mode: 'adult');
+
+        final repo = _MockProfileRepository();
+        when(
+          () => repo.updateProfile(
+            id: any(named: 'id'),
+            displayName: any(named: 'displayName'),
+            mode: any(named: 'mode'),
+            avatarIndex: any(named: 'avatarIndex'),
+          ),
+        ).thenAnswer((_) async => updatedAdultProfile);
+        when(
+          () => repo.getProfilesByAccount(any()),
+        ).thenAnswer((_) async => [updatedAdultProfile]);
+        when(
+          () => repo.getProfileById(any()),
+        ).thenAnswer((_) async => updatedAdultProfile);
+        when(
+          () => repo.countProfilesForAccount(any()),
+        ).thenAnswer((_) async => 1);
+
+        await tester.pumpWidget(
+          ProviderScope(
+            overrides: [
+              flutterSecureStorageProvider.overrideWithValue(mockStorage),
+              profileRepositoryProvider.overrideWithValue(repo),
+              selectedProfileIdProvider.overrideWith(
+                () => _FixedSelectedProfileId(profileId),
+              ),
+              currentAccountIdProvider.overrideWithValue(accountId),
+            ],
+            child: MaterialApp(
+              locale: const Locale('en'),
+              localizationsDelegates: const [
+                AppLocalizations.delegate,
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
+              supportedLocales: AppLocalizations.supportedLocales,
+              home: Consumer(
+                builder: (ctx, ref, _) => Scaffold(
+                  body: Center(
+                    child: ElevatedButton(
+                      key: const Key('trigger_edit'),
+                      onPressed: () => editProfileFlow(ctx, ref, childProfile),
+                      child: const Text('Edit'),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.pump(const Duration(milliseconds: 100));
+
+        await tester.tap(find.byKey(const Key('trigger_edit')));
+        await tester.pump(const Duration(milliseconds: 300));
+
+        final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+        await tester.tap(find.text(l10n.profilesAdultLabel).first);
+        await tester.pump(const Duration(milliseconds: 100));
+
+        await tester.tap(find.text(l10n.actionSave));
+        await tester.pump(const Duration(milliseconds: 300));
+
+        // R-PR4 fix: the tutor PIN must also be gone.
+        expect(
+          await pinService.hasTutorPin(profileId),
+          isFalse,
+          reason:
+              'R-PR4: promoting a child profile to adult must also clear the '
+              'stale tutor PIN from FlutterSecureStorage',
+        );
+
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(Duration.zero);
+      },
+    );
+
+    testWidgets('editProfileFlow: adult→child change does NOT clear any PIN '
+        '(no PINs are set; guard applies only to child→adult)', (tester) async {
+      tester.view.physicalSize = const Size(1080, 2340);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      const profileId = 7;
+      const accountId = 1;
+
+      final mockStorage = _createMockStorage();
+      final pinService = PinService(mockStorage);
+
+      // No PIN for this adult profile.
+      expect(await pinService.hasProfilePin(profileId), isFalse);
+
+      final adultProfile = ProfileModel(
+        id: profileId,
+        accountId: accountId,
+        displayName: 'Shmuel',
+        mode: 'adult',
+        avatarIndex: 0,
+        createdAt: DateTime(2024, 1, 1),
+        updatedAt: DateTime(2024, 1, 1),
+      );
+      final updatedChildProfile = adultProfile.copyWith(mode: 'child');
+
+      final repo = _MockProfileRepository();
+      when(
+        () => repo.updateProfile(
+          id: any(named: 'id'),
+          displayName: any(named: 'displayName'),
+          mode: any(named: 'mode'),
+          avatarIndex: any(named: 'avatarIndex'),
+        ),
+      ).thenAnswer((_) async => updatedChildProfile);
+      when(
+        () => repo.getProfilesByAccount(any()),
+      ).thenAnswer((_) async => [updatedChildProfile]);
+      when(
+        () => repo.getProfileById(any()),
+      ).thenAnswer((_) async => updatedChildProfile);
+      when(
+        () => repo.countProfilesForAccount(any()),
+      ).thenAnswer((_) async => 1);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            flutterSecureStorageProvider.overrideWithValue(mockStorage),
+            profileRepositoryProvider.overrideWithValue(repo),
+            selectedProfileIdProvider.overrideWith(
+              () => _FixedSelectedProfileId(profileId),
+            ),
+            currentAccountIdProvider.overrideWithValue(accountId),
+          ],
+          child: MaterialApp(
+            locale: const Locale('en'),
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: Consumer(
+              builder: (ctx, ref, _) => Scaffold(
+                body: Center(
+                  child: ElevatedButton(
+                    key: const Key('trigger_edit'),
+                    onPressed: () => editProfileFlow(ctx, ref, adultProfile),
+                    child: const Text('Edit'),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.pump(const Duration(milliseconds: 100));
+
+      await tester.tap(find.byKey(const Key('trigger_edit')));
+      await tester.pump(const Duration(milliseconds: 300));
+
+      final l10n = await AppLocalizations.delegate.load(const Locale('en'));
+      await tester.tap(find.text(l10n.profilesChildLabel).first);
+      await tester.pump(const Duration(milliseconds: 100));
+
+      await tester.tap(find.text(l10n.actionSave));
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // adult→child: no PINs existed, and we should not have accidentally
+      // broken any state. hasProfilePin stays false (nothing to clear).
+      expect(await pinService.hasProfilePin(profileId), isFalse);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    });
   });
 }

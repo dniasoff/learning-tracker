@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
+import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/profile_avatar.dart';
@@ -51,6 +52,17 @@ Future<void> editProfileFlow(
     }
     return;
   }
+
+  // R-PR4: when a child profile is promoted to adult, clear the stale
+  // per-profile PINs from secure storage. If left behind, the PIN guard would
+  // still prompt for a PIN on what is now an adult profile, and the tutor PIN
+  // would remain reachable via an orphaned key.
+  if (profile.mode == 'child' && result.mode == 'adult') {
+    final pins = ref.read(pinServiceProvider);
+    await pins.clearProfilePin(profile.id);
+    await pins.clearTutorPin(profile.id);
+  }
+
   ref.invalidate(profileListProvider);
   ref.invalidate(profileListStreamProvider);
   ref.invalidate(selectedProfileProvider);
