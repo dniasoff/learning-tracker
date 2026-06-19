@@ -1,17 +1,16 @@
 import 'package:auto_route/auto_route.dart';
-import 'package:drift/drift.dart' show Value;
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/database/daos/track_dao.dart'
-    show TrackState;
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
-import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+import 'package:learning_tracker/features/settings/domain/exceptions/last_active_curriculum_exception.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/after_track_change_invalidation.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart'
@@ -228,54 +227,106 @@ class _ParentTrackManagementScreenState
   Future<void> _showDeleteDialog(CurriculumTrack track) async {
     final l10n = AppLocalizations.of(context)!;
 
+    // R-TR2 / TS-16: Pre-check whether Archive/Delete is allowed before
+    // showing the dialog. When this track is the only active curriculum for
+    // the child profile, surfacing the destructive actions would leave the
+    // profile with zero active curricula (dashboard dead-end).
+    final activeCurricula = await ref
+        .read(userDatabaseProvider)
+        .activeCurriculumDao
+        .getActiveCurriculaByProfile(track.profileId);
+    if (!mounted) return;
+
+    final canDelete = activeCurricula.length > 1;
+
     // 'archive' = keep history; 'wipe' = hard-delete completions; null = cancel
     final choice = await showDialog<String>(
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(l10n.deleteTrackArchiveTitle),
         // TS-14: use child-scoped body copy ("your child's completion history").
-        content: Text(l10n.parentDeleteTrackArchiveBody),
+        // TS-16: when it's the last curriculum show blocking explanation instead.
+        content: Text(
+          canDelete
+              ? l10n.parentDeleteTrackArchiveBody
+              : l10n.cannotDeactivateLastCurriculum,
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
             child: Text(l10n.actionCancel),
           ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, 'archive'),
-            child: Text(l10n.deleteTrackArchive),
-          ),
-          FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: Theme.of(ctx).colorScheme.error,
+          if (canDelete) ...[
+            TextButton(
+              onPressed: () => Navigator.pop(ctx, 'archive'),
+              child: Text(l10n.deleteTrackArchive),
             ),
-            onPressed: () => Navigator.pop(ctx, 'wipe'),
-            child: Text(l10n.deleteTrackWipe),
-          ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: Theme.of(ctx).colorScheme.error,
+              ),
+              onPressed: () => Navigator.pop(ctx, 'wipe'),
+              child: Text(l10n.deleteTrackWipe),
+            ),
+          ],
         ],
       ),
     );
 
     if (choice == null || !mounted) return;
 
-    final db = ref.read(userDatabaseProvider);
-    if (choice == 'wipe') {
-      await db.trackDao.purgeHistory(track.id);
-    } else {
-      // TS-3 fix: archive = set state='archived', preserving all goal/pace/
-      // program/completion-mode config. The former dao.deleteTrackAndData()
-      // call was wrong here: it wipes stages/goals/point-configs (destroying
-      // the track config) while also leaving the track visible as active after
-      // any rebuild (state='deleted' rows are excluded by watchActiveTracksForProfile
-      // only for state='active'; archived and deleted rows are both excluded).
-      await (db.update(
-        db.curriculumTracks,
-      )..where((t) => t.id.equals(track.id))).write(
-        CurriculumTracksCompanion(
-          state: const Value(TrackState.archived),
-          stateChangedAt: Value(ref.read(localDayClockProvider).nowUtc()),
-        ),
-      );
+    // Defensive guard (canDelete was true since the dialog showed the actions).
+    if (!canDelete) {
+      _showLastCurriculumError(l10n);
+      return;
     }
+
+    if (choice == 'archive') {
+      final curriculum = CurriculumId.values
+          .where((c) => c.storageKey == track.curriculumId)
+          .firstOrNull;
+      if (curriculum != null) {
+        try {
+          // Route through CurriculumActivationService which enforces the
+          // last-curriculum invariant (throws LastActiveCurriculumException).
+          await ref
+              .read(curriculumActivationServiceProvider)
+              .deactivate(curriculum);
+          await invalidateAfterTrackDataChange(ref, track.profileId);
+        } on LastActiveCurriculumException {
+          if (!mounted) return;
+          _showLastCurriculumError(l10n);
+        }
+        return;
+      }
+    }
+
+    // Wipe path: hard-delete the track and its history.
+    final dao = ref.read(userDatabaseProvider).trackDao;
+    await dao.purgeHistory(track.id);
     await invalidateAfterTrackDataChange(ref, track.profileId);
+  }
+
+  void _showLastCurriculumError(AppLocalizations l10n) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              l10n.cannotDeactivateLastCurriculum,
+              style: const TextStyle(fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              l10n.cannotDeactivateLastCurriculumDetail,
+              style: const TextStyle(fontSize: 12),
+            ),
+          ],
+        ),
+        duration: const Duration(seconds: 4),
+      ),
+    );
   }
 }

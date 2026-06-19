@@ -6,8 +6,10 @@
 ///     count badge; FAB present
 ///   • Tap track card → router.push called
 ///   • Long-press → _showDeleteDialog — cancel: no DAO side-effect
-///   • Long-press → _showDeleteDialog — "Archive" choice: track soft-deleted
-///   • Long-press → _showDeleteDialog — "Wipe" choice: track purged
+///   • Long-press → _showDeleteDialog — "Archive" choice (2 tracks): track removed
+///   • Long-press → _showDeleteDialog — "Wipe" choice (2 tracks): track purged
+///   • R-TR2 guard — last-curriculum: dialog shows explanation + Cancel only
+///   • R-TR2 guard — last-curriculum: archive/wipe buttons absent for 1 track
 ///   • Product rule — no "Personal"/"Standard"/"Custom"/"אישי" track-type label
 ///   • he-RTL smoke — populated + empty both render without overflow
 @Tags(['profiles', 'parent_track_management'])
@@ -25,8 +27,11 @@ import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
+import 'package:learning_tracker/features/learning/domain/repositories/track_repository.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/screens/parent_track_management_screen.dart';
+import 'package:learning_tracker/features/settings/presentation/providers/curriculum_activation_providers.dart';
+import 'package:learning_tracker/features/tracks/domain/services/curriculum_activation_service.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 import 'package:mocktail/mocktail.dart';
@@ -38,6 +43,32 @@ import '../../../../helpers/drift_memory.dart';
 class _MockStackRouter extends Mock implements StackRouter {}
 
 class _FakePageRouteInfo extends Fake implements PageRouteInfo {}
+
+/// Minimal [TrackRepository] backed by the test's in-memory DB.
+/// Only [initializeDefaultTracks] is needed by [CurriculumActivationService].
+class _TrackRepositoryForTest implements TrackRepository {
+  _TrackRepositoryForTest(this._db);
+  final UserDatabase _db;
+
+  @override
+  Future<void> initializeDefaultTracks(
+    CurriculumId curriculumId, {
+    int profileId = 0,
+  }) =>
+      _db.trackDao.initializeDefaultTracks(curriculumId, profileId: profileId);
+}
+
+/// Builds a [CurriculumActivationService] wired to [db] without sync.
+CurriculumActivationService _buildActivationService(
+  UserDatabase db,
+  int profileId,
+) => CurriculumActivationService(
+  database: db,
+  pushCurriculumTrack: null,
+  trackRepository: _TrackRepositoryForTest(db),
+  profileId: profileId,
+  syncFacade: null,
+);
 
 // ─── Pin UseHebrewTerms to English ───────────────────────────────────────────
 
@@ -96,16 +127,18 @@ Widget _buildApp({
   Locale locale = const Locale('en'),
 }) {
   final database = db ?? inMemoryDb();
+  final profileId = tracks.isNotEmpty ? tracks.first.profileId : _kProfileId;
 
   return ProviderScope(
     overrides: [
-      activeProfileIdProvider.overrideWithValue(
-        tracks.isNotEmpty ? tracks.first.profileId : _kProfileId,
-      ),
+      activeProfileIdProvider.overrideWithValue(profileId),
       userDatabaseProvider.overrideWith((ref) => database),
       activeTracksProvider.overrideWith((ref) => Stream.value(tracks)),
       ..._perTrackOverrides(tracks),
       useHebrewTermsProvider.overrideWith(() => _HebrewTermsOff()),
+      curriculumActivationServiceProvider.overrideWith(
+        (ref) => _buildActivationService(database, profileId),
+      ),
     ],
     child: MaterialApp(
       locale: locale,
@@ -367,23 +400,89 @@ void main() {
       await _teardown(tester);
     });
 
-    testWidgets('long-press opens delete dialog with all three actions', (
-      tester,
-    ) async {
-      final track = _track();
-      await tester.pumpWidget(_buildApp(router: router, tracks: [track]));
-      await _settle(tester);
+    testWidgets(
+      'long-press on last-curriculum track shows explanation + Cancel only '
+      '(R-TR2 guard)',
+      (tester) async {
+        // Only one track in DB → canDelete = false → blocked dialog.
+        final db = inMemoryDb();
+        await seedProfile(db);
+        final trackId = await seedTrack(db, profileId: _kProfileId);
+        final track = _track(id: trackId);
 
-      await tester.longPress(find.byType(InkWell).first);
-      await tester.pump();
-      await tester.pump(const Duration(milliseconds: 100));
+        await tester.pumpWidget(
+          _buildApp(router: router, tracks: [track], db: db),
+        );
+        await _settle(tester);
 
-      expect(find.text('Delete Track'), findsOneWidget);
-      expect(find.text('Cancel'), findsOneWidget);
-      expect(find.text('Archive (keep history)'), findsOneWidget);
-      expect(find.text('Delete and wipe history'), findsOneWidget);
-      await _teardown(tester);
-    });
+        await tester.longPress(find.byType(InkWell).first);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        // Dialog title still shows.
+        expect(find.text('Delete Track'), findsOneWidget);
+        // Only Cancel is offered — destructive actions must be absent.
+        expect(find.text('Cancel'), findsOneWidget);
+        expect(
+          find.text('Archive (keep history)'),
+          findsNothing,
+          reason: 'R-TR2: Archive must be hidden for the last curriculum',
+        );
+        expect(
+          find.text('Delete and wipe history'),
+          findsNothing,
+          reason: 'R-TR2: Wipe must be hidden for the last curriculum',
+        );
+        // Explanation text from l10n key cannotDeactivateLastCurriculum.
+        expect(
+          find.textContaining('At least one curriculum must remain active'),
+          findsOneWidget,
+          reason: 'R-TR2: dialog must explain why actions are blocked',
+        );
+
+        await tester.tap(find.text('Cancel'));
+        await tester.pump();
+
+        await db.close();
+        await _teardown(tester);
+      },
+    );
+
+    testWidgets(
+      'long-press with TWO active curricula shows all three actions',
+      (tester) async {
+        // Two tracks in DB → canDelete = true → full dialog.
+        final db = inMemoryDb();
+        await seedProfile(db);
+        final trackId1 = await seedTrack(
+          db,
+          profileId: _kProfileId,
+          curriculumId: 'mishnayos',
+        );
+        await seedTrack(db, profileId: _kProfileId, curriculumId: 'bavli');
+        final track1 = _track(id: trackId1, curriculumId: 'mishnayos');
+
+        await tester.pumpWidget(
+          _buildApp(router: router, tracks: [track1], db: db),
+        );
+        await _settle(tester);
+
+        await tester.longPress(find.byType(InkWell).first);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        expect(find.text('Delete Track'), findsOneWidget);
+        expect(find.text('Cancel'), findsOneWidget);
+        expect(find.text('Archive (keep history)'), findsOneWidget);
+        expect(find.text('Delete and wipe history'), findsOneWidget);
+
+        await tester.tap(find.text('Cancel'));
+        await tester.pump();
+
+        await db.close();
+        await _teardown(tester);
+      },
+    );
   });
 
   // ── Delete dialog — cancel ────────────────────────────────────────────────
@@ -429,12 +528,19 @@ void main() {
 
   group('Delete dialog — archive', () {
     testWidgets(
-      '"Archive (keep history)" soft-deletes track (no longer active)',
+      '"Archive (keep history)" removes track from active when 2 curricula exist',
       (tester) async {
+        // Two curricula in DB → dialog offers Archive; archiving track1 succeeds.
         final db = inMemoryDb();
         await seedProfile(db);
-        final trackId = await seedTrack(db, profileId: _kProfileId);
-        final track = _track(id: trackId);
+        final trackId = await seedTrack(
+          db,
+          profileId: _kProfileId,
+          curriculumId: 'mishnayos',
+        );
+        // Second curriculum keeps the profile above the minimum-1 threshold.
+        await seedTrack(db, profileId: _kProfileId, curriculumId: 'bavli');
+        final track = _track(id: trackId, curriculumId: 'mishnayos');
 
         await tester.pumpWidget(
           _buildApp(router: router, tracks: [track], db: db),
@@ -453,7 +559,9 @@ void main() {
         expect(
           active.any((t) => t.id == trackId),
           isFalse,
-          reason: 'Archive must soft-delete: track must not appear as active.',
+          reason:
+              'Archive must remove the track from active when another '
+              'curriculum remains.',
         );
 
         await db.close();
@@ -465,13 +573,19 @@ void main() {
   // ── Delete dialog — wipe ──────────────────────────────────────────────────
 
   group('Delete dialog — wipe', () {
-    testWidgets('"Delete and wipe history" purges track (no longer active)', (
-      tester,
-    ) async {
+    testWidgets('"Delete and wipe history" purges track from active list '
+        'when 2 curricula exist', (tester) async {
+      // Two curricula in DB → dialog offers Wipe; wiping track1 succeeds.
       final db = inMemoryDb();
       await seedProfile(db);
-      final trackId = await seedTrack(db, profileId: _kProfileId);
-      final track = _track(id: trackId);
+      final trackId = await seedTrack(
+        db,
+        profileId: _kProfileId,
+        curriculumId: 'mishnayos',
+      );
+      // Second curriculum keeps the profile above the minimum-1 threshold.
+      await seedTrack(db, profileId: _kProfileId, curriculumId: 'bavli');
+      final track = _track(id: trackId, curriculumId: 'mishnayos');
 
       await tester.pumpWidget(
         _buildApp(router: router, tracks: [track], db: db),
@@ -490,12 +604,102 @@ void main() {
       expect(
         active.any((t) => t.id == trackId),
         isFalse,
-        reason: 'Wipe must purge the track from the active list.',
+        reason:
+            'Wipe must purge the track from the active list when another '
+            'curriculum remains.',
       );
 
       await db.close();
       await _teardown(tester);
     });
+  });
+
+  // ── R-TR2 regression: last-curriculum guard in parent delete dialog ─────────
+
+  group('R-TR2 — last-curriculum guard on parent delete dialog', () {
+    testWidgets(
+      'last active track: dialog shows explanation, no Archive/Wipe buttons',
+      (tester) async {
+        // One curriculum in DB → canDelete = false → blocked dialog.
+        final db = inMemoryDb();
+        await seedProfile(db);
+        final trackId = await seedTrack(db, profileId: _kProfileId);
+        final track = _track(id: trackId);
+
+        await tester.pumpWidget(
+          _buildApp(router: router, tracks: [track], db: db),
+        );
+        await _settle(tester);
+
+        await tester.longPress(find.byType(InkWell).first);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        // Destructive actions must be absent.
+        expect(
+          find.text('Archive (keep history)'),
+          findsNothing,
+          reason: 'R-TR2: Archive must not be offered for the last curriculum',
+        );
+        expect(
+          find.text('Delete and wipe history'),
+          findsNothing,
+          reason: 'R-TR2: Wipe must not be offered for the last curriculum',
+        );
+        // Explanation is shown instead.
+        expect(
+          find.textContaining('At least one curriculum must remain active'),
+          findsOneWidget,
+        );
+
+        // Dismiss.
+        await tester.tap(find.text('Cancel'));
+        await tester.pump();
+
+        // Track must remain active — no side-effect.
+        final active = await db.trackDao.getActiveTracksForProfile(_kProfileId);
+        expect(
+          active.any((t) => t.id == trackId),
+          isTrue,
+          reason:
+              'R-TR2: last active curriculum must not be removed from '
+              'the active list — only Cancel was available.',
+        );
+
+        await db.close();
+        await _teardown(tester);
+      },
+    );
+
+    testWidgets(
+      'last active track: long-press + Cancel leaves track unchanged',
+      (tester) async {
+        final db = inMemoryDb();
+        await seedProfile(db);
+        final trackId = await seedTrack(db, profileId: _kProfileId);
+        final track = _track(id: trackId);
+
+        await tester.pumpWidget(
+          _buildApp(router: router, tracks: [track], db: db),
+        );
+        await _settle(tester);
+
+        await tester.longPress(find.byType(InkWell).first);
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 100));
+
+        await tester.tap(find.text('Cancel'));
+        await tester.pumpAndSettle();
+
+        // Track still active and unchanged.
+        final trackRow = await db.trackDao.getTrackById(trackId);
+        expect(trackRow, isNotNull);
+        expect(trackRow!.state, equals('active'));
+
+        await db.close();
+        await _teardown(tester);
+      },
+    );
   });
 
   // ── Product rules ─────────────────────────────────────────────────────────
