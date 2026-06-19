@@ -117,7 +117,13 @@ class AppRouter extends RootStackRouter {
     AutoRoute(
       path: '/manage-learners',
       page: ManageLearnersRoute.page,
-      guards: [authGuard],
+      // Edits and DELETES learner profiles — must not be reachable in child
+      // mode. Previously [authGuard] only (R-PR10), so a child-mode session
+      // could reach profile edit/delete via deep-link. childModeGuard closes
+      // that hole; pinGuard is intentionally NOT added (the entry tiles are
+      // adult-only, and re-prompting an adult for a PIN here is a separate
+      // product decision — see R-PR10 in the E2E risk register).
+      guards: [authGuard, childModeGuard],
     ),
 
     // App shell with bottom navigation (auth required)

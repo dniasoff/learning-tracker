@@ -47,7 +47,14 @@ class _RewardConfigurationScreenState
     super.initState();
     _nameController.addListener(_onNameChanged);
     _pointsController.addListener(_onPointsChanged);
-    unawaited(ref.read(rewardConfigControllerProvider.notifier).bootstrap());
+    // Defer to post-frame: bootstrap() synchronously assigns controller state,
+    // and calling it during initState (inside the build cycle) trips Riverpod
+    // 3.x "Tried to modify a provider while the widget tree was building"
+    // (R-GA-boot).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      unawaited(ref.read(rewardConfigControllerProvider.notifier).bootstrap());
+    });
   }
 
   @override
