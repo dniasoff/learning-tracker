@@ -1,29 +1,35 @@
-/// Regression test for achievementsOverviewProvider staleness after a
-/// child redemption debit (DG-ACHV-01).
+/// Regression tests for global milestone stability after redemption
+/// (DG-ACHV-01 / R-GA2).
 ///
-/// `achievementsOverviewProvider` is a FutureProvider. It reads the current
-/// debitable balance via [RewardMilestoneService.getGlobalPointsForRewards]
-/// to classify milestones as "unlocked" (balance >= threshold) or locked.
+/// ## Background
 ///
-/// When a child redeems a reward via [ChildRedemptionScreen], the balance is
-/// debited. If the [achievementsOverviewProvider] is NOT invalidated after the
-/// debit, the gamification screen continues to show the milestone as
-/// "unlocked" (based on the pre-debit balance) even though the child no
-/// longer has sufficient balance.
+/// [achievementsOverviewProvider] previously classified global milestones as
+/// "unlocked" when [balance >= threshold], where [balance] is the DEBITABLE
+/// balance from [PointsBalanceDao.getBalance]. A redemption debit reduces the
+/// balance, so a child who had earned enough points to unlock a milestone would
+/// see it flip back to LOCKED after spending points.
 ///
-/// BEFORE the fix: `_confirmRedeem()` in [ChildRedemptionScreen] does not
-/// call `ref.invalidate(achievementsOverviewProvider)`. The gamification
-/// screen shows stale "unlocked" classification until the user does a
-/// pull-to-refresh.
+/// ## Fix (R-GA2)
 ///
-/// AFTER the fix: `_confirmRedeem()` also invalidates
-/// [achievementsOverviewProvider] after a successful `createRedemption()`,
-/// so the gamification screen immediately reflects the updated unlock state.
-@Tags(['gamification', 'staleness', 'achievements'])
+/// The provider now calls [RewardMilestoneService.getGlobalLifetimeEarnedForRewards],
+/// which sums completion points from [completionsView] across all
+/// reward-eligible tracks. This value is monotonically non-decreasing
+/// (completions are never deleted), so a milestone unlocked by crossing the
+/// threshold stays unlocked permanently — regardless of subsequent redemptions.
+///
+/// ## Tests
+///
+/// 1. After a redemption that drops the spendable balance BELOW the threshold,
+///    the milestone remains UNLOCKED (lifetime-earned still >= threshold).
+/// 2. Provider returns the same unlock state before and after invalidation +
+///    re-evaluation when a redemption has occurred.
+@Tags(['gamification', 'staleness', 'achievements', 'r_ga2'])
 library;
 
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
@@ -34,108 +40,78 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../helpers/drift_memory.dart';
 
+Future<int> _seedTrackWithGoal(UserDatabase db) async {
+  final trackId = await db
+      .into(db.curriculumTracks)
+      .insert(
+        CurriculumTracksCompanion.insert(
+          profileId: 1,
+          curriculumId: 'bavli',
+          stateChangedAt: DateTime.utc(2026, 1, 1),
+          activatedAt: DateTime.utc(2026, 1, 1),
+        ),
+      );
+  final now = DateTime.utc(2026, 1, 1);
+  await db.goalDao.insertGoal(
+    GoalsCompanion.insert(
+      profileId: 1,
+      curriculumId: 'bavli',
+      trackId: trackId,
+      createdAt: now,
+      updatedAt: now,
+    ),
+  );
+  return trackId;
+}
+
+Future<void> _insertCompletion(
+  UserDatabase db, {
+  required int trackId,
+  required int points,
+}) async {
+  await db.completionEventDao.appendEvent(
+    CompletionEventsCompanion.insert(
+      profileId: 1,
+      curriculumId: 'bavli',
+      sefariaRef: 'Berakhot.2a',
+      stageId: 1,
+      trackType: 'personal',
+      trackId: Value(trackId),
+      eventTimestamp: DateTime.utc(2026, 1, 2),
+      points: Value(points),
+    ),
+  );
+}
+
 void main() {
   setUp(() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  group('achievementsOverviewProvider — staleness after redemption '
-      '(DG-ACHV-01)', () {
-    test('achievementsOverviewProvider re-classifies milestone as locked '
-        'after ref.invalidate() when balance drops below threshold '
-        '(simulates the invalidation that _confirmRedeem must add)', () async {
-      final db = inMemoryDb();
-      addTearDown(db.close);
-      await seedProfile(db);
-
-      // Seed a global milestone at 100 pts threshold.
-      final svc = RewardMilestoneService(db, profileId: 1);
-      await svc.upsertMilestone(
-        trackId: RewardMilestone.kGlobalTrackSentinel,
-        title: 'GoldStar',
-        thresholdPoints: 100,
-        isEnabled: true,
-      );
-
-      // Credit 150 pts → milestone is "unlocked" (balance >= threshold).
-      await db.pointsBalanceDao.creditCompletion(1, 150);
-
-      final container = ProviderContainer(
-        overrides: [
-          userDatabaseProvider.overrideWithValue(db),
-          activeProfileIdProvider.overrideWithValue(1),
-          syncWriteFacadeProvider.overrideWithValue(null),
-        ],
-      );
-      addTearDown(container.dispose);
-
-      // Initial read — milestone must be unlocked.
-      final before = await container.read(achievementsOverviewProvider.future);
-      expect(
-        before.rows.any((r) => r.milestone.title == 'GoldStar' && r.isUnlocked),
-        isTrue,
-        reason:
-            'pre-condition: GoldStar must be unlocked when balance(150) '
-            '>= threshold(100)',
-      );
-
-      // Debit 100 pts via a redemption → balance drops to 50.
-      await db.pointsBalanceDao.createRedemption(
-        profileId: 1,
-        rewardTitle: 'GoldStar',
-        iconIndex: 0,
-        pointsCost: 100,
-      );
-
-      // WITHOUT invalidation, the provider still shows the stale (unlocked) state.
-      // This is the core of the DG-ACHV-01 defect.
-      final stale = await container.read(achievementsOverviewProvider.future);
-      expect(
-        stale.rows.any((r) => r.milestone.title == 'GoldStar' && r.isUnlocked),
-        isTrue,
-        reason:
-            'DEFECT CONFIRMED: achievementsOverviewProvider shows stale '
-            '"unlocked" state after a redemption debit — provider was NOT '
-            'invalidated automatically.',
-      );
-
-      // The fix: _confirmRedeem must call
-      // ref.invalidate(achievementsOverviewProvider) after a successful
-      // createRedemption. Simulating that invalidation here:
-      container.invalidate(achievementsOverviewProvider);
-
-      // Wait for the provider to re-run and settle.
-      final after = await container.read(achievementsOverviewProvider.future);
-
-      // After re-evaluation, balance=50 < threshold=100 → GoldStar must
-      // be classified as LOCKED (not unlocked).
-      expect(
-        after.rows.any((r) => r.milestone.title == 'GoldStar' && !r.isUnlocked),
-        isTrue,
-        reason:
-            'after invalidation + re-evaluation, GoldStar must be '
-            'LOCKED because balance(50) < threshold(100). This verifies '
-            'that ref.invalidate(achievementsOverviewProvider) in '
-            '_confirmRedeem corrects the stale unlock display.',
-      );
-    });
-
+  group('achievementsOverviewProvider — milestone stability after redemption '
+      '(R-GA2)', () {
     test(
-      'achievementsOverviewProvider does NOT re-classify milestone '
-      'after redemption WITHOUT explicit invalidation — defect confirmed',
+      'milestone stays UNLOCKED after redemption drops balance below threshold '
+      '(R-GA2: unlock uses lifetime-earned, not spendable balance)',
       () async {
         final db = inMemoryDb();
         addTearDown(db.close);
         await seedProfile(db);
 
+        // Seed a reward-eligible track with 150 pts of completions.
+        final trackId = await _seedTrackWithGoal(db);
+        await _insertCompletion(db, trackId: trackId, points: 150);
+        // Also credit the spendable balance so redemption can debit it.
+        await db.pointsBalanceDao.creditCompletion(1, 150);
+
+        // Seed a global milestone at 100 pts threshold.
         final svc = RewardMilestoneService(db, profileId: 1);
         await svc.upsertMilestone(
           trackId: RewardMilestone.kGlobalTrackSentinel,
-          title: 'SilverStar',
-          thresholdPoints: 80,
+          title: 'GoldStar',
+          thresholdPoints: 100,
           isEnabled: true,
         );
-        await db.pointsBalanceDao.creditCompletion(1, 120);
 
         final container = ProviderContainer(
           overrides: [
@@ -146,42 +122,101 @@ void main() {
         );
         addTearDown(container.dispose);
 
-        // Initial read — milestone is unlocked.
+        // Initial read — milestone must be unlocked (lifetime-earned 150 >= 100).
         final before = await container.read(
           achievementsOverviewProvider.future,
         );
         expect(
           before.rows.any(
-            (r) => r.milestone.title == 'SilverStar' && r.isUnlocked,
-          ),
-          isTrue,
-        );
-
-        // Debit 80 pts → balance drops to 40 < threshold(80).
-        await db.pointsBalanceDao.createRedemption(
-          profileId: 1,
-          rewardTitle: 'SilverStar',
-          iconIndex: 0,
-          pointsCost: 80,
-        );
-
-        // WITHOUT invalidation — provider returns the same cached value.
-        final staleResult = await container.read(
-          achievementsOverviewProvider.future,
-        );
-        expect(
-          staleResult.rows.any(
-            (r) => r.milestone.title == 'SilverStar' && r.isUnlocked,
+            (r) => r.milestone.title == 'GoldStar' && r.isUnlocked,
           ),
           isTrue,
           reason:
-              'DEFECT CONFIRMED: without ref.invalidate(), '
-              'achievementsOverviewProvider shows stale "unlocked" state '
-              'even though balance(40) < threshold(80). The fix must add '
-              'ref.invalidate(achievementsOverviewProvider) to '
-              '_confirmRedeem().',
+              'pre-condition: GoldStar must be unlocked when '
+              'lifetime-earned(150) >= threshold(100)',
+        );
+
+        // Debit 100 pts via a redemption → spendable balance drops to 50 < 100.
+        // Lifetime-earned remains 150 (completions are immutable).
+        await db.pointsBalanceDao.createRedemption(
+          profileId: 1,
+          rewardTitle: 'GoldStar',
+          iconIndex: 0,
+          pointsCost: 100,
+        );
+
+        // Invalidate and re-read — milestone must STILL be unlocked.
+        // R-GA2: lifetime-earned(150) >= threshold(100) regardless of balance.
+        container.invalidate(achievementsOverviewProvider);
+        final after = await container.read(achievementsOverviewProvider.future);
+
+        expect(
+          after.rows.any(
+            (r) => r.milestone.title == 'GoldStar' && r.isUnlocked,
+          ),
+          isTrue,
+          reason:
+              'R-GA2: GoldStar must remain UNLOCKED after redemption. '
+              'Spendable balance(50) < threshold(100), but '
+              'lifetime-earned(150) >= threshold(100).',
         );
       },
     );
+
+    test('milestone remains unlocked across multiple redemptions that drain '
+        'the balance to zero', () async {
+      final db = inMemoryDb();
+      addTearDown(db.close);
+      await seedProfile(db);
+
+      final trackId = await _seedTrackWithGoal(db);
+      await _insertCompletion(db, trackId: trackId, points: 200);
+      await db.pointsBalanceDao.creditCompletion(1, 200);
+
+      final svc = RewardMilestoneService(db, profileId: 1);
+      await svc.upsertMilestone(
+        trackId: RewardMilestone.kGlobalTrackSentinel,
+        title: 'SilverStar',
+        thresholdPoints: 80,
+        isEnabled: true,
+      );
+
+      final container = ProviderContainer(
+        overrides: [
+          userDatabaseProvider.overrideWithValue(db),
+          activeProfileIdProvider.overrideWithValue(1),
+          syncWriteFacadeProvider.overrideWithValue(null),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      // Drain balance via two redemptions (200 total, balance goes to 0).
+      await db.pointsBalanceDao.createRedemption(
+        profileId: 1,
+        rewardTitle: 'Item 1',
+        iconIndex: 0,
+        pointsCost: 100,
+      );
+      await db.pointsBalanceDao.createRedemption(
+        profileId: 1,
+        rewardTitle: 'Item 2',
+        iconIndex: 0,
+        pointsCost: 100,
+      );
+
+      container.invalidate(achievementsOverviewProvider);
+      final after = await container.read(achievementsOverviewProvider.future);
+
+      // Balance = 0 < threshold(80), but lifetime-earned = 200 >= 80.
+      expect(
+        after.rows.any(
+          (r) => r.milestone.title == 'SilverStar' && r.isUnlocked,
+        ),
+        isTrue,
+        reason:
+            'R-GA2: SilverStar must remain UNLOCKED even when balance '
+            'is fully drained. lifetime-earned(200) >= threshold(80).',
+      );
+    });
   });
 }

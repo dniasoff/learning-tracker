@@ -13,8 +13,10 @@
 @Tags(['gamification', 'achievements_overview'])
 library;
 
+import 'package:drift/drift.dart' show Value;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/features/gamification/domain/models/reward_milestone.dart';
 import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
@@ -25,6 +27,56 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../../helpers/drift_memory.dart';
 import '../../../../helpers/test_database.dart';
+
+/// Seed a reward-eligible track (with a learning goal) for [profileId].
+/// Returns the track id.
+Future<int> _seedRewardTrack(UserDatabase db, {int profileId = 1}) async {
+  final trackId = await db
+      .into(db.curriculumTracks)
+      .insert(
+        CurriculumTracksCompanion.insert(
+          profileId: profileId,
+          curriculumId: 'bavli',
+          stateChangedAt: DateTime.utc(2026, 1, 1),
+          activatedAt: DateTime.utc(2026, 1, 1),
+        ),
+      );
+  final now = DateTime.utc(2026, 1, 1);
+  await db.goalDao.insertGoal(
+    GoalsCompanion.insert(
+      profileId: profileId,
+      curriculumId: 'bavli',
+      trackId: trackId,
+      createdAt: now,
+      updatedAt: now,
+    ),
+  );
+  return trackId;
+}
+
+/// Insert a completion event worth [points] on [trackId] for [profileId].
+/// R-GA2: global milestone unlock now uses lifetime-earned (completions),
+/// not the spendable balance — so tests must seed completions, not just
+/// balance credits.
+Future<void> _seedCompletion(
+  UserDatabase db, {
+  required int trackId,
+  required int points,
+  int profileId = 1,
+}) async {
+  await db.completionEventDao.appendEvent(
+    CompletionEventsCompanion.insert(
+      profileId: profileId,
+      curriculumId: 'bavli',
+      sefariaRef: 'Berakhot.2a',
+      stageId: 1,
+      trackType: 'personal',
+      trackId: Value(trackId),
+      eventTimestamp: DateTime.utc(2026, 1, 2),
+      points: Value(points),
+    ),
+  );
+}
 
 ProviderContainer _makeContainer({int profileId = 1}) {
   final db = inMemoryDb();
@@ -62,16 +114,21 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  group('unlock classification (threshold <= balance ⇒ unlocked)', () {
+  // R-GA2: global milestones now use lifetime-earned (completion-derived total)
+  // not the spendable balance. Tests must seed completions to drive unlock
+  // classification (parentAdjust alone no longer affects milestone state).
+  group('unlock classification (threshold <= lifetime-earned ⇒ unlocked)', () {
     test(
-      'balance 72, thresholds {50,502}: 50 unlocked, 502 next-up, count 1/2',
+      'lifetime-earned 72, thresholds {50,502}: 50 unlocked, 502 next-up, count 1/2',
       () async {
         final c = _makeContainer();
         addTearDown(c.dispose);
 
         final db = c.read(userDatabaseProvider);
         await seedProfileWithIds(db, accountId: 1, profileId: 1, mode: 'child');
-        await db.pointsBalanceDao.parentAdjust(1, 72);
+        // Seed a reward-eligible track + completions totalling 72 pts.
+        final trackId = await _seedRewardTrack(db);
+        await _seedCompletion(db, trackId: trackId, points: 72);
 
         await _seedGlobalMilestone(
           c,
@@ -92,7 +149,7 @@ void main() {
         expect(overview.unlockedCount, 1);
         expect(overview.totalMilestones, 2);
 
-        // #36 — 50-pt reward at 72 pts is Unlocked, not "coming soon".
+        // #36 — 50-pt reward at 72 pts lifetime-earned is Unlocked.
         final fifty = _rowForThreshold(overview, 50);
         expect(fifty.isUnlocked, isTrue);
         expect(fifty.isNextUp, isFalse);
@@ -105,14 +162,15 @@ void main() {
     );
 
     test(
-      'threshold exactly equal to balance is unlocked (>= boundary)',
+      'threshold exactly equal to lifetime-earned is unlocked (>= boundary)',
       () async {
         final c = _makeContainer();
         addTearDown(c.dispose);
 
         final db = c.read(userDatabaseProvider);
         await seedProfileWithIds(db, accountId: 1, profileId: 1, mode: 'child');
-        await db.pointsBalanceDao.parentAdjust(1, 50);
+        final trackId = await _seedRewardTrack(db);
+        await _seedCompletion(db, trackId: trackId, points: 50);
 
         await _seedGlobalMilestone(
           c,
@@ -127,13 +185,14 @@ void main() {
       },
     );
 
-    test('threshold above balance stays locked', () async {
+    test('lifetime-earned below threshold stays locked', () async {
       final c = _makeContainer();
       addTearDown(c.dispose);
 
       final db = c.read(userDatabaseProvider);
       await seedProfileWithIds(db, accountId: 1, profileId: 1, mode: 'child');
-      await db.pointsBalanceDao.parentAdjust(1, 49);
+      final trackId = await _seedRewardTrack(db);
+      await _seedCompletion(db, trackId: trackId, points: 49);
 
       await _seedGlobalMilestone(
         c,
@@ -149,13 +208,15 @@ void main() {
       expect(row.isNextUp, isTrue);
     });
 
-    test('all affordable: both unlocked, none next-up, count 2/2', () async {
+    test('both thresholds crossed by lifetime-earned: both unlocked, '
+        'none next-up, count 2/2', () async {
       final c = _makeContainer();
       addTearDown(c.dispose);
 
       final db = c.read(userDatabaseProvider);
       await seedProfileWithIds(db, accountId: 1, profileId: 1, mode: 'child');
-      await db.pointsBalanceDao.parentAdjust(1, 1000);
+      final trackId = await _seedRewardTrack(db);
+      await _seedCompletion(db, trackId: trackId, points: 1000);
 
       await _seedGlobalMilestone(
         c,

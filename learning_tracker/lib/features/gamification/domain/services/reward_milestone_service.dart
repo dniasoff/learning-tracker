@@ -46,6 +46,29 @@ class RewardMilestoneService {
     return _database.pointsBalanceDao.getBalance(profileId);
   }
 
+  /// Lifetime completion-derived points total across all reward-eligible tracks.
+  ///
+  /// R-GA2: global milestone unlock classification must use lifetime-earned, not
+  /// the debitable balance. Using the debitable balance causes a milestone that
+  /// was earned (threshold crossed) to flip back to LOCKED after a redemption
+  /// debit reduces the balance below the threshold — i.e. spending points
+  /// re-locks an achievement the child already unlocked.
+  ///
+  /// This method sums completion points (from [completionsView]) for all tracks
+  /// that count toward reward points, mirroring exactly what
+  /// [getTrackPointsTotalForRewards] does for per-track milestones. The result
+  /// never decreases (completions are never deleted from the view).
+  Future<int> getGlobalLifetimeEarnedForRewards() async {
+    final tracks = await _database.trackDao.getActiveTracksForProfile(
+      profileId,
+    );
+    var total = 0;
+    for (final track in tracks) {
+      total += await getTrackPointsTotalForRewards(track.id);
+    }
+    return total;
+  }
+
   Future<List<RewardMilestone>> getAllMilestones() async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(_configKey);

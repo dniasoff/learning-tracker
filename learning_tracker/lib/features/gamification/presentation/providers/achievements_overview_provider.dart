@@ -169,7 +169,10 @@ final achievementsOverviewProvider =
           ),
         );
 
-        final globalPoints = await service.getGlobalPointsForRewards();
+        // R-GA2: use lifetime-earned (completion-derived, never decremented) so
+        // that a milestone unlocked by reaching the threshold stays unlocked
+        // even after a redemption debits the spendable balance.
+        final globalPoints = await service.getGlobalLifetimeEarnedForRewards();
         RewardMilestone? firstLockedGlobal;
         for (final m in enabledGlobal) {
           if (globalPoints < m.thresholdPoints) {
