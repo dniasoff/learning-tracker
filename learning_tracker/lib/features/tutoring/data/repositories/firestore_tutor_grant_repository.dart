@@ -185,7 +185,13 @@ class FirestoreTutorGrantRepository implements TutorGrantRepository {
       // ignore: avoid_dynamic_calls
       final data = result.data;
       return _grantsFromCallableData(data);
-    } on FirebaseFunctionsException {
+    } on FirebaseFunctionsException catch (e) {
+      // permission-denied is a definitive server error (not an offline/transient
+      // failure), so let it propagate so the UI can surface an error state instead
+      // of silently showing an empty list — which would mask a revoked grant.
+      if (e.code == 'permission-denied') rethrow;
+      // For other Firebase errors (offline, unavailable, etc.) return empty so
+      // the screen degrades gracefully when the server is temporarily unreachable.
       return const [];
     } catch (_) {
       return const [];

@@ -1382,6 +1382,83 @@ void main() {
     },
   );
 
+  // ── R-TU2: permission-denied surfaces as error, not empty list ─────────────
+
+  testWidgets(
+    'R-TU2: permission-denied on grants shows error text — NOT "No tutors"',
+    (tester) async {
+      // Regression for R-TU2: before the fix, a FirebaseFunctionsException with
+      // code=permission-denied was caught in listOutgoingGrants and returned []
+      // rather than being rethrown. The FutureProvider then delivered an empty
+      // list, so the UI rendered "No tutors invited." — masking the real state.
+      // After the fix, permission-denied is rethrown, the FutureProvider becomes
+      // AsyncError, and the screen shows the per-child error text instead.
+      final child = _childProfile(id: 1, displayName: 'PermDeniedChild');
+      final auth = _MockAuthRepository();
+      when(() => auth.currentUser).thenReturn(null);
+
+      await tester.pumpWidget(
+        ProviderScope(
+          retry: (_, __) => null,
+          overrides: [
+            profileListProvider.overrideWith((ref) => Future.value([child])),
+            outgoingTutorGrantsProvider('1').overrideWith(
+              (ref) => Future.error(
+                Exception(
+                  'PERMISSION_DENIED: Missing or insufficient permissions',
+                ),
+                StackTrace.empty,
+              ),
+            ),
+            authRepositoryProvider.overrideWithValue(auth),
+            revokeTutorGrantUseCaseProvider.overrideWithValue(_MockRevoke()),
+            rescindTutorInviteUseCaseProvider.overrideWithValue(_MockRescind()),
+            tutorNotificationGatewayProvider.overrideWithValue(
+              _MockNotificationGateway(),
+            ),
+          ],
+          child: MaterialApp(
+            locale: const Locale('en'),
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: StackRouterScope(
+              controller: router,
+              stateHash: 0,
+              child: const Scaffold(body: ManageTutorsScreen()),
+            ),
+          ),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(seconds: 1));
+
+      // Child name header is still visible.
+      expect(find.text('PermDeniedChild'), findsOneWidget);
+      // The per-child error text MUST be shown.
+      expect(
+        find.textContaining('PERMISSION_DENIED'),
+        findsOneWidget,
+        reason:
+            'R-TU2: permission-denied must surface as an error, not an empty list',
+      );
+      // "No tutors invited." MUST NOT be shown — that would mask the denial.
+      expect(
+        find.text('No tutors invited.'),
+        findsNothing,
+        reason:
+            'R-TU2: "No tutors invited." must not appear on permission-denied',
+      );
+
+      await tester.pumpWidget(const SizedBox.shrink());
+      await tester.pump(Duration.zero);
+    },
+  );
+
   // ── RTL (Hebrew locale) ─────────────────────────────────────────────────────
 
   testWidgets('Hebrew locale: key affordances render without overflow/crash', (

@@ -465,17 +465,41 @@ void main() {
       expect(grants.every((g) => g.childProfileId == 'profile_99'), isTrue);
     });
 
-    test('returns [] on FirebaseFunctionsException', () async {
-      final repo = _buildRepo(
-        (_, __) async => throw FirebaseFunctionsException(
-          code: 'permission-denied',
-          message: 'Denied',
-        ),
-      );
+    test(
+      'R-TU2: rethrows FirebaseFunctionsException with code=permission-denied',
+      () async {
+        // permission-denied is a definitive server error (the caller's grant was
+        // revoked). It must propagate so the provider transitions to AsyncError
+        // and the UI shows an error state — NOT an empty list (which would mask
+        // the revocation silently).
+        final repo = _buildRepo(
+          (_, __) async => throw FirebaseFunctionsException(
+            code: 'permission-denied',
+            message: 'Denied',
+          ),
+        );
 
-      final result = await repo.listOutgoingGrants(childProfileId: 'x');
-      expect(result, isEmpty);
-    });
+        await expectLater(
+          () => repo.listOutgoingGrants(childProfileId: 'x'),
+          throwsA(isA<FirebaseFunctionsException>()),
+        );
+      },
+    );
+
+    test(
+      'returns [] on other FirebaseFunctionsException (offline/unavailable)',
+      () async {
+        final repo = _buildRepo(
+          (_, __) async => throw FirebaseFunctionsException(
+            code: 'unavailable',
+            message: 'Offline',
+          ),
+        );
+
+        final result = await repo.listOutgoingGrants(childProfileId: 'x');
+        expect(result, isEmpty);
+      },
+    );
 
     test('returns [] on generic error', () async {
       final repo = _buildRepo((_, __) async => throw StateError('timeout'));
