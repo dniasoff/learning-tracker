@@ -639,6 +639,32 @@ class SignInController extends Notifier<SignInState> {
         .profileDao
         .getProfilesByAccount(_ref.read(currentAccountIdProvider));
 
+    // SYNC-RECONCILE: local profiles exist but the cloud account has NONE
+    // (cloudAccountHasProfiles was false from the fetch above). This is the
+    // "never reached the cloud" gap: a profile created while local-born/offline,
+    // or whose push failed under a since-fixed identity mismatch, has no cloud
+    // document — and a plain cloud-born re-sign-in otherwise only PULLS, so the
+    // data would stay stranded locally forever (the "Backup & Sync unavailable"
+    // never clears even after re-login). Run the bulk uploader once to enqueue
+    // every local entity (profiles + their data) into the outbox. Idempotent
+    // (deterministic doc ids + set/merge), best-effort, and MUST NOT block
+    // sign-in navigation, so fire-and-forget with the active profile primed so
+    // LocalDataUploadService resolves a valid profile id.
+    if (profiles.isNotEmpty &&
+        !cloudAccountHasProfiles &&
+        orchestrator != null) {
+      _ref.read(selectedProfileIdProvider.notifier).select(profiles.first.id);
+      unawaited(
+        orchestrator.pushAllLocalData().catchError((Object e, StackTrace st) {
+          AppLogger.instance.warning(
+            event: 'sign_in_reconcile_push_all_local_failed',
+            exception: e,
+            stackTrace: st,
+          );
+        }),
+      );
+    }
+
     // Multi-profile accounts go to the picker; single-profile accounts go
     // straight to the app shell. Both paths bypass OnboardingRoute.
     if (profiles.length == 1) {

@@ -94,8 +94,76 @@ void main() {
     resetLocalDayClock();
   });
 
-  // ── 1. Empty DB — still completes and enqueues singleton kinds ─────────────
+  // ── Learner profiles (SYNC-RECONCILE: the never-reached-cloud gap) ─────────
+  group('learner profiles', () {
+    test(
+      'pushAllLocalData enqueues every OWN learner profile (the bulk '
+      'reconciler must include the profile rows, not just their sub-data)',
+      () async {
+        // seedProfile already created account + profile id=1 ("Test User").
+        // Add a second own profile on the same account.
+        final accountId = (await db.profileDao.getProfileById(
+          _profileId,
+        ))!.accountId;
+        await db
+            .into(db.learnerProfiles)
+            .insert(
+              LearnerProfilesCompanion.insert(
+                accountId: accountId,
+                displayName: 'Second Child',
+                mode: 'child',
+                createdAt: DateTimeFactory.nowUtc(),
+                updatedAt: DateTimeFactory.nowUtc(),
+              ),
+            );
 
+        final (:service, facade: _) = _buildService(db);
+        await service.pushAllLocalData();
+
+        final payloads = await _payloadsOf(db, OutboxEntityKind.learnerProfile);
+        final names = payloads
+            .map((p) => p['display_name'] ?? p['displayName'])
+            .toSet();
+        expect(names, containsAll(<String>{'Test User', 'Second Child'}));
+      },
+    );
+
+    test('pushAllLocalData does NOT enqueue tutored mirror profiles', () async {
+      final accountId = (await db.profileDao.getProfileById(
+        _profileId,
+      ))!.accountId;
+      // A synthetic talmid mirror (tutorParentUid != null) must be excluded —
+      // it is another account's child, not this account's own profile.
+      await db
+          .into(db.learnerProfiles)
+          .insert(
+            LearnerProfilesCompanion.insert(
+              accountId: accountId,
+              displayName: 'Talmid Mirror',
+              mode: 'child',
+              createdAt: DateTimeFactory.nowUtc(),
+              updatedAt: DateTimeFactory.nowUtc(),
+              tutorParentUid: const Value('some-parent-uid'),
+            ),
+          );
+
+      final (:service, facade: _) = _buildService(db);
+      await service.pushAllLocalData();
+
+      final payloads = await _payloadsOf(db, OutboxEntityKind.learnerProfile);
+      final names = payloads
+          .map((p) => p['display_name'] ?? p['displayName'])
+          .toSet();
+      expect(names, contains('Test User'));
+      expect(
+        names,
+        isNot(contains('Talmid Mirror')),
+        reason: 'tutored mirror profiles must not be pushed as own profiles',
+      );
+    });
+  });
+
+  // ── Empty DB — still completes and enqueues singleton kinds ────────────────
   group('empty DB', () {
     test('pushAllLocalData completes without throwing', () async {
       final (:service, :facade) = _buildService(db);

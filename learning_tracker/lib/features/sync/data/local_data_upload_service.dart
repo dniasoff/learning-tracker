@@ -4,6 +4,7 @@ import 'package:learning_tracker/core/enums/cross_profile_scope.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/codec/bookmark_codec.dart';
 import 'package:learning_tracker/core/sync/codec/goal_codec.dart';
+import 'package:learning_tracker/core/sync/codec/learner_profile_codec.dart';
 import 'package:learning_tracker/core/sync/codec/learning_ledger_codec.dart';
 import 'package:learning_tracker/core/sync/codec/profile_program_codec.dart';
 import 'package:learning_tracker/core/sync/codec/streak_event_codec.dart';
@@ -58,6 +59,48 @@ class LocalDataUploadService {
   /// path.
   Future<void> pushAllLocalData() async {
     _logger?.info(event: 'local_data_upload_start');
+
+    // ── Learner profiles (account-level) ──────────────────────────────────
+    // The learner_profile ROWS themselves are only ever pushed to the cloud
+    // when created/edited while cloud-born (ProfileRepositoryImpl.pushLearnerProfile,
+    // which no-ops when the sync facade is null — i.e. while local-born). A
+    // profile created offline, or whose original push failed under a since-fixed
+    // identity mismatch, therefore has NO cloud document and no path to get one:
+    // a plain cloud-born re-sign-in only PULLS. Including profiles in the bulk
+    // reconciler closes that gap (idempotent: codec uses a deterministic doc id
+    // + set/merge). Tutored mirror rows (tutorParentUid != null) are synthetic
+    // talmid copies and must NOT be pushed as the account's own profiles.
+    const learnerProfileCodec = LearnerProfileCodec();
+    final activeProfileRow = await _database.profileDao.getProfileById(
+      _profileId,
+    );
+    if (activeProfileRow != null) {
+      final accountProfiles = await _database.profileDao.getProfilesByAccount(
+        activeProfileRow.accountId,
+      );
+      final ownProfiles = accountProfiles
+          .where((p) => p.tutorParentUid == null)
+          .toList();
+      for (final p in ownProfiles) {
+        await _facade.pushLearnerProfile(
+          learnerProfileCodec.encode(
+            LearnerProfileRow(
+              profileId: p.id,
+              accountId: p.accountId,
+              displayName: p.displayName,
+              mode: p.mode,
+              avatarIndex: p.avatarIndex,
+              createdAt: p.createdAt,
+              updatedAt: p.updatedAt,
+            ),
+          ),
+        );
+      }
+      _logger?.debug(
+        event: 'local_data_upload_learner_profiles_queued',
+        fields: {'count': ownProfiles.length},
+      );
+    }
 
     // ── Completions (append-only via CompletionWriter) ────────────────────
     final analytics = ParentAnalyticsRepositoryImpl(_database);
