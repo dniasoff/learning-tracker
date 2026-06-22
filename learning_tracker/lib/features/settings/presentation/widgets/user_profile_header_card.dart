@@ -386,6 +386,8 @@ class _LocalBornProfileRow extends ConsumerWidget {
               children: [
                 Text(
                   displayName,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     fontSize: 25,
@@ -393,6 +395,8 @@ class _LocalBornProfileRow extends ConsumerWidget {
                 ),
                 Text(
                   authUser.email,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                     fontSize: 16,
@@ -422,12 +426,16 @@ class _NoBackupInlineText extends StatelessWidget {
       children: [
         const Icon(Icons.cloud_off, size: 12, color: Color(0xFFCE8A41)),
         const SizedBox(width: 4),
-        Text(
-          AppLocalizations.of(context)!.noBackup,
-          style: theme.textTheme.labelSmall?.copyWith(
-            color: const Color(0xFFCE8A41),
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
+        Flexible(
+          child: Text(
+            AppLocalizations.of(context)!.noBackup,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: theme.textTheme.labelSmall?.copyWith(
+              color: const Color(0xFFCE8A41),
+              fontWeight: FontWeight.w600,
+              fontSize: 14,
+            ),
           ),
         ),
       ],

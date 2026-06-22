@@ -80,8 +80,10 @@ class StreakCalendar extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [for (final label in weekdayLabels) _DayLabel(label)],
+          children: [
+            for (final label in weekdayLabels)
+              Expanded(child: Center(child: _DayLabel(label))),
+          ],
         ),
         for (final row in rows) ...[
           const SizedBox(height: 8),
@@ -155,17 +157,22 @@ class _DayRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceAround,
       children: [
         for (final date in dates)
-          _DayCell(
-            date: date,
-            isActive: activeDates.contains(date),
-            isToday: date == today,
-            useHebrewDate: useHebrewDate,
+          Expanded(
+            child: AspectRatio(
+              aspectRatio: 1,
+              child: _DayCell(
+                date: date,
+                isActive: activeDates.contains(date),
+                isToday: date == today,
+                useHebrewDate: useHebrewDate,
+              ),
+            ),
           ),
         // Pad incomplete rows so alignment stays consistent.
-        for (var i = dates.length; i < 7; i++) const SizedBox(width: 34),
+        for (var i = dates.length; i < 7; i++)
+          const Expanded(child: SizedBox()),
       ],
     );
   }
@@ -178,17 +185,12 @@ class _DayLabel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 34,
-      child: Center(
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 10,
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
+    return Text(
+      label,
+      style: TextStyle(
+        fontSize: 10,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+        fontWeight: FontWeight.w600,
       ),
     );
   }
@@ -212,9 +214,7 @@ class _DayCell extends StatelessWidget {
     const activeColor = Color(0xFF103BAC);
     final label = formatStreakDayLabel(date, useHebrewDate: useHebrewDate);
 
-    return Container(
-      width: 34,
-      height: 34,
+    return DecoratedBox(
       decoration: BoxDecoration(
         color: isActive ? activeColor : Colors.transparent,
         shape: BoxShape.circle,

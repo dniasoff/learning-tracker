@@ -131,14 +131,7 @@ class _LifetimeKnowledgeScreenState
                     showProvenance: true,
                   );
                 },
-                loading: () => Center(
-                  child: Padding(
-                    padding: const EdgeInsets.only(top: 48),
-                    child: LoadingIndicator(
-                      message: l10n.lifetimeKnowledgeLoading,
-                    ),
-                  ),
-                ),
+                loading: () => const Center(child: CircularProgressIndicator()),
                 error: (error, _) => Padding(
                   padding: const EdgeInsets.all(24),
                   child: ErrorDisplay(

@@ -55,9 +55,16 @@ class CurriculumListScreen extends ConsumerWidget {
               children: [
                 Icon(Icons.search, color: AppTheme.brandInkMuted, size: 20),
                 SizedBox(width: 12),
-                Text(
-                  'Search curricula...',
-                  style: TextStyle(color: AppTheme.brandInkMuted, fontSize: 15),
+                Flexible(
+                  child: Text(
+                    'Search curricula...',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: AppTheme.brandInkMuted,
+                      fontSize: 15,
+                    ),
+                  ),
                 ),
               ],
             ),

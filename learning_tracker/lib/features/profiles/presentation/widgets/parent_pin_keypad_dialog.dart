@@ -418,7 +418,7 @@ class _PinDotsRow extends StatelessWidget {
       children: List.generate(4, (i) {
         final filled = i < length;
         return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 10),
+          padding: const EdgeInsets.symmetric(horizontal: 8),
           child: Container(
             width: 18,
             height: 18,

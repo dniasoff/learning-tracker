@@ -8,22 +8,31 @@
 ///
 /// ## Coverage
 ///
-/// COVERED (robustly mounts headlessly, no BUG-NEW skip):
+/// COVERED (robustly mounts headlessly, no skip):
 ///   01 AppIntroScreen
-///   02 SignInScreen
+///   02 SignInScreen (skip: BUG-NEW, separate fix)
 ///   03 SignupScreen
 ///   04 AccountPickerScreen
 ///   05 UpgradeToCloudScreen
 ///   06 OnboardingScreen
 ///   07 EmptyLoginScreen
 ///   08 DeviceRestoreScreen
-///   09 ProfilePickerScreen
+///   09 ProfilePickerScreen (skip: BUG-NEW, separate fix)
 ///   10 ManageLearnersScreen
 ///   11 DashboardScreen (en)
 ///   12 DashboardScreen (he / RTL)
+///   13 LearningScreen (en)     — FIXED: EmptyState scrollable
+///   14 LearningScreen (he/RTL) — FIXED: EmptyState scrollable
+///   15 ProgressScreen          — FIXED: EmptyState scrollable
+///   16 SettingsScreen          — FIXED: upgrade button Text in Flexible
 ///   17 SchedulerScreen
 ///   18 SiyumimMilestonesScreen
+///   19 RecentActivityScreen    — FIXED: streak card Row uses Flexible
+///   20 LifetimeKnowledgeScreen — FIXED: loading uses CircularProgressIndicator
+///   21 CurriculumListScreen    — FIXED: search bar Text in Flexible
+///   22 GamificationScreen      — FIXED: achievements fraction uses Wrap
 ///   23 ChildRedemptionScreen
+///   24 ParentPendingRedemptionsScreen — FIXED: _PinDotsRow padding 10→8px
 ///   26 CityPickerScreen
 ///   27 TrackManagementHubScreen
 ///   30 ManageTutorsScreen
@@ -43,16 +52,16 @@
 ///   44 LearningOrderScreen
 ///   45 ParentTrackManagementScreen
 ///
-/// SKIPPED with BUG-NEW (real overflow found — assertion kept, test marked skip):
-///   13 LearningScreen (en)     — 61px bottom overflow at 320×568
-///   14 LearningScreen (he/RTL) — 21px bottom overflow at 320×568
-///   15 ProgressScreen          — 9px bottom overflow at 320×568
-///   16 SettingsScreen          — 22px right overflow at 280×653
-///   19 RecentActivityScreen    — 151px right overflow at 320×568
-///   20 LifetimeKnowledgeScreen — 32px bottom overflow at 320×568
-///   21 CurriculumListScreen    — 68px right overflow at 320×568
-///   22 GamificationScreen      — overflow at 320×568
-///   24 ParentPendingRedemptionsScreen — overflow at 280×653
+/// FIXED (BUG-NEW converted to active passing tests):
+///   13 LearningScreen (en)     — EmptyState wrapped in SingleChildScrollView
+///   14 LearningScreen (he/RTL) — same EmptyState fix as 13
+///   15 ProgressScreen          — same EmptyState fix as 13
+///   16 SettingsScreen          — upgrade button Text wrapped in Flexible
+///   19 RecentActivityScreen    — streak card middle Text wrapped in Flexible, Spacer removed
+///   20 LifetimeKnowledgeScreen — loading state replaced with simple CircularProgressIndicator
+///   21 CurriculumListScreen    — search bar Text wrapped in Flexible
+///   22 GamificationScreen      — achievements fraction Row replaced with Wrap
+///   24 ParentPendingRedemptionsScreen — _PinDotsRow horizontal padding reduced 10→8px
 ///
 /// SKIPPED (harness limitation — no assertion):
 ///   25 NotificationsScreen    — FlutterLocalNotificationsPlatform native plugin
@@ -510,169 +519,149 @@ void main() {
 
   // ── 13: LearningScreen (en) ────────────────────────────────────────────────
 
-  testWidgets(
-    'BUG-NEW 13 LearningScreen en overflows 61px bottom at 320x568 '
-    '— bottom nav or task list row not Flexible/scrollable',
-    skip: true,
-    (tester) async {
-      addTearDown(tester.view.reset);
-      final matrix = defaultOverflowMatrix();
-      final overrides = <Override>[
-        _englishTerms(),
-        dashboardActiveCurriculaStreamProvider.overrideWith(
-          (ref) => Stream.value(<CurriculumId>[]),
-        ),
-        allDailyTasksProvider.overrideWith((ref) async => <DailyTask>[]),
-        coarsePacedTrackIdsProvider.overrideWith((ref) async => <int>{}),
-        dashboardStreakProvider.overrideWith(
-          (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
-        ),
-        _noTutorPerms(),
-        _noIncomingGrants(),
-      ];
-      for (final c in matrix) {
-        tester.view.devicePixelRatio = c.devicePixelRatio;
-        tester.view.physicalSize = Size(
-          c.size.width * c.devicePixelRatio,
-          c.size.height * c.devicePixelRatio,
-        );
-        final h = E2EHarness(
-          tester,
-          identity: E2EIdentity.localBorn(displayName: 'LearnEn'),
-        );
-        await h.pumpApp(
-          path: '/learn',
-          extraOverrides: overrides,
-          locale: const Locale('en'),
-        );
-        await tester.pump(const Duration(milliseconds: 300));
-        final ex = tester.takeException();
-        expect(
-          ex,
-          isNull,
-          reason: 'LearningScreen [en] overflowed at ${c.label}. Thrown: $ex',
-        );
-        await h.dispose();
-        tester.view.reset();
-      }
-    },
-  );
+  testWidgets('13 LearningScreen en — no overflow', (tester) async {
+    addTearDown(tester.view.reset);
+    final matrix = defaultOverflowMatrix();
+    final overrides = <Override>[
+      _englishTerms(),
+      dashboardActiveCurriculaStreamProvider.overrideWith(
+        (ref) => Stream.value(<CurriculumId>[]),
+      ),
+      allDailyTasksProvider.overrideWith((ref) async => <DailyTask>[]),
+      coarsePacedTrackIdsProvider.overrideWith((ref) async => <int>{}),
+      dashboardStreakProvider.overrideWith(
+        (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
+      ),
+      _noTutorPerms(),
+      _noIncomingGrants(),
+    ];
+    for (final c in matrix) {
+      tester.view.devicePixelRatio = c.devicePixelRatio;
+      tester.view.physicalSize = Size(
+        c.size.width * c.devicePixelRatio,
+        c.size.height * c.devicePixelRatio,
+      );
+      final h = E2EHarness(
+        tester,
+        identity: E2EIdentity.localBorn(displayName: 'LearnEn'),
+      );
+      await h.pumpApp(
+        path: '/learn',
+        extraOverrides: overrides,
+        locale: const Locale('en'),
+      );
+      await tester.pump(const Duration(milliseconds: 300));
+      final ex = tester.takeException();
+      expect(
+        ex,
+        isNull,
+        reason: 'LearningScreen [en] overflowed at ${c.label}. Thrown: $ex',
+      );
+      await h.dispose();
+      tester.view.reset();
+    }
+  });
 
   // ── 14: LearningScreen (he / RTL) ─────────────────────────────────────────
 
-  testWidgets(
-    'BUG-NEW 14 LearningScreen he overflows 21px bottom at 320x568 '
-    '— RTL layout variant of BUG-NEW 13; bottom row not Flexible',
-    skip: true,
-    (tester) async {
-      addTearDown(tester.view.reset);
-      final matrix = defaultOverflowMatrix();
-      final overrides = <Override>[
-        dashboardActiveCurriculaStreamProvider.overrideWith(
-          (ref) => Stream.value(<CurriculumId>[]),
-        ),
-        allDailyTasksProvider.overrideWith((ref) async => <DailyTask>[]),
-        coarsePacedTrackIdsProvider.overrideWith((ref) async => <int>{}),
-        dashboardStreakProvider.overrideWith(
-          (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
-        ),
-        _noTutorPerms(),
-        _noIncomingGrants(),
-      ];
-      for (final c in matrix) {
-        tester.view.devicePixelRatio = c.devicePixelRatio;
-        tester.view.physicalSize = Size(
-          c.size.width * c.devicePixelRatio,
-          c.size.height * c.devicePixelRatio,
-        );
-        final h = E2EHarness(
-          tester,
-          identity: E2EIdentity.localBorn(displayName: 'LearnHe'),
-        );
-        await h.pumpApp(
-          path: '/learn',
-          extraOverrides: overrides,
-          locale: const Locale('he'),
-        );
-        await tester.pump(const Duration(milliseconds: 300));
-        final ex = tester.takeException();
-        expect(
-          ex,
-          isNull,
-          reason: 'LearningScreen [he] overflowed at ${c.label}. Thrown: $ex',
-        );
-        await h.dispose();
-        tester.view.reset();
-      }
-    },
-  );
+  testWidgets('14 LearningScreen he — no overflow', (tester) async {
+    addTearDown(tester.view.reset);
+    final matrix = defaultOverflowMatrix();
+    final overrides = <Override>[
+      dashboardActiveCurriculaStreamProvider.overrideWith(
+        (ref) => Stream.value(<CurriculumId>[]),
+      ),
+      allDailyTasksProvider.overrideWith((ref) async => <DailyTask>[]),
+      coarsePacedTrackIdsProvider.overrideWith((ref) async => <int>{}),
+      dashboardStreakProvider.overrideWith(
+        (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
+      ),
+      _noTutorPerms(),
+      _noIncomingGrants(),
+    ];
+    for (final c in matrix) {
+      tester.view.devicePixelRatio = c.devicePixelRatio;
+      tester.view.physicalSize = Size(
+        c.size.width * c.devicePixelRatio,
+        c.size.height * c.devicePixelRatio,
+      );
+      final h = E2EHarness(
+        tester,
+        identity: E2EIdentity.localBorn(displayName: 'LearnHe'),
+      );
+      await h.pumpApp(
+        path: '/learn',
+        extraOverrides: overrides,
+        locale: const Locale('he'),
+      );
+      await tester.pump(const Duration(milliseconds: 300));
+      final ex = tester.takeException();
+      expect(
+        ex,
+        isNull,
+        reason: 'LearningScreen [he] overflowed at ${c.label}. Thrown: $ex',
+      );
+      await h.dispose();
+      tester.view.reset();
+    }
+  });
 
   // ── 15: ProgressScreen ─────────────────────────────────────────────────────
 
-  testWidgets(
-    'BUG-NEW 15 ProgressScreen overflows 9px bottom at 320x568 en '
-    '— progress card Row not wrapped in Flexible/Expanded',
-    skip: true,
-    (tester) async {
-      await _sweepPath(
-        tester,
-        label: 'ProgressScreen',
-        path: '/progress',
-        extraOverrides: [
-          dashboardActiveCurriculaStreamProvider.overrideWith(
-            (ref) => Stream.value(<CurriculumId>[]),
+  testWidgets('15 ProgressScreen — no overflow', (tester) async {
+    await _sweepPath(
+      tester,
+      label: 'ProgressScreen',
+      path: '/progress',
+      extraOverrides: [
+        dashboardActiveCurriculaStreamProvider.overrideWith(
+          (ref) => Stream.value(<CurriculumId>[]),
+        ),
+        dashboardStreakProvider.overrideWith(
+          (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
+        ),
+        dashboardGlobalPointsProvider.overrideWith((ref) => Stream.value(0)),
+        trackDualProgressMetricsProvider.overrideWith(
+          (ref, _) async => <TrackDualProgressMetric>[],
+        ),
+        lifetimeTotalsAcrossAllCurriculaProvider.overrideWith(
+          (ref, _) async => const LifetimeTotals(
+            learnedSections: 0,
+            totalSections: 0,
+            totalCurricula: 9,
           ),
-          dashboardStreakProvider.overrideWith(
-            (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
+        ),
+        journeyViewModelProvider.overrideWith(
+          (ref, _) async => const JourneyViewModel(
+            curricula: <CurriculumJourney>[],
+            totalCompletions: 0,
+            totalUniqueUnits: 0,
+            unitLevelSiyumimCount: 0,
+            aggregateLevelSiyumimCount: 0,
+            curriculumLevelSiyumimCount: 0,
           ),
-          dashboardGlobalPointsProvider.overrideWith((ref) => Stream.value(0)),
-          trackDualProgressMetricsProvider.overrideWith(
-            (ref, _) async => <TrackDualProgressMetric>[],
-          ),
-          lifetimeTotalsAcrossAllCurriculaProvider.overrideWith(
-            (ref, _) async => const LifetimeTotals(
-              learnedSections: 0,
-              totalSections: 0,
-              totalCurricula: 9,
-            ),
-          ),
-          journeyViewModelProvider.overrideWith(
-            (ref, _) async => const JourneyViewModel(
-              curricula: <CurriculumJourney>[],
-              totalCompletions: 0,
-              totalUniqueUnits: 0,
-              unitLevelSiyumimCount: 0,
-              aggregateLevelSiyumimCount: 0,
-              curriculumLevelSiyumimCount: 0,
-            ),
-          ),
-        ],
-      );
-    },
-  );
+        ),
+      ],
+    );
+  });
 
   // ── 16: SettingsScreen ─────────────────────────────────────────────────────
 
-  testWidgets(
-    'BUG-NEW 16 SettingsScreen overflows 22px right at 280x653 en '
-    '— Row in backup/sync section or account header not Flexible',
-    skip: true,
-    (tester) async {
-      await _sweepPath(
-        tester,
-        label: 'SettingsScreen',
-        path: '/settings',
-        extraOverrides: [
-          ..._settingsSilence(),
-          _englishTerms(),
-          _noTutorPerms(),
-          lifetimeSummariesProvider.overrideWith(
-            (ref, _) async => <CurriculumLifetimeSummary>[],
-          ),
-        ],
-      );
-    },
-  );
+  testWidgets('16 SettingsScreen — no overflow', (tester) async {
+    await _sweepPath(
+      tester,
+      label: 'SettingsScreen',
+      path: '/settings',
+      extraOverrides: [
+        ..._settingsSilence(),
+        _englishTerms(),
+        _noTutorPerms(),
+        lifetimeSummariesProvider.overrideWith(
+          (ref, _) async => <CurriculumLifetimeSummary>[],
+        ),
+      ],
+    );
+  });
 
   // ── 17: SchedulerScreen ────────────────────────────────────────────────────
 
@@ -730,104 +719,93 @@ void main() {
 
   // ── 19: RecentActivityScreen ───────────────────────────────────────────────
 
-  testWidgets(
-    'BUG-NEW 19 RecentActivityScreen overflows 151px right at 320x568 en '
-    '— streak card Row or section header not Flexible',
-    skip: true,
-    (tester) async {
-      await _sweepPath(
-        tester,
-        label: 'RecentActivityScreen',
-        path: '/progress/recent',
-        extraOverrides: [
-          dashboardStreakProvider.overrideWith(
-            (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
-          ),
-          dashboardStreakRecoveryProvider.overrideWith(
-            (ref) async =>
-                const StreakRecoveryInfo(wasRecovered: false, currentStreak: 0),
-          ),
-          anyActiveTrackHasChazaraProvider.overrideWith((ref) async => false),
-        ],
-      );
-    },
-  );
+  testWidgets('19 RecentActivityScreen — no overflow', (tester) async {
+    await _sweepPath(
+      tester,
+      label: 'RecentActivityScreen',
+      path: '/progress/recent',
+      extraOverrides: [
+        dashboardStreakProvider.overrideWith(
+          (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
+        ),
+        dashboardStreakRecoveryProvider.overrideWith(
+          (ref) async =>
+              const StreakRecoveryInfo(wasRecovered: false, currentStreak: 0),
+        ),
+        anyActiveTrackHasChazaraProvider.overrideWith((ref) async => false),
+      ],
+    );
+  });
 
   // ── 20: LifetimeKnowledgeScreen ────────────────────────────────────────────
 
-  testWidgets(
-    'BUG-NEW 20 LifetimeKnowledgeScreen overflows 32px bottom at 320x568 en '
-    '— header counter row or summary card not Flexible',
-    skip: true,
-    (tester) async {
-      await _sweepPath(
-        tester,
-        label: 'LifetimeKnowledgeScreen',
-        path: '/progress/lifetime',
-        extraOverrides: [
-          lifetimeViewSummariesProvider.overrideWith(
-            (ref, _) async => <CurriculumCompletionSummary>[],
-          ),
-          itemsLearnedSummariesProvider.overrideWith(
-            (ref, _) async => <CurriculumCompletionSummary>[],
-          ),
-          lifetimeHeaderCountersProvider.overrideWith(
-            (ref, _) async =>
-                const LifetimeHeaderCounters(itemsLearned: 0, totalChazaros: 0),
-          ),
-          trackOnlyHeaderCountersProvider.overrideWith(
-            (ref, _) async =>
-                const LifetimeHeaderCounters(itemsLearned: 0, totalChazaros: 0),
-          ),
-        ],
-      );
-    },
-  );
+  testWidgets('20 LifetimeKnowledgeScreen — no overflow', (tester) async {
+    await _sweepPath(
+      tester,
+      label: 'LifetimeKnowledgeScreen',
+      path: '/progress/lifetime',
+      extraOverrides: [
+        lifetimeViewSummariesProvider.overrideWith(
+          (ref, _) async => <CurriculumCompletionSummary>[],
+        ),
+        itemsLearnedSummariesProvider.overrideWith(
+          (ref, _) async => <CurriculumCompletionSummary>[],
+        ),
+        lifetimeHeaderCountersProvider.overrideWith(
+          (ref, _) async =>
+              const LifetimeHeaderCounters(itemsLearned: 0, totalChazaros: 0),
+        ),
+        trackOnlyHeaderCountersProvider.overrideWith(
+          (ref, _) async =>
+              const LifetimeHeaderCounters(itemsLearned: 0, totalChazaros: 0),
+        ),
+      ],
+    );
+  });
 
   // ── 21: CurriculumListScreen ───────────────────────────────────────────────
 
-  testWidgets(
-    'BUG-NEW 21 CurriculumListScreen overflows 68px right at 320x568 en '
-    '— curriculum list item Row not constrained/Flexible',
-    skip: true,
-    (tester) async {
-      await _sweepPath(tester, label: 'CurriculumListScreen', path: '/browse');
-    },
-  );
+  testWidgets('21 CurriculumListScreen — no overflow', (tester) async {
+    await _sweepPath(
+      tester,
+      label: 'CurriculumListScreen',
+      path: '/browse',
+      extraOverrides: [
+        // Silence the 15-min periodic timer in StreakStateProvider so the
+        // timer-pending invariant doesn't fire at teardown.
+        dashboardStreakProvider.overrideWith(
+          (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
+        ),
+      ],
+    );
+  });
 
   // ── 22: GamificationScreen ─────────────────────────────────────────────────
 
-  testWidgets(
-    'BUG-NEW 22 GamificationScreen overflows at 320x568 en '
-    '— achievement row or streak calendar section not Flexible',
-    skip: true,
-    (tester) async {
-      await _sweepPath(
-        tester,
-        label: 'GamificationScreen',
-        path: '/gamification',
-        identityFactory: () => E2EIdentity.localBorn(
-          displayName: 'GamChild',
-          profileMode: 'child',
+  testWidgets('22 GamificationScreen — no overflow', (tester) async {
+    await _sweepPath(
+      tester,
+      label: 'GamificationScreen',
+      path: '/gamification',
+      identityFactory: () =>
+          E2EIdentity.localBorn(displayName: 'GamChild', profileMode: 'child'),
+      extraOverrides: [
+        dashboardStreakProvider.overrideWith(
+          (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
         ),
-        extraOverrides: [
-          dashboardStreakProvider.overrideWith(
-            (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
+        streakCalendarProvider.overrideWith((ref) async => <DateTime>{}),
+        achievementsOverviewProvider.overrideWith(
+          (ref) async => const AchievementsOverview(
+            rows: <AchievementRowVm>[],
+            unlockedCount: 0,
+            totalMilestones: 0,
+            trackFilterOptions: <AchievementTrackFilterVm>[],
           ),
-          streakCalendarProvider.overrideWith((ref) async => <DateTime>{}),
-          achievementsOverviewProvider.overrideWith(
-            (ref) async => const AchievementsOverview(
-              rows: <AchievementRowVm>[],
-              unlockedCount: 0,
-              totalMilestones: 0,
-              trackFilterOptions: <AchievementTrackFilterVm>[],
-            ),
-          ),
-          _noIncomingGrants(),
-        ],
-      );
-    },
-  );
+        ),
+        _noIncomingGrants(),
+      ],
+    );
+  });
 
   // ── 23: ChildRedemptionScreen ──────────────────────────────────────────────
 
@@ -859,37 +837,34 @@ void main() {
 
   // ── 24: ParentPendingRedemptionsScreen ────────────────────────────────────
 
-  testWidgets(
-    'BUG-NEW 24 ParentPendingRedemptionsScreen overflows at 280x653 en '
-    '— redemption item Row not constrained on narrow foldable',
-    skip: true,
-    (tester) async {
-      await _sweepPath(
-        tester,
-        label: 'ParentPendingRedemptionsScreen',
-        path: '/parent-mode/pending-redemptions',
-        identityFactory: () => E2EIdentity.localBorn(
-          displayName: 'PndParent',
-          profileMode: 'child',
+  testWidgets('24 ParentPendingRedemptionsScreen — no overflow', (
+    tester,
+  ) async {
+    await _sweepPath(
+      tester,
+      label: 'ParentPendingRedemptionsScreen',
+      path: '/parent-mode/pending-redemptions',
+      identityFactory: () =>
+          E2EIdentity.localBorn(displayName: 'PndParent', profileMode: 'child'),
+      extraOverrides: [
+        // One-shot non-reactive to prevent Drift stream timer leaks.
+        pendingRedemptionsProvider.overrideWith(
+          (ref) => Stream.fromFuture(Future.value(<RewardRedemption>[])),
         ),
-        extraOverrides: [
-          // One-shot non-reactive to prevent Drift stream timer leaks.
-          pendingRedemptionsProvider.overrideWith(
-            (ref) => Stream.fromFuture(Future.value(<RewardRedemption>[])),
-          ),
-          pendingRedemptionsCountProvider.overrideWith(
-            (ref) => Stream.value(0),
-          ),
-          activeProfilePointsBalanceProvider.overrideWith(
-            (ref) => Stream.value(0),
-          ),
-          activeTracksProvider.overrideWith(
-            (ref) => Stream.fromFuture(Future.value(<CurriculumTrack>[])),
-          ),
-        ],
-      );
-    },
-  );
+        pendingRedemptionsCountProvider.overrideWith((ref) => Stream.value(0)),
+        activeProfilePointsBalanceProvider.overrideWith(
+          (ref) => Stream.value(0),
+        ),
+        activeTracksProvider.overrideWith(
+          (ref) => Stream.fromFuture(Future.value(<CurriculumTrack>[])),
+        ),
+        // Silence the 15-min periodic timer in StreakStateProvider.
+        dashboardStreakProvider.overrideWith(
+          (ref) => Stream.value((currentStreak: 0, maxStreak: 0)),
+        ),
+      ],
+    );
+  });
 
   // ── 25: NotificationsScreen ────────────────────────────────────────────────
   //

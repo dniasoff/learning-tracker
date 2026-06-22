@@ -91,15 +91,19 @@ class _Header extends StatelessWidget {
         children: [
           const Icon(Icons.lock_clock_outlined, color: Colors.white, size: 17),
           const SizedBox(width: 8),
-          Text(
-            AppLocalizations.of(
-              context,
-            )!.sacredTimeShabbosModeLabel(shabbos.toUpperCase()),
-            style: const TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w800,
-              letterSpacing: 1.2,
-              fontSize: 12,
+          Flexible(
+            child: Text(
+              AppLocalizations.of(
+                context,
+              )!.sacredTimeShabbosModeLabel(shabbos.toUpperCase()),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w800,
+                letterSpacing: 1.2,
+                fontSize: 12,
+              ),
             ),
           ),
           const Spacer(),

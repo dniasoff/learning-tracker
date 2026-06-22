@@ -268,26 +268,31 @@ class _StreakHeaderCard extends ConsumerWidget {
                 ),
               ),
               const Spacer(),
-              streakAsync.maybeWhen(
-                data: (s) => Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 10,
-                    vertical: 5,
-                  ),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFF6F77),
-                    borderRadius: BorderRadius.circular(999),
-                  ),
-                  child: Text(
-                    l10n.tierCounterStreakDays(s.currentStreak),
-                    style: theme.textTheme.labelSmall?.copyWith(
-                      color: Colors.white,
-                      letterSpacing: 0.4,
-                      fontWeight: FontWeight.w700,
+              Flexible(
+                fit: FlexFit.loose,
+                child: streakAsync.maybeWhen(
+                  data: (s) => Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 5,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFF6F77),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      l10n.tierCounterStreakDays(s.currentStreak),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.labelSmall?.copyWith(
+                        color: Colors.white,
+                        letterSpacing: 0.4,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
+                  orElse: () => const SizedBox.shrink(),
                 ),
-                orElse: () => const SizedBox.shrink(),
               ),
             ],
           ),
@@ -303,24 +308,32 @@ class _StreakHeaderCard extends ConsumerWidget {
                   ),
                 ),
                 const SizedBox(width: 6),
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text(
-                    l10n.learnStreakDayStreak(s.currentStreak),
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: const Color(0xFF5E6678),
-                      fontWeight: FontWeight.w600,
+                Flexible(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      l10n.learnStreakDayStreak(s.currentStreak),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        color: const Color(0xFF5E6678),
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),
-                const Spacer(),
-                Padding(
-                  padding: const EdgeInsets.only(top: 8),
-                  child: Text(
-                    l10n.learnStreakPersonalBest(s.maxStreak),
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: const Color(0xFF778099),
-                      fontWeight: FontWeight.w600,
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Padding(
+                    padding: const EdgeInsets.only(top: 8),
+                    child: Text(
+                      l10n.learnStreakPersonalBest(s.maxStreak),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: const Color(0xFF778099),
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                 ),

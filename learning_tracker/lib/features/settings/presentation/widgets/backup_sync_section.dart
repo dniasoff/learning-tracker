@@ -358,7 +358,13 @@ class _BackupSyncSectionState extends ConsumerState<BackupSyncSection> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Text(AppLocalizations.of(context)!.upgradeToCloudButton),
+                      Flexible(
+                        child: Text(
+                          AppLocalizations.of(context)!.upgradeToCloudButton,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                     ],
                   ),
                 ),
