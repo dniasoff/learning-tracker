@@ -530,6 +530,10 @@ void main() {
     ) async {
       await tester.pumpWidget(
         const MaterialApp(
+          // R-GA10: the "(best: N)" text is now l10n-driven, so the widget
+          // needs the AppLocalizations delegate (default test locale = en).
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
           home: Scaffold(
             body: StreakWidget(
               currentStreak: 7,
