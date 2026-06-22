@@ -1394,9 +1394,6 @@ class AppLocalizationsHe extends AppLocalizations {
   String get displayName => 'שם תצוגה';
 
   @override
-  String get deleteProfileTitle => 'מחיקת פרופיל';
-
-  @override
   String deleteProfileConfirm(String name) {
     return 'למחוק לצמיתות את \"$name\" ואת כל נתוני הלמידה הקשורים? לא ניתן לבטל.';
   }
@@ -2648,6 +2645,11 @@ class AppLocalizationsHe extends AppLocalizations {
   String get cityPickerHint => 'הקלד שם עיר…';
 
   @override
+  String cityPickerNoMatches(String query) {
+    return 'אין תוצאות עבור \"$query\".';
+  }
+
+  @override
   String get schedulerStudyLabel => 'לימוד';
 
   @override
@@ -2724,6 +2726,9 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get learnerNameRequired => 'יש להזין שם';
+
+  @override
+  String get deleteProfileTitle => 'מחיקת פרופיל';
 
   @override
   String get deleteProfileLastTitle => 'למחוק את הפרופיל היחיד שלך?';
@@ -4336,8 +4341,9 @@ class AppLocalizationsHe extends AppLocalizations {
   String acceptInviteBodyFromParentForChild(
     String parentLabel,
     String childLabel,
-  ) =>
-      '$parentLabel הזמין/ה אתכם להדריך את $childLabel. באישור ההזמנה תקבלו גישה לצפייה ולניהול של פרופיל הלמידה שלו.';
+  ) {
+    return '$parentLabel הזמין/ה אתכם להדריך את $childLabel. באישור ההזמנה תקבלו גישה לצפייה ולניהול של פרופיל הלמידה שלו.';
+  }
 
   @override
   String get acceptInvitePermissionViewData =>

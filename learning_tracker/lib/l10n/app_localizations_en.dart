@@ -1405,9 +1405,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get displayName => 'Display Name';
 
   @override
-  String get deleteProfileTitle => 'Delete Profile';
-
-  @override
   String deleteProfileConfirm(String name) {
     return 'Permanently delete \"$name\" and ALL associated learning data? This cannot be undone.';
   }
@@ -2676,6 +2673,11 @@ class AppLocalizationsEn extends AppLocalizations {
   String get cityPickerHint => 'Type a city name…';
 
   @override
+  String cityPickerNoMatches(String query) {
+    return 'No matches for \"$query\".';
+  }
+
+  @override
   String get schedulerStudyLabel => 'Study';
 
   @override
@@ -2752,6 +2754,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get learnerNameRequired => 'Enter a name';
+
+  @override
+  String get deleteProfileTitle => 'Delete Profile';
 
   @override
   String get deleteProfileLastTitle => 'Delete your only profile?';
@@ -4371,8 +4376,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String acceptInviteBodyFromParentForChild(
     String parentLabel,
     String childLabel,
-  ) =>
-      '$parentLabel has invited you to tutor $childLabel. By accepting, you will have access to view and manage their learning profile.';
+  ) {
+    return '$parentLabel has invited you to tutor $childLabel. By accepting, you will have access to view and manage their learning profile.';
+  }
 
   @override
   String get acceptInvitePermissionViewData =>

@@ -656,7 +656,6 @@
   "profileNameAlreadyExists": "כבר קיים פרופיל עם השם הזה",
   "renameProfileTitle": "שינוי שם פרופיל",
   "displayName": "שם תצוגה",
-  "deleteProfileTitle": "למחוק את הפרופיל?",
   "deleteProfileConfirm": "למחוק לצמיתות את \"{name}\" ואת כל נתוני הלמידה הקשורים? לא ניתן לבטל.",
   "@deleteProfileConfirm": {
     "placeholders": {
@@ -1237,6 +1236,7 @@
   },
   "cityPickerTitle": "בחרו עיר",
   "cityPickerHint": "הקלד שם עיר…",
+  "cityPickerNoMatches": "אין תוצאות עבור \"{query}\".",
 
   "schedulerStudyLabel": "לימוד",
   "schedulerReviewOnlyLabel": "חזרה בלבד",

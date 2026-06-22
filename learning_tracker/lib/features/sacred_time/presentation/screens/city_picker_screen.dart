@@ -76,7 +76,7 @@ class _CityPickerScreenState extends ConsumerState<CityPickerScreen> {
                 if (cities.isEmpty) {
                   return Center(
                     child: Text(
-                      'No matches for "$_query".',
+                      AppLocalizations.of(context)!.cityPickerNoMatches(_query),
                       style: theme.textTheme.bodyMedium?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),

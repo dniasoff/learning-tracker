@@ -761,7 +761,6 @@
   "profileNameAlreadyExists": "A profile with this name already exists",
   "renameProfileTitle": "Rename Profile",
   "displayName": "Display Name",
-  "deleteProfileTitle": "Delete Profile?",
   "deleteProfileConfirm": "Permanently delete \"{name}\" and ALL associated learning data? This cannot be undone.",
   "@deleteProfileConfirm": {
     "placeholders": {
@@ -1378,6 +1377,14 @@
   },
   "cityPickerTitle": "Choose a city",
   "cityPickerHint": "Type a city name…",
+  "cityPickerNoMatches": "No matches for \"{query}\".",
+  "@cityPickerNoMatches": {
+    "placeholders": {
+      "query": {
+        "type": "String"
+      }
+    }
+  },
 
   "schedulerStudyLabel": "Study",
   "schedulerReviewOnlyLabel": "Review only",

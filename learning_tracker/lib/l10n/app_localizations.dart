@@ -2454,7 +2454,7 @@ abstract class AppLocalizations {
   /// No description provided for @adultModeCardSubtitleDeepFocused.
   ///
   /// In en, this message translates to:
-  /// **'Deep & Focused'**
+  /// **'Focused'**
   String get adultModeCardSubtitleDeepFocused;
 
   /// No description provided for @profileBadgeChildMode.
@@ -2516,12 +2516,6 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Display Name'**
   String get displayName;
-
-  /// No description provided for @deleteProfileTitle.
-  ///
-  /// In en, this message translates to:
-  /// **'Delete Profile'**
-  String get deleteProfileTitle;
 
   /// No description provided for @deleteProfileConfirm.
   ///
@@ -4689,6 +4683,12 @@ abstract class AppLocalizations {
   /// **'Type a city name…'**
   String get cityPickerHint;
 
+  /// No description provided for @cityPickerNoMatches.
+  ///
+  /// In en, this message translates to:
+  /// **'No matches for \"{query}\".'**
+  String cityPickerNoMatches(String query);
+
   /// No description provided for @schedulerStudyLabel.
   ///
   /// In en, this message translates to:
@@ -4844,6 +4844,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Enter a name'**
   String get learnerNameRequired;
+
+  /// No description provided for @deleteProfileTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete Profile'**
+  String get deleteProfileTitle;
 
   /// No description provided for @deleteProfileLastTitle.
   ///
