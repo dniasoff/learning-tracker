@@ -2756,7 +2756,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get learnerNameRequired => 'Enter a name';
 
   @override
-  String get deleteProfileTitle => 'Delete Profile';
+  String get deleteProfileTitle => 'Delete Profile?';
 
   @override
   String get deleteProfileLastTitle => 'Delete your only profile?';
@@ -3812,6 +3812,11 @@ class AppLocalizationsEn extends AppLocalizations {
       one: 'Best: 1 day',
     );
     return '$_temp0';
+  }
+
+  @override
+  String streakSubtleBest(int count) {
+    return '(best: $count)';
   }
 
   @override

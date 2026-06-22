@@ -1265,7 +1265,7 @@
   "profilesEnterLearnerName": "הזינו שם לומד",
   "profilesNameFieldLabel": "שם",
   "learnerNameRequired": "יש להזין שם",
-  "deleteProfileTitle": "מחיקת פרופיל",
+  "deleteProfileTitle": "למחוק את הפרופיל?",
   "deleteProfileLastTitle": "למחוק את הפרופיל היחיד שלך?",
   "deleteProfileBody": "האם למחוק את \"{name}\"? כל נתוני הלמידה של פרופיל זה יימחקו לצמיתות.",
   "deleteProfileLastBody": "זהו הפרופיל היחיד שלך. מחיקת \"{name}\" תמחק כל מסלול, השלמה ורישום מצטבר בחשבון זה. יהיה עליך ליצור פרופיל חדש כדי להמשיך ללמוד.",
@@ -1846,6 +1846,11 @@
   "streakWidgetBest": "{count, plural, one{שיא: יום אחד} other{שיא: {count} ימים}}",
   "@streakWidgetBest": {
     "description": "Child-mode StreakWidget sub-line showing the longest streak.",
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "streakSubtleBest": "(שיא: {count})",
+  "@streakSubtleBest": {
+    "description": "Adult-mode subtle streak display parenthetical showing the all-time best streak count.",
     "placeholders": { "count": { "type": "int" } }
   },
   "schedulerTodaysGoal": "היעד של היום",

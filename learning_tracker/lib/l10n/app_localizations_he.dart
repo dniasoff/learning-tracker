@@ -2728,7 +2728,7 @@ class AppLocalizationsHe extends AppLocalizations {
   String get learnerNameRequired => 'יש להזין שם';
 
   @override
-  String get deleteProfileTitle => 'מחיקת פרופיל';
+  String get deleteProfileTitle => 'למחוק את הפרופיל?';
 
   @override
   String get deleteProfileLastTitle => 'למחוק את הפרופיל היחיד שלך?';
@@ -3772,6 +3772,11 @@ class AppLocalizationsHe extends AppLocalizations {
       one: 'שיא: יום אחד',
     );
     return '$_temp0';
+  }
+
+  @override
+  String streakSubtleBest(int count) {
+    return '(שיא: $count)';
   }
 
   @override

@@ -542,8 +542,8 @@ void main() {
       await tester.tap(find.text('Delete'));
       await tester.pumpAndSettle();
 
-      // Standard delete confirm dialog title: l10n.deleteProfileTitle = 'Delete Profile'
-      expect(find.text('Delete Profile'), findsOneWidget);
+      // Standard delete confirm dialog title: l10n.deleteProfileTitle = 'Delete Profile?'
+      expect(find.text('Delete Profile?'), findsOneWidget);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(Duration.zero);

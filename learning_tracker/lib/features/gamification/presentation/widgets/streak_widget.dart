@@ -157,6 +157,7 @@ class _SubtleStreakDisplay extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final l10n = AppLocalizations.of(context)!;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
       child: Row(
@@ -176,7 +177,7 @@ class _SubtleStreakDisplay extends StatelessWidget {
           ),
           const SizedBox(width: 8),
           Text(
-            '(best: $maxStreak)',
+            l10n.streakSubtleBest(maxStreak),
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),

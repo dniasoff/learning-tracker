@@ -1416,7 +1416,7 @@
   "@learnerNameRequired": {
     "description": "Inline validation error shown when a learner/profile name is empty or whitespace-only on Save."
   },
-  "deleteProfileTitle": "Delete Profile",
+  "deleteProfileTitle": "Delete Profile?",
   "deleteProfileLastTitle": "Delete your only profile?",
   "deleteProfileBody": "Are you sure you want to delete \"{name}\"? All learning data for this profile will be permanently lost.",
   "@deleteProfileBody": {
@@ -2041,6 +2041,11 @@
   "streakWidgetBest": "{count, plural, =1{Best: 1 day} other{Best: {count} days}}",
   "@streakWidgetBest": {
     "description": "Child-mode StreakWidget sub-line showing the longest streak. ICU plural so 1 reads 'Best: 1 day' not 'Best: 1 days'.",
+    "placeholders": { "count": { "type": "int" } }
+  },
+  "streakSubtleBest": "(best: {count})",
+  "@streakSubtleBest": {
+    "description": "Adult-mode subtle streak display parenthetical showing the all-time best streak count. Intentionally compact (no 'days' noun) to fit a single row alongside the fire icon and current streak number.",
     "placeholders": { "count": { "type": "int" } }
   },
   "schedulerTodaysGoal": "TODAY'S GOAL",

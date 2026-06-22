@@ -4848,7 +4848,7 @@ abstract class AppLocalizations {
   /// No description provided for @deleteProfileTitle.
   ///
   /// In en, this message translates to:
-  /// **'Delete Profile'**
+  /// **'Delete Profile?'**
   String get deleteProfileTitle;
 
   /// No description provided for @deleteProfileLastTitle.
@@ -6554,6 +6554,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{count, plural, =1{Best: 1 day} other{Best: {count} days}}'**
   String streakWidgetBest(int count);
+
+  /// Adult-mode subtle streak display parenthetical showing the all-time best streak count. Intentionally compact (no 'days' noun) to fit a single row alongside the fire icon and current streak number.
+  ///
+  /// In en, this message translates to:
+  /// **'(best: {count})'**
+  String streakSubtleBest(int count);
 
   /// Eyebrow label on the daily-task scheduler goal banner, above the task count. Uppercase styling is applied by the text theme, not the string.
   ///

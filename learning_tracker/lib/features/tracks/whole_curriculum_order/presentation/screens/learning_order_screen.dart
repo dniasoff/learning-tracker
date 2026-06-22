@@ -84,7 +84,7 @@ class _LearningOrderScreenState extends ConsumerState<LearningOrderScreen> {
                   color: Theme.of(context).colorScheme.surfaceContainerHighest,
                   padding: const EdgeInsets.all(12),
                   child: Text(
-                    'Controlled by parent',
+                    AppLocalizations.of(context)!.controlledByParent,
                     style: Theme.of(context).textTheme.bodyMedium?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
                     ),

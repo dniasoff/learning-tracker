@@ -480,9 +480,9 @@ void main() {
         await h.pump();
 
         // deleteProfileFlow reads DB count → 2 → isLast=false → non-last
-        // dialog appears with title "Delete Profile" (l10n.deleteProfileTitle;
+        // dialog appears with title "Delete Profile?" (l10n.deleteProfileTitle;
         // NOT "Delete your only profile?" which is the last-profile variant).
-        h.expectOnScreen('Delete Profile');
+        h.expectOnScreen('Delete Profile?');
         // Tap the "Delete" action button (last occurrence of 'Delete').
         await h.tapWidget(find.text('Delete').last);
         await h.pump(const Duration(milliseconds: 600));

@@ -528,7 +528,7 @@ void main() {
         await tester.pump(const Duration(milliseconds: 500));
 
         // Delete confirm dialog should appear.
-        expect(find.text('Delete Profile'), findsOneWidget);
+        expect(find.text('Delete Profile?'), findsOneWidget);
         // The dialog must reference the profile name.
         expect(find.textContaining('Avi'), findsWidgets);
 
