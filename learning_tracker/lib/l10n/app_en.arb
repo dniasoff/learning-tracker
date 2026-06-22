@@ -2787,6 +2787,11 @@
     }
   },
 
+  "onboardingNamePrompt": "What should we call you?",
+  "onboardingLearningExperience": "Learning Experience",
+  "onboardingCalendarLabel": "Calendar",
+  "onboardingSettingsChangeableLater": "You can change these settings anytime later.",
+
   "onboardingIntentHeading": "What brings you here?",
   "onboardingIntentSubtitle": "Choose how you want to get started.",
   "onboardingIntentTrackTitle": "Track my own learning",

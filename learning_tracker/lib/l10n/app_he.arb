@@ -2589,6 +2589,11 @@
     }
   },
 
+  "onboardingNamePrompt": "מה נקרא לך?",
+  "onboardingLearningExperience": "חוויית למידה",
+  "onboardingCalendarLabel": "לוח שנה",
+  "onboardingSettingsChangeableLater": "ניתן לשנות הגדרות אלה בכל עת מאוחר יותר.",
+
   "onboardingIntentHeading": "מה הביא אותך לכאן?",
   "onboardingIntentSubtitle": "בחר איך תרצה להתחיל.",
   "onboardingIntentTrackTitle": "לעקוב אחרי הלמידה שלי",

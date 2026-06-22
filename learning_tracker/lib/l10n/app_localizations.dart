@@ -8190,6 +8190,30 @@ abstract class AppLocalizations {
   /// **'Your {currentStreak}-day streak is at risk!'**
   String notificationStreakBody(int currentStreak);
 
+  /// No description provided for @onboardingNamePrompt.
+  ///
+  /// In en, this message translates to:
+  /// **'What should we call you?'**
+  String get onboardingNamePrompt;
+
+  /// No description provided for @onboardingLearningExperience.
+  ///
+  /// In en, this message translates to:
+  /// **'Learning Experience'**
+  String get onboardingLearningExperience;
+
+  /// No description provided for @onboardingCalendarLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Calendar'**
+  String get onboardingCalendarLabel;
+
+  /// No description provided for @onboardingSettingsChangeableLater.
+  ///
+  /// In en, this message translates to:
+  /// **'You can change these settings anytime later.'**
+  String get onboardingSettingsChangeableLater;
+
   /// No description provided for @onboardingIntentHeading.
   ///
   /// In en, this message translates to:

@@ -4861,6 +4861,19 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get onboardingNamePrompt => 'What should we call you?';
+
+  @override
+  String get onboardingLearningExperience => 'Learning Experience';
+
+  @override
+  String get onboardingCalendarLabel => 'Calendar';
+
+  @override
+  String get onboardingSettingsChangeableLater =>
+      'You can change these settings anytime later.';
+
+  @override
   String get onboardingIntentHeading => 'What brings you here?';
 
   @override

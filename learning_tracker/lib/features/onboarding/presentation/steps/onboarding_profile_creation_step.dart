@@ -279,7 +279,7 @@ class _OnboardingProfileCreationStepState
                     borderRadius: BorderRadius.circular(8),
                   ),
                   child: Text(
-                    'ACTIVE',
+                    AppLocalizations.of(context)!.pointSettingsActiveBadge,
                     style: theme.textTheme.labelSmall?.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.w800,
@@ -301,7 +301,7 @@ class _OnboardingProfileCreationStepState
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             Text(
-              'What should we call you?',
+              AppLocalizations.of(context)!.onboardingNamePrompt,
               style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.w700,
                 fontSize: 22,
@@ -320,7 +320,7 @@ class _OnboardingProfileCreationStepState
               inputFormatters: const [TrimLeadingSpaceFormatter()],
               style: const TextStyle(color: AppTheme.brandInk),
               decoration: InputDecoration(
-                hintText: 'Enter name',
+                hintText: AppLocalizations.of(context)!.enterNameHint,
                 errorText: _nameError,
                 suffixIcon: const Icon(
                   Icons.edit_outlined,
@@ -336,7 +336,7 @@ class _OnboardingProfileCreationStepState
             ),
             const SizedBox(height: 22),
             Text(
-              'Learning Experience',
+              AppLocalizations.of(context)!.onboardingLearningExperience,
               style: theme.textTheme.titleLarge?.copyWith(
                 fontWeight: FontWeight.w800,
                 fontSize: 22,
@@ -352,16 +352,20 @@ class _OnboardingProfileCreationStepState
                   isChild: true,
                   icon: Icons.rocket_launch_rounded,
                   iconBgMuted: const Color(0xFFE8E0FF),
-                  title: 'Child Mode',
-                  subtitle: 'Fun & Rewards',
+                  title: AppLocalizations.of(context)!.childModeCardTitle,
+                  subtitle: AppLocalizations.of(
+                    context,
+                  )!.childModeCardSubtitleFunRewards,
                 ),
                 const SizedBox(width: 12),
                 modeCard(
                   isChild: false,
                   icon: Icons.menu_book_rounded,
                   iconBgMuted: AppTheme.brandOutline,
-                  title: 'Adult Mode',
-                  subtitle: 'Deep & Scholarly',
+                  title: AppLocalizations.of(context)!.adultModeCardTitle,
+                  subtitle: AppLocalizations.of(
+                    context,
+                  )!.adultModeCardSubtitleDeepFocused,
                 ),
               ],
             ),
@@ -385,7 +389,7 @@ class _OnboardingProfileCreationStepState
                       const SizedBox(width: 8),
                       Flexible(
                         child: Text(
-                          'Nikud',
+                          AppLocalizations.of(context)!.settingsNikud,
                           style: theme.textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.w800,
                             color: AppTheme.brandInk,
@@ -396,8 +400,10 @@ class _OnboardingProfileCreationStepState
                   ),
                   const SizedBox(height: 10),
                   pillPair(
-                    leftLabel: 'Without nikud',
-                    rightLabel: 'With nikud',
+                    leftLabel: AppLocalizations.of(
+                      context,
+                    )!.settingsNikudWithout,
+                    rightLabel: AppLocalizations.of(context)!.settingsNikudWith,
                     leftSelected: !_showNikud,
                     onLeft: () => setState(() => _showNikud = false),
                     onRight: () => setState(() => _showNikud = true),
@@ -413,7 +419,7 @@ class _OnboardingProfileCreationStepState
                       const SizedBox(width: 8),
                       Flexible(
                         child: Text(
-                          'Calendar',
+                          AppLocalizations.of(context)!.onboardingCalendarLabel,
                           style: theme.textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.w800,
                             color: AppTheme.brandInk,
@@ -424,8 +430,8 @@ class _OnboardingProfileCreationStepState
                   ),
                   const SizedBox(height: 10),
                   pillPair(
-                    leftLabel: 'English',
-                    rightLabel: 'Hebrew',
+                    leftLabel: AppLocalizations.of(context)!.calendarGregorian,
+                    rightLabel: AppLocalizations.of(context)!.calendarHebrew,
                     leftSelected: !_useHebrewCalendar,
                     onLeft: () => setState(() => _useHebrewCalendar = false),
                     onRight: () => setState(() => _useHebrewCalendar = true),
@@ -442,7 +448,7 @@ class _OnboardingProfileCreationStepState
                         const SizedBox(width: 8),
                         Flexible(
                           child: Text(
-                            'Hebrew Terms',
+                            AppLocalizations.of(context)!.hebrewTermsPreference,
                             style: theme.textTheme.titleSmall?.copyWith(
                               fontWeight: FontWeight.w800,
                               color: AppTheme.brandInk,
@@ -453,8 +459,12 @@ class _OnboardingProfileCreationStepState
                     ),
                     const SizedBox(height: 10),
                     pillPair(
-                      leftLabel: 'English',
-                      rightLabel: 'Hebrew',
+                      leftLabel: AppLocalizations.of(
+                        context,
+                      )!.hebrewTermsEnglish,
+                      rightLabel: AppLocalizations.of(
+                        context,
+                      )!.hebrewTermsHebrew,
                       leftSelected: !_useHebrewTerms,
                       onLeft: () => setState(() => _useHebrewTerms = false),
                       onRight: () => setState(() => _useHebrewTerms = true),
@@ -493,7 +503,7 @@ class _OnboardingProfileCreationStepState
                       children: [
                         Flexible(
                           child: Text(
-                            'Create Profile',
+                            AppLocalizations.of(context)!.createProfile,
                             style: theme.textTheme.titleMedium?.copyWith(
                               color: Colors.white,
                               fontWeight: FontWeight.w800,
@@ -512,7 +522,7 @@ class _OnboardingProfileCreationStepState
             ),
             const SizedBox(height: 12),
             Text(
-              'You can change these settings anytime later.',
+              AppLocalizations.of(context)!.onboardingSettingsChangeableLater,
               textAlign: TextAlign.center,
               style: theme.textTheme.bodySmall?.copyWith(
                 color: AppTheme.brandInkMuted,

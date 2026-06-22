@@ -4819,6 +4819,19 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
+  String get onboardingNamePrompt => 'מה נקרא לך?';
+
+  @override
+  String get onboardingLearningExperience => 'חוויית למידה';
+
+  @override
+  String get onboardingCalendarLabel => 'לוח שנה';
+
+  @override
+  String get onboardingSettingsChangeableLater =>
+      'ניתן לשנות הגדרות אלה בכל עת מאוחר יותר.';
+
+  @override
   String get onboardingIntentHeading => 'מה הביא אותך לכאן?';
 
   @override
