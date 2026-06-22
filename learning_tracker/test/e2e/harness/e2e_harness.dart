@@ -304,6 +304,7 @@ class E2EHarness {
   Future<void> pumpApp({
     String path = '/',
     List<Override> extraOverrides = const [],
+    Locale locale = const Locale('en'),
   }) async {
     SharedPreferences.setMockInitialValues({'onboarding_complete': true});
 
@@ -321,6 +322,7 @@ class E2EHarness {
           path == '/'
               ? _router.config()
               : _router.config(deepLinkBuilder: (_) => DeepLink.path(path)),
+          locale,
         ),
       ),
     );
@@ -635,7 +637,10 @@ class E2EHarness {
     ];
   }
 
-  MaterialApp _buildMaterialApp(RouterConfig<Object> routerConfig) {
+  MaterialApp _buildMaterialApp(
+    RouterConfig<Object> routerConfig, [
+    Locale locale = const Locale('en'),
+  ]) {
     return MaterialApp.router(
       // Wire the root messenger key so SnackBar / MaterialBanner assertions
       // that target rootScaffoldMessengerKey (e.g. UpgradeToCloud banner)
@@ -643,7 +648,9 @@ class E2EHarness {
       scaffoldMessengerKey: rootScaffoldMessengerKey,
       routerConfig: routerConfig,
       debugShowCheckedModeBanner: false,
-      locale: const Locale('en'),
+      // Locale is injectable (defaults to en) so Hebrew-RTL journeys can pump
+      // the app under Locale('he') and assert RTL + Hebrew l10n strings.
+      locale: locale,
       localizationsDelegates: const [
         AppLocalizations.delegate,
         GlobalMaterialLocalizations.delegate,
