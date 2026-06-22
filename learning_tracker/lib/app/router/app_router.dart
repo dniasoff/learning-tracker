@@ -117,13 +117,14 @@ class AppRouter extends RootStackRouter {
     AutoRoute(
       path: '/manage-learners',
       page: ManageLearnersRoute.page,
-      // Edits and DELETES learner profiles — must not be reachable in child
-      // mode. Previously [authGuard] only (R-PR10), so a child-mode session
-      // could reach profile edit/delete via deep-link. childModeGuard closes
-      // that hole; pinGuard is intentionally NOT added (the entry tiles are
-      // adult-only, and re-prompting an adult for a PIN here is a separate
-      // product decision — see R-PR10 in the E2E risk register).
-      guards: [authGuard, childModeGuard],
+      // R-PR10 NOTE: ManageLearners edits/deletes profiles. childModeGuard is
+      // the WRONG guard here — it ALLOWS child-mode and BLOCKS adults (it gates
+      // parent-mode-supervising-a-child routes), so adding it silently broke the
+      // adult "Manage Profiles" tile (which is itself `!isChildProfile`-gated in
+      // Settings). Reverted to authGuard. The tile is the only in-app entry and
+      // is already adult-only; a true adult-only/anti-child route guard for
+      // deep-link hardening is tracked as a future item, not this guard.
+      guards: [authGuard],
     ),
 
     // App shell with bottom navigation (auth required)
