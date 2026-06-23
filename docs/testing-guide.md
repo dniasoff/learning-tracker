@@ -6,6 +6,11 @@ date: 2026-03-18
 
 # Testing Guide
 
+> **For a current overview of all test *layers/options* (what each covers, how to
+> run it, what it does NOT cover), see [test-options.md](test-options.md).** This
+> guide focuses on *how to write* tests; some counts/sections below predate later
+> layers (contract test, emulator rules, headless E2E waves, on-device driver).
+
 ## Table of Contents
 
 - [Test Architecture](#test-architecture)
