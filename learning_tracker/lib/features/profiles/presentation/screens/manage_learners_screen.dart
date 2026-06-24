@@ -2,12 +2,12 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/app_error_view.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/add_profile_dialog.dart';
-import 'package:learning_tracker/features/profiles/presentation/widgets/profile_avatar.dart';
 import 'package:learning_tracker/features/profiles/presentation/widgets/profile_edit_delete_actions.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -78,7 +78,7 @@ class _ProfileListTile extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return Card(
       child: ListTile(
-        leading: ProfileAvatar(avatarIndex: profile.avatarIndex),
+        leading: _ProfileInitialsAvatar(displayName: profile.displayName),
         title: Text(profile.displayName),
         subtitle: Text(
           profile.profileMode == ProfileMode.child
@@ -104,6 +104,47 @@ class _ProfileListTile extends ConsumerWidget {
               child: Text(AppLocalizations.of(context)!.profilesDeleteLabel),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Initials circle matching the style used by [ProfileCard] in the profile
+/// picker — keeps both screens visually consistent.
+class _ProfileInitialsAvatar extends StatelessWidget {
+  const _ProfileInitialsAvatar({required this.displayName});
+
+  final String displayName;
+
+  @override
+  Widget build(BuildContext context) {
+    final trimmed = displayName.trim();
+    final initial = trimmed.isEmpty
+        ? '?'
+        : trimmed.substring(0, 1).toUpperCase();
+    return Container(
+      width: 48,
+      height: 48,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [Color(0xFFF2F5FC), Color(0xFFE6ECF8)],
+        ),
+        shape: BoxShape.circle,
+        border: Border.all(
+          color: AppTheme.brandBlue.withValues(alpha: 0.14),
+          width: 2,
+        ),
+      ),
+      child: Center(
+        child: Text(
+          initial,
+          style: Theme.of(context).textTheme.titleMedium?.copyWith(
+            color: AppTheme.brandBlueDeep,
+            fontWeight: FontWeight.w800,
+          ),
         ),
       ),
     );

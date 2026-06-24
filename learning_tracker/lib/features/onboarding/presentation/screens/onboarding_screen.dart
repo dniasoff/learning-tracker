@@ -277,10 +277,39 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     await _clearSavedState();
     await _store.markComplete(skipped: true, joinedToTutor: joinedToTutor);
     if (!mounted) return;
-    // WS2.skip/WS2.surface: route to the empty-login surface (zero-profile
-    // landing). The existing AppShellRoute is guarded by ProfileGuard which
-    // blocks zero-profile accounts — EmptyLoginRoute has no such guard.
-    unawaited(context.router.replaceAll([const EmptyLoginRoute()]));
+
+    // Tutor-join: no own profile is expected — EmptyLoginRoute is the correct
+    // zero-profile landing surface.
+    if (joinedToTutor) {
+      unawaited(context.router.replaceAll([const EmptyLoginRoute()]));
+      return;
+    }
+
+    // WS2.skip/WS2.surface: route to the empty-login surface for genuine
+    // zero-profile skips. BUT if a profile was already created during this
+    // onboarding session (e.g. user created a profile then chose "Skip for
+    // now" at the intent chooser), route into the app just like
+    // _navigateToDashboard does — routing to EmptyLoginRoute would dead-end
+    // the user with no bottom nav and no way back (confirmed P1 regression).
+    final repo = ref.read(profileRepositoryProvider);
+    final profiles = await repo.getProfilesByAccount(
+      ref.read(currentAccountIdProvider),
+    );
+    if (!mounted) return;
+
+    if (profiles.isEmpty) {
+      // Genuine zero-profile skip (e.g. user skipped profile creation itself).
+      unawaited(context.router.replaceAll([const EmptyLoginRoute()]));
+    } else if (profiles.length >= 2) {
+      ref.read(selectedProfileIdProvider.notifier).clear();
+      unawaited(context.router.replaceAll([const ProfilePickerRoute()]));
+    } else {
+      final landingProfileId = _createdProfileId ?? profiles.firstOrNull?.id;
+      if (landingProfileId != null) {
+        ref.read(selectedProfileIdProvider.notifier).select(landingProfileId);
+      }
+      unawaited(context.router.replaceAll([const AppShellRoute()]));
+    }
   }
 
   // ── Build — OnboardingPhaseRouter ──────────────────────────────────────────

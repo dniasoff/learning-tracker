@@ -261,7 +261,7 @@ class _ScopeStepContentState extends ConsumerState<ScopeStepContent> {
         'seder nashim' => l10n.scopeGlossWomenMarriage,
         'seder nezikin' => l10n.scopeGlossDamagesCivil,
         'seder kodashim' => l10n.scopeGlossTempleSacrifices,
-        'seder taharos' => l10n.scopeGlossPurityRitual,
+        'seder tahorot' => l10n.scopeGlossPurityRitual,
         _ => l10n.scopeGlossCoreFocus,
       };
     }
@@ -275,7 +275,7 @@ class _ScopeStepContentState extends ConsumerState<ScopeStepContent> {
     if (normalized.contains('nashim')) return Icons.family_restroom_rounded;
     if (normalized.contains('nezikin')) return Icons.balance_rounded;
     if (normalized.contains('kodashim')) return Icons.temple_buddhist_rounded;
-    if (normalized.contains('taharos')) return Icons.water_drop_rounded;
+    if (normalized.contains('tahor')) return Icons.water_drop_rounded;
     return Icons.book_rounded;
   }
 

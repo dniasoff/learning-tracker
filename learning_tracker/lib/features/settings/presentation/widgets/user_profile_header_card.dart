@@ -148,10 +148,13 @@ class _UserProfileHeaderCardState extends ConsumerState<UserProfileHeaderCard> {
       ),
     };
     // Hide the account email in parent/tutor context — it belongs to the
-    // tutor/parent's own account, not the child being viewed.
+    // tutor/parent's own account, not the child being viewed. Also suppress
+    // the synthetic internal address that credential-less offline accounts
+    // carry (…@offline.local must never be shown to users).
     final showEmail =
         widget.contextRole == UserProfileContextRole.selfLearner &&
-        user.email != null;
+        user.email != null &&
+        !user.email!.endsWith('@offline.local');
 
     return _wrapSurface(
       widget.surface,
@@ -393,15 +396,19 @@ class _LocalBornProfileRow extends ConsumerWidget {
                     fontSize: 25,
                   ),
                 ),
-                Text(
-                  authUser.email,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                    fontSize: 16,
+                // Credential-less offline accounts carry a synthetic internal
+                // email (…@offline.local) that must never be shown; suppress it
+                // (the _NoBackupInlineText row below already signals offline).
+                if (!authUser.email.endsWith('@offline.local'))
+                  Text(
+                    authUser.email,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                      fontSize: 16,
+                    ),
                   ),
-                ),
                 const SizedBox(height: 4),
                 const _NoBackupInlineText(),
               ],
