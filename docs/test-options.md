@@ -141,6 +141,9 @@ Layers 9 and 10 are **not** in CI — they need a physical device / emulator.
   `gcloud auth print-access-token` available).
 - **Status:** driver + one journey proven; full per-screen coverage builds out
   journey-by-journey against the catalogue.
+- **Accessing the emulator farm from WSL2** (emulators run on the Windows host;
+  drive them via the Windows `adb.exe` shim, never the Linux adb server): see
+  [testing-guide.md › Accessing On-Device Emulators](testing-guide.md#accessing-on-device-emulators-wsl2--windows-host).
 
 ## 10. Flutter `integration_test` (on-device, in-app)
 

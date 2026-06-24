@@ -21,6 +21,7 @@ date: 2026-03-18
 - [How to Write a Story Acceptance Test](#how-to-write-a-story-acceptance-test)
 - [How to Write an Integration Test](#how-to-write-an-integration-test)
 - [Test Infrastructure Details](#test-infrastructure-details)
+- [Accessing On-Device Emulators (WSL2 ↔ Windows Host)](#accessing-on-device-emulators-wsl2--windows-host)
 - [Known Gotchas](#known-gotchas)
 
 ## Test Architecture
@@ -498,6 +499,97 @@ await batchInsert(db, db.completions, [
   CompletionsCompanion.insert(/* ... */),
 ]);
 ```
+
+## Accessing On-Device Emulators (WSL2 ↔ Windows Host)
+
+> Lessons learned standing up the layer-9 on-device farm (see
+> [test-options.md](test-options.md) layer 9). In this dev setup the Android
+> **emulators run on the Windows host** and WSL2 drives them through the Windows
+> `adb.exe` via WSL interop. The Linux `adb` server **cannot** reach the
+> Windows-bound emulator ports — that is the single biggest gotcha.
+
+### Topology
+
+- The Android SDK is the Windows SDK surfaced into WSL: `~/Android/Sdk` is a
+  symlink to `/mnt/c/Users/<user>/AppData/Local/Android/Sdk`.
+- `~/Android/Sdk/platform-tools/adb` is a **shell shim** that `exec`s `adb.exe`.
+  Because of it, `adb`, `flutter`, and `tool/device_e2e/driver.py` all work
+  **unmodified** from WSL — each ends up talking to the Windows ADB server the
+  emulators registered with on startup. Keep that shim first on `PATH`.
+
+### The five AVDs (fixed ports → stable serials)
+
+| AVD | Serial | Console port | Android |
+|---|---|---|---|
+| `lt_api28_pixel2` | `emulator-5554` | 5554 | 9 (API 28) |
+| `lt_api29_pixel3` | `emulator-5556` | 5556 | 10 (API 29) |
+| `lt_api31_pixel5` | `emulator-5558` | 5558 | 12 (API 31) |
+| `lt_api34_pixel7` | `emulator-5560` | 5560 | 14 (API 34) |
+| `lt_api36_tablet` | `emulator-5562` | 5562 | 16 (API 36) |
+
+### Start emulators
+
+From **Windows PowerShell** (preferred — headless, GPU host):
+
+```powershell
+.\tool\emulators-start.ps1                                         # all 5
+.\tool\emulators-start.ps1 -Avds lt_api34_pixel7,lt_api36_tablet   # subset
+.\tool\emulators-start.ps1 -WipeData                               # cold boot
+```
+
+Or **directly from WSL** via interop (one process per AVD; `cd /mnt/c` first to
+avoid the harmless UNC-cwd warning):
+
+```bash
+cd /mnt/c
+EMU=~/Android/Sdk/emulator/emulator.exe
+nohup "$EMU" -avd lt_api34_pixel7 -port 5560 \
+  -no-window -no-audio -no-snapshot-save -gpu host >/tmp/emu_5560.log 2>&1 &
+```
+
+`-no-window` is headless; `-no-snapshot-save` keeps installed apps but does not
+persist transient user state.
+
+### Connect, verify, wait for boot
+
+```bash
+tool/adb-connect-wsl.sh                                  # per-device status + flutter devices
+adb devices                                              # uses the shim → Windows adb.exe
+adb -s emulator-5560 shell getprop sys.boot_completed    # == 1 when fully booted
+```
+
+### Driving the app
+
+- `tool/device_e2e/driver.py` works as-is. When driving **multiple devices in
+  parallel**, give each its own artifact dir so screenshots don't collide:
+
+  ```python
+  Device("emulator-5560", artifact_dir="/tmp/device_e2e/5560")
+  ```
+
+- **Screenshots over interop work** — use `exec-out` (not `shell`) so the PNG
+  bytes are not CRLF-mangled:
+
+  ```bash
+  adb -s emulator-5560 exec-out screencap -p > shot.png   # valid PNG
+  ```
+
+### Gotchas
+
+- **Use the Windows adb, not the Linux one.** If `adb devices` is empty while the
+  emulators are clearly up, you are talking to the wrong ADB server — put the
+  shim (or `adb.exe`) first on `PATH`.
+- `-no-snapshot-save` leaves each device with **whatever app state it had last
+  run**, which drifts between devices. Normalize before a session with
+  `adb -s <serial> shell am force-stop <pkg>` (keeps data) or `pm clear <pkg>`
+  (wipes to first-run).
+- `adb install -r -d <apk>` **preserves** seeded profiles/data when pushing a
+  new build; a reinstall after a signing-key change wipes them.
+- The fastest route to a populated app with **no cloud** is the offline account:
+  `AppIntro → Signup → "Create Offline Account" → Onboarding → Dashboard`. The
+  default seeded Parent PIN is `2580`.
+- Cloud (Firestore) verification additionally needs the install's **App Check
+  debug token** registered — see `tool/device_e2e/README.md`.
 
 ## Known Gotchas
 
