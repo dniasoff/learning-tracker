@@ -22,11 +22,13 @@ root-causes/severities were wrong — verification matters.
 |----|-----|--------|--------|-----|-----------|
 | F4 | P1 | Onboarding (offline) | "Skip for now" after creating a profile lands on **EmptyLoginScreen** (no bottom nav), **persistent** across relaunch — only escape was the gear icon | `onboarding_screen.dart` `_navigateToDashboardSkipped` now mirrors `_navigateToDashboard`'s profile-aware routing (AppShell when a profile exists; EmptyLogin only for genuine zero-profile / tutor-join) | ✅ PASS on 5554 — lands in AppShell w/ bottom nav; persistence holds |
 
-## ⛔ CONFIRMED P1 — NOT fixed (delicate; deferred to team)
+## ✅ CONFIRMED P1 — FIXED + on-device re-verified (empirical, logcat-driven)
 
-| ID | Sev | Screen | Defect | Why not auto-fixed |
-|----|-----|--------|--------|---------------------|
-| F5 | P1 | Parent PIN **setup** (first-time) | After confirming a new PIN the screen **loops back to "Set Parent PIN"**; back/nav don't escape (force-stop recovers). The PIN IS saved + parent mode activates; the **verify** flow (existing PIN) works fine — setup-only. | Real-device AutoRoute guard/`unawaited`-pop **timing** race in `pin_flow_screen.dart` `_handleCompletion` (setup case). High blast radius (parent-mode guard with documented prior loop bugs). Deep static analysis eliminated the scope-mismatch / async-save / null-id hypotheses but could NOT pinpoint the trigger with confidence → not guessing. Needs debugger-driven on-device iteration. Confined edge (PIN saves; recoverable). |
+| ID | Sev | Screen | Defect | Fix | Re-verify |
+|----|-----|--------|--------|-----|-----------|
+| F5 | P1 | Parent PIN **setup** (first-time) | After confirming a new PIN the screen **looped back to "Set Parent PIN"**; back/nav didn't escape (force-stop recovered). PIN WAS saved + parent mode activated; the **verify** flow worked — setup-only. | `pin_flow_screen.dart` `_popResult` used `context.router.maybePop(result)`, which removed the route but **did not complete the guard's `push<bool>(PinFlowSetupRoute)` result-completer** — so `resolver.next()` never fired and the parent hub never showed. Switched to `context.router.pop(result)` (completes the completer); also deferred completion to a post-frame callback to avoid navigating during the controller's state-notification. | ✅ on-device logcat now shows `guard_setup_result ok=true` (absent in every prior run) and the screen reaches the **Parent Settings hub**; verify flow still works (no regression). |
+
+**How it was found:** static analysis (incl. a capable sub-agent reading the AutoRoute source) could NOT pinpoint it. Resolved empirically by instrumenting the guard + screen (`debugPrint` PINDBG markers), building, deploying, and reading `adb logcat` across the confirm action. The decisive signal was that `guard_setup_result` (logged right after `await router.push<bool>()`) NEVER fired even though `maybePop` returned `true` — proving the pop wasn't completing the guard's result-completer. Two earlier candidate fixes (post-frame-only, root-router pop) were tried and rejected by on-device evidence before `pop()` confirmed.
 
 ## ⚠️ REAL but not auto-fixing (surface to user — product/data decisions)
 

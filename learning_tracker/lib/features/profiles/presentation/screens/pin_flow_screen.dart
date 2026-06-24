@@ -97,7 +97,15 @@ class _PinFlowScreenState extends ConsumerState<PinFlowScreen> {
 
   Future<void> _popResult(bool ok) async {
     if (!mounted) return;
-    await context.router.maybePop(ok);
+    // Use pop(result), NOT maybePop(result). The parent-mode pinGuard sets up a
+    // first-time PIN by `await router.push<bool>(PinFlowSetupRoute)`, and that
+    // future only resolves when the pushed route's RESULT completer is completed.
+    // maybePop() removed the route (returned true) WITHOUT completing that
+    // completer, so the guard hung: resolver.next() never fired, the parent hub
+    // never showed, and the setup screen looped back to "Set Parent PIN" (the PIN
+    // was saved, but the user was trapped). pop() completes the result completer.
+    // (P1 found by on-device E2E audit, 2026-06.)
+    context.router.pop(ok);
   }
 
   // ------------------------------------------------------------------
@@ -112,7 +120,15 @@ class _PinFlowScreenState extends ConsumerState<PinFlowScreen> {
     // React to side-effects that require navigation/auth.
     ref.listen(pinFlowControllerProvider, (prev, next) {
       if (next.completed && !(prev?.completed ?? false)) {
-        _handleCompletion(next);
+        // Defer completion to post-frame: _handleCompletion mutates another
+        // provider (pinGuard.markAuthenticated) and pops this route, and doing
+        // that synchronously inside the controller's state-change notification
+        // navigates during a build/notify cycle. Post-frame lets the frame
+        // settle first. (The pop itself uses pop() — see _popResult — which is
+        // what actually delivers the result back to the guard's push<bool>().)
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (mounted) _handleCompletion(next);
+        });
       }
     });
 

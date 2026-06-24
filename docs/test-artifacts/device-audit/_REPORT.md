@@ -14,12 +14,13 @@ in parallel, English + Hebrew/RTL, on a populated account (track + completions).
 browsing, the 7-step Add-Track wizard, scheduler/goals, track detail/edit, gamification + parent
 hub (PIN), child mode + redemption, progress sub-screens, settings subtree — English and Hebrew.
 
-## Verdict: **CONCERNS** (good shape; one P1 to track)
+## Verdict: **PASS** (all 5 confirmed defects fixed + on-device re-verified)
 
 The app is **solid** — populated screens render correctly, Hebrew/RTL is largely correct,
 no crashes, no overflow on the small/old device, no raw l10n keys. Of the auditor findings, **most
 were false positives** (caught in triage before they became feature-breaking "fixes"). **5 genuine
-defects** were confirmed; **4 are fixed + on-device re-verified**; **1 P1 is deferred** (delicate).
+defects** were confirmed, and **all 5 are now fixed + on-device re-verified** (the final P1 — the
+Parent-PIN setup loop — was resolved empirically via logcat instrumentation; see F5 below).
 
 ### Fixed + re-verified (4)
 | ID | Sev | Defect | Re-verify |
@@ -29,10 +30,10 @@ defects** were confirmed; **4 are fixed + on-device re-verified**; **1 P1 is def
 | F3 | P2 | Raw **offline email** `offline_…@offline.local` leaked into the Settings account card | ✅ suppressed; card shows name + "No Backup" |
 | F4 | **P1** | **Offline onboarding nav-trap**: "Skip for now" after creating a profile dead-ended on EmptyLoginScreen (no bottom nav), **persistent** | ✅ lands in AppShell w/ bottom nav; persistence holds |
 
-### Confirmed P1 — NOT fixed, deferred to team (1)
-| ID | Sev | Defect | Why deferred |
-|----|-----|--------|--------------|
-| F5 | **P1** | **First-time Parent-PIN setup loops** back to "Set Parent PIN" after confirm; back/nav don't escape (force-stop recovers). PIN **is** saved; **verify** flow works — setup-only. | Real-device AutoRoute guard/`unawaited`-pop **timing** race in `pin_flow_screen.dart _handleCompletion`. High blast radius (parent-mode guard, documented prior loop bugs). Deep static analysis eliminated the obvious hypotheses but couldn't confirm the trigger → not guessing. Needs debugger-driven on-device iteration. Confined edge (PIN saves; recoverable). |
+### Confirmed P1 — FIXED empirically (1)
+| ID | Sev | Defect | Fix |
+|----|-----|--------|-----|
+| F5 | **P1** | **First-time Parent-PIN setup looped** back to "Set Parent PIN" after confirm; back/nav didn't escape (force-stop recovered). PIN **was** saved; **verify** flow worked — setup-only. | `pin_flow_screen.dart` `_popResult` used `maybePop(result)`, which removed the route but did NOT complete the guard's `await router.push<bool>(PinFlowSetupRoute)` result-completer → the guard hung, the hub never showed, the screen looped. Fix: `pop(result)` (completes the completer) + post-frame completion. **Root-caused empirically** (static analysis couldn't): instrumented the guard/screen, read `adb logcat` across the confirm — the decisive signal was `guard_setup_result` (logged after the awaited push) NEVER firing despite `maybePop` returning true. On-device re-verify: `guard_setup_result ok=true` now fires and the screen reaches the **Parent Settings hub**; verify flow unregressed. |
 
 ### Surfaced for product decision (not bugs / enhancements)
 - Hebrew translations missing for study-**program** subtitles (seed data, e.g. "Two mishnayos per day") — `learning_program_seeds.dart`.
