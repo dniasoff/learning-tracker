@@ -1126,7 +1126,7 @@ class AppLocalizationsHe extends AppLocalizations {
   String get notificationSettings => 'הגדרות התראות';
 
   @override
-  String get notificationSettingsSubtitle => 'דחיפה, אימייל והתראות קול ללימוד';
+  String get notificationSettingsSubtitle => 'התראות דחיפה';
 
   @override
   String pointsAbbrev(int count) {
@@ -1799,7 +1799,7 @@ class AppLocalizationsHe extends AppLocalizations {
   String get chartLast7Days => '7 ימים';
 
   @override
-  String get chartLast30Days => '30\nימים';
+  String get chartLast30Days => '30 ימים';
 
   @override
   String get chartAllTime => 'הכול';
@@ -4987,4 +4987,90 @@ class AppLocalizationsHe extends AppLocalizations {
     );
     return 'אחרי $delays $_temp0';
   }
+
+  @override
+  String get goalClearDeadlineTooltip => 'נקה תאריך יעד';
+
+  @override
+  String get showPassword => 'הצג סיסמה';
+
+  @override
+  String get hidePassword => 'הסתר סיסמה';
+
+  @override
+  String get programDescriptionOraysa =>
+      'לימוד מובנה עם לימוד יומי, חזרה למחרת, חזרה שבועית ומחזור חזרה מתגלגל של 20 אחרון.';
+
+  @override
+  String get programDescriptionDirshuKinyanTorah =>
+      'קצב דף יומי עם 3 מחזורי חזרה וחינות חודשיות.';
+
+  @override
+  String get programDescriptionDirshuAmudHaYomi =>
+      'קצב חצי דף ביום עם מחזורי חזרה וחינות חודשיות.';
+
+  @override
+  String get programDescriptionDirshuKinyanYerushalmi =>
+      'לימוד ירושלמי עם מחזורי חזרה וחינות חודשיות.';
+
+  @override
+  String get programDescriptionDafYomi => 'דף אחד ביום, ללא חזרה מובנית.';
+
+  @override
+  String get programDescriptionMishnayYomis =>
+      'שתי משניות ביום, ללא חזרה מובנית.';
+
+  @override
+  String get programDescriptionNachYomi => 'פרק אחד ביום, ללא חזרה מובנית.';
+
+  @override
+  String get programDescriptionYerushalmiYomi =>
+      'דף אחד של תלמוד ירושלמי ביום.';
+
+  @override
+  String get programDescriptionRambam1Chapter => 'פרק אחד של משנה תורה ביום.';
+
+  @override
+  String get programDescriptionRambam3Chapters =>
+      'שלושה פרקים של משנה תורה ביום.';
+
+  @override
+  String get programDescriptionDafAWeek => 'דף אחד של תלמוד בבלי בשבוע.';
+
+  @override
+  String get programDescriptionHalakhahYomit =>
+      'לימוד הלכה יומי לפי מחזור שולחן ערוך.';
+
+  @override
+  String get programDescriptionArukhHashulchanYomi =>
+      'לימוד יומי של ערוך השולחן.';
+
+  @override
+  String get programDescriptionTanakhYomi => 'מחזור לימוד תנ\"ך יומי.';
+
+  @override
+  String get programDescriptionChofetzChaimDaily =>
+      'לימוד יומי של חפץ חיים על שמירת הלשון.';
+
+  @override
+  String get programDescriptionKitzurShulchanAruchYomi =>
+      'לימוד יומי של קיצור שולחן ערוך.';
+
+  @override
+  String get programDescriptionTehillimYomi => 'מחזור תהלים יומי.';
+
+  @override
+  String get programDescriptionPerekYomi => 'פרק אחד של משנה ביום.';
+
+  @override
+  String get programDescriptionSeferHaMitzvot =>
+      'לימוד יומי של ספר המצוות של הרמב\"ם.';
+
+  @override
+  String get programDescriptionShemiratHaLashon =>
+      'לימוד יומי של שמירת הלשון של חפץ חיים (נלווה לחפץ חיים יומי).';
+
+  @override
+  String get programDescriptionPirkeiAvotSummer =>
+      'פרק אחד של פרקי אבות בכל שבת בין פסח לראש השנה.';
 }

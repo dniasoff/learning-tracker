@@ -1132,8 +1132,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notificationSettings => 'Notification Settings';
 
   @override
-  String get notificationSettingsSubtitle =>
-      'Push, email, and study sound alerts';
+  String get notificationSettingsSubtitle => 'Push notification alerts';
 
   @override
   String pointsAbbrev(int count) {
@@ -1811,7 +1810,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get chartLast7Days => 'Last 7 Days';
 
   @override
-  String get chartLast30Days => 'Last 30\nDays';
+  String get chartLast30Days => 'Last 30 Days';
 
   @override
   String get chartAllTime => 'All Time';
@@ -5029,4 +5028,93 @@ class AppLocalizationsEn extends AppLocalizations {
     );
     return 'After $delays $_temp0';
   }
+
+  @override
+  String get goalClearDeadlineTooltip => 'Clear deadline date';
+
+  @override
+  String get showPassword => 'Show password';
+
+  @override
+  String get hidePassword => 'Hide password';
+
+  @override
+  String get programDescriptionOraysa =>
+      'Structured learning with daily study, next-day review, weekly review, and rolling back-20 review cycle.';
+
+  @override
+  String get programDescriptionDirshuKinyanTorah =>
+      'Daf Yomi pace with 3 chazarah review cycles and monthly tests.';
+
+  @override
+  String get programDescriptionDirshuAmudHaYomi =>
+      'Half-daf daily pace with review cycles and monthly tests.';
+
+  @override
+  String get programDescriptionDirshuKinyanYerushalmi =>
+      'Yerushalmi study with review cycles and monthly tests.';
+
+  @override
+  String get programDescriptionDafYomi =>
+      'One daf per day, no built-in review.';
+
+  @override
+  String get programDescriptionMishnayYomis =>
+      'Two mishnayos per day, no built-in review.';
+
+  @override
+  String get programDescriptionNachYomi =>
+      'One chapter per day, no built-in review.';
+
+  @override
+  String get programDescriptionYerushalmiYomi =>
+      'One daf of Talmud Yerushalmi per day.';
+
+  @override
+  String get programDescriptionRambam1Chapter =>
+      'One chapter of Mishneh Torah per day.';
+
+  @override
+  String get programDescriptionRambam3Chapters =>
+      'Three chapters of Mishneh Torah per day.';
+
+  @override
+  String get programDescriptionDafAWeek => 'One daf of Talmud Bavli per week.';
+
+  @override
+  String get programDescriptionHalakhahYomit =>
+      'Daily halacha study following the Shulchan Aruch cycle.';
+
+  @override
+  String get programDescriptionArukhHashulchanYomi =>
+      'Daily study of the Arukh HaShulchan.';
+
+  @override
+  String get programDescriptionTanakhYomi => 'Daily Tanakh study cycle.';
+
+  @override
+  String get programDescriptionChofetzChaimDaily =>
+      'Daily study of the Chofetz Chaim on Shmirat HaLashon.';
+
+  @override
+  String get programDescriptionKitzurShulchanAruchYomi =>
+      'Daily study of the Kitzur Shulchan Aruch.';
+
+  @override
+  String get programDescriptionTehillimYomi => 'Daily Psalms cycle.';
+
+  @override
+  String get programDescriptionPerekYomi => 'One Mishnah perek per day.';
+
+  @override
+  String get programDescriptionSeferHaMitzvot =>
+      'Daily study of the Rambam\'s Sefer HaMitzvot.';
+
+  @override
+  String get programDescriptionShemiratHaLashon =>
+      'Daily study of the Chofetz Chaim\'s Shemirat HaLashon (companion to Chofetz Chaim Yomi).';
+
+  @override
+  String get programDescriptionPirkeiAvotSummer =>
+      'One perek of Pirkei Avot each Shabbos between Pesach and Rosh Hashana.';
 }

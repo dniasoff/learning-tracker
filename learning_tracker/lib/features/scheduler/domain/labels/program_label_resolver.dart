@@ -1,8 +1,10 @@
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_registry.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_service.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
+import 'package:learning_tracker/l10n/app_localizations.dart';
 
 /// Scheduler-side resolver for program-label strings.
 ///
@@ -71,4 +73,73 @@ class ProgramLabelResolver {
       return entry.todayRefHe;
     return entry.todayRef;
   }
+
+  /// Returns a locale-aware description for [program].
+  ///
+  /// Picks the ARB key matching the program's [LearningProgramData.name] from
+  /// [l10n].  Falls back to [LearningProgramData.description] (the English
+  /// seed text) when no ARB key exists for the program name.
+  String learningProgramDescription(
+    LearningProgramData program,
+    AppLocalizations l10n,
+  ) {
+    switch (program.name) {
+      case 'oraysa':
+        return l10n.programDescriptionOraysa;
+      case 'dirshu_kinyan_torah':
+        return l10n.programDescriptionDirshuKinyanTorah;
+      case 'dirshu_amud_hayomi':
+        return l10n.programDescriptionDirshuAmudHaYomi;
+      case 'dirshu_kinyan_yerushalmi':
+        return l10n.programDescriptionDirshuKinyanYerushalmi;
+      case 'daf_yomi':
+        return l10n.programDescriptionDafYomi;
+      case 'mishnah_yomis':
+        return l10n.programDescriptionMishnayYomis;
+      case 'nach_yomi':
+        return l10n.programDescriptionNachYomi;
+      case 'yerushalmi_yomi':
+        return l10n.programDescriptionYerushalmiYomi;
+      case 'rambam_1_chapter':
+        return l10n.programDescriptionRambam1Chapter;
+      case 'rambam_3_chapters':
+        return l10n.programDescriptionRambam3Chapters;
+      case 'daf_a_week':
+        return l10n.programDescriptionDafAWeek;
+      case 'halakhah_yomit':
+        return l10n.programDescriptionHalakhahYomit;
+      case 'arukh_hashulchan_yomi':
+        return l10n.programDescriptionArukhHashulchanYomi;
+      case 'tanakh_yomi':
+        return l10n.programDescriptionTanakhYomi;
+      case 'chofetz_chaim_daily':
+        return l10n.programDescriptionChofetzChaimDaily;
+      case 'kitzur_shulchan_aruch_yomi':
+        return l10n.programDescriptionKitzurShulchanAruchYomi;
+      case 'tehillim_yomi':
+        return l10n.programDescriptionTehillimYomi;
+      case 'perek_yomi':
+        return l10n.programDescriptionPerekYomi;
+      case 'sefer_hamitzvot':
+        return l10n.programDescriptionSeferHaMitzvot;
+      case 'shemirat_halashon':
+        return l10n.programDescriptionShemiratHaLashon;
+      case 'pirkei_avot_summer':
+        return l10n.programDescriptionPirkeiAvotSummer;
+      default:
+        return program.description;
+    }
+  }
+}
+
+/// Convenience top-level function — mirrors [learningProgramLabelText] for
+/// descriptions.  Resolves via [ProgramLabelResolver] so that features do not
+/// construct the resolver directly.
+String learningProgramDescriptionText(
+  WidgetRef ref,
+  BuildContext context, {
+  required LearningProgramData program,
+}) {
+  final l10n = AppLocalizations.of(context)!;
+  return ProgramLabelResolver.of(ref).learningProgramDescription(program, l10n);
 }

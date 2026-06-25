@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/models/wizard_result_wrapper.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/goal_entity.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
@@ -329,9 +330,27 @@ class AddTrackController extends _$AddTrackController {
 
   // ── Private helpers ───────────────────────────────────────────────────────
 
-  static String _smartLabel(AddTrackState form) {
+  String _smartLabel(AddTrackState form) {
     if (form.programName != null) return form.programName!;
     if (form.scopeSelections != null && form.scopeSelections!.isNotEmpty) {
+      final c = form.curriculumId;
+      // F-05/F-21: when ALL top-level items were selected via "Select all in
+      // this list", return the curriculum name instead of the last seder value
+      // (which would show e.g. "Seder Taharos" even though the full curriculum
+      // was chosen).
+      if (c != null) {
+        final level1Selected = form.scopeSelections!
+            .where((s) => s.level == 1)
+            .map((s) => s.value)
+            .toSet();
+        final content = ref.read(curriculumContentProvider(c)).asData?.value;
+        if (content != null && level1Selected.isNotEmpty) {
+          final totalLevel1 = content.map((item) => item.level1).toSet().length;
+          if (level1Selected.length >= totalLevel1) {
+            return c.storageKey;
+          }
+        }
+      }
       return form.scopeSelections!.last.value;
     }
     // Use storageKey as a locale-neutral fallback. The screen can later

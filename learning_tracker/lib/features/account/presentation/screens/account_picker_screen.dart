@@ -188,20 +188,23 @@ class _DashedOutlineButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     const radius = 24.0;
-    return CustomPaint(
-      painter: const _DashedRRectPainter(
-        color: AppTheme.brandBlueDeep,
-        strokeWidth: 1.4,
-        radius: radius,
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          borderRadius: BorderRadius.circular(radius),
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 18),
-            child: Center(child: child),
+    return Semantics(
+      button: true,
+      child: CustomPaint(
+        painter: const _DashedRRectPainter(
+          color: AppTheme.brandBlueDeep,
+          strokeWidth: 1.4,
+          radius: radius,
+        ),
+        child: Material(
+          color: Colors.transparent,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(radius),
+            onTap: onTap,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 18),
+              child: Center(child: child),
+            ),
           ),
         ),
       ),

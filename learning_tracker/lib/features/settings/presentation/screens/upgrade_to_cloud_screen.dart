@@ -550,6 +550,7 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
                         TextFormField(
                           controller: _emailController,
                           keyboardType: TextInputType.emailAddress,
+                          textInputAction: TextInputAction.next,
                           inputFormatters: const [NoSpaceFormatter()],
                           decoration: InputDecoration(
                             labelText: l10n.upgradeToCloudEmailLabel,
@@ -570,6 +571,7 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
                         TextFormField(
                           controller: _passwordController,
                           obscureText: true,
+                          textInputAction: TextInputAction.done,
                           inputFormatters: const [NoSpaceFormatter()],
                           decoration: InputDecoration(
                             labelText: l10n.upgradeToCloudNewPasswordLabel,
@@ -577,12 +579,14 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
                           validator: (v) => (v == null || v.isEmpty)
                               ? l10n.upgradeToCloudPasswordRequired
                               : null,
+                          onFieldSubmitted: (_) => _submitNewCredentials(),
                           enabled: !isLoading,
                         ),
                       ] else
                         TextFormField(
                           controller: _passwordController,
                           obscureText: true,
+                          textInputAction: TextInputAction.done,
                           inputFormatters: const [NoSpaceFormatter()],
                           decoration: InputDecoration(
                             labelText: l10n.upgradeToCloudPasswordLabel,
@@ -590,6 +594,7 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
                           validator: (v) => (v == null || v.isEmpty)
                               ? l10n.upgradeToCloudPasswordRequired
                               : null,
+                          onFieldSubmitted: (_) => _submit(),
                           enabled: !isLoading,
                         ),
                       if (error != null) ...[

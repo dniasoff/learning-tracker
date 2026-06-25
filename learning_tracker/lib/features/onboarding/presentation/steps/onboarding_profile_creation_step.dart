@@ -224,6 +224,7 @@ class _OnboardingProfileCreationStepState
                     setState(() => _profileMode = isChild ? 'child' : 'adult'),
                 borderRadius: BorderRadius.circular(cardRadius),
                 child: Container(
+                  width: double.infinity,
                   padding: const EdgeInsets.fromLTRB(12, 18, 12, 14),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(cardRadius),

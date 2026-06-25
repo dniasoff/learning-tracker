@@ -650,7 +650,7 @@
   },
   "sectionLearning": "LEARNING",
   "notificationSettings": "Notification Settings",
-  "notificationSettingsSubtitle": "Push, email, and study sound alerts",
+  "notificationSettingsSubtitle": "Push notification alerts",
   "pointsAbbrev": "{count} pts",
   "@pointsAbbrev": {
     "placeholders": {
@@ -923,7 +923,7 @@
   "chartPointsEarned": "Points Earned",
   "chartTotalTorahPoints": "TOTAL TORAH POINTS",
   "chartLast7Days": "Last 7 Days",
-  "chartLast30Days": "Last 30\nDays",
+  "chartLast30Days": "Last 30 Days",
   "chartAllTime": "All Time",
   "chartFilterAll": "All",
   "learnStreakCurrentAchievement": "CURRENT ACHIEVEMENT",
@@ -2954,5 +2954,32 @@
         "type": "int"
       }
     }
-  }
+  },
+
+  "goalClearDeadlineTooltip": "Clear deadline date",
+
+  "showPassword": "Show password",
+  "hidePassword": "Hide password",
+
+  "programDescriptionOraysa": "Structured learning with daily study, next-day review, weekly review, and rolling back-20 review cycle.",
+  "programDescriptionDirshuKinyanTorah": "Daf Yomi pace with 3 chazarah review cycles and monthly tests.",
+  "programDescriptionDirshuAmudHaYomi": "Half-daf daily pace with review cycles and monthly tests.",
+  "programDescriptionDirshuKinyanYerushalmi": "Yerushalmi study with review cycles and monthly tests.",
+  "programDescriptionDafYomi": "One daf per day, no built-in review.",
+  "programDescriptionMishnayYomis": "Two mishnayos per day, no built-in review.",
+  "programDescriptionNachYomi": "One chapter per day, no built-in review.",
+  "programDescriptionYerushalmiYomi": "One daf of Talmud Yerushalmi per day.",
+  "programDescriptionRambam1Chapter": "One chapter of Mishneh Torah per day.",
+  "programDescriptionRambam3Chapters": "Three chapters of Mishneh Torah per day.",
+  "programDescriptionDafAWeek": "One daf of Talmud Bavli per week.",
+  "programDescriptionHalakhahYomit": "Daily halacha study following the Shulchan Aruch cycle.",
+  "programDescriptionArukhHashulchanYomi": "Daily study of the Arukh HaShulchan.",
+  "programDescriptionTanakhYomi": "Daily Tanakh study cycle.",
+  "programDescriptionChofetzChaimDaily": "Daily study of the Chofetz Chaim on Shmirat HaLashon.",
+  "programDescriptionKitzurShulchanAruchYomi": "Daily study of the Kitzur Shulchan Aruch.",
+  "programDescriptionTehillimYomi": "Daily Psalms cycle.",
+  "programDescriptionPerekYomi": "One Mishnah perek per day.",
+  "programDescriptionSeferHaMitzvot": "Daily study of the Rambam's Sefer HaMitzvot.",
+  "programDescriptionShemiratHaLashon": "Daily study of the Chofetz Chaim's Shemirat HaLashon (companion to Chofetz Chaim Yomi).",
+  "programDescriptionPirkeiAvotSummer": "One perek of Pirkei Avot each Shabbos between Pesach and Rosh Hashana."
 }

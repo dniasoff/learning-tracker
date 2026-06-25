@@ -31,6 +31,7 @@ class ContentItemTile extends ConsumerWidget {
     required this.onTap,
     this.reviewCount,
     this.showReviewBadge = true,
+    this.showBreadcrumb = false,
   });
 
   final ContentItem item;
@@ -47,6 +48,14 @@ class ContentItemTile extends ConsumerWidget {
   /// curriculum) does not have chazara enabled.  Hiding the badge prevents
   /// confusing "1x" indicators on learn-only tracks.
   final bool showReviewBadge;
+
+  /// Whether to show a parent breadcrumb as the subtitle.
+  ///
+  /// Enable in search contexts where multiple items share the same display
+  /// name (e.g. "משנה ו") and the parent path is needed for disambiguation.
+  /// Defaults to `false` for the hierarchy browser where the position in the
+  /// drill path already supplies parent context.
+  final bool showBreadcrumb;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -76,6 +85,14 @@ class ContentItemTile extends ConsumerWidget {
         ),
         textAlign: TextAlign.start,
       ),
+      subtitle: showBreadcrumb
+          ? CurriculumLabel.parent(
+              item.sefariaRef,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            )
+          : null,
       trailing: _buildTrailing(theme, count),
       onTap: onTap,
       onLongPress: item.isLeaf && count > 0 && showReviewBadge

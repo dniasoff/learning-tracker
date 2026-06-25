@@ -332,11 +332,7 @@ class ParentSettingsScreen extends ConsumerWidget {
                 titleColor: AppColors.chartRed,
                 subtitle: null,
                 leadingSquare: true,
-                trailing: const Icon(
-                  Icons.logout_outlined,
-                  color: AppColors.chartRed,
-                  size: 24,
-                ),
+                trailing: const SizedBox.shrink(),
                 onTap: () => showSignOutConfirmation(context, ref),
               ),
             ),

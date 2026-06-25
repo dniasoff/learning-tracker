@@ -190,7 +190,7 @@ class _RecentActivityScreenState extends ConsumerState<RecentActivityScreen> {
                     ChartTimeRange.allTime => l10n.chartAllTime,
                   },
                   textAlign: TextAlign.center,
-                  maxLines: 2,
+                  maxLines: 1,
                   style: Theme.of(context).textTheme.labelMedium?.copyWith(
                     color: selected ? Colors.white : const Color(0xFF5E6678),
                     fontWeight: FontWeight.w700,

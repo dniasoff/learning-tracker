@@ -389,6 +389,14 @@ class _RewardConfigurationScreenState
                       // the type segmented control and per-track dropdown are
                       // gone.
                       const SizedBox(height: 18),
+                      Text(
+                        l10n.rewardConfigPointsThresholdLabel,
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: _kMutedLabel,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
                       TextField(
                         controller: _pointsController,
                         keyboardType: TextInputType.number,

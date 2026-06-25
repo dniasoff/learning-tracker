@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/features/scheduler/domain/labels/program_label_resolver.dart';
 import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
@@ -222,11 +223,11 @@ class _FeaturedProgramCard extends ConsumerWidget {
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  program.description.isNotEmpty
-                      ? program.description
-                      : AppLocalizations.of(
-                          context,
-                        )!.programDefaultDescriptionFeatured,
+                  learningProgramDescriptionText(
+                    ref,
+                    context,
+                    program: program,
+                  ),
                   style: theme.textTheme.bodyLarge?.copyWith(
                     color: AppTheme.brandInkMuted,
                   ),
@@ -325,11 +326,11 @@ class _CompactProgramCard extends ConsumerWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  program.description.isNotEmpty
-                      ? program.description
-                      : AppLocalizations.of(
-                          context,
-                        )!.programDefaultDescriptionCompact,
+                  learningProgramDescriptionText(
+                    ref,
+                    context,
+                    program: program,
+                  ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: theme.textTheme.bodyMedium?.copyWith(

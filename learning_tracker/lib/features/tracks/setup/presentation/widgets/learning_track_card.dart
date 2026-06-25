@@ -79,109 +79,121 @@ class LearningTrackCard extends ConsumerWidget {
     const accent = AppColors.blueMedium;
     const icon = Icons.menu_book_rounded;
 
-    return Material(
-      color: Colors.transparent,
-      child: InkWell(
-        borderRadius: BorderRadius.circular(30),
-        onTap: onTap,
-        onLongPress: onLongPress,
-        child: Ink(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(30),
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.blueDeepNavy.withValues(alpha: 0.07),
-                blurRadius: 14,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
-          child: Row(
-            children: [
-              Container(
-                width: 66,
-                height: 66,
-                decoration: BoxDecoration(
-                  color: accent,
-                  borderRadius: BorderRadius.circular(18),
-                  boxShadow: [
-                    BoxShadow(
-                      color: accent.withValues(alpha: 0.28),
-                      blurRadius: 10,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
+    final cardTitle = trackDisplayTitle(ref, track);
+    final semanticsLabel = showProgress && !hasProgramEnrollment
+        ? '$cardTitle, $cyclePercentDisplay'
+        : cardTitle;
+
+    return Semantics(
+      label: semanticsLabel,
+      button: true,
+      excludeSemantics: true,
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(30),
+          onTap: onTap,
+          onLongPress: onLongPress,
+          child: Ink(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(30),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.blueDeepNavy.withValues(alpha: 0.07),
+                  blurRadius: 14,
+                  offset: const Offset(0, 6),
                 ),
-                child: const Icon(icon, color: Colors.white, size: 34),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // B-EDIT-NAME fix: surface the user's custom track name
-                    // (Goal.description) when set, falling back to the
-                    // curriculum label. The card previously always showed the
-                    // curriculum name and ignored an edited name.
-                    Text(
-                      trackDisplayTitle(ref, track),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: theme.textTheme.titleLarge?.copyWith(
-                        color: AppTheme.brandBlueDeep,
-                        fontWeight: FontWeight.w800,
+              ],
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 66,
+                  height: 66,
+                  decoration: BoxDecoration(
+                    color: accent,
+                    borderRadius: BorderRadius.circular(18),
+                    boxShadow: [
+                      BoxShadow(
+                        color: accent.withValues(alpha: 0.28),
+                        blurRadius: 10,
+                        offset: const Offset(0, 4),
                       ),
-                    ),
-                    if (showProgress) ...[
-                      const SizedBox(height: 9),
-                      if (!hasProgramEnrollment) ...[
-                        Row(
-                          children: [
-                            Text(
-                              trackHasChazara
-                                  ? l10n.carouselCompletion(chazaraTerm)
-                                  : l10n.trackProgress,
-                              style: theme.textTheme.labelSmall?.copyWith(
-                                color: AppTheme.brandInkMuted,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                            const Spacer(),
-                            Text(
-                              cyclePercentDisplay,
-                              style: theme.textTheme.labelMedium?.copyWith(
-                                color: AppTheme.brandInk,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ],
+                    ],
+                  ),
+                  child: const Icon(icon, color: Colors.white, size: 34),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // B-EDIT-NAME fix: surface the user's custom track name
+                      // (Goal.description) when set, falling back to the
+                      // curriculum label. The card previously always showed the
+                      // curriculum name and ignored an edited name.
+                      Text(
+                        trackDisplayTitle(ref, track),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: theme.textTheme.titleLarge?.copyWith(
+                          color: AppTheme.brandBlueDeep,
+                          fontWeight: FontWeight.w800,
                         ),
-                        const SizedBox(height: 6),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(999),
-                          child: LinearProgressIndicator(
-                            value: cycleFraction,
-                            minHeight: 10,
-                            backgroundColor: AppTheme.brandCreamSoft,
-                            valueColor: AlwaysStoppedAnimation<Color>(
-                              curriculumBarColor,
+                      ),
+                      if (showProgress) ...[
+                        const SizedBox(height: 9),
+                        if (!hasProgramEnrollment) ...[
+                          Row(
+                            children: [
+                              Text(
+                                trackHasChazara
+                                    ? l10n.carouselCompletion(chazaraTerm)
+                                    : l10n.trackProgress,
+                                style: theme.textTheme.labelSmall?.copyWith(
+                                  color: AppTheme.brandInkMuted,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const Spacer(),
+                              Text(
+                                cyclePercentDisplay,
+                                style: theme.textTheme.labelMedium?.copyWith(
+                                  color: AppTheme.brandInk,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 6),
+                          ExcludeSemantics(
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(999),
+                              child: LinearProgressIndicator(
+                                value: cycleFraction,
+                                minHeight: 10,
+                                backgroundColor: AppTheme.brandCreamSoft,
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  curriculumBarColor,
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                        const SizedBox(height: 8),
+                          const SizedBox(height: 8),
+                        ],
                       ],
                     ],
-                  ],
+                  ),
                 ),
-              ),
-              const Icon(
-                Icons.chevron_right_rounded,
-                size: 30,
-                color: AppTheme.brandBlueDeep,
-              ),
-            ],
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  size: 30,
+                  color: AppTheme.brandBlueDeep,
+                ),
+              ],
+            ),
           ),
         ),
       ),

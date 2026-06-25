@@ -90,6 +90,7 @@ class SignInForm extends StatelessWidget {
             validator: validatePassword,
             onFieldSubmitted: (_) => onSubmit(),
             suffixIcon: IconButton(
+              tooltip: obscurePassword ? l10n.showPassword : l10n.hidePassword,
               icon: Icon(
                 obscurePassword
                     ? Icons.visibility_off_rounded
@@ -126,22 +127,24 @@ class SignInForm extends StatelessWidget {
             )
           else
             const SizedBox(height: 14),
-          Row(
-            children: [
-              Checkbox(
-                value: keepSignedIn,
-                onChanged: isLoading ? null : onKeepSignedInChanged,
-                visualDensity: VisualDensity.compact,
-              ),
-              Text(
-                l10n.signInKeepMeSignedIn,
-                style: const TextStyle(
-                  color: AppTheme.brandInkMuted,
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
+          MergeSemantics(
+            child: Row(
+              children: [
+                Checkbox(
+                  value: keepSignedIn,
+                  onChanged: isLoading ? null : onKeepSignedInChanged,
+                  visualDensity: VisualDensity.compact,
                 ),
-              ),
-            ],
+                Text(
+                  l10n.signInKeepMeSignedIn,
+                  style: const TextStyle(
+                    color: AppTheme.brandInkMuted,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+              ],
+            ),
           ),
         ],
       ),

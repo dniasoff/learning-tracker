@@ -301,73 +301,82 @@ class DashboardBody extends ConsumerWidget {
               ),
             ),
             const SizedBox(width: 10),
-            GestureDetector(
-              // E1: register taps across the whole chip (incl. padding/gaps),
-              // not just where the icon/text render objects sit. Without
-              // `opaque`, GestureDetector defers to its children and taps on
-              // the transparent padding area are a dead no-op on-device.
-              behavior: HitTestBehavior.opaque,
-              // E1 (real root cause): GamificationRoute is gated by
-              // `childModeGuard`, which silently rejects (`resolver.next(false)`)
-              // navigation whenever the active profile is NOT in child mode. The
-              // streak chip is rendered for every mode, so in adult / tutor mode
-              // the tap fired but the guard swallowed it — "tapping does
-              // nothing". Gamification is child-only (adults have no points), so
-              // only route to it in child mode; for other modes the chip is a
-              // passive streak indicator with no dead navigation.
-              //
-              // GA-4: Also guard against double-push — if GamificationRoute is
-              // already active, a second tap would push a duplicate.
-              // Use isRouteActive (safe — no null dereference) instead of
-              // router.current.name which throws when the stack is empty or
-              // the router is a partial mock.
-              onTap: userMode == ProfileMode.child
-                  ? () {
-                      final alreadyActive = context.router.isRouteActive(
-                        const GamificationRoute().routeName,
-                      );
-                      if (GamificationRoutePushGuard.canPush(
-                        isGamificationRouteActive: alreadyActive,
-                      )) {
-                        context.router.push(const GamificationRoute());
+            // F-11: wrap the streak chip in a Semantics node so TalkBack/
+            // VoiceOver announces a descriptive label (e.g. "3-day streak")
+            // instead of the raw number "1". `excludeSemantics: true` prevents
+            // the inner Icon + Text from also being announced, which would
+            // produce a redundant bare "3" after the meaningful label.
+            Semantics(
+              label: l10n.tierCounterStreakDays(currentStreak),
+              excludeSemantics: true,
+              child: GestureDetector(
+                // E1: register taps across the whole chip (incl. padding/gaps),
+                // not just where the icon/text render objects sit. Without
+                // `opaque`, GestureDetector defers to its children and taps on
+                // the transparent padding area are a dead no-op on-device.
+                behavior: HitTestBehavior.opaque,
+                // E1 (real root cause): GamificationRoute is gated by
+                // `childModeGuard`, which silently rejects (`resolver.next(false)`)
+                // navigation whenever the active profile is NOT in child mode. The
+                // streak chip is rendered for every mode, so in adult / tutor mode
+                // the tap fired but the guard swallowed it — "tapping does
+                // nothing". Gamification is child-only (adults have no points), so
+                // only route to it in child mode; for other modes the chip is a
+                // passive streak indicator with no dead navigation.
+                //
+                // GA-4: Also guard against double-push — if GamificationRoute is
+                // already active, a second tap would push a duplicate.
+                // Use isRouteActive (safe — no null dereference) instead of
+                // router.current.name which throws when the stack is empty or
+                // the router is a partial mock.
+                onTap: userMode == ProfileMode.child
+                    ? () {
+                        final alreadyActive = context.router.isRouteActive(
+                          const GamificationRoute().routeName,
+                        );
+                        if (GamificationRoutePushGuard.canPush(
+                          isGamificationRouteActive: alreadyActive,
+                        )) {
+                          context.router.push(const GamificationRoute());
+                        }
                       }
-                    }
-                  : null,
-              child: Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 8,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.statusDanger,
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AppColors.statusDanger.withValues(alpha: 0.28),
-                      blurRadius: 12,
-                      offset: const Offset(0, 6),
-                    ),
-                  ],
-                ),
-                child: Row(
-                  children: [
-                    const Icon(
-                      Icons.local_fire_department_rounded,
-                      color: Colors.white,
-                      size: 18,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      '$currentStreak',
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w800,
+                    : null,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.statusDanger,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.statusDanger.withValues(alpha: 0.28),
+                        blurRadius: 12,
+                        offset: const Offset(0, 6),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(
+                        Icons.local_fire_department_rounded,
+                        color: Colors.white,
+                        size: 18,
+                      ),
+                      const SizedBox(width: 4),
+                      Text(
+                        '$currentStreak',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
+            ), // Semantics
           ],
         ),
         const SizedBox(height: 18),

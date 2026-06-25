@@ -555,7 +555,7 @@
   },
   "sectionLearning": "למידה",
   "notificationSettings": "הגדרות התראות",
-  "notificationSettingsSubtitle": "דחיפה, אימייל והתראות קול ללימוד",
+  "notificationSettingsSubtitle": "התראות דחיפה",
   "pointsAbbrev": "{count} נק׳",
   "@pointsAbbrev": {
     "placeholders": {
@@ -818,7 +818,7 @@
   "chartPointsEarned": "נקודות שהורו",
   "chartTotalTorahPoints": "נק׳ תורה סה״כ",
   "chartLast7Days": "7 ימים",
-  "chartLast30Days": "30\nימים",
+  "chartLast30Days": "30 ימים",
   "chartAllTime": "הכול",
   "chartFilterAll": "הכול",
   "learnStreakCurrentAchievement": "הישג נוכחי",
@@ -2654,5 +2654,32 @@
         "type": "int"
       }
     }
-  }
+  },
+
+  "goalClearDeadlineTooltip": "נקה תאריך יעד",
+
+  "showPassword": "הצג סיסמה",
+  "hidePassword": "הסתר סיסמה",
+
+  "programDescriptionOraysa": "לימוד מובנה עם לימוד יומי, חזרה למחרת, חזרה שבועית ומחזור חזרה מתגלגל של 20 אחרון.",
+  "programDescriptionDirshuKinyanTorah": "קצב דף יומי עם 3 מחזורי חזרה וחינות חודשיות.",
+  "programDescriptionDirshuAmudHaYomi": "קצב חצי דף ביום עם מחזורי חזרה וחינות חודשיות.",
+  "programDescriptionDirshuKinyanYerushalmi": "לימוד ירושלמי עם מחזורי חזרה וחינות חודשיות.",
+  "programDescriptionDafYomi": "דף אחד ביום, ללא חזרה מובנית.",
+  "programDescriptionMishnayYomis": "שתי משניות ביום, ללא חזרה מובנית.",
+  "programDescriptionNachYomi": "פרק אחד ביום, ללא חזרה מובנית.",
+  "programDescriptionYerushalmiYomi": "דף אחד של תלמוד ירושלמי ביום.",
+  "programDescriptionRambam1Chapter": "פרק אחד של משנה תורה ביום.",
+  "programDescriptionRambam3Chapters": "שלושה פרקים של משנה תורה ביום.",
+  "programDescriptionDafAWeek": "דף אחד של תלמוד בבלי בשבוע.",
+  "programDescriptionHalakhahYomit": "לימוד הלכה יומי לפי מחזור שולחן ערוך.",
+  "programDescriptionArukhHashulchanYomi": "לימוד יומי של ערוך השולחן.",
+  "programDescriptionTanakhYomi": "מחזור לימוד תנ\"ך יומי.",
+  "programDescriptionChofetzChaimDaily": "לימוד יומי של חפץ חיים על שמירת הלשון.",
+  "programDescriptionKitzurShulchanAruchYomi": "לימוד יומי של קיצור שולחן ערוך.",
+  "programDescriptionTehillimYomi": "מחזור תהלים יומי.",
+  "programDescriptionPerekYomi": "פרק אחד של משנה ביום.",
+  "programDescriptionSeferHaMitzvot": "לימוד יומי של ספר המצוות של הרמב\"ם.",
+  "programDescriptionShemiratHaLashon": "לימוד יומי של שמירת הלשון של חפץ חיים (נלווה לחפץ חיים יומי).",
+  "programDescriptionPirkeiAvotSummer": "פרק אחד של פרקי אבות בכל שבת בין פסח לראש השנה."
 }

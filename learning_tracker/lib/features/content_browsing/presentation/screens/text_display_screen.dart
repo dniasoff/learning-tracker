@@ -68,6 +68,7 @@ class TextDisplayScreen extends ConsumerWidget {
         toolbarHeight: 72,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
+          tooltip: MaterialLocalizations.of(context).backButtonTooltip,
           onPressed: () => context.router.maybePop(),
         ),
         title: Text(

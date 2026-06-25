@@ -13,6 +13,7 @@ import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_dialog.dart';
+import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/models/wizard_result_wrapper.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
@@ -669,6 +670,24 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
   String _getSmartDefault() {
     if (_state.programName != null) return _state.programName!;
     if (_state.scopeSelections != null && _state.scopeSelections!.isNotEmpty) {
+      final c = _state.curriculumId;
+      // F-05/F-21: when ALL top-level items were selected via "Select all in
+      // this list", use the curriculum label instead of the last seder name
+      // (which would show e.g. "Seder Taharos" even though the whole
+      // curriculum was chosen).
+      if (c != null) {
+        final level1Selected = _state.scopeSelections!
+            .where((s) => s.level == 1)
+            .map((s) => s.value)
+            .toSet();
+        final content = ref.read(curriculumContentProvider(c)).asData?.value;
+        if (content != null && level1Selected.isNotEmpty) {
+          final totalLevel1 = content.map((item) => item.level1).toSet().length;
+          if (level1Selected.length >= totalLevel1) {
+            return curriculumLabelText(ref, curriculum: c);
+          }
+        }
+      }
       // R1-(1): raw scope values are Sefaria English translations (e.g. "Genesis").
       // Transliterate through the curriculum label renderer so the toast
       // shows "Bereishis"/"Bereshit" instead of "Genesis".

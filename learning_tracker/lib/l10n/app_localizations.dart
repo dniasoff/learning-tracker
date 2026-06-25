@@ -2034,7 +2034,7 @@ abstract class AppLocalizations {
   /// No description provided for @notificationSettingsSubtitle.
   ///
   /// In en, this message translates to:
-  /// **'Push, email, and study sound alerts'**
+  /// **'Push notification alerts'**
   String get notificationSettingsSubtitle;
 
   /// No description provided for @pointsAbbrev.
@@ -3246,7 +3246,7 @@ abstract class AppLocalizations {
   /// No description provided for @chartLast30Days.
   ///
   /// In en, this message translates to:
-  /// **'Last 30\nDays'**
+  /// **'Last 30 Days'**
   String get chartLast30Days;
 
   /// No description provided for @chartAllTime.
@@ -8417,6 +8417,150 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'After {delays} {count, plural, =1{day} other{days}}'**
   String trackEditReviewSummaryWithDays(String delays, int count);
+
+  /// No description provided for @goalClearDeadlineTooltip.
+  ///
+  /// In en, this message translates to:
+  /// **'Clear deadline date'**
+  String get goalClearDeadlineTooltip;
+
+  /// No description provided for @showPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Show password'**
+  String get showPassword;
+
+  /// No description provided for @hidePassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Hide password'**
+  String get hidePassword;
+
+  /// No description provided for @programDescriptionOraysa.
+  ///
+  /// In en, this message translates to:
+  /// **'Structured learning with daily study, next-day review, weekly review, and rolling back-20 review cycle.'**
+  String get programDescriptionOraysa;
+
+  /// No description provided for @programDescriptionDirshuKinyanTorah.
+  ///
+  /// In en, this message translates to:
+  /// **'Daf Yomi pace with 3 chazarah review cycles and monthly tests.'**
+  String get programDescriptionDirshuKinyanTorah;
+
+  /// No description provided for @programDescriptionDirshuAmudHaYomi.
+  ///
+  /// In en, this message translates to:
+  /// **'Half-daf daily pace with review cycles and monthly tests.'**
+  String get programDescriptionDirshuAmudHaYomi;
+
+  /// No description provided for @programDescriptionDirshuKinyanYerushalmi.
+  ///
+  /// In en, this message translates to:
+  /// **'Yerushalmi study with review cycles and monthly tests.'**
+  String get programDescriptionDirshuKinyanYerushalmi;
+
+  /// No description provided for @programDescriptionDafYomi.
+  ///
+  /// In en, this message translates to:
+  /// **'One daf per day, no built-in review.'**
+  String get programDescriptionDafYomi;
+
+  /// No description provided for @programDescriptionMishnayYomis.
+  ///
+  /// In en, this message translates to:
+  /// **'Two mishnayos per day, no built-in review.'**
+  String get programDescriptionMishnayYomis;
+
+  /// No description provided for @programDescriptionNachYomi.
+  ///
+  /// In en, this message translates to:
+  /// **'One chapter per day, no built-in review.'**
+  String get programDescriptionNachYomi;
+
+  /// No description provided for @programDescriptionYerushalmiYomi.
+  ///
+  /// In en, this message translates to:
+  /// **'One daf of Talmud Yerushalmi per day.'**
+  String get programDescriptionYerushalmiYomi;
+
+  /// No description provided for @programDescriptionRambam1Chapter.
+  ///
+  /// In en, this message translates to:
+  /// **'One chapter of Mishneh Torah per day.'**
+  String get programDescriptionRambam1Chapter;
+
+  /// No description provided for @programDescriptionRambam3Chapters.
+  ///
+  /// In en, this message translates to:
+  /// **'Three chapters of Mishneh Torah per day.'**
+  String get programDescriptionRambam3Chapters;
+
+  /// No description provided for @programDescriptionDafAWeek.
+  ///
+  /// In en, this message translates to:
+  /// **'One daf of Talmud Bavli per week.'**
+  String get programDescriptionDafAWeek;
+
+  /// No description provided for @programDescriptionHalakhahYomit.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily halacha study following the Shulchan Aruch cycle.'**
+  String get programDescriptionHalakhahYomit;
+
+  /// No description provided for @programDescriptionArukhHashulchanYomi.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily study of the Arukh HaShulchan.'**
+  String get programDescriptionArukhHashulchanYomi;
+
+  /// No description provided for @programDescriptionTanakhYomi.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily Tanakh study cycle.'**
+  String get programDescriptionTanakhYomi;
+
+  /// No description provided for @programDescriptionChofetzChaimDaily.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily study of the Chofetz Chaim on Shmirat HaLashon.'**
+  String get programDescriptionChofetzChaimDaily;
+
+  /// No description provided for @programDescriptionKitzurShulchanAruchYomi.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily study of the Kitzur Shulchan Aruch.'**
+  String get programDescriptionKitzurShulchanAruchYomi;
+
+  /// No description provided for @programDescriptionTehillimYomi.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily Psalms cycle.'**
+  String get programDescriptionTehillimYomi;
+
+  /// No description provided for @programDescriptionPerekYomi.
+  ///
+  /// In en, this message translates to:
+  /// **'One Mishnah perek per day.'**
+  String get programDescriptionPerekYomi;
+
+  /// No description provided for @programDescriptionSeferHaMitzvot.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily study of the Rambam\'s Sefer HaMitzvot.'**
+  String get programDescriptionSeferHaMitzvot;
+
+  /// No description provided for @programDescriptionShemiratHaLashon.
+  ///
+  /// In en, this message translates to:
+  /// **'Daily study of the Chofetz Chaim\'s Shemirat HaLashon (companion to Chofetz Chaim Yomi).'**
+  String get programDescriptionShemiratHaLashon;
+
+  /// No description provided for @programDescriptionPirkeiAvotSummer.
+  ///
+  /// In en, this message translates to:
+  /// **'One perek of Pirkei Avot each Shabbos between Pesach and Rosh Hashana.'**
+  String get programDescriptionPirkeiAvotSummer;
 }
 
 class _AppLocalizationsDelegate

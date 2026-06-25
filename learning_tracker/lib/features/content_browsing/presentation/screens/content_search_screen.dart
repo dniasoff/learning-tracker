@@ -159,10 +159,24 @@ class _ContentSearchScreenState extends ConsumerState<ContentSearchScreen> {
               item: item,
               curriculum: curriculum,
               showReviewBadge: showReviewBadge,
+              showBreadcrumb: true,
               onTap: () {
                 if (item.isLeaf) {
                   context.router.push(
                     TextDisplayRoute(sefariaRef: item.sefariaRef),
+                  );
+                } else {
+                  // Navigate into the hierarchy pre-filtered to this
+                  // container's level path, mirroring _handleItemTap in
+                  // ContentHierarchyScreen.
+                  context.router.push(
+                    ContentHierarchyRoute(
+                      curriculumId: curriculum.storageKey,
+                      level1: item.level1,
+                      level2: item.level2,
+                      level3: item.level3,
+                      level4: item.level4,
+                    ),
                   );
                 }
               },

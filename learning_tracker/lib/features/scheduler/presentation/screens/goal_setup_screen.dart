@@ -313,6 +313,9 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
                   if (_targetDate != null)
                     IconButton(
                       icon: const Icon(Icons.clear),
+                      tooltip: AppLocalizations.of(
+                        context,
+                      )!.goalClearDeadlineTooltip,
                       onPressed: () => setState(() => _targetDate = null),
                     )
                   else
@@ -671,7 +674,9 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
           ),
           const SizedBox(height: 16),
           FilledButton(
-            onPressed: _submit,
+            onPressed: (_goalType == 'deadline' && _targetDate == null)
+                ? null
+                : _submit,
             child: Text(
               widget.submitLabel ??
                   (widget.existingGoal != null

@@ -433,13 +433,15 @@ class _TrackDetailScreenState extends ConsumerState<TrackDetailScreen> {
               ],
             ),
             const SizedBox(height: 6),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(999),
-              child: LinearProgressIndicator(
-                value: cycleFraction,
-                minHeight: 10,
-                backgroundColor: AppTheme.brandCreamSoft,
-                valueColor: AlwaysStoppedAnimation<Color>(curriculumBarColor),
+            ExcludeSemantics(
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(999),
+                child: LinearProgressIndicator(
+                  value: cycleFraction,
+                  minHeight: 10,
+                  backgroundColor: AppTheme.brandCreamSoft,
+                  valueColor: AlwaysStoppedAnimation<Color>(curriculumBarColor),
+                ),
               ),
             ),
             const SizedBox(height: 10),
