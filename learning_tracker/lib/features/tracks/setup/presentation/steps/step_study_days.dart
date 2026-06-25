@@ -122,6 +122,11 @@ class _StudyDaysEditableState extends ConsumerState<StudyDaysEditable> {
           const SizedBox(height: 18),
           Expanded(
             child: ListView.builder(
+              // Bottom padding lets the last row scroll clear of the sticky
+              // "Continue" button (height 52) + the 14 px gap above it.
+              // On larger screens the list is short enough that no scrolling
+              // occurs, so the extra padding is simply invisible white space.
+              padding: const EdgeInsets.only(bottom: 66),
               itemCount: 7,
               itemBuilder: (context, index) {
                 final dayNum = kStepStudyDayNumbers[index];

@@ -256,9 +256,13 @@ class _IntroPage extends ConsumerWidget {
       child: LayoutBuilder(
         builder: (context, c) {
           // Reserve a generous vertical band for the task-card (scale-to-fit via FittedBox).
+          // On phones the natural 55 % fraction lands under 320 px so the hard
+          // cap is irrelevant. On tablets/large viewports the old hard 320 cap
+          // left a large empty gap below the progress bar; capping at 65 % of
+          // the available height instead lets the hero absorb the extra space
+          // and eliminates the dead zone without touching the phone layout.
           const minHero = 220.0;
-          const maxHero = 320.0;
-          final heroH = (c.maxHeight * 0.55).clamp(minHero, maxHero);
+          final heroH = (c.maxHeight * 0.55).clamp(minHero, c.maxHeight * 0.65);
           return SingleChildScrollView(
             clipBehavior: Clip.hardEdge,
             physics: const BouncingScrollPhysics(

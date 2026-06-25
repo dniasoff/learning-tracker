@@ -1680,6 +1680,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Enter your 4-digit PIN to access parent settings.';
 
   @override
+  String get pinDialogSubtitleSwitchProfile =>
+      'Enter the PIN to switch profiles.';
+
+  @override
   String get enterNewPinSubtitle => 'Choose a new 4-digit PIN.';
 
   @override
@@ -1805,6 +1809,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get chartTotalTorahPoints => 'TOTAL TORAH POINTS';
+
+  @override
+  String get chartPointsEarnedSubtitle => 'POINTS EARNED';
 
   @override
   String get chartLast7Days => 'Last 7 Days';
@@ -2010,6 +2017,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Offline — changes will sync when you\'re back online';
 
   @override
+  String get signInOfflineHint =>
+      'You\'re offline. Signing in requires an internet connection.';
+
+  @override
   String get signInWelcomeBack => 'Welcome Back!';
 
   @override
@@ -2031,7 +2042,7 @@ class AppLocalizationsEn extends AppLocalizations {
   String get signInKeepMeSignedIn => 'Keep me signed in';
 
   @override
-  String get signInForgotPassword => 'Forgot password?';
+  String get signInForgotPassword => 'Forgot your Secret Key?';
 
   @override
   String get signInForgotPasswordSent =>
@@ -4068,8 +4079,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get paceLiveLearningOnlyCaption => 'Pace tracks track learning only.';
 
   @override
-  String get bulkMarkWizardSubtitle =>
-      'These count toward siyumim and lifetime knowledge — but not toward your streak or points.';
+  String bulkMarkWizardSubtitle(String siyumimTerm) {
+    return 'These count toward $siyumimTerm and lifetime knowledge — but not toward your streak or points.';
+  }
 
   @override
   String bulkMarkConfirmationToast(int count) {
@@ -4206,7 +4218,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String redeemScreenCostLabel(int points) {
-    return '$points points';
+    return '$points Points';
   }
 
   @override
@@ -4481,6 +4493,10 @@ class AppLocalizationsEn extends AppLocalizations {
   String inviteTutorSentSnackbar(String email) {
     return 'Invite sent to $email!';
   }
+
+  @override
+  String get inviteTutorErrorLocalOnly =>
+      'Tutoring requires a cloud account — upgrade to invite a tutor.';
 
   @override
   String get inviteTutorErrorUnauthenticated =>

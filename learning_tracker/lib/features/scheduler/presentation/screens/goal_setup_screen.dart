@@ -85,6 +85,8 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
   // Pace mode fields
   late String _goalType;
   late int _paceValue;
+  bool _paceFieldValid =
+      true; // false when pace text field is empty / non-positive
   String _paceUnit = 'per_day';
   late String _paceGranularity;
 
@@ -254,13 +256,34 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
   }
 
   Future<void> _pickHebrewDate() async {
+    final now = _now();
     final picked = await HebrewDatePicker.show(
       context,
-      initialDate: _targetDate,
+      // Seed with current value, or tomorrow as the minimum-reasonable default.
+      initialDate: (_targetDate != null && !_targetDate!.isBefore(now))
+          ? _targetDate
+          : now.add(const Duration(days: 1)),
     );
-    if (picked != null) {
+    // Reject dates in the past — the submit guard also checks this, but
+    // storing a past date is confusing because the button stays disabled.
+    if (picked != null && !picked.isBefore(now)) {
       setState(() => _targetDate = picked.toUtc());
     }
+  }
+
+  /// Returns true when the form should not be submittable.
+  ///
+  /// Deadline: no date selected, or the selected date is in the past.
+  /// Pace: the pace text field is empty or non-positive.
+  bool _isSubmitDisabled() {
+    if (_goalType == 'deadline') {
+      if (_targetDate == null) return true;
+      if (_targetDate!.isBefore(_now())) return true;
+    }
+    if (_goalType == 'pace') {
+      if (!_paceFieldValid) return true;
+    }
+    return false;
   }
 
   void _submit() {
@@ -443,9 +466,14 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
           ),
           onChanged: (v) {
             final parsed = int.tryParse(v);
-            if (parsed != null && parsed > 0) {
-              setState(() => _paceValue = parsed);
-            }
+            setState(() {
+              if (parsed != null && parsed > 0) {
+                _paceValue = parsed;
+                _paceFieldValid = true;
+              } else {
+                _paceFieldValid = false;
+              }
+            });
           },
         ),
         const SizedBox(height: 12),
@@ -626,27 +654,29 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
                     ),
                     const SizedBox(height: 24),
                   ],
-                  // Goal type toggle
+                  // Goal type toggle — text-only segments (no leading icons) and
+                  // showSelectedIcon:false: on a 3-segment button each cell is
+                  // only ~127 dp wide, and a leading icon next to "No deadline"
+                  // forced a 2-line wrap. The labels are self-explanatory, so we
+                  // drop the icons to keep every segment on one line.
                   SegmentedButton<String>(
+                    showSelectedIcon: false,
                     segments: [
                       ButtonSegment(
                         value: 'deadline',
                         label: Text(
                           AppLocalizations.of(context)!.goalTypeDeadline,
                         ),
-                        icon: const Icon(Icons.calendar_today),
                       ),
                       ButtonSegment(
                         value: 'pace',
                         label: Text(AppLocalizations.of(context)!.goalTypePace),
-                        icon: const Icon(Icons.speed),
                       ),
                       ButtonSegment(
                         value: 'none',
                         label: Text(
                           AppLocalizations.of(context)!.goalTypeNoDeadline,
                         ),
-                        icon: const Icon(Icons.all_inclusive),
                       ),
                     ],
                     selected: {_goalType},
@@ -674,9 +704,7 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
           ),
           const SizedBox(height: 16),
           FilledButton(
-            onPressed: (_goalType == 'deadline' && _targetDate == null)
-                ? null
-                : _submit,
+            onPressed: _isSubmitDisabled() ? null : _submit,
             child: Text(
               widget.submitLabel ??
                   (widget.existingGoal != null

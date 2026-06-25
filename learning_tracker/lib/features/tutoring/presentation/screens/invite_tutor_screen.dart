@@ -21,6 +21,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/text_input_formatters.dart';
+import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart';
 import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart';
@@ -72,6 +73,19 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
   }
 
   Future<void> _sendInvite() async {
+    // LOCAL-ONLY precondition: inviting a tutor requires a cloud account.
+    // Show a clear, non-retryable message instead of letting the attempt
+    // fail with a confusing generic error.
+    final authState = ref.read(authStateProvider);
+    if (authState.isLocalBorn) {
+      setState(
+        () => _errorMessage = AppLocalizations.of(
+          context,
+        )!.inviteTutorErrorLocalOnly,
+      );
+      return;
+    }
+
     final email = _emailController.text.trim();
     if (!_emailValid) {
       setState(

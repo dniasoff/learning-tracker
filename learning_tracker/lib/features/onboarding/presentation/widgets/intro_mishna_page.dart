@@ -176,7 +176,7 @@ class IntroMishnaProgressBar extends StatelessWidget {
                       child: Container(
                         width: c.maxWidth * t,
                         height: 5,
-                        color: const Color(0xFFB8C0CC),
+                        color: const Color(0xFF1DB97D),
                       ),
                     ),
                   ],

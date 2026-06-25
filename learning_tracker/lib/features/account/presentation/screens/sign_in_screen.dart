@@ -264,100 +264,149 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
             child: Column(
               children: [
                 const SizedBox(height: 10),
-                ConstrainedBox(
-                  constraints: const BoxConstraints(maxWidth: 430),
-                  child: Stack(
-                    children: [
-                      Positioned(
-                        top: -50,
-                        right: -58,
-                        child: Container(
-                          width: 170,
-                          height: 170,
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Color(0xFFE9EAF2),
+                Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 430),
+                    child: Stack(
+                      children: [
+                        Positioned(
+                          top: -50,
+                          right: -58,
+                          child: Container(
+                            width: 170,
+                            height: 170,
+                            decoration: const BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Color(0xFFE9EAF2),
+                            ),
                           ),
                         ),
-                      ),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.fromLTRB(24, 26, 24, 28),
-                        decoration: BoxDecoration(
-                          color: AppTheme.brandCreamCard,
-                          borderRadius: BorderRadius.circular(34),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.stretch,
-                          children: [
-                            Text(
-                              l10n.signInWelcomeBack,
-                              style: Theme.of(context).textTheme.headlineMedium
-                                  ?.copyWith(fontWeight: FontWeight.w800),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              l10n.signInReady,
-                              style: Theme.of(context).textTheme.bodyLarge
-                                  ?.copyWith(
-                                    color: AppTheme.brandInkMuted,
-                                    height: 1.4,
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.fromLTRB(24, 26, 24, 28),
+                          decoration: BoxDecoration(
+                            color: AppTheme.brandCreamCard,
+                            borderRadius: BorderRadius.circular(34),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Text(
+                                l10n.signInWelcomeBack,
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .headlineMedium
+                                    ?.copyWith(fontWeight: FontWeight.w800),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                l10n.signInReady,
+                                style: Theme.of(context).textTheme.bodyLarge
+                                    ?.copyWith(
+                                      color: AppTheme.brandInkMuted,
+                                      height: 1.4,
+                                    ),
+                                textAlign: TextAlign.center,
+                              ),
+                              const SizedBox(height: 16),
+                              // Fix #13: When offline and the account is not a
+                              // confirmed local-born account, show a plain
+                              // "you're offline" hint rather than the misleading
+                              // "local account only" banner (signInOfflineHint).
+                              if (!isOnline &&
+                                  _registryMatchKind !=
+                                      RegistryMatchKind.localBorn)
+                                Container(
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: AppTheme.brandCoralSoft.withValues(
+                                      alpha: 0.45,
+                                    ),
+                                    borderRadius: BorderRadius.circular(12),
+                                    border: Border.all(
+                                      color: AppTheme.brandCoralDeep.withValues(
+                                        alpha: 0.55,
+                                      ),
+                                    ),
                                   ),
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 16),
-                            SignInModeCard(mode: signInMode, l10n: l10n),
-                            const SizedBox(height: 26),
-                            SignInForm(
-                              formKey: _formKey,
-                              emailController: _emailController,
-                              passwordController: _passwordController,
-                              isLoading: isLoading,
-                              obscurePassword: _obscurePassword,
-                              keepSignedIn: _keepSignedIn,
-                              registrySubtitle: registrySubtitle,
-                              l10n: l10n,
-                              onEmailChanged: _onEmailChanged,
-                              onPasswordToggle: () => setState(
-                                () => _obscurePassword = !_obscurePassword,
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const Icon(
+                                        Icons.wifi_off_rounded,
+                                        color: AppTheme.brandCoralDeep,
+                                      ),
+                                      const SizedBox(width: 10),
+                                      Expanded(
+                                        child: Text(
+                                          l10n.signInOfflineHint,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodyMedium
+                                              ?.copyWith(
+                                                color: AppTheme.brandInk,
+                                                fontWeight: FontWeight.w600,
+                                              ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              else
+                                SignInModeCard(mode: signInMode, l10n: l10n),
+                              const SizedBox(height: 26),
+                              SignInForm(
+                                formKey: _formKey,
+                                emailController: _emailController,
+                                passwordController: _passwordController,
+                                isLoading: isLoading,
+                                obscurePassword: _obscurePassword,
+                                keepSignedIn: _keepSignedIn,
+                                registrySubtitle: registrySubtitle,
+                                l10n: l10n,
+                                onEmailChanged: _onEmailChanged,
+                                onPasswordToggle: () => setState(
+                                  () => _obscurePassword = !_obscurePassword,
+                                ),
+                                onKeepSignedInChanged: (value) => setState(
+                                  () => _keepSignedIn = value ?? false,
+                                ),
+                                onSubmit: () => _handleSignInWithEmail(l10n),
+                                validateEmail: validators.validateEmail,
+                                validatePassword: (v) {
+                                  if (v == null || v.isEmpty) {
+                                    return l10n.authPasswordRequired;
+                                  }
+                                  return null;
+                                },
+                                // AN-11: show "Forgot password?" for cloud
+                                // accounts (or unknown — the user may be typing
+                                // a new cloud email). Suppress for confirmed
+                                // local-born accounts (no Firebase reset).
+                                onForgotPassword:
+                                    _registryMatchKind ==
+                                        RegistryMatchKind.localBorn
+                                    ? null
+                                    : () => _handleForgotPassword(l10n),
                               ),
-                              onKeepSignedInChanged: (value) => setState(
-                                () => _keepSignedIn = value ?? false,
+                              const SizedBox(height: 12),
+                              SignInActions(
+                                isLoading: isLoading,
+                                isOnline: isOnline,
+                                l10n: l10n,
+                                onSignIn: () => _handleSignInWithEmail(l10n),
+                                onGoogleSignIn: () =>
+                                    _handleSignInWithGoogle(l10n),
+                                onRegister: () =>
+                                    context.router.replace(SignupRoute()),
                               ),
-                              onSubmit: () => _handleSignInWithEmail(l10n),
-                              validateEmail: validators.validateEmail,
-                              validatePassword: (v) {
-                                if (v == null || v.isEmpty) {
-                                  return l10n.authPasswordRequired;
-                                }
-                                return null;
-                              },
-                              // AN-11: show "Forgot password?" for cloud
-                              // accounts (or unknown — the user may be typing
-                              // a new cloud email). Suppress for confirmed
-                              // local-born accounts (no Firebase reset).
-                              onForgotPassword:
-                                  _registryMatchKind ==
-                                      RegistryMatchKind.localBorn
-                                  ? null
-                                  : () => _handleForgotPassword(l10n),
-                            ),
-                            const SizedBox(height: 12),
-                            SignInActions(
-                              isLoading: isLoading,
-                              isOnline: isOnline,
-                              l10n: l10n,
-                              onSignIn: () => _handleSignInWithEmail(l10n),
-                              onGoogleSignIn: () =>
-                                  _handleSignInWithGoogle(l10n),
-                              onRegister: () =>
-                                  context.router.replace(SignupRoute()),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ],

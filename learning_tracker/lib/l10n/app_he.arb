@@ -762,6 +762,10 @@
   },
   "enterParentPin": "הזינו קוד הורה",
   "enterParentPinSubtitle": "הזינו קוד בן 4 ספרות כדי לגשת להגדרות הורה.",
+  "pinDialogSubtitleSwitchProfile": "הזינו את הקוד כדי לעבור בין פרופילים.",
+  "@pinDialogSubtitleSwitchProfile": {
+    "description": "PIN dialog subtitle shown specifically in the profile-switch context. Replaces the generic 'access parent settings' copy when the PIN prompt is triggered by a profile switch."
+  },
   "enterNewPinSubtitle": "בחרו קוד חדש בן 4 ספרות.",
   "confirmNewPinSubtitle": "הזינו שוב את אותו קוד לאישור.",
   "changeParentPin": "שינוי קוד הורה",
@@ -817,6 +821,10 @@
   "chartCumulativeProgressSubtitle": "סה״כ השלמות לאורך זמן",
   "chartPointsEarned": "נקודות שהורו",
   "chartTotalTorahPoints": "נק׳ תורה סה״כ",
+  "chartPointsEarnedSubtitle": "נקודות שנצברו",
+  "@chartPointsEarnedSubtitle": {
+    "description": "Range-accurate subtitle for the Points Earned chart card in Recent Activity. Replaces the misleading 'TOTAL TORAH POINTS' all-time label — this value is scoped to the selected date range."
+  },
   "chartLast7Days": "7 ימים",
   "chartLast30Days": "30 ימים",
   "chartAllTime": "הכול",
@@ -899,6 +907,10 @@
   "authModeLocalBody": "ללא גיבוי לענן. הנתונים נשארים רק במכשיר הזה.",
   "offlineBannerMessage": "לא מקוונים — השינויים יסונכרנו כשתחזרו לרשת",
   "offlineBannerSemantics": "לא מקוונים — השינויים יסונכרנו כשתחזרו להיות מחוברים לרשת",
+  "signInOfflineHint": "אינכם מחוברים לאינטרנט. כניסה לחשבון דורשת חיבור לאינטרנט.",
+  "@signInOfflineHint": {
+    "description": "Hint shown on the Sign-In screen when the device has no internet. Replaces the misleading 'Local account only' banner — sign-in always requires a connection."
+  },
   "signInWelcomeBack": "ברוכים השבים!",
   "signInReady": "מוכנים להרפתקת הלמידה הבאה?",
   "signInYourEmail": "האימייל שלכם",
@@ -906,7 +918,7 @@
   "signInPasswordLabel": "סיסמה",
   "signInPasswordHint": "הכניסו את הסיסמה",
   "signInKeepMeSignedIn": "השאירו אותי מחוברים",
-  "signInForgotPassword": "שכחתי סיסמה?",
+  "signInForgotPassword": "שכחת את המפתח הסודי?",
   "signInForgotPasswordSent": "נשלח מייל לאיפוס סיסמה. בדקו את תיבת הדואר.",
   "signInForgotPasswordNoEmail": "נא הכניסו כתובת אימייל תחילה.",
   "signInCta": "התחברות",
@@ -2112,9 +2124,12 @@
     "description": "Caption shown under the PaceIndicator on the Curriculum Progress screen — disambiguates pace (engagement-tier track learning) from the lifetime tier."
   },
 
-  "bulkMarkWizardSubtitle": "פריטים אלו נספרים לסיומים ולידע הכולל — אך לא לרצף או לנקודות שלך.",
+  "bulkMarkWizardSubtitle": "פריטים אלו נספרים ל{siyumimTerm} ולידע הכולל — אך לא לרצף או לנקודות שלך.",
   "@bulkMarkWizardSubtitle": {
-    "description": "Subtitle/explainer for the Bulk Mark wizard."
+    "description": "Subtitle/explainer for the Bulk Mark wizard — clarifies tier credit. {siyumimTerm} is the toggle-aware domain term (Siyumim / סיומים) so the copy respects the Hebrew Terms preference.",
+    "placeholders": {
+      "siyumimTerm": { "type": "String" }
+    }
   },
   "bulkMarkConfirmationToast": "{count} פריטים סומנו כנלמדו בעבר. הם יופיעו בידע הכולל ועשויים לפתוח סיומים.",
   "@bulkMarkConfirmationToast": {
@@ -2385,6 +2400,7 @@
       "email": { "type": "String" }
     }
   },
+  "inviteTutorErrorLocalOnly": "הזמנת מדריך מצריכה חשבון ענן — שדרגו את החשבון כדי להזמין מדריך.",
   "inviteTutorErrorUnauthenticated": "לא הצלחנו לשלוח את ההזמנה. היכנסו לחשבון ונסו שוב.",
   "inviteTutorErrorGeneric": "לא הצלחנו לשלוח את ההזמנה. נסו שוב.",
 

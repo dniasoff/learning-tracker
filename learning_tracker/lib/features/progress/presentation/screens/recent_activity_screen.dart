@@ -153,7 +153,7 @@ class _RecentActivityScreenState extends ConsumerState<RecentActivityScreen> {
               const SizedBox(height: 14),
               _ChartSection(
                 title: l10n.chartPointsEarned,
-                subtitle: l10n.chartTotalTorahPoints,
+                subtitle: l10n.chartPointsEarnedSubtitle,
                 trailing: _PointsTotalLabel(window: window),
                 child: SizedBox(
                   height: 140,

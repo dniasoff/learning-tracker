@@ -867,6 +867,10 @@
   },
   "enterParentPin": "Enter Parent PIN",
   "enterParentPinSubtitle": "Enter your 4-digit PIN to access parent settings.",
+  "pinDialogSubtitleSwitchProfile": "Enter the PIN to switch profiles.",
+  "@pinDialogSubtitleSwitchProfile": {
+    "description": "PIN dialog subtitle shown specifically in the profile-switch context. Replaces the generic 'access parent settings' copy when the PIN prompt is triggered by a profile switch rather than by opening parent settings."
+  },
   "enterNewPinSubtitle": "Choose a new 4-digit PIN.",
   "confirmNewPinSubtitle": "Enter the same PIN again to confirm.",
   "changeParentPin": "Change Parent PIN",
@@ -922,6 +926,10 @@
   "chartCumulativeProgressSubtitle": "Total completions over time",
   "chartPointsEarned": "Points Earned",
   "chartTotalTorahPoints": "TOTAL TORAH POINTS",
+  "chartPointsEarnedSubtitle": "POINTS EARNED",
+  "@chartPointsEarnedSubtitle": {
+    "description": "Range-accurate subtitle for the Points Earned chart card in Recent Activity. Replaces the misleading 'TOTAL TORAH POINTS' all-time label — this value is scoped to the selected date range."
+  },
   "chartLast7Days": "Last 7 Days",
   "chartLast30Days": "Last 30 Days",
   "chartAllTime": "All Time",
@@ -1010,6 +1018,10 @@
   "@offlineBannerSemantics": {
     "description": "Accessibility (screen reader) label for the offline top banner."
   },
+  "signInOfflineHint": "You're offline. Signing in requires an internet connection.",
+  "@signInOfflineHint": {
+    "description": "Hint shown on the Sign-In screen when the device has no internet. Replaces the misleading 'Local account only' banner — sign-in always requires a connection, so users should not expect to sign in offline."
+  },
   "signInWelcomeBack": "Welcome Back!",
   "signInReady": "Ready for your next learning adventure?",
   "signInYourEmail": "Your Email",
@@ -1017,7 +1029,7 @@
   "signInPasswordLabel": "Secret Key",
   "signInPasswordHint": "Enter your secret key",
   "signInKeepMeSignedIn": "Keep me signed in",
-  "signInForgotPassword": "Forgot password?",
+  "signInForgotPassword": "Forgot your Secret Key?",
   "signInForgotPasswordSent": "Password reset email sent. Check your inbox.",
   "signInForgotPasswordNoEmail": "Please enter your email address first.",
   "signInCta": "Sign In",
@@ -2307,9 +2319,12 @@
     "description": "Caption shown under the PaceIndicator on the Curriculum Progress screen — disambiguates pace (engagement-tier track learning) from the lifetime tier so users don't conflate the two."
   },
 
-  "bulkMarkWizardSubtitle": "These count toward siyumim and lifetime knowledge — but not toward your streak or points.",
+  "bulkMarkWizardSubtitle": "These count toward {siyumimTerm} and lifetime knowledge — but not toward your streak or points.",
   "@bulkMarkWizardSubtitle": {
-    "description": "Subtitle/explainer for the Bulk Mark wizard (Wave 5 Task #17) — clarifies tier credit so the user understands why streak/points are not impacted."
+    "description": "Subtitle/explainer for the Bulk Mark wizard — clarifies tier credit. {siyumimTerm} is the toggle-aware domain term (Siyumim / סיומים) so the copy respects the Hebrew Terms preference.",
+    "placeholders": {
+      "siyumimTerm": { "type": "String" }
+    }
   },
   "bulkMarkConfirmationToast": "{count} items marked as previously learned. They'll appear in Lifetime Knowledge and may unlock siyumim.",
   "@bulkMarkConfirmationToast": {
@@ -2460,7 +2475,7 @@
   "redeemScreenTitle": "Redeem Prizes",
   "redeemScreenBalance": "Your Balance",
   "redeemScreenNoRewards": "No prizes configured yet.\nAsk a parent to set some up!",
-  "redeemScreenCostLabel": "{points} points",
+  "redeemScreenCostLabel": "{points} Points",
   "@redeemScreenCostLabel": {
     "placeholders": { "points": { "type": "int" } }
   },
@@ -2583,6 +2598,7 @@
       "email": { "type": "String" }
     }
   },
+  "inviteTutorErrorLocalOnly": "Tutoring requires a cloud account — upgrade to invite a tutor.",
   "inviteTutorErrorUnauthenticated": "Couldn't send the invitation. Please sign in and try again.",
   "inviteTutorErrorGeneric": "Couldn't send the invitation. Please try again.",
 

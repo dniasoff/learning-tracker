@@ -455,7 +455,8 @@ class ProfileSwitcherBar extends ConsumerWidget {
     if (authUser != null) {
       if (authUser.displayName.trim().isNotEmpty) {
         accountName = authUser.displayName.trim();
-      } else if (authUser.email.contains('@')) {
+      } else if (authUser.email.contains('@') &&
+          !authUser.email.endsWith('@offline.local')) {
         accountName = authUser.email.split('@').first;
       }
     }

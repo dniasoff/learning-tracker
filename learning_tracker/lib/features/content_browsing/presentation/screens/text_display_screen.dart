@@ -53,8 +53,11 @@ class TextDisplayScreen extends ConsumerWidget {
     // the user always knows where they are (Sefer › Perek › Mishna / Daf).
     // Wraps onto multiple lines if needed; the AppBar grows to fit.
     final chainAsync = ref.watch(renderedDisplayForRefProvider(sefariaRef));
-    final chainTitle =
-        chainAsync.asData?.value ?? sefariaRef.replaceAll('_', ' ');
+    final chainTitle = chainAsync.when(
+      data: (v) => v,
+      loading: () => '…',
+      error: (_, __) => sefariaRef.replaceAll('_', ' '),
+    );
 
     final adjAsync = ref.watch(adjacentContentRefsProvider(sefariaRef));
     final adj = adjAsync.asData?.value;

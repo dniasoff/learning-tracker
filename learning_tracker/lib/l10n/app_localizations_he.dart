@@ -1669,6 +1669,10 @@ class AppLocalizationsHe extends AppLocalizations {
       'הזינו קוד בן 4 ספרות כדי לגשת להגדרות הורה.';
 
   @override
+  String get pinDialogSubtitleSwitchProfile =>
+      'הזינו את הקוד כדי לעבור בין פרופילים.';
+
+  @override
   String get enterNewPinSubtitle => 'בחרו קוד חדש בן 4 ספרות.';
 
   @override
@@ -1794,6 +1798,9 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String get chartTotalTorahPoints => 'נק׳ תורה סה״כ';
+
+  @override
+  String get chartPointsEarnedSubtitle => 'נקודות שנצברו';
 
   @override
   String get chartLast7Days => '7 ימים';
@@ -1995,6 +2002,10 @@ class AppLocalizationsHe extends AppLocalizations {
       'לא מקוונים — השינויים יסונכרנו כשתחזרו להיות מחוברים לרשת';
 
   @override
+  String get signInOfflineHint =>
+      'אינכם מחוברים לאינטרנט. כניסה לחשבון דורשת חיבור לאינטרנט.';
+
+  @override
   String get signInWelcomeBack => 'ברוכים השבים!';
 
   @override
@@ -2016,7 +2027,7 @@ class AppLocalizationsHe extends AppLocalizations {
   String get signInKeepMeSignedIn => 'השאירו אותי מחוברים';
 
   @override
-  String get signInForgotPassword => 'שכחתי סיסמה?';
+  String get signInForgotPassword => 'שכחת את המפתח הסודי?';
 
   @override
   String get signInForgotPasswordSent =>
@@ -4035,8 +4046,9 @@ class AppLocalizationsHe extends AppLocalizations {
       'הקצב עוקב אחר לימוד במסלולים בלבד.';
 
   @override
-  String get bulkMarkWizardSubtitle =>
-      'פריטים אלו נספרים לסיומים ולידע הכולל — אך לא לרצף או לנקודות שלך.';
+  String bulkMarkWizardSubtitle(String siyumimTerm) {
+    return 'פריטים אלו נספרים ל$siyumimTerm ולידע הכולל — אך לא לרצף או לנקודות שלך.';
+  }
 
   @override
   String bulkMarkConfirmationToast(int count) {
@@ -4445,6 +4457,10 @@ class AppLocalizationsHe extends AppLocalizations {
   String inviteTutorSentSnackbar(String email) {
     return 'ההזמנה נשלחה אל $email!';
   }
+
+  @override
+  String get inviteTutorErrorLocalOnly =>
+      'הזמנת מדריך מצריכה חשבון ענן — שדרגו את החשבון כדי להזמין מדריך.';
 
   @override
   String get inviteTutorErrorUnauthenticated =>

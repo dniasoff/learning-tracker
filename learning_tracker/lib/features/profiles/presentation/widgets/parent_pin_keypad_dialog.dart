@@ -12,11 +12,16 @@ import 'package:learning_tracker/l10n/app_localizations.dart';
 ///
 /// Fires [AnalyticsEvent.parentModeEntered] on success when [analytics] is
 /// provided (Story 27.14, DNI-390).
+///
+/// [subtitle] overrides the default subtitle copy. Pass a context-appropriate
+/// string (e.g. `l10n.pinDialogSubtitleSwitchProfile`) when the action is
+/// something other than accessing parent settings.
 Future<bool> showParentPinVerificationDialog(
   BuildContext context, {
   required int profileId,
   required PinService pinService,
   AnalyticsService? analytics,
+  String? subtitle,
 }) async {
   final result = await showDialog<bool>(
     context: context,
@@ -25,6 +30,7 @@ Future<bool> showParentPinVerificationDialog(
     builder: (ctx) => _ParentPinVerificationDialog(
       profileId: profileId,
       pinService: pinService,
+      subtitle: subtitle,
     ),
   );
   final verified = result ?? false;
@@ -66,10 +72,15 @@ class _ParentPinVerificationDialog extends StatefulWidget {
   const _ParentPinVerificationDialog({
     required this.profileId,
     required this.pinService,
+    this.subtitle,
   });
 
   final int profileId;
   final PinService pinService;
+
+  /// Overrides the default subtitle copy. When null, falls back to
+  /// [AppLocalizations.enterParentPinSubtitle].
+  final String? subtitle;
 
   @override
   State<_ParentPinVerificationDialog> createState() =>
@@ -148,7 +159,7 @@ class _ParentPinVerificationDialogState
     final l10n = AppLocalizations.of(context)!;
     return PinKeypadDialogFrame(
       title: l10n.enterParentPin,
-      subtitle: l10n.enterParentPinSubtitle,
+      subtitle: widget.subtitle ?? l10n.enterParentPinSubtitle,
       digits: _digits,
       errorMessage: _errorMessage,
       lockedOut: _lockedOut,

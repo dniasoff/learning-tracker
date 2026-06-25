@@ -3003,6 +3003,12 @@ abstract class AppLocalizations {
   /// **'Enter your 4-digit PIN to access parent settings.'**
   String get enterParentPinSubtitle;
 
+  /// PIN dialog subtitle shown specifically in the profile-switch context. Replaces the generic 'access parent settings' copy when the PIN prompt is triggered by a profile switch rather than by opening parent settings.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the PIN to switch profiles.'**
+  String get pinDialogSubtitleSwitchProfile;
+
   /// No description provided for @enterNewPinSubtitle.
   ///
   /// In en, this message translates to:
@@ -3236,6 +3242,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'TOTAL TORAH POINTS'**
   String get chartTotalTorahPoints;
+
+  /// Range-accurate subtitle for the Points Earned chart card in Recent Activity. Replaces the misleading 'TOTAL TORAH POINTS' all-time label — this value is scoped to the selected date range.
+  ///
+  /// In en, this message translates to:
+  /// **'POINTS EARNED'**
+  String get chartPointsEarnedSubtitle;
 
   /// No description provided for @chartLast7Days.
   ///
@@ -3579,6 +3591,12 @@ abstract class AppLocalizations {
   /// **'Offline — changes will sync when you\'re back online'**
   String get offlineBannerSemantics;
 
+  /// Hint shown on the Sign-In screen when the device has no internet. Replaces the misleading 'Local account only' banner — sign-in always requires a connection, so users should not expect to sign in offline.
+  ///
+  /// In en, this message translates to:
+  /// **'You\'re offline. Signing in requires an internet connection.'**
+  String get signInOfflineHint;
+
   /// No description provided for @signInWelcomeBack.
   ///
   /// In en, this message translates to:
@@ -3624,7 +3642,7 @@ abstract class AppLocalizations {
   /// No description provided for @signInForgotPassword.
   ///
   /// In en, this message translates to:
-  /// **'Forgot password?'**
+  /// **'Forgot your Secret Key?'**
   String get signInForgotPassword;
 
   /// No description provided for @signInForgotPasswordSent.
@@ -6855,11 +6873,11 @@ abstract class AppLocalizations {
   /// **'Pace tracks track learning only.'**
   String get paceLiveLearningOnlyCaption;
 
-  /// Subtitle/explainer for the Bulk Mark wizard (Wave 5 Task #17) — clarifies tier credit so the user understands why streak/points are not impacted.
+  /// Subtitle/explainer for the Bulk Mark wizard — clarifies tier credit. {siyumimTerm} is the toggle-aware domain term (Siyumim / סיומים) so the copy respects the Hebrew Terms preference.
   ///
   /// In en, this message translates to:
-  /// **'These count toward siyumim and lifetime knowledge — but not toward your streak or points.'**
-  String get bulkMarkWizardSubtitle;
+  /// **'These count toward {siyumimTerm} and lifetime knowledge — but not toward your streak or points.'**
+  String bulkMarkWizardSubtitle(String siyumimTerm);
 
   /// Confirmation toast after the bulk-mark save completes — used by Wave 5 Task #17.
   ///
@@ -7068,7 +7086,7 @@ abstract class AppLocalizations {
   /// No description provided for @redeemScreenCostLabel.
   ///
   /// In en, this message translates to:
-  /// **'{points} points'**
+  /// **'{points} Points'**
   String redeemScreenCostLabel(int points);
 
   /// No description provided for @redeemScreenAffordableLabel.
@@ -7535,6 +7553,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Invite sent to {email}!'**
   String inviteTutorSentSnackbar(String email);
+
+  /// No description provided for @inviteTutorErrorLocalOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Tutoring requires a cloud account — upgrade to invite a tutor.'**
+  String get inviteTutorErrorLocalOnly;
 
   /// No description provided for @inviteTutorErrorUnauthenticated.
   ///

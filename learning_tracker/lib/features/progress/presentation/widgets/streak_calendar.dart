@@ -160,13 +160,18 @@ class _DayRow extends StatelessWidget {
       children: [
         for (final date in dates)
           Expanded(
-            child: AspectRatio(
-              aspectRatio: 1,
-              child: _DayCell(
-                date: date,
-                isActive: activeDates.contains(date),
-                isToday: date == today,
-                useHebrewDate: useHebrewDate,
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 44, maxHeight: 44),
+                child: AspectRatio(
+                  aspectRatio: 1,
+                  child: _DayCell(
+                    date: date,
+                    isActive: activeDates.contains(date),
+                    isToday: date == today,
+                    useHebrewDate: useHebrewDate,
+                  ),
+                ),
               ),
             ),
           ),

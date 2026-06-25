@@ -316,17 +316,21 @@ class HierarchySelectionPanelState
           widget.bottomActions!(context)
         else if (widget.onSkip != null || widget.onConfirmed != null)
           Padding(
-            padding: const EdgeInsets.all(16),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
             child: Row(
               children: [
                 if (widget.onSkip != null) ...[
                   Expanded(
                     child: OutlinedButton(
                       onPressed: widget.onSkip,
-                      child: Text(widget.skipLabel ?? l10n.actionSkipForNow),
+                      child: Text(
+                        widget.skipLabel ?? l10n.actionSkipForNow,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 8),
                 ],
                 if (widget.onConfirmed != null)
                   Expanded(
@@ -334,7 +338,11 @@ class HierarchySelectionPanelState
                       onPressed: _selections.isNotEmpty
                           ? () => widget.onConfirmed!(Set.of(_selections))
                           : null,
-                      child: Text(widget.confirmLabel ?? l10n.actionNext),
+                      child: Text(
+                        widget.confirmLabel ?? l10n.actionNext,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                   ),
               ],
