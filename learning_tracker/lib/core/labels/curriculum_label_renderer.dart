@@ -183,10 +183,17 @@ class CurriculumLabelRenderer {
   /// level one above the item's deepest non-null level. Used by the reader
   /// page's two-line AppBar to show "פרק ג" big and "בראשית" small.
   ///
+  /// [hebrewNamesPerSegment], when provided, supplies pre-resolved Hebrew
+  /// names for each level in the full path (including the leaf). This mirrors
+  /// the pattern used by [renderForItem] and [renderBreadcrumb]. When not
+  /// provided the renderer falls back to the raw segment values for named
+  /// levels, which may surface English organizational labels in Hebrew mode.
+  ///
   /// Returns null when the item is already at level 1 (no parent).
   static String? renderParentForItem(
     ContentItem item, {
     required bool useHebrew,
+    List<String?>? hebrewNamesPerSegment,
     TransliterationVariant transliterationVariant =
         TransliterationVariant.ashkenazi,
   }) {
@@ -197,10 +204,16 @@ class CurriculumLabelRenderer {
     if (rawSegments.length < 2) return null;
 
     final parentSegments = rawSegments.sublist(0, rawSegments.length - 1);
+    // Trim hebrewNamesPerSegment to the parent depth when provided.
+    final parentHebrewNames = hebrewNamesPerSegment?.sublist(
+      0,
+      parentSegments.length,
+    );
     final segments = renderBreadcrumb(
       curriculumId: id,
       rawSegmentValues: parentSegments,
       useHebrew: useHebrew,
+      hebrewNamesPerSegment: parentHebrewNames,
       transliterationVariant: transliterationVariant,
     );
     return segments.last;

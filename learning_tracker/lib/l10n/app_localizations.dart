@@ -4323,6 +4323,12 @@ abstract class AppLocalizations {
   /// **'You have no tasks remaining for today.'**
   String get tasksNoTasksRemainingTitle;
 
+  /// No description provided for @tasksNoOverdueTasksSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No overdue tasks.'**
+  String get tasksNoOverdueTasksSubtitle;
+
   /// No description provided for @undoLabel.
   ///
   /// In en, this message translates to:

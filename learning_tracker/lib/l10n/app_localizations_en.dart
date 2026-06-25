@@ -2453,6 +2453,9 @@ class AppLocalizationsEn extends AppLocalizations {
       'You have no tasks remaining for today.';
 
   @override
+  String get tasksNoOverdueTasksSubtitle => 'No overdue tasks.';
+
+  @override
   String get undoLabel => 'Undo';
 
   @override

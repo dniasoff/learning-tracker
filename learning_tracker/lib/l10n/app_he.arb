@@ -1144,6 +1144,7 @@
   "dailyTasksTitle": "משימות יומיות",
   "taskSkippedUntilTomorrow": "המשימה נדחתה למחר",
   "tasksNoTasksRemainingTitle": "אין משימות נותרות להיום.",
+  "tasksNoOverdueTasksSubtitle": "אין משימות באיחור.",
   "undoLabel": "בטל",
 
   "searchTitle": "חיפוש",

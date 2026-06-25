@@ -52,10 +52,14 @@ class LimudimChazarosBarChart extends ConsumerWidget {
     final maxY = maxTotal == 0 ? 5.0 : (maxTotal + 1).toDouble();
 
     final isShortRange = data.length <= 7;
-    // Weekday axis labels follow the UI locale — on a Hebrew device they must be
-    // Hebrew letters (א..ש), matching the streak calendar above, not English
-    // MON/TUE which leaked into the otherwise-Hebrew Recent Activity screen.
-    final isHebrew = ref.watch(currentAppLocaleProvider).languageCode == 'he';
+    // Weekday axis labels follow both the UI locale AND the Hebrew-date
+    // preference — mirrors the streak calendar's headerUsesHebrewScript logic.
+    // Either condition is sufficient: a Hebrew-locale device must show Hebrew
+    // letters even on a Gregorian date system, and a user who opted into the
+    // Hebrew calendar must see Hebrew weekday initials even with an English UI.
+    final isHebrew =
+        ref.watch(useHebrewDateProvider) ||
+        ref.watch(currentAppLocaleProvider).languageCode == 'he';
     const weekdayLabelEn = <int, String>{
       DateTime.monday: 'MON',
       DateTime.tuesday: 'TUE',

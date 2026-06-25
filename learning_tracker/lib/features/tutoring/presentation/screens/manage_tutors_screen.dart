@@ -238,7 +238,7 @@ class _ChildGrantsSection extends ConsumerWidget {
                 child: Text(
                   l10n.manageTutorsNoTutors,
                   style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.outline,
+                    color: theme.colorScheme.onSurfaceVariant,
                   ),
                 ),
               );

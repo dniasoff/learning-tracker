@@ -419,6 +419,7 @@ class _RewardConfigurationScreenState
                       _RewardPreview(
                         iconIndex: form.iconIndex,
                         previewTitle: previewTitle,
+                        isPlaceholder: form.name.trim().isEmpty,
                         previewPoints: form.previewPoints,
                         l10n: l10n,
                       ),
@@ -493,12 +494,14 @@ class _RewardPreview extends StatelessWidget {
   const _RewardPreview({
     required this.iconIndex,
     required this.previewTitle,
+    required this.isPlaceholder,
     required this.previewPoints,
     required this.l10n,
   });
 
   final int iconIndex;
   final String previewTitle;
+  final bool isPlaceholder;
   final int previewPoints;
   final AppLocalizations l10n;
 
@@ -546,11 +549,18 @@ class _RewardPreview extends StatelessWidget {
                   children: [
                     Text(
                       previewTitle,
-                      style: const TextStyle(
-                        color: _kNavy,
-                        fontWeight: FontWeight.w800,
-                        fontSize: 16,
-                      ),
+                      style: isPlaceholder
+                          ? const TextStyle(
+                              color: Colors.grey,
+                              fontWeight: FontWeight.normal,
+                              fontStyle: FontStyle.italic,
+                              fontSize: 16,
+                            )
+                          : const TextStyle(
+                              color: _kNavy,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 16,
+                            ),
                     ),
                     const SizedBox(height: 6),
                     Row(

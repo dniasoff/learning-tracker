@@ -1255,6 +1255,7 @@
   "dailyTasksTitle": "Daily Tasks",
   "taskSkippedUntilTomorrow": "Task skipped until tomorrow",
   "tasksNoTasksRemainingTitle": "You have no tasks remaining for today.",
+  "tasksNoOverdueTasksSubtitle": "No overdue tasks.",
   "undoLabel": "Undo",
 
   "searchTitle": "Search",

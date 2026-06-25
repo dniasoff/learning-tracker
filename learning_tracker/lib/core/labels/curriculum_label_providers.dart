@@ -72,17 +72,46 @@ Future<String> renderedLeafForRef(Ref ref, String sefariaRef) async {
 /// Renders the parent (one level above leaf) display string for [sefariaRef].
 /// Used by the reader page's two-line AppBar — leaf big, parent small.
 /// Returns null when the item is already at level 1.
+///
+/// Looks up Hebrew names for every ancestor segment (mirroring
+/// [renderedDisplayForRef]) so named levels like "Seder Zeraim" or "Genesis"
+/// render in Hebrew rather than as raw English organizational labels.
 @riverpod
 Future<String?> renderedParentForRef(Ref ref, String sefariaRef) async {
   final useHebrew = ref.watch(effectiveUseHebrewTermsProvider);
   final variant = ref.watch(currentTransliterationVariantProvider);
   final item = await _findContentItem(ref, sefariaRef);
   if (item == null) return null;
-  return CurriculumLabelRenderer.renderParentForItem(
-    item,
+
+  final id = _curriculumIdFromStorageKey(item.curriculumId);
+  if (id == null) return null;
+
+  final rawSegments = <String>[item.level1];
+  if (item.level2 != null) rawSegments.add(item.level2!);
+  if (item.level3 != null) rawSegments.add(item.level3!);
+  if (item.level4 != null) rawSegments.add(item.level4!);
+
+  // Need at least two segments to have a parent.
+  if (rawSegments.length < 2) return null;
+
+  // The parent path is all segments except the deepest leaf.
+  final parentSegments = rawSegments.sublist(0, rawSegments.length - 1);
+
+  // Look up Hebrew names for every parent segment so named ancestor levels
+  // (e.g. "Seder Zeraim", "Genesis") render in Hebrew, not raw English.
+  final allItems = await ref.watch(curriculumContentProvider(id).future);
+  final hebrewNames = _hebrewNamesForPath(allItems, rawSegments);
+  // Trim to parent depth — we only render the parent segments here.
+  final parentHebrewNames = hebrewNames.sublist(0, parentSegments.length);
+
+  final segments = CurriculumLabelRenderer.renderBreadcrumb(
+    curriculumId: id,
+    rawSegmentValues: parentSegments,
     useHebrew: useHebrew,
+    hebrewNamesPerSegment: parentHebrewNames,
     transliterationVariant: variant,
   );
+  return segments.last;
 }
 
 /// Renders every breadcrumb segment for [sefariaRef] in order. Looks up

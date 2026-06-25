@@ -8,8 +8,10 @@ import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
+import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/providers/database_provider.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
+import 'package:learning_tracker/core/widgets/empty_state.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 import 'package:learning_tracker/features/tracks/setup/presentation/providers/track_management_providers.dart';
@@ -267,14 +269,14 @@ class _PointConfigScreenState extends ConsumerState<PointConfigScreen> {
         ),
         data: (pointData) {
           if (pointData.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(24),
-                child: Text(
-                  l10n.pointConfigNoActiveTracksBody,
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyLarge,
-                ),
+            return EmptyState(
+              icon: Icons.tune_rounded,
+              message: l10n.noActiveTracks,
+              subtitle: l10n.pointConfigNoActiveTracksBody,
+              action: OutlinedButton.icon(
+                onPressed: () => context.router.push(TrackManagementHubRoute()),
+                icon: const Icon(Icons.playlist_add_rounded),
+                label: Text(l10n.manageTracks),
               ),
             );
           }

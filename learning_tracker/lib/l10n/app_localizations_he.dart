@@ -2430,6 +2430,9 @@ class AppLocalizationsHe extends AppLocalizations {
   String get tasksNoTasksRemainingTitle => 'אין משימות נותרות להיום.';
 
   @override
+  String get tasksNoOverdueTasksSubtitle => 'אין משימות באיחור.';
+
+  @override
   String get undoLabel => 'בטל';
 
   @override

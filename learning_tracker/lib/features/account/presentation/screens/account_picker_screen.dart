@@ -83,35 +83,29 @@ class AccountPickerScreen extends ConsumerWidget {
               return const SizedBox.shrink();
             }
 
-            return Column(
+            return ListView(
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
               children: [
-                Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                    children: [
-                      Text(
-                        l10n.accountPickerTitle,
-                        style: theme.textTheme.displaySmall?.copyWith(
-                          color: AppTheme.brandInk,
-                          fontWeight: FontWeight.w800,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        l10n.accountPickerSubtitle,
-                        style: theme.textTheme.bodyMedium?.copyWith(
-                          color: AppTheme.brandInkMuted,
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                      ...accounts.map(
-                        (account) => Padding(
-                          padding: const EdgeInsets.only(bottom: 10),
-                          child: _AccountTile(account: account),
-                        ),
-                      ),
-                    ],
+                Text(
+                  l10n.accountPickerTitle,
+                  style: theme.textTheme.displaySmall?.copyWith(
+                    color: AppTheme.brandInk,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  l10n.accountPickerSubtitle,
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: AppTheme.brandInkMuted,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                ...accounts.map(
+                  (account) => Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: _AccountTile(account: account),
                   ),
                 ),
                 _BottomAddAccountSection(

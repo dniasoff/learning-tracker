@@ -357,6 +357,7 @@ class ProfileSwitcherSheet extends ConsumerWidget {
         context,
         profileId: activeProfileId,
         pinService: ref.read(pinServiceProvider),
+        subtitle: AppLocalizations.of(context)!.pinDialogSubtitleSwitchProfile,
       ).then((verified) {
         if (verified && context.mounted) action();
       }),

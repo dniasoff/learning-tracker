@@ -63,13 +63,12 @@ class SchedulerScreen extends ConsumerWidget {
                 : rawTasks;
             final visibleTasks = _filterTasks(tasks, section);
             if (visibleTasks.isEmpty) {
+              final l10n = AppLocalizations.of(context)!;
               return EmptyState(
-                message: AppLocalizations.of(
-                  context,
-                )!.dashboardAllCaughtUpTitle,
-                subtitle: AppLocalizations.of(
-                  context,
-                )!.tasksNoTasksRemainingTitle,
+                message: l10n.dashboardAllCaughtUpTitle,
+                subtitle: section == SchedulerTaskSection.overdue
+                    ? l10n.tasksNoOverdueTasksSubtitle
+                    : l10n.tasksNoTasksRemainingTitle,
                 icon: Icons.celebration_outlined,
               );
             }
