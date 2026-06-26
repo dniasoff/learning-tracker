@@ -234,7 +234,9 @@ List<Override> _calendarModeOverrides(_MockCalendarProgramService calendarSvc) {
   final db = inMemoryDb();
   return [
     userDatabaseProvider.overrideWithValue(db),
-    calendarProgramServiceProvider.overrideWithValue(calendarSvc),
+    calendarProgramServiceProvider.overrideWith(
+      (ref) => Future.value(calendarSvc),
+    ),
     useHebrewTermsProvider.overrideWith(() => _FalseUseHebrewTerms()),
     syncWriteFacadeProvider.overrideWithValue(null),
     activeProfileIdProvider.overrideWith(_ProfileIdOverride.new),
@@ -359,7 +361,9 @@ void main() {
 
         final overrides = [
           ..._baseOverridesWithContentRepo(contentRepo),
-          calendarProgramServiceProvider.overrideWithValue(calendarSvc),
+          calendarProgramServiceProvider.overrideWith(
+            (ref) => Future.value(calendarSvc),
+          ),
         ];
 
         await tester.pumpWidget(
@@ -1013,7 +1017,9 @@ void main() {
       final db = inMemoryDb();
       final overrides = [
         userDatabaseProvider.overrideWithValue(db),
-        calendarProgramServiceProvider.overrideWithValue(calendarSvc),
+        calendarProgramServiceProvider.overrideWith(
+          (ref) => Future.value(calendarSvc),
+        ),
         useHebrewTermsProvider.overrideWith(() => _TrueUseHebrewTerms()),
         syncWriteFacadeProvider.overrideWithValue(null),
         activeProfileIdProvider.overrideWith(_ProfileIdOverride.new),
@@ -1069,7 +1075,9 @@ void main() {
       final db = inMemoryDb();
       final overrides = [
         userDatabaseProvider.overrideWithValue(db),
-        calendarProgramServiceProvider.overrideWithValue(calendarSvc),
+        calendarProgramServiceProvider.overrideWith(
+          (ref) => Future.value(calendarSvc),
+        ),
         useHebrewTermsProvider.overrideWith(() => _TrueUseHebrewTerms()),
         syncWriteFacadeProvider.overrideWithValue(null),
         activeProfileIdProvider.overrideWith(_ProfileIdOverride.new),
@@ -1119,7 +1127,9 @@ void main() {
       final db = inMemoryDb();
       final overrides = [
         userDatabaseProvider.overrideWithValue(db),
-        calendarProgramServiceProvider.overrideWithValue(calendarSvc),
+        calendarProgramServiceProvider.overrideWith(
+          (ref) => Future.value(calendarSvc),
+        ),
         useHebrewTermsProvider.overrideWith(() => _TrueUseHebrewTerms()),
         syncWriteFacadeProvider.overrideWithValue(null),
         activeProfileIdProvider.overrideWith(_ProfileIdOverride.new),

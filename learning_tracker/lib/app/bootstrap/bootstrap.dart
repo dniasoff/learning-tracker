@@ -6,7 +6,6 @@ import 'package:learning_tracker/app/bootstrap/analytics_bootstrap.dart';
 import 'package:learning_tracker/app/bootstrap/crashlytics_bootstrap.dart';
 import 'package:learning_tracker/app/bootstrap/firebase_bootstrap.dart';
 import 'package:learning_tracker/app/bootstrap/notifications_bootstrap.dart';
-import 'package:learning_tracker/app/bootstrap/seed_bootstrap.dart';
 import 'package:learning_tracker/core/analytics/analytics_provider.dart';
 import 'package:learning_tracker/core/logging/crashlytics_service.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
@@ -24,10 +23,11 @@ typedef BootstrapResult = ({
 
 /// Orchestrates the full app bootstrap sequence.
 ///
-/// Initialises Firebase, logging, analytics, Crashlytics, the seed DB,
-/// account resolution, and the Riverpod [ProviderContainer]. Wires the
-/// resolved profile listener for Crashlytics. Runs the notification
-/// bootstrap as a side-effect against the built container.
+/// Initialises Firebase, logging, analytics, Crashlytics, account resolution,
+/// and the Riverpod [ProviderContainer]. Seed-DB extraction is deferred to
+/// [contentDatabaseProvider] so [runApp] fires after ~1-2 s (Firebase +
+/// account only). Wires the resolved profile listener for Crashlytics. Runs
+/// the notification bootstrap as a side-effect against the built container.
 ///
 /// Returns a [BootstrapResult] whose [container] is ready for
 /// [UncontrolledProviderScope] and whose [crashlytics] is suitable for the
@@ -44,11 +44,12 @@ Future<BootstrapResult> bootstrap() async {
 
   log.info(event: 'app_starting_local_first');
 
+  // Seed extraction (SeedManager.ensureContentDb) runs lazily inside
+  // contentDbPathProvider / contentDatabaseProvider — no await here.
+  // runApp is called after only Firebase + account init (~1-2 s), and
+  // content-DB-dependent screens show their loading state until seeding
+  // completes.
   final docsDir = await getApplicationDocumentsDirectory();
-  final contentDbPath = await bootstrapSeedDb(
-    dbDirectory: docsDir.path,
-    log: log,
-  );
   final resolvedDbFileName = await bootstrapAccount(
     databasesPath: docsDir.path,
     log: log,
@@ -58,7 +59,6 @@ Future<BootstrapResult> bootstrap() async {
 
   final container = ProviderContainer(
     overrides: [
-      contentDbPathProvider.overrideWithValue(contentDbPath),
       analyticsServiceProvider.overrideWithValue(analytics),
       // W7.16: expose the bootstrapped Crashlytics service through the
       // provider tree so sync subsystems can record non-fatal errors.

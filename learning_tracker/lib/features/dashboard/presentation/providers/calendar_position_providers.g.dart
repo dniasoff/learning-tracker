@@ -79,7 +79,7 @@ final class ProgramCalendarPositionProvider
 }
 
 String _$programCalendarPositionHash() =>
-    r'067e1e0b09b666330244d49101bb5a319fa1aa4f';
+    r'80fba859bc4e685f062e6800c3ef46a0165d8bc8';
 
 /// Provides calendar-relative position for a program track.
 ///

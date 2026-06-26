@@ -9,9 +9,12 @@ import 'package:riverpod_annotation/riverpod_annotation.dart';
 part 'text_display_providers.g.dart';
 
 /// Provider for the text cache repository.
+///
+/// Awaits [contentDatabaseProvider] so the repository is only created once
+/// the content DB is ready (extraction completes on first launch).
 @Riverpod(keepAlive: true)
-TextCacheRepository textCacheRepository(Ref ref) {
-  final database = ref.watch(contentDatabaseProvider);
+Future<TextCacheRepository> textCacheRepository(Ref ref) async {
+  final database = await ref.watch(contentDatabaseProvider.future);
 
   return TextCacheRepository(
     textCacheDao: database.contentTextCacheDao,
@@ -22,7 +25,7 @@ TextCacheRepository textCacheRepository(Ref ref) {
 /// Provider for fetching text by Sefaria reference.
 @riverpod
 Future<TextContent?> textContent(Ref ref, String sefariaRef) async {
-  final repository = ref.watch(textCacheRepositoryProvider);
+  final repository = await ref.watch(textCacheRepositoryProvider.future);
   return repository.getText(sefariaRef);
 }
 

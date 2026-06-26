@@ -322,11 +322,24 @@ Future<List<DailyTask>> allDailyTasks(Ref ref) async {
   final db = ref.watch(userDatabaseProvider);
   final generator = ref.watch(dailyTaskGeneratorProvider);
   final planRepo = ref.watch(dailyPlanRepositoryProvider);
-  final calendarService = ref.watch(calendarProgramServiceProvider);
+  // Capture future synchronously (before first await) to satisfy the
+  // "all ref reads before first await" rule; await below after all deps.
+  final calendarServiceFuture = ref.watch(
+    calendarProgramServiceProvider.future,
+  );
   final skipped = ref.watch(skippedTasksProvider);
   final previouslySkipped = await ref.watch(
     previouslySkippedRefsProvider.future,
   );
+  // Await calendarService before reading globalStageRepositoryProvider so
+  // that if the calendar service is in error state (content DB not yet
+  // extracted, or not overridden in tests) we fail fast here and never
+  // evaluate globalStageRepositoryProvider — which transitively reaches
+  // syncWriteFacadeProvider → authStateProvider → Firebase.  Deferring
+  // this read past an await is intentional: we accept no reactive
+  // re-run on stageRepository changes (its value is stable per session).
+  final calendarService = await calendarServiceFuture;
+
   final profileId = ref.watch(activeProfileIdProvider);
   final now = ref.watch(clockProvider);
 

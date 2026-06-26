@@ -68,7 +68,9 @@ Widget _buildApp({
   return ProviderScope(
     overrides: [
       userDatabaseProvider.overrideWithValue(db),
-      calendarProgramServiceProvider.overrideWithValue(calendarSvc),
+      calendarProgramServiceProvider.overrideWith(
+        (ref) => Future.value(calendarSvc),
+      ),
       useHebrewTermsProvider.overrideWith(() => _FalseUseHebrewTerms()),
       syncWriteFacadeProvider.overrideWithValue(null),
     ],

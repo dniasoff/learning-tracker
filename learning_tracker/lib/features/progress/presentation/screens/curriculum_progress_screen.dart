@@ -5,6 +5,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
+import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
 import 'package:learning_tracker/core/widgets/error_display.dart';
@@ -68,6 +69,16 @@ class CurriculumProgressScreen extends ConsumerWidget {
         scrolledUnderElevation: 0,
         surfaceTintColor: Colors.transparent,
         foregroundColor: AppTheme.brandInk,
+        actions: [
+          if (curriculum != null)
+            IconButton(
+              icon: const Icon(Icons.settings_outlined),
+              tooltip: 'Curriculum settings',
+              onPressed: () => context.router.push(
+                CurriculumSettingsRoute(curriculumId: curriculumId),
+              ),
+            ),
+        ],
         title: AppBarTitle(
           child: Column(
             mainAxisSize: MainAxisSize.min,

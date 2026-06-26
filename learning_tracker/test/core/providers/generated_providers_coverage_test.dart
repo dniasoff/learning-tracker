@@ -666,10 +666,10 @@ void main() {
   // ── database_provider.g.dart ──────────────────────────────────────────────
 
   group('database provider instances', () {
-    test('contentDbPathProvider overrideWithValue String', () {
-      // covers lines 120-123
-      final override = contentDbPathProvider.overrideWithValue(
-        'test/db/content.db',
+    test('contentDbPathProvider overrideWith Future<String>', () {
+      // contentDbPathProvider is now a FutureProvider<String> — use overrideWith.
+      final override = contentDbPathProvider.overrideWith(
+        (ref) => Future.value('test/db/content.db'),
       );
       expect(override, isNotNull);
     });

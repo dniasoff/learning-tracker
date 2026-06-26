@@ -1,5 +1,7 @@
 import 'dart:io';
+import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show compute;
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:learning_tracker/core/database/content/content_database.dart';
 import 'package:learning_tracker/core/database/seed_version.dart';
@@ -10,6 +12,41 @@ import 'package:sqlite3/sqlite3.dart';
 /// Exception thrown when the seed database cannot be initialized.
 class SeedManagerException extends InternalException {
   SeedManagerException(super.message);
+}
+
+/// Top-level function for [compute] — runs gzip decompression and disk write
+/// in a separate Dart isolate so the main isolate (and Flutter renderer) stay
+/// responsive during first-launch extraction.
+///
+/// Takes a record of (targetPath, compressedBytes). Returns the number of
+/// bytes written on success; throws on failure so [compute] propagates the
+/// error back to the caller.
+Future<int> _decompressAndWrite((String, Uint8List) args) async {
+  final (targetPath, input) = args;
+  var bytesWritten = 0;
+  final out = File(targetPath).openWrite();
+  try {
+    Stream<List<int>> compressedChunks() async* {
+      const chunkSize = 1 << 20; // 1 MB
+      for (var i = 0; i < input.length; i += chunkSize) {
+        final end = (i + chunkSize < input.length)
+            ? i + chunkSize
+            : input.length;
+        yield input.sublist(i, end);
+      }
+    }
+
+    await out.addStream(
+      compressedChunks().transform(gzip.decoder).map((chunk) {
+        bytesWritten += chunk.length;
+        return chunk;
+      }),
+    );
+    await out.flush();
+  } finally {
+    await out.close();
+  }
+  return bytesWritten;
 }
 
 /// Manages the Content DB lifecycle on startup.
@@ -171,50 +208,31 @@ class SeedManager {
 
   /// Extract seed.db.gz from assets to the target path.
   ///
-  /// The bundled asset is gzipped — `dart:io`'s `gzip.decode` is C-native
-  /// (zlib) and decodes a ~110 MB blob in 1–2 s on a mid-range phone, so
-  /// no worker isolate is needed.
+  /// Loads the compressed asset on the main isolate (required for
+  /// [rootBundle]), then hands the raw bytes off to a [compute] isolate for
+  /// the CPU-intensive gzip decompression and disk write. This keeps Flutter's
+  /// rendering pipeline responsive during the ~1-2 s extraction window on
+  /// real hardware (and much longer on slow emulators).
   ///
   /// Source-of-truth in the repo is `assets/db/content.db.xz` (smaller,
   /// fits under GitHub's 100 MB hard limit). The build pipeline converts
   /// xz → gz via `tool/prepare_asset.dart` before `flutter build`.
   Future<void> _extractSeedDb(String targetPath) async {
     try {
+      // Load compressed asset on the main isolate — rootBundle is only
+      // accessible here, not inside compute isolates.
       final compressed = await rootBundle.load(_seedAssetPath);
       final input = compressed.buffer.asUint8List(
         compressed.offsetInBytes,
         compressed.lengthInBytes,
       );
-      // Stream-decode the gzip straight to disk. The previous
-      // `gzip.decode(...)` allocated the entire ~432 MB plaintext as ONE
-      // contiguous Uint8List, which the Scudo allocator cannot satisfy on
-      // 2 GB / older devices (API <= 31) — the app OOM-crashed during
-      // first-launch seeding and dropped the user back on the launcher.
-      // Streaming keeps peak memory to ~1 MB per decoded chunk plus the
-      // compressed blob, so first launch succeeds on low-RAM / older Android.
-      var bytesWritten = 0;
-      final out = File(targetPath).openWrite();
-      try {
-        Stream<List<int>> compressedChunks() async* {
-          const chunkSize = 1 << 20; // 1 MB
-          for (var i = 0; i < input.length; i += chunkSize) {
-            final end = (i + chunkSize < input.length)
-                ? i + chunkSize
-                : input.length;
-            yield input.sublist(i, end);
-          }
-        }
-
-        await out.addStream(
-          compressedChunks().transform(gzip.decoder).map((chunk) {
-            bytesWritten += chunk.length;
-            return chunk;
-          }),
-        );
-        await out.flush();
-      } finally {
-        await out.close();
-      }
+      // Decompress and write in a separate Dart isolate via compute() so
+      // Flutter's rendering pipeline stays responsive during the extraction.
+      // The top-level [_decompressAndWrite] handles the gzip streaming loop.
+      final bytesWritten = await compute(_decompressAndWrite, (
+        targetPath,
+        input,
+      ));
       _logger?.info(
         event: 'seed_manager_seed_extracted',
         fields: {'sizeMb': (bytesWritten / 1024 / 1024).toStringAsFixed(1)},

@@ -9,21 +9,32 @@ part of 'text_display_providers.dart';
 // GENERATED CODE - DO NOT MODIFY BY HAND
 // ignore_for_file: type=lint, type=warning
 /// Provider for the text cache repository.
+///
+/// Awaits [contentDatabaseProvider] so the repository is only created once
+/// the content DB is ready (extraction completes on first launch).
 
 @ProviderFor(textCacheRepository)
 final textCacheRepositoryProvider = TextCacheRepositoryProvider._();
 
 /// Provider for the text cache repository.
+///
+/// Awaits [contentDatabaseProvider] so the repository is only created once
+/// the content DB is ready (extraction completes on first launch).
 
 final class TextCacheRepositoryProvider
     extends
         $FunctionalProvider<
+          AsyncValue<TextCacheRepository>,
           TextCacheRepository,
-          TextCacheRepository,
-          TextCacheRepository
+          FutureOr<TextCacheRepository>
         >
-    with $Provider<TextCacheRepository> {
+    with
+        $FutureModifier<TextCacheRepository>,
+        $FutureProvider<TextCacheRepository> {
   /// Provider for the text cache repository.
+  ///
+  /// Awaits [contentDatabaseProvider] so the repository is only created once
+  /// the content DB is ready (extraction completes on first launch).
   TextCacheRepositoryProvider._()
     : super(
         from: null,
@@ -40,26 +51,18 @@ final class TextCacheRepositoryProvider
 
   @$internal
   @override
-  $ProviderElement<TextCacheRepository> $createElement(
+  $FutureProviderElement<TextCacheRepository> $createElement(
     $ProviderPointer pointer,
-  ) => $ProviderElement(pointer);
+  ) => $FutureProviderElement(pointer);
 
   @override
-  TextCacheRepository create(Ref ref) {
+  FutureOr<TextCacheRepository> create(Ref ref) {
     return textCacheRepository(ref);
-  }
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(TextCacheRepository value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<TextCacheRepository>(value),
-    );
   }
 }
 
 String _$textCacheRepositoryHash() =>
-    r'566b49d7100e94ac79428a39005321a08b2473b8';
+    r'fcec3dbb01529902bf57125cb634a2f91cdf9aac';
 
 /// Provider for fetching text by Sefaria reference.
 
@@ -121,7 +124,7 @@ final class TextContentProvider
   }
 }
 
-String _$textContentHash() => r'3d8b7afc5e13eceb2971c02001b06bd6be1cad4a';
+String _$textContentHash() => r'5d65669a057cd40f08ca73ccf24b627f706d6ecc';
 
 /// Provider for fetching text by Sefaria reference.
 

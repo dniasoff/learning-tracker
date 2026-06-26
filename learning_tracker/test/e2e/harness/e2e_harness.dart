@@ -593,7 +593,8 @@ class E2EHarness {
       // Override the content database with an in-memory NativeDatabase so
       // content-browsing and text-display journeys work without the bundled
       // seed file.  Seed rows via [seedContent] when a journey needs them.
-      contentDatabaseProvider.overrideWithValue(_contentDb),
+      // contentDatabaseProvider is now a FutureProvider so use overrideWith.
+      contentDatabaseProvider.overrideWith((ref) => Future.value(_contentDb)),
 
       // ── Auth ──────────────────────────────────────────────────────────────
       authStateProvider.overrideWithValue(authState),

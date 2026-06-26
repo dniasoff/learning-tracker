@@ -77,13 +77,20 @@ class ContentIndex {
       final curriculumKey = entry.key.storageKey;
       final items = entry.value;
       for (final item in items) {
-        byRef[item.sefariaRef] = item;
+        // First-write-wins: when the same sefariaRef exists in more than one
+        // curriculum (e.g. a Chumash pasuk also indexed under Tanach), the
+        // curriculum that comes FIRST in CurriculumId.values (the canonical
+        // one, e.g. Chumash) wins. Without this, last-write-wins resolved a
+        // חומש text's breadcrumb root to 'תורה' (Tanach) instead of 'חומש'.
+        byRef.putIfAbsent(item.sefariaRef, () => item);
       }
       final leaves = items.where((i) => i.isLeaf).toList()
         ..sort((a, b) => a.sortOrder.compareTo(b.sortOrder));
       leavesByCurriculum[curriculumKey] = leaves;
       for (var i = 0; i < leaves.length; i++) {
-        leafIndexByRef[leaves[i].sefariaRef] = i;
+        // First-write-wins to mirror _byRef above, so a colliding ref's leaf
+        // position resolves to the same (canonical) curriculum.
+        leafIndexByRef.putIfAbsent(leaves[i].sefariaRef, () => i);
       }
     }
 

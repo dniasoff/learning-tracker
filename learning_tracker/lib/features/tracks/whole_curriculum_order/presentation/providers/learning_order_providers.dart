@@ -17,7 +17,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 /// Reads the `version` field from the content DB's single SeedMetadata row.
 /// Defaults to 1 when no metadata row is found (test / first-install paths).
 final contentVersionProvider = FutureProvider<int>((ref) async {
-  final contentDb = ref.watch(contentDatabaseProvider);
+  final contentDb = await ref.watch(contentDatabaseProvider.future);
   final meta = await contentDb.seedMetadataDao.getVersion();
   return meta?.version ?? 1;
 });

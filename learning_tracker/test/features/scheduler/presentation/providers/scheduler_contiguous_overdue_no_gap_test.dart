@@ -153,8 +153,9 @@ ProviderContainer _container(UserDatabase db, {required DateTime clock}) {
       userDatabaseProvider.overrideWithValue(db),
       activeProfileIdProvider.overrideWith(_ProfileId1.new),
       clockProvider.overrideWith((ref) => clock),
-      calendarProgramServiceProvider.overrideWithValue(
-        CalendarProgramService(const _NoopCalendarEngine()),
+      calendarProgramServiceProvider.overrideWith(
+        (ref) =>
+            Future.value(CalendarProgramService(const _NoopCalendarEngine())),
       ),
       globalStageRepositoryProvider.overrideWith((ref) {
         return StageDefinitionRepositoryImpl(

@@ -2,7 +2,9 @@ import 'dart:io';
 
 import 'package:drift_flutter/drift_flutter.dart';
 import 'package:learning_tracker/core/database/content/content_database.dart';
+import 'package:learning_tracker/core/database/seed_manager.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
+import 'package:path_provider/path_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
 part 'database_provider.g.dart';
@@ -39,27 +41,31 @@ UserDatabase userDatabase(Ref ref) {
 
 /// Filesystem path for the bundled content database.
 ///
-/// Overridden in `main.dart` with the path resolved by `SeedManager`
-/// (Story 19.2b T13). Tests leave this unset and rely on the content
-/// provider override with an in-memory database.
+/// Resolves the path by running [SeedManager.ensureContentDb] in the
+/// background — decompresses the asset on first launch, no-ops on subsequent
+/// launches. Runs independently of [runApp] so the UI is not blocked during
+/// cold start (see bootstrap.dart).
+///
+/// Tests override [contentDatabaseProvider] directly with an in-memory DB and
+/// never need to override this provider.
 @Riverpod(keepAlive: true)
-String contentDbPath(Ref ref) {
-  throw UnimplementedError(
-    'contentDbPathProvider must be overridden before any content lookup. '
-    'main.dart calls SeedManager.ensureContentDb() at startup and provides '
-    'the resolved path via ProviderScope overrides.',
-  );
+Future<String> contentDbPath(Ref ref) async {
+  final docsDir = await getApplicationDocumentsDirectory();
+  final seedManager = SeedManager(dbDirectory: docsDir.path);
+  return seedManager.ensureContentDb();
 }
 
 /// Content database — read-only, bundled seed content.
 ///
-/// Opens the content.db file prepared by [SeedManager] at startup with
-/// `PRAGMA query_only = ON` enforced at the SQLite level (Story 19.3 AC-10).
+/// Awaits [contentDbPathProvider] so extraction completes before the database
+/// is opened. The first read after a fresh install/clear will suspend until
+/// seeding finishes; subsequent launches return immediately (already extracted).
+///
 /// Tests typically override this with an in-memory database via
 /// `createTestContentDatabase()` instead of relying on [contentDbPath].
 @Riverpod(keepAlive: true)
-ContentDatabase contentDatabase(Ref ref) {
-  final path = ref.watch(contentDbPathProvider);
+Future<ContentDatabase> contentDatabase(Ref ref) async {
+  final path = await ref.watch(contentDbPathProvider.future);
   final database = ContentDatabase.openReadOnly(File(path));
   ref.onDispose(database.close);
   return database;

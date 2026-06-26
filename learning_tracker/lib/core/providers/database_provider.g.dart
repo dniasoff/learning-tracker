@@ -155,27 +155,39 @@ String _$userDatabaseHash() => r'32a85d2484055a69ae0da3df23730d020ea762dd';
 
 /// Filesystem path for the bundled content database.
 ///
-/// Overridden in `main.dart` with the path resolved by `SeedManager`
-/// (Story 19.2b T13). Tests leave this unset and rely on the content
-/// provider override with an in-memory database.
+/// Resolves the path by running [SeedManager.ensureContentDb] in the
+/// background — decompresses the asset on first launch, no-ops on subsequent
+/// launches. Runs independently of [runApp] so the UI is not blocked during
+/// cold start (see bootstrap.dart).
+///
+/// Tests override [contentDatabaseProvider] directly with an in-memory DB and
+/// never need to override this provider.
 
 @ProviderFor(contentDbPath)
 final contentDbPathProvider = ContentDbPathProvider._();
 
 /// Filesystem path for the bundled content database.
 ///
-/// Overridden in `main.dart` with the path resolved by `SeedManager`
-/// (Story 19.2b T13). Tests leave this unset and rely on the content
-/// provider override with an in-memory database.
+/// Resolves the path by running [SeedManager.ensureContentDb] in the
+/// background — decompresses the asset on first launch, no-ops on subsequent
+/// launches. Runs independently of [runApp] so the UI is not blocked during
+/// cold start (see bootstrap.dart).
+///
+/// Tests override [contentDatabaseProvider] directly with an in-memory DB and
+/// never need to override this provider.
 
 final class ContentDbPathProvider
-    extends $FunctionalProvider<String, String, String>
-    with $Provider<String> {
+    extends $FunctionalProvider<AsyncValue<String>, String, FutureOr<String>>
+    with $FutureModifier<String>, $FutureProvider<String> {
   /// Filesystem path for the bundled content database.
   ///
-  /// Overridden in `main.dart` with the path resolved by `SeedManager`
-  /// (Story 19.2b T13). Tests leave this unset and rely on the content
-  /// provider override with an in-memory database.
+  /// Resolves the path by running [SeedManager.ensureContentDb] in the
+  /// background — decompresses the asset on first launch, no-ops on subsequent
+  /// launches. Runs independently of [runApp] so the UI is not blocked during
+  /// cold start (see bootstrap.dart).
+  ///
+  /// Tests override [contentDatabaseProvider] directly with an in-memory DB and
+  /// never need to override this provider.
   ContentDbPathProvider._()
     : super(
         from: null,
@@ -192,29 +204,23 @@ final class ContentDbPathProvider
 
   @$internal
   @override
-  $ProviderElement<String> $createElement($ProviderPointer pointer) =>
-      $ProviderElement(pointer);
+  $FutureProviderElement<String> $createElement($ProviderPointer pointer) =>
+      $FutureProviderElement(pointer);
 
   @override
-  String create(Ref ref) {
+  FutureOr<String> create(Ref ref) {
     return contentDbPath(ref);
-  }
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(String value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<String>(value),
-    );
   }
 }
 
-String _$contentDbPathHash() => r'99bbed4b861478949d2e31ae1d1d0b38e3494257';
+String _$contentDbPathHash() => r'71834543374dfec8b4ff0a483970cff5bef2b7f4';
 
 /// Content database — read-only, bundled seed content.
 ///
-/// Opens the content.db file prepared by [SeedManager] at startup with
-/// `PRAGMA query_only = ON` enforced at the SQLite level (Story 19.3 AC-10).
+/// Awaits [contentDbPathProvider] so extraction completes before the database
+/// is opened. The first read after a fresh install/clear will suspend until
+/// seeding finishes; subsequent launches return immediately (already extracted).
+///
 /// Tests typically override this with an in-memory database via
 /// `createTestContentDatabase()` instead of relying on [contentDbPath].
 
@@ -223,19 +229,27 @@ final contentDatabaseProvider = ContentDatabaseProvider._();
 
 /// Content database — read-only, bundled seed content.
 ///
-/// Opens the content.db file prepared by [SeedManager] at startup with
-/// `PRAGMA query_only = ON` enforced at the SQLite level (Story 19.3 AC-10).
+/// Awaits [contentDbPathProvider] so extraction completes before the database
+/// is opened. The first read after a fresh install/clear will suspend until
+/// seeding finishes; subsequent launches return immediately (already extracted).
+///
 /// Tests typically override this with an in-memory database via
 /// `createTestContentDatabase()` instead of relying on [contentDbPath].
 
 final class ContentDatabaseProvider
     extends
-        $FunctionalProvider<ContentDatabase, ContentDatabase, ContentDatabase>
-    with $Provider<ContentDatabase> {
+        $FunctionalProvider<
+          AsyncValue<ContentDatabase>,
+          ContentDatabase,
+          FutureOr<ContentDatabase>
+        >
+    with $FutureModifier<ContentDatabase>, $FutureProvider<ContentDatabase> {
   /// Content database — read-only, bundled seed content.
   ///
-  /// Opens the content.db file prepared by [SeedManager] at startup with
-  /// `PRAGMA query_only = ON` enforced at the SQLite level (Story 19.3 AC-10).
+  /// Awaits [contentDbPathProvider] so extraction completes before the database
+  /// is opened. The first read after a fresh install/clear will suspend until
+  /// seeding finishes; subsequent launches return immediately (already extracted).
+  ///
   /// Tests typically override this with an in-memory database via
   /// `createTestContentDatabase()` instead of relying on [contentDbPath].
   ContentDatabaseProvider._()
@@ -254,24 +268,17 @@ final class ContentDatabaseProvider
 
   @$internal
   @override
-  $ProviderElement<ContentDatabase> $createElement($ProviderPointer pointer) =>
-      $ProviderElement(pointer);
+  $FutureProviderElement<ContentDatabase> $createElement(
+    $ProviderPointer pointer,
+  ) => $FutureProviderElement(pointer);
 
   @override
-  ContentDatabase create(Ref ref) {
+  FutureOr<ContentDatabase> create(Ref ref) {
     return contentDatabase(ref);
-  }
-
-  /// {@macro riverpod.override_with_value}
-  Override overrideWithValue(ContentDatabase value) {
-    return $ProviderOverride(
-      origin: this,
-      providerOverride: $SyncValueProvider<ContentDatabase>(value),
-    );
   }
 }
 
-String _$contentDatabaseHash() => r'5a481a7eabbd43d69fd32007098cb4f89de96742';
+String _$contentDatabaseHash() => r'6e7d8d35d2ce55fddbdad8d7e171cb517291d2ed';
 
 /// Legacy alias — will be removed after full migration.
 /// DO NOT use in new code.

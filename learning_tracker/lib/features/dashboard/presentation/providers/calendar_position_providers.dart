@@ -17,16 +17,20 @@ part 'calendar_position_providers.g.dart';
 /// compute expected progress and compare against completed learn items.
 @riverpod
 Future<CalendarPosition> programCalendarPosition(Ref ref, int trackId) async {
-  final db = ref.watch(userDatabaseProvider);
-  final profileId = ref.watch(activeProfileIdProvider);
-  final calendarService = ref.watch(calendarProgramServiceProvider);
   // All ref reads MUST happen synchronously before the first await: this
   // provider is rebuilt rapidly on the dashboard, and a `ref.read`/`ref.watch`
   // after an async gap throws "Cannot use Ref after dispose" when the previous
   // build is still pending. Capture every dependency up-front.
+  final db = ref.watch(userDatabaseProvider);
+  final profileId = ref.watch(activeProfileIdProvider);
+  final calendarServiceFuture = ref.watch(
+    calendarProgramServiceProvider.future,
+  );
   final programRepository = ref.read(learningProgramRepositoryProvider);
   final clockUtc = ref.watch(clockProvider);
   final stageRepository = ref.watch(globalStageRepositoryProvider);
+  // Await after all synchronous ref reads are captured.
+  final calendarService = await calendarServiceFuture;
 
   // 1. Look up the track
   final track = await (db.select(

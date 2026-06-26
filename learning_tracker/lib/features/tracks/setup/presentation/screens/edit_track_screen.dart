@@ -336,7 +336,9 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
 
     final db = ref.read(userDatabaseProvider);
     final profileId = ref.read(activeProfileIdProvider);
-    final calendarService = ref.read(calendarProgramServiceProvider);
+    final calendarService = await ref.read(
+      calendarProgramServiceProvider.future,
+    );
 
     final now = DateTimeFactory.nowLocal();
     final today = DateTime(now.year, now.month, now.day);

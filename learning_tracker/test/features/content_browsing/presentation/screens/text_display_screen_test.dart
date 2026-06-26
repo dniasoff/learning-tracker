@@ -47,7 +47,9 @@ void main() {
     ];
     return ProviderScope(
       overrides: [
-        textCacheRepositoryProvider.overrideWithValue(repository),
+        textCacheRepositoryProvider.overrideWith(
+          (ref) => Future.value(repository),
+        ),
         allDailyTasksProvider.overrideWith((ref) => Future.value(dailyTasks)),
         trackStorageKeyForTrackIdProvider.overrideWith(
           (ref, trackId) async => 'personal',

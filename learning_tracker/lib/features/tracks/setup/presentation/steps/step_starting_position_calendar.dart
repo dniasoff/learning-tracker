@@ -92,7 +92,7 @@ class _StartingPositionCalendarModeState
     if (_calendarProgramKey == null) return;
     setState(() => _calendarLoading = true);
     try {
-      final service = ref.read(calendarProgramServiceProvider);
+      final service = await ref.read(calendarProgramServiceProvider.future);
       final entry = await service.getEntry(_calendarProgramKey!, _selectedDate);
       if (!mounted) return;
       setState(() => _calendarEntry = entry);
