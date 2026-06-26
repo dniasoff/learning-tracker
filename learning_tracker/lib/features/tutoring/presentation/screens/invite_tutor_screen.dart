@@ -46,6 +46,11 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
   bool _isLoading = false;
   String? _errorMessage;
 
+  /// Account-level error (e.g. "cloud account required"), shown as a banner
+  /// above the form — NOT as email-field errorText, which would imply the
+  /// address is malformed.
+  String? _accountError;
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -79,7 +84,7 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
     final authState = ref.read(authStateProvider);
     if (authState.isLocalBorn) {
       setState(
-        () => _errorMessage = AppLocalizations.of(
+        () => _accountError = AppLocalizations.of(
           context,
         )!.inviteTutorErrorLocalOnly,
       );
@@ -98,6 +103,7 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
     setState(() {
       _isLoading = true;
       _errorMessage = null;
+      _accountError = null;
     });
     try {
       // Snapshot human-readable names onto the grant so the tutor sees the
@@ -226,6 +232,40 @@ class _InviteTutorScreenState extends ConsumerState<InviteTutorScreen> {
                 ),
               ),
               const SizedBox(height: 28),
+              // Account-level notice (e.g. "cloud account required").
+              // Shown as a banner so it is not confused with email validation.
+              if (_accountError != null) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.errorContainer,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        Icons.info_outline_rounded,
+                        color: theme.colorScheme.onErrorContainer,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          _accountError!,
+                          style: theme.textTheme.bodyMedium?.copyWith(
+                            color: theme.colorScheme.onErrorContainer,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
               // Email field
               TextFormField(
                 controller: _emailController,

@@ -1,9 +1,10 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide DateUtils;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/preferences/preference_providers.dart';
+import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/core/utils/hebrew_calendar_utils.dart';
 import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
@@ -368,7 +369,14 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
           const SizedBox(height: 16),
           Builder(
             builder: (context) {
-              final daysRemaining = _targetDate!.difference(_now()).inDays;
+              // Compare calendar-date floors so that a target date of
+              // "tomorrow" always reads as +1 day regardless of the current
+              // time-of-day (raw .difference().inDays truncates durations
+              // shorter than 24 h to 0, wrongly triggering "deadline passed"
+              // when the deadline is still tomorrow).
+              final daysRemaining = DateUtils.extractLocalDate(
+                _targetDate!.toLocal(),
+              ).difference(DateUtils.extractLocalDate(_now())).inDays;
               if (daysRemaining <= 0) {
                 return Text(
                   // R1-(7): use l10n.

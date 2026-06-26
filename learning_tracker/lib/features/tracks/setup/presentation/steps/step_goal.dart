@@ -83,7 +83,8 @@ class _SelfPacedGoalStepState extends ConsumerState<SelfPacedGoalStep> {
     } else {
       _paceValue = (daily * 7).clamp(1, 99);
       final now = DateTimeFactory.nowLocal();
-      _deadline = DateTime(now.year, now.month, now.day);
+      final base = DateTime(now.year, now.month, now.day);
+      _deadline = base.add(const Duration(days: 30));
     }
   }
 

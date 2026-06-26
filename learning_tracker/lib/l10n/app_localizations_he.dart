@@ -1525,7 +1525,7 @@ class AppLocalizationsHe extends AppLocalizations {
       'בחרו סמל והגדירו יעדי נקודות לילד.';
 
   @override
-  String get rewardConfigChooseAvatarStep => '1. בחירת סמל';
+  String get rewardConfigChooseAvatarStep => 'בחירת סמל';
 
   @override
   String get rewardConfigRewardTypeLabel => 'סוג פרס';
@@ -2995,6 +2995,14 @@ class AppLocalizationsHe extends AppLocalizations {
   String get curriculumSettingsRequestProgram => 'בקשו תוכנית חדשה';
 
   @override
+  String get curriculumSettingsCustomSchedule => 'לוח זמנים מותאם';
+
+  @override
+  String curriculumSettingsProgramLabel(String name) {
+    return 'תוכנית: $name';
+  }
+
+  @override
   String get deleteAccountDialogTitle => 'מחיקת חשבון';
 
   @override
@@ -3494,7 +3502,9 @@ class AppLocalizationsHe extends AppLocalizations {
   String get trackEditSectionStudyDays => 'ימי לימוד';
 
   @override
-  String get trackEditSectionReview => 'חזרה';
+  String trackEditSectionReview(String term) {
+    return 'חזרה ($term)';
+  }
 
   @override
   String get trackEditGoalTypeLocked => 'לא ניתן לשנות את סוג היעד לאחר ההגדרה';
@@ -4936,7 +4946,7 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String schedulerStudyDaysScreenTitle(String curriculum) {
-    return 'ימי לימוד $curriculum';
+    return '$curriculum • ימי לימוד';
   }
 
   @override

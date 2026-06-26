@@ -88,6 +88,7 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
   String? _enteredEmail;
 
   _UpgradePhase _phase = const _PhaseForm();
+  bool _obscurePassword = true;
 
   /// A credential-less offline account has a synthetic `@offline.local` email
   /// and no user-known password, so it upgrades by registering fresh
@@ -570,11 +571,24 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
                         const SizedBox(height: 16),
                         TextFormField(
                           controller: _passwordController,
-                          obscureText: true,
+                          obscureText: _obscurePassword,
                           textInputAction: TextInputAction.done,
                           inputFormatters: const [NoSpaceFormatter()],
                           decoration: InputDecoration(
                             labelText: l10n.upgradeToCloudNewPasswordLabel,
+                            suffixIcon: IconButton(
+                              tooltip: _obscurePassword
+                                  ? l10n.showPassword
+                                  : l10n.hidePassword,
+                              icon: Icon(
+                                _obscurePassword
+                                    ? Icons.visibility_off_rounded
+                                    : Icons.visibility_rounded,
+                              ),
+                              onPressed: () => setState(
+                                () => _obscurePassword = !_obscurePassword,
+                              ),
+                            ),
                           ),
                           validator: (v) => (v == null || v.isEmpty)
                               ? l10n.upgradeToCloudPasswordRequired
@@ -585,11 +599,24 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
                       ] else
                         TextFormField(
                           controller: _passwordController,
-                          obscureText: true,
+                          obscureText: _obscurePassword,
                           textInputAction: TextInputAction.done,
                           inputFormatters: const [NoSpaceFormatter()],
                           decoration: InputDecoration(
                             labelText: l10n.upgradeToCloudPasswordLabel,
+                            suffixIcon: IconButton(
+                              tooltip: _obscurePassword
+                                  ? l10n.showPassword
+                                  : l10n.hidePassword,
+                              icon: Icon(
+                                _obscurePassword
+                                    ? Icons.visibility_off_rounded
+                                    : Icons.visibility_rounded,
+                              ),
+                              onPressed: () => setState(
+                                () => _obscurePassword = !_obscurePassword,
+                              ),
+                            ),
                           ),
                           validator: (v) => (v == null || v.isEmpty)
                               ? l10n.upgradeToCloudPasswordRequired

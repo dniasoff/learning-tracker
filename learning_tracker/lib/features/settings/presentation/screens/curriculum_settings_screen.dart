@@ -83,8 +83,14 @@ class _CurriculumSettingsScreenState
                 leading: const Icon(Icons.school),
                 title: Text(
                   info != null
-                      ? 'Program: ${learningProgramLabelText(ref, program: info)}'
-                      : 'Custom schedule',
+                      ? AppLocalizations.of(
+                          context,
+                        )!.curriculumSettingsProgramLabel(
+                          learningProgramLabelText(ref, program: info),
+                        )
+                      : AppLocalizations.of(
+                          context,
+                        )!.curriculumSettingsCustomSchedule,
                 ),
                 subtitle: info != null ? Text(info.description) : null,
               ),

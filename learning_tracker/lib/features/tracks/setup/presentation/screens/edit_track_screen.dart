@@ -523,7 +523,9 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
                 false) ...[
               const SizedBox(height: 14),
               _SectionCard(
-                title: l10n.trackEditSectionReview,
+                title: l10n.trackEditSectionReview(
+                  domainTermLabels(ref).chazara,
+                ),
                 child: _buildChazaraSection(context, theme, l10n),
               ),
             ],
@@ -793,7 +795,9 @@ class _EditTrackScreenState extends ConsumerState<EditTrackScreen> {
         maxChildSize: 0.95,
         builder: (_, controller) => ChazaraInlineSetup(
           curriculumId: curriculum,
-          headerTitle: l10n.trackEditSectionReview,
+          headerTitle: l10n.trackEditSectionReview(
+            domainTermLabels(ref).chazara,
+          ),
           headerSubtitle: l10n.trackEditConfirmBody,
           initialDelays: currentDelays,
           onComplete: (result) {

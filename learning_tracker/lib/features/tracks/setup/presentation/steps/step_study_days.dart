@@ -121,44 +121,58 @@ class _StudyDaysEditableState extends ConsumerState<StudyDaysEditable> {
           ),
           const SizedBox(height: 18),
           Expanded(
-            child: ListView.builder(
-              // Bottom padding lets the last row scroll clear of the sticky
-              // "Continue" button (height 52) + the 14 px gap above it.
-              // On larger screens the list is short enough that no scrolling
-              // occurs, so the extra padding is simply invisible white space.
-              padding: const EdgeInsets.only(bottom: 66),
-              itemCount: 7,
-              itemBuilder: (context, index) {
-                final dayNum = kStepStudyDayNumbers[index];
-                final isActive = _days[dayNum] == 'study';
-                final title = _dayName(dayNum);
-                // Avatar initial = first grapheme of the LOCALIZED short label
-                // (Sun–Fri from the shared scheduler abbrev keys, Sat from the
-                // shabbos term) so the row never mixes Latin initials with a
-                // lone Hebrew glyph and stays fully Hebrew in the he locale.
-                final initial = studyDayInitial(
-                  studyDayAbbrevLabel(
-                    dayNum: dayNum,
-                    l10n: l10n,
-                    terms: terms,
-                    variant: variant,
-                  ),
-                );
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: StudyDayCard(
-                    initial: initial,
-                    title: title,
-                    subtitle: '',
-                    subtitleColor: AppTheme.brandInkMuted,
-                    activeColor: AppColors.surfaceE9,
-                    isShabbos: dayNum == 6,
-                    isOn: isActive,
-                    onChanged: (v) =>
-                        setState(() => _days[dayNum] = v ? 'study' : 'review'),
-                  ),
-                );
-              },
+            // ShaderMask fades the bottom edge so users on small screens (e.g.
+            // Pixel 2) see a scroll affordance indicating the שבת row exists
+            // below the visible area. The gradient is applied only to the alpha
+            // channel (BlendMode.dstIn) so it works on any background colour.
+            child: ShaderMask(
+              shaderCallback: (Rect bounds) => const LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: [Colors.white, Colors.white, Colors.transparent],
+                stops: [0.0, 0.80, 1.0],
+              ).createShader(bounds),
+              blendMode: BlendMode.dstIn,
+              child: ListView.builder(
+                // Bottom padding lets the last row scroll clear of the sticky
+                // "Continue" button (height 52) + the 14 px gap above it.
+                // On larger screens the list is short enough that no scrolling
+                // occurs, so the extra padding is simply invisible white space.
+                padding: const EdgeInsets.only(bottom: 66),
+                itemCount: 7,
+                itemBuilder: (context, index) {
+                  final dayNum = kStepStudyDayNumbers[index];
+                  final isActive = _days[dayNum] == 'study';
+                  final title = _dayName(dayNum);
+                  // Avatar initial = first grapheme of the LOCALIZED short label
+                  // (Sun–Fri from the shared scheduler abbrev keys, Sat from the
+                  // shabbos term) so the row never mixes Latin initials with a
+                  // lone Hebrew glyph and stays fully Hebrew in the he locale.
+                  final initial = studyDayInitial(
+                    studyDayAbbrevLabel(
+                      dayNum: dayNum,
+                      l10n: l10n,
+                      terms: terms,
+                      variant: variant,
+                    ),
+                  );
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: StudyDayCard(
+                      initial: initial,
+                      title: title,
+                      subtitle: '',
+                      subtitleColor: AppTheme.brandInkMuted,
+                      activeColor: AppColors.surfaceE9,
+                      isShabbos: dayNum == 6,
+                      isOn: isActive,
+                      onChanged: (v) => setState(
+                        () => _days[dayNum] = v ? 'study' : 'review',
+                      ),
+                    ),
+                  );
+                },
+              ),
             ),
           ),
           const SizedBox(height: 14),

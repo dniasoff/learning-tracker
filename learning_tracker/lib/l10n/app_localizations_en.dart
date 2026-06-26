@@ -1536,7 +1536,7 @@ class AppLocalizationsEn extends AppLocalizations {
       'Select a magical icon and set the milestone goals for your child.';
 
   @override
-  String get rewardConfigChooseAvatarStep => '1. CHOOSE AN AVATAR';
+  String get rewardConfigChooseAvatarStep => 'CHOOSE AN AVATAR';
 
   @override
   String get rewardConfigRewardTypeLabel => 'Reward type';
@@ -3025,6 +3025,14 @@ class AppLocalizationsEn extends AppLocalizations {
   String get curriculumSettingsRequestProgram => 'Request a new program';
 
   @override
+  String get curriculumSettingsCustomSchedule => 'Custom schedule';
+
+  @override
+  String curriculumSettingsProgramLabel(String name) {
+    return 'Program: $name';
+  }
+
+  @override
   String get deleteAccountDialogTitle => 'Delete Account';
 
   @override
@@ -3529,7 +3537,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get trackEditSectionStudyDays => 'Study Days';
 
   @override
-  String get trackEditSectionReview => 'Review (Chazara)';
+  String trackEditSectionReview(String term) {
+    return 'Review ($term)';
+  }
 
   @override
   String get trackEditGoalTypeLocked =>
@@ -4976,7 +4986,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String schedulerStudyDaysScreenTitle(String curriculum) {
-    return '$curriculum Study Days';
+    return '$curriculum • Study Days';
   }
 
   @override

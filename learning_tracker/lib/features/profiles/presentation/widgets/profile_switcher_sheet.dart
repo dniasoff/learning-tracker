@@ -140,7 +140,9 @@ class ProfileSwitcherSheet extends ConsumerWidget {
                       l10n.switchAccount,
                       style: const TextStyle(fontWeight: FontWeight.w600),
                     ),
-                    subtitle: accountEmail == null
+                    subtitle:
+                        accountEmail == null ||
+                            accountEmail.endsWith('@offline.local')
                         ? null
                         : Text(
                             accountEmail,

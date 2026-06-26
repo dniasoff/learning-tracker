@@ -2760,7 +2760,7 @@ abstract class AppLocalizations {
   /// No description provided for @rewardConfigChooseAvatarStep.
   ///
   /// In en, this message translates to:
-  /// **'1. CHOOSE AN AVATAR'**
+  /// **'CHOOSE AN AVATAR'**
   String get rewardConfigChooseAvatarStep;
 
   /// No description provided for @rewardConfigRewardTypeLabel.
@@ -5307,6 +5307,18 @@ abstract class AppLocalizations {
   /// **'Request a new program'**
   String get curriculumSettingsRequestProgram;
 
+  /// No description provided for @curriculumSettingsCustomSchedule.
+  ///
+  /// In en, this message translates to:
+  /// **'Custom schedule'**
+  String get curriculumSettingsCustomSchedule;
+
+  /// List tile title showing the active learning program name. {name} is the human-readable program label.
+  ///
+  /// In en, this message translates to:
+  /// **'Program: {name}'**
+  String curriculumSettingsProgramLabel(String name);
+
   /// No description provided for @deleteAccountDialogTitle.
   ///
   /// In en, this message translates to:
@@ -6105,11 +6117,11 @@ abstract class AppLocalizations {
   /// **'Study Days'**
   String get trackEditSectionStudyDays;
 
-  /// No description provided for @trackEditSectionReview.
+  /// Section heading for the review configuration block on the track-edit screen. {term} is the domain-specific term for review/chazara, supplied by the caller via domainTermLabels.
   ///
   /// In en, this message translates to:
-  /// **'Review (Chazara)'**
-  String get trackEditSectionReview;
+  /// **'Review ({term})'**
+  String trackEditSectionReview(String term);
 
   /// No description provided for @trackEditGoalTypeLocked.
   ///
@@ -8355,7 +8367,7 @@ abstract class AppLocalizations {
   /// AppBar title for the standalone Study Days config screen. {curriculum} is the curriculum/track display label (transliteration in English mode, Hebrew in Hebrew mode).
   ///
   /// In en, this message translates to:
-  /// **'{curriculum} Study Days'**
+  /// **'{curriculum} • Study Days'**
   String schedulerStudyDaysScreenTitle(String curriculum);
 
   /// AppBar title for the per-track learning-order reorder screen. {curriculum} is the curriculum/track display label (transliteration in English mode, Hebrew in Hebrew mode).

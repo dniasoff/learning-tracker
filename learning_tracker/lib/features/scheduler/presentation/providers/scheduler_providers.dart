@@ -832,7 +832,7 @@ Future<List<DailyTask>> _buildProjectionTasks({
 
     final anchor = DateUtils.extractLocalDate(startedAt);
 
-    // Items completed on or before the track's anchor date are "prior
+    // Items completed strictly before the track's anchor date are "prior
     // completions" — e.g. bulk Mark-Prior-Completions rows, which carry a
     // placeholder completedAt (Jan 1 2000). They must NOT consume schedule
     // slots: selfPacedSchedule walks orderedRefs from index 0, so a track
@@ -840,15 +840,18 @@ Future<List<DailyTask>> _buildProjectionTasks({
     // refs for today, project() would strip them, and the queue would show
     // nothing due for the next N / pace study days (the Mishnayot
     // ghost-track bug). Walk the schedule over only the refs NOT yet
-    // completed at the anchor, so the first genuinely-unlearned ref lands on
-    // the anchor day. Completions made AFTER the anchor stay in the schedule
-    // and are handled by project() as normal on-pace progress.
+    // completed before the anchor, so the first genuinely-unlearned ref lands
+    // on the anchor day. Completions made ON OR AFTER the anchor stay in the
+    // schedule and are handled by project() as normal on-pace progress.
+    // NOTE: using isBefore (not !isAfter) so that same-day completions (when
+    // the track was started and tasks completed on the same calendar day)
+    // remain in the schedule and are correctly counted as done by project().
     final priorCompletionRefs = allCompletions
         .where(
           (c) =>
               (c.stageId == firstStage.id ||
                   c.stageId == firstStage.stageOrder) &&
-              !DateUtils.extractLocalDate(c.completedAt).isAfter(anchor),
+              DateUtils.extractLocalDate(c.completedAt).isBefore(anchor),
         )
         .map((c) => c.sefariaRef)
         .toSet();

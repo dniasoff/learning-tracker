@@ -176,7 +176,7 @@ class HierarchySelectionPanelState
         widget.tileBuilder ??
         (ContentItem item, List<String> currentPath, VoidCallback? onDrill) {
           final isSelected = _isItemSelected(item);
-          return ListTile(
+          final tile = ListTile(
             leading: Checkbox(
               value: isSelected,
               onChanged: (_) => _toggleItem(item, currentPath.length),
@@ -192,6 +192,12 @@ class HierarchySelectionPanelState
             trailing: onDrill != null ? const Icon(Icons.chevron_right) : null,
             onTap: onDrill ?? () => _toggleItem(item, currentPath.length),
           );
+          // In Hebrew mode the labels are RTL; wrap the tile so that
+          // ListTile's `leading` (checkbox) is placed on the RIGHT —
+          // adjacent to the label — instead of being stranded at the far left.
+          return terms.isHebrew
+              ? Directionality(textDirection: TextDirection.rtl, child: tile)
+              : tile;
         };
 
     return Column(

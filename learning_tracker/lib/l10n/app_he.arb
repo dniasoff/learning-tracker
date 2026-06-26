@@ -701,7 +701,7 @@
   "rewardConfigScreenContextLabel": "הגדרת פרסים",
   "rewardConfigConfigureNewTitle": "הגדרת פרס חדש",
   "rewardConfigConfigureNewSubtitle": "בחרו סמל והגדירו יעדי נקודות לילד.",
-  "rewardConfigChooseAvatarStep": "1. בחירת סמל",
+  "rewardConfigChooseAvatarStep": "בחירת סמל",
   "rewardConfigRewardTypeLabel": "סוג פרס",
   "rewardConfigChooseTrackLabel": "בחירת מסלול",
   "rewardConfigPreviewLabel": "תצוגה מקדימה",
@@ -1385,6 +1385,14 @@
   "curriculumSettingsChangeProgramSubtitle": "עברו לתוכנית לימוד אחרת",
   "curriculumSettingsDontSeeProgram": "לא רואים את התוכנית שלכם?",
   "curriculumSettingsRequestProgram": "בקשו תוכנית חדשה",
+  "curriculumSettingsCustomSchedule": "לוח זמנים מותאם",
+  "curriculumSettingsProgramLabel": "תוכנית: {name}",
+  "@curriculumSettingsProgramLabel": {
+    "description": "List tile title showing the active learning program name. {name} is the human-readable program label.",
+    "placeholders": {
+      "name": { "type": "String" }
+    }
+  },
 
   "deleteAccountDialogTitle": "מחיקת חשבון",
   "deleteAccountTypeConfirm": "הקלידו DELETE לאישור:",
@@ -1699,7 +1707,13 @@
   "trackEditSectionName": "שם מסלול",
   "trackEditSectionGoal": "יעד",
   "trackEditSectionStudyDays": "ימי לימוד",
-  "trackEditSectionReview": "חזרה",
+  "trackEditSectionReview": "חזרה ({term})",
+  "@trackEditSectionReview": {
+    "description": "Section heading for the review configuration block on the track-edit screen. {term} is the domain-specific term for review/chazara, supplied by the caller via domainTermLabels.",
+    "placeholders": {
+      "term": { "type": "String" }
+    }
+  },
   "trackEditGoalTypeLocked": "לא ניתן לשנות את סוג היעד לאחר ההגדרה",
   "trackEditProgramLocked": "חזרה, היקף ויימי לימוד מנוהלים על ידי התוכנית.",
   "trackEditReviewSummaryNone": "ללא חזרה",
@@ -2646,7 +2660,7 @@
       "levelLabel": { "type": "String" }
     }
   },
-  "schedulerStudyDaysScreenTitle": "ימי לימוד {curriculum}",
+  "schedulerStudyDaysScreenTitle": "{curriculum} • ימי לימוד",
   "trackReorderScreenTitle": "{curriculum} • סדר מחדש",
   "bulkMarkScreenTitle": "סימון לימוד קודם — {curriculum}",
   "bulkMarkSelectHeading": "בחרו תוכן שכבר למדתם",

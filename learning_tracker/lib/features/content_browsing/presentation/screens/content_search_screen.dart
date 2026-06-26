@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
@@ -49,6 +50,24 @@ class _ContentSearchScreenState extends ConsumerState<ContentSearchScreen> {
     _debounce?.cancel();
     _searchController.dispose();
     super.dispose();
+  }
+
+  /// Mirrors [ContentHierarchyScreen._isChapterLevelRef]: returns true when
+  /// [item] sits at the curriculum's [CurriculumLabels.maxBrowseDepth] and
+  /// that depth is shallower than the full leaf depth. Such items should open
+  /// the text reader directly rather than drill into a (broken) intermediate
+  /// hierarchy screen.
+  bool _isChapterLevelRef(CurriculumId curriculum, ContentItem item) {
+    final maxDepth = CurriculumLabels.maxBrowseDepth(curriculum);
+    if (maxDepth >= CurriculumLabels.depth(curriculum)) return false;
+    final itemDepth = item.level4 != null
+        ? 4
+        : item.level3 != null
+        ? 3
+        : item.level2 != null
+        ? 2
+        : 1;
+    return itemDepth == maxDepth;
   }
 
   void _onSearchChanged(String query) {
@@ -161,7 +180,7 @@ class _ContentSearchScreenState extends ConsumerState<ContentSearchScreen> {
               showReviewBadge: showReviewBadge,
               showBreadcrumb: true,
               onTap: () {
-                if (item.isLeaf) {
+                if (item.isLeaf || _isChapterLevelRef(curriculum, item)) {
                   context.router.push(
                     TextDisplayRoute(sefariaRef: item.sefariaRef),
                   );
