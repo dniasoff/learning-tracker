@@ -368,7 +368,7 @@ void main() {
           // Key assertions (E2E-804):
           // 1. Time-range chips are present.
           h.expectOnScreen('Last 7 Days');
-          h.expectOnScreen('Last 30\nDays');
+          h.expectOnScreen('Last 30 Days');
           h.expectOnScreen('All Time');
           // 2. Curriculum filter "All" chip present.
           h.expectOnScreen('All');
@@ -394,10 +394,10 @@ void main() {
 
           await h.tapText('Recent Activity');
           // Tap "Last 30 Days" chip to change the range.
-          await h.tapText('Last 30\nDays');
+          await h.tapText('Last 30 Days');
 
           // The chip label is still visible (toggle rendered without crash).
-          h.expectOnScreen('Last 30\nDays');
+          h.expectOnScreen('Last 30 Days');
           // The screen title still present.
           h.expectOnScreen('Recent Activity');
         },

@@ -18,10 +18,10 @@
 //  B. PinFlowScreen — verify mode
 //     B1. Verify: AppBar title is "Enter Parent PIN"
 //     B2. Verify: subtitle is enterParentPinSubtitle
-//     B3. Verify: correct PIN → verifyProfilePin called + maybePop(true)
+//     B3. Verify: correct PIN → verifyProfilePin called + pop(true)
 //     B4. Verify: wrong PIN → errorMessage shown, not completed
 //     B5. Verify: lockout → lockedOut=true, lockout panel shown
-//     B6. Verify: Cancel button calls maybePop(false)
+//     B6. Verify: Cancel button calls pop(false)
 //
 //  C. PinFlowScreen — change mode
 //     C1. Change: AppBar title is "Change Parent PIN"
@@ -29,7 +29,7 @@
 //     C3. Change: correct current PIN → transitions to enterNew step
 //     C4. Change: wrong current PIN → errorMessage shown
 //     C5. Change: mismatch on confirm → back to enterNew + error
-//     C6. Change: full happy path → setProfilePin called + maybePop(true)
+//     C6. Change: full happy path → setProfilePin called + pop(true)
 //
 //  D. ParentPinSetupDialog — internal widget (via showParentPinSetupDialog)
 //     D1. Dialog: title is setParentPinDialogTitle on enterNew step
@@ -188,9 +188,9 @@ Future<void> _teardown(WidgetTester tester) async {
 // ── Helper to set up common mock stubs ────────────────────────────────────────
 
 void _stubRouter(_MockStackRouter router) {
-  when(
-    () => router.maybePop<bool>(any<bool>()),
-  ).thenAnswer((_) => Future.value(true));
+  // Production code now calls pop(result) — not maybePop — so that the
+  // push<bool>() result completer resolves correctly (P1 on-device audit fix).
+  when(() => router.pop<bool>(any<bool>())).thenReturn(null);
   when(() => router.canPop()).thenReturn(true);
   when(() => router.currentPath).thenReturn('/');
 }
@@ -475,7 +475,7 @@ void main() {
       await _teardown(tester);
     });
 
-    testWidgets('B3: correct PIN → verifyProfilePin called, maybePop invoked', (
+    testWidgets('B3: correct PIN → verifyProfilePin called, pop invoked', (
       tester,
     ) async {
       setViewSize(tester);
@@ -497,9 +497,10 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
 
       verify(() => ps.verifyProfilePin(_kProfileId, '1234')).called(1);
-      // maybePop was called (with true).
+      // pop(true) was called — production uses pop() not maybePop() so that
+      // the parent-mode guard's push<bool>() result completer resolves.
       verify(
-        () => router.maybePop<bool>(any<bool>()),
+        () => router.pop<bool>(any<bool>()),
       ).called(greaterThanOrEqualTo(1));
       await _teardown(tester);
     });
@@ -607,7 +608,7 @@ void main() {
       await _teardown(tester);
     });
 
-    testWidgets('B6: Cancel button calls maybePop', (tester) async {
+    testWidgets('B6: Cancel button calls pop', (tester) async {
       setViewSize(tester);
       await tester.pumpWidget(
         _buildScreen(
@@ -623,8 +624,9 @@ void main() {
       await tester.tap(find.text('Cancel'));
       await tester.pump();
 
+      // Production uses pop(false) on cancel — not maybePop.
       verify(
-        () => router.maybePop<bool>(any<bool>()),
+        () => router.pop<bool>(any<bool>()),
       ).called(greaterThanOrEqualTo(1));
       await _teardown(tester);
     });
@@ -799,46 +801,46 @@ void main() {
       await _teardown(tester);
     });
 
-    testWidgets(
-      'C6: full happy path → setProfilePin called + maybePop invoked',
-      (tester) async {
-        setViewSize(tester);
-        when(
-          () => ps.verifyProfilePin(_kProfileId, '1234'),
-        ).thenAnswer((_) async => true);
-        when(
-          () => ps.setProfilePin(_kProfileId, '5678'),
-        ).thenAnswer((_) async {});
+    testWidgets('C6: full happy path → setProfilePin called + pop invoked', (
+      tester,
+    ) async {
+      setViewSize(tester);
+      when(
+        () => ps.verifyProfilePin(_kProfileId, '1234'),
+      ).thenAnswer((_) async => true);
+      when(
+        () => ps.setProfilePin(_kProfileId, '5678'),
+      ).thenAnswer((_) async {});
 
-        await tester.pumpWidget(
-          _buildScreen(
-            PinFlowMode.change,
-            pinService: ps,
-            router: router,
-            appRouter: appRouter,
-          ),
-        );
-        await tester.pump(const Duration(seconds: 1));
+      await tester.pumpWidget(
+        _buildScreen(
+          PinFlowMode.change,
+          pinService: ps,
+          router: router,
+          appRouter: appRouter,
+        ),
+      );
+      await tester.pump(const Duration(seconds: 1));
 
-        // verifyCurrent
-        await _enterPin(tester, '1234');
-        await tester.pump(const Duration(seconds: 1));
+      // verifyCurrent
+      await _enterPin(tester, '1234');
+      await tester.pump(const Duration(seconds: 1));
 
-        // enterNew
-        await _enterPin(tester, '5678');
-        await tester.pump(const Duration(seconds: 1));
+      // enterNew
+      await _enterPin(tester, '5678');
+      await tester.pump(const Duration(seconds: 1));
 
-        // confirm
-        await _enterPin(tester, '5678');
-        await tester.pump(const Duration(seconds: 1));
+      // confirm
+      await _enterPin(tester, '5678');
+      await tester.pump(const Duration(seconds: 1));
 
-        verify(() => ps.setProfilePin(_kProfileId, '5678')).called(1);
-        verify(
-          () => router.maybePop<bool>(any<bool>()),
-        ).called(greaterThanOrEqualTo(1));
-        await _teardown(tester);
-      },
-    );
+      verify(() => ps.setProfilePin(_kProfileId, '5678')).called(1);
+      // Production uses pop(true) not maybePop(true).
+      verify(
+        () => router.pop<bool>(any<bool>()),
+      ).called(greaterThanOrEqualTo(1));
+      await _teardown(tester);
+    });
   });
 
   // ── D. ParentPinSetupDialog ────────────────────────────────────────────────
@@ -1409,7 +1411,7 @@ void main() {
   //     setup screen — causing an infinite loop.
   group('G. Setup-completion navigation linger (regression)', () {
     testWidgets(
-      'G1: setup completion — maybePop called and digits are empty on completion',
+      'G1: setup completion — pop called and digits are empty on completion',
       (tester) async {
         tester.view.physicalSize = const Size(800, 1600);
         tester.view.devicePixelRatio = 1.0;
@@ -1481,9 +1483,9 @@ void main() {
               'lingers before maybePop takes effect',
         );
 
-        // maybePop(true) must have been called.
+        // pop(true) must have been called — production uses pop() not maybePop().
         verify(
-          () => router.maybePop<bool>(any<bool>()),
+          () => router.pop<bool>(any<bool>()),
         ).called(greaterThanOrEqualTo(1));
 
         await _teardown(tester);

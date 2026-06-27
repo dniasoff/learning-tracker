@@ -269,8 +269,8 @@ void main() {
 
       // The reward card title is visible
       expect(find.text('Toy'), findsOneWidget);
-      // Cost label via redeemScreenCostLabel
-      expect(find.text('50 points'), findsOneWidget);
+      // Cost label via redeemScreenCostLabel ("{points} Points" — capital P)
+      expect(find.text('50 Points'), findsOneWidget);
 
       final button = tester.widget<FilledButton>(find.byType(FilledButton));
       expect(

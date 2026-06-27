@@ -295,8 +295,14 @@ void main() {
       // The goal-setup form renders its mode toggle + submit button.
       expect(find.text('Create Goal'), findsOneWidget);
 
-      // Submit the default goal (pace mode default), then let the write +
-      // navigation pop settle.
+      // The form defaults to 'deadline' mode which requires a date before
+      // submitting. Switch to 'No deadline' mode so the form is immediately
+      // submittable without any additional date-picker interaction.
+      await tester.tap(find.text('No deadline'));
+      await tester.pump();
+
+      // Submit the goal (no-deadline mode requires no further input), then
+      // let the write + navigation pop settle.
       await tester.tap(find.text('Create Goal'));
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 200));

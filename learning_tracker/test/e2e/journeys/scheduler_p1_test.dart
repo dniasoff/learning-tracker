@@ -511,7 +511,7 @@ void main() {
         await tester.pump(const Duration(milliseconds: 300));
 
         // Key assertion: screen title rendered.
-        h.expectOnScreen('Mishnayos Study Days');
+        h.expectOnScreen('Mishnayos • Study Days');
 
         // Neutral message for a no-chazara track.
         h.expectOnScreen('All days are study days for this track.');
@@ -633,7 +633,7 @@ void main() {
         await tester.pump(const Duration(milliseconds: 300));
 
         // Screen title visible.
-        h.expectOnScreen('Mishnayos Study Days');
+        h.expectOnScreen('Mishnayos • Study Days');
 
         // Day-toggle grid is shown (chazara-enabled track).
         h.expectOnScreen('Study');
@@ -647,7 +647,7 @@ void main() {
           await tester.tap(sunTile);
           await tester.pumpAndSettle(const Duration(milliseconds: 300));
           // No crash — screen title still visible.
-          h.expectOnScreen('Mishnayos Study Days');
+          h.expectOnScreen('Mishnayos • Study Days');
         }
 
         await tester.pump(Duration.zero);
@@ -763,7 +763,7 @@ void main() {
         await tester.pump(const Duration(milliseconds: 300));
 
         // Screen title visible.
-        h.expectOnScreen('Mishnayos Study Days');
+        h.expectOnScreen('Mishnayos • Study Days');
 
         // Zero-study-day counter: "0 study days per week".
         h.expectOnScreen('0 study days per week');

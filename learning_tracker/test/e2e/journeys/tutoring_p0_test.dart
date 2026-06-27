@@ -358,83 +358,115 @@ void main() {
   group('E2E-1001 — Parent invites a tutor for a child', () {
     // Seed a child profile so InviteTutorScreen has a valid childProfileId.
     // Navigate directly to /tutor/invite?childProfileId=<id>.
-    // Enter a valid tutor email, tap "Send invite".
-    // Assert the fake repository received the inviteTutor call.
+    //
+    // HARNESS LIMITATION (invite flow change):
+    //   The E2E harness always sets authStateProvider to Tier.localBorn.
+    //   Re-overriding authStateProvider in extraOverrides crashes ProviderScope
+    //   with "ProviderAlreadyOverriddenError" (same constraint as E2E-719,
+    //   E2E-1306 — documented in profiles_tutoring_p2_test.dart and
+    //   sync_p1_test.dart).
+    //
+    //   InviteTutorScreen._sendInvite now checks authState.isLocalBorn first:
+    //   if true it shows an account-level error banner ("Tutoring requires a
+    //   cloud account — upgrade to invite a tutor.") and returns without calling
+    //   inviteTutorUseCase. This is the INTENTIONAL behavior change.
+    //
+    //   The cloud-born happy path (where inviteTutor IS called) is fully covered
+    //   by invite_tutor_screen_l1_test.dart which overrides authStateProvider
+    //   with a cloudBorn tier directly (no harness constraint).
+    //
+    // This E2E test therefore asserts the local-born precondition behavior:
+    //   • The screen is reachable via /tutor/invite.
+    //   • Entering a valid email and tapping "Send invite" with a local-born
+    //     account shows the account-level cloud-required error banner.
+    //   • inviteTutorUseCase is NOT called (fakeRepo.invitedEmails is empty).
 
-    testWidgets('entering a valid tutor email and tapping Send invite calls '
-        'inviteTutorUseCase with the entered email', (tester) async {
-      final identity = E2EIdentity.localBorn(
-        email: 'parent1001@example.com',
-        displayName: 'Parent1001',
-        profileMode: 'adult',
-      );
-      final h = E2EHarness(tester, identity: identity);
-      addTearDown(h.dispose);
+    testWidgets(
+      'local-born parent: tapping Send invite shows cloud-account-required '
+      'error banner; inviteTutorUseCase is NOT called '
+      '(cloud-born happy path covered by invite_tutor_screen_l1_test.dart)',
+      (tester) async {
+        final identity = E2EIdentity.localBorn(
+          email: 'parent1001@example.com',
+          displayName: 'Parent1001',
+          profileMode: 'adult',
+        );
+        final h = E2EHarness(tester, identity: identity);
+        addTearDown(h.dispose);
 
-      final fakeRepo = _FakeTutorGrantRepository();
+        final fakeRepo = _FakeTutorGrantRepository();
 
-      await h.pumpApp(
-        path: '/dashboard',
-        extraOverrides: [
-          ..._baseSilences(h),
-          tutorGrantRepositoryProvider.overrideWithValue(fakeRepo),
-          outgoingTutorGrantsProvider.overrideWith(
-            (ref, childProfileId) => Future.value(<TutorGrant>[]),
-          ),
-          tutorNotificationGatewayProvider.overrideWithValue(
-            _NoopTutorNotificationGateway(),
-          ),
-          activeTutoredProfileSelectionProvider.overrideWith(
-            () => _NullTutoredSelection(),
-          ),
-        ],
-      );
-
-      // Seed a child profile into the in-memory DB.
-      final childProfileId = await h.db
-          .into(h.db.learnerProfiles)
-          .insert(
-            LearnerProfilesCompanion.insert(
-              accountId: identity.accountId,
-              displayName: 'ChildToTutor',
-              mode: 'child',
-              createdAt: DateTimeFactory.nowUtc(),
-              updatedAt: DateTimeFactory.nowUtc(),
+        await h.pumpApp(
+          path: '/dashboard',
+          extraOverrides: [
+            ..._baseSilences(h),
+            tutorGrantRepositoryProvider.overrideWithValue(fakeRepo),
+            outgoingTutorGrantsProvider.overrideWith(
+              (ref, childProfileId) => Future.value(<TutorGrant>[]),
             ),
-          );
+            tutorNotificationGatewayProvider.overrideWithValue(
+              _NoopTutorNotificationGateway(),
+            ),
+            activeTutoredProfileSelectionProvider.overrideWith(
+              () => _NullTutoredSelection(),
+            ),
+          ],
+        );
 
-      // Navigate to InviteTutorScreen with the child's profile id.
-      // Use _navigateToSettle so all animation frames complete before Flutter
-      // reports any layout errors — prevents "DISPOSED OVERFLOWING" from a
-      // transient slide-in frame with minimal height constraints.
-      await _navigateToSettle(
-        h,
-        tester,
-        InviteTutorRoute(childProfileId: childProfileId.toString()),
-      );
+        // Seed a child profile into the in-memory DB.
+        final childProfileId = await h.db
+            .into(h.db.learnerProfiles)
+            .insert(
+              LearnerProfilesCompanion.insert(
+                accountId: identity.accountId,
+                displayName: 'ChildToTutor',
+                mode: 'child',
+                createdAt: DateTimeFactory.nowUtc(),
+                updatedAt: DateTimeFactory.nowUtc(),
+              ),
+            );
 
-      // InviteTutor screen heading should be visible.
-      h.expectOnScreen('Invite a Tutor');
+        // Navigate to InviteTutorScreen with the child's profile id.
+        // Use _navigateToSettle so all animation frames complete before Flutter
+        // reports any layout errors — prevents "DISPOSED OVERFLOWING" from a
+        // transient slide-in frame with minimal height constraints.
+        await _navigateToSettle(
+          h,
+          tester,
+          InviteTutorRoute(childProfileId: childProfileId.toString()),
+        );
 
-      // Enter a valid tutor email.
-      const tutorEmail = 'newtutor1001@example.com';
-      await h.enterText(find.byType(TextFormField), tutorEmail);
-      await h.pump(const Duration(milliseconds: 100));
+        // InviteTutor screen heading should be visible.
+        h.expectOnScreen('Invite a Tutor');
 
-      // Tap the Send invite button.
-      await h.tapText('Send invite');
-      await tester.pump(const Duration(milliseconds: 500));
-      await tester.pumpAndSettle(const Duration(milliseconds: 500));
+        // Enter a valid tutor email.
+        const tutorEmail = 'newtutor1001@example.com';
+        await h.enterText(find.byType(TextFormField), tutorEmail);
+        await h.pump(const Duration(milliseconds: 100));
 
-      // The fake repository must have received the inviteTutor call.
-      expect(
-        fakeRepo.invitedEmails,
-        contains(tutorEmail),
-        reason:
-            'Expected tutorGrantRepository.inviteTutor to be called '
-            'with the entered email address',
-      );
-    });
+        // Tap the Send invite button.
+        await h.tapText('Send invite');
+        await tester.pump(const Duration(milliseconds: 500));
+        await tester.pumpAndSettle(const Duration(milliseconds: 500));
+
+        // For a local-born account, _sendInvite detects isLocalBorn=true and
+        // shows the account-level cloud-required error banner instead of calling
+        // inviteTutorUseCase.
+        h.expectOnScreen(
+          'Tutoring requires a cloud account — upgrade to invite a tutor.',
+        );
+
+        // The use case must NOT have been called (local-born guard blocks it).
+        expect(
+          fakeRepo.invitedEmails,
+          isEmpty,
+          reason:
+              'Expected inviteTutorUseCase NOT to be called for a local-born '
+              'account — the screen must show the cloud-account-required error '
+              'banner and return before dispatching the invite.',
+        );
+      },
+    );
   });
 
   // ── E2E-1002 ─────────────────────────────────────────────────────────────────

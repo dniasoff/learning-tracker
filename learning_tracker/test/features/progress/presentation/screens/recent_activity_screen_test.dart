@@ -403,7 +403,7 @@ void main() {
     );
 
     // Tap "Last 30 Days" pill — switches the window, must refetch.
-    final last30Pill = find.text('Last 30\nDays');
+    final last30Pill = find.text('Last 30 Days');
     expect(last30Pill, findsOneWidget);
     await tester.tap(last30Pill);
     await tester.pumpAndSettle();

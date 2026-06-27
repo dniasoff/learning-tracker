@@ -586,7 +586,8 @@ void main() {
         await tester.pump(const Duration(milliseconds: 300));
 
         // Key assertions: screen title and legend are present.
-        h.expectOnScreen('Mishnayos Study Days');
+        // Title format is '{curriculum} • Study Days' per schedulerStudyDaysScreenTitle l10n.
+        h.expectOnScreen('Mishnayos • Study Days');
         h.expectOnScreen('Study');
         h.expectOnScreen('Review only');
         // R-SC7: no mounted-check crash — screen is still mounted.

@@ -263,7 +263,7 @@ void main() {
       await tester.pump(Duration.zero);
     });
 
-    testWidgets('shows l10n childMode subtitle for child profile', (
+    testWidgets('shows l10n profileTypeChild subtitle for child profile', (
       tester,
     ) async {
       final profiles = [_profile(id: 1, name: 'Dani', mode: 'child')];
@@ -273,14 +273,14 @@ void main() {
       );
       await tester.pump();
 
-      // l10n.childMode = 'Child mode'
-      expect(find.text('Child mode'), findsOneWidget);
+      // l10n.profileTypeChild = 'Child'
+      expect(find.text('Child'), findsOneWidget);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(Duration.zero);
     });
 
-    testWidgets('shows l10n adultMode subtitle for adult profile', (
+    testWidgets('shows l10n profileTypeAdult subtitle for adult profile', (
       tester,
     ) async {
       final profiles = [_profile(id: 1, name: 'Sarah', mode: 'adult')];
@@ -290,8 +290,8 @@ void main() {
       );
       await tester.pump();
 
-      // l10n.adultMode = 'Adult mode'
-      expect(find.text('Adult mode'), findsOneWidget);
+      // l10n.profileTypeAdult = 'Adult'
+      expect(find.text('Adult'), findsOneWidget);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(Duration.zero);

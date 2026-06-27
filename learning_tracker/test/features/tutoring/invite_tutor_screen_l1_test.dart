@@ -20,6 +20,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/features/account/domain/models/auth_state.dart';
+import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart';
@@ -32,6 +34,22 @@ import 'package:mocktail/mocktail.dart';
 // ── Mocks ────────────────────────────────────────────────────────────────────
 
 class _MockInviteTutorUseCase extends Mock implements InviteTutorUseCase {}
+
+// ── Auth state stub ───────────────────────────────────────────────────────────
+
+/// A cloud-born [AuthState] that bypasses the local-only guard in
+/// [InviteTutorScreen._sendInvite]. The screen rejects the attempt when
+/// [AuthState.isLocalBorn] is true; overriding with this cloud-born state
+/// lets tests reach the use-case call without a real Firebase session.
+const _cloudBornAuthState = AuthState.signedIn(
+  user: AuthUser(
+    profileId: 1,
+    email: 'cloud@test.com',
+    displayName: 'Cloud User',
+    firebaseUid: 'uid-test',
+  ),
+  tier: Tier.cloudBorn,
+);
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -66,6 +84,9 @@ Widget _buildApp({
   return ProviderScope(
     overrides: [
       inviteTutorUseCaseProvider.overrideWithValue(useCase),
+      // Provide a cloud-born auth state so the local-only guard in
+      // _sendInvite does not block the invite — no real Firebase needed.
+      authStateProvider.overrideWithValue(_cloudBornAuthState),
       // Return the list synchronously (FutureOr<List<...>> can be just a
       // List<...>) so ref.read(profileListProvider).asData?.value is non-null
       // immediately on first pump — the screen calls ref.read (not watch).
@@ -502,6 +523,7 @@ void main() {
         ProviderScope(
           overrides: [
             inviteTutorUseCaseProvider.overrideWithValue(mockUseCase),
+            authStateProvider.overrideWithValue(_cloudBornAuthState),
             profileListProvider.overrideWith(
               (ref) => [
                 _profile(id: 1, name: 'Parent', mode: 'adult'),

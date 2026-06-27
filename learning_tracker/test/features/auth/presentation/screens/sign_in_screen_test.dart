@@ -110,22 +110,26 @@ void main() {
       await tester.pump(Duration.zero);
     });
 
-    testWidgets('offline: shows the coral local-warning mode card', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        buildTestWidget(connectivity: Stream.value(false)),
-      );
-      await tester.pump(const Duration(seconds: 2));
+    testWidgets(
+      'offline: shows the inline wifi-off hint (Fix #13 — no email typed)',
+      (tester) async {
+        await tester.pumpWidget(
+          buildTestWidget(connectivity: Stream.value(false)),
+        );
+        await tester.pump(const Duration(seconds: 2));
 
-      // Coral local-warning variant uses the warning + danger icons; the
-      // cloud-blue "backed up" card must NOT be shown.
-      expect(find.byIcon(Icons.warning_amber_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.cloud_done_rounded), findsNothing);
+        // Fix #13: When offline and no confirmed local-born account is matched,
+        // the screen now shows an inline wifi-off hint instead of the coral
+        // "local account only" SignInModeCard. The cloud-blue "backed up" card
+        // must still NOT appear.
+        expect(find.byIcon(Icons.wifi_off_rounded), findsOneWidget);
+        expect(find.byIcon(Icons.warning_amber_rounded), findsNothing);
+        expect(find.byIcon(Icons.cloud_done_rounded), findsNothing);
 
-      await tester.pumpWidget(const SizedBox.shrink());
-      await tester.pump(Duration.zero);
-    });
+        await tester.pumpWidget(const SizedBox.shrink());
+        await tester.pump(Duration.zero);
+      },
+    );
 
     testWidgets(
       'loading (probe in flight): defaults to offline — no cloud card, '

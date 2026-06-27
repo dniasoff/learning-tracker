@@ -1217,9 +1217,22 @@ void main() {
       setViewSize(tester);
       final submitted = <GoalEntity>[];
 
+      // Pre-populate with a future date so the submit button is enabled in
+      // deadline mode (the button is disabled when no date is selected).
+      // Description starts empty so we can assert our typed value.
+      final goalWithDate = GoalEntity(
+        curriculumId: CurriculumId.mishnayos,
+        targetPercent: 100.0,
+        goalType: 'deadline',
+        targetDate: DateTime.utc(2027, 12, 31),
+        createdAt: _kNow,
+        updatedAt: _kNow,
+      );
+
       await tester.pumpWidget(
         _buildGoalFormHarness(
           curriculumId: CurriculumId.mishnayos,
+          existingGoal: goalWithDate,
           submitted: submitted,
         ),
       );
@@ -1235,7 +1248,8 @@ void main() {
       await tester.enterText(occasionField, 'Siyum HaShas');
       await tester.pump();
 
-      await tester.tap(find.text('Create Goal'));
+      // existingGoal is set → button reads "Update Goal"
+      await tester.tap(find.text('Update Goal'));
       await tester.pump();
 
       expect(submitted, hasLength(1));
@@ -1261,10 +1275,16 @@ void main() {
       );
       await tester.pump();
 
-      // Drag slider to around 50%
+      // Drag slider to around 50% (slider starts at 100, dragging left reduces it).
       final slider = find.byType(Slider);
       final sliderCenter = tester.getCenter(slider);
       await tester.dragFrom(sliderCenter, const Offset(-100, 0));
+      await tester.pump();
+
+      // Switch to "No deadline" so the submit button is enabled without
+      // requiring a date selection. The _targetPercent value persists across
+      // mode changes because it is a separate state field.
+      await tester.tap(find.text('No deadline'));
       await tester.pump();
 
       await tester.tap(find.text('Create Goal'));

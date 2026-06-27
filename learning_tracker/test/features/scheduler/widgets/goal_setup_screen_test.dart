@@ -495,8 +495,10 @@ void main() {
           );
           await tester.pumpAndSettle();
 
-          // Switch to pace mode via the speed-icon segment (locale-agnostic).
-          await tester.tap(find.byIcon(Icons.speed));
+          // Switch to pace mode via the localized goal-type segment label.
+          // The speed icon was removed; the segment is now text-only.
+          final paceLabel = locale.languageCode == 'he' ? 'קצב' : 'Pace';
+          await tester.tap(find.text(paceLabel));
           await tester.pumpAndSettle();
 
           _expectPaceLabelsNotTruncated(tester);

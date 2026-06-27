@@ -489,7 +489,7 @@ void main() {
         h.expectOnScreen('Recent Activity');
         // 2. Time-range chips present — sourced from local state (no network).
         h.expectOnScreen('Last 7 Days');
-        h.expectOnScreen('Last 30\nDays');
+        h.expectOnScreen('Last 30 Days');
         h.expectOnScreen('All Time');
         // 3. Curriculum filter "All" chip present.
         h.expectOnScreen('All');

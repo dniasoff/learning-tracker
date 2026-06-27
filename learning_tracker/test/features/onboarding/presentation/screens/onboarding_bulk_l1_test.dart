@@ -589,10 +589,15 @@ void main() {
         await tester.pump();
         await tester.pump(const Duration(seconds: 1));
 
+        // The siyumimTerm is interpolated by domainTermLabels(ref).siyumim which
+        // defaults to Hebrew script ('סיומים') in the test environment because
+        // HebrewTermsPreference.defaultValue is true. Check stable sub-strings
+        // from the en ARB template that are always present regardless of the
+        // resolved term.
         expect(
-          find.textContaining('siyumim'),
+          find.textContaining('and lifetime knowledge'),
           findsOneWidget,
-          reason: 'Subtitle must mention siyumim',
+          reason: 'Subtitle must mention lifetime knowledge',
         );
         expect(
           find.textContaining('not toward your streak'),

@@ -500,6 +500,12 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 
+      // With kMaxDeviceAccounts tiles in the list the bottom section may be
+      // below the default test viewport (800×600). Scroll to the bottom so
+      // the lazily-built items enter the viewport before asserting.
+      await tester.drag(find.byType(ListView), const Offset(0, -800));
+      await tester.pumpAndSettle();
+
       // Max message rendered
       expect(
         find.textContaining(

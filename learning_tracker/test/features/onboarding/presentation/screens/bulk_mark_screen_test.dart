@@ -122,12 +122,11 @@ void main() {
 
       // The subtitle uses the W2 l10n key `bulkMarkWizardSubtitle` whose en
       // copy clarifies the tier policy.
-      expect(
-        find.textContaining(
-          'These count toward siyumim and lifetime knowledge',
-        ),
-        findsOneWidget,
-      );
+      // The siyumimTerm is interpolated by domainTermLabels(ref).siyumim which
+      // defaults to Hebrew script ('סיומים') in the test environment because
+      // HebrewTermsPreference.defaultValue is true. Check stable sub-strings
+      // that are always present regardless of the resolved term.
+      expect(find.textContaining('and lifetime knowledge'), findsOneWidget);
       expect(
         find.textContaining('not toward your streak or points'),
         findsOneWidget,

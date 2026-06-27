@@ -560,7 +560,7 @@ void main() {
       await _settle(tester);
 
       expect(find.text('Points Earned'), findsOneWidget);
-      expect(find.text('TOTAL TORAH POINTS'), findsOneWidget);
+      expect(find.text('POINTS EARNED'), findsOneWidget);
 
       await _teardown(tester);
     });

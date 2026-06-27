@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
 import 'package:learning_tracker/core/preferences/text_display_preferences.dart';
 import 'package:learning_tracker/features/content_browsing/data/repositories/text_cache_repository.dart';
 import 'package:learning_tracker/features/content_browsing/presentation/providers/text_display_providers.dart';
@@ -55,6 +56,12 @@ void main() {
           (ref, trackId) async => 'personal',
         ),
         isStageCompletedProvider.overrideWith((ref, params) async => false),
+        // Provide a resolved title so the AppBar shows the ref string rather
+        // than the '…' loading placeholder (renderedDisplayForRefProvider is
+        // async and has no real content index in tests).
+        renderedDisplayForRefProvider.overrideWith(
+          (ref, sefariaRef) async => sefariaRef.replaceAll('_', ' '),
+        ),
       ],
       child: const MaterialApp(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
