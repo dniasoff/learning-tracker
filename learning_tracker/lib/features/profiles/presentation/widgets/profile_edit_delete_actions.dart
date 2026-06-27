@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/utils/text_input_formatters.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
@@ -57,7 +58,8 @@ Future<void> editProfileFlow(
   // per-profile PINs from secure storage. If left behind, the PIN guard would
   // still prompt for a PIN on what is now an adult profile, and the tutor PIN
   // would remain reachable via an orphaned key.
-  if (profile.mode == 'child' && result.mode == 'adult') {
+  if (profile.profileMode == ProfileMode.child &&
+      ProfileMode.fromStorageKey(result.mode) == ProfileMode.adult) {
     final pins = ref.read(pinServiceProvider);
     await pins.clearProfilePin(profile.id);
     await pins.clearTutorPin(profile.id);
