@@ -130,10 +130,14 @@ class _DeclineInviteScreenState extends ConsumerState<DeclineInviteScreen> {
                   childName: grant.childDisplayLabel,
                 ),
           );
-        case TutorGrantFailure(:final message):
+        case TutorGrantFailure():
+          // Never surface raw Firebase/gRPC codes (e.g. "UNAVAILABLE") to
+          // the user — always map to a friendly, localized message.
           setState(() {
             _step = _DeclineStep.error;
-            _errorMessage = message;
+            _errorMessage = AppLocalizations.of(
+              context,
+            )!.declineInviteGenericError;
           });
         case TutorGrantPreconditionError(:final message):
           setState(() {

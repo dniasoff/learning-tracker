@@ -471,7 +471,7 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String introRewardsSubtitle(String scholarTier) {
-    return 'צברו נקודות, בנו רצפים ופתחו פרסים מסתוריים ככל שתתקדמו ממתחילים ועד $scholarTier!';
+    return 'צברו נקודות, בנו רצפים ופתחו פרסים מסתוריים ככל שתתקדמו ממתחילים ועד ⁦$scholarTier⁩!';
   }
 
   @override
@@ -1505,6 +1505,9 @@ class AppLocalizationsHe extends AppLocalizations {
       'פרס אחר כבר משתמש בערך נקודות זה.';
 
   @override
+  String get rewardConfigDuplicateName => 'פרס עם השם הזה כבר קיים.';
+
+  @override
   String get rewardConfigEmptyMilestones =>
       'עדיין אין פרסים. סגרו תפריט זה והשתמשו בטופס שלמעלה כדי להוסיף.';
 
@@ -1575,7 +1578,7 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String rewardConfigRewardCreatedBody(String name) {
-    return '\"$name\" נוסף. הילד יראה אותו תחת הישגים — נעול ומטושטש עד שיגיע ליעד הנקודות.';
+    return '\"$name\" נוסף. הילד יכול לראות את הפרס עכשיו — נעול ומטושטש עד שיגיע ליעד הנקודות.';
   }
 
   @override
@@ -1583,7 +1586,7 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String rewardConfigRewardUpdatedBody(String name) {
-    return 'השינויים ב־\"$name\" נשמרו. הילד יראה את העדכון תחת הישגים.';
+    return 'השינויים ב־\"$name\" נשמרו. הילד יכול לראות את העדכון.';
   }
 
   @override
@@ -1671,6 +1674,17 @@ class AppLocalizationsHe extends AppLocalizations {
   @override
   String get pinDialogSubtitleSwitchProfile =>
       'הזינו את הקוד כדי לעבור בין פרופילים.';
+
+  @override
+  String get pinDialogSubtitleEditProfile =>
+      'הזינו את הקוד כדי לערוך פרופיל זה.';
+
+  @override
+  String get pinDialogSubtitleDeleteProfile =>
+      'הזינו את הקוד כדי למחוק פרופיל זה.';
+
+  @override
+  String get pinBackspace => 'מחק';
 
   @override
   String get enterNewPinSubtitle => 'בחרו קוד חדש בן 4 ספרות.';
@@ -2189,7 +2203,7 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String accountPickerAddAnother(int remaining) {
-    return '+1   הוספת חשבון ($remaining מקומות פנויים)';
+    return 'הוספת חשבון ($remaining מקומות פנויים)';
   }
 
   @override
@@ -2649,7 +2663,7 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String searchFieldHint(String label) {
-    return 'חיפוש $label…';
+    return 'חיפוש ⁦$label⁩…';
   }
 
   @override
@@ -3305,7 +3319,14 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String goalDeadlineItemsInDays(int items, int days) {
-    return '$items פריטים ב-$days ימים';
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days ימים',
+      two: 'יומיים',
+      one: 'יום אחד',
+    );
+    return '$items פריטים ב-$_temp0';
   }
 
   @override

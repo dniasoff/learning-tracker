@@ -156,9 +156,16 @@ class _CityRow extends StatelessWidget {
   }
 }
 
+/// Returns false for numeric-only GeoNames admin1 codes (e.g. "05", "123")
+/// that carry no human-readable meaning and should be suppressed in labels.
+bool _isReadableRegion(String? admin1) {
+  if (admin1 == null || admin1.isEmpty) return false;
+  return !RegExp(r'^\d+$').hasMatch(admin1);
+}
+
 String _subtitleFor(City city) {
   final parts = <String>[
-    if (city.admin1 != null && city.admin1!.isNotEmpty) city.admin1!,
+    if (_isReadableRegion(city.admin1)) city.admin1!,
     city.countryCode,
   ];
   return parts.join(' · ');
@@ -167,7 +174,7 @@ String _subtitleFor(City city) {
 String _formatCityLabel(City city) {
   final parts = <String>[
     city.name,
-    if (city.admin1 != null && city.admin1!.isNotEmpty) city.admin1!,
+    if (_isReadableRegion(city.admin1)) city.admin1!,
     city.countryCode,
   ];
   return parts.join(', ');

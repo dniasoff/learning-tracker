@@ -467,7 +467,12 @@ class _UpgradeToCloudScreenState extends ConsumerState<UpgradeToCloudScreen> {
       appBar: AppBar(title: Text(l10n.upgradeToCloudTitle)),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          padding: EdgeInsets.fromLTRB(
+            24,
+            24,
+            24,
+            24 + MediaQuery.viewInsetsOf(context).bottom,
+          ),
           child: Form(
             key: _formKey,
             child: Column(

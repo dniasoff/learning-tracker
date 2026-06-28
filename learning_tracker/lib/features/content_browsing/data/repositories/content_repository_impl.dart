@@ -28,6 +28,15 @@ class ContentRepositoryImpl implements ContentRepository {
   /// [search] call so nikud stripping is not recomputed per keystroke (T2.10).
   final _strippedHeCache = <String, List<String>>{};
 
+  /// Cache of pre-rendered English leaf-segment names (lowercased), keyed by
+  /// curriculum storage key. Built once alongside [_strippedHeCache] so the
+  /// per-item renderer is not re-invoked on every keystroke.
+  ///
+  /// Uses the leaf-segment-only rendering (fullPath: false) so that ancestor
+  /// path words (e.g. "Numbers" embedded in "Numbers 1:1") do not cause every
+  /// descendant to match a search for the ancestor's name.
+  final _leafEnCache = <String, List<String>>{};
+
   @override
   Future<List<ContentItem>> getContentForCurriculum(
     CurriculumId curriculumId,
@@ -151,8 +160,8 @@ class ContentRepositoryImpl implements ContentRepository {
     final items = await getContentForCurriculum(curriculumId);
     final normalizedQuery = HebrewUtils.stripNikud(query.toLowerCase().trim());
 
-    // Build the per-curriculum stripped-Hebrew cache on first search so that
-    // subsequent keystrokes never recompute stripNikud() for each item (T2.10).
+    // Build the per-curriculum caches on first search so that subsequent
+    // keystrokes never recompute per-item work (T2.10).
     final key = curriculumId.storageKey;
     if (!_strippedHeCache.containsKey(key)) {
       _strippedHeCache[key] = items
@@ -163,13 +172,26 @@ class ContentRepositoryImpl implements ContentRepository {
           )
           .toList();
     }
+    if (!_leafEnCache.containsKey(key)) {
+      // Use leaf-segment-only rendering so ancestor names embedded in the
+      // full-path displayNameEn (e.g. "Numbers" in "Numbers 1:1") do not
+      // cause every descendant to match a search for the ancestor's name.
+      _leafEnCache[key] = items
+          .map(
+            (item) => CurriculumLabelRenderer.renderForItem(
+              item,
+              useHebrew: false,
+            ).toLowerCase(),
+          )
+          .toList();
+    }
     final strippedHeNames = _strippedHeCache[key]!;
+    final leafEnNames = _leafEnCache[key]!;
 
     final results = <ContentItem>[];
     for (var i = 0; i < items.length; i++) {
-      final normalizedEn = items[i].displayNameEn.toLowerCase();
       if (strippedHeNames[i].contains(normalizedQuery) ||
-          normalizedEn.contains(normalizedQuery)) {
+          leafEnNames[i].contains(normalizedQuery)) {
         results.add(items[i]);
       }
     }

@@ -263,7 +263,7 @@
   "@introRewardsTitle": {
     "description": "Title of the rewards intro page."
   },
-  "introRewardsSubtitle": "Collect points, build streaks, and unlock mystery rewards as you climb from a Novice to a {scholarTier}!",
+  "introRewardsSubtitle": "Collect points, build streaks, and unlock mystery rewards as you climb from a Novice to a ⁦{scholarTier}⁩!",
   "@introRewardsSubtitle": {
     "description": "Subtitle on the rewards intro page. {scholarTier} is the toggle-aware Talmid Chochom domain term.",
     "placeholders": {
@@ -800,6 +800,7 @@
   "rewardConfigSaveReward": "Save",
   "rewardConfigDeleteReward": "Delete",
   "rewardConfigDuplicateThreshold": "Another reward already uses this point value.",
+  "rewardConfigDuplicateName": "A reward with this name already exists.",
   "rewardConfigEmptyMilestones": "No rewards yet. Close this menu and use the form above to add one.",
   "rewardConfigSaved": "Rewards saved",
   "parentPortalTitle": "Parent Portal",
@@ -824,14 +825,14 @@
   "rewardConfigPointsPlaceholder": "e.g., 500",
   "rewardConfigMenuManageRewards": "Manage rewards",
   "rewardConfigRewardCreatedTitle": "Reward created",
-  "rewardConfigRewardCreatedBody": "\"{name}\" was added. Your child will see it under Achievements — locked and blurred until they reach the points goal.",
+  "rewardConfigRewardCreatedBody": "\"{name}\" was added. Your child can now see this reward — locked and blurred until they reach the points goal.",
   "@rewardConfigRewardCreatedBody": {
     "placeholders": {
       "name": {"type": "String"}
     }
   },
   "rewardConfigRewardUpdatedTitle": "Reward updated",
-  "rewardConfigRewardUpdatedBody": "Your changes to \"{name}\" were saved. Your child will see the update under Achievements.",
+  "rewardConfigRewardUpdatedBody": "Your changes to \"{name}\" were saved. Your child can now see the update.",
   "@rewardConfigRewardUpdatedBody": {
     "placeholders": {
       "name": {"type": "String"}
@@ -870,6 +871,18 @@
   "pinDialogSubtitleSwitchProfile": "Enter the PIN to switch profiles.",
   "@pinDialogSubtitleSwitchProfile": {
     "description": "PIN dialog subtitle shown specifically in the profile-switch context. Replaces the generic 'access parent settings' copy when the PIN prompt is triggered by a profile switch rather than by opening parent settings."
+  },
+  "pinDialogSubtitleEditProfile": "Enter the PIN to edit this profile.",
+  "@pinDialogSubtitleEditProfile": {
+    "description": "PIN dialog subtitle shown in the edit-profile context."
+  },
+  "pinDialogSubtitleDeleteProfile": "Enter the PIN to delete this profile.",
+  "@pinDialogSubtitleDeleteProfile": {
+    "description": "PIN dialog subtitle shown in the delete-profile context."
+  },
+  "pinBackspace": "Delete",
+  "@pinBackspace": {
+    "description": "Accessibility label for the backspace/delete button on the PIN keypad."
   },
   "enterNewPinSubtitle": "Choose a new 4-digit PIN.",
   "confirmNewPinSubtitle": "Enter the same PIN again to confirm.",
@@ -1088,7 +1101,7 @@
   "accountDeleteAccountBody": "All learning data will be permanently lost. This cannot be undone.",
   "accountRemove": "Remove",
   "accountDeleteForever": "Delete Forever",
-  "accountPickerAddAnother": "+1   Add another account ({remaining} slots remaining)",
+  "accountPickerAddAnother": "Add another account ({remaining} slots remaining)",
   "@accountPickerAddAnother": {
     "placeholders": {
       "remaining": { "type": "int" }
@@ -1382,7 +1395,7 @@
       "itemLabel": { "type": "String" }
     }
   },
-  "searchFieldHint": "Search {label}…",
+  "searchFieldHint": "Search ⁦{label}⁩…",
   "@searchFieldHint": {
     "placeholders": {
       "label": { "type": "String" }
@@ -1736,7 +1749,7 @@
       "pace": { "type": "int" }
     }
   },
-  "goalDeadlineItemsInDays": "{items} items in {days} days",
+  "goalDeadlineItemsInDays": "{items} items in {days, plural, =1{1 day} other{{days} days}}",
   "@goalDeadlineItemsInDays": {
     "placeholders": {
       "items": { "type": "int" },

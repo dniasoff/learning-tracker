@@ -933,7 +933,7 @@ abstract class AppLocalizations {
   /// Subtitle on the rewards intro page. {scholarTier} is the toggle-aware Talmid Chochom domain term.
   ///
   /// In en, this message translates to:
-  /// **'Collect points, build streaks, and unlock mystery rewards as you climb from a Novice to a {scholarTier}!'**
+  /// **'Collect points, build streaks, and unlock mystery rewards as you climb from a Novice to a ⁦{scholarTier}⁩!'**
   String introRewardsSubtitle(String scholarTier);
 
   /// Decorative chip on the Mishna intro illustration showing a partial 'Review…' word.
@@ -2721,6 +2721,12 @@ abstract class AppLocalizations {
   /// **'Another reward already uses this point value.'**
   String get rewardConfigDuplicateThreshold;
 
+  /// No description provided for @rewardConfigDuplicateName.
+  ///
+  /// In en, this message translates to:
+  /// **'A reward with this name already exists.'**
+  String get rewardConfigDuplicateName;
+
   /// No description provided for @rewardConfigEmptyMilestones.
   ///
   /// In en, this message translates to:
@@ -2838,7 +2844,7 @@ abstract class AppLocalizations {
   /// No description provided for @rewardConfigRewardCreatedBody.
   ///
   /// In en, this message translates to:
-  /// **'\"{name}\" was added. Your child will see it under Achievements — locked and blurred until they reach the points goal.'**
+  /// **'\"{name}\" was added. Your child can now see this reward — locked and blurred until they reach the points goal.'**
   String rewardConfigRewardCreatedBody(String name);
 
   /// No description provided for @rewardConfigRewardUpdatedTitle.
@@ -2850,7 +2856,7 @@ abstract class AppLocalizations {
   /// No description provided for @rewardConfigRewardUpdatedBody.
   ///
   /// In en, this message translates to:
-  /// **'Your changes to \"{name}\" were saved. Your child will see the update under Achievements.'**
+  /// **'Your changes to \"{name}\" were saved. Your child can now see the update.'**
   String rewardConfigRewardUpdatedBody(String name);
 
   /// No description provided for @pointConfigPerTaskTitle.
@@ -3008,6 +3014,24 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Enter the PIN to switch profiles.'**
   String get pinDialogSubtitleSwitchProfile;
+
+  /// PIN dialog subtitle shown in the edit-profile context.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the PIN to edit this profile.'**
+  String get pinDialogSubtitleEditProfile;
+
+  /// PIN dialog subtitle shown in the delete-profile context.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter the PIN to delete this profile.'**
+  String get pinDialogSubtitleDeleteProfile;
+
+  /// Accessibility label for the backspace/delete button on the PIN keypad.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get pinBackspace;
 
   /// No description provided for @enterNewPinSubtitle.
   ///
@@ -3936,7 +3960,7 @@ abstract class AppLocalizations {
   /// No description provided for @accountPickerAddAnother.
   ///
   /// In en, this message translates to:
-  /// **'+1   Add another account ({remaining} slots remaining)'**
+  /// **'Add another account ({remaining} slots remaining)'**
   String accountPickerAddAnother(int remaining);
 
   /// No description provided for @cannotDeactivateLastCurriculum.
@@ -4692,7 +4716,7 @@ abstract class AppLocalizations {
   /// No description provided for @searchFieldHint.
   ///
   /// In en, this message translates to:
-  /// **'Search {label}…'**
+  /// **'Search ⁦{label}⁩…'**
   String searchFieldHint(String label);
 
   /// No description provided for @cityPickerTitle.
@@ -5838,7 +5862,7 @@ abstract class AppLocalizations {
   /// No description provided for @goalDeadlineItemsInDays.
   ///
   /// In en, this message translates to:
-  /// **'{items} items in {days} days'**
+  /// **'{items} items in {days, plural, =1{1 day} other{{days} days}}'**
   String goalDeadlineItemsInDays(int items, int days);
 
   /// No description provided for @goalPaceHowMany.

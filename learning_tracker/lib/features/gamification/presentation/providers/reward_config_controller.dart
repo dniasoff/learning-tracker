@@ -36,6 +36,10 @@ final class RewardSaveDuplicateThreshold extends RewardSaveResult {
   const RewardSaveDuplicateThreshold();
 }
 
+final class RewardSaveDuplicateName extends RewardSaveResult {
+  const RewardSaveDuplicateName();
+}
+
 final class RewardSaveInvalidInput extends RewardSaveResult {
   const RewardSaveInvalidInput();
 }
@@ -169,6 +173,18 @@ class RewardConfigController extends _$RewardConfigController {
     final trackId = state.usesGlobalLadder
         ? RewardMilestone.kGlobalTrackSentinel
         : state.selectedTrackId!;
+
+    // Guard against duplicate names within the same reward ladder (Fix #21).
+    // When editing, allow the existing reward to keep its own name.
+    final currentMilestones = state.usesGlobalLadder
+        ? await svc.getGlobalMilestones()
+        : await svc.getMilestonesForTrack(trackId);
+    final isDuplicateName = currentMilestones.any(
+      (m) =>
+          m.title.trim().toLowerCase() == title.toLowerCase() &&
+          m.id != state.editingMilestoneId,
+    );
+    if (isDuplicateName) return const RewardSaveDuplicateName();
 
     await svc.upsertMilestone(
       trackId: trackId,

@@ -163,6 +163,7 @@ class ProfileSwitcherSheet extends ConsumerWidget {
                       ref,
                       pinGuardRequired: pinGuardRequired,
                       activeProfileId: activeProfileId,
+                      subtitle: l10n.pinDialogSubtitleSwitchProfile,
                       action: () {
                         Navigator.of(context).pop();
                         unawaited(
@@ -197,6 +198,7 @@ class ProfileSwitcherSheet extends ConsumerWidget {
                       ref,
                       pinGuardRequired: pinGuardRequired,
                       activeProfileId: activeProfileId,
+                      subtitle: l10n.pinDialogSubtitleSwitchProfile,
                       action: () => _switchProfile(context, ref, profile.id),
                     ),
                     onEdit: () => _guardEscalating(
@@ -204,6 +206,7 @@ class ProfileSwitcherSheet extends ConsumerWidget {
                       ref,
                       pinGuardRequired: pinGuardRequired,
                       activeProfileId: activeProfileId,
+                      subtitle: l10n.pinDialogSubtitleEditProfile,
                       action: () =>
                           unawaited(editProfileFlow(context, ref, profile)),
                     ),
@@ -212,6 +215,7 @@ class ProfileSwitcherSheet extends ConsumerWidget {
                       ref,
                       pinGuardRequired: pinGuardRequired,
                       activeProfileId: activeProfileId,
+                      subtitle: l10n.pinDialogSubtitleDeleteProfile,
                       action: () =>
                           unawaited(deleteProfileFlow(context, ref, profile)),
                     ),
@@ -252,6 +256,7 @@ class ProfileSwitcherSheet extends ConsumerWidget {
                       ref,
                       pinGuardRequired: pinGuardRequired,
                       activeProfileId: activeProfileId,
+                      subtitle: l10n.pinDialogSubtitleSwitchProfile,
                       action: () async {
                         // D4 root cause: popping the sheet FIRST unmounted both
                         // `context` and `ref`, so showAddProfileDialog's
@@ -340,13 +345,16 @@ class ProfileSwitcherSheet extends ConsumerWidget {
   /// active profile is a child with a configured PIN.
   ///
   /// [pinGuardRequired] is derived from [switcherSheetPinGuardRequiredProvider]
-  /// (overridable in tests); [action] is only executed after a successful PIN
-  /// verification (or immediately when no guard is needed).
+  /// (overridable in tests); [subtitle] is the action-specific l10n string
+  /// shown below the PIN keypad (switch / edit / delete); [action] is only
+  /// executed after a successful PIN verification (or immediately when no guard
+  /// is needed).
   void _guardEscalating(
     BuildContext context,
     WidgetRef ref, {
     required bool pinGuardRequired,
     required int activeProfileId,
+    required String subtitle,
     required VoidCallback action,
   }) {
     if (!pinGuardRequired) {
@@ -359,7 +367,7 @@ class ProfileSwitcherSheet extends ConsumerWidget {
         context,
         profileId: activeProfileId,
         pinService: ref.read(pinServiceProvider),
-        subtitle: AppLocalizations.of(context)!.pinDialogSubtitleSwitchProfile,
+        subtitle: subtitle,
       ).then((verified) {
         if (verified && context.mounted) action();
       }),

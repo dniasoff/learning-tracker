@@ -473,7 +473,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String introRewardsSubtitle(String scholarTier) {
-    return 'Collect points, build streaks, and unlock mystery rewards as you climb from a Novice to a $scholarTier!';
+    return 'Collect points, build streaks, and unlock mystery rewards as you climb from a Novice to a ⁦$scholarTier⁩!';
   }
 
   @override
@@ -1516,6 +1516,10 @@ class AppLocalizationsEn extends AppLocalizations {
       'Another reward already uses this point value.';
 
   @override
+  String get rewardConfigDuplicateName =>
+      'A reward with this name already exists.';
+
+  @override
   String get rewardConfigEmptyMilestones =>
       'No rewards yet. Close this menu and use the form above to add one.';
 
@@ -1585,7 +1589,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String rewardConfigRewardCreatedBody(String name) {
-    return '\"$name\" was added. Your child will see it under Achievements — locked and blurred until they reach the points goal.';
+    return '\"$name\" was added. Your child can now see this reward — locked and blurred until they reach the points goal.';
   }
 
   @override
@@ -1593,7 +1597,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String rewardConfigRewardUpdatedBody(String name) {
-    return 'Your changes to \"$name\" were saved. Your child will see the update under Achievements.';
+    return 'Your changes to \"$name\" were saved. Your child can now see the update.';
   }
 
   @override
@@ -1682,6 +1686,17 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get pinDialogSubtitleSwitchProfile =>
       'Enter the PIN to switch profiles.';
+
+  @override
+  String get pinDialogSubtitleEditProfile =>
+      'Enter the PIN to edit this profile.';
+
+  @override
+  String get pinDialogSubtitleDeleteProfile =>
+      'Enter the PIN to delete this profile.';
+
+  @override
+  String get pinBackspace => 'Delete';
 
   @override
   String get enterNewPinSubtitle => 'Choose a new 4-digit PIN.';
@@ -2210,7 +2225,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String accountPickerAddAnother(int remaining) {
-    return '+1   Add another account ($remaining slots remaining)';
+    return 'Add another account ($remaining slots remaining)';
   }
 
   @override
@@ -2676,7 +2691,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String searchFieldHint(String label) {
-    return 'Search $label…';
+    return 'Search ⁦$label⁩…';
   }
 
   @override
@@ -3339,7 +3354,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String goalDeadlineItemsInDays(int items, int days) {
-    return '$items items in $days days';
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: '$days days',
+      one: '1 day',
+    );
+    return '$items items in $_temp0';
   }
 
   @override

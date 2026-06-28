@@ -2,8 +2,11 @@ import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:learning_tracker/core/content/content_grouping.dart';
+import 'package:learning_tracker/core/content/content_index.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/exceptions/permission_exception.dart';
+import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/curriculum_label_providers.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
@@ -62,6 +65,28 @@ class TextDisplayScreen extends ConsumerWidget {
     final adjAsync = ref.watch(adjacentContentRefsProvider(sefariaRef));
     final adj = adjAsync.asData?.value;
 
+    // #14 — fire-and-forget background prefetch so the SQLite read is warm
+    // before the user taps ‹ or ›, eliminating the ~8s "Loading text…" spinner.
+    // Uses ref.read (non-reactive) + .ignore() to swallow both the result and
+    // any error; textContentProvider is auto-dispose so no leak occurs.
+    if (adj?.next != null) {
+      ref.read(textContentProvider(adj!.next!).future).ignore();
+    }
+    if (adj?.prev != null) {
+      ref.read(textContentProvider(adj!.prev!).future).ignore();
+    }
+
+    // #16 — resolve the curriculum root name so the AppBar title can
+    // disambiguate shared seder/masechta names (e.g. ברכות in Mishnah vs Bavli).
+    // contentIndexProvider is keepAlive so the lookup is O(1) once warm.
+    final contentIndex = ref.watch(contentIndexProvider).asData?.value;
+    final curriculumId = contentIndex != null
+        ? _curriculumIdForRef(sefariaRef, contentIndex)
+        : null;
+    final curriculumName = curriculumId != null
+        ? curriculumLabelText(ref, curriculum: curriculumId)
+        : null;
+
     return Scaffold(
       backgroundColor: AppColors.surfaceF5,
       appBar: AppBar(
@@ -75,7 +100,7 @@ class TextDisplayScreen extends ConsumerWidget {
           onPressed: () => context.router.maybePop(),
         ),
         title: Text(
-          chainTitle,
+          curriculumName != null ? '$curriculumName › $chainTitle' : chainTitle,
           textAlign: TextAlign.center,
           maxLines: 3,
           softWrap: true,
@@ -129,6 +154,17 @@ class TextDisplayScreen extends ConsumerWidget {
       ),
     );
   }
+}
+
+/// Maps [sefariaRef] to its [CurriculumId] via the pre-built [ContentIndex].
+/// Returns null when the ref is not found or the storage key is unrecognised.
+CurriculumId? _curriculumIdForRef(String sefariaRef, ContentIndex index) {
+  final item = index.lookup(sefariaRef);
+  if (item == null) return null;
+  for (final id in CurriculumId.values) {
+    if (id.storageKey == item.curriculumId) return id;
+  }
+  return null;
 }
 
 /// Loading view with spinner and message.

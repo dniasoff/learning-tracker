@@ -42,6 +42,11 @@ class _RewardConfigurationScreenState
   String _lastSyncedName = '';
   String _lastSyncedPoints = '';
 
+  // Incremented on save/delete to force the inline rewards section to re-fetch.
+  int _rewardsVersion = 0;
+
+  void _refreshRewards() => setState(() => _rewardsVersion++);
+
   @override
   void initState() {
     super.initState();
@@ -187,6 +192,7 @@ class _RewardConfigurationScreenState
       await ref
           .read(rewardConfigControllerProvider.notifier)
           .deleteMilestone(milestone);
+      _refreshRewards();
     } on TutorWriteException catch (e) {
       if (!mounted) return;
       if (e.code == 'permission-denied') {
@@ -228,7 +234,12 @@ class _RewardConfigurationScreenState
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l10n.rewardConfigDuplicateThreshold)),
         );
+      case RewardSaveDuplicateName():
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(l10n.rewardConfigDuplicateName)));
       case RewardSaved(:final title, :final wasEditing):
+        _refreshRewards();
         await showDialog<void>(
           context: context,
           builder: (dialogContext) => AlertDialog(
@@ -308,183 +319,211 @@ class _RewardConfigurationScreenState
                 16,
                 16 + MediaQuery.viewPaddingOf(context).bottom,
               ),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.surface,
-                  borderRadius: BorderRadius.circular(22),
-                  boxShadow: const [
-                    BoxShadow(
-                      color: Color(0x1200218D),
-                      blurRadius: 20,
-                      offset: Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 22, 20, 24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Text(
-                        // GA-7: Switch heading to edit-mode copy when editing.
-                        form.isEditing
-                            ? l10n.rewardConfigEditReward
-                            : l10n.rewardConfigConfigureNewTitle,
-                        style: Theme.of(context).textTheme.headlineSmall
-                            ?.copyWith(
-                              fontWeight: FontWeight.w800,
-                              color: Colors.black,
-                              fontSize: 22,
-                            ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        // GA-7: Subtitle also switches to edit-mode copy.
-                        form.isEditing
-                            ? l10n.rewardConfigEditModeSubtitle
-                            : l10n.rewardConfigConfigureNewSubtitle,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: _kMutedLabel,
-                          height: 1.35,
-                        ),
-                      ),
-                      const SizedBox(height: 22),
-                      Text(
-                        l10n.rewardConfigChooseAvatarStep,
-                        style: const TextStyle(
-                          color: _kNavy,
-                          fontWeight: FontWeight.w800,
-                          fontSize: 12,
-                          letterSpacing: 0.6,
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      AvatarPickerRow(
-                        selectedIndex: form.iconIndex,
-                        onSelect: notifier.setIconIndex,
-                      ),
-                      const SizedBox(height: 22),
-                      Text(
-                        l10n.rewardConfigRewardNameLabel,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: _kMutedLabel,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      TextField(
-                        controller: _nameController,
-                        textCapitalization: TextCapitalization.sentences,
-                        inputFormatters: const [TrimLeadingSpaceFormatter()],
-                        decoration: InputDecoration(
-                          hintText: l10n.rewardConfigNamePlaceholder,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 14,
-                          ),
-                          suffixIcon: Icon(
-                            Icons.edit_outlined,
-                            color: _kMutedLabel.withValues(alpha: 0.7),
-                          ),
-                        ),
-                      ),
-                      // R4o-H2 / DEC-32: the Per-track vs Total reward-type
-                      // split was removed — every reward is a single global
-                      // priced spend-item against the one debitable balance, so
-                      // the type segmented control and per-track dropdown are
-                      // gone.
-                      const SizedBox(height: 18),
-                      Text(
-                        l10n.rewardConfigPointsThresholdLabel,
-                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: _kMutedLabel,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      TextField(
-                        controller: _pointsController,
-                        keyboardType: TextInputType.number,
-                        inputFormatters: [
-                          FilteringTextInputFormatter.digitsOnly,
-                        ],
-                        decoration: InputDecoration(
-                          hintText: l10n.rewardConfigPointsPlaceholder,
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 14,
-                          ),
-                          suffixIcon: const Icon(
-                            Icons.star_rounded,
-                            color: _kOrange,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 22),
-                      _RewardPreview(
-                        iconIndex: form.iconIndex,
-                        previewTitle: previewTitle,
-                        isPlaceholder: form.name.trim().isEmpty,
-                        previewPoints: form.previewPoints,
-                        l10n: l10n,
-                      ),
-                      const SizedBox(height: 16),
-                      Center(
-                        child: TextButton(
-                          onPressed: notifier.clearForm,
-                          child: Text(
-                            l10n.rewardConfigCancel,
-                            style: const TextStyle(
-                              color: _kMutedLabel,
-                              fontWeight: FontWeight.w600,
-                              fontSize: 15,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 52,
-                        child: FilledButton(
-                          // GA-7: Disable Save when form is not valid (name
-                          // empty / cost invalid) to prevent the silent no-op.
-                          // Also disable for tutors without edit permission.
-                          onPressed: canEdit
-                              ? (form.canSave
-                                    ? () => unawaited(_saveReward(l10n))
-                                    : null)
-                              : () =>
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          l10n.tutorPermissionDenied,
-                                        ),
-                                      ),
-                                    ),
-                          style: FilledButton.styleFrom(
-                            backgroundColor: _kNavy,
-                            foregroundColor: Colors.white,
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(26),
-                            ),
-                          ),
-                          child: Text(
-                            // GA-7: Use "Update Reward" button label in edit mode.
-                            form.isEditing
-                                ? l10n.rewardConfigUpdateRewardButton
-                                : l10n.rewardConfigSaveRewardButton,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w800,
-                              fontSize: 16,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Fix #1: Show existing rewards inline so parents can see
+                  // them without discovering the overflow menu.
+                  _InlineRewardsSection(
+                    key: ValueKey(_rewardsVersion),
+                    load: notifier.milestonesForCurrentLadder,
+                    l10n: l10n,
+                    onEdit: notifier.applyMilestoneToForm,
+                    onDelete: (m) => _confirmDelete(m, l10n),
+                    onToggle: (m) async {
+                      try {
+                        await notifier.toggleEnabled(m);
+                      } on TutorWriteException catch (e) {
+                        if (!context.mounted) return;
+                        if (e.code == 'permission-denied') {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text(l10n.tutorPermissionDenied)),
+                          );
+                        }
+                      }
+                    },
                   ),
-                ),
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surface,
+                      borderRadius: BorderRadius.circular(22),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x1200218D),
+                          blurRadius: 20,
+                          offset: Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(20, 22, 20, 24),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Text(
+                            // GA-7: Switch heading to edit-mode copy when editing.
+                            form.isEditing
+                                ? l10n.rewardConfigEditReward
+                                : l10n.rewardConfigConfigureNewTitle,
+                            style: Theme.of(context).textTheme.headlineSmall
+                                ?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  color: Colors.black,
+                                  fontSize: 22,
+                                ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            // GA-7: Subtitle also switches to edit-mode copy.
+                            form.isEditing
+                                ? l10n.rewardConfigEditModeSubtitle
+                                : l10n.rewardConfigConfigureNewSubtitle,
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(color: _kMutedLabel, height: 1.35),
+                          ),
+                          const SizedBox(height: 22),
+                          Text(
+                            l10n.rewardConfigChooseAvatarStep,
+                            style: const TextStyle(
+                              color: _kNavy,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 12,
+                              letterSpacing: 0.6,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          AvatarPickerRow(
+                            selectedIndex: form.iconIndex,
+                            onSelect: notifier.setIconIndex,
+                          ),
+                          const SizedBox(height: 22),
+                          Text(
+                            l10n.rewardConfigRewardNameLabel,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: _kMutedLabel,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ),
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: _nameController,
+                            textCapitalization: TextCapitalization.sentences,
+                            inputFormatters: const [
+                              TrimLeadingSpaceFormatter(),
+                            ],
+                            decoration: InputDecoration(
+                              hintText: l10n.rewardConfigNamePlaceholder,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
+                              suffixIcon: Icon(
+                                Icons.edit_outlined,
+                                color: _kMutedLabel.withValues(alpha: 0.7),
+                              ),
+                            ),
+                          ),
+                          // R4o-H2 / DEC-32: the Per-track vs Total reward-type
+                          // split was removed — every reward is a single global
+                          // priced spend-item against the one debitable balance, so
+                          // the type segmented control and per-track dropdown are
+                          // gone.
+                          const SizedBox(height: 18),
+                          Text(
+                            l10n.rewardConfigPointsThresholdLabel,
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: _kMutedLabel,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                          ),
+                          const SizedBox(height: 8),
+                          TextField(
+                            controller: _pointsController,
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
+                            decoration: InputDecoration(
+                              hintText: l10n.rewardConfigPointsPlaceholder,
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 14,
+                              ),
+                              suffixIcon: const Icon(
+                                Icons.star_rounded,
+                                color: _kOrange,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 22),
+                          _RewardPreview(
+                            iconIndex: form.iconIndex,
+                            previewTitle: previewTitle,
+                            isPlaceholder: form.name.trim().isEmpty,
+                            previewPoints: form.previewPoints,
+                            l10n: l10n,
+                          ),
+                          const SizedBox(height: 16),
+                          Center(
+                            child: TextButton(
+                              onPressed: notifier.clearForm,
+                              child: Text(
+                                l10n.rewardConfigCancel,
+                                style: const TextStyle(
+                                  color: _kMutedLabel,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 15,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          SizedBox(
+                            width: double.infinity,
+                            height: 52,
+                            child: FilledButton(
+                              // GA-7: Disable Save when form is not valid (name
+                              // empty / cost invalid) to prevent the silent no-op.
+                              // Also disable for tutors without edit permission.
+                              onPressed: canEdit
+                                  ? (form.canSave
+                                        ? () => unawaited(_saveReward(l10n))
+                                        : null)
+                                  : () => ScaffoldMessenger.of(context)
+                                        .showSnackBar(
+                                          SnackBar(
+                                            content: Text(
+                                              l10n.tutorPermissionDenied,
+                                            ),
+                                          ),
+                                        ),
+                              style: FilledButton.styleFrom(
+                                backgroundColor: _kNavy,
+                                foregroundColor: Colors.white,
+                                elevation: 0,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(26),
+                                ),
+                              ),
+                              child: Text(
+                                // GA-7: Use "Update Reward" button label in edit mode.
+                                form.isEditing
+                                    ? l10n.rewardConfigUpdateRewardButton
+                                    : l10n.rewardConfigSaveRewardButton,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
@@ -596,6 +635,84 @@ class _RewardPreview extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Inline rewards section (Fix #1)
+// ─────────────────────────────────────────────────────────────────────────────
+
+/// Shows the existing configured rewards inline above the form so parents see
+/// them without having to discover the overflow menu.
+///
+/// Keyed externally with [_rewardsVersion] so it re-fetches after every
+/// save or delete operation.
+class _InlineRewardsSection extends StatefulWidget {
+  const _InlineRewardsSection({
+    super.key,
+    required this.load,
+    required this.l10n,
+    required this.onEdit,
+    required this.onDelete,
+    required this.onToggle,
+  });
+
+  final Future<List<RewardMilestone>> Function() load;
+  final AppLocalizations l10n;
+  final void Function(RewardMilestone) onEdit;
+  final Future<void> Function(RewardMilestone) onDelete;
+  final Future<void> Function(RewardMilestone) onToggle;
+
+  @override
+  State<_InlineRewardsSection> createState() => _InlineRewardsSectionState();
+}
+
+class _InlineRewardsSectionState extends State<_InlineRewardsSection> {
+  late Future<List<RewardMilestone>> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = widget.load();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<RewardMilestone>>(
+      future: _future,
+      builder: (_, snap) {
+        final list = snap.data;
+        if (list == null || list.isEmpty) return const SizedBox.shrink();
+        final listHeight = (list.length * 72.0).clamp(72.0, 260.0);
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 0, 0, 8),
+              child: Text(
+                widget.l10n.rewardConfigMenuManageRewards,
+                style: const TextStyle(
+                  color: _kNavy,
+                  fontWeight: FontWeight.w800,
+                  fontSize: 13,
+                  letterSpacing: 0.4,
+                ),
+              ),
+            ),
+            SizedBox(
+              height: listHeight,
+              child: ManageRewardsList(
+                load: widget.load,
+                onEdit: widget.onEdit,
+                onDelete: widget.onDelete,
+                onToggle: widget.onToggle,
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+        );
+      },
     );
   }
 }

@@ -51,6 +51,11 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   bool _obscurePassword = true;
   bool _keepSignedIn = true;
 
+  /// True when no accounts exist in the device registry (fresh install /
+  /// first-run flow). Detected asynchronously in [initState]; starts false so
+  /// the heading defaults to "Welcome Back!" until the check resolves.
+  bool _isFirstRun = false;
+
   /// Set when the email matches a device-registry account (shown under field).
   String? _registryFoundHint;
   RegistryMatchKind _registryMatchKind = RegistryMatchKind.none;
@@ -81,6 +86,17 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               .buildVerificationCallback(context),
           showError: _showError,
         );
+    _checkFirstRun();
+  }
+
+  /// Detect first-run: if the device registry has no saved accounts the user
+  /// has never signed in on this device, so show a welcoming (not "Back!")
+  /// heading.
+  Future<void> _checkFirstRun() async {
+    final registry = ref.read(deviceRegistryProvider);
+    final accounts = await registry.getAllAccounts();
+    if (!mounted) return;
+    if (accounts.isEmpty) setState(() => _isFirstRun = true);
   }
 
   @override
@@ -255,10 +271,14 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           child: ConstrainedBox(
             constraints: BoxConstraints(
+              // Subtract the IME inset so that when the keyboard is open the
+              // ConstrainedBox shrinks accordingly and SingleChildScrollView
+              // can scroll the Sign In button into view above the keyboard.
               minHeight:
                   MediaQuery.of(context).size.height -
                   MediaQuery.of(context).padding.top -
                   MediaQuery.of(context).padding.bottom -
+                  MediaQuery.of(context).viewInsets.bottom -
                   28,
             ),
             child: Column(
@@ -292,7 +312,14 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
                               Text(
-                                l10n.signInWelcomeBack,
+                                // #11: first-run users haven't been here
+                                // before, so avoid the "Welcome Back!" copy.
+                                // We use getStarted ("Get Started") as the
+                                // best available existing key; signInWelcome
+                                // does not currently exist in the ARB files.
+                                _isFirstRun
+                                    ? l10n.getStarted
+                                    : l10n.signInWelcomeBack,
                                 style: Theme.of(context)
                                     .textTheme
                                     .headlineMedium

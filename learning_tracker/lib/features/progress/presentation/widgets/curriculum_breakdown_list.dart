@@ -308,11 +308,11 @@ class CurriculumBreakdownTreeNode extends ConsumerWidget {
               ? () => onExpandToggle(nodeKey, !isExpanded)
               : null,
           child: Padding(
-            padding: EdgeInsets.only(
-              left: depth * 16.0,
+            padding: EdgeInsetsDirectional.only(
+              start: depth * 16.0,
               top: 4,
               bottom: 4,
-              right: 4,
+              end: 4,
             ),
             child: Row(
               children: [

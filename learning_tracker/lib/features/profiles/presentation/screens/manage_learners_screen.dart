@@ -29,6 +29,7 @@ class ManageLearnersScreen extends ConsumerWidget {
         ),
         child: FloatingActionButton(
           onPressed: () => _showAddProfileDialogCanonical(context, ref),
+          tooltip: AppLocalizations.of(context)!.addProfile,
           child: const Icon(Icons.add),
         ),
       ),

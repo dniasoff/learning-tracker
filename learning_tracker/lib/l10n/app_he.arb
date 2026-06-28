@@ -227,7 +227,7 @@
   "introMishnaSubtitle": "התמחו בלימוד שלכם בעזרת מחזורי חזרה חכמים. {highlight} שלנו עוזר לכם לזכור כל מה שאתם לומדים.",
   "introMishnaSubtitleHighlight": "מנוע החזרה המרווחת",
   "introRewardsTitle": "מרוויחים תוך כדי לימוד",
-  "introRewardsSubtitle": "צברו נקודות, בנו רצפים ופתחו פרסים מסתוריים ככל שתתקדמו ממתחילים ועד {scholarTier}!",
+  "introRewardsSubtitle": "צברו נקודות, בנו רצפים ופתחו פרסים מסתוריים ככל שתתקדמו ממתחילים ועד ⁦{scholarTier}⁩!",
   "introMishnaReviewChip": "חזרה…",
   "introChildModeTagTitle": "לפרופילי ילד בלבד",
   "introChildModeTagBody": "נקודות, רצפים ופרסים מופיעים כשיוצרים פרופיל ילד. פרופילי מבוגר מתמקדים בהתקדמות לימוד פשוטה.",
@@ -695,6 +695,7 @@
   "rewardConfigSaveReward": "שמירה",
   "rewardConfigDeleteReward": "מחיקה",
   "rewardConfigDuplicateThreshold": "פרס אחר כבר משתמש בערך נקודות זה.",
+  "rewardConfigDuplicateName": "פרס עם השם הזה כבר קיים.",
   "rewardConfigEmptyMilestones": "עדיין אין פרסים. סגרו תפריט זה והשתמשו בטופס שלמעלה כדי להוסיף.",
   "rewardConfigSaved": "הפרסים נשמרו",
   "parentPortalTitle": "פורטל הורים",
@@ -719,14 +720,14 @@
   "rewardConfigPointsPlaceholder": "למשל, 500",
   "rewardConfigMenuManageRewards": "ניהול פרסים",
   "rewardConfigRewardCreatedTitle": "הפרס נוצר",
-  "rewardConfigRewardCreatedBody": "\"{name}\" נוסף. הילד יראה אותו תחת הישגים — נעול ומטושטש עד שיגיע ליעד הנקודות.",
+  "rewardConfigRewardCreatedBody": "\"{name}\" נוסף. הילד יכול לראות את הפרס עכשיו — נעול ומטושטש עד שיגיע ליעד הנקודות.",
   "@rewardConfigRewardCreatedBody": {
     "placeholders": {
       "name": {"type": "String"}
     }
   },
   "rewardConfigRewardUpdatedTitle": "הפרס עודכן",
-  "rewardConfigRewardUpdatedBody": "השינויים ב־\"{name}\" נשמרו. הילד יראה את העדכון תחת הישגים.",
+  "rewardConfigRewardUpdatedBody": "השינויים ב־\"{name}\" נשמרו. הילד יכול לראות את העדכון.",
   "@rewardConfigRewardUpdatedBody": {
     "placeholders": {
       "name": {"type": "String"}
@@ -765,6 +766,18 @@
   "pinDialogSubtitleSwitchProfile": "הזינו את הקוד כדי לעבור בין פרופילים.",
   "@pinDialogSubtitleSwitchProfile": {
     "description": "PIN dialog subtitle shown specifically in the profile-switch context. Replaces the generic 'access parent settings' copy when the PIN prompt is triggered by a profile switch."
+  },
+  "pinDialogSubtitleEditProfile": "הזינו את הקוד כדי לערוך פרופיל זה.",
+  "@pinDialogSubtitleEditProfile": {
+    "description": "PIN dialog subtitle shown in the edit-profile context."
+  },
+  "pinDialogSubtitleDeleteProfile": "הזינו את הקוד כדי למחוק פרופיל זה.",
+  "@pinDialogSubtitleDeleteProfile": {
+    "description": "PIN dialog subtitle shown in the delete-profile context."
+  },
+  "pinBackspace": "מחק",
+  "@pinBackspace": {
+    "description": "Accessibility label for the backspace/delete button on the PIN keypad."
   },
   "enterNewPinSubtitle": "בחרו קוד חדש בן 4 ספרות.",
   "confirmNewPinSubtitle": "הזינו שוב את אותו קוד לאישור.",
@@ -977,7 +990,7 @@
   "accountDeleteAccountBody": "כל נתוני הלמידה יימחקו לצמיתות. לא ניתן לבטל.",
   "accountRemove": "הסרה",
   "accountDeleteForever": "מחיקה לצמיתות",
-  "accountPickerAddAnother": "+1   הוספת חשבון ({remaining} מקומות פנויים)",
+  "accountPickerAddAnother": "הוספת חשבון ({remaining} מקומות פנויים)",
   "@accountPickerAddAnother": {
     "placeholders": {
       "remaining": { "type": "int" }
@@ -1241,7 +1254,7 @@
       "itemLabel": { "type": "String" }
     }
   },
-  "searchFieldHint": "חיפוש {label}…",
+  "searchFieldHint": "חיפוש ⁦{label}⁩…",
   "@searchFieldHint": {
     "placeholders": {
       "label": { "type": "String" }
@@ -1569,7 +1582,7 @@
       "pace": { "type": "int" }
     }
   },
-  "goalDeadlineItemsInDays": "{items} פריטים ב-{days} ימים",
+  "goalDeadlineItemsInDays": "{items} פריטים ב-{days, plural, =1{יום אחד} =2{יומיים} other{{days} ימים}}",
   "@goalDeadlineItemsInDays": {
     "placeholders": {
       "items": { "type": "int" },

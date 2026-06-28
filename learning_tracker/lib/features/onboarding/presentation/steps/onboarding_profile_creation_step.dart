@@ -161,7 +161,7 @@ class _OnboardingProfileCreationStepState
       Widget pill(String label, bool selected, VoidCallback onTap) {
         return Expanded(
           child: Material(
-            color: selected ? theme.colorScheme.surface : AppTheme.brandOutline,
+            color: selected ? AppTheme.brandBlue : AppTheme.brandOutline,
             borderRadius: BorderRadius.circular(22),
             child: InkWell(
               onTap: onTap,
@@ -173,7 +173,7 @@ class _OnboardingProfileCreationStepState
                   textAlign: TextAlign.center,
                   style: theme.textTheme.labelLarge?.copyWith(
                     fontWeight: FontWeight.w700,
-                    color: AppTheme.brandInk,
+                    color: selected ? Colors.white : AppTheme.brandInk,
                   ),
                 ),
               ),

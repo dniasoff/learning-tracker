@@ -535,76 +535,80 @@ class _PinKeypad extends StatelessWidget {
       ),
     );
 
-    return Column(
-      children: [
-        Row(
-          children: [
-            digitBtn('1'),
-            const SizedBox(width: spacing),
-            digitBtn('2'),
-            const SizedBox(width: spacing),
-            digitBtn('3'),
-          ],
-        ),
-        const SizedBox(height: spacing),
-        Row(
-          children: [
-            digitBtn('4'),
-            const SizedBox(width: spacing),
-            digitBtn('5'),
-            const SizedBox(width: spacing),
-            digitBtn('6'),
-          ],
-        ),
-        const SizedBox(height: spacing),
-        Row(
-          children: [
-            digitBtn('7'),
-            const SizedBox(width: spacing),
-            digitBtn('8'),
-            const SizedBox(width: spacing),
-            digitBtn('9'),
-          ],
-        ),
-        const SizedBox(height: spacing),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
-          children: [
-            if (showCancel)
-              Expanded(
-                child: TextButton(
-                  onPressed: busy ? null : onCancel,
-                  style: TextButton.styleFrom(
-                    foregroundColor: _pinNavy,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                  child: Text(
-                    l10n.cancel,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 16,
+    return Directionality(
+      textDirection: TextDirection.ltr,
+      child: Column(
+        children: [
+          Row(
+            children: [
+              digitBtn('1'),
+              const SizedBox(width: spacing),
+              digitBtn('2'),
+              const SizedBox(width: spacing),
+              digitBtn('3'),
+            ],
+          ),
+          const SizedBox(height: spacing),
+          Row(
+            children: [
+              digitBtn('4'),
+              const SizedBox(width: spacing),
+              digitBtn('5'),
+              const SizedBox(width: spacing),
+              digitBtn('6'),
+            ],
+          ),
+          const SizedBox(height: spacing),
+          Row(
+            children: [
+              digitBtn('7'),
+              const SizedBox(width: spacing),
+              digitBtn('8'),
+              const SizedBox(width: spacing),
+              digitBtn('9'),
+            ],
+          ),
+          const SizedBox(height: spacing),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              if (showCancel)
+                Expanded(
+                  child: TextButton(
+                    onPressed: busy ? null : onCancel,
+                    style: TextButton.styleFrom(
+                      foregroundColor: _pinNavy,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                    child: Text(
+                      l10n.cancel,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 16,
+                      ),
                     ),
                   ),
-                ),
-              )
-            else
-              const Expanded(child: SizedBox()),
-            if (showCancel) const SizedBox(width: spacing),
-            digitBtn('0'),
-            const SizedBox(width: spacing),
-            Expanded(
-              child: _KeypadChip(
-                onTap: busy ? null : onBackspace,
-                child: Icon(
-                  Icons.backspace_outlined,
-                  color: Theme.of(context).colorScheme.error,
-                  size: 24,
+                )
+              else
+                const Expanded(child: SizedBox()),
+              if (showCancel) const SizedBox(width: spacing),
+              digitBtn('0'),
+              const SizedBox(width: spacing),
+              Expanded(
+                child: _KeypadChip(
+                  onTap: busy ? null : onBackspace,
+                  child: Icon(
+                    Icons.backspace_outlined,
+                    color: Theme.of(context).colorScheme.error,
+                    size: 24,
+                    semanticLabel: l10n.pinBackspace,
+                  ),
                 ),
               ),
-            ),
-          ],
-        ),
-      ],
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

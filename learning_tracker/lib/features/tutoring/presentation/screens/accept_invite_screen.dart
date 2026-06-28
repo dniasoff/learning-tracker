@@ -191,10 +191,14 @@ class _AcceptInviteScreenState extends ConsumerState<AcceptInviteScreen> {
             return;
           }
           setState(() => _step = _AcceptStep.success);
-        case TutorGrantFailure(:final message):
+        case TutorGrantFailure():
+          // Never surface raw Firebase/gRPC codes (e.g. "UNAVAILABLE") to
+          // the user — always map to a friendly, localized message.
           setState(() {
             _step = _AcceptStep.error;
-            _errorMessage = message;
+            _errorMessage = AppLocalizations.of(
+              context,
+            )!.acceptInviteGenericError;
           });
         case TutorGrantPreconditionError(:final message):
           setState(() {
