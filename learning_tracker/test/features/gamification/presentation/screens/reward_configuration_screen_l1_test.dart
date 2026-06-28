@@ -493,17 +493,11 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 
-    // Open sheet.
-    await tester.tap(find.byIcon(Icons.more_vert_rounded));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
-    await tester.tap(find.text('Manage rewards'));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
-
+    // Run-6: rewards now appear inline on the primary screen (_InlineRewardsSection),
+    // so we no longer need to open the Manage Rewards sheet to find the reward.
     expect(find.text('Silver Star'), findsOneWidget);
 
-    // Tap delete icon.
+    // Tap delete icon in the inline rewards section.
     await tester.tap(find.byIcon(Icons.delete_outline).first);
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
@@ -532,15 +526,8 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 
-    // Open sheet.
-    await tester.tap(find.byIcon(Icons.more_vert_rounded));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
-    await tester.tap(find.text('Manage rewards'));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
-
-    // Tap delete icon.
+    // Run-6: rewards now appear inline on the primary screen. Tap delete
+    // directly in the inline rewards section — no sheet needed.
     await tester.tap(find.byIcon(Icons.delete_outline).first);
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
@@ -569,15 +556,8 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 
-    // Open sheet.
-    await tester.tap(find.byIcon(Icons.more_vert_rounded));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
-    await tester.tap(find.text('Manage rewards'));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
-
-    // Tap delete icon.
+    // Run-6: rewards now appear inline on the primary screen. Tap delete
+    // directly in the inline rewards section — no sheet needed.
     await tester.tap(find.byIcon(Icons.delete_outline).first);
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
@@ -690,17 +670,11 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 
-    // Open the Manage rewards sheet.
-    await tester.tap(find.byIcon(Icons.more_vert_rounded));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 300));
-    await tester.tap(find.text('Manage rewards'));
-    await tester.pump();
-    await tester.pump(const Duration(seconds: 1));
-
-    // Tap the RewardCard's edit button. The name TextField also carries an
-    // edit_outlined suffix icon, so the card's edit is the LAST one.
-    await tester.tap(find.byIcon(Icons.edit_outlined).last);
+    // Run-6: rewards now appear inline on the primary screen. Tap the
+    // RewardCard's edit button directly in the inline section.
+    // The inline section comes before the form in the widget tree, so its
+    // edit_outlined icon is .first; the form's name-field suffix is .last.
+    await tester.tap(find.byIcon(Icons.edit_outlined).first);
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 

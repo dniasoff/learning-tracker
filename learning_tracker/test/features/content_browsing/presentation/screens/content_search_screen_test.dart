@@ -68,14 +68,17 @@ void main() {
       await tester.pump(const Duration(seconds: 1));
 
       // With Hebrew locale and English terms (useHebrewTermsProvider=false),
-      // the hint text is "חיפוש Mishnayos…" (l10n key searchFieldHint).
-      // Assert the exact Hebrew-prefixed hint is present in the TextField.
+      // searchFieldHint returns "חיפוש [U+2066]Mishnayos[U+2069]…".
+      // The curriculum-name placeholder is wrapped in U+2066...U+2069 LTR-isolate
+      // marks; use Dart escape sequences (\u2066 / \u2069) in the string literal
+      // to avoid the text_direction_code_point_in_literal analyzer warning.
       expect(
-        find.text('חיפוש Mishnayos…'),
+        find.text('חיפוש \u2066Mishnayos\u2069…'),
         findsOneWidget,
         reason:
-            'R4-4: searchFieldHint in he locale must render '
-            '"חיפוש Mishnayos…", not the English "Search Mishnayos…"',
+            'R4-4: searchFieldHint in he locale must render the Hebrew prefix '
+            'with U+2066...U+2069 isolates around the label, '
+            'not the English "Search Mishnayos..."',
       );
       // The bare English "Search " prefix must be absent.
       expect(

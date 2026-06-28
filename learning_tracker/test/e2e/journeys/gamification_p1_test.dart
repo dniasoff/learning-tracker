@@ -259,18 +259,22 @@ void main() {
         await h.pump(const Duration(milliseconds: 300));
 
         // Tap "Manage rewards" in the popup menu.
+        // NOTE: "Manage rewards" also appears as the _InlineRewardsSection
+        // header label in the main screen body (behind the popup overlay).
+        // Use .last to target the popup menu item, which sits in the Overlay
+        // and is the last matching widget in widget-tree traversal order.
         h.expectOnScreen('Manage rewards');
-        await h.tapText('Manage rewards');
+        await h.tapWidget(find.text('Manage rewards').last);
         await h.pump(const Duration(milliseconds: 400));
 
         // The bottom sheet shows our seeded reward.
         h.expectOnScreen('Silver Cup');
 
         // Tap the edit icon for 'Silver Cup'.
-        // NOTE: Icons.edit_outlined also appears as a suffixIcon on the name
-        // TextField in the main screen body (now behind the modal barrier).
-        // Use .last to target the edit icon inside the manage sheet, which
-        // is the last matching widget in the widget-tree traversal order.
+        // Icons.edit_outlined appears in three places behind the sheet:
+        //   (1) inline section ManageRewardsList, (2) name TextField suffixIcon.
+        // The sheet's ManageRewardsList edit icon is last in traversal order
+        // (it lives in the Overlay above the main body).
         await h.tapWidget(find.byIcon(Icons.edit_outlined).last);
         await h.pump(const Duration(milliseconds: 300));
 
@@ -283,11 +287,10 @@ void main() {
         await h.enterText(nameField, 'Golden Cup');
         await h.pump(const Duration(milliseconds: 300));
 
-        // Scroll down to expose the Update Reward button (may be below viewport).
-        await tester.drag(
-          find.byType(SingleChildScrollView).first,
-          const Offset(0, -300),
-        );
+        // Scroll down to expose the Update Reward button.
+        // The inline rewards section pushes the form further down than before;
+        // use ensureVisible so the exact pixel offset doesn't matter.
+        await tester.ensureVisible(find.text('Update Reward').first);
         await h.pump(const Duration(milliseconds: 300));
 
         // Tap Update Reward (save button in edit mode).
@@ -353,15 +356,19 @@ void main() {
         // Open the Manage Rewards bottom sheet via PopupMenuButton.
         await h.tapWidget(find.byIcon(Icons.more_vert_rounded).first);
         await h.pump(const Duration(milliseconds: 300));
+        // Use .last: "Manage rewards" now appears as the _InlineRewardsSection
+        // header on the main body AND as the popup menu item in the Overlay.
         h.expectOnScreen('Manage rewards');
-        await h.tapText('Manage rewards');
+        await h.tapWidget(find.text('Manage rewards').last);
         await h.pump(const Duration(milliseconds: 400));
 
         // The sheet shows our seeded reward.
         h.expectOnScreen('Bronze Star');
 
         // Tap the delete icon.
-        await h.tapWidget(find.byIcon(Icons.delete_outline).first);
+        // The inline section's delete icon is FIRST (main body, behind barrier).
+        // The sheet's delete icon is LAST (Overlay, on top).
+        await h.tapWidget(find.byIcon(Icons.delete_outline).last);
         await h.pump(const Duration(milliseconds: 300));
 
         // Confirm dialog — both title and button show "Delete Reward".
@@ -430,13 +437,18 @@ void main() {
         // Open manage rewards sheet.
         await h.tapWidget(find.byIcon(Icons.more_vert_rounded).first);
         await h.pump(const Duration(milliseconds: 300));
-        await h.tapText('Manage rewards');
+        // Use .last: "Manage rewards" appears in both the inline section header
+        // and the popup menu item (Overlay). Popup item is last in traversal.
+        await h.tapWidget(find.text('Manage rewards').last);
         await h.pump(const Duration(milliseconds: 400));
 
         h.expectOnScreen('Enabled Prize');
 
-        // Toggle the enabled switch (the first Switch in the sheet).
-        final switchFinder = find.byType(Switch).first;
+        // Toggle the enabled switch inside the Manage Rewards sheet.
+        // The inline section (main body, behind modal barrier) also renders
+        // a Switch — its Switch is FIRST. The sheet's Switch lives in the
+        // Overlay and is LAST in the widget-tree traversal order.
+        final switchFinder = find.byType(Switch).last;
         await h.tapWidget(switchFinder);
         await h.pump(const Duration(milliseconds: 500));
         await h.pump();
@@ -510,9 +522,17 @@ void main() {
           'Reward Configuration',
           routeName: 'RewardConfigurationScreen',
         );
+        // The inline rewards section now appears above the form card and pushes
+        // the text fields just below the initial viewport.
+        // Scroll down a little first to bring them into view, then enter text.
+        await tester.ensureVisible(find.byType(TextField).first);
+        await h.pump(const Duration(milliseconds: 200));
+
         // Fill a valid form so Save Reward would otherwise be enabled.
         await h.enterText(find.byType(TextField).first, 'New Reward');
         await h.pump();
+        await tester.ensureVisible(find.byType(TextField).last);
+        await h.pump(const Duration(milliseconds: 200));
         await h.enterText(find.byType(TextField).last, '100');
         await h.pump(const Duration(milliseconds: 200));
 

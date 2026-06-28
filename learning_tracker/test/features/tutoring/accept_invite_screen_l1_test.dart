@@ -591,7 +591,13 @@ void main() {
       await tester.pump(const Duration(milliseconds: 50));
 
       expect(find.text('Could not accept invite'), findsOneWidget);
-      expect(find.text('Server rejected grant'), findsOneWidget);
+      // Run-6: TutorGrantFailure.message is never surfaced raw — the screen
+      // always maps it to the friendly l10n.acceptInviteGenericError string to
+      // avoid showing internal gRPC codes (e.g. "UNAVAILABLE") to users.
+      expect(
+        find.text('Unable to accept invite. Please try again.'),
+        findsOneWidget,
+      );
       expect(find.text('Try again'), findsOneWidget);
 
       await _tearDown(tester);

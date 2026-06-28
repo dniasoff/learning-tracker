@@ -435,7 +435,12 @@ void main() {
 
       // l10n key: declineInviteErrorHeading
       expect(find.text('Could not decline invite'), findsOneWidget);
-      expect(find.text('Cloud Function rejected'), findsOneWidget);
+      // run-6: TutorGrantFailure.message is no longer surfaced raw — the screen
+      // always maps it to the friendly declineInviteGenericError l10n string.
+      expect(
+        find.text('Unable to decline invite. Please try again.'),
+        findsOneWidget,
+      );
 
       await _tearDown(tester);
     });

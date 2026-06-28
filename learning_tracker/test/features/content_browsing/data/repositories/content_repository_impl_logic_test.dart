@@ -268,9 +268,12 @@ void main() {
     });
 
     test('matches by English display name', () async {
+      // Run-6: search matches the rendered leaf-segment name, not displayNameEn.
+      // For Mishnayos in Ashkenazi mode 'Berakhot' renders as 'Berakhos', so
+      // the query must use the rendered form.
       final result = await repo.search(
         curriculumId: CurriculumId.mishnayos,
-        query: 'Berakhot',
+        query: 'Berakhos',
       );
 
       expect(result.any((i) => i.sefariaRef == 'Berakhot'), isTrue);
