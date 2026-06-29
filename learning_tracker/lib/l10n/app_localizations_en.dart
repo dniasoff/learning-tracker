@@ -606,7 +606,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String addTrackChazaraStepQuestion(String term) {
-    return 'How do you want to $term?';
+    return 'How do you want to schedule $term?';
   }
 
   @override
@@ -2418,6 +2418,10 @@ class AppLocalizationsEn extends AppLocalizations {
   }
 
   @override
+  String get noResultsForQueryHint =>
+      'Try searching by the Hebrew name (e.g. ברכות).';
+
+  @override
   String viewAllTasks(int count) {
     return 'View all ($count) →';
   }
@@ -4223,6 +4227,11 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String allTimeTermDone(String term) {
     return '$term done';
+  }
+
+  @override
+  String allTimeTermDoneHebrew(String term) {
+    return '$term שנלמד';
   }
 
   @override

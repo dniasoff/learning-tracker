@@ -459,14 +459,18 @@ class _AllTimeSummaryCard extends ConsumerWidget {
             Expanded(
               child: _AllTimeStat(
                 value: limudCount,
-                label: l10n.allTimeTermDone(terms.limud),
+                label: terms.isHebrew
+                    ? l10n.allTimeTermDoneHebrew(terms.limud)
+                    : l10n.allTimeTermDone(terms.limud),
               ),
             ),
             if (anyTrackHasChazara)
               Expanded(
                 child: _AllTimeStat(
                   value: chazaraCount,
-                  label: l10n.allTimeTermDone(terms.chazaros),
+                  label: terms.isHebrew
+                      ? l10n.allTimeTermDoneHebrew(terms.chazaros)
+                      : l10n.allTimeTermDone(terms.chazaros),
                 ),
               ),
           ],

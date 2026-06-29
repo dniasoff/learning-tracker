@@ -198,7 +198,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 
-    expect(find.text('Point Configuration'), findsOneWidget);
+    expect(find.text('Point Settings'), findsOneWidget);
 
     await _tearDown(tester);
   });
@@ -290,7 +290,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 
-    expect(find.text('Point Configuration'), findsOneWidget);
+    expect(find.text('Point Settings'), findsOneWidget);
 
     await _tearDown(tester);
   });
@@ -393,7 +393,7 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 
-      expect(find.text('Point Configuration'), findsNothing);
+      expect(find.text('Point Settings'), findsNothing);
 
       await _tearDown(tester);
     },
@@ -460,7 +460,7 @@ void main() {
 
     expect(find.text('Manage Tracks'), findsNothing);
     expect(find.text('Manage Goals'), findsNothing);
-    expect(find.text('Point Configuration'), findsNothing);
+    expect(find.text('Point Settings'), findsNothing);
     expect(find.text('Reward Configuration'), findsNothing);
     expect(find.text('Adjust Points'), findsNothing);
     expect(find.text('Pending Prizes'), findsNothing);
@@ -604,7 +604,7 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(seconds: 1));
 
-    await tester.tap(find.text('Point Configuration'));
+    await tester.tap(find.text('Point Settings'));
     await tester.pump();
 
     verify(
@@ -727,7 +727,7 @@ void main() {
 
     expect(find.text('Manage Tracks'), findsNothing);
     expect(find.text('Manage Goals'), findsNothing);
-    expect(find.text('Point Configuration'), findsNothing);
+    expect(find.text('Point Settings'), findsNothing);
     expect(find.text('Adjust Points'), findsNothing);
     expect(find.text('Reward Configuration'), findsNothing);
     expect(find.text('Pending Prizes'), findsNothing);

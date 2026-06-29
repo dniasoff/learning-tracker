@@ -596,6 +596,7 @@ class _GoalSetupFormState extends ConsumerState<GoalSetupForm> {
                     max: 100,
                     divisions: 99,
                     label: '${_targetPercent.round()}%',
+                    semanticFormatterCallback: (v) => '${v.round()}%',
                     onChanged: (v) => setState(() => _targetPercent = v),
                   ),
                   const SizedBox(height: 24),

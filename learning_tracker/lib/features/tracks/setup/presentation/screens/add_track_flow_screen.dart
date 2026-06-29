@@ -3,17 +3,14 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/content/hierarchy_selection.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
 import 'package:learning_tracker/core/labels/curriculum_label.dart';
 import 'package:learning_tracker/core/labels/domain_term_labels.dart';
 import 'package:learning_tracker/core/logging/logger.dart';
-import 'package:learning_tracker/core/preferences/preference_providers.dart';
 import 'package:learning_tracker/core/theme/app_colors.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_dialog.dart';
-import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
 import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';
 import 'package:learning_tracker/features/onboarding/domain/models/wizard_result_wrapper.dart';
 import 'package:learning_tracker/features/onboarding/domain/services/bulk_prior_completion_service.dart';
@@ -41,23 +38,26 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 /// TS-11: Computes the display denominator for the "STEP n OF N" indicator.
 ///
-/// On the curriculum step ([currentIndex] == 0), the program step has not been
-/// confirmed yet, so it is excluded from [fullStepCount] to prevent the total
-/// jumping to an inflated value before the user has made any choice.
+/// The denominator is kept stable so it never changes as the user moves between
+/// steps. The program step is excluded from [fullStepCount] only while no
+/// curriculum has been selected yet — i.e. before the user taps any curriculum
+/// tile. The instant a curriculum is chosen (even while still on step 0), the
+/// full count is shown so the total does not jump on the slide to step 1.
 ///
 /// Parameters:
 /// - [currentIndex]: 0-based index of the current step.
 /// - [fullStepCount]: total steps including any program step.
 /// - [hasProgramStep]: whether a program step is in the active steps list.
-/// - [programConfirmed]: whether the user has already confirmed a program choice.
+/// - [curriculumSelected]: whether the user has already picked a curriculum.
 int computeWizardStepTotal({
   required int currentIndex,
   required int fullStepCount,
   required bool hasProgramStep,
-  required bool programConfirmed,
+  required bool curriculumSelected,
 }) {
-  if (currentIndex == 0 && hasProgramStep && !programConfirmed) {
-    // Exclude the program step from the denominator on the curriculum step.
+  if (currentIndex == 0 && hasProgramStep && !curriculumSelected) {
+    // No curriculum chosen yet — exclude the program step so the denominator
+    // does not appear inflated before any choice is made.
     return fullStepCount - 1;
   }
   return fullStepCount;
@@ -670,33 +670,13 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
   String _getSmartDefault() {
     if (_state.programName != null) return _state.programName!;
     if (_state.scopeSelections != null && _state.scopeSelections!.isNotEmpty) {
+      // F-05/F-21/run7: always use the curriculum label for the track's default
+      // name (not the last-selected seder, e.g. "Seder Taharos") so the
+      // post-creation snackbar matches the Track Management hub card title,
+      // which shows the curriculum — whether the user picked the whole
+      // curriculum or just a section.
       final c = _state.curriculumId;
-      // F-05/F-21: when ALL top-level items were selected via "Select all in
-      // this list", use the curriculum label instead of the last seder name
-      // (which would show e.g. "Seder Taharos" even though the whole
-      // curriculum was chosen).
-      if (c != null) {
-        final level1Selected = _state.scopeSelections!
-            .where((s) => s.level == 1)
-            .map((s) => s.value)
-            .toSet();
-        final content = ref.read(curriculumContentProvider(c)).asData?.value;
-        if (content != null && level1Selected.isNotEmpty) {
-          final totalLevel1 = content.map((item) => item.level1).toSet().length;
-          if (level1Selected.length >= totalLevel1) {
-            return curriculumLabelText(ref, curriculum: c);
-          }
-        }
-      }
-      // R1-(1): raw scope values are Sefaria English translations (e.g. "Genesis").
-      // Transliterate through the curriculum label renderer so the toast
-      // shows "Bereishis"/"Bereshit" instead of "Genesis".
-      final rawValue = _state.scopeSelections!.last.value;
-      final variant = ref.read(currentTransliterationVariantProvider);
-      return CurriculumLabels.transliterateNamedValue(
-        rawValue,
-        variant: variant,
-      );
+      if (c != null) return curriculumLabelText(ref, curriculum: c);
     }
     final c = _state.curriculumId;
     if (c == null) return '';
@@ -708,13 +688,13 @@ class _AddTrackFlowState extends ConsumerState<AddTrackFlow> {
   @override
   Widget build(BuildContext context) {
     final steps = _activeSteps;
-    // TS-11: on the curriculum step, exclude the program step from the total
-    // so the denominator doesn't jump to 7 before any program is confirmed.
+    // TS-11: once a curriculum is selected the final step count is known;
+    // keep the denominator stable so it never changes mid-slide.
     final displayTotal = computeWizardStepTotal(
       currentIndex: _currentIndex,
       fullStepCount: steps.length,
       hasProgramStep: steps.contains(AddTrackStep.program),
-      programConfirmed: _state.programId != null,
+      curriculumSelected: _state.curriculumId != null,
     );
     final progress = _currentIndex.clamp(0, steps.length) / steps.length;
     final theme = Theme.of(context);

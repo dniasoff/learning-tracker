@@ -2395,6 +2395,9 @@ class AppLocalizationsHe extends AppLocalizations {
   }
 
   @override
+  String get noResultsForQueryHint => 'נסו לחפש לפי השם בעברית (למשל ברכות).';
+
+  @override
   String viewAllTasks(int count) {
     return 'הצג הכול ($count) →';
   }
@@ -4191,6 +4194,11 @@ class AppLocalizationsHe extends AppLocalizations {
 
   @override
   String allTimeTermDone(String term) {
+    return '$term שנלמד';
+  }
+
+  @override
+  String allTimeTermDoneHebrew(String term) {
     return '$term שנלמד';
   }
 

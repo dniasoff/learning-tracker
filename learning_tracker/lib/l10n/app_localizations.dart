@@ -1179,7 +1179,7 @@ abstract class AppLocalizations {
   /// Question header for the chazara (review) setup step in the add-track flow. {term} is the localized chazara/review domain term.
   ///
   /// In en, this message translates to:
-  /// **'How do you want to {term}?'**
+  /// **'How do you want to schedule {term}?'**
   String addTrackChazaraStepQuestion(String term);
 
   /// No description provided for @addTrackGoalDeadlinePaceLine.
@@ -4281,6 +4281,12 @@ abstract class AppLocalizations {
   /// **'No results for \"{query}\"'**
   String noResultsForQuery(String query);
 
+  /// Hint under the no-results message clarifying that content is searched by its Hebrew name.
+  ///
+  /// In en, this message translates to:
+  /// **'Try searching by the Hebrew name (e.g. ברכות).'**
+  String get noResultsForQueryHint;
+
   /// No description provided for @viewAllTasks.
   ///
   /// In en, this message translates to:
@@ -7094,6 +7100,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'{term} done'**
   String allTimeTermDone(String term);
+
+  /// Hebrew-script variant of allTimeTermDone, used when Hebrew domain terms are active so the term and its suffix stay script-consistent (avoids 'לימוד done'). {term} is a Hebrew domain term.
+  ///
+  /// In en, this message translates to:
+  /// **'{term} שנלמד'**
+  String allTimeTermDoneHebrew(String term);
 
   /// Active-days stat phrase in the All Time summary card (Recent Activity screen). ICU plural so count==1 is singular ("1 Active day").
   ///

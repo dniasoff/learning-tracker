@@ -200,7 +200,7 @@ class ParentSettingsScreen extends ConsumerWidget {
                       iconBackground: _iconCircleMuted,
                       icon: Icons.tune_rounded,
                       iconColor: _iconMutedFg,
-                      title: l10n.pointConfiguration,
+                      title: l10n.pointSettingsTitle,
                       subtitle: l10n.pointConfigurationSubtitle,
                       trailing: const Icon(
                         Icons.chevron_right_rounded,

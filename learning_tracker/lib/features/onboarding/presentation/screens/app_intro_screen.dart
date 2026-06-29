@@ -443,6 +443,8 @@ class _IntroPage extends ConsumerWidget {
           child: _subtitleRich(
             l10n: l10n,
             talmidChochomLabel: talmidChochomLabel,
+            isHebrewLocale:
+                Localizations.localeOf(context).languageCode == 'he',
           ),
         );
       },
@@ -451,6 +453,7 @@ class _IntroPage extends ConsumerWidget {
 
   Widget _subtitleRich({
     required AppLocalizations l10n,
+    required bool isHebrewLocale,
     String talmidChochomLabel = 'Talmid Chochom',
   }) {
     const highlightStyle = TextStyle(
@@ -479,10 +482,17 @@ class _IntroPage extends ConsumerWidget {
           style: _subStyle,
         );
       case _IntroPageVariant.rewards:
-        return Text(
-          l10n.introRewardsSubtitle(talmidChochomLabel),
-          textAlign: TextAlign.center,
-          style: _subStyle,
+        // Force the subtitle's base direction to match the APP locale (not the
+        // device locale): the English string ends with "…to a {tier}!" where
+        // {tier} can be a Hebrew domain term; on a Hebrew-locale device the
+        // ambient RTL base would flip the trailing "!" to the wrong side.
+        return Directionality(
+          textDirection: isHebrewLocale ? TextDirection.rtl : TextDirection.ltr,
+          child: Text(
+            l10n.introRewardsSubtitle(talmidChochomLabel),
+            textAlign: TextAlign.center,
+            style: _subStyle,
+          ),
         );
     }
   }

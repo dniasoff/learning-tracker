@@ -376,7 +376,11 @@ class _AccountTileState extends ConsumerState<_AccountTile> {
                       ? (hasValidSession
                             ? Icons.chevron_right_rounded
                             : Icons.warning_rounded)
-                      : Icons.lock_outline_rounded,
+                      // run7 #12: a local account opens with no credential gate,
+                      // exactly like a valid-session cloud account — so it shows
+                      // the same "tap to enter" chevron. (A lock icon here
+                      // wrongly implied a password was required.)
+                      : Icons.chevron_right_rounded,
                   color: isCloud && !hasValidSession
                       ? AppColors.statusError
                       : AppTheme.brandInkMuted,

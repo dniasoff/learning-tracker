@@ -343,7 +343,7 @@
       "term": { "type": "String" }
     }
   },
-  "addTrackChazaraStepQuestion": "How do you want to {term}?",
+  "addTrackChazaraStepQuestion": "How do you want to schedule {term}?",
   "@addTrackChazaraStepQuestion": {
     "description": "Question header for the chazara (review) setup step in the add-track flow. {term} is the localized chazara/review domain term.",
     "placeholders": {
@@ -1223,6 +1223,10 @@
     "placeholders": {
       "query": { "type": "String" }
     }
+  },
+  "noResultsForQueryHint": "Try searching by the Hebrew name (e.g. ברכות).",
+  "@noResultsForQueryHint": {
+    "description": "Hint under the no-results message clarifying that content is searched by its Hebrew name."
   },
 
   "viewAllTasks": "View all ({count}) →",
@@ -2484,6 +2488,13 @@
   "allTimeTermDone": "{term} done",
   "@allTimeTermDone": {
     "description": "Stat label in the All Time summary card. {term} is a toggle-aware domain term (e.g. Limud/לימוד or Chazaros/חזרות).",
+    "placeholders": {
+      "term": { "type": "String" }
+    }
+  },
+  "allTimeTermDoneHebrew": "{term} שנלמד",
+  "@allTimeTermDoneHebrew": {
+    "description": "Hebrew-script variant of allTimeTermDone, used when Hebrew domain terms are active so the term and its suffix stay script-consistent (avoids 'לימוד done'). {term} is a Hebrew domain term.",
     "placeholders": {
       "term": { "type": "String" }
     }

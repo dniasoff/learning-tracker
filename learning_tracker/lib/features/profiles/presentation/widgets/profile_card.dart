@@ -115,24 +115,30 @@ class ProfileCard extends StatelessWidget {
                       ),
                     ),
                     if (isChild)
+                      // ExcludeSemantics must sit INSIDE Positioned — Positioned
+                      // has to be a direct child of the Stack. The star badge is
+                      // decorative (child-mode is already conveyed by the
+                      // "CHILD MODE" pill), so it carries no semantics.
                       Positioned(
                         right: -1,
                         bottom: -1,
-                        child: Container(
-                          width: 30,
-                          height: 30,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF96B82),
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: AppTheme.brandCreamCard,
-                              width: 2,
+                        child: ExcludeSemantics(
+                          child: Container(
+                            width: 30,
+                            height: 30,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF96B82),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: AppTheme.brandCreamCard,
+                                width: 2,
+                              ),
                             ),
-                          ),
-                          child: const Icon(
-                            Icons.star_rounded,
-                            color: Colors.white,
-                            size: 16,
+                            child: const Icon(
+                              Icons.star_rounded,
+                              color: Colors.white,
+                              size: 16,
+                            ),
                           ),
                         ),
                       ),

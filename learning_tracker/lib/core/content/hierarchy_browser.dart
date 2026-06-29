@@ -86,6 +86,14 @@ class HierarchyBrowserState extends ConsumerState<HierarchyBrowser> {
   List<String> _path = [];
   List<String?> _hebrewNames = [];
 
+  final ScrollController _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
   // ── Public API for external callers ──────────────────────────────────────
 
   /// Raw values of the current navigation stack (one entry per level drilled).
@@ -186,13 +194,18 @@ class HierarchyBrowserState extends ConsumerState<HierarchyBrowser> {
     }
 
     final path = _path; // capture for closure
-    return ListView.builder(
-      itemCount: displayItems.length,
-      itemBuilder: (context, index) {
-        final item = displayItems[index];
-        final onDrill = item.isLeaf ? null : () => _drillInto(item);
-        return widget.tileBuilder(item, path, onDrill);
-      },
+    return Scrollbar(
+      controller: _scrollController,
+      thumbVisibility: true,
+      child: ListView.builder(
+        controller: _scrollController,
+        itemCount: displayItems.length,
+        itemBuilder: (context, index) {
+          final item = displayItems[index];
+          final onDrill = item.isLeaf ? null : () => _drillInto(item);
+          return widget.tileBuilder(item, path, onDrill);
+        },
+      ),
     );
   }
 }

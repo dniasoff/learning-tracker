@@ -1113,6 +1113,10 @@
       "query": { "type": "String" }
     }
   },
+  "noResultsForQueryHint": "נסו לחפש לפי השם בעברית (למשל ברכות).",
+  "@noResultsForQueryHint": {
+    "description": "Hint under the no-results message clarifying that content is searched by its Hebrew name."
+  },
 
   "viewAllTasks": "הצג הכול ({count}) →",
   "@viewAllTasks": {
@@ -2289,6 +2293,13 @@
   "allTimeTermDone": "{term} שנלמד",
   "@allTimeTermDone": {
     "description": "Stat label in the All Time summary card. {term} is a toggle-aware domain term.",
+    "placeholders": {
+      "term": { "type": "String" }
+    }
+  },
+  "allTimeTermDoneHebrew": "{term} שנלמד",
+  "@allTimeTermDoneHebrew": {
+    "description": "Hebrew-script variant of allTimeTermDone, used when Hebrew domain terms are active so the term and its suffix stay script-consistent. {term} is a Hebrew domain term.",
     "placeholders": {
       "term": { "type": "String" }
     }

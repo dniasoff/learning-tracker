@@ -163,10 +163,27 @@ class _ContentSearchScreenState extends ConsumerState<ContentSearchScreen> {
     return resultsAsync.when(
       data: (items) {
         if (items.isEmpty) {
+          final l10n = AppLocalizations.of(context)!;
           return Center(
-            child: Text(
-              AppLocalizations.of(context)!.noResultsForQuery(_debouncedQuery),
-              textAlign: TextAlign.center,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  l10n.noResultsForQuery(_debouncedQuery),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 32),
+                  child: Text(
+                    l10n.noResultsForQueryHint,
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                ),
+              ],
             ),
           );
         }

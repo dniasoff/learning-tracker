@@ -130,7 +130,7 @@ class _StudyDaysEditableState extends ConsumerState<StudyDaysEditable> {
                 begin: Alignment.topCenter,
                 end: Alignment.bottomCenter,
                 colors: [Colors.white, Colors.white, Colors.transparent],
-                stops: [0.0, 0.80, 1.0],
+                stops: [0.0, 0.60, 1.0],
               ).createShader(bounds),
               blendMode: BlendMode.dstIn,
               child: ListView.builder(

@@ -669,17 +669,17 @@ class _ChildViewBanner extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    return GestureDetector(
-      onTap: () => showProfileSwitcherSheet(context),
-      child: Container(
-        height: 28,
-        color: _childViewAccentColor,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        child: Row(
-          children: [
-            const Icon(Icons.child_care_rounded, size: 13, color: Colors.white),
-            const SizedBox(width: 6),
-            Expanded(
+    return Container(
+      height: 28,
+      color: _childViewAccentColor,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Row(
+        children: [
+          const Icon(Icons.child_care_rounded, size: 13, color: Colors.white),
+          const SizedBox(width: 6),
+          Expanded(
+            child: GestureDetector(
+              onTap: () => showProfileSwitcherSheet(context),
               child: Text(
                 l10n.viewingChildBanner(childName),
                 style: const TextStyle(
@@ -692,49 +692,46 @@ class _ChildViewBanner extends ConsumerWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            // Explicit, labelled "Exit parent mode" button — returns the parent
-            // to their own (adult) profile via [onExit].
-            Material(
-              type: MaterialType.transparency,
-              child: InkWell(
-                onTap: onExit,
-                borderRadius: BorderRadius.circular(4),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.logout_rounded,
-                        size: 12,
+          ),
+          // Explicit, labelled "Exit parent mode" button — returns the parent
+          // to their own (adult) profile via [onExit].
+          Material(
+            type: MaterialType.transparency,
+            child: InkWell(
+              onTap: onExit,
+              borderRadius: BorderRadius.circular(4),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.logout_rounded,
+                      size: 12,
+                      color: Colors.white,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      l10n.viewingChildBannerExit,
+                      style: const TextStyle(
                         color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.4,
                       ),
-                      const SizedBox(width: 4),
-                      Text(
-                        l10n.viewingChildBannerExit,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.4,
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),
-          ],
-        ),
-      ), // Container
-    ); // GestureDetector
+          ),
+        ],
+      ),
+    );
   }
 }
 
@@ -769,17 +766,17 @@ class TutorModeIndicatorBar extends ConsumerWidget {
     final label = (talmidName != null && talmidName.isNotEmpty)
         ? l10n.tutorModeIndicatorNamed(talmidName)
         : l10n.tutorModeIndicator;
-    return GestureDetector(
-      onTap: () => showProfileSwitcherSheet(context),
-      child: Container(
-        height: 24,
-        color: _tutorAccentColor,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
-        child: Row(
-          children: [
-            const Icon(Icons.school_rounded, size: 13, color: Colors.white),
-            const SizedBox(width: 6),
-            Expanded(
+    return Container(
+      height: 24,
+      color: _tutorAccentColor,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Row(
+        children: [
+          const Icon(Icons.school_rounded, size: 13, color: Colors.white),
+          const SizedBox(width: 6),
+          Expanded(
+            child: GestureDetector(
+              onTap: () => showProfileSwitcherSheet(context),
               child: Text(
                 label,
                 style: const TextStyle(
@@ -792,50 +789,45 @@ class TutorModeIndicatorBar extends ConsumerWidget {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            Material(
-              type: MaterialType.transparency,
-              child: InkWell(
-                onTap: () {
-                  ref
-                      .read(activeTutoredProfileSelectionProvider.notifier)
-                      .exit();
-                  context.router.replaceAll([const AppShellRoute()]);
-                },
-                borderRadius: BorderRadius.circular(4),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.2),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(
-                        Icons.logout_rounded,
-                        size: 12,
+          ),
+          Material(
+            type: MaterialType.transparency,
+            child: InkWell(
+              onTap: () {
+                ref.read(activeTutoredProfileSelectionProvider.notifier).exit();
+                context.router.replaceAll([const AppShellRoute()]);
+              },
+              borderRadius: BorderRadius.circular(4),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.2),
+                  borderRadius: BorderRadius.circular(4),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      Icons.logout_rounded,
+                      size: 12,
+                      color: Colors.white,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      l10n.tutorModeExit,
+                      style: const TextStyle(
                         color: Colors.white,
+                        fontSize: 11,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.4,
                       ),
-                      const SizedBox(width: 4),
-                      Text(
-                        l10n.tutorModeExit,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.4,
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

@@ -1,11 +1,13 @@
-/// Regression test for TS-11:
-/// The Add-Track wizard shows "STEP 1 OF N" on the curriculum step. When the
-/// previously-selected curriculum has active programs, the program step would be
-/// included, showing "STEP 1 OF 7" before the user has chosen whether to use a
-/// program. The denominator must show the minimum (program-free) path on step 1.
+/// Regression test for TS-11 (run-7 refinement):
+/// The Add-Track wizard shows "STEP n OF N". When a curriculum with active
+/// programs is chosen, the program step is added — which previously made the
+/// denominator jump from 6 to 7 *across the slide* from the curriculum step to
+/// the program step ("STEP 1 OF 6" → "STEP 2 OF 7").
 ///
-/// Fix: expose [computeWizardStepTotal] — a pure function that returns the
-/// display total, excluding the program step on the curriculum step (index 0).
+/// Fix: [computeWizardStepTotal] keeps the denominator STABLE. The program step
+/// is excluded only while NO curriculum has been selected yet. The instant a
+/// curriculum is picked (even while still on the curriculum step, index 0) the
+/// full count is shown, so the total never changes on the slide to step 1.
 library;
 
 import 'package:flutter_test/flutter_test.dart';
@@ -13,65 +15,69 @@ import 'package:learning_tracker/features/tracks/setup/presentation/screens/add_
 
 void main() {
   group('TS-11 — wizard step total denominator stability', () {
-    test('on curriculum step (index 0) denominator excludes program step', () {
-      // curriculumHasPrograms=true, programConfirmed=false → must show 6 not 7
-      final total = computeWizardStepTotal(
-        currentIndex: 0,
-        fullStepCount: 7, // includes program step
-        hasProgramStep: true,
-        programConfirmed: false,
-      );
-      expect(
-        total,
-        equals(6),
-        reason:
-            'TS-11: curriculum step denominator must not include program step '
-            'before the user has confirmed a program selection',
-      );
-    });
-
-    test('on program step (index 1) denominator includes program step', () {
-      final total = computeWizardStepTotal(
-        currentIndex: 1,
-        fullStepCount: 7,
-        hasProgramStep: true,
-        programConfirmed: false,
-      );
-      expect(
-        total,
-        equals(7),
-        reason:
-            'Once on the program step, show full count including program step',
-      );
-    });
-
     test(
-      'on curriculum step when no programs available denominator unchanged',
+      'curriculum step, nothing selected yet → excludes program step (6)',
       () {
-        // 6-step self-paced track (no program step)
+        // Fresh wizard, no curriculum tapped: show the minimum program-free
+        // path so the total is not inflated before any choice is made.
         final total = computeWizardStepTotal(
           currentIndex: 0,
-          fullStepCount: 6,
-          hasProgramStep: false,
-          programConfirmed: false,
+          fullStepCount: 7, // includes program step
+          hasProgramStep: true,
+          curriculumSelected: false,
         );
-        expect(total, equals(6));
+        expect(
+          total,
+          equals(6),
+          reason:
+              'Before any curriculum is chosen the program step must be '
+              'excluded from the denominator',
+        );
       },
     );
 
     test(
-      'on curriculum step when program already confirmed denominator unchanged',
+      'curriculum step, curriculum just selected → shows full count (7)',
       () {
-        // User backed up to step 1 with programId still set
+        // The moment a program-bearing curriculum is tapped, the final step
+        // count is known. Showing 7 here (still on index 0) means the total
+        // does NOT jump when the page slides to the program step.
         final total = computeWizardStepTotal(
           currentIndex: 0,
           fullStepCount: 7,
           hasProgramStep: true,
-          programConfirmed: true,
+          curriculumSelected: true,
         );
-        // Denominator should still show the correct count since program is confirmed
-        expect(total, equals(7));
+        expect(
+          total,
+          equals(7),
+          reason:
+              'Once a curriculum is selected the denominator is stable at the '
+              'full count, preventing a 6→7 jump on the slide to step 1',
+        );
       },
     );
+
+    test('program step (index 1) → shows full count (7)', () {
+      final total = computeWizardStepTotal(
+        currentIndex: 1,
+        fullStepCount: 7,
+        hasProgramStep: true,
+        curriculumSelected: true,
+      );
+      expect(total, equals(7));
+    });
+
+    test('curriculum with no programs → denominator unchanged (6)', () {
+      // Self-paced-only curriculum: no program step exists, so the count is
+      // already the full path regardless of selection state.
+      final total = computeWizardStepTotal(
+        currentIndex: 0,
+        fullStepCount: 6,
+        hasProgramStep: false,
+        curriculumSelected: false,
+      );
+      expect(total, equals(6));
+    });
   });
 }

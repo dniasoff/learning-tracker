@@ -337,8 +337,10 @@ void main() {
       // Tier badge for local-born
       expect(find.text('LOCAL ACCOUNT'), findsOneWidget);
 
-      // Lock icon for local-born (no Firebase session)
-      expect(find.byIcon(Icons.lock_outline_rounded), findsOneWidget);
+      // run7 #12: local accounts open with no credential gate (like a valid
+      // cloud session), so the trailing affordance is a "tap to enter" chevron,
+      // not a misleading lock icon.
+      expect(find.byIcon(Icons.chevron_right_rounded), findsOneWidget);
 
       await _tearDown(tester, fixture);
     },
