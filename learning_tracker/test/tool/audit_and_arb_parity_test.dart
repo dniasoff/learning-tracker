@@ -17,6 +17,9 @@ import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
 
+/// Single-quotes [value] for safe interpolation into a `bash -c` command.
+String _shellQuote(String value) => "'${value.replaceAll("'", r"'\''")}'";
+
 void main() {
   // `flutter test` runs with cwd = the package dir (`learning_tracker/`).
   // The repo root is one level up; the Makefile lives in the package dir.
@@ -93,6 +96,114 @@ void main() {
       skip:
           'Pre-existing violations from Epics 25–26 not yet resolved; '
           're-enable once make audit is fully clean (DNI-389 tracks this)',
+    );
+  });
+
+  group('make audit check 15/15 cross-feature-import detector '
+      '(AUD-guardrails-02)', () {
+    // Mirrors the awk program in Makefile check 15/15 (both occurrences,
+    // which are identical). If that awk changes, update this constant too —
+    // these tests exercise the exact detection logic, not just its wiring.
+    //
+    // The original awk matched `features/([^/]+)/` against BOTH $1 (the
+    // grep -rn file-path field) and $0 (the whole line, which STARTS with
+    // that same file path), so it always compared the importing file's own
+    // feature against itself and could never detect a real violation. This
+    // version extracts the import statement text (everything after the
+    // first two `:`-delimited fields) before matching the imported feature,
+    // and exempts imports that route through the target feature's own
+    // barrel (`features/<f>/<f>.dart`).
+    const awkProgram =
+        r'{ content = $0; sub(/^[^:]*:[^:]*:/, "", content); '
+        r'if (match($1, /features\/([^\/]+)\//, a) && '
+        r'match(content, /features\/([^\/]+)\//, b)) { '
+        'if (a[1] != b[1]) { '
+        'barrel = "features/" b[1] "/" b[1] ".dart"; '
+        'if (index(content, barrel) == 0) print } } }';
+
+    Future<String> runAwk(String inputLine) async {
+      final result = await Process.run('bash', [
+        '-c',
+        "printf '%s\\n' ${_shellQuote(inputLine)} | awk -F: '$awkProgram'",
+      ]);
+      expect(
+        result.exitCode,
+        0,
+        reason: 'awk itself must not error.\nstderr=${result.stderr}',
+      );
+      return result.stdout.toString();
+    }
+
+    test(
+      'prints a synthetic cross-feature deep import (not suppressed)',
+      () async {
+        // AC1: "file/features/A/x.dart:N:import ...features/B/y.dart"
+        // must be printed, not silently swallowed by the awk.
+        const line =
+            'lib/features/A/x.dart:9:'
+            "import 'package:learning_tracker/features/B/y.dart';";
+        final out = await runAwk(line);
+        expect(
+          out.trim(),
+          line,
+          reason: 'a genuine cross-feature deep import must be reported',
+        );
+      },
+    );
+
+    test('suppresses a same-feature deep import (not cross-feature)', () async {
+      const line =
+          'lib/features/A/domain/x.dart:9:'
+          "import 'package:learning_tracker/features/A/data/y.dart';";
+      final out = await runAwk(line);
+      expect(
+        out.trim(),
+        isEmpty,
+        reason: 'an import within the same feature is not a violation',
+      );
+    });
+
+    test(
+      'suppresses a cross-feature import that routes through the barrel',
+      () async {
+        const line =
+            'lib/features/A/x.dart:9:'
+            "import 'package:learning_tracker/features/B/B.dart';";
+        final out = await runAwk(line);
+        expect(
+          out.trim(),
+          isEmpty,
+          reason: 'importing another feature\'s own barrel is compliant',
+        );
+      },
+    );
+
+    test(
+      'regression: pending_local_signup.dart and onboarding_screen.dart '
+      'account imports no longer flagged (AUD-guardrails-02 fix sites)',
+      () async {
+        final result = await Process.run('make', [
+          'audit',
+        ], workingDirectory: packageDir);
+        final stdout = result.stdout.toString();
+        expect(
+          stdout,
+          isNot(contains('pending_local_signup.dart:11')),
+          reason:
+              'pending_local_signup.dart now imports currentAccountIdProvider '
+              'via features/profiles/profiles.dart, not the deep provider path',
+        );
+        expect(
+          stdout,
+          allOf(
+            isNot(contains('onboarding_screen.dart:10')),
+            isNot(contains('onboarding_screen.dart:11')),
+          ),
+          reason:
+              'onboarding_screen.dart now imports OnboardingIntentStep and '
+              'the auth state provider via features/account/account.dart',
+        );
+      },
     );
   });
 
