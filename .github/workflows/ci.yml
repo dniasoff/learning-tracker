@@ -79,6 +79,23 @@ jobs:
         working-directory: learning_tracker
         run: dart run build_runner build --delete-conflicting-outputs
 
+      - name: Generate l10n
+        working-directory: learning_tracker
+        run: flutter gen-l10n
+
+      # ── AG-7 freshness gate (docs/coding-standards.md) ──
+      # Committed generated output (*.g.dart, *.freezed.dart, *.gr.dart, and
+      # lib/l10n/app_localizations*.dart) must match what build_runner/gen-l10n
+      # produce on a clean tree. Runs before the secret-writing steps below so
+      # that decoding google-services.json / firebase_options.dart (gitignored,
+      # not tracked) can never be mistaken for codegen drift.
+      - name: Verify generated code is fresh (AG-7)
+        run: |
+          if ! git diff --exit-code; then
+            echo "::error::Generated code is stale — committed *.g.dart/*.freezed.dart/l10n output does not match what 'dart run build_runner build --delete-conflicting-outputs' and 'flutter gen-l10n' produce. Regenerate in learning_tracker/ and commit the result. See docs/coding-standards.md AG-7."
+            exit 1
+          fi
+
       - name: Prepare bundled seed asset (xz → gzip)
         working-directory: learning_tracker
         run: dart run tool/prepare_asset.dart
