@@ -99,6 +99,22 @@ part 'user_database.g.dart';
 ///   participates in the Goals table's profile-scoping key, matching every
 ///   other profile-scoped table. Additive index only — no data loss.
 ///
+/// Schema v34 (AUD-core-database-03 — sync merge double-credit gap closure):
+/// - Added UNIQUE composite indexes `points_ledger_profile_ulid` on
+///   `points_ledger(profile_id, ulid)` and
+///   `reward_redemptions_profile_ulid` on
+///   `reward_redemptions(profile_id, ulid)`, mirroring the UNIQUE
+///   `learning_ledger_profile_ulid` index `LearningLedger` already has. Any
+///   pre-existing duplicate `(profile_id, ulid)` rows (the exact double-
+///   credit this defect could already have produced) are deduplicated —
+///   keeping the lowest `id` — before the unique index is created, and every
+///   profile with a `points_ledger` duplicate has its `points_balance`
+///   re-derived from the deduplicated ledger so no stale over-credit
+///   survives the upgrade. Rows with a `NULL` ulid (not yet backfilled by
+///   the Wave-B sync agent) are never deduplicated — SQLite treats each NULL
+///   as distinct in a UNIQUE index, matching the pre-existing
+///   `learning_ledger` precedent.
+///
 /// This database uses standard Drift migrations and holds all user-generated
 /// content: profiles, progress, configuration, streaks, and sync state.
 /// It is the only database that accepts writes at runtime.
@@ -162,7 +178,7 @@ class UserDatabase extends _$UserDatabase {
   UserDatabase(super.e);
 
   @override
-  int get schemaVersion => 33;
+  int get schemaVersion => 34;
 
   // drift_dev cannot express WHERE in a Dart-defined view's `as()` body
   // (cascade `..where()` confuses the generator).  The auto-generated SQL for
@@ -401,6 +417,102 @@ class UserDatabase extends _$UserDatabase {
           ).get();
           if (hasGoals.isNotEmpty) {
             await m.createIndex(goalsProfileCurriculum);
+          }
+        }
+        if (from < 34) {
+          // AUD-core-database-03: points_ledger / reward_redemptions lacked
+          // the UNIQUE(profileId, ulid) companion index every other
+          // sync-able entity has (learning_ledger), leaving a
+          // SELECT-then-INSERT TOCTOU window in which a racing merge
+          // (concurrent pulls, a retried tutored pull) could double-credit
+          // a child's points balance.
+          // Guard: partial-schema migration paths (e.g. older upgrade
+          // tests that model only their own migration's tables) may not
+          // have created these tables yet — same pattern as the
+          // hasLedger/hasGoals guards above.
+          final hasPointsLedger = await customSelect(
+            'SELECT 1 FROM sqlite_master '
+            "WHERE type = 'table' AND name = 'points_ledger'",
+          ).get();
+          if (hasPointsLedger.isNotEmpty) {
+            // Defensive dedup FIRST: a pre-existing duplicate
+            // (profile_id, ulid) pair — the exact double-credit this
+            // defect could already have produced on a device that hit the
+            // race — would make CREATE UNIQUE INDEX fail outright. Keep
+            // the lowest id per (profile_id, ulid) pair; NULL-ulid rows
+            // (not yet backfilled by the Wave-B sync agent) are left
+            // untouched — SQLite treats each NULL as distinct in a UNIQUE
+            // index, so they can never collide (same as learning_ledger).
+            //
+            // Capture the affected profiles BEFORE deleting so the balance
+            // re-derivation below only touches profiles whose ledger
+            // actually had a duplicate removed.
+            await customStatement(
+              'CREATE TEMP TABLE _v34_ledger_dupe_profiles AS '
+              'SELECT DISTINCT profile_id FROM points_ledger '
+              'WHERE ulid IS NOT NULL AND id NOT IN ('
+              '  SELECT MIN(id) FROM points_ledger '
+              '  WHERE ulid IS NOT NULL GROUP BY profile_id, ulid'
+              ')',
+            );
+            await customStatement(
+              'DELETE FROM points_ledger '
+              'WHERE ulid IS NOT NULL AND id NOT IN ('
+              '  SELECT MIN(id) FROM points_ledger '
+              '  WHERE ulid IS NOT NULL GROUP BY profile_id, ulid'
+              ')',
+            );
+            await m.createIndex(pointsLedgerProfileUlid);
+            // Re-derive points_balance for every profile that had a
+            // duplicate removed, so no stale over-credit survives the
+            // upgrade (mirrors PointsBalanceDao.reDeriveBalanceFromLedger:
+            // sum of all remaining ledger deltas, clamped at 0). Guarded
+            // separately: some partial-schema migration test fixtures model
+            // points_ledger without points_balance.
+            final hasPointsBalance = await customSelect(
+              'SELECT 1 FROM sqlite_master '
+              "WHERE type = 'table' AND name = 'points_balance'",
+            ).get();
+            if (hasPointsBalance.isNotEmpty) {
+              await customStatement(
+                'INSERT INTO points_balance (profile_id, balance, updated_at) '
+                'SELECT pl.profile_id, '
+                '       MAX(0, COALESCE(SUM(pl.delta), 0)), '
+                "       CAST(strftime('%s','now') AS INTEGER) "
+                'FROM points_ledger pl '
+                'WHERE pl.profile_id IN '
+                '  (SELECT profile_id FROM _v34_ledger_dupe_profiles) '
+                'GROUP BY pl.profile_id '
+                'ON CONFLICT(profile_id) DO UPDATE SET '
+                '  balance = excluded.balance, '
+                '  updated_at = excluded.updated_at',
+              );
+            }
+            await customStatement('DROP TABLE _v34_ledger_dupe_profiles');
+          }
+
+          final hasRewardRedemptions = await customSelect(
+            'SELECT 1 FROM sqlite_master '
+            "WHERE type = 'table' AND name = 'reward_redemptions'",
+          ).get();
+          if (hasRewardRedemptions.isNotEmpty) {
+            // Same defensive dedup for reward_redemptions. It is an LWW
+            // state-machine (not append-only), so keep the row with the
+            // latest `updated_at` per (profile_id, ulid), tie-broken by the
+            // lowest id, rather than always keeping the lowest id.
+            await customStatement(
+              'DELETE FROM reward_redemptions '
+              'WHERE ulid IS NOT NULL AND id NOT IN ('
+              '  SELECT r1.id FROM reward_redemptions r1 '
+              '  WHERE r1.id = ('
+              '    SELECT r2.id FROM reward_redemptions r2 '
+              '    WHERE r2.profile_id = r1.profile_id '
+              '      AND r2.ulid = r1.ulid '
+              '    ORDER BY r2.updated_at DESC, r2.id ASC LIMIT 1'
+              '  )'
+              ')',
+            );
+            await m.createIndex(rewardRedemptionsProfileUlid);
           }
         }
       },
