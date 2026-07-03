@@ -5,6 +5,7 @@ import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/codec/streak_event_codec.dart';
 import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/core/time/ulid.dart';
@@ -187,14 +188,37 @@ class CompletionRepositoryImpl implements CompletionRepository {
       // Per completion_source.dart, bulkInTrack credits achievement so a
       // learner who bulk-marks a complete masechta still earns the siyum.
       if (_completionDetectionService != null && creditsAchievement) {
+        // AUD-learning-01 / EH-3: this call is intentionally fire-and-forget
+        // (a slow siyum scan must never block or fail the primary completion
+        // write), but completion_detection_service.dart has no try/catch of
+        // its own. Without a local catch path here, any failure (closed DB
+        // mid profile-switch, a malformed content lookup, …) permanently and
+        // silently drops the B1 siyum credit for this unit, surfaced only as
+        // a generic "fatal" report by the global zone handler with no
+        // domain context. Log it here instead so the failure — and which
+        // completion caused it — is visible without depending on that
+        // catch-all.
         unawaited(
-          _completionDetectionService.checkAndRecordCompletions(
-            curriculumId: request.curriculumId,
-            sefariaRef: request.sefariaRef,
-            trackType: request.trackType,
-            profileId: _activeProfileId,
-            markedBy: _activeProfileId,
-          ),
+          _completionDetectionService
+              .checkAndRecordCompletions(
+                curriculumId: request.curriculumId,
+                sefariaRef: request.sefariaRef,
+                trackType: request.trackType,
+                profileId: _activeProfileId,
+                markedBy: _activeProfileId,
+              )
+              .catchError((Object error, StackTrace stackTrace) {
+                AppLogger.instance.error(
+                  event: 'completion_siyum_detection_failed',
+                  fields: {
+                    'curriculumId': request.curriculumId,
+                    'sefariaRef': request.sefariaRef,
+                    'trackType': request.trackType,
+                  },
+                  exception: error,
+                  stackTrace: stackTrace,
+                );
+              }),
         );
       }
 
