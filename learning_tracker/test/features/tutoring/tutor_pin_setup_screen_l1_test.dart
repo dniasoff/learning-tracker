@@ -594,6 +594,55 @@ void main() {
     );
   });
 
+  group('TutorPinSetupScreen — AUD-tutoring-04: setTutorPin throws', () {
+    testWidgets('shows the generic save error and resets to step 1 instead of '
+        'silently stalling on the confirm step', (tester) async {
+      tester.view.physicalSize = const Size(800, 1600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(tester.view.resetPhysicalSize);
+
+      var onPinSetCalled = false;
+
+      await tester.pumpWidget(
+        _buildHarness(
+          stubService: _StubTutorPinService(
+            setResult: (_, __) => throw Exception('keystore unavailable'),
+          ),
+          onPinSet: () => onPinSetCalled = true,
+        ),
+      );
+      await tester.pump();
+
+      // Enter matching PINs so the service is called and throws.
+      await _enterPin(tester, '4321');
+      await tester.pump(const Duration(milliseconds: 100));
+      await _enterPin(tester, '4321');
+      await tester.pump(const Duration(milliseconds: 100));
+      await tester.pump(const Duration(seconds: 1));
+
+      expect(
+        find.byType(CircularProgressIndicator),
+        findsNothing,
+        reason: 'Saving spinner must clear once the throw is handled',
+      );
+      expect(
+        find.text('Unable to save PIN. Please try again.'),
+        findsOneWidget,
+        reason:
+            'AUD-tutoring-04: an uncaught exception from setTutorPin must '
+            'surface tutorPinSetupSaveError, not a silent stall',
+      );
+      // Resets to step 1 so the user can retry.
+      expect(find.text('Create your Tutor PIN'), findsOneWidget);
+      expect(
+        onPinSetCalled,
+        isFalse,
+        reason: 'onPinSet must not fire on a thrown exception',
+      );
+      await _teardown(tester);
+    });
+  });
+
   group('TutorPinSetupScreen — skip button', () {
     testWidgets('tapping "Set up later" calls onSkip', (tester) async {
       tester.view.physicalSize = const Size(800, 1600);

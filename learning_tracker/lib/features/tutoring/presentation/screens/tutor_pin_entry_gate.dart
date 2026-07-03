@@ -111,6 +111,24 @@ class _TutorPinEntryGateState extends ConsumerState<TutorPinEntryGate> {
           _errorMessage = errorMessage;
         });
       }
+    } catch (e, st) {
+      // EH-2/EH-3: verifyTutorPin only converts PinLockoutException — an
+      // underlying storage failure (e.g. secure-storage/keystore error)
+      // propagates raw. Without this catch the user was left staring at a
+      // stalled numpad: _isVerifying still resets via `finally`, but no
+      // error ever appears and _digits stays at 4 filled dots.
+      AppLogger.instance.error(
+        event: 'tutor_pin_verify_failed',
+        exception: e,
+        stackTrace: st,
+      );
+      if (mounted) {
+        final l10n = AppLocalizations.of(context)!;
+        setState(() {
+          _digits = '';
+          _errorMessage = l10n.tutorPinErrorPrefix(l10n.errorSaveFailed);
+        });
+      }
     } finally {
       if (mounted) setState(() => _isVerifying = false);
     }

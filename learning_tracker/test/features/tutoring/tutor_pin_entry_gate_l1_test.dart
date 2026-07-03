@@ -283,6 +283,69 @@ void main() {
     );
   });
 
+  // ── AUD-tutoring-04: verifyTutorPin throws → error state, not a silent
+  // stall. Before the fix, _onPinComplete had no catch clause, so a raw
+  // exception from the service (e.g. secure-storage/keystore failure) left
+  // _isVerifying reset by `finally` but _errorMessage null and _digits still
+  // at 4 filled dots — a stalled numpad with no explanation.
+
+  group('TutorPinEntryGate — AUD-tutoring-04: verifyTutorPin throws', () {
+    testWidgets(
+      'shows a generic error message and clears the stalled digits instead '
+      'of silently stalling',
+      (tester) async {
+        setViewSize(tester);
+        final mockService = _MockTutorPinService();
+        var pinVerifiedCalled = false;
+
+        when(
+          () => mockService.verifyTutorPin(
+            profileId: any(named: 'profileId'),
+            rawPin: any(named: 'rawPin'),
+          ),
+        ).thenThrow(Exception('keystore unavailable'));
+
+        await tester.pumpWidget(
+          _buildHarness(
+            pinIsSet: const AsyncValue.data(true),
+            mockService: mockService,
+            onPinVerified: () => pinVerifiedCalled = true,
+            onCancel: () {},
+          ),
+        );
+        await tester.pump();
+        await tester.pump(const Duration(seconds: 1));
+
+        await _enterPin(tester, '1234');
+        await tester.pump(const Duration(seconds: 1));
+
+        // Spinner must not be stuck forever (finally still resets it) AND an
+        // error message must now be visible — the silent-stall symptom is
+        // that NEITHER an error nor a way to retry appears.
+        expect(
+          find.byType(CircularProgressIndicator),
+          findsNothing,
+          reason: 'Verifying spinner must clear once the throw is handled',
+        );
+        expect(
+          find.textContaining('Error:'),
+          findsAtLeastNWidgets(1),
+          reason:
+              'AUD-tutoring-04: an uncaught exception from verifyTutorPin '
+              'must surface a visible error state, not a silent stall',
+        );
+        // The stalled 4-digit entry must be cleared so the user can retype.
+        expect(
+          pinVerifiedCalled,
+          isFalse,
+          reason: 'onPinVerified must not fire on a thrown exception',
+        );
+
+        await _teardown(tester);
+      },
+    );
+  });
+
   // ── No PIN set → delegates to setup screen ─────────────────────────────────
 
   group('TutorPinEntryGate — no PIN set → shows setup screen', () {
