@@ -1,0 +1,70 @@
+[
+ {
+  "sourceBatch": "t1-feat-tutoring-p1",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Route TutorGrantPreconditionError/TutorPinValidationError messages through AppLocalizations instead of hardcoded English",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "EH-5 (stable codes, not pre-formatted messages)",
+   "area": "features/tutoring/domain + presentation",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart",
+     "line": 120,
+     "quote": "message: 'A valid tutor email address is required.',"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart",
+     "line": 154,
+     "quote": "'Grant ${grant.grantId} is not in a state that can be accepted '"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/domain/use_cases/tutor_grant_use_cases.dart",
+     "line": 29,
+     "quote": "'Grant ${grant.grantId} cannot be revoked '"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/domain/services/tutor_pin_service.dart",
+     "line": 93,
+     "quote": "message: 'Tutor PIN must be exactly 4 numeric digits.',"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/invite_tutor_screen.dart",
+     "line": 161,
+     "quote": "setState(() => _errorMessage = message);"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/decline_invite_screen.dart",
+     "line": 145,
+     "quote": "_errorMessage = message;"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/accept_invite_screen.dart",
+     "line": 206,
+     "quote": "_errorMessage = message;"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_entry_dialog.dart",
+     "line": 88,
+     "quote": "_errorMessage = message;"
+    }
+   ],
+   "sites": 12,
+   "why": "TutorGrantPreconditionError (4 construction sites in tutor_invite_use_cases.dart, 2 in tutor_grant_use_cases.dart) and TutorPinValidationError (2 sites in tutor_pin_service.dart) bake formatted English sentences straight into a domain result type, which invite/accept/decline screens and the tutor-PIN dialog then assign directly to `_errorMessage` and render as-is. A Hebrew-locale user who hits a stale-grant race (double-tap accept/decline/revoke) or somehow submits a malformed PIN sees raw English text in an otherwise fully-localized RTL app. The same files correctly localize the sibling TutorGrantFailure variant via `_friendlyInviteError`/a generic ARB fallback, showing the team knows the pattern \u2014 the PreconditionError/ValidationError variant was simply missed.",
+   "recommendation": "Replace the `message` field on TutorGrantPreconditionError and TutorPinValidationError with a stable enum/code (e.g. grantNotAcceptable(GrantState), pinFormatInvalid) and have each consuming screen resolve the code to AppLocalizations text, mirroring the existing _friendlyInviteError pattern.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "TutorGrantPreconditionError/TutorPinValidationError expose a typed code, not a formatted String.",
+    "Widget test asserts a Locale('he') build of invite_tutor_screen/accept_invite_screen/decline_invite_screen/tutor_pin_entry_dialog shows Hebrew text (not the literal English sentence) when the use case returns a PreconditionError/ValidationError.",
+    "make arb-parity stays green after adding the new keys."
+   ],
+   "labels": [
+    "l10n",
+    "EH-5",
+    "i18n",
+    "tutoring"
+   ]
+  }
+ }
+]

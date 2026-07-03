@@ -1,0 +1,51 @@
+[
+ {
+  "sourceBatch": "t1-core-sync-root-p2",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Chunk pushLedgerEntriesBatch at the 500-op WriteBatch limit like pushCompletionsBatch \u2014 it currently commits every entry in one unbounded batch",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "FB-5",
+   "area": "core/sync \u2014 FirestoreGatewayImpl.pushLedgerEntriesBatch (gap surfaced via firestore_gateway_impl_test.dart coverage)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/sync/firestore_gateway_impl.dart",
+     "line": 461,
+     "quote": "final batch = _firestore.batch();\n    for (final entry in entries) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/firestore_gateway_impl.dart",
+     "line": 471,
+     "quote": "await batch.commit();"
+    },
+    {
+     "file": "learning_tracker/test/core/sync/firestore_gateway_impl_test.dart",
+     "line": 995,
+     "quote": "'pushLedgerEntriesBatch writes all entries with ULID doc IDs',"
+    },
+    {
+     "file": "/home/daniel/.pub-cache/hosted/pub.dev/fake_cloud_firestore-4.1.1/lib/src/mock_write_batch.dart",
+     "line": 38,
+     "quote": "if (tasks.length > 500) {\n      throw Exception('Firestore supports at most 500 tasks in a batch');"
+    }
+   ],
+   "sites": 1,
+   "why": "pushCompletionsBatch (lines 245-285) correctly loops in <=500-item chunks via _writeBatchLimit and catches per-chunk failures into SyncPushException(committed:...). Its sibling pushLedgerEntriesBatch (lines 454-472), the batch entry point for the outbox's learning_ledger kind, instead puts every caller-supplied entry into a single _firestore.batch() and calls .commit() once with no chunk loop and no try/catch. grep across lib/ finds zero callers today (PushPipeline's and SyncOrchestrator's test fakes both stub it as an unused no-op), so it isn't live yet, but it IS unit-tested in this file as if production-ready (max 3 entries tested), and fake_cloud_firestore's own MockWriteBatch enforces the identical 500-task cap real Firestore does. The first caller who batches >500 pending ledger entries gets an unhandled 'Firestore supports at most 500 tasks in a batch' exception with zero partial-commit accounting, not the graceful per-chunk degrade FB-5 requires \u2014 and every retry of that same backlog fails identically, wedging that user's ledger sync.",
+   "recommendation": "Give pushLedgerEntriesBatch the same chunk loop, per-chunk try/catch, and SyncPushException(committed:) accounting as pushCompletionsBatch (ideally factor both into a shared chunking helper); add a >500-entry test mirroring the one recommended for pushCompletionsBatch below.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "pushLedgerEntriesBatch splits entries into <=500-item WriteBatch chunks and reports partial commits on mid-drain failure, matching pushCompletionsBatch's contract",
+    "New test pushes >500 ledger entries through the real method with an injected chunk-2 failure and asserts on committed/failed accounting",
+    "grep for _writeBatchLimit in firestore_gateway_impl.dart shows pushLedgerEntriesBatch using the shared chunk constant"
+   ],
+   "labels": [
+    "bug",
+    "sync",
+    "FB-5",
+    "outbox",
+    "dead-code"
+   ]
+  }
+ }
+]

@@ -1,0 +1,209 @@
+[
+ {
+  "sourceBatch": "t1-core-database-root-p1",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Trim and de-duplicate the oversized Drift-codegen coverage tests for ContentDatabase and DeviceRegistryDatabase",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "learning_tracker/test/core/database",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/database/content_database_companion_coverage_test.dart",
+     "line": 1,
+     "quote": "/// Companion-class coverage tests for content_database.g.dart."
+    },
+    {
+     "file": "learning_tracker/test/core/database/content_database_comprehensive_test.dart",
+     "line": 143,
+     "quote": "test('TextCacheData.toString contains ref', () async {"
+    },
+    {
+     "file": "learning_tracker/test/core/database/content_database_companion_coverage_test.dart",
+     "line": 143,
+     "quote": "test('toString covers StringBuffer body', () async {"
+    }
+   ],
+   "sites": 3,
+   "why": "content_database_companion_coverage_test.dart (855 lines), content_database_comprehensive_test.dart (664 lines), and device_registry_managers_test.dart (616 lines) all exceed AG-3's 400-line cap \u2014 content past line 400 is outside a typical agent's reliable read window, so an agent editing content_database.dart's schema is likely to see and update only part of its own test suite. The first two also duplicate each other: both assert `.toString()` (and toJson/copyWith) output for the same generated classes \u2014 TextCacheData at comprehensive_test.dart:143 vs companion_coverage_test.dart:143, and the same pattern repeats for CalendarCycle, DailyContentData, SeedMetadataData \u2014 so a column rename requires updating assertions in two places, and there's no single file to point an agent at for 'the tests for ContentDatabase'.",
+   "recommendation": "Split each file at natural table boundaries (e.g. one file per table) each under 400 lines, and delete the duplicate toString/toJson/copyWith assertions that exist in both content_database_comprehensive_test.dart and content_database_companion_coverage_test.dart, keeping one copy.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "`find lib test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400'` (AG-3's proposed checker) returns none of these three files.",
+    "No test description/assertion pair for the same generated method (e.g. TextCacheData.toString) appears in two different files."
+   ],
+   "labels": [
+    "AG-3",
+    "test-hygiene",
+    "duplication"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-database-root-p1",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Move core/database test files onto their AG-5-mirrored lib/ paths",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-5",
+   "area": "learning_tracker/test/core/database",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/database/content_database_comprehensive_test.dart",
+     "line": 1,
+     "quote": "library; // no test/core/database/content/content_database_test.dart exists"
+    },
+    {
+     "file": "learning_tracker/test/core/database/registry/device_registry_test.dart",
+     "line": 1,
+     "quote": "// device_registry_database.dart's tests split across this + _managers_test.dart, neither named device_registry_database_test.dart"
+    },
+    {
+     "file": "learning_tracker/test/core/database/migration_test.dart",
+     "line": 1,
+     "quote": "// no test/core/database/user/ directory exists for lib/core/database/user/user_database.dart"
+    }
+   ],
+   "sites": 8,
+   "why": "AG-5 asks for lib/a/b/foo.dart <-> test/a/b/foo_test.dart so an agent can glob straight to the right test. None of content_database.dart's 3 test files, device_registry_database.dart's 2, or user_database.dart's 3 migration-labeled tests in this batch live at their mirrored path \u2014 there is no test/core/database/content/ or test/core/database/user/ directory in the repo at all. A directory listing shows 11 more user_database_*_test.dart files split the same way outside this batch (companion_coverage, dataclass, dataclass_core, dataclass_extended, managers, managers_computed_fields, managers_computed_fields2, managers_create_update, managers_crossref_filter, managers_orderby, managers_refs), so this is a systemic pattern, not a one-off \u2014 an agent adding a UserDatabase migration and looking for 'where do I add the test' has over a dozen candidate files and no canonical one.",
+   "recommendation": "Pick one canonical file per lib source (test/core/database/content/content_database_test.dart, test/core/database/registry/device_registry_database_test.dart, test/core/database/user/user_database_test.dart) and either merge the split files into it, or \u2014 if size (finding 6) forces a split \u2014 keep the split files under the matching mirrored subdirectory sharing the base name as a prefix.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "An audit check over test/core/database/**/*.dart flags any file whose stem (minus _test.dart and any suffix) doesn't correspond to a lib/core/database/**/*.dart file at the same relative directory.",
+    "content_database.dart, device_registry_database.dart, and user_database.dart each have a primary test at the exact mirrored path."
+   ],
+   "labels": [
+    "AG-5",
+    "test-hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-database-root-p1",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Replace DateTime.now() with a fixed clock in UserDatabase migration/smoke test setup",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6",
+   "area": "learning_tracker/test/core/database",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/database/migration_test.dart",
+     "line": 21,
+     "quote": "stateChangedAt: DateTime.now(),\n              activatedAt: DateTime.now(),"
+    },
+    {
+     "file": "learning_tracker/test/core/database/schema_v1_smoke_test.dart",
+     "line": 43,
+     "quote": "final now = DateTime.now().toUtc();"
+    },
+    {
+     "file": "learning_tracker/test/core/database/hebrew_migration_test.dart",
+     "line": 23,
+     "quote": "stateChangedAt: DateTime.now(),\n              activatedAt: DateTime.now(),"
+    }
+   ],
+   "sites": 3,
+   "why": "29 wall-clock DateTime.now() calls across these 3 files (6 + 17 + 6) stamp createdAt/activatedAt/stateChangedAt instead of using a fixed constant. None currently assert date-boundary behavior, so today it's inert risk rather than an active flake \u2014 but TQ-6 requires hermetic tests specifically so a later change elsewhere in the same file doesn't silently start comparing against a moving 'now' (e.g. a future staleness/ordering assertion would flake once a day near a UTC boundary, and CI's randomized test ordering would make the failure look like it came from an unrelated test).",
+   "recommendation": "Replace DateTime.now()/DateTime.now().toUtc() with a fixed DateTime.utc(...) constant, matching the pattern already used elsewhere in these same files (e.g. schema_v1_smoke_test.dart's DateTime.utc(2026, 1, 1) at line 258).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep for 'DateTime.now(' in these 3 files returns zero.",
+    "TQ-6's Pending checker (currently lib/-only via inner audit check 6) is extended to cover test/."
+   ],
+   "labels": [
+    "TQ-6",
+    "hermetic-tests"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-database-root-p1",
+  "findingIndex": 8,
+  "finding": {
+   "title": "Delete or wire up dead code kept alive only by its own tests: ContentResult and CalendarCycleDao's legacy methods",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "dead-code",
+   "area": "learning_tracker/lib/core/database",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/database/content_result.dart",
+     "line": 2,
+     "quote": "sealed class ContentResult<T> {"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/content/daos/calendar_cycle_dao.dart",
+     "line": 55,
+     "quote": "Future<CalendarCycle?> getCycleForProgramAndDate(\n    String programKey,"
+    }
+   ],
+   "sites": 2,
+   "why": "grep for ContentResult/ContentLoaded/ContentNotFound outside content_result.dart finds only test/story_acceptance/epic_19_offline_first_test.dart, which constructs and pattern-matches the type in isolation \u2014 no repository, service, or provider in lib/ ever returns or consumes a ContentResult; the content DAOs in this same batch (text_cache_dao.dart, daily_content_dao.dart) return plain nullable Future<T?> instead, exactly the shape ContentResult looks built to replace per EH-2's 'convert to a value at the data-layer boundary'. Likewise getCycleForProgramAndDate/getCyclesForDate/getCyclesForDateRange in calendar_cycle_dao.dart have zero callers anywhere in lib/ (grep confirms) \u2014 only content_database_comprehensive_test.dart's 'legacy method ... delegates' tests call them. In both cases a green test suite hides that the code has no real consumer; deleting either wouldn't be caught by any user-facing behavior change, only by the tests written specifically to keep them alive.",
+   "recommendation": "Delete ContentResult/ContentLoaded/ContentNotFound and its test, or wire it into the content DAOs' return types if the EH-2 result-type pattern is actually wanted there. Delete calendar_cycle_dao.dart's 3 legacy methods and their delegate tests, or confirm via a repo-wide symbol search that nothing external depends on them before the next release.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep for ContentResult/ContentLoaded/ContentNotFound and for getCycleForProgramAndDate/getCyclesForDate/getCyclesForDateRange outside their own definition+test either returns a real production call site, or the symbols are deleted."
+   ],
+   "labels": [
+    "dead-code",
+    "speculative-generality"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-database-root-p2",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Shrink 5 of 7 test/core/database files that exceed the AG-3 400-line ceiling by 2-4x",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "test/core/database",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/database/seed_manager_test.dart",
+     "line": 1,
+     "quote": "/// Logic tests for SeedManager."
+    },
+    {
+     "file": "learning_tracker/test/core/database/user_database_companion_coverage_test.dart",
+     "line": 1,
+     "quote": "/// Companion-class coverage tests for user_database.g.dart."
+    },
+    {
+     "file": "learning_tracker/test/core/database/user_database_dataclass_core_test.dart",
+     "line": 1,
+     "quote": "/// DataClass coverage for core user_database.g.dart tables not yet covered."
+    },
+    {
+     "file": "learning_tracker/test/core/database/user_database_dataclass_extended_test.dart",
+     "line": 1,
+     "quote": "/// Extended DataClass round-trip tests for the remaining tables in"
+    },
+    {
+     "file": "learning_tracker/test/core/database/user_database_dataclass_test.dart",
+     "line": 1,
+     "quote": "/// Tests that exercise DataClass serialization methods (toJson, fromJson,"
+    }
+   ],
+   "sites": 5,
+   "why": "Actual line counts: seed_manager_test.dart 794, user_database_companion_coverage_test.dart 1109, user_database_dataclass_core_test.dart 1176, user_database_dataclass_extended_test.dart 1613 (4x the ceiling), user_database_dataclass_test.dart 853 \u2014 all against the documented 400-line cap (docs/coding-standards.md:511-514, whose own proposed checker is `find lib test -name '*.dart' ... | xargs wc -l | awk '$1>400'`, i.e. it explicitly covers test/). The rule's stated cost \u2014 'content past the window is invisible, becomes a dumping ground' \u2014 is not hypothetical here: it is the direct cause of the duplicate-coverage finding below, which sat undetected inside a 1176-line file next to an 853-line sibling.",
+   "recommendation": "Split each file into per-table test files (e.g. test/core/database/dataclass/account_test.dart, .../goal_test.dart, ...) each under 400 lines, or promote the Pending AG-3 checker now in warn-only mode so new growth is caught at review time before it reaches this size.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "`find learning_tracker/lib learning_tracker/test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400'` no longer lists any of these 5 files.",
+    "Total test count/assertions for the affected tables is preserved across the split (verified by `flutter test test/core/database/` passing before and after)."
+   ],
+   "labels": [
+    "test-quality",
+    "AG-3",
+    "hygiene",
+    "file-size"
+   ]
+  }
+ }
+]

@@ -1,0 +1,270 @@
+[
+ {
+  "sourceBatch": "orchestrator",
+  "chunk": "grp-133",
+  "finding": {
+   "title": "Regenerate and commit stale codegen for curriculum_label_providers and 2 other .g.dart files; add the AG-7 freshness gate",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-7",
+   "area": "core/labels",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/labels/curriculum_label_providers.g.dart",
+     "line": 204,
+     "quote": "regen adds 22 lines of doc-comment (Hebrew ancestor-name lookup docs) \u2014 committed file predates its source's doc change"
+    },
+    {
+     "file": "learning_tracker/lib/features/gamification/presentation/providers/reward_config_controller.g.dart",
+     "line": 1,
+     "quote": "2-line drift on regeneration"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/presentation/providers/scheduler_providers.g.dart",
+     "line": 1,
+     "quote": "2-line drift on regeneration"
+    }
+   ],
+   "sites": 3,
+   "why": "Committed generated code no longer matches its sources: `dart run build_runner build` on a clean tree at 4018a91c dirties 3 files. Every future agent build produces unexplained diffs, and the doc-claimed 'CI regenerates before analyze' means CI analyzes code that differs from what is committed. The pending `git diff --exit-code` freshness gate (AG-7) would have caught this at commit time.",
+   "recommendation": "Run build_runner + gen-l10n, commit the 3 regenerated files, and add the AG-7 freshness gate to CI (`git diff --exit-code` after regeneration).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "build_runner + gen-l10n on a clean tree leaves `git status` clean",
+    "CI fails on non-empty git diff after codegen (freshness gate landed)"
+   ],
+   "labels": [
+    "codegen",
+    "ci",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-sync-root-p1",
+  "chunk": "grp-033",
+  "finding": {
+   "title": "Type the catch/catchError clauses across sync_orchestrator.dart, pull_pipeline.dart and tutored_listener_supervisor.dart (EH-4)",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "EH-4",
+   "area": "core/sync",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+     "line": 389,
+     "quote": "} catch (e, st) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+     "line": 503,
+     "quote": "} catch (e, st) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+     "line": 529,
+     "quote": "} catch (e, st) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+     "line": 543,
+     "quote": "} catch (e, st) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+     "line": 621,
+     "quote": "} catch (e, st) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+     "line": 931,
+     "quote": "} catch (e, stackTrace) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+     "line": 1074,
+     "quote": "} catch (e, st) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+     "line": 1141,
+     "quote": "} catch (e, st) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+     "line": 1178,
+     "quote": "} catch (e, st) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+     "line": 1289,
+     "quote": "supervisor.restart().catchError((Object e, StackTrace stackTrace) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+     "line": 1315,
+     "quote": "} catch (e, stackTrace) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+     "line": 1375,
+     "quote": ".catchError((Object e, StackTrace st) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+     "line": 1456,
+     "quote": "} catch (e, st) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/pull_pipeline.dart",
+     "line": 299,
+     "quote": "} catch (e, stackTrace) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/pull_pipeline.dart",
+     "line": 327,
+     "quote": "} catch (e, stackTrace) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/tutored_listener_supervisor.dart",
+     "line": 158,
+     "quote": ".catchError((Object err, StackTrace st) {"
+    },
+    {
+     "file": "docs/coding-standards.md",
+     "line": 189,
+     "quote": "[Pending] enable `avoid_catches_without_on_clauses` + `avoid_catching_errors`"
+    }
+   ],
+   "sites": 16,
+   "why": "All 16 sites catch without an `on <Type>` clause, so each also catches Error subtypes (TypeError, StateError, RangeError, NoSuchMethodError) as if they were the transient I/O failures the surrounding code is designed to shrug off. Every one of these swallows-and-logs (the pull_pipeline.dart and tutored_listener_supervisor.dart sites don't rethrow at all; most of the sync_orchestrator.dart sites log a warning and return/fall through). Concrete cost: if a future change introduces a null-dereference or bad cast inside a merger reached from the 60s periodic drain, a recovery-pull trigger, or a listener dispatch, it gets caught here, logged once per occurrence as an ordinary 'drain failed'/'listener error' warning, and never crashes or reaches Crashlytics as a fatal -- masking a real regression indefinitely instead of surfacing it. (Two other sites -- sync_orchestrator.dart:768 and :939 -- were deliberately excluded from this list: :768 delegates to a typed `_isLocalDatabaseError` classifier before deciding to swallow, and :939 rethrows after converting to a status; both already behave like the fix this finding asks for elsewhere.)",
+   "recommendation": "Narrow each listed catch to `on Exception catch` (Exception still covers FirebaseException/TimeoutException/SocketException etc.) so Error subtypes propagate to the zone's uncaught-error handler instead of being absorbed; use sync_orchestrator.dart:768's classifier-based pattern as the template for guards that need to stay broad on purpose.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "Enable avoid_catches_without_on_clauses + avoid_catching_errors once dart run custom_lint is unblocked; all 16 sites pass.",
+    "A test that injects a StateError into a merger/dispatch call reached from one of these paths shows the error propagating (not silently logged-and-continued)."
+   ],
+   "labels": [
+    "EH-4",
+    "error-handling",
+    "sync"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-sync-p1",
+  "chunk": "grp-106",
+  "finding": {
+   "title": "SyncStatus.error and RestoreStatus.error carry a free-text message instead of a stable code, inviting raw/untranslated text downstream",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "EH-5",
+   "area": "features/sync domain models",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/sync/domain/models/sync_status.dart",
+     "line": 41,
+     "quote": "required String message,"
+    },
+    {
+     "file": "learning_tracker/lib/features/sync/domain/models/restore_status.dart",
+     "line": 26,
+     "quote": "const factory RestoreStatus.error({required String message}) ="
+    },
+    {
+     "file": "learning_tracker/lib/features/sync/presentation/providers/sync_providers.dart",
+     "line": 60,
+     "quote": "message: error.toString(),"
+    }
+   ],
+   "sites": 2,
+   "why": "EH-5 requires domain/data errors to carry stable codes/enums, never pre-formatted human messages, because this is an EN+Hebrew app where presentation must resolve text via AppLocalizations. Both status models instead expose a raw String message, and sync_providers.dart populates SyncStatus.error.message straight from error.toString() -- an unbounded, unlocalized, potentially technical string. This is not hypothetical: features/settings/presentation/widgets/backup_sync_section.dart already had to add an explicit guard (its own comment: 'never pass a raw exception string into the user-facing subtitle') to avoid rendering SyncStatusError.message directly, and lib/app/restore/device_restore_service.dart embeds RestoreStatus.error's message straight into a rethrown Exception's text. Any future consumer that pattern-matches .message without knowing about that workaround ships raw/English text to Hebrew-locale users.",
+   "recommendation": "Replace the free-text message field on both SyncStatus.error and RestoreStatus.error with a stable enum/code (e.g. SyncErrorCode) plus optional non-user-facing debug detail, and have presentation resolve the code via AppLocalizations, per EH-5.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "EH-5 Rule-0 checker (grep for `required String message` on sealed status/result types, or raw error.toString() flowing into a domain model) passes.",
+    "backup_sync_section.dart's existing raw-string guard becomes structurally unnecessary because the type no longer exposes text to short-circuit around."
+   ],
+   "labels": [
+    "EH-5",
+    "i18n",
+    "error-handling",
+    "sync"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-settings-p3",
+  "chunk": "grp-102",
+  "finding": {
+   "title": "Replace upgrade_to_cloud_cancel_collision_test.dart's synthetic phase simulator with a test that drives the real _CollisionBlock",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (regression test must fail without the fix, red-first)",
+   "area": "features/settings/presentation/screens (upgrade-to-cloud)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/settings/presentation/screens/upgrade_to_cloud_cancel_collision_test.dart",
+     "line": 21,
+     "quote": "// Because we cannot instantiate private sealed classes from outside the\n// library, we test via a custom widget that exposes the phase transition"
+    },
+    {
+     "file": "learning_tracker/test/features/settings/presentation/screens/upgrade_to_cloud_cancel_collision_test.dart",
+     "line": 119,
+     "quote": "'FIXED behavior (AN-5): cancel returns to form phase (form-visible appears)',"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/presentation/screens/upgrade_to_cloud_screen.dart",
+     "line": 544,
+     "quote": "onCancel: () {\n                        setState(() => _phase = const _PhaseForm());"
+    }
+   ],
+   "sites": 1,
+   "why": "Both the 'BUGGY' and 'FIXED' tests pump a hand-written `_CollisionCancelSimulator` whose behaviour is selected entirely by a `buggyBehavior` flag the test itself sets \u2014 neither test imports, renders, or interacts with `upgrade_to_cloud_screen.dart`'s real `_CollisionBlock`/`_UpgradeToCloudScreenState`. Reverting the actual AN-5 fix at upgrade_to_cloud_screen.dart:544-546 (e.g. changing `_PhaseForm()` back to `_PhaseCollision()`) would not fail this suite \u2014 it tests a parallel reimplementation, not the fixed code, so it provides zero regression protection despite its name and file header claiming otherwise. The sibling file upgrade_to_cloud_screen_l1_test.dart honestly `skip: true`s the same scenario with a documented Isolate limitation instead of faking a pass.",
+   "recommendation": "Add a `@visibleForTesting` seam (e.g. an injectable PasswordHasher/verification hook that resolves without Isolate.spawn) so the real _CollisionBlock can be reached and its onCancel exercised directly in a widget test; until that seam exists, rename this file/tests to make clear they validate a simulated model only, and don't count them as AN-5 regression coverage in the suite inventory.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "A test exists that pumps the real UpgradeToCloudScreen (or _CollisionBlock via an exposed seam), and reverting upgrade_to_cloud_screen.dart:544-546 to the pre-AN-5 behavior makes that test fail."
+   ],
+   "labels": [
+    "TQ-8",
+    "fake-test",
+    "regression-coverage"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-streak",
+  "chunk": "grp-027",
+  "finding": {
+   "title": "Parameterize insertEvent() by profileId in streak_state_provider_test.dart instead of duplicating the raw companion insert",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler-duplication (lens pass)",
+   "area": "learning_tracker/test/core/streak/streak_state_provider_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/streak/streak_state_provider_test.dart",
+     "line": 21,
+     "quote": "Future<void> insertEvent(UserDatabase db, DateTime timestamp) async {"
+    },
+    {
+     "file": "learning_tracker/test/core/streak/streak_state_provider_test.dart",
+     "line": 113,
+     "quote": "await db.streakEventDao.appendEvent("
+    }
+   ],
+   "sites": 1,
+   "why": "insertEvent() hardcodes the outer profileId constant, so the one test needing a second profile ('does not count events from another profile', line 111) can't reuse it and instead re-spells the same StreakEventsCompanion.insert(...) call inline (lines 113-121). A future change to the companion's required fields now has two call sites in this file to update instead of one, and they can silently drift apart.",
+   "recommendation": "Add an optional `{int? profileId}` parameter to insertEvent() (defaulting to the outer constant) and use it at line 113 instead of the inline duplicate.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Only one StreakEventsCompanion.insert(...) call site remains in streak_state_provider_test.dart."
+   ],
+   "labels": [
+    "duplication",
+    "test-hygiene"
+   ]
+  }
+ }
+]

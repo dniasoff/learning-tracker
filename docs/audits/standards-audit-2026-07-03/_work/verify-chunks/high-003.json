@@ -1,0 +1,45 @@
+[
+ {
+  "sourceBatch": "t1-core-auth",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Guard FirebaseAuthGatewayImpl link/reauth methods against silent no-op on null currentUser",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "AU-1",
+   "area": "core/auth",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/auth/firebase_auth_gateway_impl.dart",
+     "line": 218,
+     "quote": "await _firebaseAuth.currentUser?.linkWithCredential(credential);"
+    },
+    {
+     "file": "learning_tracker/lib/core/auth/firebase_auth_gateway_impl.dart",
+     "line": 226,
+     "quote": "await _firebaseAuth.currentUser?.reauthenticateWithCredential(credential);"
+    },
+    {
+     "file": "learning_tracker/lib/core/auth/firebase_auth_gateway_impl.dart",
+     "line": 238,
+     "quote": "await _firebaseAuth.currentUser?.linkWithCredential(credential);"
+    }
+   ],
+   "sites": 3,
+   "why": "If currentUser is null when these fire (expired/revoked anonymous session, or a UI race), the `?.` swallows the call and the method returns a normally-completed Future<void> \u2014 no exception, no signal that nothing happened. The one real caller (features/account/data/repositories/auth_repository_impl.dart:129-140 `linkGoogleProvider`/`linkEmailProvider`/`reauthenticateWithGoogle`) just awaits and reports success with nothing to double-check. That directly undercuts AU-1: linking must actually run against the anonymous uid so its offline data carries over; a silent no-op leaves the account anonymous while the user believes it's now permanent, and Identity Platform auto-deletes unlinked anonymous accounts after 30 days (AU-3's rationale), which can permanently orphan the child's offline learning history. Every sibling precondition check in this same file (deleteCurrentUser:172-176, updatePassword:181-186, reauthenticateWithEmail:192-199, sendEmailVerification:100-104) throws `StateError` instead of silently no-op'ing; the one genuinely-intentional no-op in the file (`updateDisplayName`) is declared as such by an explicit 'is a no-op when no user is signed in' test \u2014 these three methods have neither the guard nor a test declaring the no-op intentional, which is the tell that it's an oversight, not a design choice.",
+   "recommendation": "Add the same `if (user == null) throw ...` guard used elsewhere in this file before calling linkWithCredential/reauthenticateWithCredential in all three methods (ideally throwing the typed exception recommended in the companion EH-5 finding rather than another StateError). Add regression tests mirroring the existing 'throws when no user is signed in' pattern for linkWithGoogleIdToken, linkWithEmailAndPassword, and reauthenticateWithGoogleIdToken.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "linkWithGoogleIdToken, linkWithEmailAndPassword, and reauthenticateWithGoogleIdToken throw (not silently no-op) when currentUser is null.",
+    "New red-first unit tests in firebase_auth_gateway_impl_test.dart cover the null-currentUser case for all 3 methods and pass.",
+    "Existing 'links credential when signed in' tests for the same methods stay green."
+   ],
+   "labels": [
+    "auth",
+    "AU-1",
+    "child-privacy",
+    "silent-failure"
+   ]
+  }
+ }
+]

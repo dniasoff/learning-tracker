@@ -1,0 +1,40 @@
+[
+ {
+  "sourceBatch": "t1-feat-scheduler-p2",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Fix the tautological awk comparison in make audit check 15 so cross-feature deep imports are ever reported",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "Rule-0 / Rule-2",
+   "area": "tooling/Makefile (impact: scheduler cross-feature imports)",
+   "evidence": [
+    {
+     "file": "learning_tracker/Makefile",
+     "line": 378,
+     "quote": "| awk -F: '{match($$1, /features\\/([^\\/]+)\\//, a); match($$0, /features\\/([^\\/]+)\\//, b); if(a[1] != b[1]) print}' \\"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/presentation/providers/scheduler_providers.dart",
+     "line": 16,
+     "quote": "import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';"
+    }
+   ],
+   "sites": 1,
+   "why": "awk's match() finds the leftmost occurrence of `features/([^/]+)/` in $0, which for a `file:line:content` grep line is always inside the FILE PATH itself (it precedes the content). So a[1] (from $1, the path) and b[1] (from $0) are always derived from the same leading match and are always equal \u2014 `a[1] != b[1]` can never be true. I reproduced this directly: piping the real repo through the exact pipeline yields 0 lines even though 1186 lines match the pre-filter pattern, and manually evaluating the awk on a scheduler_providers.dart import line prints `a=scheduler b=scheduler` for an import that is unambiguously FROM `features/learning/`. Rule 2 is marked [E] (enforced) but its checker is structurally incapable of ever printing a violation or failing, regardless of how much cross-feature coupling exists \u2014 `make audit PASSED` gives false assurance for this rule specifically (distinct from the already-documented 'warn-only' gap, which assumed the check merely doesn't fail the build, not that it is inert).",
+   "recommendation": "Rewrite the check-15 pipeline to compare the importing file's own feature (parsed once from $1) against the imported feature (parsed from the import statement/content portion only, e.g. by stripping $1 and the line number before matching), and add a fixture test (a temp file with a deliberate deep cross-feature import) asserting the check's exit/output actually flags it before merging any fix.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "`make audit` check 15 prints at least one file:line when a deliberate cross-feature deep import is introduced in a throwaway test fixture.",
+    "A regression test or CI fixture pins this behavior so the check cannot silently regress to a no-op again."
+   ],
+   "labels": [
+    "Rule-0",
+    "Rule-2",
+    "layering",
+    "tooling",
+    "AG-11"
+   ]
+  }
+ }
+]

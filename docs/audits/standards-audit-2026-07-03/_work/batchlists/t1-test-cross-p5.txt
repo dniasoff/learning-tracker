@@ -1,0 +1,6 @@
+learning_tracker/test/e2e/journeys/tutoring_p1_test.dart  (1344 lines)
+learning_tracker/test/features/tracks_studydays_and_content_hierarchy_l1_test.dart  (951 lines)
+learning_tracker/test/features/tutor_pin_dialog_and_goal_setup_l1_test.dart  (1407 lines)
+learning_tracker/test/golden/store_screenshots_test.dart  (1169 lines)
+learning_tracker/test/integration/bulk_mark_prior_streak_suppression_test.dart  (271 lines)
+learning_tracker/test/integration/bulk_prior_completion_b6_b8_test.dart  (1225 lines)

@@ -1,0 +1,213 @@
+[
+ {
+  "sourceBatch": "t4-docs-canonical-p1",
+  "findingIndex": 10,
+  "finding": {
+   "title": "Fix golden-screenshot file path in docs/deployment-guide.md (missing test/ segment)",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "doc-accuracy",
+   "area": "docs/deployment-guide.md",
+   "evidence": [
+    {
+     "file": "docs/deployment-guide.md",
+     "line": 84,
+     "quote": "`learning_tracker/golden/store_screenshots_test.dart` generates Play Store screenshots..."
+    },
+    {
+     "file": "learning_tracker/test/golden/store_screenshots_test.dart",
+     "line": 1,
+     "quote": "(actual file location)"
+    }
+   ],
+   "sites": 1,
+   "why": "The real path is learning_tracker/test/golden/store_screenshots_test.dart \u2014 the doc's path is missing the test/ directory component and would fail a direct file lookup.",
+   "recommendation": "Insert 'test/' into the path at deployment-guide.md:84.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "deployment-guide.md's golden screenshot path resolves to a real file"
+   ],
+   "labels": [
+    "docs",
+    "drift",
+    "path"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t4-docs-canonical-p1",
+  "findingIndex": 11,
+  "finding": {
+   "title": "Create or remove the dangling docs/appcheck-enforcement.md reference in docs/coding-standards.md",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "PV-6",
+   "area": "docs/coding-standards.md",
+   "evidence": [
+    {
+     "file": "docs/coding-standards.md",
+     "line": 349,
+     "quote": "...enforcement flips only after CI/device tokens are registered and metrics reviewed, recorded in `docs/appcheck-enforcement.md`."
+    }
+   ],
+   "sites": 1,
+   "why": "docs/appcheck-enforcement.md does not exist anywhere in the repo \u2014 PV-6's enforcement-status process points at a record that was never created. Given the project's known App Check debug-token fragility (wipes regenerate the token and cause 403/permission-denied outages), the absence of any recorded enforcement-status process for a fragile, security-relevant subsystem is more than pure hygiene.",
+   "recommendation": "Either create docs/appcheck-enforcement.md recording current App Check enforcement status, or remove the dangling pointer from PV-6 until the doc exists.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "docs/appcheck-enforcement.md exists, or coding-standards.md:349 no longer references it"
+   ],
+   "labels": [
+    "docs",
+    "drift",
+    "appcheck",
+    "broken-link"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t4-docs-canonical-p1",
+  "findingIndex": 12,
+  "finding": {
+   "title": "Move shipped hard-tier auth refactor out of README.md's Roadmap section",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "doc-accuracy",
+   "area": "README.md",
+   "evidence": [
+    {
+     "file": "README.md",
+     "line": 135,
+     "quote": "**Offline-First Architecture v2** \u2014 hard-tier auth refactor to simplify the offline-first model"
+    },
+    {
+     "file": "docs/architecture.md",
+     "line": 495,
+     "quote": "The hard-tier upgrade flow (`localBorn` \u2192 `cloudBorn`) is atomic."
+    }
+   ],
+   "sites": 1,
+   "why": "This Roadmap item's title/description is near-identical to Epic 23 ('Offline-First Architecture v2 \u2014 Hard-Tier Auth Refactor'), which V1_OUT_OF_SCOPE.md's epic table marks 'Done... just shipped 2026-04-15... canonical' and which architecture.md describes in the present tense as existing system behavior (Security Model section). README.md presents already-shipped work as a future roadmap item to an open-source visitor evaluating the project.",
+   "recommendation": "Remove the hard-tier auth line from README.md's Roadmap (it is done); keep only genuinely unshipped items (iOS support, Epic 20 dashboard redesign).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "README.md's Roadmap section lists only features not yet shipped per architecture.md/linear-status.md"
+   ],
+   "labels": [
+    "docs",
+    "drift",
+    "roadmap"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t4-docs-canonical-p2",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Regenerate index.md/project-overview.md/source-tree-analysis.md's DB-schema, feature-list and file-count inventory \u2014 frozen before the Epic 24-27 rebuild",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-8",
+   "area": "docs (index.md, project-overview.md, source-tree-analysis.md) vs core/database, features/",
+   "evidence": [
+    {
+     "file": "docs/index.md",
+     "line": 16,
+     "quote": "Three-database schema (User DB 23 tables, Content DB 3 tables, Device Registry DB 2 tables)"
+    },
+    {
+     "file": "docs/project-overview.md",
+     "line": 29,
+     "quote": "Three databases: User DB (23 tables, schema v4) + Content DB (3 tables, read-only, v3) + Device Registry DB (2 tables, v1)"
+    },
+    {
+     "file": "docs/project-overview.md",
+     "line": 19,
+     "quote": "**Codebase snapshot:** ~366 source files, 182 test files, 18 feature modules."
+    },
+    {
+     "file": "docs/source-tree-analysis.md",
+     "line": 34,
+     "quote": "\u251c\u2500\u2500 app_database.dart # Main database class (schema v15)"
+    },
+    {
+     "file": "docs/source-tree-analysis.md",
+     "line": 116,
+     "quote": "- **User DB** \u2014 schema v4, 23 tables, 20 DAOs, read-write, per-account file."
+    },
+    {
+     "file": "docs/source-tree-analysis.md",
+     "line": 66,
+     "quote": "\u251c\u2500\u2500 story_acceptance/         # Epic-based acceptance tests (15 files, 401 tests)"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/user/user_database.dart",
+     "line": 159,
+     "quote": "int get schemaVersion => 32;"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/content/content_database.dart",
+     "line": 28,
+     "quote": "tables: [TextCache, CalendarCycles, DailyContent, SeedMetadata],"
+    }
+   ],
+   "sites": 3,
+   "why": "These three docs (all required 'read in this order' reading per index.md itself) describe a codebase that no longer exists: there is no app_database.dart (it is lib/core/database/user/user_database.dart, class UserDatabase, schemaVersion 32 with 24 tables and 24 registered DAOs, not v4/v15 with 23 tables/20 DAOs); the Content DB has 4 tables (daily_content is missing from every doc's list) at schema v5, not 3 at v3; the feature list is 18 old names (auth, parent_mode, learning_order, stages, test_tracking, track_setup, tutor_mode) when lib/features/ actually has 15 (account, sacred_time, tracks, tutoring, etc. \u2014 several renamed/merged); test/story_acceptance/ has 57 files today, not 15; and the ~366/182 file counts are roughly half the current 720 hand-written lib files / 780 test files. A contributor or agent using these docs to reason about the schema, DAOs, or feature boundaries will build a wrong mental model and can violate layering rules unknowingly (e.g. importing a dropped table's companion class, as testing-guide.md's own examples do \u2014 see the paired finding).",
+   "recommendation": "Re-run the document-project/architecture-scan workflow that originally produced these three files against current HEAD (it already exists and was used once, per docs/project-scan-report.json) rather than hand-patching individual numbers, since nearly every count in the DB/feature/file sections has drifted.",
+   "effort": "L",
+   "acceptance_criteria": [
+    "schema table counts, DAO counts, and feature list in all three docs match the @DriftDatabase tables:/daos: lists and lib/features/ directory at time of merge",
+    "add these three files to the AG-8 'update paired doc in the same PR' checklist for schema/feature-reorg changes"
+   ],
+   "labels": [
+    "docs",
+    "architecture",
+    "stale-docs"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t4-docs-canonical-p2",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Reconcile project-overview.md's Project-status table with linear-status.md \u2014 Epics 21 and 23 wrongly shown 'delivered'",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-8",
+   "area": "docs (project-overview.md vs linear-status.md)",
+   "evidence": [
+    {
+     "file": "docs/project-overview.md",
+     "line": 126,
+     "quote": "| Epics delivered (production) | 1\u201314, 16, 19, 21, 23 |"
+    },
+    {
+     "file": "docs/project-overview.md",
+     "line": 122,
+     "quote": "**As of 2026-04-19** \u2014 sourced from [`docs/linear-status.md`](./linear-status.md), which is the canonical epic/story status document."
+    },
+    {
+     "file": "docs/linear-status.md",
+     "line": 49,
+     "quote": "| DNI-238 | 21 \u2014 Multi-Account Device \u2014 Account Switching, Session Management & Deletion | 0 | Backlog |"
+    },
+    {
+     "file": "docs/linear-status.md",
+     "line": 51,
+     "quote": "| DNI-278 | 23 \u2014 Manual QA Verification | 18 | Canceled (all stories Canceled) |"
+    }
+   ],
+   "sites": 1,
+   "why": "project-overview.md's own Project-status table cites docs/linear-status.md as its source, but the two directly disagree: project-overview.md lists Epic 21 (Multi-Account Device) and Epic 23 (Manual QA Verification) as 'delivered (production)', while linear-status.md \u2014 in the same batch, itself the more detailed and internally self-consistent doc \u2014 shows Epic 21 has 0 stories and is Backlog, and Epic 23's 18 stories are all Canceled. project-overview.md also never mentions the Epic 24-27 Greenfield Rebuild at all, even though linear-status.md states that rebuild superseded nearly everything before it. A reader trusting project-overview.md's summary (the first doc in the required read-in-order path) gets an actively wrong picture of what has shipped.",
+   "recommendation": "Replace the static Project-status table with either a one-line pointer to linear-status.md (avoiding a second copy that can drift) or regenerate it from status/sprint-status.yaml, and add a note that the Epic 24-27 Greenfield Rebuild superseded the pre-24 epic set.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "project-overview.md's epic-status claims match linear-status.md's current table, or the section is replaced with a pointer instead of a duplicated table"
+   ],
+   "labels": [
+    "docs",
+    "project-status"
+   ]
+  }
+ }
+]

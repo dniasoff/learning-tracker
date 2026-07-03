@@ -1,0 +1,215 @@
+[
+ {
+  "sourceBatch": "t1-feat-notifications-p1",
+  "chunk": "grp-064",
+  "finding": {
+   "title": "Use a clock-skew-safe timestamp, not client clock, for notification_settings updated_at LWW field",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "FB-2 (pattern)",
+   "area": "features/notifications/presentation/providers",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/notifications/presentation/providers/notification_providers.dart",
+     "line": 341,
+     "quote": "final updatedAtMs = DateTimeFactory.nowUtc().millisecondsSinceEpoch;"
+    },
+    {
+     "file": "learning_tracker/lib/features/notifications/presentation/providers/notification_providers.dart",
+     "line": 366,
+     "quote": "'updated_at': DateTime.fromMillisecondsSinceEpoch(\n      updatedAtMs,"
+    }
+   ],
+   "sites": 1,
+   "why": "This client-computed timestamp becomes the payload's updated_at field pushed via enqueueNotificationSettings; core/sync/merge/notification_settings_merger.dart (outside this batch) parses remote['updated_at'] to arbitrate LWW. If two devices' clocks disagree, the device with the faster/wrong clock can push a stale settings change that looks 'newer' and wins over a genuinely newer change made on a correctly-clocked device, silently reverting the user's real edit with no error surfaced anywhere. Confirming the full blast radius requires reading the outbox-drain write path (outside this batch) to see whether it overwrites this field with FieldValue.serverTimestamp() before commit.",
+   "recommendation": "Confirm whether the write path already substitutes a server timestamp before commit; if not, do so, or route the push side through the same clock-skew arbitration MergeStore.remoteIsNewer already implements for the pull side.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "A sync test with an artificially-skewed local clock demonstrates the genuinely later settings write wins regardless of which device has the faster clock."
+   ],
+   "labels": [
+    "sync",
+    "fb-2",
+    "notifications",
+    "clock-skew"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-providers-prefs",
+  "chunk": "grp-023",
+  "finding": {
+   "title": "Add ProviderContainer-based tests for core/preferences notifiers; replace the string-grep sentinel test; fix the misplaced/illegitimate profile_scoped_preference_keys_test.dart barrel import",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-5 (test mirrors lib) + TQ-8 (weak/non-behavioral assertion) + Rule 2 (no unauthorized re-export barrels)",
+   "area": "core/preferences (testing)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/preferences/hebrew_terms_sentinel_test.dart",
+     "line": 88,
+     "quote": "final hasSentinelGuard =\n            source.contains('profileId == 0') ||"
+    },
+    {
+     "file": "learning_tracker/test/core/preferences/hebrew_terms_sentinel_test.dart",
+     "line": 74,
+     "quote": "File('lib/core/preferences/preference_providers.dart'),\n          File('../lib/core/preferences/preference_providers.dart'),"
+    },
+    {
+     "file": "learning_tracker/test/features/sync/domain/profile_scoped_preference_keys_test.dart",
+     "line": 8,
+     "quote": "import 'package:learning_tracker/features/sync/domain/profile_scoped_preference_keys.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/features/sync/domain/profile_scoped_preference_keys.dart",
+     "line": 2,
+     "quote": "export 'package:learning_tracker/core/preferences/profile_scoped_preference_keys.dart';"
+    }
+   ],
+   "sites": 7,
+   "why": "hebrew_terms_sentinel_test.dart's only coverage of the IL-1 sentinel-guard mechanism is a test that reads preference_providers.dart off disk as text via a CWD-dependent File() probe and checks for the substring 'profileId == 0' \u2014 it passes whether or not UseHebrewTerms.build() actually preserves state, and would still pass if the guard were pasted into an unrelated function; it is also fragile since the two hardcoded relative paths break if the runner's CWD differs. Meanwhile 7 of the 9 non-generated files in lib/core/preferences/ (hebrew_date_preference.dart, nikud_preference.dart, text_display_preference.dart, transliteration_variant_preference.dart, profile_scoped_preference.dart, preference_providers.dart, and effectively profile_scoped_preference_keys.dart) have no test at their mirrored test/core/preferences/ path. profile_scoped_preference_keys.dart IS tested, but only via test/features/sync/domain/profile_scoped_preference_keys_test.dart, which imports the class through an unauthorized 2-line re-export barrel (lib/features/sync/domain/profile_scoped_preference_keys.dart) instead of importing core/preferences/ directly \u2014 exactly the kind of extra re-export barrel Rule 2 prohibits. This organizational split is why this batch's readUseHebrewCalendar/HebrewDatePreference default-drift finding went uncaught: the two halves of the same invariant are tested, if at all, in disconnected files/directories.",
+   "recommendation": "Add test/core/preferences/{hebrew_date_preference,nikud_preference,text_display_preference,transliteration_variant_preference,profile_scoped_preference,preference_providers}_test.dart with real ProviderContainer-driven assertions. Replace hebrew_terms_sentinel_test.dart's source-grep sub-test with a ProviderContainer test that drives UseHebrewTerms through a real-id -> 0 -> real-id transition and asserts state is preserved. Delete lib/features/sync/domain/profile_scoped_preference_keys.dart, repoint its one import at core/preferences/ directly, and move the test file to test/core/preferences/profile_scoped_preference_keys_test.dart.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "Every lib/core/preferences/*.dart (excluding .g.dart) has a mirrored test/core/preferences/*_test.dart, per AG-5.",
+    "hebrew_terms_sentinel_test.dart no longer reads source files off disk; the sentinel-guard assertion drives real Notifier behavior through a ProviderContainer.",
+    "lib/features/sync/domain/profile_scoped_preference_keys.dart (the re-export barrel) is deleted; grep -rn \"export 'package:learning_tracker/core\" lib/features/sync/ returns nothing for this symbol."
+   ],
+   "labels": [
+    "testing",
+    "preferences",
+    "AG-5",
+    "P2"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-sync-p4",
+  "chunk": "grp-111",
+  "finding": {
+   "title": "Extract a shared no-op FirestoreGateway/PushPipeline fake \u2014 hand-duplicated stubs push tutored_pull_isolation_test.dart to 767 lines",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "core/sync \u2014 tests",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/sync/tutored_pull_isolation_test.dart",
+     "line": 48,
+     "quote": "class _ChildDataGateway implements FirestoreGateway {"
+    },
+    {
+     "file": "learning_tracker/test/sync/tutored_pull_isolation_test.dart",
+     "line": 336,
+     "quote": "class _NoPushPipeline implements PushPipeline {"
+    },
+    {
+     "file": "learning_tracker/test/sync/write_tee_status_update_test.dart",
+     "line": 34,
+     "quote": "class _EmptyGateway implements FirestoreGateway {"
+    },
+    {
+     "file": "learning_tracker/test/sync/write_tee_status_update_test.dart",
+     "line": 85,
+     "quote": "dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/firestore_gateway.dart",
+     "line": 40,
+     "quote": "Future<void> pushCompletion({"
+    }
+   ],
+   "sites": 2,
+   "why": "FirestoreGateway is a single 408-line, 30+-method interface (push/fetch/listen for every entity kind); PushPipeline is similarly broad. tutored_pull_isolation_test.dart spends lines 48-333 (_ChildDataGateway, 286 lines) and 336-456 (_NoPushPipeline, 121 lines) \u2014 over 400 of its 767 lines, more than half the file \u2014 hand-stubbing methods the tests never call, most just throwing StateError. That alone breaches the 400-line AG-3 cap by nearly 2x. write_tee_status_update_test.dart hits the identical wall from the other direction: _EmptyGateway (line 34) implements only 7 of the ~30 methods and falls back to a bare `super.noSuchMethod` (line 85) to dodge the rest \u2014 a different workaround for the same fat-interface pain. Per a repo-wide grep (context only, files outside this batch), the same `implements FirestoreGateway` duplication recurs in 20+ other test/sync files, so a shared fake pays off well beyond this batch.",
+   "recommendation": "Add a shared no-op base (e.g. test/helpers/fakes/no_op_firestore_gateway.dart, no_op_push_pipeline.dart) whose every method either no-ops or throws a consistent 'not stubbed' error, and have tutored_pull_isolation_test.dart / write_tee_status_update_test.dart extend it and override only the handful of methods each test actually exercises. Consider splitting FirestoreGateway by concern (push/fetch/listen, own-data/child-data) as a longer-term ISP fix.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "find lib test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400' no longer lists tutored_pull_isolation_test.dart.",
+    "A shared no-op FirestoreGateway/PushPipeline fake exists under test/helpers/ and both files in this finding use it instead of hand-stubbing the full interface."
+   ],
+   "labels": [
+    "tests",
+    "duplication",
+    "AG-3",
+    "ISP"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-progress-p5",
+  "chunk": "grp-088",
+  "finding": {
+   "title": "Complete B18 in siyumim_timeline_and_lifetime_providers_test.dart to actually exercise the unmark-after-mark ledger conflict it documents",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (tautological / weaker-than-claimed test)",
+   "area": "features/progress (test) \u2014 lifetime_knowledge hotspot",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/progress/siyumim_timeline_and_lifetime_providers_test.dart",
+     "line": 1151,
+     "quote": "// Then unmark the same seder \u2014 FIRST-WRITE WINS per putIfAbsent,\n// so the positive mark placed first takes priority."
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/domain/services/lifetime_tree_builder.dart",
+     "line": 110,
+     "quote": "level1Actions.putIfAbsent(unitId, () => action);"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/daos/learning_ledger_dao.dart",
+     "line": 70,
+     "quote": "..orderBy([(t) => OrderingTerm.desc(t.completedAt)]))"
+    }
+   ],
+   "sites": 1,
+   "why": "B18's name and inline comments describe adding a positive seder mark then an unmark entry for the same seder, asserting the 'first (positive) mark' wins per putIfAbsent. The actual ledgerEntries list (lines 1143-1156) contains only the single positive entry -- the unmark _fakeLedgerData call described in the comment was never written -- so B18 exercises nothing beyond a trivial single-entry seder expansion already covered by B17, under a misleading name. computeLearnedLeafRefs' putIfAbsent (builder) plus getEntriesByCurriculum/getEntriesByTrack's orderBy(desc(completedAt)) (DAO) together implement a real 'most-recent-ledger-action-wins' contract with no shared documentation and no runtime assertion tying the two together; only B18b tests the mirror direction (unmark first, mark second). A regression that flips either half of that contract (e.g. a new query path that forgets the desc ordering, or a putIfAbsent that becomes an overwrite) would silently make an old bulk-mark override a later intentional unmark, and nothing in this suite would catch the positive-first/unmark-second direction.",
+   "recommendation": "Add the described second _fakeLedgerData(..., entryScope: 'unmark_seder') entry after the positive one in B18 and assert the leaf remains learned (mirroring B18b's assertion in the opposite order); add a doc comment on computeLearnedLeafRefs stating the newest-first ordering precondition it relies on from callers.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "B18's ledgerEntries list contains both a positive seder entry and a corresponding unmark_seder entry, and the test fails if putIfAbsent semantics regress",
+    "computeLearnedLeafRefs doc comment states its ledgerEntries-must-be-newest-first-by-completedAt precondition"
+   ],
+   "labels": [
+    "testing",
+    "progress",
+    "hotspot",
+    "lifetime-knowledge"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-scheduler-p1",
+  "chunk": "grp-092",
+  "finding": {
+   "title": "Mirror scheduler's domain/projection tests under test/features/scheduler/domain/projection per AG-5",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-5 [P] \u2014 test/ mirrors lib/ 1:1",
+   "area": "features/scheduler test organization",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/scheduler/domain/projection/overdue_projection.dart",
+     "line": 1,
+     "quote": "/// Pure overdue projection \u2014 the `project()` function."
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/data/repositories/overdue_from_elapsed_study_days_test.dart",
+     "line": 20,
+     "quote": "import 'package:learning_tracker/features/scheduler/domain/projection/projection.dart';"
+    }
+   ],
+   "sites": 1,
+   "why": "There is no test/features/scheduler/domain/projection/ directory at all \u2014 the 4-file domain/projection/ module (overdue_projection.dart, overdue_schedule.dart, overdue_types.dart, projection.dart) is instead tested from files scattered loosely under test/features/scheduler/, including overdue_from_elapsed_study_days_test.dart which sits inside the unrelated data/repositories/ test directory despite importing only domain/projection/projection.dart. A contributor looking for 'the projection tests' at the standard mirrored path won't find them, and a future agent adding coverage for overdue_projection.dart risks not noticing this file already covers related ground.",
+   "recommendation": "Relocate the projection-only test files under test/features/scheduler/domain/projection/ to match lib/features/scheduler/domain/projection/.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "overdue_from_elapsed_study_days_test.dart and the other projection-only test files (e.g. reorder_amnesty_test.dart, collapse_daf_tasks_test.dart if scoped to projection) live under test/features/scheduler/domain/projection/."
+   ],
+   "labels": [
+    "testing",
+    "AG-5",
+    "test-mirroring"
+   ]
+  }
+ }
+]

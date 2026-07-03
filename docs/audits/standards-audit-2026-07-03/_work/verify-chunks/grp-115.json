@@ -1,0 +1,198 @@
+[
+ {
+  "sourceBatch": "t1-feat-tracks-p2",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Stop TrackLearningOrderRepositoryImpl importing ContentRepository directly \u2014 compose in a service/notifier (SM-8)",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "SM-8",
+   "area": "data/tracks-track_order",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tracks/track_order/data/repositories/track_learning_order_repository_impl.dart",
+     "line": 3,
+     "quote": "import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/track_order/data/repositories/track_learning_order_repository_impl.dart",
+     "line": 11,
+     "quote": "required ContentRepository contentRepository,"
+    }
+   ],
+   "sites": 1,
+   "why": "TrackLearningOrderRepositoryImpl takes a ContentRepository constructor dependency and calls `_contentRepository.getContentForCurriculum(...)` directly from three of its own methods (_buildSedarimIndex, _buildMasechtosIndex). This is exactly the repository-imports-repository shape SM-8 forbids: unit-testing this repository now requires faking or booting ContentRepository's dependency chain instead of a clean seam, and the file's own doc comments on MasechtaOrderingPolicy already flag this as a known-wrong coupling ('Unblocks W4.22 (_buildMasechtosIndex removal from the repository impl)') that the team is mid-way through unwinding.",
+   "recommendation": "Move the content-fetch + index-build orchestration into a domain service or the notifier that currently constructs TrackLearningOrderRepositoryImpl, passing the already-resolved content list/indices into the repository (or into MasechtaOrderingPolicy directly), so the repository itself only talks to its own DAO.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "TrackLearningOrderRepositoryImpl no longer imports anything under features/content_browsing/.",
+    "A unit test constructs TrackLearningOrderRepositoryImpl with only a fake/in-memory database (no ContentRepository fake required).",
+    "SM-8's grep/lint (once implemented) reports zero repository\u2192repository imports in lib/features/tracks/."
+   ],
+   "labels": [
+    "state-management",
+    "repository-composition",
+    "testability"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tracks-p2",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Wrap TrackLearningOrderRepositoryImpl's save/reset methods' two DAO writes in a single transaction (DB-2)",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "DB-2",
+   "area": "data/tracks-track_order",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tracks/track_order/data/repositories/track_learning_order_repository_impl.dart",
+     "line": 124,
+     "quote": "await _database.trackLearningOrderDao.upsertOrder(trackId, refs);"
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/track_order/data/repositories/track_learning_order_repository_impl.dart",
+     "line": 136,
+     "quote": "await _database.trackLearningOrderDao.upsertOrder(trackId, refs);"
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/track_order/data/repositories/track_learning_order_repository_impl.dart",
+     "line": 144,
+     "quote": "await _database.trackLearningOrderDao.deleteByTrack(trackId);"
+    }
+   ],
+   "sites": 3,
+   "why": "saveSedarimOrder, saveMasechtosOrder, and resetToDefault each perform two sequential, separately-awaited local Drift writes (upsertOrder/deleteByTrack, then trackDao.stampReorderAt) with no shared transaction() wrapper. If the process dies between the two statements (app kill, OS low-memory kill \u2014 routine on mobile), the reorder is saved but the 'reorder-amnesty' stamp is not, so the scheduler keeps showing items as overdue that the user just reordered past \u2014 the exact bug the stampReorderAt call exists to prevent (per the file's own '\u00a710.1' comments). stage_definition_repository_impl.dart's reorderStages in the same batch already demonstrates the correct pattern (_stageDao.runTransaction(...)) for the identical class of problem.",
+   "recommendation": "Wrap each pair of DAO calls in `_database.transaction(() async { ... })`, mirroring the pattern already used in stage_definition_repository_impl.dart.reorderStages.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "All three methods wrap both DAO calls in one _database.transaction() block.",
+    "A test that throws inside a mocked stampReorderAt asserts upsertOrder/deleteByTrack's effects are rolled back (not left partially applied).",
+    "DB-2's checker (once implemented) reports zero multi-statement-without-transaction sites in this file."
+   ],
+   "labels": [
+    "database",
+    "atomicity",
+    "offline-first"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tracks-p2",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Stop hardcoding TextDirection.rtl on TrackLabelStep's free-text field regardless of app locale",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "no_hardcoded_text_direction (custom lint) / AX",
+   "area": "presentation/tracks-setup",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/widgets/track_label_step.dart",
+     "line": 68,
+     "quote": "textDirection: TextDirection.rtl,"
+    }
+   ],
+   "sites": 1,
+   "why": "TrackLabelStep's TextFormField is the free-text 'name this track' input \u2014 the user can type anything, in either app locale. Forcing textDirection: TextDirection.rtl unconditionally (not gated on locale or on the defaultLabel's script) means an English-locale user typing 'Morning Bavli Study' gets a right-anchored cursor/hint and base-RTL layout for a field the rest of the (LTR) English screen doesn't otherwise use RTL for. This is precisely what the currently-broken `no_hardcoded_text_direction` custom lint rule exists to catch \u2014 with custom_lint crashing repo-wide, nothing currently flags it.",
+   "recommendation": "Drive textDirection from the ambient Directionality/locale (or drop the explicit override and let Flutter's default locale-derived directionality apply), the same way other bidi-sensitive widgets in this batch (scope_views.dart's chooseLevelPrompt) key off useHebrew instead of hardcoding a direction.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "textDirection on this field is either removed or computed from Directionality.of(context)/a Hebrew-Terms-aware flag, not a literal TextDirection.rtl.",
+    "An EN-locale widget test asserts the field's effective text direction is ltr.",
+    "custom_lint's no_hardcoded_text_direction rule (once unbroken) passes on this file."
+   ],
+   "labels": [
+    "accessibility",
+    "i18n",
+    "rtl"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tracks-p2",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Fix AX-1's EdgeInsets.only(left:/right:) grep to match multi-line dart-format output, and fix the resulting hit in track_management_body.dart",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AX-1 / Rule 0",
+   "area": "tooling (root Makefile) \u2014 presentation/tracks-setup",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/widgets/track_management_body.dart",
+     "line": 102,
+     "quote": "padding: const EdgeInsets.only("
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/widgets/track_management_body.dart",
+     "line": 103,
+     "quote": "left: 16,"
+    },
+    {
+     "file": "Makefile",
+     "line": 184,
+     "quote": "HITS=$$(grep -rn 'EdgeInsets\\.only([^)]*\\(left\\|right\\):' \"$$LIB/\" \\"
+    }
+   ],
+   "sites": 1,
+   "why": "track_management_body.dart:102-107 uses EdgeInsets.only(left: 16, right: 16, top: 8, bottom: 96) \u2014 the exact pattern AX-1 bans. The root Makefile's check 10/12 grep is single-line only (`[^)]*` cannot span the newline dart format inserts after 4+ named args), so `grep -rn 'EdgeInsets\\.only([^)]*\\(left\\|right\\):' lib/` returns zero hits repo-wide even though this exact violation exists; a `-Pzo` multiline reproduction confirms the hit. Because left==right==16 here there's no live RTL rendering bug today, but the checker gives false confidence: a future edit that makes left != right (a real RTL mirror bug) would ship silently, and this is the only file in the batch with this shape so the blind spot is real, not hypothetical.",
+   "recommendation": "Rewrite the grep to be multiline-aware (e.g. `grep -Pzo` or a small Dart/Python AST-ish scan) so it catches EdgeInsets.only(...) regardless of formatting, then replace this instance with EdgeInsetsDirectional.only(start:, end:, top:, bottom:).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "The root Makefile's AX-1 check flags a deliberately-added multi-line EdgeInsets.only(left:...) fixture.",
+    "track_management_body.dart's padding is EdgeInsetsDirectional.only(start:, end:, top:, bottom:).",
+    "`make audit` (root) still exits 0 after the fix."
+   ],
+   "labels": [
+    "accessibility",
+    "rtl",
+    "rule-0",
+    "false-negative"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tracks-p2",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Delete or wire up the dead stage-editor mutation path (StageEditorNotifier, StageValidator, Protected/LimitExceeded exceptions)",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler dead-code / AG-6",
+   "area": "data+domain+presentation/tracks-stages",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tracks/stages/presentation/providers/stage_providers.dart",
+     "line": 73,
+     "quote": "Future<void> addStage("
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/stages/data/repositories/stage_definition_repository_impl.dart",
+     "line": 93,
+     "quote": "throw StageLimitExceededException(maxStages: _maxStages);"
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/stages/domain/services/stage_validator.dart",
+     "line": 16,
+     "quote": "return 'Weekly stages require at least one day of week';"
+    }
+   ],
+   "sites": 6,
+   "why": "A repo-wide grep for `.addStage(`, `.updateStage(`, `.deleteStage(`, `.reorderStages(` finds callers only inside stage_providers.dart itself (the notifier calling its own repository) and stage_definition_repository_impl.dart/stage_definition_repository.dart (the definitions) \u2014 StageEditorNotifier's five mutation methods have zero external callers (stageEditorProvider's only other reference, in curriculum_settings_screen.dart, is a bare ref.invalidate). That makes StageEditorNotifier.addStage/updateStage/deleteStage/reorderStages/resetToDefaults (stage_providers.dart), the repository's addStage/updateStage/deleteStage/reorderStages (stage_definition_repository_impl.dart + .../repositories/stage_definition_repository.dart), all of StageValidator, and both ProtectedStageException/StageLimitExceededException dead: ~200 lines of validated, exception-typed, individually-tested code that no screen can currently reach. It also means the EH-5 raw-English-message design smell in these exceptions (and in ArgumentError(validationError)) has zero live blast radius today, but would need fixing the moment anyone wires a stage-editor UI to this path.",
+   "recommendation": "Either delete the whole unreachable path (StageEditorNotifier's 5 methods, the repository's 4 corresponding methods, StageValidator, and the two exception classes) if the feature was superseded by the chazara wizard's applyWizardResult, or \u2014 if a stage-editor screen is actually planned \u2014 wire it up now and fix EH-5 (stable error codes, not raw strings) and SM-5 (state = AsyncLoading()/AsyncValue.guard around the mutation itself, not just the refetch) before shipping it.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "grep for `.addStage(`/`.updateStage(`/`.deleteStage(`/`.reorderStages(` on StageDefinitionRepository either returns a real UI caller, or the dead methods/files are removed.",
+    "If kept: StageEditorNotifier's mutation methods wrap the repository call itself in AsyncValue.guard with a preceding AsyncLoading, and the exceptions carry stable codes resolved via AppLocalizations at the presentation boundary.",
+    "Existing tests (stage_exceptions_test.dart, stage_definition_repository_impl_test.dart) still pass after whichever choice is made."
+   ],
+   "labels": [
+    "dead-code",
+    "error-handling",
+    "state-management"
+   ]
+  }
+ }
+]

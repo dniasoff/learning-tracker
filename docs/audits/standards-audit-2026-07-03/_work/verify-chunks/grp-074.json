@@ -1,0 +1,207 @@
+[
+ {
+  "sourceBatch": "t1-feat-parent_mode",
+  "findingIndex": 9,
+  "finding": {
+   "title": "Guard ref.mounted after awaits in PinFlowController._handleSetup/_handleChange/_handleVerify (SM-4)",
+   "severity": "P2",
+   "confidence": "SUSPECTED",
+   "rule": "SM-4",
+   "area": "lib/features/profiles/presentation/providers/pin_flow_controller.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/providers/pin_flow_controller.dart",
+     "line": 274,
+     "quote": "await pinService.setProfilePin(profileId, pin);"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/providers/pin_flow_controller.dart",
+     "line": 380,
+     "quote": "final ok = await pinService.verifyProfilePin(profileId, pin);"
+    }
+   ],
+   "sites": 4,
+   "why": "PinFlowController is @Riverpod(keepAlive: true), so it survives normal widget disposal, but keepAlive doesn't prevent explicit container disposal (app teardown, ref.invalidate, hot-restart, or a route pop mid-flight) while a bcrypt verify/hash is in flight \u2014 bcrypt is deliberately slow, widening this window. Riverpod 3 throws UnmountedRefException from a post-await `state = ...` write if the container is gone by then. None of the 4 awaited PinService call sites (_handleSetup confirm-save, _handleChange verifyCurrent and confirm-save, _handleVerify) check ref.mounted first, and none of the 628 lines in pin_flow_controller_test.dart dispose the container between firing an async PIN action and that action resolving \u2014 every async test either awaits full completion or uses a never-resolving Future, so this path is never exercised. Runtime confirmation needs a test that disposes mid-await and checks the outcome is clean rather than an uncaught exception.",
+   "recommendation": "Add `if (!ref.mounted) return;` immediately after each of the 4 awaited PinService calls, before the subsequent state write. Add a regression test that disposes the container after the 4th digit triggers the async handler but before the pending PinService future resolves.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Each of the 4 sites has a ref.mounted guard after its await.",
+    "A new test disposes mid-flight and passes without an uncaught UnmountedRefException."
+   ],
+   "labels": [
+    "SM-4",
+    "riverpod",
+    "pin_flow"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-parent_mode",
+  "findingIndex": 10,
+  "finding": {
+   "title": "Replace DateTime.now().toUtc() with a fixed clock in parent_dashboard_aggregator_compute_test.dart's streak test",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6",
+   "area": "test/features/parent_mode/domain/services/parent_dashboard_aggregator_compute_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/parent_mode/domain/services/parent_dashboard_aggregator_compute_test.dart",
+     "line": 122,
+     "quote": "final today = DateTime.now().toUtc();"
+    }
+   ],
+   "sites": 1,
+   "why": "The streak-derivation test seeds 5 consecutive streak_events ending 'today' from the real wall clock instead of a fixed value like the DateTime.utc(2026, 3, 20) literals used elsewhere in the same file. The test's determinism is coupled to the date it happens to run on, which TQ-6 (no wall-clock in tests) exists specifically to rule out.",
+   "recommendation": "Use a fixed `const todayUtc = DateTime.utc(2026, 3, 20);` instead of DateTime.now().toUtc().",
+   "effort": "S",
+   "acceptance_criteria": [
+    "No DateTime.now() call remains in the file; test still passes deterministically."
+   ],
+   "labels": [
+    "TQ-6",
+    "hermetic-test"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-parent_mode",
+  "findingIndex": 11,
+  "finding": {
+   "title": "Convert ParentDashboardData/CurriculumSummary/RecentCompletion/EngagementMetrics to @freezed",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "naming-placement",
+   "area": "lib/features/dashboard/domain/services/parent_dashboard_aggregator.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/dashboard/domain/services/parent_dashboard_aggregator.dart",
+     "line": 17,
+     "quote": "class ParentDashboardData {"
+    },
+    {
+     "file": "learning_tracker/lib/features/dashboard/domain/services/parent_dashboard_aggregator.dart",
+     "line": 36,
+     "quote": "class CurriculumSummary {"
+    }
+   ],
+   "sites": 4,
+   "why": "These four domain-result classes are hand-rolled (final fields + const constructor, no ==/hashCode/copyWith) instead of @freezed, as the coding standard requires for domain/state models. No test in this batch currently compares whole-object equality, so this hasn't produced a false pass yet, but the first test that writes `expect(data.curricula.first, CurriculumSummary(...))` expecting structural equality will silently compare object identity instead.",
+   "recommendation": "Annotate the four classes with @freezed, or record a documented judgment-call exception if they're deliberately excluded.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "The four classes are @freezed, or a coding-standards.md judgment-call entry documents why not."
+   ],
+   "labels": [
+    "naming-placement",
+    "freezed"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-profiles-p1",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Delete four dead domain-layer files in features/profiles/domain (pin_flow_machine.dart, profile_creation_use_case.dart, set_parent_pin_use_case.dart, verify_parent_pin_use_case.dart)",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-6 dead code / Fowler dead code",
+   "area": "features/profiles/domain",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/profiles/domain/services/pin_flow_machine.dart",
+     "line": 6,
+     "quote": "// The thin Riverpod adapter (PinFlowController) in\n// `features/profiles/presentation/providers/pin_flow_controller.dart`"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/domain/services/pin_flow_machine.dart",
+     "line": 138,
+     "quote": "class PinFlowMachine {"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/domain/use_cases/profile_creation_use_case.dart",
+     "line": 59,
+     "quote": "class ProfileCreationUseCase {"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/domain/use_cases/set_parent_pin_use_case.dart",
+     "line": 33,
+     "quote": "class SetParentPinUseCase {"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/domain/use_cases/verify_parent_pin_use_case.dart",
+     "line": 38,
+     "quote": "class VerifyParentPinUseCase {"
+    }
+   ],
+   "sites": 4,
+   "why": "Repo-wide grep for the class names (PinFlowMachine, ProfileCreationUseCase, SetParentPinUseCase, VerifyParentPinUseCase) finds zero constructors/imports anywhere in lib/ outside each class's own file. ProfileCreationUseCase has a dedicated passing unit test (profile_creation_use_case_test.dart) that exercises code no production path ever runs; SetParentPinUseCase/VerifyParentPinUseCase have neither callers nor tests. pin_flow_machine.dart's own header claims PinFlowController 'wraps this machine' \u2014 false; PinFlowController reimplements the same state machine independently (see next finding). Combined this is 647 lines of orphaned domain logic (atomic profile+curriculum creation, PIN set/verify as sealed results) that misleads a reader into thinking PIN/profile-creation business rules live here, when the real logic is duplicated directly in the presentation layer.",
+   "recommendation": "Delete all four files and their now-orphaned tests, or if the atomic profile+curriculum-seed behavior in ProfileCreationUseCase is actually wanted, wire it into a @riverpod provider and call it from showAddProfileDialog instead of ProfileRepositoryImpl.createProfile.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep for PinFlowMachine/ProfileCreationUseCase/SetParentPinUseCase/VerifyParentPinUseCase across lib/ returns zero hits outside deleted files (or, if kept, returns a real caller)",
+    "flutter analyze and dart run build_runner build stay clean after removal",
+    "orphaned test files for the deleted classes are removed in the same change"
+   ],
+   "labels": [
+    "dead-code",
+    "profiles",
+    "pin-flow",
+    "cleanup"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-profiles-p1",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Consolidate the PIN entry/verify/change/setup state machine duplicated across 3 live implementations in features/profiles",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "SM-1/Fowler duplication, AG-4 duplicate top-level names",
+   "area": "features/profiles/presentation",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/providers/pin_flow_controller.dart",
+     "line": 130,
+     "quote": "@Riverpod(keepAlive: true)\nclass PinFlowController extends _$PinFlowController {"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/widgets/parent_pin_setup_dialog.dart",
+     "line": 35,
+     "quote": "class _ParentPinSetupDialog extends ConsumerStatefulWidget {"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/widgets/parent_pin_keypad_dialog.dart",
+     "line": 71,
+     "quote": "class _ParentPinVerificationDialog extends StatefulWidget {"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/widgets/parent_pin_keypad_dialog.dart",
+     "line": 178,
+     "quote": "class _ParentPinChangeDialog extends StatefulWidget {"
+    },
+    {
+     "file": "learning_tracker/lib/app/router/app_router.dart",
+     "line": 254,
+     "quote": "path: '/parent-mode/pin-entry',\n      page: PinFlowVerifyRoute.page,"
+    }
+   ],
+   "sites": 3,
+   "why": "The 4-digit-entry + busy-lock + lockout state machine is hand-rolled independently in PinFlowController (setup mode), _ParentPinSetupDialog (parent_pin_setup_dialog.dart), and _ParentPinVerificationDialog/_ParentPinChangeDialog (parent_pin_keypad_dialog.dart) \u2014 four near-identical but textually distinct copies of the same transitions (mismatch \u2192 reset to enterNew, lockout \u2192 freeze keypad, 4th digit \u2192 async verify/save). Worse, PinFlowController ALSO fully implements change/verify modes (and pin_flow_machine.dart even duplicates the enum names PinFlowMode/PinFlowStep as public top-level symbols, AG-4), but grepping every `.push(` call site in lib/ shows PinFlowVerifyRoute and PinFlowChangeRoute are registered in app_router.dart and never pushed anywhere \u2014 the app's real verify/change UX goes through the dialog-based _ParentPin*Dialog classes via router_provider.dart's promptForPin and settings_screen.dart. A confirmed device bug (PP-1: rapid 5th-digit tap racing the confirm-step reset) was fixed in _ParentPinSetupDialog's specific busy-before-reset ordering; because the other three copies re-derive the same logic independently, a fix like this has no guarantee of applying to the others.",
+   "recommendation": "Extract one shared PIN-entry state-machine class/notifier (digits, busy, lockedOut, lockoutMinutes, transitions) and have setup/verify/change dialogs and PinFlowScreen all delegate to it; delete PinFlowController's unreachable change/verify branches and their dead routes, or wire a real navigation call site to them.",
+   "effort": "L",
+   "acceptance_criteria": [
+    "Only one implementation owns the digit-buffer/busy/lockout transition logic; setup, verify, and change UIs all call into it",
+    "Either PinFlowVerifyRoute/PinFlowChangeRoute get a real .push call site, or they and PinFlowController's change/verify modes are deleted",
+    "pin_flow_controller_test.dart and parent_pin_keypad_dialog_test.dart continue to pass against the consolidated implementation"
+   ],
+   "labels": [
+    "duplication",
+    "pin-flow",
+    "riverpod",
+    "dead-code"
+   ]
+  }
+ }
+]

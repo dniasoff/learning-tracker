@@ -1,0 +1,7 @@
+learning_tracker/test/e2e/journeys/scheduler_p1_test.dart  (1066 lines)
+learning_tracker/test/e2e/journeys/settings_p0_test.dart  (762 lines)
+learning_tracker/test/e2e/journeys/settings_p1_test.dart  (1011 lines)
+learning_tracker/test/e2e/journeys/sync_p1_test.dart  (828 lines)
+learning_tracker/test/e2e/journeys/tracks_p0_test.dart  (560 lines)
+learning_tracker/test/e2e/journeys/tracks_p1_test.dart  (675 lines)
+learning_tracker/test/e2e/journeys/tutoring_p0_test.dart  (972 lines)

@@ -1,0 +1,183 @@
+[
+ {
+  "sourceBatch": "t1-feat-parent_mode",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Remove tautological 'DashboardStats model' test in parent_dashboard_aggregator_test.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "test/features/parent_mode/domain/services/parent_dashboard_aggregator_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/parent_mode/domain/services/parent_dashboard_aggregator_test.dart",
+     "line": 65,
+     "quote": "// ParentDashboardData has no mostRecentlyActive, but we test data construction"
+    },
+    {
+     "file": "learning_tracker/test/features/parent_mode/domain/services/parent_dashboard_aggregator_test.dart",
+     "line": 66,
+     "quote": "expect(data.curricula, isEmpty);"
+    }
+   ],
+   "sites": 1,
+   "why": "The test constructs a ParentDashboardData literal and then asserts its fields equal the literal values it was just given \u2014 it exercises no aggregator logic. Its own inline comment admits the field it was meant to check (mostRecentlyActive) doesn't exist on the class. A broken aggregator would never fail this test.",
+   "recommendation": "Delete the 'DashboardStats model' group, or replace it with a real assertion against ParentDashboardAggregator.compute() output if a 'most recently active curriculum' feature is still wanted.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "No remaining test that only re-asserts constructor inputs back at itself."
+   ],
+   "labels": [
+    "tautological-test",
+    "TQ-8"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-parent_mode",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Replace string-matched PIN error localization with typed error codes (EH-5/AX-2)",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "EH-5",
+   "area": "lib/features/profiles/presentation/{providers/pin_flow_controller.dart,screens/pin_flow_screen.dart}, lib/features/profiles/domain/services/pin_service.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/providers/pin_flow_controller.dart",
+     "line": 413,
+     "quote": "String _incorrectPin() => 'Incorrect PIN';"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/domain/services/pin_service.dart",
+     "line": 327,
+     "quote": "'Too many failed attempts. Try again in $remainingMinutes minute(s).',"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/screens/pin_flow_screen.dart",
+     "line": 198,
+     "quote": "_ => raw,"
+    }
+   ],
+   "sites": 3,
+   "why": "PinFlowController.errorMessage carries raw English sentinel text (EH-5: domain/data errors must carry codes/enums, never pre-formatted messages), and PinFlowScreen._resolveError maps it back to ARB strings by exact string match, with a silent `_ => raw` fallback that renders raw English verbatim on any miss. The coupling has already drifted once undetected: the switch's 'Failed to save PIN' case matches nothing PinFlowController ever produces (only the dead pin_flow_machine.dart emitted that string \u2014 see companion dead-code finding). No test in the 628-line pin_flow_controller_test.dart or the screen test exercises _resolveError, so the next wording tweak to one file without the other silently regresses Hebrew (or English) users to wrong/raw text in a security-sensitive PIN-entry flow, undetected by CI.",
+   "recommendation": "Replace the free-text errorMessage field with a sealed PinFlowError enum/code on PinFlowState; have the screen switch on the enum (exhaustive switch expression, compiler-enforced) instead of string-matching English sentinels. Give PinLockoutException a stable code alongside its message. Add a widget test asserting the Locale('he') text renders for each error code.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "PinFlowState's error field is a closed enum/sealed type, not a String; pin_flow_screen.dart's switch has no fallback arm.",
+    "A test drives each PinFlowController error path and asserts the Locale('he') rendered text, not just non-null errorMessage."
+   ],
+   "labels": [
+    "EH-5",
+    "AX-2",
+    "i18n",
+    "pin_flow"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-parent_mode",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Delete unreferenced pin_flow_machine.dart (340 lines) superseded by PinFlowController",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-6",
+   "area": "lib/features/profiles/domain/services/pin_flow_machine.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/profiles/domain/services/pin_flow_machine.dart",
+     "line": 74,
+     "quote": "/// The Riverpod adapter extends this with async fields (busy, lockedOut)"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/domain/services/pin_flow_machine.dart",
+     "line": 294,
+     "quote": "errorMessage: errorMessage ?? 'Failed to save PIN',"
+    }
+   ],
+   "sites": 1,
+   "why": "grep -rln pin_flow_machine lib/ test/ matches only the file itself \u2014 nothing imports PinFlowSnapshot/PinFlowEvent or the state machine class. PinFlowController reimplements the same mode/step/digits/firstPin/errorMessage state machine directly instead of extending this class as the file's own doc comment claims it should. It has no test file. It is 340 lines of parallel, silently-abandoned domain logic that a future maintainer could mistake for the live implementation and edit by accident, believing they've fixed the real PIN flow.",
+   "recommendation": "Delete lib/features/profiles/domain/services/pin_flow_machine.dart and the now-dead 'Failed to save PIN' case in pin_flow_screen.dart's _resolveError switch.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep -rl pin_flow_machine lib/ test/ returns nothing.",
+    "dart analyze stays clean after removal."
+   ],
+   "labels": [
+    "dead-code",
+    "pin_flow"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-parent_mode",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Expand pin_setup_screen_test.dart beyond a single render smoke test and rename to match PinFlowScreen",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-3",
+   "area": "test/features/parent_mode/presentation/screens/pin_setup_screen_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/parent_mode/presentation/screens/pin_setup_screen_test.dart",
+     "line": 17,
+     "quote": "testWidgets('renders without error', (tester) async {"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/screens/pin_flow_screen.dart",
+     "line": 22,
+     "quote": "/// Replaces the former [PinSetupScreen], [PinChangeScreen], and"
+    }
+   ],
+   "sites": 1,
+   "why": "This is the only widget-level test for PinFlowScreen (400 lines; drives setup/change/verify PIN entry, the lockout panel, and the fragile _resolveError localization mapping from the companion EH-5 finding), and it contains one 'renders without error' smoke test for setup mode only: no change/verify mode, no Locale('he') RTL variant (roughly 90 other screen test files in this codebase carry one per TQ-3), no digit-entry/lockout/error-text assertions. The filename references PinSetupScreen, a class pin_flow_screen.dart's own doc comment says was removed when setup/change/verify were unified into PinFlowScreen, so the name is stale on top of being under-tested.",
+   "recommendation": "Rename to pin_flow_screen_test.dart and relocate under test/features/profiles/presentation/screens/ (see companion AG-5 finding); add change/verify mode coverage, a Locale('he') pump, and a driven wrong-PIN/lockout interaction asserting resolved (not raw) error text.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "test/features/profiles/presentation/screens/pin_flow_screen_test.dart exists with setup+change+verify mode coverage and a Locale('he') pump."
+   ],
+   "labels": [
+    "AG-5",
+    "TQ-3",
+    "coverage-gap",
+    "pin_flow"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-parent_mode",
+  "findingIndex": 8,
+  "finding": {
+   "title": "Use addTearDown(container.dispose) in pin_flow_controller_test.dart's async/setup-transition tests",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-2",
+   "area": "test/features/parent_mode/presentation/providers/pin_flow_controller_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/parent_mode/presentation/providers/pin_flow_controller_test.dart",
+     "line": 434,
+     "quote": "expect(container.read(pinFlowControllerProvider).completed, isTrue);"
+    },
+    {
+     "file": "learning_tracker/test/features/parent_mode/presentation/providers/pin_flow_controller_test.dart",
+     "line": 599,
+     "quote": "container.dispose();"
+    }
+   ],
+   "sites": 5,
+   "why": "Every other group in this file creates its container with addTearDown(container.dispose) immediately after construction, per TQ-2, guaranteeing cleanup even when an expect() throws. The 5 tests in the 'verify mode (async)' and 'setup mode step transitions' groups (lines ~424-435, 442-454, 463-474, 579-599, 604-625) instead call container.dispose() as the last statement in the test body \u2014 if any expect() before it fails, the container and its pending bcrypt/timer callbacks leak into the rest of the suite.",
+   "recommendation": "Add addTearDown(container.dispose) immediately after each of the 5 `final container = _makeContainer(...)` calls in these two groups; drop the trailing manual container.dispose() calls.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "No test in the file calls container.dispose() as its last statement; every container has a paired addTearDown at construction."
+   ],
+   "labels": [
+    "TQ-2",
+    "test-hygiene"
+   ]
+  }
+ }
+]

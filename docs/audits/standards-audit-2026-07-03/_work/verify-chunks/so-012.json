@@ -1,0 +1,188 @@
+[
+ {
+  "sourceBatch": "t1-feat-notifications-p2",
+  "chunk": "grp-066",
+  "finding": {
+   "title": "Replace ws5_per_profile_test.dart's tautological payload-format assertions with real NotificationGateway verification",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (tautological test)",
+   "area": "features/notifications (tests, tautology)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/notifications/ws5_per_profile_test.dart",
+     "line": 71,
+     "quote": "const payload = '$dailyReminderPayload:$profileId';\n      expect(payload, equals('daily_reminder:42'));"
+    },
+    {
+     "file": "learning_tracker/test/features/notifications/ws5_per_profile_test.dart",
+     "line": 74,
+     "quote": "const parts = ['daily_reminder', '42'];\n      expect(parts.length, equals(2));"
+    },
+    {
+     "file": "learning_tracker/test/features/notifications/ws5_per_profile_test.dart",
+     "line": 80,
+     "quote": "const payloadA = '$dailyReminderPayload:1';\n      const payloadB = '$dailyReminderPayload:2';"
+    }
+   ],
+   "sites": 3,
+   "why": "None of the 3 tests in the 'notification payload format' group ever construct a NotificationGateway or call scheduleDailyReminderForProfile/scheduleStreakAlertForProfile (confirmed: no NotificationGateway( appears anywhere in this file). Two of the three just re-interpolate the same '$dailyReminderPayload:$profileId' formula the source uses and compare it to a literal, or hand-write a `parts` list and assert facts about the literal they just wrote three lines earlier -- these can never fail regardless of what NotificationGateway actually does, so despite the docstring's claim to verify \"per-profile payload format\", they add file weight without adding protection. The real protection already exists properly (mocked zonedSchedule + captureAny) in the sibling notification_gateway_test.dart:320-416 outside this batch, which is why this is hygiene/redundancy (P3) rather than a live coverage gap.",
+   "recommendation": "Either delete these two redundant tests (coverage already exists in notification_gateway_test.dart) or rewrite them to construct a NotificationGateway with a mocked FlutterLocalNotificationsPlugin and assert on the captured `payload:` argument from scheduleDailyReminderForProfile, matching this file's own '(good)' ID-allocation tests which do call the real functions.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "Remaining payload-format tests in this file (if kept) invoke NotificationGateway rather than re-deriving the expected string independently.",
+    "Red-first check: temporarily change the separator/format in notification_gateway.dart's per-profile payload construction and confirm whichever tests remain go red."
+   ],
+   "labels": [
+    "testing",
+    "TQ-8",
+    "tautological"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-database-daos-p2",
+  "chunk": "grp-010",
+  "finding": {
+   "title": "Split learning_ledger_dao_test.dart and points_balance_dao_test.dart below the 400-line AG-3 cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "test/core/database/daos \u2014 file size",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/database/daos/learning_ledger_dao_test.dart",
+     "line": 1,
+     "quote": "import 'package:drift/drift.dart' hide isNotNull, isNull;"
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/points_balance_dao_test.dart",
+     "line": 1,
+     "quote": "import 'package:flutter_test/flutter_test.dart';"
+    }
+   ],
+   "sites": 2,
+   "why": "learning_ledger_dao_test.dart is 446 lines and points_balance_dao_test.dart is 476 lines \u2014 both hand-written, both over the AG-3 400-line cap. Every comparable DAO in this same directory (goal, stage, learning_order, curriculum_scope) already splits its tests into a `_test.dart` + `_extra_test.dart`/`_extended_test.dart` pair specifically to stay under the cap, so these two files are the outliers that never got split and are now the largest/hardest-to-navigate files in the directory.",
+   "recommendation": "Split each file the same way sibling DAOs in this directory already are \u2014 e.g. move the D14 cloud-sync-enqueue group out of points_balance_dao_test.dart into points_balance_dao_sync_test.dart, and split learning_ledger_dao_test.dart's tail groups into a companion file \u2014 following the existing naming convention.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "learning_ledger_dao_test.dart and points_balance_dao_test.dart both \u2264400 lines after split",
+    "New split files follow the existing _extra_test.dart/_extended_test.dart naming convention used elsewhere in this directory",
+    "Rule-0 checker: `find lib test -name '*.dart' ! -name '*.g.dart' | xargs wc -l | awk '$1>400{print}'` returns 0 hits for these two files"
+   ],
+   "labels": [
+    "hygiene",
+    "file-size",
+    "AG-3"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-gamification-p2",
+  "chunk": "grp-055",
+  "finding": {
+   "title": "Fix regression-test provenance drift in ga4/ga8 gamification test files",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-5 / hygiene (test placement and doc accuracy)",
+   "area": "test/features/gamification",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/gamification/ga4_reentrance_guard_test.dart",
+     "line": 18,
+     "quote": "/// For the InviteTutor send busy-guard, we verify that the _isLoading flag is\n/// raised synchronously (before any await) so the button is disabled while"
+    },
+    {
+     "file": "learning_tracker/test/features/gamification/ga8_capitalization_test.dart",
+     "line": 56,
+     "quote": "group('GA-8: manageTutors section headers must use consistent casing', () {\n    test('manageTutorsActiveSection must NOT be all-caps \"ACTIVE\"', () {"
+    }
+   ],
+   "sites": 2,
+   "why": "ga4_reentrance_guard_test.dart's docstring describes testing the InviteTutor _isLoading busy-guard, but the file contains only 4 GamificationRoutePushGuard tests \u2014 that behavior is actually tested in test/features/tutoring/invite_tutor_screen_l1_test.dart, so a reader trusting this docstring will believe coverage exists here that doesn't. ga8_capitalization_test.dart is tagged/located under gamification but 2 of its 3 groups assert ARB strings owned by the tutoring feature (manageTutorsActiveSection/manageTutorsPendingSection) rather than gamification's own rewardConfigurationTitle \u2014 a feature-boundary placement drift that will confuse anyone searching for gamification vs. tutoring test coverage.",
+   "recommendation": "Trim ga4's docstring to what the file actually tests; move the manageTutors* groups out of ga8_capitalization_test.dart into a tutoring-scoped l10n test (or split/rename the file to reflect its actual multi-feature scope).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "ga4_reentrance_guard_test.dart's docstring only references GamificationRoutePushGuard.",
+    "manageTutorsActiveSection/manageTutorsPendingSection assertions live under test/features/tutoring/ or the file is explicitly re-scoped."
+   ],
+   "labels": [
+    "hygiene",
+    "test-placement",
+    "docs-drift"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-profiles-p1",
+  "chunk": "grp-076",
+  "finding": {
+   "title": "Replace PinFlowController's raw-English error-string matching with a stable error code",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "EH-5 (stable codes, not pre-formatted messages)",
+   "area": "features/profiles/presentation",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/providers/pin_flow_controller.dart",
+     "line": 413,
+     "quote": "String _incorrectPin() => 'Incorrect PIN';\n  String _pinsDoNotMatch() => 'PINs do not match';"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/screens/pin_flow_screen.dart",
+     "line": 194,
+     "quote": "'Incorrect PIN' => l10n.incorrectPin,\n    'PINs do not match' => l10n.pinsDoNotMatch,"
+    }
+   ],
+   "sites": 2,
+   "why": "PinFlowController (no BuildContext/l10n access) emits full English sentences as its error 'codes', and pin_flow_screen.dart's _resolveError matches them by exact string equality to localize. This is the same fragility EH-5 targets one layer up: if a future edit tweaks the wording in one file (e.g. fixes a typo in 'Incorrect PIN'), the switch in the other silently stops matching and falls through to `_ => raw`, showing raw English to Hebrew users with no compiler error to catch the drift.",
+   "recommendation": "Define a small PinFlowError enum returned/stored instead of a String, and switch on the enum in pin_flow_screen.dart.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "PinFlowController exposes a typed error code, not a formatted sentence",
+    "A test renaming/removing one of the four magic strings would fail to compile instead of silently breaking localization"
+   ],
+   "labels": [
+    "eh-5",
+    "i18n",
+    "pin-flow"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-account-p2",
+  "chunk": "grp-038",
+  "finding": {
+   "title": "Extract the duplicated drift .sqlite-suffix delete helper out of AccountLifecycleService and PendingLocalSignupStore",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler: duplicated code (Extract Method)",
+   "area": "features/account/domain",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/account/domain/services/account_lifecycle_service.dart",
+     "line": 126,
+     "quote": "final driftFile = File('$_dbPath/$dbFileName.sqlite');"
+    },
+    {
+     "file": "learning_tracker/lib/features/account/domain/services/pending_local_signup.dart",
+     "line": 222,
+     "quote": "final driftFile = File('$databasesPath/$dbFileName.sqlite');"
+    }
+   ],
+   "sites": 2,
+   "why": "Both private _deleteDbFile methods encode the identical drift_flutter '.sqlite'-suffix-with-bare-name-fallback workaround, each discovered and fixed as a separate bug (each carries its own header comment and its own dedicated regression test in this batch: account_lifecycle_db_delete_test.dart and pending_local_signup_file_cleanup_test.dart). Any future drift_flutter version change to the on-disk filename scheme means this exact fix has to be found and reapplied in two places; missing one leaves orphaned .sqlite files on disk or a delete that silently no-ops.",
+   "recommendation": "Extract one shared deleteDriftDbFile(databasesPath, dbFileName) utility (e.g. under core/database/ or core/utils/) that both services call; keep both existing regression tests but retarget them at the shared utility.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "one shared function implements the .sqlite-suffix delete-with-fallback logic",
+    "AccountLifecycleService and PendingLocalSignupStore both delegate to it instead of each defining their own copy",
+    "both existing regression tests still pass"
+   ],
+   "labels": [
+    "duplication",
+    "fowler"
+   ]
+  }
+ }
+]

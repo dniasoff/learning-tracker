@@ -1,0 +1,204 @@
+[
+ {
+  "sourceBatch": "t1-feat-profiles-p1",
+  "chunk": "grp-075",
+  "finding": {
+   "title": "Guard ProfileRepositoryImpl.deleteProfile's cloud-sync push the same way create/update/ensureDefaultProfile do",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "EH-2 / Nygard (I/O failure handling)",
+   "area": "features/profiles/data",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/profiles/data/repositories/profile_repository_impl.dart",
+     "line": 250,
+     "quote": "await _syncEngine?.deleteLearnerProfile(id);\n    _log.info("
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/data/repositories/profile_repository_impl.dart",
+     "line": 105,
+     "quote": "try {\n      await _syncEngine?.pushLearnerProfile(_toFirestorePayload(model));"
+    }
+   ],
+   "sites": 1,
+   "why": "createProfile, updateProfile, and ensureDefaultProfile all wrap their `_syncEngine?.push*` call in try/catch with an explicit 'offline-first, cloud push is non-fatal' comment. deleteProfile does not: `await _syncEngine?.deleteLearnerProfile(id)` runs bare, after the local cascade-delete transaction has already committed across ~12 tables. Both push and delete enqueue through the same outbox `_enqueue` mechanism (a local Drift insert), so they carry the same theoretical failure mode (e.g. disk-full, DB-locked). If that insert throws, the whole deleteProfile Future rejects even though the profile is already gone locally \u2014 and neither of deleteProfile's two callers in this batch (profile_edit_delete_actions.dart's deleteProfileFlow, profile_picker_screen.dart's _showDeleteDialog) catch it either, so the exception surfaces as an unhandled error in a button's onPressed handler while the delete has, in fact, already succeeded \u2014 contradicting the offline-first invariant this same file documents for every other mutation.",
+   "recommendation": "Wrap `await _syncEngine?.deleteLearnerProfile(id)` in the same non-fatal try/catch (with logging per the previous finding) used by createProfile/updateProfile/ensureDefaultProfile.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "deleteProfile's sync call is wrapped in try/catch matching its siblings, with a logged, non-fatal failure",
+    "A test with a SyncWriteFacade fake that throws on deleteLearnerProfile asserts ProfileRepositoryImpl.deleteProfile still completes normally"
+   ],
+   "labels": [
+    "error-handling",
+    "offline-first",
+    "sync"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epic-26",
+  "chunk": "grp-131",
+  "finding": {
+   "title": "Add a Locale('he') behavioral variant to StatCard's interactive widget tests (epic_26_story_26_16)",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-3",
+   "area": "test/story_acceptance",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_26_story_26_16_stat_card_test.dart",
+     "line": 77,
+     "quote": "locale: const Locale('en'),"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_26_story_26_16_stat_card_test.dart",
+     "line": 101,
+     "quote": "locale: const Locale('en'),"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_26_story_26_16_stat_card_test.dart",
+     "line": 127,
+     "quote": "locale: const Locale('en'),"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_26_story_26_16_stat_card_test.dart",
+     "line": 152,
+     "quote": "locale: const Locale('en'),"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_26_story_26_16_stat_card_test.dart",
+     "line": 177,
+     "quote": "locale: const Locale('en'),"
+    }
+   ],
+   "sites": 5,
+   "why": "StatCard is a core/widgets/ primitive explicitly built for a bilingual RTL app (its own AC6 wants 'golden tests in 3 visual variants, en + he each'), but all 5 interactive testWidgets (text rendering, tap handling) hardcode Locale('en'); only the 3 golden-smoke tests touch 'he', and those skip the actual matchesGoldenFile compare via skipGolden: true. A regression that breaks hit-testing or layout specifically under RTL mirroring (e.g. the tap target shifting when Directionality flips) would not be caught anywhere in this file.",
+   "recommendation": "Parameterize the 5 testWidgets over both locales, or add an 'he' counterpart for at least the tap-behavior test.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "at least one StatCard testWidgets test in this file pumps with Locale('he') and asserts tap/render behavior, not just a skipped golden compare"
+   ],
+   "labels": [
+    "testing",
+    "i18n",
+    "rtl",
+    "epic-26"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-database-daos-p1",
+  "chunk": "grp-008",
+  "finding": {
+   "title": "Replace track_dao.dart's stringly-typed TrackState class with a real Dart enum",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "EH-6 spirit / Evans ubiquitous language",
+   "area": "core/database/daos/track_dao.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/database/daos/track_dao.dart",
+     "line": 15,
+     "quote": "class TrackState {\n  const TrackState._();\n  static const active = 'active';"
+    }
+   ],
+   "sites": 1,
+   "why": "TrackState is a 4-value closed lifecycle (active/retired/archived/deleted) central to this HOTSPOT file's whole model, modeled as bare String constants on a TextColumn with no DB-level or compiler-level check that only these 4 values ever get stored. Any code that branches on `.state` gets no exhaustiveness checking, and nothing stops a typo'd string reaching the column (mitigated today only by everyone remembering to use the TrackState.* constants rather than literals \u2014 a convention, not a guarantee).",
+   "recommendation": "Model TrackState as a real Dart `enum` (or use Drift's `.withConverter` to store it as text but expose an enum in Dart), so switches over track state are compiler-exhaustive and no non-member string can be constructed.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "TrackState is a Dart enum (or enum-backed column); all TrackState.active-style call sites in this batch keep compiling.",
+    "Any switch/when over the state value is exhaustive without a default/_ arm."
+   ],
+   "labels": [
+    "modeling",
+    "type-safety",
+    "hotspot"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-scheduler-p5",
+  "chunk": "grp-098",
+  "finding": {
+   "title": "Extract scheduler_providers.dart's private _amnestyDayCutoffUtc/anchor-clamp so reorder_amnesty_test.dart calls it instead of hand-copying it",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (tautological/re-derived test) / Feathers seam",
+   "area": "features/scheduler/presentation/providers (hotspot: scheduler_providers.dart)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/scheduler/presentation/providers/scheduler_providers.dart",
+     "line": 481,
+     "quote": "DateTime _amnestyDayCutoffUtc(DateTime lastReorderAt) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/presentation/providers/scheduler_providers.dart",
+     "line": 683,
+     "quote": "final progAmnestyCutoff = rawAmnestyCutoff.isAfter(anchor)"
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/reorder_amnesty_test.dart",
+     "line": 221,
+     "quote": "final cutoff = DateTime.utc(local.year, local.month, local.day);"
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/reorder_amnesty_test.dart",
+     "line": 280,
+     "quote": "final clampedCutoff = rawCutoff.isAfter(anchor) ? anchor : rawCutoff;"
+    }
+   ],
+   "sites": 3,
+   "why": "_amnestyDayCutoffUtc is a private top-level function, so no test file can import and call it; the 3 'projection amnesty' tests in Scenario A (basic cutoff, mid-day cutoff, program back-date anchor-clamp) each hand-retype the algorithm instead (one comment even says 'Mimic the production day-level cutoff'). If a future edit to the real function or the isAfter(anchor) clamp regresses, these 3 tests stay green because they only check their own copy. Partial mitigation: scheduler_providers_branches_test.dart's RA1/RA2 do drive the real allDailyTasksProvider for the non-program path, but the program-specific back-date anchor-clamp scenario here has no confirmed real-path coverage elsewhere.",
+   "recommendation": "Mark _amnestyDayCutoffUtc @visibleForTesting (or move it plus the clamp expression to a small pure function in domain/projection/) and have reorder_amnesty_test.dart's three amnesty tests call it directly instead of retyping the algorithm.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "reorder_amnesty_test.dart imports and calls the real cutoff/clamp function; no inline DateTime.utc(local.year, local.month, local.day) reimplementation remains in the test file.",
+    "A mutation flipping isAfter to isBefore in the anchor clamp (scheduler_providers.dart:683) fails this test file."
+   ],
+   "labels": [
+    "test-quality",
+    "TQ-8",
+    "seam",
+    "scheduler",
+    "hotspot"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-progress-p4",
+  "chunk": "grp-086",
+  "finding": {
+   "title": "Rewrite track_dual_progress_reactivity_test.dart so it stops overriding the provider it claims to guard",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (tautological regression test)",
+   "area": "test/features/progress/presentation/providers",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/progress/presentation/providers/track_dual_progress_reactivity_test.dart",
+     "line": 23,
+     "quote": "trackDualProgressMetricsProvider(1).overrideWith((ref) async {"
+    },
+    {
+     "file": "learning_tracker/test/features/progress/presentation/providers/track_dual_progress_reactivity_test.dart",
+     "line": 68,
+     "quote": "trackDualProgressMetricsProvider(99).overrideWith((ref) async {"
+    }
+   ],
+   "sites": 2,
+   "why": "Both tests replace trackDualProgressMetricsProvider's own body with a stub that independently calls ref.watch<int>(completionCommittedProvider) itself (lines 27, 69). A Riverpod .overrideWith fully replaces the provider's create function, so the real body in lifetime_knowledge_providers.dart:357 is never invoked by either test. Deleting that real ref.watch<int>(completionCommittedProvider) line today \u2014 silently breaking the dashboard/progress-hub's live refresh after a completion \u2014 would not fail either test in this file, despite the file's own docstring calling itself 'Regression test for Fix 3'. Contrast with the correctly-built sibling recent_activity_reactivity_test.dart, which drives the real production provider body over a real in-memory DB with no override of the provider under test.",
+   "recommendation": "Rewrite using the recent_activity_reactivity_test.dart pattern: real in-memory DB, unmodified trackDualProgressMetricsProvider, seed a completion, tick completionCommittedProvider, assert the provider's actual output changes.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Test constructs trackDualProgressMetricsProvider without overriding that same provider family",
+    "Test goes red when ref.watch<int>(completionCommittedProvider) is deleted from lifetime_knowledge_providers.dart:357"
+   ],
+   "labels": [
+    "testing",
+    "riverpod",
+    "progress"
+   ]
+  }
+ }
+]

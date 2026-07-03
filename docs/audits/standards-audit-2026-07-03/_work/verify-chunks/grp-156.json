@@ -1,0 +1,180 @@
+[
+ {
+  "sourceBatch": "t2-build-ci-guardrails",
+  "findingIndex": 12,
+  "finding": {
+   "title": "Fix the stale \"50%\" coverage-floor comment in ci.yml (actual floor is 60%)",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "hygiene (stale comment)",
+   "area": "GitHub Actions",
+   "evidence": [
+    {
+     "file": ".github/workflows/ci.yml",
+     "line": 249,
+     "quote": "# \u2500\u2500 6. coverage-floor (50% line coverage, always enforced) \u2500\u2500"
+    },
+    {
+     "file": ".github/workflows/ci.yml",
+     "line": 264,
+     "quote": "          FLOOR=60"
+    }
+   ],
+   "sites": 1,
+   "why": "The section header comment says the floor is 50%, but the step name ('Assert coverage floor \u2265 60%') and the enforced FLOOR=60 variable both say 60% \u2014 someone raised the floor and updated the step but not the section comment. Low-impact (the enforced value is correct and stricter than the comment implies) but misleads anyone skimming section headers to understand the pipeline.",
+   "recommendation": "Update the comment to '(60% line coverage, always enforced)'.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "The section-6 comment states the same percentage as the FLOOR variable."
+   ],
+   "labels": [
+    "hygiene",
+    "ci"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-build-ci-guardrails",
+  "findingIndex": 13,
+  "finding": {
+   "title": "Remove the hardcoded personal PATH and silenced stderr in emit-fixtures",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-1 (portable committed tooling)",
+   "area": "Makefile",
+   "evidence": [
+    {
+     "file": "learning_tracker/Makefile",
+     "line": 20,
+     "quote": "PATH=/home/daniel/flutter/bin:$$PATH dart run tool/emit_fixture_payloads.dart 2>/dev/null > functions/test/fixtures/write_payloads.json"
+    }
+   ],
+   "sites": 1,
+   "why": "This target hardcodes an absolute, author-specific local path (`/home/daniel/flutter/bin`) that doesn't exist on any other contributor's machine or CI runner, and pipes the underlying script's stderr to /dev/null with no exit-code check beyond Make's default abort-on-error. If `dart run tool/emit_fixture_payloads.dart` fails for any reason, the committed fixture `functions/test/fixtures/write_payloads.json` gets truncated (the `>` redirection opens/truncates the file before the command runs) with zero visible diagnostic \u2014 a developer sees only a bare 'make: *** Error N', not why, and could easily commit the now-empty fixture.",
+   "recommendation": "Drop the hardcoded PATH prefix (rely on the environment's own PATH, consistent with every other target in this Makefile) and remove `2>/dev/null` so failures are diagnosable.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "emit-fixtures contains no hardcoded absolute path and surfaces stderr on failure."
+   ],
+   "labels": [
+    "hygiene",
+    "makefile",
+    "portability"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-build-ci-guardrails",
+  "findingIndex": 14,
+  "finding": {
+   "title": "Delete the now-vestigial integration_test/.gitkeep placeholder",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "hygiene",
+   "area": "repo hygiene",
+   "evidence": [
+    {
+     "file": "learning_tracker/integration_test/.gitkeep",
+     "line": 1,
+     "quote": "(empty file)"
+    },
+    {
+     "file": "learning_tracker/integration_test/app_test.dart",
+     "line": 1,
+     "quote": "import 'package:flutter_test/flutter_test.dart';"
+    }
+   ],
+   "sites": 2,
+   "why": ".gitkeep files exist solely to keep an otherwise-empty directory tracked by git. learning_tracker/integration_test/ has contained a real, tracked file (app_test.dart) since that test was added, so the .gitkeep no longer serves any purpose \u2014 pure clutter.",
+   "recommendation": "Delete learning_tracker/integration_test/.gitkeep.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "learning_tracker/integration_test/.gitkeep no longer exists."
+   ],
+   "labels": [
+    "hygiene",
+    "cleanup"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-firebase-rules-functions-p1",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Add value-type and string-size checks to firestore.rules' hasOnly() snapshot-collection whitelists",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "SR-2",
+   "area": "firestore.rules",
+   "evidence": [
+    {
+     "file": "learning_tracker/firestore.rules",
+     "line": 314,
+     "quote": "allow create, update: if isOwner(uid)\n            && request.resource.data.keys().hasOnly(["
+    },
+    {
+     "file": "learning_tracker/firestore.rules",
+     "line": 375,
+     "quote": "allow create, update: if isOwner(uid)\n            && request.resource.data.keys().hasOnly(["
+    },
+    {
+     "file": "learning_tracker/firestore.rules",
+     "line": 409,
+     "quote": "allow create, update: if isOwner(uid)\n            && request.resource.data.keys().hasOnly(["
+    }
+   ],
+   "sites": 8,
+   "why": "stage_definitions, curriculum_tracks, bookmarks, learning_order, goals, import_metadata, profile_programs and study_day_configs all gate create/update with `keys().hasOnly([...])` and nothing else -- no type check, no `size()` cap on any string field. A malicious or buggy client can write a multi-megabyte string into any allow-listed field (e.g. goals free-text fields), bloating every synced device's listener payload indefinitely, or write the wrong type where the Dart codec expects a specific one, surfacing only as a runtime cast failure on every device that later syncs the doc.",
+   "recommendation": "Add `is string && size() <= N` (or the appropriate type check) for at least the free-text fields in each collection, matching the pattern completions already uses for `points`.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "A create/update to goals with an oversized or wrong-typed field is denied, proven in functions/test/firestore_rules.test.mjs."
+   ],
+   "labels": [
+    "security",
+    "firestore-rules",
+    "P2"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-firebase-rules-functions-p1",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Split allow list from allow read in firestore.rules to cap request.query.limit",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "SR-4",
+   "area": "firestore.rules",
+   "evidence": [
+    {
+     "file": "learning_tracker/firestore.rules",
+     "line": 193,
+     "quote": "allow read: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);"
+    },
+    {
+     "file": "learning_tracker/firestore.rules",
+     "line": 219,
+     "quote": "allow read: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);"
+    },
+    {
+     "file": "learning_tracker/firestore.rules",
+     "line": 246,
+     "quote": "allow read: if isOwner(uid) || hasActiveTutorAccess(uid, profileId);"
+    }
+   ],
+   "sites": 23,
+   "why": "`allow read` grants both `get` and `list` under the identical condition on every match block in the file (learner_profiles, completions, streak_events, learning_ledger, points_ledger, and every other subcollection); none constrains `request.query.limit`, so nothing stops an unbounded query. This matters most for the tutor cross-user read path: a compromised or custom client authenticated as an active tutor can issue one unlimited `.get()` query across a child's entire completions/learning_ledger history.",
+   "recommendation": "Split `allow read` into `allow get` (unchanged) and `allow list` (same condition && request.query.limit <= 500) on at least the per-profile event collections (completions, streak_events, learning_ledger, points_ledger).",
+   "effort": "M",
+   "acceptance_criteria": [
+    "functions/test/firestore_rules.test.mjs asserts a list query with an unbounded/501+ limit against completions is denied while limit(500) succeeds."
+   ],
+   "labels": [
+    "security",
+    "firestore-rules",
+    "P2"
+   ]
+  }
+ }
+]

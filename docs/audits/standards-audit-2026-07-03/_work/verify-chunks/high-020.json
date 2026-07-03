@@ -1,0 +1,46 @@
+[
+ {
+  "sourceBatch": "t1-core-sync-merge",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Guard stage_definition/settings/goal merges against missing local track before FK-constrained insert",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "Nygard (I/O ordering race) \u2014 FK integrity on merge; matches the fix already applied to bookmark/gamification_settings/study_day_config",
+   "area": "core/sync/merge",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/sync/merge/drift_merge_store.dart",
+     "line": 650,
+     "quote": "await _db.stageDao.insertStageDefinition("
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/merge/drift_merge_store.dart",
+     "line": 596,
+     "quote": "await _db.stageDao.replaceStagesForCurriculum(curriculumId, companions);"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/merge/goal_merger.dart",
+     "line": 86,
+     "quote": "await _db.goalDao.upsertGoalByTrack("
+    }
+   ],
+   "sites": 3,
+   "why": "lib/core/database/tables/stage_definitions.dart and goals.dart both declare `trackId => integer().references(CurriculumTracks, #id)()` \u2014 a real, enforced FK. If a stage_definition/settings/goal Firestore snapshot merges before its curriculum_tracks row exists locally (independent per-collection listeners, or first-launch pull on a restored device), the raw insert throws an uncaught SqliteException(787) and aborts merging the whole page. BookmarkMerger (drift_merge_store.dart:527 `if (track == null) { ...skip... }`), GamificationSettingsMerger (gamification_settings_merger.dart:128 `if (localTrack == null) continue;`) and StudyDayConfigMerger (study_day_config_merger.dart:66 `if (trackExists == null) continue;`) already guard this exact race by skipping and relying on the next (idempotent) pull to re-merge \u2014 the pattern was never generalized to stage_definition/settings/goal, which resolve the identical remote-track-id-fallback (`localTrack?.id ?? remoteTrackId`) without ever checking the fallback actually exists.",
+   "recommendation": "Add the same trackExists-before-insert guard (skip, don't throw; rely on idempotent re-merge next pull) to DriftMergeStore._upsertStageDefinition, _upsertSettings, and GoalMerger.merge, mirroring StudyDayConfigMerger's existing pattern.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "Integration test: merge a stage_definition (and separately a settings, and a goal) row referencing a curriculum_id with no local curriculum_tracks row yet \u2014 assert no exception is thrown and the row is silently skipped.",
+    "Same test seeds the track afterward and re-merges the identical row \u2014 assert it now applies (idempotent recovery).",
+    "New regression tests live under test/core/sync/merge/, mirroring the FK-race coverage style already present for bookmark/study_day_config."
+   ],
+   "labels": [
+    "sync",
+    "merge",
+    "data-integrity",
+    "FK",
+    "nygard"
+   ]
+  }
+ }
+]

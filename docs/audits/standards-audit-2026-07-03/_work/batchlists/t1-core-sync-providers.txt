@@ -1,0 +1,7 @@
+learning_tracker/lib/core/sync/providers/firestore_instance_provider.dart  (34 lines)
+learning_tracker/lib/core/sync/providers/merge_router_provider.dart  (104 lines)
+learning_tracker/lib/core/sync/providers/outbox_providers.dart  (113 lines)
+learning_tracker/lib/core/sync/providers/resolve_profile_id_provider.dart  (13 lines)
+learning_tracker/lib/core/sync/providers/sync_orchestrator_providers.dart  (209 lines)
+learning_tracker/lib/core/sync/providers/sync_status_providers.dart  (55 lines)
+learning_tracker/lib/core/sync/providers/tutored_pull_providers.dart  (193 lines)

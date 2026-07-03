@@ -1,0 +1,202 @@
+[
+ {
+  "sourceBatch": "t1-feat-profiles-p2",
+  "findingIndex": 9,
+  "finding": {
+   "title": "Replace hardcoded English fallback strings in TutoredChildrenSection's error snackbars",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AX-2",
+   "area": "features/profiles/presentation/widgets/tutored_children_section.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/widgets/tutored_children_section.dart",
+     "line": 638,
+     "quote": "AppLocalizations.of(context)?.tutoredEntryPermissionDenied ??\n    'Access denied \u2014 the grant may have been revoked.',"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/widgets/tutored_children_section.dart",
+     "line": 655,
+     "quote": "AppLocalizations.of(context)?.tutoredEntryError ??\n    'Could not load talmid data. Please try again.',"
+    }
+   ],
+   "sites": 2,
+   "why": "Both snackbar messages fall back to raw, un-ARB'd English literals if AppLocalizations.of(context) returns null. That fallback would render untranslated on a Hebrew device in the (defensive-only) case it triggers. The same idiom exists at text_display_screen.dart:900 outside this batch, so it's a small but repeated pattern, not a one-off typo.",
+   "recommendation": "Drop the ?? fallback (AppLocalizations.of(context) is non-null under the app's own MaterialApp) or route the fallback through a second ARB key instead of an inline literal.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "No `AppLocalizations.of(context)?.<key> ?? '<literal>'` pattern remains in tutored_children_section.dart",
+    "The hardcoded-string audit grep is extended to catch this null-coalescing idiom"
+   ],
+   "labels": [
+    "i18n",
+    "ax-2",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-profiles-p2",
+  "findingIndex": 10,
+  "finding": {
+   "title": "Use PositionedDirectional in TutoredChildrenSection's pending-invite count badge instead of physical right:",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AX-1 (spirit)",
+   "area": "features/profiles/presentation/widgets/tutored_children_section.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/widgets/tutored_children_section.dart",
+     "line": 145,
+     "quote": "Positioned(\n  top: 6,"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/widgets/tutored_children_section.dart",
+     "line": 147,
+     "quote": "right: 6,"
+    }
+   ],
+   "sites": 1,
+   "why": "AX-1 bans physical left:/right: positioning in this RTL (Hebrew) app; EdgeInsets.only(left:/right:) and Alignment.centerLeft/Right are the named examples but Positioned(right:) is the same class of bug and isn't caught by the current grep (which only targets EdgeInsets/Alignment APIs) or by any of the 22 make audit checks (confirmed clean on this exact tree). In Hebrew/RTL the pending-invite count badge stays pinned to the physical right of the mail icon instead of mirroring to the leading/'start' corner like directional UI elsewhere in the app.",
+   "recommendation": "Wrap with PositionedDirectional(top: 6, end: 6, ...) \u2014 the Stack is already inside an ambient Directionality via MaterialApp.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Positioned(...right:...) no longer appears in tutored_children_section.dart",
+    "The root Makefile's AX-1 grep is extended to also flag Positioned(...left:/right:...)"
+   ],
+   "labels": [
+    "ax-1",
+    "rtl",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-profiles-p2",
+  "findingIndex": 11,
+  "finding": {
+   "title": "Split hand-written Dart files over the 400-line cap in the profiles feature slice",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "features/profiles/** (lib + test)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/widgets/profile_switcher_sheet.dart",
+     "line": 457,
+     "quote": "(whole file \u2014 457 lines; AG-3 cap is 400)"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/widgets/tutored_children_section.dart",
+     "line": 672,
+     "quote": "(whole file \u2014 672 lines; AG-3 cap is 400)"
+    },
+    {
+     "file": "learning_tracker/test/features/profiles/data/repositories/profile_repository_impl_test.dart",
+     "line": 623,
+     "quote": "(whole file \u2014 623 lines; AG-3 cap is 400)"
+    },
+    {
+     "file": "learning_tracker/test/features/profiles/pin_flow_and_setup_dialog_l1_test.dart",
+     "line": 1575,
+     "quote": "(whole file \u2014 1575 lines; AG-3 cap is 400)"
+    },
+    {
+     "file": "learning_tracker/test/features/profiles/presentation/profile_switcher_sheet_test.dart",
+     "line": 488,
+     "quote": "(whole file \u2014 488 lines; AG-3 cap is 400)"
+    },
+    {
+     "file": "learning_tracker/test/features/profiles/presentation/screens/manage_learners_screen_l1_test.dart",
+     "line": 800,
+     "quote": "(whole file \u2014 800 lines; AG-3 cap is 400)"
+    }
+   ],
+   "sites": 6,
+   "why": "AG-3 caps hand-written Dart files at 400 lines; 6 of the 11 files in this batch exceed it, led by pin_flow_and_setup_dialog_l1_test.dart at 1575 lines (nearly 4x the cap) and tutored_children_section.dart at 672 lines. No existing checker enforces this \u2014 all 22 make audit checks are content-pattern greps, none count lines \u2014 so the cap has drifted silently.",
+   "recommendation": "Split the two largest files first: pin_flow_and_setup_dialog_l1_test.dart into per-source-file tests (fixes the AG-5 mirroring finding at the same time); tutored_children_section.dart by extracting _ViewInvitationsRow/_ManageGrantsRow/_TutoredChildRow to sibling files.",
+   "effort": "L",
+   "acceptance_criteria": [
+    "A make target/CI step greps `find lib test -name '*.dart' | xargs wc -l` (excluding .g.dart/.freezed.dart) and fails on any file over 400 lines",
+    "All 6 listed files are at or under 400 lines"
+   ],
+   "labels": [
+    "ag-3",
+    "hygiene",
+    "file-size"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-profiles-p2",
+  "findingIndex": 12,
+  "finding": {
+   "title": "Relocate profiles feature test files to their AG-5-mirrored paths",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-5",
+   "area": "test/features/profiles/**",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/profiles/presentation/profile_switcher_sheet_test.dart",
+     "line": 1,
+     "quote": "(sits at presentation/ \u2014 mirrored path is presentation/widgets/profile_switcher_sheet_test.dart, which does not exist)"
+    },
+    {
+     "file": "learning_tracker/test/features/profiles/pin_flow_and_setup_dialog_l1_test.dart",
+     "line": 1,
+     "quote": "// L1 widget tests \u2014 PinFlowScreen + ParentPinSetupDialog (combined)"
+    }
+   ],
+   "sites": 2,
+   "why": "AG-5 maps lib/a/b/foo.dart to test/a/b/foo_test.dart with only story_acceptance exempt. profile_switcher_sheet.dart's tests are split across profile_switcher_sheet_test.dart (one directory level shallow, missing /widgets/) and an2_switcher_pin_guard_test.dart (different name, same missing directory); the canonical mirrored path test/features/profiles/presentation/widgets/profile_switcher_sheet_test.dart does not exist at all (verified via directory listing). pin_flow_and_setup_dialog_l1_test.dart combines pin_flow_screen.dart (screens/), parent_pin_setup_dialog.dart (widgets/) and parent_pin_keypad_dialog.dart's change-dialog flow (widgets/ \u2014 which already has its own dedicated parent_pin_keypad_dialog_test.dart) at a non-mirrored top-level path. A contributor looking for 'where do I add a test for profile_switcher_sheet.dart' at the AG-5-mandated path finds nothing and risks adding a third, overlapping file.",
+   "recommendation": "Move profile_switcher_sheet_test.dart to presentation/widgets/, keep an2_switcher_pin_guard_test.dart alongside it (or fold in), and split pin_flow_and_setup_dialog_l1_test.dart's groups back onto pin_flow_screen_test.dart / parent_pin_setup_dialog_test.dart / parent_pin_keypad_dialog_test.dart.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "test/features/profiles/presentation/widgets/profile_switcher_sheet_test.dart exists and contains the sheet's tests",
+    "A script diffing lib/ and test/ trees (AG-5 checker) reports 0 unmirrored non-story_acceptance files for features/profiles/"
+   ],
+   "labels": [
+    "ag-5",
+    "testing",
+    "placement"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-profiles-p2",
+  "findingIndex": 13,
+  "finding": {
+   "title": "Replace DateTime.now() wall-clock calls with DateTimeFactory.nowUtc() in profile_creation_use_case_test.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6",
+   "area": "test/features/profiles/domain/use_cases/profile_creation_use_case_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/profiles/domain/use_cases/profile_creation_use_case_test.dart",
+     "line": 226,
+     "quote": "createdAt: DateTime.now().toUtc(),"
+    },
+    {
+     "file": "learning_tracker/test/features/profiles/domain/use_cases/profile_creation_use_case_test.dart",
+     "line": 277,
+     "quote": "createdAt: DateTime.now().toUtc(),"
+    }
+   ],
+   "sites": 4,
+   "why": "TQ-6 requires hermetic tests with no wall-clock; check 6/15 of make audit already forbids DateTime.now() in lib/ (outside core/time) but doesn't scan test/, so this slipped through. This same file's own setUp (line 37-38) correctly uses DateTimeFactory.nowUtc() \u2014 these 4 calls (lines 226, 227, 277, 278) are the only wall-clock use in the file, seeding LearnerProfilesCompanion.insert rows directly. Currently harmless since no assertion reads the timestamp, but it's an inconsistent, uncontrolled precedent in an otherwise clock-disciplined test file.",
+   "recommendation": "Swap all 4 occurrences to DateTimeFactory.nowUtc().",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep 'DateTime.now()' test/features/profiles/domain/use_cases/profile_creation_use_case_test.dart returns nothing",
+    "The repo-wide DateTime.now() Rule-0 grep is extended to cover test/ (TQ-6 checker)"
+   ],
+   "labels": [
+    "tq-6",
+    "testing",
+    "hygiene"
+   ]
+  }
+ }
+]

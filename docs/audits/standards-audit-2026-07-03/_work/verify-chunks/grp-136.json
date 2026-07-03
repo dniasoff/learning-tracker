@@ -1,0 +1,169 @@
+[
+ {
+  "sourceBatch": "t1-story-epic-27",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Delete or fix the tautological empty-list StreakReducer assertion in epic_27_story_05_bulk_mark_prior_test.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "test/story_acceptance \u2014 gamification/streak",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_27_story_05_bulk_mark_prior_test.dart",
+     "line": 177,
+     "quote": "final reducerState = const StreakReducer().reduce(\n        const <StreakEvent>[],"
+    }
+   ],
+   "sites": 1,
+   "why": "The comment above (lines 166-176) claims this 'pins the reducer directly against the empty event log' and replays 'the events attributable to the batch', but the code passes a literal `const <StreakEvent>[]`, never the `streakRows` queried two blocks earlier \u2014 so `reducerState.currentStreak == 0` is true by construction for any run, proving nothing about bulkMarkComplete. No coverage gap results (the preceding `streakRows, isEmpty` assertion at line 154-164 already correctly covers the real invariant against the DB), but the block misleads a reader into thinking the reducer was exercised against real data.",
+   "recommendation": "Either delete the redundant block, or map the already-queried `streakRows` into StreakEvents and reduce those instead of a hardcoded empty list.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "The reducer assertion consumes the DB-queried rows, or the redundant block is removed."
+   ],
+   "labels": [
+    "testing",
+    "tautological"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epic-27",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Pin the LocalDayClock in epic_27_story_05_bulk_mark_prior_test.dart's second test instead of relying on real wall time",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6",
+   "area": "test/story_acceptance \u2014 gamification/streak",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_27_story_05_bulk_mark_prior_test.dart",
+     "line": 190,
+     "quote": "await repo.markComplete(\n        const CompletionRequest("
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_27_story_05_bulk_mark_prior_test.dart",
+     "line": 208,
+     "quote": "// The completion landed \"today\" (DateTimeFactory.nowUtc() at\n      // test execution time) \u2014 which is at most a few seconds before"
+    }
+   ],
+   "sites": 1,
+   "why": "No `useLocalDayClock(...)` call exists anywhere in this file, so `repo.markComplete(...)` writes `eventTimestamp` via `DateTimeFactory.nowUtc()` \u2192 the real `SystemLocalDayClock`, while `StreakStateProvider(..., clock: FakeLocalDayClock(today))` pins `today = DateTime.utc(2026, 5, 13, 9)` \u2014 violating TQ-6's no-wall-clock rule. The in-file comment claiming real 'now' is 'at most a few seconds before `today`' is already false (real time is ~7 weeks past 2026-05-13 as of this audit). The assertion (`state.maxStreak == 1`) only survives because streak_reducer.dart computes maxStreak from distinct-day count, independent of `today`, for a single-event list \u2014 confirmed by reading the reducer and by `flutter test` passing today. Any future addition of a currentStreak/lastCompletionDayLocal assertion here would go flaky depending on wall-clock date.",
+   "recommendation": "Call `useLocalDayClock(FakeLocalDayClock(today))` in setUp with `resetLocalDayClock()` in tearDown, matching the pattern already used in epic_27_integration_lockout_redaction_atomic_test.dart's AC1 group.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Test pins the global LocalDayClock explicitly and passes independent of wall-clock date."
+   ],
+   "labels": [
+    "testing",
+    "TQ-6",
+    "hermeticity"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epic-27",
+  "findingIndex": 8,
+  "finding": {
+   "title": "Rename or rewrite the crash_reported test in epic_27_story_14_analytics_test.dart to match its assertion",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "test/story_acceptance \u2014 analytics",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_27_story_14_analytics_test.dart",
+     "line": 438,
+     "quote": "'NullCrashlyticsService.recordError does NOT fire crash_reported',"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_27_story_14_analytics_test.dart",
+     "line": 444,
+     "quote": "expect(analytics.countOf(AnalyticsEvent.crashReported), 1);"
+    }
+   ],
+   "sites": 1,
+   "why": "The test name says the null crashlytics service does NOT fire the event; the body never constructs NullCrashlyticsService at all and instead calls `analytics.logCrashReported` directly, asserting the event DOES fire (count==1) \u2014 the opposite claim of the name. NullCrashlyticsService's real no-op behaviour is separately and correctly covered by test/core/logging/crashlytics_service_test.dart, so there's no coverage gap, but a reader trusting this acceptance test's name would draw the wrong conclusion about what it demonstrates.",
+   "recommendation": "Rename to describe what's actually asserted (e.g. 'logCrashReported records exactly one crash_reported event'), or rewrite the body to construct NullCrashlyticsService with a spy AnalyticsService and assert it's never called.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Test name matches its assertion's actual subject and polarity."
+   ],
+   "labels": [
+    "testing",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epic-27",
+  "findingIndex": 9,
+  "finding": {
+   "title": "Remove the self-comparison schemaVersion assertion and fix the stale '13' docstring in epic_27_test_infrastructure_test.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "test/story_acceptance \u2014 test infrastructure",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_27_test_infrastructure_test.dart",
+     "line": 146,
+     "quote": "expect(db.schemaVersion, db.schemaVersion);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_27_test_infrastructure_test.dart",
+     "line": 13,
+     "quote": "///   AC3 \u2014 `test/helpers/drift_memory.dart` provides `inMemoryDb()`\n///         returning a fresh schema-v1 (current schemaVersion = 13)"
+    }
+   ],
+   "sites": 1,
+   "why": "`expect(db.schemaVersion, db.schemaVersion)` compares a value to itself \u2014 always true, verifying nothing about 'the current schemaVersion' as the enclosing test name claims. The file's own top-of-file docstring says 'current schemaVersion = 13'; the real value (lib/core/database/user/user_database.dart:159) is `32` \u2014 stale by roughly 19 migrations, suggesting the original pinned-number check was hollowed into a tautology at some point to dodge updating a hardcoded expectation on every schema bump.",
+   "recommendation": "Delete the self-comparison line (the `greaterThanOrEqualTo(1)` check on the next line is a fine minimal sanity check on its own); fix or remove the stale '13' in the docstring.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "No self-comparison assertions remain in this test; the docstring's schemaVersion number matches reality or is removed."
+   ],
+   "labels": [
+    "testing",
+    "hygiene",
+    "tautological"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epic-27",
+  "findingIndex": 10,
+  "finding": {
+   "title": "Rename the strict-rules 'honours request.auth.uid' test in epic_27_test_infrastructure_test.dart to match what it proves",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "test/story_acceptance \u2014 test infrastructure",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_27_test_infrastructure_test.dart",
+     "line": 76,
+     "quote": "test('createFakeFirestore(strictRules: true) honours request.auth.uid '\n          'on uid-scoped collections', () async {"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_27_test_infrastructure_test.dart",
+     "line": 96,
+     "quote": "'fake_firebase_security_rules does not yet evaluate '\n              'request.resource.data \u2014 see firestore_fake.dart header. '"
+    }
+   ],
+   "sites": 1,
+   "why": "The test name promises to verify that auth.uid matching is honoured, but it asserts the authenticated owner's write THROWS \u2014 its own reason string admits this is because an unrelated `hasOnly()`/request.resource.data clause isn't supported by the parser and 'evaluates as deny', not because auth.uid was validated. No test anywhere in this group exercises the actual positive path (an authenticated owner's write succeeding under strict rules). The file is honest in its inline comment, but the test's name overclaims what it demonstrates.",
+   "recommendation": "Rename to state the actual limitation being pinned (e.g. 'unsupported hasOnly() clause fails closed under strict rules'), and add a genuinely-passing strict-mode write against a rule the parser does support so 'honours request.auth.uid' has a real positive-path test somewhere in the suite.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Test name matches its assertion; a positive-path strict-mode success case exists in the suite."
+   ],
+   "labels": [
+    "testing",
+    "hygiene"
+   ]
+  }
+ }
+]

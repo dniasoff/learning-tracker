@@ -1,0 +1,277 @@
+[
+ {
+  "sourceBatch": "t1-story-epics-17-20",
+  "findingIndex": 8,
+  "finding": {
+   "title": "Use DateTimeFactory.nowUtc() instead of raw DateTime.now() for insert timestamps in epic_18/epic_19 story-acceptance tests",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6",
+   "area": "test/story_acceptance",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_18_track_overhaul_test.dart",
+     "line": 37,
+     "quote": "stateChangedAt: DateTime.now(),"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_18_track_overhaul_test.dart",
+     "line": 38,
+     "quote": "activatedAt: DateTime.now(),"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_18_track_overhaul_test.dart",
+     "line": 136,
+     "quote": "createdAt: DateTime.now(),"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_18_track_overhaul_test.dart",
+     "line": 137,
+     "quote": "updatedAt: DateTime.now(),"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_18_track_overhaul_test.dart",
+     "line": 147,
+     "quote": "createdAt: DateTime.now(),"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_18_track_overhaul_test.dart",
+     "line": 148,
+     "quote": "updatedAt: DateTime.now(),"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_18_track_overhaul_test.dart",
+     "line": 432,
+     "quote": "stateChangedAt: DateTime.now(),"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_18_track_overhaul_test.dart",
+     "line": 433,
+     "quote": "activatedAt: DateTime.now(),"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_18_track_overhaul_test.dart",
+     "line": 468,
+     "quote": "stateChangedAt: DateTime.now(),"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_18_track_overhaul_test.dart",
+     "line": 469,
+     "quote": "activatedAt: DateTime.now(),"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_19_offline_first_test.dart",
+     "line": 90,
+     "quote": "createdAt: DateTime.now(),"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_19_offline_first_test.dart",
+     "line": 91,
+     "quote": "updatedAt: DateTime.now(),"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_19_offline_first_test.dart",
+     "line": 116,
+     "quote": "createdAt: DateTime.now(),"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_19_offline_first_test.dart",
+     "line": 117,
+     "quote": "updatedAt: DateTime.now(),"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_19_offline_first_test.dart",
+     "line": 185,
+     "quote": "final now = DateTime.now().toUtc();"
+    }
+   ],
+   "sites": 15,
+   "why": "TQ-6 requires tests use a fixed DateTimeFactory rather than the wall clock. None of these 15 sites are currently asserted on, so there is no live flake today \u2014 but the codebase already has a working seam (DateTimeFactory.nowUtc(), used correctly by test/helpers/drift_memory.dart's seedProfile in the very same suite and throughout production DAOs) that these two files bypass with raw DateTime.now(). The next author who copies one of these insert blocks into a test that does compare timestamps (an ordering check, a 'recently updated' window) inherits non-determinism silently.",
+   "recommendation": "Replace DateTime.now() with DateTimeFactory.nowUtc() (or a fixed literal) at all 15 sites, matching the pattern already used in test/helpers/drift_memory.dart.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep -n 'DateTime.now()' learning_tracker/test/story_acceptance/epic_18_track_overhaul_test.dart learning_tracker/test/story_acceptance/epic_19_offline_first_test.dart returns no match"
+   ],
+   "labels": [
+    "hygiene",
+    "hermetic-tests",
+    "TQ-6"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epics-21-24",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Split oversized story-acceptance files over AG-3's 400-line cap: epic_21_multi_account_test.dart (1048 lines), epic_24_stop_the_bleeding_test.dart (423 lines)",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "test/story_acceptance",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_21_multi_account_test.dart",
+     "line": 1,
+     "quote": "/// Story acceptance tests for Epic 21 -- Multi-Account Device."
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_24_stop_the_bleeding_test.dart",
+     "line": 1,
+     "quote": "/// Story acceptance tests for Epic 24 \u2014 Stop-the-Bleeding (Phase 0)."
+    }
+   ],
+   "sites": 2,
+   "why": "Both files exceed the 400-line agent-context-budget ratchet by 1.06x-2.6x (1048 and 423 lines respectively, verified via wc -l). Content past an agent's read window is effectively invisible, so new stories tend to get appended blind or forked into a fresh file instead of merged into the right group -- which is exactly what already happened for Epic 24 (see the duplicate-file finding below).",
+   "recommendation": "Split epic_21_multi_account_test.dart by story group (e.g. epic_21_registry_test.dart / epic_21_lifecycle_test.dart) and epic_24_stop_the_bleeding_test.dart by story (24.1 rules vs 24.4 crashlytics), matching the epic_25_story_NN_* convention already used for later epics; update Makefile targets to match.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "`find lib test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400'` reports zero lines for these two files",
+    "All existing test groups/tags still run under their current `make test-epic-*`/`--tags` invocations after the split"
+   ],
+   "labels": [
+    "AG-3",
+    "file-size",
+    "test-organization"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epics-21-24",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Merge or clearly disambiguate epic_24_stop_bleeding_test.dart and epic_24_stop_the_bleeding_test.dart; make test-epic-24 run both",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-1 / CLAUDE.md test-file convention",
+   "area": "test/story_acceptance",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_24_stop_bleeding_test.dart",
+     "line": 1,
+     "quote": "/// Story acceptance tests for Epic 24 -- Stop-the-Bleeding (Phase 0)."
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_24_stop_the_bleeding_test.dart",
+     "line": 1,
+     "quote": "/// Story acceptance tests for Epic 24 \u2014 Stop-the-Bleeding (Phase 0)."
+    },
+    {
+     "file": "learning_tracker/Makefile",
+     "line": 119,
+     "quote": "test-epic-24: ## Run all Epic 24 (Stop-the-Bleeding) acceptance tests"
+    },
+    {
+     "file": "learning_tracker/Makefile",
+     "line": 120,
+     "quote": "\tflutter test test/story_acceptance/epic_24_stop_bleeding_test.dart"
+    }
+   ],
+   "sites": 2,
+   "why": "make test-epic-24's own doc-comment claims to run 'all Epic 24' tests but only executes epic_24_stop_bleeding_test.dart (Stories 24.7/24.8); Stories 24.1 and 24.4's 423 lines of tests, living in the near-identically-named epic_24_stop_the_bleeding_test.dart, are silently excluded, and there is no test-story-24.1/test-story-24.4 target at all. A developer following CLAUDE.md's documented loop ('Run make test-epic-N to check you didn't break sibling stories') gets a false all-clear for 24.1/24.4 while iterating on 24.7/24.8. Git history confirms this isn't an in-progress rename: both files were independently created the same day (2026-05-13) by different work streams (DNI-310 vs DNI-316/319), each assuming it owned 'the' epic-24 file -- the exact 'divergent parallel copy' failure mode AG-4/AG-5's rationale warns about. (The tests still execute under `make ci` -> `flutter test --coverage`'s whole-directory discovery, so the CI hard gate itself isn't bypassed -- only the convenience per-epic/per-story targets are broken.)",
+   "recommendation": "Rename/merge into one canonical, clearly-named file (or split by story with unambiguous suffixes the way epic_25+ do, e.g. epic_24_story_24_1_rules_test.dart), then add test-story-24.1/test-story-24.4 Makefile targets and fix test-epic-24 to cover all four stories.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "`make test-epic-24` output shows Stories 24.1, 24.4, 24.7, and 24.8 all executing",
+    "Only one file (or a story-suffixed set) matches `test/story_acceptance/epic_24_*_test.dart` with no name differing from another only by an article/qualifier word"
+   ],
+   "labels": [
+    "test-organization",
+    "make-target",
+    "dev-workflow"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epics-21-24",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Replace tautological verifyNever(mockFacade...) checks on a facade never injected into the repo under test in epic_24_stop_bleeding_test.dart",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (tautological/over-mocked test)",
+   "area": "test/story_acceptance",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_24_stop_bleeding_test.dart",
+     "line": 79,
+     "quote": "final localRepo = TrackRepositoryImpl(database: db);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_24_stop_bleeding_test.dart",
+     "line": 81,
+     "quote": "verifyNever(() => mockFacade.pushCurriculumTrack(any()));"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_24_stop_bleeding_test.dart",
+     "line": 142,
+     "quote": "final localRepo = LearningOrderRepositoryImpl("
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_24_stop_bleeding_test.dart",
+     "line": 147,
+     "quote": "verifyNever("
+    }
+   ],
+   "sites": 2,
+   "why": "Both 'no push when syncEngine is null (local-born user)' tests construct localRepo without a syncEngine: argument (defaults to null), so localRepo never holds a reference to mockFacade. Mocktail records invocations per mock instance, so verifyNever(() => mockFacade....) is checking an object the code under test never touches -- it passes unconditionally no matter what localRepo actually does internally. A regression that made a local-born repository push to Firestore through any other path would not be caught by this acceptance test despite its name promising exactly that guarantee, and the production code's current correct `_syncEngine?.push...` null-guard (verified in both TrackRepositoryImpl and LearningOrderRepositoryImpl) is protected by nothing but the fact the call would crash first.",
+   "recommendation": "Delete the vacuous verifyNever calls (the preceding await already fails the test if a null syncEngine crashes on use), or replace with an assertion tied to localRepo's actual collaborators -- e.g. assert the local Drift write succeeded with no corresponding outbox/sync artifact.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Neither 'no push when syncEngine is null' test references a mock object that isn't reachable from the object under test",
+    "A deliberately-introduced bug that makes the null-syncEngine path push anyway (e.g. via a stray ambient reference) fails one of these two tests"
+   ],
+   "labels": [
+    "TQ-8",
+    "tautological-test",
+    "mocktail"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epics-21-24",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Scope firestore.rules text-matching assertions to their collection block and check deny-all ordering in epic_24_stop_the_bleeding_test.dart",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (weak assertion vs SR-1..3 rule content)",
+   "area": "test/story_acceptance",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_24_stop_the_bleeding_test.dart",
+     "line": 52,
+     "quote": "expect(rules, contains('points >= 0'));"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_24_stop_the_bleeding_test.dart",
+     "line": 57,
+     "quote": "expect(rules, contains('completed_at <= request.time'));"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_24_stop_the_bleeding_test.dart",
+     "line": 172,
+     "quote": "// The deny-all rule must come before any collection-specific rules."
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_24_stop_the_bleeding_test.dart",
+     "line": 173,
+     "quote": "final denyPos = rules.indexOf('allow read, write: if false');"
+    }
+   ],
+   "sites": 3,
+   "why": "'allows create' and 'enforces completed_at' assert against the whole `rules` string instead of the `_extractBlock(rules, 'completions/{completionId}')` result that the very next test in the same group ('denies update on completions') correctly uses. Nothing stops the points-bound or timestamp-clamp text from being removed from the completions block and coincidentally still matching elsewhere in the file (e.g. another append-only ledger) while this test stays green -- points_ledger and streak_events currently have no such bound at all, so a future accidental swap would go undetected. Separately, the deny-all test's own comment states the rule 'must come before any collection-specific rules' but the assertion only checks `denyPos > -1` (string exists somewhere) -- it never compares denyPos to any collection match's position, so reordering the deny-all rule after a permissive collection rule would not fail this test despite the comment's explicit claim.",
+   "recommendation": "Change the two unscoped assertions to use `_extractBlock(rules, 'completions/{completionId}')` like the sibling test three lines below; change the deny-all test to assert `denyPos < rules.indexOf('match /completions')` (or the first collection match position) instead of just `> -1`.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "The two completions assertions call _extractBlock(rules, 'completions/{completionId}') the same way the 'denies update' test does",
+    "The deny-all test fails if the deny-all rule is moved after a collection-specific match block"
+   ],
+   "labels": [
+    "TQ-8",
+    "weak-assertion",
+    "firestore-rules",
+    "security"
+   ]
+  }
+ }
+]

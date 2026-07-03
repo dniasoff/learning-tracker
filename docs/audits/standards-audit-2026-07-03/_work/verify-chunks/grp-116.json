@@ -1,0 +1,202 @@
+[
+ {
+  "sourceBatch": "t1-feat-tracks-p2",
+  "findingIndex": 8,
+  "finding": {
+   "title": "Delete the dead TrackOrder aggregate/OrderingLevel enum or fix its doc comment's false repository contract",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler dead-code / naming-placement (@freezed rule)",
+   "area": "domain/tracks-track_order",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tracks/track_order/domain/aggregates/track_order.dart",
+     "line": 42,
+     "quote": "/// [TrackLearningOrderRepository] returns a [TrackOrder] from"
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/track_order/domain/repositories/track_learning_order_repository.dart",
+     "line": 7,
+     "quote": "Future<List<LearningOrderItem>> getSedarimOrder("
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/track_order/domain/aggregates/track_order.dart",
+     "line": 83,
+     "quote": "bool operator ==(Object other) =>"
+    }
+   ],
+   "sites": 1,
+   "why": "TrackOrder and OrderingLevel have zero references anywhere else in lib/ (grep confirms) \u2014 the actual TrackLearningOrderRepository interface returns bare List<LearningOrderItem> from getSedarimOrder/getMasechtosOrder, never a TrackOrder. But track_order.dart's own doc comment asserts '[TrackLearningOrderRepository] returns a [TrackOrder] from getSedarimOrder / getMasechtosOrder' \u2014 a confident, specific, and false description of the current contract. A future maintainer (e.g. picking up the W4.22 refactor referenced in masechta_ordering_policy.dart) who trusts this comment will build against an aggregate the real code never produces. Separately, TrackOrder hand-writes ==/hashCode/toString instead of using @freezed like every other domain model in this batch (StageDefinition, GoalEntity), and its hashCode only hashes items.length, so any two same-length differently-ordered TrackOrders collide.",
+   "recommendation": "Delete the file if the two-method-pair API is staying; if TrackOrder is genuinely planned to replace it, land that refactor (repository returns TrackOrder, callers updated) in the same change as the doc comment, and convert it to @freezed while doing so.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Either track_order.dart is removed, or TrackLearningOrderRepository's methods actually return TrackOrder and the doc comment is true.",
+    "If kept, TrackOrder is a @freezed class with generated ==/hashCode, not hand-written ones.",
+    "`flutter analyze` and existing track_order tests stay green."
+   ],
+   "labels": [
+    "dead-code",
+    "doc-drift",
+    "freezed"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tracks-p2",
+  "findingIndex": 9,
+  "finding": {
+   "title": "Add a mounted guard after the awaited date-picker calls in SelfPacedGoalStep._pickDeadline",
+   "severity": "P2",
+   "confidence": "SUSPECTED",
+   "rule": "SM-4 (widget analog)",
+   "area": "presentation/tracks-setup",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/steps/step_goal.dart",
+     "line": 184,
+     "quote": "final picked = await HebrewDatePicker.show("
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/steps/step_goal.dart",
+     "line": 188,
+     "quote": "if (picked != null) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/steps/step_goal.dart",
+     "line": 197,
+     "quote": "final picked = await showLearningAppDatePicker("
+    }
+   ],
+   "sites": 2,
+   "why": "Both branches of _pickDeadline call setState() straight after an awaited date-picker dialog with no `if (!mounted) return;` guard, unlike every other async-gap-then-setState in this same batch (step_starting_position.dart:89/114, step_starting_position_calendar.dart:97-98/100, step_scope.dart:150) which all check mounted first. If the user backs out of the Add-Track wizard while the date picker is open, the awaited Future resolves after State.dispose(), and setState() throws (framework error, not silently ignored) instead of the no-op the mounted guard would produce. This needs a runtime repro (rapid back-navigation during either date picker) to confirm it fires in practice, but the code path is unambiguous.",
+   "recommendation": "Add `if (!mounted) return;` immediately after each `await ...Picker.show/showLearningAppDatePicker(...)`, matching the guard style already used elsewhere in this batch.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Both await sites in _pickDeadline check mounted before calling setState.",
+    "A widget test that disposes SelfPacedGoalStep while the picker Future is pending does not throw."
+   ],
+   "labels": [
+    "state-management",
+    "widget-lifecycle"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tracks-p2",
+  "findingIndex": 10,
+  "finding": {
+   "title": "Route TrackManagementBody's hard-delete ('wipe') path through a repository instead of calling trackDao directly (DB-1)",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "DB-1",
+   "area": "presentation/tracks-setup",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/widgets/track_management_body.dart",
+     "line": 273,
+     "quote": "final dao = ref.read(userDatabaseProvider).trackDao;"
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/widgets/track_management_body.dart",
+     "line": 275,
+     "quote": "await dao.purgeHistory(track.id);"
+    }
+   ],
+   "sites": 1,
+   "why": "_showDeleteDialog's 'wipe' branch pulls trackDao straight out of userDatabaseProvider and calls purgeHistory/deleteTrackAndData from a widget State, bypassing the repository layer DB-1 requires. It's an inconsistency within the same method: the sibling 'archive' branch a few lines above correctly goes through curriculumActivationServiceProvider and has typed try/catch + a localized error SnackBar; the 'wipe' branch has neither a repository nor any error handling at all \u2014 if either DAO call throws, the widget has no recovery path. (The DAO methods themselves are well-built \u2014 transactional, outbox-aware \u2014 so this is a layering/testability and inconsistent-error-handling defect, not a sync-correctness one.)",
+   "recommendation": "Add a track repository (or extend an existing one) with wipe/delete methods that widgets call, mirroring the 'archive' branch's service-layer pattern, including a try/catch with a localized error SnackBar for parity with the archive path.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "track_management_body.dart no longer reads userDatabaseProvider or trackDao directly.",
+    "The 'wipe' branch has the same try/catch + user-facing error handling as the 'archive' branch.",
+    "DB-1's checker (once implemented) reports zero direct DAO access from lib/features/*/presentation/."
+   ],
+   "labels": [
+    "database",
+    "layering",
+    "error-handling"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tracks-p2",
+  "findingIndex": 11,
+  "finding": {
+   "title": "Split scope_views.dart, step_goal.dart, step_scope.dart, step_starting_position_calendar.dart, and stage_definition_repository_impl.dart under AG-3's 400-line cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "presentation+data/tracks-setup,tracks-stages",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/steps/scope_views.dart",
+     "line": 29,
+     "quote": "class ScopeTopLevelView extends ConsumerWidget {"
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/steps/step_goal.dart",
+     "line": 24,
+     "quote": "class SelfPacedGoalStep extends ConsumerStatefulWidget {"
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/stages/data/repositories/stage_definition_repository_impl.dart",
+     "line": 58,
+     "quote": "class StageDefinitionRepositoryImpl implements StageDefinitionRepository {"
+    }
+   ],
+   "sites": 5,
+   "why": "scope_views.dart (487 lines), step_goal.dart (487), step_scope.dart (448), step_starting_position_calendar.dart (468), and stage_definition_repository_impl.dart (474) all exceed the 400-line hand-written-file cap, making each harder to navigate/review as a single unit (scope_views.dart alone holds two large, independent view classes plus their breadcrumb builder; step_goal.dart mixes pace math, deadline math, and a large build()).",
+   "recommendation": "Extract scope_views.dart's ScopeHierarchyView + its _buildBreadcrumbs helper into its own file; extract step_goal.dart's pace/deadline card-building and derivation glue (already partly in goal_helpers.dart) further out of the State class; split stage_definition_repository_impl.dart's schedule encode/decode helpers into a small codec-adjacent file.",
+   "effort": "L",
+   "acceptance_criteria": [
+    "All five files are \u2264400 lines.",
+    "AG-3's line-count checker (once implemented) reports zero violators in this batch."
+   ],
+   "labels": [
+    "hygiene",
+    "file-size"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tracks-p2",
+  "findingIndex": 12,
+  "finding": {
+   "title": "Consolidate the tracks/{setup,stages,track_order} test suite onto mirrored paths under test/features/tracks/** (AG-5)",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-5",
+   "area": "test/tracks-setup,tracks-stages,tracks-track_order",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/track_setup/presentation/steps/goal_helpers_test.dart",
+     "line": 12,
+     "quote": "import 'package:learning_tracker/features/tracks/setup/presentation/steps/goal_helpers.dart';"
+    },
+    {
+     "file": "learning_tracker/test/features/stages/data/repositories/stage_definition_repository_impl_test.dart",
+     "line": 7,
+     "quote": "import 'package:learning_tracker/features/tracks/stages/data/repositories/stage_definition_repository_impl.dart';"
+    },
+    {
+     "file": "learning_tracker/test/features/track_learning_order/data/repositories/track_learning_order_repository_impl_test.dart",
+     "line": 16,
+     "quote": "import 'package:learning_tracker/features/tracks/track_order/data/repositories/track_learning_order_repository_impl.dart';"
+    }
+   ],
+   "sites": 3,
+   "why": "test/features/track_setup/**, test/features/stages/**, and test/features/track_learning_order/** all still exist and DO test current lib code (confirmed via their imports) \u2014 they are not stale \u2014 but none of them mirror the actual lib/features/tracks/{setup,stages,track_order}/** layout. A correctly-mirrored tree has also grown alongside them (e.g. test/features/tracks/setup/**, test/features/tracks/track_order/**), so coverage for this feature area is now split across two parallel, differently-named directory trees. A developer adding a new test for goal_helpers.dart would not find the existing one unless they already knew to look under the legacy 'track_setup' (singular, no 'tracks/' prefix) name instead of the mirrored 'tracks/setup' path, risking either an undiscovered duplicate or accidentally-orphaned old tests.",
+   "recommendation": "Move test/features/track_setup/**, test/features/stages/**, and test/features/track_learning_order/** to their AG-5-mirrored locations under test/features/tracks/{setup,stages,track_order}/**, merging with the already-correct parallel tree where both exist for the same source file.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "AG-5's mirroring checker (once implemented) reports zero unmirrored test directories for tracks/setup, tracks/stages, and tracks/track_order.",
+    "No test file is lost or silently duplicated during the move (`flutter test` count before == after)."
+   ],
+   "labels": [
+    "testing",
+    "hygiene",
+    "test-organization"
+   ]
+  }
+ }
+]

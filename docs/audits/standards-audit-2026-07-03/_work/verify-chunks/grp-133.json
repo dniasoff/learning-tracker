@@ -1,0 +1,395 @@
+[
+ {
+  "sourceBatch": "t1-story-epics-01-08",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Delete or replace compile-time-tautological assertions across Epic 1/2 acceptance tests",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "test/story_acceptance/epic_01_foundation_test.dart, epic_02_content_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_01_foundation_test.dart",
+     "line": 74,
+     "quote": "expect(UserDatabase, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_01_foundation_test.dart",
+     "line": 81,
+     "quote": "expect(true, isTrue);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_01_foundation_test.dart",
+     "line": 102,
+     "quote": "expect(db, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_01_foundation_test.dart",
+     "line": 110,
+     "quote": "expect(db.activeCurriculumDao, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_01_foundation_test.dart",
+     "line": 111,
+     "quote": "expect(db.completionDao, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_01_foundation_test.dart",
+     "line": 112,
+     "quote": "expect(db.goalDao, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_01_foundation_test.dart",
+     "line": 113,
+     "quote": "expect(db.pointConfigDao, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_01_foundation_test.dart",
+     "line": 114,
+     "quote": "expect(db.stageDao, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_01_foundation_test.dart",
+     "line": 115,
+     "quote": "expect(db.bookmarkDao, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_01_foundation_test.dart",
+     "line": 116,
+     "quote": "expect(db.learningOrderDao, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_01_foundation_test.dart",
+     "line": 117,
+     "quote": "expect(db.streakEventDao, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_01_foundation_test.dart",
+     "line": 118,
+     "quote": "expect(db.trackDao, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_01_foundation_test.dart",
+     "line": 119,
+     "quote": "expect(db.userProfileDao, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_01_foundation_test.dart",
+     "line": 121,
+     "quote": "expect(db.textDownloadStatusDao, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_01_foundation_test.dart",
+     "line": 122,
+     "quote": "expect(db.learningLedgerDao, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_01_foundation_test.dart",
+     "line": 154,
+     "quote": "expect(AuthGuard, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_01_foundation_test.dart",
+     "line": 160,
+     "quote": "expect(true, isTrue);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_01_foundation_test.dart",
+     "line": 168,
+     "quote": "expect(CurriculumContentFetcher, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_01_foundation_test.dart",
+     "line": 172,
+     "quote": "expect(SefariaFetcherBase, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_01_foundation_test.dart",
+     "line": 176,
+     "quote": "expect(MishnaFetcher, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_01_foundation_test.dart",
+     "line": 177,
+     "quote": "expect(BavliFetcher, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_01_foundation_test.dart",
+     "line": 178,
+     "quote": "expect(YerushalmiFetcher, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_01_foundation_test.dart",
+     "line": 179,
+     "quote": "expect(MishnaBerurahFetcher, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_01_foundation_test.dart",
+     "line": 180,
+     "quote": "expect(ChumashFetcher, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_01_foundation_test.dart",
+     "line": 188,
+     "quote": "expect(AppRouter, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_01_foundation_test.dart",
+     "line": 192,
+     "quote": "expect(AuthGuard, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_01_foundation_test.dart",
+     "line": 198,
+     "quote": "expect(PinGuard, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_01_foundation_test.dart",
+     "line": 250,
+     "quote": "expect(logger, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_01_foundation_test.dart",
+     "line": 264,
+     "quote": "expect(SyncOrchestrator, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_01_foundation_test.dart",
+     "line": 269,
+     "quote": "expect(OutboxSyncWriteFacade, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_01_foundation_test.dart",
+     "line": 292,
+     "quote": "expect(true, isTrue);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_02_content_test.dart",
+     "line": 61,
+     "quote": "expect(ContentRepository, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_02_content_test.dart",
+     "line": 161,
+     "quote": "expect(curriculumContentProvider, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_02_content_test.dart",
+     "line": 164,
+     "quote": "expect(provider, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_02_content_test.dart",
+     "line": 240,
+     "quote": "expect(TextCacheRepository, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_02_content_test.dart",
+     "line": 745,
+     "quote": "expect(contentRepositoryProvider, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_02_content_test.dart",
+     "line": 746,
+     "quote": "expect(curriculumContentProvider, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_02_content_test.dart",
+     "line": 747,
+     "quote": "expect(curriculumHierarchyConfigProvider, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_02_content_test.dart",
+     "line": 748,
+     "quote": "expect(filteredContentProvider, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_02_content_test.dart",
+     "line": 749,
+     "quote": "expect(contentSearchProvider, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_02_content_test.dart",
+     "line": 750,
+     "quote": "expect(contentByRefProvider, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_02_content_test.dart",
+     "line": 924,
+     "quote": "expect(TextDownloadService, isNotNull);"
+    }
+   ],
+   "sites": 42,
+   "why": "In null-safe Dart, `expect(SomeClass, isNotNull)` on a Type literal, a non-nullable getter, or a non-nullable top-level provider constant is guaranteed true by the type system before the test ever runs \u2014 the same is true for a bare `expect(true, isTrue)`. None of these 42 assertions, spread across 6 of Epic 1's 12 stories (1.1, 1.3, 1.4, 1.5, 1.7, 1.9) and 3 of Epic 2's AC blocks, can fail for any runtime reason; they only prove the referenced symbol resolves at compile time, which flutter analyze / the test file's own import block already guarantees. Story 1.3, for example, consists of exactly these two assertions and nothing else, yet the file header claims 'All 12 stories are DONE and actively tested,' and CLAUDE.md frames `make test-story-X.Y` passing as the story's acceptance gate ('always validate it before marking it done'). A regression in AuthGuard's guard logic, AppRouter's routes, SyncOrchestrator's wiring, or any of the 11 DAOs' real behavior ships green through that gate.",
+   "recommendation": "For each site, either delete the assertion (documenting that the import block is the only intended check) or replace it with a behavioral assertion that calls a representative method/route/guard and checks its actual return value \u2014 the pattern Stories 1.2, 1.6, 1.11, 1.12 and the rest of Epic 2 already use in the same files.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "No `expect(X, isNotNull)` remains where X's static type is non-nullable, and no standalone `expect(true, isTrue)` remains, in epic_01_foundation_test.dart / epic_02_content_test.dart",
+    "Each surviving test in the affected groups exercises at least one real method call or return value"
+   ],
+   "labels": [
+    "test-quality",
+    "tautological-test",
+    "false-safety-net"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epics-01-08",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Inject a fake clock instead of comparing against real DateTime.now() in completion/restore timing assertions",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6",
+   "area": "test/story_acceptance",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_03_learning_cycle_test.dart",
+     "line": 118,
+     "quote": "DateTime.now().difference(completion.completedAt).abs().inSeconds,\n          lessThan(5),"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/regression_invariants_test.dart",
+     "line": 251,
+     "quote": "restored.activatedAt.isAfter(\n              beforeRestore.subtract(const Duration(seconds: 5)),"
+    }
+   ],
+   "sites": 2,
+   "why": "Both assertions pin correctness to a 5-second window measured against the real wall clock at assertion time, rather than the FakeLocalDayClock/DateTimeFactory override the codebase already provides and uses correctly elsewhere (e.g. epic_08_gamification_test.dart Story 8.2). On a slow or contended CI runner, a stall of more than 5 seconds between the write and the assertion \u2014 plausible for a cold Drift/sqlite3 open \u2014 flakes the test for a reason unrelated to the code under test.",
+   "recommendation": "Install a FakeLocalDayClock (or equivalent) before the write and assert equality/near-equality against the fake's fixed instant, matching the pattern already used in epic_08_gamification_test.dart Story 8.2.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Both assertions compare against a fixed/fake clock value, not a DateTime.now()/DateTimeFactory.nowUtc() call made at assertion time"
+   ],
+   "labels": [
+    "test-quality",
+    "hermetic",
+    "flake-risk"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epics-01-08",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Reconcile AG-3's 400-line cap with the 'one file per epic' story-acceptance convention",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "test/story_acceptance",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_07_dashboard_test.dart",
+     "line": 1224,
+     "quote": "(file total: 1224 lines \u2014 3.1x the AG-3 cap)"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_06_scheduler_test.dart",
+     "line": 1038,
+     "quote": "(file total: 1038 lines)"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/track_lifecycle_test.dart",
+     "line": 970,
+     "quote": "(file total: 970 lines)"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_02_content_test.dart",
+     "line": 936,
+     "quote": "(file total: 936 lines)"
+    },
+    {
+     "file": "learning_tracker/docs/coding-standards.md",
+     "line": 513,
+     "quote": "find lib test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400'"
+    }
+   ],
+   "sites": 8,
+   "why": "coding-standards.md AG-3 caps hand-written Dart files at 400 lines, and its own proposed [Pending] checker explicitly globs both `lib` and `test` \u2014 there is no story-acceptance carve-out (unlike AG-5, which explicitly exempts story-acceptance suites from mirroring). learning_tracker/CLAUDE.md simultaneously documents 'One file per epic' as the required structure for test/story_acceptance/epic_NN_*.dart files. The two written standards contradict each other: an epic file that starts under 400 lines is guaranteed to cross the cap as later stories are appended, which has already happened to 8 of this batch's 10 files (epic_01 at 392 and epic_05 at 381 are the only ones still under), up to 3x over at epic_07_dashboard_test.dart (1224 lines). Neither document currently resolves the conflict, so AG-3 is guaranteed to keep failing by design for this directory once its checker ships.",
+   "recommendation": "Either add a story-acceptance carve-out to AG-3 in coding-standards.md (mirroring AG-5's existing one), or change the CLAUDE.md convention to one-file-per-story so AG-3 stays enforceable as written. This is a guardrail-doc change (AG-11) and needs human review either way, not a unilateral file split.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "coding-standards.md AG-3 and learning_tracker/CLAUDE.md's story-acceptance file convention no longer contradict each other",
+    "The Rule-0 checker at coding-standards.md:513 passes for test/story_acceptance/** or has a documented, scoped exemption"
+   ],
+   "labels": [
+    "hygiene",
+    "standards-conflict",
+    "AG-3"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epics-01-08",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Add missing tags: ['story_5_2'] to the Story 5.2 group in epic_05_stages_order_test.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "learning_tracker/CLAUDE.md Test Structure convention",
+   "area": "test/story_acceptance/epic_05_stages_order_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_05_stages_order_test.dart",
+     "line": 152,
+     "quote": "group('Story 5.2 -- Custom learning order', () {"
+    }
+   ],
+   "sites": 1,
+   "why": "Every other numbered Story group across all 10 files in this batch carries `tags: ['story_N_M']` per the documented convention ('tags: [\"story_1_2\"] on each group'); Story 5.2 alone omits it. make test-story-5.2 still works today because its Makefile target filters by `--name \"Story 5.2\"` rather than `--tags`, so this is not currently a functional break, but any future tooling that filters by tag (CI matrix, `dart test --tags`) silently drops all of Story 5.2's tests.",
+   "recommendation": "Add `tags: ['story_5_2']` to the group() call, matching every sibling group in the file.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "epic_05_stages_order_test.dart:152 group carries tags: ['story_5_2']"
+   ],
+   "labels": [
+    "hygiene",
+    "consistency"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "orchestrator",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Regenerate and commit stale codegen for curriculum_label_providers and 2 other .g.dart files; add the AG-7 freshness gate",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-7",
+   "area": "core/labels",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/labels/curriculum_label_providers.g.dart",
+     "line": 204,
+     "quote": "regen adds 22 lines of doc-comment (Hebrew ancestor-name lookup docs) \u2014 committed file predates its source's doc change"
+    },
+    {
+     "file": "learning_tracker/lib/features/gamification/presentation/providers/reward_config_controller.g.dart",
+     "line": 1,
+     "quote": "2-line drift on regeneration"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/presentation/providers/scheduler_providers.g.dart",
+     "line": 1,
+     "quote": "2-line drift on regeneration"
+    }
+   ],
+   "sites": 3,
+   "why": "Committed generated code no longer matches its sources: `dart run build_runner build` on a clean tree at 4018a91c dirties 3 files. Every future agent build produces unexplained diffs, and the doc-claimed 'CI regenerates before analyze' means CI analyzes code that differs from what is committed. The pending `git diff --exit-code` freshness gate (AG-7) would have caught this at commit time.",
+   "recommendation": "Run build_runner + gen-l10n, commit the 3 regenerated files, and add the AG-7 freshness gate to CI (`git diff --exit-code` after regeneration).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "build_runner + gen-l10n on a clean tree leaves `git status` clean",
+    "CI fails on non-empty git diff after codegen (freshness gate landed)"
+   ],
+   "labels": [
+    "codegen",
+    "ci",
+    "hygiene"
+   ],
+   "origin": "orchestrator-baseline"
+  }
+ }
+]

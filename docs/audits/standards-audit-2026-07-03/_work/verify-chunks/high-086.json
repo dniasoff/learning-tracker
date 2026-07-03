@@ -1,0 +1,63 @@
+[
+ {
+  "sourceBatch": "t1-feat-tracks-p1",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Fix duplicate 'Track progress' label on TrackDetailScreen showing two differently-sourced percentages",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "Evans (invariant re-derived, not enforced once) / user-visible defect",
+   "area": "features/tracks/setup/presentation/screens/track_detail_screen.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/screens/track_detail_screen.dart",
+     "line": 152,
+     "quote": "dashboardTrackCompletionPercentageProvider(track.id),"
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/screens/track_detail_screen.dart",
+     "line": 162,
+     "quote": "trackDualProgressMetricsProvider(track.profileId),"
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/screens/track_detail_screen.dart",
+     "line": 397,
+     "quote": "'$trackProgressLabel: $trackProgressDisplay',"
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/screens/track_detail_screen.dart",
+     "line": 419,
+     "quote": ": trackProgressLabel,"
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/screens/track_detail_screen.dart",
+     "line": 427,
+     "quote": "cyclePercentDisplay,"
+    },
+    {
+     "file": "learning_tracker/test/features/tracks/setup/presentation/screens/track_detail_screen_test.dart",
+     "line": 103,
+     "quote": "dashboardTrackCompletionPercentageProvider("
+    },
+    {
+     "file": "learning_tracker/test/features/tracks/setup/presentation/screens/track_detail_screen_test.dart",
+     "line": 110,
+     "quote": "trackDualProgressMetricsProvider(track.profileId).overrideWith("
+    }
+   ],
+   "sites": 1,
+   "why": "build() reads cycleFraction from dashboardTrackCompletionPercentageProvider (documented in dashboard_providers.dart:131-134 as 'all-time, multi-stage gate') and separately reads currentCyclePct from trackDualProgressMetricsProvider (documented as 'time-gated, single-ref check') \u2014 two admittedly different formulas. The header card then shows currentCyclePct combined with the label text 'Track progress' at line 397, and \u2014 whenever the track has no chazara stages \u2014 reuses the exact same `trackProgressLabel` variable for the second row at line 419, next to cycleFraction's value at line 427. Any track where the two formulas diverge (routine per their own doc comment) renders two different numbers under the identical label on the same card. The dedicated regression test for this exact section (track_detail_screen_test.dart `_overridesFor`) feeds the SAME `currentCycle` value into both provider overrides by construction, so it can never catch the two rows disagreeing \u2014 a textbook tautological fixture.",
+   "recommendation": "Give the lower ('cyclePercentDisplay') row a distinct, non-reused label instead of falling back to trackProgressLabel, or drive both rows off the same provider/formula. Update the test fixture to pass different currentCycle-vs-dashboard values so a future re-divergence fails.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "A widget test overrides dashboardTrackCompletionPercentageProvider and trackDualProgressMetricsProvider with DIFFERENT values and asserts the screen never shows two different percentages under the same 'Track progress' label",
+    "track_detail_screen_test.dart's _overridesFor no longer derives both provider overrides from one shared currentCycle parameter"
+   ],
+   "labels": [
+    "ui-bug",
+    "progress-metrics",
+    "track-detail"
+   ]
+  }
+ }
+]

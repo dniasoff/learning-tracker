@@ -1,0 +1,194 @@
+[
+ {
+  "sourceBatch": "t1-core-database-daos-p1",
+  "chunk": "grp-007",
+  "finding": {
+   "title": "Split completion_dao.dart, points_balance_dao.dart, track_dao.dart, and completion_dao_extended_test.dart under the 400-line AG-3 cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "core/database/daos",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/database/daos/completion_dao.dart",
+     "line": 1,
+     "quote": "(881 lines total, hand-written)"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/daos/points_balance_dao.dart",
+     "line": 1,
+     "quote": "(617 lines total, hand-written)"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/daos/track_dao.dart",
+     "line": 1,
+     "quote": "(546 lines total, hand-written)"
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/completion_dao_extended_test.dart",
+     "line": 1,
+     "quote": "(533 lines total, hand-written)"
+    }
+   ],
+   "sites": 4,
+   "why": "All four are more than 2x the 400-line hand-written-file cap. completion_dao.dart mixes cross-profile-scope-guarded reads, raw-SQL tier filtering, and grouped aggregates in one file; points_balance_dao.dart mixes balance/ledger/redemption CRUD with sync-outbox plumbing; track_dao.dart mixes lifecycle CRUD with two different multi-table transactional delete flows. Long files raise the odds that the next edit misses a nearby invariant (e.g. the DB-3 loop found in track_dao.dart's purgeHistory, buried 400 lines in).",
+   "recommendation": "Split by responsibility, e.g. completion_dao.dart into a read/aggregate DAO plus a cross-profile-guarded companion; points_balance_dao.dart into balance+ledger vs redemption vs sync-enqueue helpers; track_dao.dart into lifecycle CRUD vs the two delete/purge transactional flows.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "Each resulting file is \u2264400 lines.",
+    "A Rule-0 line-count check (e.g. `find lib -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400'`) is added to `make audit` and passes."
+   ],
+   "labels": [
+    "AG-3",
+    "file-size",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-learning-p1",
+  "chunk": "grp-059",
+  "finding": {
+   "title": "Narrow and log the catch-all in CompletionRepositoryImpl._appendStreakEvent",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "EH-3",
+   "area": "learning/data/repositories",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/learning/data/repositories/completion_repository_impl.dart",
+     "line": 767,
+     "quote": "} catch (_) {\n      // Defensive: never let a telemetry tee block the primary write."
+    }
+   ],
+   "sites": 1,
+   "why": "catch (_) swallows every exception from BOTH the streak_events Drift insert and the outbox enqueue (facade.enqueueStreakPayload) with no AppLogger call anywhere in this file \u2014 a codec bug, closed-DB race, or genuine corruption is indistinguishable from the expected benign duplicate-key case this comment is defending against. This is also EH-4-adjacent (catches Error subtypes, not just typed Exceptions) and evades the Rule-0 'no empty catch blocks' Makefile grep (`catch\\s*(_\\?\\w*)\\s*{}`), which only matches a literal same-line `{}` \u2014 this multi-line comment-only body is functionally empty but textually invisible to that checker. Per the file's own header comment, the outbox enqueue here is what 'closes the gap' where a second device sees a frozen streak; if enqueueStreakPayload throws, that gap silently reopens with zero diagnostic trail and no retry.",
+   "recommendation": "Catch a specific expected type (e.g. the Drift unique-constraint exception) for the benign-duplicate case and let everything else propagate or be logged via AppLogger.instance.warning/error before swallowing, so a genuine failure is at least visible in Crashlytics/Talker.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "The catch narrows to the specific expected exception type; every other path logs via AppLogger before returning; a regression test that makes enqueueStreakPayload throw asserts the failure is logged, not silently dropped."
+   ],
+   "labels": [
+    "eh-3",
+    "eh-4",
+    "error-handling",
+    "sync"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-sync-merge",
+  "chunk": "grp-030",
+  "finding": {
+   "title": "Split the four hand-written files in core/sync/merge that exceed the 400-line AG-3 cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3 (hand-written Dart file <=400 lines; generated exempt)",
+   "area": "core/sync/merge",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/sync/merge/drift_merge_store.dart",
+     "line": 1,
+     "quote": "788 total lines"
+    },
+    {
+     "file": "learning_tracker/test/core/sync/merge/drift_merge_store_test.dart",
+     "line": 1,
+     "quote": "1842 total lines"
+    },
+    {
+     "file": "learning_tracker/test/core/sync/merge/mergers_test.dart",
+     "line": 1,
+     "quote": "460 total lines"
+    },
+    {
+     "file": "learning_tracker/test/core/sync/merge/notification_settings_merger_round_trip_test.dart",
+     "line": 1,
+     "quote": "453 total lines"
+    }
+   ],
+   "sites": 4,
+   "why": "drift_merge_store.dart alone blends the LWW clock-skew gate, seven distinct per-entity upsert implementations, FK/account resolution logic and schedule JSON encoding in one file \u2014 the 'God File' shape AG-3's cap exists to prevent \u2014 and it is this batch's #1 churn hotspot, so every fix wave re-reads all 788 lines for context. The three oversized test files mirror the same sprawl.",
+   "recommendation": "Split drift_merge_store.dart into one file per upsert group behind the existing MergeStore interface; split drift_merge_store_test.dart/mergers_test.dart/notification_settings_merger_round_trip_test.dart to mirror, no behavior change.",
+   "effort": "L",
+   "acceptance_criteria": [
+    "AG-3 line-count checker (grep/lint over lib/ and test/, generated files exempt) passes for all four files."
+   ],
+   "labels": [
+    "hygiene",
+    "AG-3",
+    "file-size"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-scheduler-p3",
+  "chunk": "grp-096",
+  "finding": {
+   "title": "Collapse duplicate equality/hashCode/toString assertions inside delta_value_test.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler duplication (within-file)",
+   "area": "features/scheduler/domain/models tests",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/scheduler/domain/models/delta_value_test.dart",
+     "line": 27,
+     "quote": "test('equality: not equal to different type', () {\n      expect(const DateDelta(5) == const PaceDelta(5), isFalse);"
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/domain/models/delta_value_test.dart",
+     "line": 31,
+     "quote": "test('equality: DateDelta != PaceDelta with same numeric value', () {\n      expect(const DateDelta(5) == const PaceDelta(5), isFalse);"
+    }
+   ],
+   "sites": 1,
+   "why": "Within this single 290-line file, several test() blocks are byte-for-byte identical in body under different names \u2014 e.g. lines 27-29 and 31-33 both assert `DateDelta(5) == PaceDelta(5)` is false; lines 39-41 and 47-49 both assert DateDelta(5).hashCode equality the same way; lines 51-53 and 55-57 both assert DateDelta(7).toString() contains '7'. Harmless (both copies pass and are correct) but purely additive noise: roughly 6 of the file's ~50 tests contribute zero incremental coverage over their twin, inflating the file for a future reader trying to find what's actually pinned.",
+   "recommendation": "Delete one test from each identified duplicate pair, keeping the more descriptively-named one.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "No two test() bodies in the file are textually identical (grep/diff check)."
+   ],
+   "labels": [
+    "test-quality",
+    "duplication",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-profiles-p1",
+  "chunk": "grp-077",
+  "finding": {
+   "title": "Replace unchecked e.message as String? casts in PIN dialogs with a null-safe read",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "hygiene / defensive coding",
+   "area": "features/profiles/presentation",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/providers/pin_flow_controller.dart",
+     "line": 286,
+     "quote": "errorMessage: e.message as String?,"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/widgets/parent_pin_setup_dialog.dart",
+     "line": 122,
+     "quote": "_errorMessage = e.message as String?;"
+    }
+   ],
+   "sites": 2,
+   "why": "ArgumentError.message is typed Object? in dart:core, not String?. Both sites hard-cast it with `as String?`, which would throw a TypeError if PinService ever threw an ArgumentError constructed with a non-String message (e.g. ArgumentError.value(...)). Today PinService only ever throws `ArgumentError('PIN must be exactly 4 numeric digits')` so this never fires, but the cast is a landmine for the next caller of setProfilePin/setTutorPin-style methods that doesn't preserve that convention.",
+   "recommendation": "Use `e.message?.toString() ?? <fallback>` instead of the unchecked cast in both places.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Both sites read e.message without an unchecked String cast",
+    "A test constructing ArgumentError.value(42, 'pin') and feeding it through does not crash"
+   ],
+   "labels": [
+    "hygiene",
+    "defensive-coding"
+   ]
+  }
+ }
+]

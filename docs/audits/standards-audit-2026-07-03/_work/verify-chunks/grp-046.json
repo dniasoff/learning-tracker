@@ -1,0 +1,195 @@
+[
+ {
+  "sourceBatch": "t1-feat-content_browsing-p2",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Merge the duplicate TextCacheRepository and TextDisplayScreen test files produced by parallel coverage-wave commits",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler duplication lens (digest step 3) / TQ-1 (pyramid-shaped, non-bloated suite)",
+   "area": "test-quality \u2014 content_browsing data/repositories + presentation/screens",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/content_browsing/data/repositories/text_cache_repository_extended_test.dart",
+     "line": 1,
+     "quote": "/// Extended tests for TextCacheRepository covering paths that are"
+    },
+    {
+     "file": "learning_tracker/test/features/content_browsing/data/repositories/text_cache_repository_extra_test.dart",
+     "line": 1,
+     "quote": "// Extra coverage for TextCacheRepository \u2014 exercises the text_cache hit path,"
+    },
+    {
+     "file": "learning_tracker/test/features/content_browsing/presentation/screens/text_display_screen_l1_test.dart",
+     "line": 1,
+     "quote": "// L1 widget tests for TextDisplayScreen \u2014 the text reader (67.5% coverage focus)"
+    }
+   ],
+   "sites": 3,
+   "why": "git log shows text_cache_repository_extra_test.dart (commit be671521, 'coverage-f1') and text_cache_repository_extended_test.dart (commit 80a8399a, 'coverage-f2') were both added the same day, 2026-05-14, by two independent automated coverage passes; each docstring claims to cover gaps in the *original baseline* file, but neither checked the *other new* file. Concretely both assert: text_cache exact-match + parsing, child-verse aggregation + sort-by-number, skip-empty-segment, daily_content fallback, and getCachedRefs \u2014 roughly 80% of their combined ~600 lines duplicate each other with cosmetically different fixtures. The same pattern repeats one directory over: text_display_screen_test.dart (added Feb, DNI-33) versus text_display_screen_l1_test.dart (added 2026-05-30, 'coverage w3') \u2014 the newer file's loading/offline/error/Hebrew-RTL/mark-complete-button tests re-assert what the older file already asserts, without removing or even referencing it. Cost: a future change to TextCacheRepository.getText's fallback chain or TextDisplayScreen's loading/error copy must be updated in 2-3 near-identical places instead of 1, and CI spends real time re-pumping the same widget states repeatedly.",
+   "recommendation": "Pick one canonical file per production class: keep text_cache_repository_extended_test.dart, fold the HTML-entity-decoding case from _extra_test.dart into it, delete _extra_test.dart. Keep text_display_screen_l1_test.dart as primary, fold any assertion unique to text_display_screen_test.dart (e.g. the AppBar-shows-sefariaRef case) into it, then delete the old file. Add a one-line note to the coverage-wave tooling/prompt to grep for an existing test file on the target class before creating a new one.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "One test file per production class in this area with no cross-file scenario-name overlap greater than 1, and combined line count for the merged pair is lower than the sum of the originals with no loss of branch coverage."
+   ],
+   "labels": [
+    "test-quality",
+    "duplication",
+    "content_browsing",
+    "coverage-wave-process"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-content_browsing-p2",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Fix the tautological 'Gematriya correctness' test in text_display_screen_deep_l1_test.dart to call the real Gematriya.forNumber",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (tautological test \u2014 asserts what a local copy returns, not the production code)",
+   "area": "test-quality \u2014 content_browsing/presentation/screens",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/content_browsing/presentation/screens/text_display_screen_deep_l1_test.dart",
+     "line": 769,
+     "quote": "expect(_gematriya(15), equals('\u05d8\u05d5'));"
+    },
+    {
+     "file": "learning_tracker/test/features/content_browsing/presentation/screens/text_display_screen_deep_l1_test.dart",
+     "line": 805,
+     "quote": "// avoid importing a lib/ class that could pull in unwanted transitive deps."
+    }
+   ],
+   "sites": 1,
+   "why": "The test name promises to verify Gematriya.forNumber's halachically-significant 15/16 substitution (\u05d8\u05d5/\u05d8\u05d6 instead of spelling the divine name), but it never calls Gematriya.forNumber \u2014 it calls a private `_gematriya()` helper in the same test file that hand-copies the lookup table as a literal Dart map. The stated reason ('avoid importing a lib/ class that could pull in unwanted transitive deps') does not hold: lib/core/utils/gematriya.dart is a zero-import, private-constructor pure-static class, and 20+ other tests in this very file already import lib/ classes freely (TutorPermissions, ResolvedSession, MarkLiveCompletionUseCase). If Gematriya.forNumber were changed or broken, this test would keep passing because it only checks the copied table against itself. Real protection for the underlying rule does exist elsewhere \u2014 test/core/utils/gematriya_test.dart and gematriya_ts6_test.dart call the real class, and this same file's C1/C2 tests exercise Gematriya.forNumber indirectly through widget rendering \u2014 so the concrete risk today is low, but this specific 'Direct assertion for completeness' test contributes zero verification while reading as if it does.",
+   "recommendation": "Delete the local _gematriya helper and its hardcoded table; import package:learning_tracker/core/utils/gematriya.dart and call Gematriya.forNumber directly in the assertions.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Test calls Gematriya.forNumber(15)/(16) etc. directly; temporarily corrupting Gematriya's 15/16 special-case in lib/ makes this specific test fail."
+   ],
+   "labels": [
+    "test-quality",
+    "tautological-test",
+    "content_browsing"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-content_browsing-p3",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Replace tautological ConstrainedBox-ancestor check in r2_panel_leaf_crumb_ellipsis_test.dart with a real width-bound assertion",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (weakened/tautological assertion)",
+   "area": "test/features/content_browsing/presentation/widgets",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/content_browsing/presentation/widgets/r2_panel_leaf_crumb_ellipsis_test.dart",
+     "line": 197,
+     "quote": "of: find.byWidget(leaf),\n              matching: find.byType(ConstrainedBox),"
+    }
+   ],
+   "sites": 1,
+   "why": "Empirically verified via mutation testing: with the real fix in place, `flutter test` passes 4/4. Reverting hierarchy_selection_panel.dart's leaf-crumb Text to a bare `Text(label)` (no overflow/maxLines/ConstrainedBox) makes the suite RED as expected \u2014 but reverting only the `ConstrainedBox(maxWidth: maxLeafCrumbWidth)` wrapper while leaving `overflow: TextOverflow.ellipsis, maxLines: 1, softWrap: false` on the Text keeps all 4 cases GREEN. Instrumenting the finder shows why: it matches TextButton's own internal minimum-tap-target box (`ConstrainedBox(64.0<=w<=Infinity, 40.0<=h<=Infinity)`), not the fix's width cap. So a future regression that removes the actual width bound \u2014 exactly the failure mode the test's own `reason:` string names (\"leaf crumb must be width-capped so ellipsis engages\") \u2014 would ship undetected even though this file is tagged as the regression test for that bug.",
+   "recommendation": "Assert on the rendered geometry instead of \"any ConstrainedBox exists\": either read the leaf Text's `RenderBox` size via `tester.getSize(find.byWidget(leaf))` and assert its width is bounded (e.g. <= panel width), or use `find.ancestor(matching: find.byWidgetPredicate((w) => w is ConstrainedBox && w.constraints.maxWidth < double.infinity))` so TextButton's own unrelated min-size box can't satisfy the finder.",
+   "acceptance_criteria": [
+    "Re-running the test against a widget with the ConstrainedBox width-cap stripped (overflow/maxLines left in place) fails RED on the updated assertion.",
+    "All 4 parametrized LTR/RTL x scale cases stay GREEN with the real fix in place."
+   ],
+   "labels": [
+    "testing",
+    "content_browsing",
+    "TQ-8",
+    "tautological-assertion"
+   ],
+   "effort": "S"
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-content_browsing-p3",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Fix Makefile check 15's awk logic \u2014 it structurally can never flag a cross-feature deep import",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Rule 0 (deterministic checker) / Rule 2 (cross-feature deep imports)",
+   "area": "tooling/Makefile (Rule 2 checker) \u2014 surfaced while verifying content_browsing layering",
+   "evidence": [
+    {
+     "file": "learning_tracker/Makefile",
+     "line": 378,
+     "quote": "awk -F: '{match($$1, /features\\/([^\\/]+)\\//, a); match($$0, /features\\/([^\\/]+)\\//, b); if(a[1] != b[1]) print}'"
+    },
+    {
+     "file": "learning_tracker/Makefile",
+     "line": 384,
+     "quote": "awk -F: '{match($$1, /features\\/([^\\/]+)\\//, a); match($$0, /features\\/([^\\/]+)\\//, b); if(a[1] != b[1]) print}';"
+    }
+   ],
+   "sites": 2,
+   "why": "match($0, ...) scans the whole `path:line:content` string and returns the FIRST `features/X/` match \u2014 which is always inside the file-path prefix, identical to what match($1, ...) already extracted from the path alone. So a[1] and b[1] are always equal and `if(a[1] != b[1])` never fires, regardless of input. Verified by running the exact pipeline against the live tree: it returns 0 lines. Yet real cross-feature deep imports exist and bypass their feature's providers.dart barrel \u2014 e.g. lib/features/content_browsing/presentation/widgets/hierarchy_selection_panel.dart:14 imports 'package:learning_tracker/features/tracks/setup/domain/entities/add_track_result.dart' directly, and a broader scan turned up 40+ more instances just under lib/features/tracks/. This is a different, more severe problem than the already-documented 'checks 14-15 are warn-only' backlog: check 14 (Rule 1) is warn-only but does enumerate its ~32 known edges every run; check 15 (Rule 2) has never printed a single violation and would stay silent even on a brand-new cross-feature deep import introduced today, so Rule 2 currently has zero live detection, not merely non-blocking detection.",
+   "recommendation": "Fix the second match() to search only the substring after the file path's own feature segment (e.g. split $1 out of $0 first, or anchor the second regex to the import-statement portion of the line only), then re-run and baseline the newly-real violation list the same way check 14 already documents its known edges.",
+   "acceptance_criteria": [
+    "make audit check 15 prints hierarchy_selection_panel.dart:14 (and other live cross-feature deep imports) as WARN output on the current tree.",
+    "A synthetic fixture file with a deliberate cross-feature deep import (not via providers.dart) makes check 15's grep pipeline produce non-empty output; a fixture using only same-feature or providers.dart-barrel imports keeps it silent."
+   ],
+   "labels": [
+    "tooling",
+    "rule-0",
+    "layering",
+    "makefile",
+    "dead-checker"
+   ],
+   "effort": "M"
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-dashboard-p1",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Guard ref.watch/ref.read after in-flight awaits in dashboard_providers.dart (SM-4)",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "SM-4",
+   "area": "learning_tracker/lib/features/dashboard/presentation/providers/dashboard_providers.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/dashboard/presentation/providers/dashboard_providers.dart",
+     "line": 142,
+     "quote": "final track = await db.trackDao.getTrackById(trackId);"
+    },
+    {
+     "file": "learning_tracker/lib/features/dashboard/presentation/providers/dashboard_providers.dart",
+     "line": 155,
+     "quote": "final totalItems = await ref.watch(\n    scopedItemCountProvider(curriculum).future,"
+    },
+    {
+     "file": "learning_tracker/lib/features/dashboard/presentation/providers/dashboard_providers.dart",
+     "line": 323,
+     "quote": "await ref.read(syncWriteFacadeProvider)?.pushGamificationSettingsSnapshot();"
+    },
+    {
+     "file": "learning_tracker/lib/features/dashboard/presentation/providers/dashboard_providers.dart",
+     "line": 439,
+     "quote": "final totalItems = await ref.watch(\n    scopedItemCountProvider(curriculum).future,"
+    }
+   ],
+   "sites": 4,
+   "why": "dashboardTrackCompletionPercentage, dashboardCompletionPercentage, stripStockMilestonesEffect, and dashboardPaceStatus each call ref.watch/ref.read after an earlier await (a Drift DB read) with no ref.mounted check in between. If any of these autoDispose family providers loses its last listener while that DB read is still in flight \u2014 e.g. the user swipes the active-tracks carousel past a card or leaves the dashboard mid-load \u2014 the later ref call throws UnmountedRefException, an uncaught exception inside the async provider body. The same file's dashboardChildNextReward provider (line 343) already guards this exact hazard with `if (!ref.mounted) return null;`, proving the team knows the failure mode; it just isn't applied consistently.",
+   "recommendation": "Add `if (!ref.mounted) return <default>;` immediately after the await that precedes the later ref access in each of the four functions, mirroring the existing guard in dashboardChildNextReward.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "A targeted test that disposes the ProviderContainer (or drops the last listener) mid-await for each of the four providers confirms no UnmountedRefException escapes.",
+    "A grep/lint check for 'ref.watch|ref.read after await without a preceding ref.mounted guard' is added to make audit or riverpod_lint config."
+   ],
+   "labels": [
+    "riverpod",
+    "SM-4",
+    "dashboard",
+    "crash-risk"
+   ]
+  }
+ }
+]

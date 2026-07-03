@@ -1,0 +1,51 @@
+[
+ {
+  "sourceBatch": "t1-feat-progress-p5",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Update recent_activity_overflow_test.dart's hand-copied _AllTimeSummaryRow to match the shipped _AllTimeStatPhrase tile and exercise Hebrew locale",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (assertions/fixtures weaker than what the source can do wrong) + Feathers seam lens",
+   "area": "features/progress (test)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/progress/recent_activity_overflow_test.dart",
+     "line": 81,
+     "quote": "const Expanded(\n  child: _AllTimeStat(value: '128', label: 'Active days'),"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/screens/recent_activity_screen.dart",
+     "line": 453,
+     "quote": "child: _AllTimeStatPhrase(\n  phrase: activeDaysCount == null"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/screens/recent_activity_screen.dart",
+     "line": 523,
+     "quote": "class _AllTimeStatPhrase extends StatelessWidget {"
+    },
+    {
+     "file": "learning_tracker/test/helpers/overflow_harness.dart",
+     "line": 179,
+     "quote": "Locale locale = const Locale('en'),"
+    }
+   ],
+   "sites": 3,
+   "why": "The file's own header says it reproduces 'the *exact* post-fix layout shape' of a Row that has twice overflowed for real (its own docstring: 'pushed the Row wider than the card'). Production's _AllTimeSummaryCard row now renders _AllTimeStatPhrase (a single Center+Text ICU-plural phrase, added for the singular/plural active-days fix) as its first child, but the test's _AllTimeSummaryRow still hand-copies three _AllTimeStat (value+label) tiles and never renders _AllTimeStatPhrase at all -- that widget type is completely unguarded. Compounding it, none of the 3 testWidgets in this file passes locale: Locale('he') to expectNoOverflowAcrossDevices, so it defaults to English; the fixture strings ('Active days', 'Mishnayos with a long curriculum name') are also English stand-ins, not the actual Hebrew ICU-plural phrases or Hebrew curriculum labels that ship in this RTL-first app. A regression in the untested _AllTimeStatPhrase tile at long Hebrew text would reproduce the exact 'RenderFlex overflowed horizontally' bug this file exists to prevent, and this suite would stay green throughout.",
+   "recommendation": "Either mark _AllTimeStat/_AllTimeStatPhrase/_AllTimeSummaryCard (and the siyumim milestone-card Row) @visibleForTesting and import the real widgets instead of hand-copying, or extend the copy to include an _AllTimeStatPhrase-equivalent tile and add a Locale('he') case with realistic long Hebrew phrase/curriculum-name content to the matrix.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "expectNoOverflowAcrossDevices exercises a tile structurally equivalent to production's _AllTimeStatPhrase (single Center+Text, maxLines:2, titleMedium) with a long Hebrew ICU-plural phrase",
+    "at least one case in this file runs with locale: Locale('he') and RTL-length fixture strings",
+    "a comment or lint ties the copied widget tree to its production source so future prod changes are forced to touch this file too"
+   ],
+   "labels": [
+    "testing",
+    "progress",
+    "overflow",
+    "rtl",
+    "hotspot-adjacent"
+   ]
+  }
+ }
+]

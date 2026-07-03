@@ -1,0 +1,44 @@
+[
+ {
+  "sourceBatch": "t1-core-sync-root-p2",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Replace the always-passing FirestoreGatewayImpl permission-denied conversion test with a real assertion",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "EH-2",
+   "area": "core/sync \u2014 firestore_gateway_impl_test.dart group 9",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/sync/firestore_gateway_impl_test.dart",
+     "line": 1675,
+     "quote": "// If we get here, strict rules didn't deny \u2014 skip the assertion.\n        // This is acceptable: the fake may be permissive in CI."
+    },
+    {
+     "file": "learning_tracker/test/core/sync/firestore_gateway_impl_test.dart",
+     "line": 1679,
+     "quote": "} on Exception {\n        // Other exception \u2014 acceptable, the fake may surface it differently."
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/firestore_gateway_impl.dart",
+     "line": 1204,
+     "quote": "} on FirebaseException catch (e) {\n      if (e.code == 'permission-denied') {"
+    }
+   ],
+   "sites": 1,
+   "why": "Group 9's only test wraps fetchPage in try { on FirestorePermissionDeniedException: pass; on Exception: pass; falls through with no throw: also pass }. All three possible outcomes are treated as success, so the test cannot fail no matter what _guardPermission does. Repo-wide grep confirms no other test anywhere constructs a raw FirebaseException(code:'permission-denied') to exercise this conversion \u2014 every other site (sync_orchestrator_test.dart, sy3_sync_error_message_sanitize_test.dart) injects FirestorePermissionDeniedException directly, bypassing the conversion entirely. Yet sync_orchestrator.dart, pull_pipeline.dart (x2), and tutored_pull_service.dart all branch on the resulting typed exception \u2014 a broken e.code=='permission-denied' mapping (e.g. an SDK error-code rename) would silently degrade permission-denied handling everywhere downstream while CI stays green.",
+   "recommendation": "Replace the strict-rules/try-catch-all test with a mocktail interaction mock or hand-rolled fake CollectionReference/Query whose .get() throws a real FirebaseException(plugin:'cloud_firestore', code:'permission-denied'), and assert fetchPage rethrows FirestorePermissionDeniedException specifically (no alternate silently-passing branch).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "New/updated test constructs FirebaseException(code:'permission-denied') via a mock and asserts throwsA(isA<FirestorePermissionDeniedException>()) with no catch-all pass branch",
+    "Deliberately reverting the e.code=='permission-denied' check in firestore_gateway_impl.dart makes the test fail red"
+   ],
+   "labels": [
+    "testing",
+    "sync",
+    "tautological-test",
+    "error-handling"
+   ]
+  }
+ }
+]

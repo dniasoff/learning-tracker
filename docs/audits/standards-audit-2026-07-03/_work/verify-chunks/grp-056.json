@@ -1,0 +1,225 @@
+[
+ {
+  "sourceBatch": "t1-feat-gamification-p2",
+  "findingIndex": 12,
+  "finding": {
+   "title": "Correct streak_event_log.dart's doc comment \u2014 the real unique index is (profileId, dayUtc, eventType), not eventTimestamp",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Evans (ubiquitous language consistency) / AG-8-adjacent (docs must match reality)",
+   "area": "features/gamification/streak",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/gamification/streak/streak_event_log.dart",
+     "line": 3,
+     "quote": "/// The single mutation method is [append]. Idempotency is enforced by\n/// the UNIQUE `(profileId, eventTimestamp, eventType)` index on"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/tables/streak_events.dart",
+     "line": 12,
+     "quote": "@TableIndex(\n  name: 'streak_events_natural_key',\n  columns: {#profileId, #dayUtc, #eventType},"
+    }
+   ],
+   "sites": 1,
+   "why": "The actual Drift table declares the UNIQUE composite as (profileId, dayUtc, eventType) \u2014 eventTimestamp is not part of it, and the table's own doc comment says so explicitly ('two devices writing the same logical day-event collapse to one row'). streak_event_log.dart's code is actually correct (it computes dayUtc from eventTimestamp before inserting), but its doc comment describes a different, wrong key. This class is the write path used by core/sync/merge/streak_event_merger.dart for cross-device streak-event merge \u2014 a maintainer who trusts this comment and 'optimizes' the dedup logic around eventTimestamp instead of dayUtc would break cross-device dedup and silently duplicate streak_events rows on sync, corrupting streak counts.",
+   "recommendation": "Fix the doc comment to say (profileId, dayUtc, eventType), matching core/database/tables/streak_events.dart.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "streak_event_log.dart's doc comment states the same 3 columns as the @TableIndex on StreakEvents."
+   ],
+   "labels": [
+    "docs-drift",
+    "sync",
+    "streak"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-gamification-p2",
+  "findingIndex": 13,
+  "finding": {
+   "title": "Add an accessibility label to RewardConfigHeader's icon-only back button",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AX-3",
+   "area": "features/gamification/presentation/widgets",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/gamification/presentation/widgets/reward_config_header.dart",
+     "line": 39,
+     "quote": "child: IconButton(\n                padding: EdgeInsets.zero,"
+    },
+    {
+     "file": "learning_tracker/lib/features/gamification/presentation/widgets/reward_config_header.dart",
+     "line": 41,
+     "quote": "icon: const Icon(Icons.arrow_back_ios_new_rounded),"
+    }
+   ],
+   "sites": 1,
+   "why": "The back-navigation IconButton has no `tooltip` and the Icon has no semanticLabel, so a screen-reader user (TalkBack/VoiceOver) reaches this control with no announced purpose \u2014 unlike the adjacent PopupMenuButton, which gets a Flutter-provided default tooltip. This is a real, checkable AX-3 gap on a primary navigation control in a screen a parent (potentially using assistive tech) uses to configure rewards.",
+   "recommendation": "Add tooltip: AppLocalizations.of(context)!.<backButtonLabel> (or reuse MaterialLocalizations back-button semantics) to the IconButton.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "A widget test finds a Semantics node with a non-empty label for the back button via find.bySemanticsLabel or tester.getSemantics."
+   ],
+   "labels": [
+    "a11y",
+    "AX-3"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-gamification-p3",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Delete or rewire AchievementUnlockCelebration \u2014 its only trigger has been dead code since DEC-32",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (regression suite must pin reachable behavior) / Fowler speculative generality",
+   "area": "features/gamification/presentation/widgets (achievement_unlock_celebration_test.dart) + features/learning/data, features/content_browsing (context)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/learning/data/repositories/completion_repository_impl.dart",
+     "line": 218,
+     "quote": "newMilestoneUnlocks = const <RewardUnlockRecord>[];"
+    },
+    {
+     "file": "learning_tracker/lib/features/gamification/domain/services/reward_milestone_service.dart",
+     "line": 292,
+     "quote": "return const [];"
+    },
+    {
+     "file": "learning_tracker/lib/features/content_browsing/presentation/screens/text_display_screen.dart",
+     "line": 704,
+     "quote": "if (userMode == ProfileMode.child && newUnlocks.isNotEmpty) {"
+    },
+    {
+     "file": "learning_tracker/test/features/gamification/presentation/widgets/achievement_unlock_celebration_test.dart",
+     "line": 197,
+     "quote": "await tester.pumpWidget(_buildHarness(unlocks: [_makeUnlock()]));"
+    }
+   ],
+   "sites": 1,
+   "why": "DEC-32 replaced the auto-unlock ladder with the spend economy: evaluateUnlocksForTrack/evaluateUnlocksForGlobal are permanent no-ops, and completion_repository_impl.dart's markComplete unconditionally sets newMilestoneUnlocks to an empty list (bulkMarkComplete never produces one at all). text_display_screen.dart:704 is the ONLY caller of showForUnlockedMilestones and its `newUnlocks.isNotEmpty` guard can never be true, so the confetti/party dialog can never render for a real user. achievement_unlock_celebration_test.dart nonetheless spends ~400 of its 575 lines (title, emoji, name interpolation, auto-close timer, in-flight double-tap guard, multi-unlock ordering, RTL) driving that dialog by constructing fake RewardUnlockRecord values directly \u2014 coverage that is 100% green and gives false confidence that milestone celebrations work, whether or not product still wants this UX.",
+   "recommendation": "Confirm product intent: either wire a real trigger (e.g. fire when achievementsOverviewProvider flips a row from locked to unlocked) and replace the harness-only tests with one that drives the real markComplete/achievementsOverviewProvider path, or delete AchievementUnlockCelebration, its call site, and this test file, and record the removal per AG-8.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "Either an integration-level test exists that reaches showForUnlockedMilestones through the real markComplete \u2192 MarkCompletionResult.newMilestoneUnlocks path and observes a non-empty list, or `grep -rn showForUnlockedMilestones lib/` returns no hits after removal.",
+    "docs/coding-standards.md or docs/product-rules.md reflects whichever outcome is chosen (AG-8)."
+   ],
+   "labels": [
+    "dead-code",
+    "test-quality",
+    "gamification",
+    "false-confidence"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-gamification-p3",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Stop testing RewardSaveNoTrack/RewardSaveDuplicateThreshold \u2014 both sealed variants are unreachable post-DEC-32/GA-3",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (tests must exercise the branch they claim) / Fowler speculative generality",
+   "area": "features/gamification/presentation/providers, presentation/screens",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/gamification/presentation/providers/reward_config_controller_test.dart",
+     "line": 231,
+     "quote": "// Manually inject a track into the state so setGlobalReward respects\n      // the parameter. We can do this by mutating state via the notifier's"
+    },
+    {
+     "file": "learning_tracker/test/features/gamification/presentation/providers/reward_config_controller_test.dart",
+     "line": 850,
+     "quote": "test('returns empty list when per-track mode but no track selected', () async {"
+    },
+    {
+     "file": "learning_tracker/test/features/gamification/presentation/providers/reward_config_controller_test.dart",
+     "line": 956,
+     "quote": "isGlobalReward: false,\n          selectedTrackId: null,"
+    },
+    {
+     "file": "learning_tracker/test/features/gamification/presentation/screens/reward_configuration_screen_l1_test.dart",
+     "line": 353,
+     "quote": "saveResult: const RewardSaveDuplicateThreshold(),"
+    }
+   ],
+   "sites": 4,
+   "why": "reward_config_controller.dart's bootstrap() hardcodes `tracks: const []` (comment: 'the form is always global and no track list is loaded'), so RewardForm.usesGlobalLadder is always true and the per-track/no-track-selected code in saveReward() is unreachable; separately, GA-3 removed the duplicate-threshold rejection entirely ('the old RewardSaveDuplicateThreshold result is no longer returned'). Despite that, 3 tests in reward_config_controller_test.dart claim to cover 'allows non-global when tracks is non-empty', 'per-track mode but no track selected', and 'RewardSaveNoTrack' but either exercise the identical tracks-empty branch under a different name or never call saveReward() at all (they assert on a hand-built RewardForm instead); a 4th test in reward_configuration_screen_l1_test.dart renders UI for a RewardSaveDuplicateThreshold result the real controller can never produce. A future revert or refactor that mangles these dead branches would ship with zero real regression coverage despite the suite appearing to test exactly that.",
+   "recommendation": "Remove the dead tracks/selectedTrackId/RewardSaveNoTrack/RewardSaveDuplicateThreshold machinery (and the screen's switch arm for it) now that DEC-32/GA-3 are final, deleting these 4 tests with it; or if per-track rewards are coming back, rewrite the tests to actually seed RewardForm.tracks through a real bootstrap path.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "`grep -rn \"RewardSaveNoTrack\\|RewardSaveDuplicateThreshold\" lib/` returns no hits after cleanup, or a new test drives RewardForm.tracks non-empty via the real controller and asserts the branch.",
+    "No test in reward_config_controller_test.dart asserts on a hand-constructed RewardForm as a substitute for calling the notifier method the test's group() claims to cover."
+   ],
+   "labels": [
+    "dead-code",
+    "test-quality",
+    "gamification"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-gamification-p3",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Close every in-memory Drift UserDatabase created by gamification test factories",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6 hermetic tests / drift_memory.dart's own documented contract",
+   "area": "features/gamification test helpers (4 files)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/gamification/presentation/providers/reward_config_controller_test.dart",
+     "line": 58,
+     "quote": "final db = inMemoryDb();"
+    },
+    {
+     "file": "learning_tracker/test/features/gamification/presentation/screens/reward_configuration_screen_l1_test.dart",
+     "line": 137,
+     "quote": "final db = inMemoryDb();"
+    },
+    {
+     "file": "learning_tracker/test/features/gamification/presentation/screens/child_redemption_screen_l1_test.dart",
+     "line": 108,
+     "quote": "final database = db ?? inMemoryDb();"
+    },
+    {
+     "file": "learning_tracker/test/features/gamification/presentation/screens/child_redemption_screen_l1_test.dart",
+     "line": 161,
+     "quote": "final database = inMemoryDb();"
+    },
+    {
+     "file": "learning_tracker/test/features/gamification/presentation/widgets/achievement_unlock_celebration_test.dart",
+     "line": 88,
+     "quote": "final db = createTestUserDatabase();"
+    },
+    {
+     "file": "learning_tracker/test/features/gamification/presentation/widgets/achievement_unlock_celebration_test.dart",
+     "line": 272,
+     "quote": "final db = createTestUserDatabase();"
+    },
+    {
+     "file": "learning_tracker/test/features/gamification/presentation/widgets/achievement_unlock_celebration_test.dart",
+     "line": 297,
+     "quote": "final db2 = createTestUserDatabase();"
+    }
+   ],
+   "sites": 7,
+   "why": "test/helpers/drift_memory.dart documents: 'Callers MUST await db.close() in tearDown to free the native resources.' These 7 factory call sites (used by ~1041+709+9+3 individual test invocations respectively) never do, so every test run leaves a live FFI-backed sqlite3 in-memory connection open until the file's isolate exits. 6 other files in this same batch (child_redemption_balance_reactive_test.dart, child_redemption_rewards_staleness_test.dart, pending_redemptions_reactive_test.dart, parent_pending_redemptions_screen_l1_test.dart, r_ga2_...test.dart, and 7 of 9 sites in child_redemption_screen_l1_test.dart) follow the contract correctly, proving it's practical here and making the gap inconsistent rather than structural.",
+   "recommendation": "Route each factory through addTearDown(db.close) (or the setUp/tearDown pattern parent_pending_redemptions_screen_l1_test.dart already uses correctly) so every inMemoryDb()/createTestUserDatabase() call in this feature is closed.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep-based Rule-0 checker: every `inMemoryDb()`/`createTestUserDatabase()` call site under test/ has a matching close() reachable from the same scope.",
+    "The 7 cited call sites each gain an addTearDown(..., .close) or equivalent."
+   ],
+   "labels": [
+    "hygiene",
+    "test-quality",
+    "resource-leak"
+   ]
+  }
+ }
+]

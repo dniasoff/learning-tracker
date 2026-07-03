@@ -1,0 +1,48 @@
+[
+ {
+  "sourceBatch": "t1-feat-onboarding-p2",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Localize auth_validators.dart's hardcoded English error messages via AppLocalizations",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "EH-5, AX-2",
+   "area": "onboarding/domain/validators",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/onboarding/domain/validators/auth_validators.dart",
+     "line": 10,
+     "quote": "return 'Email is required';"
+    },
+    {
+     "file": "learning_tracker/lib/features/onboarding/domain/validators/auth_validators.dart",
+     "line": 14,
+     "quote": "return 'Please enter a valid email address';"
+    },
+    {
+     "file": "learning_tracker/lib/features/onboarding/domain/validators/auth_validators.dart",
+     "line": 25,
+     "quote": "return 'Password must be at least 6 characters';"
+    },
+    {
+     "file": "learning_tracker/test/features/onboarding/domain/validators/auth_validators_test.dart",
+     "line": 18,
+     "quote": "expect(validateEmail(null), 'Email is required');"
+    }
+   ],
+   "sites": 5,
+   "why": "signup_screen.dart and sign_in_screen.dart call these validators directly on the account-creation form. A Hebrew-locale user sees raw English 'Email is required' / 'Password must be at least 6 characters' on one of the very first screens of the app instead of a translated message. auth_validators_test.dart and account_creation_validation_test.dart both assert these exact English literals as the correct return value, so a future ARB-based fix must touch both test files in the same change or they go red for the right reason.",
+   "recommendation": "Add ARB keys (authEmailRequired, authEmailInvalid, authPasswordRequired, authPasswordTooShort, authDisplayNameRequired) to app_en.arb/app_he.arb; change the validators to resolve through AppLocalizations (or return a stable error-code enum resolved to text at the call site); update auth_validators_test.dart and account_creation_validation_test.dart to assert localized output per locale.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "A regression test pumps the sign-up/sign-in form in Locale('he') and asserts the Hebrew validation string renders (mirroring bulk_mark_screen_test.dart's 'title and heading are localized in Hebrew locale' pattern)",
+    "No literal English message string is returned directly from validateEmail/validatePassword/validateDisplayName"
+   ],
+   "labels": [
+    "i18n",
+    "onboarding",
+    "auth"
+   ]
+  }
+ }
+]

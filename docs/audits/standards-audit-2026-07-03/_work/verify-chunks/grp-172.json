@@ -1,0 +1,281 @@
+[
+ {
+  "sourceBatch": "t4-docs-triage-p3",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Propagate the Epic-20-canceled banner to dashboard-redesign-set pages 01-07 (currently read as ready-to-build)",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Tier-4 triage AREA NOTE \u2014 presents-as-current classification; egregious contradiction with reality",
+   "area": "docs/scenarios/dashboard-redesign-set",
+   "evidence": [
+    {
+     "file": "docs/scenarios/dashboard-redesign-set/dashboard-redesign/00-scenario-overview.md",
+     "line": 3,
+     "quote": "Epic 20 (DNI-210) was canceled 2026-04-15 (all 12 child stories) ... the dashboard UI redesign specified in this set is **not shipped**."
+    },
+    {
+     "file": "docs/scenarios/dashboard-redesign-set/dashboard-redesign/01-dashboard.md",
+     "line": 1,
+     "quote": "# 01 \u2014 Dashboard"
+    },
+    {
+     "file": "docs/scenarios/dashboard-redesign-set/dashboard-redesign/06-progress-screen.md",
+     "line": 1,
+     "quote": "# 06 \u2014 Progress Screen"
+    },
+    {
+     "file": "docs/planning/epics.md",
+     "line": 653,
+     "quote": "**DNI-211** \u2014 20.1: Schema Definition \u2014 trackId on 7 Config Tables + paceResetDate *(Canceled)*"
+    }
+   ],
+   "sites": 7,
+   "why": "Files 01 through 07 read as fully-approved, implementation-ready specs (dp-level layout tables, real Riverpod provider names, Dart variant-selection snippets, acceptance checklists all ticked [x]) with zero mention that Epic 20/DNI-210's 12 stories are Canceled \u2014 that fact lives only in the sibling 00-scenario-overview.md. An engineer or agent opening 01-dashboard.md, 06-progress-screen.md, or 07-track-detail.md directly (search, or a 'build the dashboard redesign' request) has no signal to check 00 first and could sink real implementation effort into a design the project has already dropped in favor of the Greenfield Rebuild (Epics 24-27, all still Backlog).",
+   "recommendation": "Copy the same one-line cancellation banner from 00-scenario-overview.md:3 to the top of 01-dashboard.md, 02-card-program.md, 03-card-deadline.md, 04-card-velocity.md, 05-card-momentum.md, 06-progress-screen.md, and 07-track-detail.md \u2014 matching the pattern already applied consistently across all 19 files in docs/scenarios/evolution/.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Each of the 7 page-spec files under docs/scenarios/dashboard-redesign-set/dashboard-redesign/ (01 through 07) opens with a banner stating Epic 20/DNI-210 was canceled and the design is unshipped, matching 00-scenario-overview.md:3.",
+    "grep -L 'canceled' docs/scenarios/dashboard-redesign-set/dashboard-redesign/*.md returns none of 01-07 once fixed."
+   ],
+   "labels": [
+    "docs",
+    "tier4-triage",
+    "canceled-epic",
+    "P2"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t4-docs-triage-p3",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Reconcile stale backlog/implementation-ready language in docs/scenarios/evolution/README.md with its own OBSOLETE banner",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Tier-4 triage AREA NOTE \u2014 internal doc self-consistency for a point-in-time artifact",
+   "area": "docs/scenarios/evolution",
+   "evidence": [
+    {
+     "file": "docs/scenarios/evolution/README.md",
+     "line": 1,
+     "quote": "> **OBSOLETE \u2014 superseded 2026-05-19.** ... is **not being implemented**."
+    },
+    {
+     "file": "docs/scenarios/evolution/README.md",
+     "line": 9,
+     "quote": "status: backlog"
+    },
+    {
+     "file": "docs/scenarios/evolution/README.md",
+     "line": 22,
+     "quote": "> Use these docs as the implementation-ready spec when Epic 22 work starts."
+    }
+   ],
+   "sites": 1,
+   "why": "Line 1 says the design is obsolete and not being implemented, but the frontmatter (line 9) still claims `status: backlog` and line 22 tells the reader to treat the set as 'implementation-ready ... when Epic 22 work starts' \u2014 implying a future implementation that docs/linear-status.md confirms will not happen (Epic 22/DNI-255: all 22 stories Canceled). Risk is low only because the unambiguous top banner reads first; a reader skimming past line 1 into the frontmatter or body could still conclude Epic 22 is merely queued rather than abandoned.",
+   "recommendation": "Delete or rewrite the frontmatter `status: backlog` field and the line-22 'implementation-ready spec... when Epic 22 work starts' sentence so the whole file agrees with its own line-1 OBSOLETE/superseded banner.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "docs/scenarios/evolution/README.md contains no `status: backlog` or 'when Epic 22 work starts' language.",
+    "The file's frontmatter and body both agree with its own line-1 OBSOLETE/superseded banner."
+   ],
+   "labels": [
+    "docs",
+    "tier4-triage",
+    "internal-inconsistency",
+    "P3"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t4-docs-triage-p3",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Update or disclaim docs/scenarios/stitch-prompts/{03-mode-selection,04-curriculum-selection,06-dashboard}.md \u2014 describe a product IA the shipped app doesn't have",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Tier-4 triage AREA NOTE \u2014 presents-as-current classification; egregious contradiction with reality",
+   "area": "docs/scenarios/stitch-prompts",
+   "evidence": [
+    {
+     "file": "docs/scenarios/stitch-prompts/03-mode-selection.md",
+     "line": 4,
+     "quote": "First onboarding screen where user selects their learning mode (Self-Learner, Parent, or Tutor)."
+    },
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/steps/onboarding_profile_creation_step.dart",
+     "line": 356,
+     "quote": "title: AppLocalizations.of(context)!.childModeCardTitle,"
+    },
+    {
+     "file": "docs/scenarios/stitch-prompts/04-curriculum-selection.md",
+     "line": 37,
+     "quote": "3. **Curriculum Cards (5 Scrollable Cards)**"
+    },
+    {
+     "file": "learning_tracker/lib/core/enums/curriculum_id.dart",
+     "line": 16,
+     "quote": "enum CurriculumId {"
+    },
+    {
+     "file": "docs/scenarios/stitch-prompts/06-dashboard.md",
+     "line": 126,
+     "quote": "- 5 navigation items"
+    },
+    {
+     "file": "learning_tracker/lib/app/router/app_shell.dart",
+     "line": 298,
+     "quote": "(icon: Icons.space_dashboard_rounded, label: l10n.tabBarDashboard),"
+    }
+   ],
+   "sites": 3,
+   "why": "These prompts are literal AI-image-generation inputs for the WDS/Stitch design workflow (docs/index.md calls the folder 'AI-generated UI design prompts'; see the bmad-wds-stitch-generation skill) \u2014 their whole purpose is to be re-run to produce mockups. Three of them describe a product model the app doesn't have: onboarding mode selection is framed as Self-Learner/Parent/Tutor here vs. the actual child/adult-per-profile choice in code; curriculum selection lists exactly 5 curricula ('5 Scrollable Cards') vs. the real 9-value CurriculumId enum (missing Nach, Tanach, Mishneh Torah, Mussar); and the dashboard bottom nav lists 5 tabs (Home/Browse/Progress/Calendar/More) vs. the real 4-tab app_shell.dart (Dashboard/Learn/Progress/Settings). Unlike every file in the dashboard-redesign-set and evolution-set, none of the 7 stitch-prompts carry any staleness/inspiration-only disclaimer, so re-running them today would generate polished mockups for the wrong information architecture.",
+   "recommendation": "Update 03-mode-selection.md, 04-curriculum-selection.md, and 06-dashboard.md to match the current onboarding (child/adult mode), the full 9-curriculum roster, and the real 4-tab nav \u2014 or add a one-line 'early concept, not current IA' disclaimer to the whole stitch-prompts set the way dashboard-redesign-set and evolution/ already do.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "03-mode-selection.md describes child/adult mode selection, or is explicitly marked as a superseded early concept.",
+    "04-curriculum-selection.md's curriculum list matches lib/core/enums/curriculum_id.dart (9 values), or is marked non-exhaustive/example-only.",
+    "06-dashboard.md's bottom-nav section matches lib/app/router/app_shell.dart (4 tabs: Dashboard, Learn, Progress, Settings), or is marked as an earlier concept."
+   ],
+   "labels": [
+    "docs",
+    "tier4-triage",
+    "design-prompt",
+    "P2"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t4-docs-triage-p4",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Reconcile docs/status/sprint-status.yaml (and linear-mapping.yaml) with Epic 18's cancellation in Linear",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Tier-4 triage protocol (presents-as-current drift check); adjacent to AG-8 (paired docs stay in sync with reality)",
+   "area": "docs/status",
+   "evidence": [
+    {
+     "file": "docs/status/sprint-status.yaml",
+     "line": 173,
+     "quote": "epic-18: in-progress"
+    },
+    {
+     "file": "docs/status/sprint-status.yaml",
+     "line": 174,
+     "quote": "18-1-extract-reusable-add-track-flow: review"
+    },
+    {
+     "file": "docs/linear-status.md",
+     "line": 85,
+     "quote": "18 \u2014 Onboarding & Track Management Overhaul | Superseded by E24\u2013E26; all stories now Canceled"
+    },
+    {
+     "file": "docs/linear-status.md",
+     "line": 168,
+     "quote": "DNI-166 | 18.1: Extract Reusable Add Track Flow (\u05d4\u05d5\u05e1\u05e4\u05ea \u05de\u05e1\u05dc\u05d5\u05dc) | Canceled"
+    },
+    {
+     "file": "docs/status/linear-mapping.yaml",
+     "line": 9,
+     "quote": "sync_timestamp: \"2026-03-12T20:23:00Z\""
+    },
+    {
+     "file": "docs/status/linear-mapping.yaml",
+     "line": 87,
+     "quote": "epic-16:"
+    },
+    {
+     "file": "docs/stories/implementation/18-3-track-management-hub.md",
+     "line": 3,
+     "quote": "Status: review"
+    }
+   ],
+   "sites": 14,
+   "why": "docs/linear-status.md itself calls sprint-status.yaml 'the machine-readable source of truth \u2014 if the two disagree, trust the YAML' (line 17), and three BMAD skills confirmed via repo grep (bmad-dev-story, bmad-create-story, bmad-sprint-planning) parse sprint-status.yaml as the literal queue of ready-for-dev/in-progress work for AI dev agents. Trusting it today means believing the 12-story Epic-18 Add-Track-Flow overhaul is still active review work, when Linear canceled all of it (DNI-166/167/168/176 confirmed by name) months ago in favor of the Epic 24-26 Greenfield Rebuild. linear-mapping.yaml compounds this: its own header says 'DO NOT edit manually - managed by BMAD workflows' but its sync_timestamp is 2026-03-12 and it stops at epic-16, silently omitting epics 18/19/21/25 that now exist as story files on disk. An agent or contributor picking up 'ready' work from these files risks reviving canceled scope or reviewing already-abandoned UI (AddTrackFlow/TrackManagementHubScreen).",
+   "recommendation": "Update sprint-status.yaml's epic-18 block and its 12 story entries to `canceled` (matching Linear), or add a header note pointing readers to docs/linear-status.md as authoritative for epics >=18. Regenerate linear-mapping.yaml via `tool/linear-sync.sh sync` (`make linear-sync`) so it covers epics 18/19/21/25, or mark it explicitly deprecated in favor of docs/linear-status.md. Wire the existing `tool/linear-sync.sh check` (`make linear-check`, already in the Makefile) into CI/`make audit` so a sprint-status.yaml/Linear divergence fails the build instead of silently drifting for months; the bmad-sprint-status skill already has an unused staleness check (.agents/skills/bmad-sprint-status/SKILL.md:153, 'last_updated timestamp is more than 7 days old') that would have caught this if run.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "sprint-status.yaml epic-18 block and all 12 story statuses match Linear's actual (Canceled) state, or the file carries an explicit pointer to docs/linear-status.md for epics >=18.",
+    "linear-mapping.yaml is regenerated to include epics 18/19/21/25 or is marked frozen/deprecated with a dated header explaining why it stops at epic-16.",
+    "`make linear-check` runs in CI or `make audit` and fails non-zero when sprint-status.yaml diverges from the Linear cache."
+   ],
+   "labels": [
+    "docs",
+    "process-drift",
+    "sprint-status",
+    "bmad-automation"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t4-docs-triage-p4",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Correct sprint-status.yaml's false 'done' marking on 10 Epic-19 stories \u2014 confirmed unimplemented cleanup in story 19-10",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Tier-4 triage protocol (presents-as-current drift check)",
+   "area": "docs/status + docs/stories/implementation",
+   "evidence": [
+    {
+     "file": "docs/status/sprint-status.yaml",
+     "line": 200,
+     "quote": "19-10-navigation-state-cleanup: done"
+    },
+    {
+     "file": "docs/stories/implementation/19-10-navigation-state-cleanup.md",
+     "line": 3,
+     "quote": "Status: ready-for-dev"
+    },
+    {
+     "file": "docs/stories/implementation/19-10-navigation-state-cleanup.md",
+     "line": 375,
+     "quote": "_To be filled during implementation_"
+    },
+    {
+     "file": "learning_tracker/lib/features/content_browsing/presentation/providers/text_display_providers.dart",
+     "line": 59,
+     "quote": "TextDownloadService textDownloadService(Ref ref) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/content_browsing/presentation/providers/cloud_content_providers.dart",
+     "line": 20,
+     "quote": "TextDownloadStatusDao contentDownloadStatusDaoProvider(Ref ref) {"
+    },
+    {
+     "file": "docs/status/sprint-status.yaml",
+     "line": 191,
+     "quote": "19-2-two-database-split: done"
+    },
+    {
+     "file": "docs/stories/implementation/19-2-two-database-split.md",
+     "line": 3,
+     "quote": "Status: ready-for-dev"
+    },
+    {
+     "file": "docs/status/sprint-status.yaml",
+     "line": 47,
+     "quote": "1-1-initialize-flutter-project-and-directory-structure: done"
+    }
+   ],
+   "sites": 12,
+   "why": "sprint-status.yaml marks 10 of the 11 Epic-19 story files in this batch (19-2, 19-2b, 19-3, 19-4, 19-5, 19-6, 19-7, 19-10, 19-11, 19-12) 'done', but every one of those files itself shows 0 checked tasks and a template Dev Agent Record ('_To be filled during implementation_') rather than the file-list/completion-notes pattern every Epic-18 and story 19-1/16-1 file has. For story 19-10 this is not just a stale doc: its AC-4 required deleting TextDownloadService, the text_download_status_dao.dart/table, and cloud_content_providers.dart \u2014 all three are still present and actively wired into live Riverpod providers today (cloud_content_providers.dart even carries a 'Retained for potential future use' comment). The identically-named story 1-1 shows the same pattern for Epic 1 (file says ready-for-dev/blank Dev Agent Record; tracker says done) and additionally the on-disk filename doesn't match the slug sprint-status.yaml and linear-mapping.yaml reference (`...with-architecture-foundations` vs `...and-directory-structure`), so a script matching by slug would 404 on it. Anyone treating sprint-status.yaml as ground truth (the BMAD dev-story workflow explicitly does) has no way to discover this outstanding cleanup work.",
+   "recommendation": "For each flagged story, either back-fill the Status header and Dev Agent Record with real completion evidence matching the shipped code, or correct sprint-status.yaml to the true status. Start with 19-10: verify its AC-4 against the live tree (confirmed still-present: TextDownloadService, text_download_status_dao.dart/table, cloud_content_providers.dart) and either finish the deletions or record why they're intentionally retained, then fix its sprint-status.yaml entry. Add a cheap grep-diff checker under tool/ that flags any docs/stories/implementation/*.md whose sprint-status.yaml entry is `done` while its own `Status:` header is `ready-for-dev` (uncaught today because nothing runs the reconciliation this batch performed manually).",
+   "effort": "M",
+   "acceptance_criteria": [
+    "Each of the 10 flagged Epic-19 story files has a Status header and Dev Agent Record consistent with actual repo state, or sprint-status.yaml is corrected to match.",
+    "Story 19-10's AC-4 is re-verified against learning_tracker/lib/: TextDownloadService, text_download_status_dao.dart/table, and cloud_content_providers.dart are either removed or their retention is explicitly justified, and sprint-status.yaml is updated accordingly.",
+    "A Rule-0 checker (tool/ script, runnable in CI) fails when a story file's own Status header disagrees with sprint-status.yaml's status for the same story key."
+   ],
+   "labels": [
+    "docs",
+    "process-drift",
+    "sprint-status",
+    "dead-code",
+    "epic-19"
+   ]
+  }
+ }
+]

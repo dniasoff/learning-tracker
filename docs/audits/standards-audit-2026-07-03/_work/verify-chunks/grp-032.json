@@ -1,0 +1,208 @@
+[
+ {
+  "sourceBatch": "t1-core-sync-providers",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Add error handling and logging to resetFirestoreNetwork's disable/enable sequence in firestore_instance_provider.dart",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Nygard-lens: unguarded I/O fails halfway",
+   "area": "learning_tracker/lib/core/sync/providers/firestore_instance_provider.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/sync/providers/firestore_instance_provider.dart",
+     "line": 30,
+     "quote": "Future<void> resetFirestoreNetwork() async {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/providers/firestore_instance_provider.dart",
+     "line": 32,
+     "quote": "await fs.disableNetwork();\n  await fs.enableNetwork();"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/lifecycle_observer.dart",
+     "line": 147,
+     "quote": "final reset = resetFirestoreNetwork;\n      if (reset != null) await reset();"
+    }
+   ],
+   "sites": 1,
+   "why": "resetFirestoreNetwork disables then re-enables the Firestore network with no try/catch and no AppLogger call. If enableNetwork() throws after disableNetwork() succeeds (plugin channel error, terminated instance, or exactly the flaky-network condition this function exists to recover from), the network is left force-disabled with no automatic retry and zero diagnostic trail. The connectivity-trigger caller in sync_orchestrator.dart (line ~611) does wrap this in try/catch+log, but the lifecycle/foreground-resume caller in lifecycle_observer.dart:147-148 does not \u2014 an exception there aborts the rest of the resume sequence (redetectTimezone, invalidateSacredCache, triggerPull) as an unhandled async error, silently skipping the resume pull.",
+   "recommendation": "Wrap the disable/enable pair in try/catch inside resetFirestoreNetwork itself (so every caller gets the protection for free), log failures via AppLogger with a stable event code, and consider a bounded retry for enableNetwork() specifically so a mid-sequence failure doesn't leave the channel permanently disabled.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "resetFirestoreNetwork catches and logs failures from disableNetwork()/enableNetwork() instead of letting them propagate unhandled.",
+    "Unit test: stub FirebaseFirestore so enableNetwork() throws after disableNetwork() succeeds; assert the exception is caught/logged and does not abort the lifecycle-resume sequence (timezone redetect, sacred-cache invalidation, resume pull still run)."
+   ],
+   "labels": [
+    "sync",
+    "nygard",
+    "error-handling",
+    "connectivity"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-sync-providers",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Resolve outboxProcessor lazily in syncOrchestratorProvider instead of capturing it by value",
+   "severity": "P2",
+   "confidence": "SUSPECTED",
+   "rule": "SM-6 lazy-resolver consistency / Nygard-lens: stale capture across DB swap",
+   "area": "learning_tracker/lib/core/sync/providers/sync_orchestrator_providers.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/sync/providers/sync_orchestrator_providers.dart",
+     "line": 129,
+     "quote": "final outboxProcessor = ref.read(outboxProcessorProvider);"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/providers/sync_orchestrator_providers.dart",
+     "line": 160,
+     "quote": "outboxProcessor: outboxProcessor,"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/providers/sync_orchestrator_providers.dart",
+     "line": 164,
+     "quote": "resolveOutboxDao: () => ref.read(userDatabaseProvider).outboxDao,"
+    }
+   ],
+   "sites": 1,
+   "why": "Every other volatile build-time dependency in this same constructor call (gateway, merge router, outbox DAO, identity status) is deliberately passed as a lazy `() => ref.read(...)` resolver specifically \u2014 per the inline comments at lines 136-137, 161-163 \u2014 'so a DB swap (multi-account flow) is picked up without rebuilding the orchestrator singleton.' outboxProcessor is the one exception: it's read once (line 129) and stored as a plain value field. outboxProcessorProvider (outbox_providers.dart) watches userDatabaseProvider and rebuilds on a DB swap; database_provider.dart confirms userDatabaseProvider swaps via the independently-mutable accountDbFileNameProvider, decoupled from authStateProvider (the only thing syncOrchestratorProvider itself watches). If a DB swap can occur without authStateProvider's watched value also changing in the same tick, the orchestrator keeps draining through an OutboxProcessor bound to the pre-swap, superseded UserDatabase/outboxDao while its other lazily-resolved collaborators (gateway, merge router) may already be pointing at the new account \u2014 a split-identity state. Confirming this needs tracing whether the app's account-switch flow (account_actions.dart) can complete a DB swap before authStateProvider's emitted value settles to the new account.",
+   "recommendation": "Change the outboxProcessor parameter to a lazy `resolveOutboxProcessor: () => ref.read(outboxProcessorProvider)` resolver, matching resolveGateway/resolveMergeRouter/resolveOutboxDao, so it can't go stale relative to its siblings.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "syncOrchestratorProvider resolves outboxProcessor via a lazy resolver rather than a captured value.",
+    "Regression/integration test: trigger a userDatabaseProvider swap while syncOrchestratorProvider stays alive (authState unchanged) and assert the next drain operates against the new outboxDao's pending rows, not the pre-swap instance."
+   ],
+   "labels": [
+    "sync",
+    "riverpod",
+    "multi-account",
+    "nygard"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-sync-providers",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Delete the dead duplicate syncStatusStreamProvider/syncStatusProvider in features/sync/presentation/providers/sync_providers.dart and fix the false 'delegates here' comment in sync_status_providers.dart",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-4 duplicate top-level symbol names / dead code",
+   "area": "learning_tracker/lib/core/sync/providers/sync_status_providers.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/sync/providers/sync_status_providers.dart",
+     "line": 18,
+     "quote": "UI can watch this directly; [syncStatusProvider] in sync_providers.dart\n/// also delegates here."
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/providers/sync_status_providers.dart",
+     "line": 20,
+     "quote": "final syncStatusStreamProvider = StreamProvider<SyncStatus>((ref) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/sync/presentation/providers/sync_providers.dart",
+     "line": 25,
+     "quote": "final syncStatusStreamProvider = StreamProvider<SyncStatus>((ref) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/sync/presentation/providers/sync_providers.dart",
+     "line": 47,
+     "quote": "final syncStatusProvider = Provider<SyncStatus>((ref) {"
+    }
+   ],
+   "sites": 1,
+   "why": "sync_status_providers.dart:17-19 and :34-36 both assert that sync_providers.dart's syncStatusProvider 'delegates here.' It doesn't: sync_providers.dart independently re-declares both syncStatusStreamProvider and syncStatusProvider with character-for-character identical bodies (same orchestrator watch, same late-subscriber loading-state workaround, same error mapping), under the same names. Grepping every consumer of these two symbol names across lib/ shows dashboard_screen.dart, backup_sync_section.dart and sync_status_indicator.dart all import exclusively from core/sync/providers/sync_status_providers.dart; nothing anywhere imports or references the copy in sync_providers.dart. It is fully dead code with a misleading doc comment, and it demonstrates the exact shotgun-surgery risk duplication creates: the 'late subscriber to a broadcast stream' loading-state fix (the loop-iter2/orchestrator.currentStatus fallback) had to be applied to both copies in parallel, and nothing prevents the next fix from being applied to only one.",
+   "recommendation": "Delete syncStatusStreamProvider/syncStatusProvider from features/sync/presentation/providers/sync_providers.dart (confirmed zero production consumers); any future consumer should import core/sync/providers/sync_status_providers.dart directly. Correct or remove the 'also delegates here' comment once the duplicate is gone.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "features/sync/presentation/providers/sync_providers.dart no longer defines syncStatusStreamProvider or syncStatusProvider.",
+    "grep -rn 'final syncStatusStreamProvider\\|final syncStatusProvider' lib/ returns exactly one definition site each.",
+    "flutter analyze and the existing sync-status widget tests (sync_status_indicator_l1_test.dart, backup_sync_section_l1_test.dart, sync_status_provider_loading_state_test.dart) still pass unchanged."
+   ],
+   "labels": [
+    "dead-code",
+    "duplication",
+    "riverpod",
+    "AG-4"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-sync-providers",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Add a ref.mounted check after the await in resolveOwnerAccountIdForWipe (tutored_pull_providers.dart)",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "SM-4",
+   "area": "learning_tracker/lib/core/sync/providers/tutored_pull_providers.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/sync/providers/tutored_pull_providers.dart",
+     "line": 189,
+     "quote": "final rows = await db.userProfileDao.getAllUserProfiles();"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/providers/tutored_pull_providers.dart",
+     "line": 192,
+     "quote": "return ref.read(currentAccountIdProvider);"
+    }
+   ],
+   "sites": 1,
+   "why": "resolveOwnerAccountIdForWipe(Ref ref) awaits a DB query and then, on the fallback path, calls ref.read(currentAccountIdProvider) with no ref.mounted guard in between. Per SM-4/Riverpod 3, if the provider or notifier that owns this `ref` is disposed while the getAllUserProfiles() query is in flight (e.g. the reconcile fires during a sign-out or account switch that tears down the owning provider), this throws an uncaught UnmountedRefException from inside a bare async function with no surrounding try/catch at this call site.",
+   "recommendation": "Add `if (!ref.mounted) return <safe fallback, e.g. -1 or rethrow a typed error>;` immediately after the awaited query, before the ref.read(currentAccountIdProvider) fallback.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "resolveOwnerAccountIdForWipe checks ref.mounted before any post-await ref access.",
+    "Regression test: dispose the owning container/provider during the awaited DB call and assert no UnmountedRefException escapes uncaught."
+   ],
+   "labels": [
+    "riverpod",
+    "SM-4",
+    "async"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-sync-providers",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Wire the tested D18 tutored-mirror-wipe fix (resolveOwnerAccountIdForWipe / wipeRevokedMirrors) into the real incoming-grants reconcile path, or delete it",
+   "severity": "P2",
+   "confidence": "SUSPECTED",
+   "rule": "AG-6 dead code / Evans: invariant re-derived instead of enforced once",
+   "area": "learning_tracker/lib/core/sync/providers/tutored_pull_providers.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/sync/providers/tutored_pull_providers.dart",
+     "line": 169,
+     "quote": "/// D18 fix: resolve the owning account id directly from the [accounts] table"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/providers/tutored_pull_providers.dart",
+     "line": 187,
+     "quote": "Future<int> resolveOwnerAccountIdForWipe(Ref ref) async {"
+    }
+   ],
+   "sites": 1,
+   "why": "resolveOwnerAccountIdForWipe exists solely to feed TutoredMirrorWipeService.wipeRevokedMirrors the tutor's real accounts.id instead of currentAccountIdProvider, which the docstring and test/sync/tutored_wipe_wrong_id_test.dart both claim 'during an active TUTORED session can resolve to the talmid's learner_profiles.id,' causing a revoked tutor's mirrored talmid data to silently survive (a real child-privacy concern if true). Grepping lib/ and test/ shows resolveOwnerAccountIdForWipe and wipeRevokedMirrors have zero callers anywhere except that one regression test \u2014 the fix was built and unit-tested but never wired into production. The actual revoke-reconcile path that runs today (incomingTutorGrantsProvider in features/tutoring/presentation/providers/manage_tutors_providers.dart:97/109) instead reconciles via `ref.watch(currentAccountIdProvider)` directly plus a per-grant wipeMirrorForGrant loop \u2014 the exact pattern the D18 docstring calls unsafe. Tracing currentAccountIdProvider (profile_providers.dart) and AuthStateNotifier (auth_state_provider.dart) shows currentUser is derived purely from the live Firebase uid + accounts/user_profiles lookup, with no dependency on activeProfileIdProvider or tutored-session selection \u2014 so the documented failure mode may no longer be reachable, meaning the D18 docstring/test could simply be stale. Either way, the tested fix and the shipped code have diverged and nobody has reconciled them.",
+   "recommendation": "Determine whether incomingTutorGrantsProvider's currentAccountIdProvider-based reconcile is actually safe now (it appears to be, since currentAccountIdProvider no longer varies with tutored-session state). If safe, delete resolveOwnerAccountIdForWipe/wipeRevokedMirrors and retire or rewrite tutored_wipe_wrong_id_test.dart to test the real path. If not safe (i.e. there's a code path where currentAccountIdProvider does vary during a tutored session), call resolveOwnerAccountIdForWipe from incomingTutorGrantsProvider instead of its current inline resolution.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "Either incomingTutorGrantsProvider routes through resolveOwnerAccountIdForWipe/wipeRevokedMirrors, or resolveOwnerAccountIdForWipe and wipeRevokedMirrors are deleted along with their now-inaccurate docstrings.",
+    "grep -rn 'resolveOwnerAccountIdForWipe\\|wipeRevokedMirrors(' outside test/ is non-empty if kept, or the symbols no longer exist if removed.",
+    "tutored_wipe_wrong_id_test.dart is updated to exercise whichever path is actually shipped."
+   ],
+   "labels": [
+    "dead-code",
+    "tutoring",
+    "privacy",
+    "AG-6"
+   ]
+  }
+ }
+]

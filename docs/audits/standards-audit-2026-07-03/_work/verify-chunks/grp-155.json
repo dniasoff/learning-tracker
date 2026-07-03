@@ -1,0 +1,187 @@
+[
+ {
+  "sourceBatch": "t2-build-ci-guardrails",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Refresh learning_tracker/dart_test.yaml's stale tag registry",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-1 (tooling hygiene) / Rule 0",
+   "area": "test tooling",
+   "evidence": [
+    {
+     "file": "learning_tracker/dart_test.yaml",
+     "line": 2,
+     "quote": "# Prevents \"unknown tag\" warnings when running flutter test --tags."
+    },
+    {
+     "file": "learning_tracker/dart_test.yaml",
+     "line": 21,
+     "quote": "  epic_16:"
+    }
+   ],
+   "sites": 1,
+   "why": "Comparing every tag declared in dart_test.yaml against every tag actually used via `@Tags([...])`/`tags: [...]` across learning_tracker/test/ (`comm -23` on the two sorted sets) shows 295 of 400 used tags are undeclared \u2014 including entire epics that clearly exist and have Makefile targets (epic_18, epic_20, epic_24, epic_28) plus dozens of story tags (story_15_2/4/7/9/11/13/15/16/17, story_18_*, story_25_2/9/22, story_26_23/31, story_27_5/14, story_i3/i4, and ~200 ad-hoc descriptive tags like `widget`, `unit`, `a11y`, `rtl`). The file's stated one job \u2014 suppressing 'unknown tag' warnings \u2014 now fails for most of the suite, defeating its purpose and adding warning noise that makes genuine problems easy to miss in CI logs.",
+   "recommendation": "Regenerate the tags: block from a script that scans test/ for all @Tags()/tags: usages, or drop the file if package:test's current version no longer warns on undeclared tags.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "`comm -23` between tags used in test/ and tags declared in dart_test.yaml is empty."
+   ],
+   "labels": [
+    "hygiene",
+    "test-tooling",
+    "dart-test-yaml"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-build-ci-guardrails",
+  "findingIndex": 8,
+  "finding": {
+   "title": "Fix inconsistent check-count labels in learning_tracker/Makefile's audit target",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Rule 0 (checker hygiene)",
+   "area": "Makefile",
+   "evidence": [
+    {
+     "file": "learning_tracker/Makefile",
+     "line": 386,
+     "quote": "echo \"16/17 \u2014 No raw profile.mode string comparisons (use ProfileMode enum) (W5.10)\"; \\"
+    },
+    {
+     "file": "learning_tracker/Makefile",
+     "line": 412,
+     "quote": "echo \"18/18 \u2014 No direct FirestoreGateway.push* outside lib/core/sync/ (Plan \u00a7F Phase 5 deliverable 8 \u2014 no-direct-gateway-push)\"; \\"
+    },
+    {
+     "file": "learning_tracker/Makefile",
+     "line": 450,
+     "quote": "echo \"20/22 \u2014 No raw curriculumId/storageKey rendered in Text() (render via CurriculumLabel / rendered*ForRef)\"; \\"
+    }
+   ],
+   "sites": 4,
+   "why": "The 22 checks are echoed as 1/15...15/15, then 16/17, 17/17, 18/18, 19/20, 20/22, 21/22, 22/22 \u2014 five different denominators (15, 17, 18, 20, 22) across one run, none matching the actual total until the very last line. This is harmless to the pass/fail logic but actively misleading to anyone reading `make audit` output while debugging a failure (e.g. 'check 18/18' reads as the last check, when 4 more follow) \u2014 clear evidence checks were bolted on over time without updating earlier labels.",
+   "recommendation": "Renumber every echo label to X/22 in one pass.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Every numbered echo in the audit target uses a consistent /22 denominator."
+   ],
+   "labels": [
+    "hygiene",
+    "makefile"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-build-ci-guardrails",
+  "findingIndex": 9,
+  "finding": {
+   "title": "Remove or repair the dead root firebase.json/.firebaserc pointing at missing files",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-1 (dead config)",
+   "area": "Firebase config",
+   "evidence": [
+    {
+     "file": "firebase.json",
+     "line": 3,
+     "quote": "    \"rules\": \"firestore.rules\","
+    },
+    {
+     "file": ".firebaserc",
+     "line": 3,
+     "quote": "    \"default\": \"torah-study-tracker\""
+    }
+   ],
+   "sites": 2,
+   "why": "Root firebase.json references firestore.rules and firestore.indexes.json relative to the repo root, but neither file exists there \u2014 both live only under learning_tracker/. `firebase deploy`/`firebase emulators:start` run from the repo root (a natural instinct since .firebaserc's project default lives there too) would fail immediately with a file-not-found error. Git history confirms firestore.rules used to live at repo root and was moved under learning_tracker/ during a restructure, with the root firebase.json/.firebaserc never cleaned up. Compounding this, no Makefile or CI workflow in the repo contains a `firebase deploy` or `firebase use` command anywhere \u2014 there is no committed, automated path from the source-controlled firestore.rules to the real deployed ruleset at all.",
+   "recommendation": "Delete the root firebase.json/.firebaserc (or repoint them at learning_tracker/), and document (or automate via CI on tag/release) the actual firestore.rules deploy process.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Root firebase.json's referenced paths exist, or the file is removed."
+   ],
+   "labels": [
+    "firebase",
+    "dead-config",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-build-ci-guardrails",
+  "findingIndex": 10,
+  "finding": {
+   "title": "Remove the inert .gitattributes merge=beads directive for a gitignored path",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-1 (dead guardrail config)",
+   "area": "git config",
+   "evidence": [
+    {
+     "file": ".gitattributes",
+     "line": 3,
+     "quote": ".beads/issues.jsonl merge=beads"
+    },
+    {
+     "file": ".gitignore",
+     "line": 5,
+     "quote": ".beads/"
+    }
+   ],
+   "sites": 2,
+   "why": "`.beads/` is git-ignored at the repo root, and `git ls-files | grep beads` confirms `.beads/issues.jsonl` has never been tracked. A `merge=` custom-merge-driver attribute only ever activates during a git merge of a tracked file, so this line can never fire. Even setting that aside, no `merge.beads.driver` command is registered anywhere in the repo (no hooks/, tool/, or doc sets it via `git config`) \u2014 so even a force-added copy of the file would hit 'unable to find custom merge driver beads' rather than actually merging. This is dead scaffolding for a workflow (the beads issue tracker) that isn't wired into this repo.",
+   "recommendation": "Either delete the .gitattributes line (if beads isn't used here), or un-ignore .beads/issues.jsonl and add a committed setup step that registers `git config merge.beads.driver`.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Either .gitattributes no longer references a driver that's never registered, or the driver is registered by a committed script and the target path is tracked."
+   ],
+   "labels": [
+    "hygiene",
+    "dead-config",
+    "git"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-build-ci-guardrails",
+  "findingIndex": 11,
+  "finding": {
+   "title": "Extract duplicated CI bootstrap steps into a shared composite action",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-11 / Fowler duplication",
+   "area": "GitHub Actions",
+   "evidence": [
+    {
+     "file": ".github/workflows/ci.yml",
+     "line": 9,
+     "quote": "# Shared Flutter + pub setup extracted via composite action pattern (inline reuse via YAML anchors)\n# GitHub Actions does not support YAML anchors natively, so setup steps are duplicated per job."
+    },
+    {
+     "file": ".github/workflows/build.yml",
+     "line": 69,
+     "quote": "      - name: Decode google-services.json"
+    },
+    {
+     "file": ".github/workflows/deploy-play-store.yml",
+     "line": 111,
+     "quote": "      - name: Decode google-services.json"
+    }
+   ],
+   "sites": 3,
+   "why": "ci.yml's own comment justifies duplicating checkout/Flutter-setup/pub-cache/codegen/secret-decode steps ACROSS ITS OWN JOBS because 'GitHub Actions does not support YAML anchors natively' \u2014 true, but the actual GHA-native fix (composite actions / reusable workflows via `uses:`) is never used, and the same six-to-eight-step bootstrap sequence is copy-pasted a further two times whole across build.yml and deploy-play-store.yml (which the stated per-job-isolation rationale doesn't even apply to \u2014 they're separate files, not parallel jobs needing independent runners). A future change to how secrets are decoded or how the seed asset is prepared requires finding and editing this sequence in up to 6 places (4 ci.yml jobs + build.yml + deploy-play-store.yml) with no mechanism to catch a missed one.",
+   "recommendation": "Create `.github/actions/flutter-bootstrap/action.yml` (checkout+setup+cache+codegen+asset-prep+secret-decode) and reference it via `uses: ./.github/actions/flutter-bootstrap` from all three workflow files.",
+   "effort": "L",
+   "acceptance_criteria": [
+    "A single composite action exists and build.yml, ci.yml, and deploy-play-store.yml all invoke it instead of repeating the step sequence inline."
+   ],
+   "labels": [
+    "ci",
+    "duplication",
+    "fowler",
+    "maintainability"
+   ]
+  }
+ }
+]

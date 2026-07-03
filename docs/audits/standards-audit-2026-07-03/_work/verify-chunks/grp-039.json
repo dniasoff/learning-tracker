@@ -1,0 +1,161 @@
+[
+ {
+  "sourceBatch": "t1-feat-account-p2",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Extract the duplicated _extractFirebaseCode regex parser out of MagicLinkService and UpgradeToCloudService",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler: duplicated code; layering tension with Rule 3",
+   "area": "features/account/domain + data",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/account/data/services/magic_link_service.dart",
+     "line": 238,
+     "quote": "final match = RegExp(r'\\[([a-z-]+)\\]').firstMatch(str);"
+    },
+    {
+     "file": "learning_tracker/lib/features/account/domain/services/upgrade_to_cloud_service.dart",
+     "line": 374,
+     "quote": "final match = RegExp(r'\\[([a-z-]+)\\]').firstMatch(str);"
+    }
+   ],
+   "sites": 2,
+   "why": "Both files independently reimplement 'parse a Firebase error code out of an exception's toString()' via the identical regex, because Rule 3 blocks these features/account/{domain,data} files from importing FirebaseAuthException directly and matching its typed .code field. The fallback is fragile: if a Firebase Auth SDK bump changes the exception's string format so it no longer wraps the code in literal brackets, _extractFirebaseCode silently returns null everywhere at once \u2014 in upgrade_to_cloud_service.dart this means the 'email-already-in-use' retry-merge branch falls through to rethrow, and the guided merge flow silently stops firing, surfacing a raw exception to the user instead. The same helper is also duplicated at 3 more sites repo-wide (signup_screen.dart, sign_in_controller.dart, upgrade_to_cloud_screen.dart), confirming this is a systemic gap rather than a one-off.",
+   "recommendation": "Factor the regex parser into one shared, unit-tested helper (e.g. core/utils/firebase_error_code.dart, which only touches strings so it doesn't trip Rule 3) that all current call sites import.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "one shared, unit-tested extractFirebaseCode(Object e) utility exists",
+    "magic_link_service.dart and upgrade_to_cloud_service.dart delegate to it instead of each defining their own regex copy"
+   ],
+   "labels": [
+    "duplication",
+    "fowler",
+    "layering"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-account-p2",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Remove the fixed height:32 on OfflineTopBanner's Container so large text-scale doesn't clip it",
+   "severity": "P2",
+   "confidence": "SUSPECTED",
+   "rule": "AX-4 (no fixed heights on text wrappers)",
+   "area": "features/account/presentation/widgets",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/account/presentation/widgets/offline_top_banner.dart",
+     "line": 30,
+     "quote": "width: double.infinity,\n                height: 32,"
+    }
+   ],
+   "sites": 1,
+   "why": "The banner's Container is given a tight height:32 which forces the same tight cross-axis height onto the Row wrapping the cloud-off Icon and the offline-message Text. The app sets no textScaler clamp anywhere (grep-confirmed repo-wide), so under a standard OS large-text accessibility setting the Text needs more than 32 logical pixels; because Container does not clip by default, the text would paint outside the 32px band, visually overlapping the AppBar/content around it rather than wrapping or growing the banner.",
+   "recommendation": "Let the banner size to its child's intrinsic height (drop the fixed height, or express it as a minHeight), and add a widget test that pumps OfflineTopBanner under a scaled MediaQuery (TextScaler.linear(1.6)+) and asserts no overflow/clip.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "a widget/golden test pumps OfflineTopBanner at textScaler >= 1.6x and asserts the rendered content fits within its layout bounds",
+    "the banner Container no longer hard-codes height:32"
+   ],
+   "labels": [
+    "accessibility",
+    "ax-4"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-account-p2",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Move account_picker_switch_test.dart into test/.../presentation/screens/ to match its siblings",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-5 (test/ mirrors lib/ 1:1)",
+   "area": "features/account/testing",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/account/presentation/account_picker_switch_test.dart",
+     "line": 32,
+     "quote": "import 'package:learning_tracker/features/account/presentation/screens/account_picker_screen.dart';"
+    }
+   ],
+   "sites": 1,
+   "why": "account_picker_switch_test.dart sits directly under test/features/account/presentation/, while its three siblings covering the exact same AccountPickerScreen (account_picker_an4_test.dart, account_picker_local_data_missing_test.dart, account_picker_screen_l1_test.dart) correctly live one level deeper under presentation/screens/, matching lib/features/account/presentation/screens/account_picker_screen.dart. It's the only one of the four out of place, making it easy to miss when scanning the screens/ directory for everything that covers this screen.",
+   "recommendation": "git mv test/features/account/presentation/account_picker_switch_test.dart test/features/account/presentation/screens/account_picker_switch_test.dart",
+   "effort": "S",
+   "acceptance_criteria": [
+    "account_picker_switch_test.dart is located under test/features/account/presentation/screens/, matching its three sibling files"
+   ],
+   "labels": [
+    "hygiene",
+    "ag-5"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-account-p2",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Replace magic_link_service_test.dart's 20 fixed-delay waits with a deterministic completion signal",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6 (hermetic tests, no wall-clock reliance)",
+   "area": "features/account/testing",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/account/data/services/magic_link_service_test.dart",
+     "line": 256,
+     "quote": "await Future<void>.delayed(const Duration(milliseconds: 50));"
+    },
+    {
+     "file": "learning_tracker/test/features/account/data/services/magic_link_service_test.dart",
+     "line": 341,
+     "quote": "await Future<void>.delayed(const Duration(milliseconds: 50));"
+    }
+   ],
+   "sites": 20,
+   "why": "This file uses plain test() (no fakeAsync/tester.runAsync wrapper), so all 20 of these are real wall-clock waits used to let the fake uriLinkStream's listener finish processing before the following assertions run. Each adds ~50ms of guaranteed dead time (~1s total for this file), and because 50ms is a guess rather than a guarantee, the assertions are one slow/contended CI runner away from a flaky false failure if the listener callback hasn't finished when the wait ends.",
+   "recommendation": "Await an explicit completion signal instead \u2014 e.g. have the test await a Completer that the fake onSignedIn/mock callback completes, rather than guessing a fixed sleep.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "magic_link_service_test.dart's stream-driven tests await an explicit completion signal (e.g. a Completer) instead of a fixed-millisecond Future.delayed"
+   ],
+   "labels": [
+    "testing",
+    "tq-6",
+    "flakiness"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-account-p2",
+  "findingIndex": 8,
+  "finding": {
+   "title": "Give SignInActions' TapGestureRecognizer a disposal owner instead of rebuilding it every build()",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Flutter widget lifecycle hygiene",
+   "area": "features/account/presentation/widgets",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/account/presentation/widgets/sign_in_actions.dart",
+     "line": 105,
+     "quote": "recognizer: TapGestureRecognizer()\n                    ..onTap = () {"
+    }
+   ],
+   "sites": 1,
+   "why": "SignInActions is a StatelessWidget, so every build() (e.g. each time isLoading flips) allocates a brand-new TapGestureRecognizer that nothing ever calls .dispose() on. The framework does not manage recognizer lifecycle automatically; Flutter's own guidance is to create such recognizers once in a State and dispose them in State.dispose(). The same pattern also exists in signup_screen.dart:825, so it's a small but repeated hygiene gap, not a one-off typo.",
+   "recommendation": "Hoist the 'Register' tap handling into a small stateful owner (or the already-stateful parent SignInScreen) that creates the TapGestureRecognizer once and disposes it in dispose().",
+   "effort": "S",
+   "acceptance_criteria": [
+    "the TapGestureRecognizer used for the Register span is created once and disposed via a State.dispose() rather than reallocated on every SignInActions.build()"
+   ],
+   "labels": [
+    "hygiene",
+    "flutter-lifecycle"
+   ]
+  }
+ }
+]

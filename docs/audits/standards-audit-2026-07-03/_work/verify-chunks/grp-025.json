@@ -1,0 +1,208 @@
+[
+ {
+  "sourceBatch": "t1-core-small-a",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Deduplicate near-identical CurriculumLabels test coverage spread across 3 test files",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ test-suite duplication / Fowler DRY",
+   "area": "learning_tracker/test/core/constants",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/constants/curriculum_defaults_extended_test.dart",
+     "line": 265,
+     "quote": "test('excludes level labels when includeLevelLabel is false', () {"
+    },
+    {
+     "file": "learning_tracker/test/core/constants/curriculum_labels_extended_test.dart",
+     "line": 187,
+     "quote": "test('excludes level labels when includeLevelLabel=false', () {"
+    },
+    {
+     "file": "learning_tracker/test/core/constants/curriculum_defaults_test.dart",
+     "line": 223,
+     "quote": "test('daily targets exist for all curricula', () {"
+    },
+    {
+     "file": "learning_tracker/test/core/constants/curriculum_defaults_extended_test.dart",
+     "line": 322,
+     "quote": "test('defaultDailyTargets covers all 9 curricula', () {"
+    }
+   ],
+   "sites": 3,
+   "why": "curriculum_defaults_extended_test.dart and curriculum_labels_extended_test.dart both independently claim in their file-header doc comments to cover 'methods not yet tested' by the other files, but in fact both re-test CurriculumLabels.container, .containerSectionHeader, .level (RangeError for 0 and out-of-range), .valueWithLabel, and .fullPath (skip-null, custom-separator, includeLevelLabel=false) with near-identical test names and assertions \u2014 e.g. the 'excludes level labels' group exists verbatim in both files. curriculum_defaults_test.dart separately duplicates the CurriculumDefaults.defaultStages/defaultDailyTargets assertions that curriculum_defaults_extended_test.dart's last group re-covers. Net effect: ~1200 lines across 4 files test one 1270-line source file, with the same behavior asserted 2-3x under different names \u2014 any future change to e.g. fullPath's separator handling requires hunting through multiple files to update every duplicate, and CI burns time re-running equivalent assertions. (curriculum_label_variant_test.dart, the 4th file, was checked and found NOT to overlap \u2014 it covers distinct nusach/transliteration behavior only.)",
+   "recommendation": "Consolidate curriculum_defaults_extended_test.dart and curriculum_labels_extended_test.dart (partition cleanly by class \u2014 LevelLabels vs CurriculumLabels vs CurriculumDefaults \u2014 or merge into curriculum_defaults_test.dart), removing the 5+ duplicate assertion groups identified.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "Merged suite passes `flutter test test/core/constants/`",
+    "No two test groups across the constants test directory assert the same production method+scenario combination",
+    "Consolidated suite's total line count is measurably smaller than the current 4-file total"
+   ],
+   "labels": [
+    "test-quality",
+    "duplication",
+    "tq"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-small-a",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Delete dead HebrewTerms.getCurriculumDisplayName \u2014 unused, violates Rule 5 displayNameHe placement, tested twice by duplicate groups",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Rule 5 (no_curriculum_display_name_bypass, currently unenforced) + dead-code",
+   "area": "learning_tracker/lib/core/constants",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/constants/hebrew_terms.dart",
+     "line": 171,
+     "quote": "static String getCurriculumDisplayName(CurriculumId id) => id.displayNameHe;"
+    },
+    {
+     "file": "learning_tracker/test/core/constants/hebrew_terms_test.dart",
+     "line": 73,
+     "quote": "group('getCurriculumDisplayName', () {"
+    },
+    {
+     "file": "learning_tracker/test/core/constants/hebrew_terms_test.dart",
+     "line": 102,
+     "quote": "group('getCurriculumDisplayName', () {"
+    }
+   ],
+   "sites": 2,
+   "why": "A repo-wide grep of lib/ finds zero production callers of HebrewTerms.getCurriculumDisplayName \u2014 the only call sites are two duplicate, identically-named test groups (lines 73 and 102, in the same file) that both just re-assert `== id.displayNameHe`, a tautology restating the implementation. The method also lives in core/constants/, not core/labels/, so its `.displayNameHe` access bypasses the Rule 5 placement boundary that the no_curriculum_display_name_bypass custom lint would flag if custom_lint weren't currently broken (per baseline). core/labels/curriculum_label.dart already has the equivalent, correctly-placed `_curriculumId!.displayNameHe` access, confirming this delegate is a superseded leftover (the doc comment even says the map it replaced was removed 'to eliminate duplication').",
+   "recommendation": "Delete HebrewTerms.getCurriculumDisplayName and both duplicate test groups. If Hebrew curriculum-name lookup is still needed outside core/labels/, route through CurriculumLabelRenderer per Rule 5 instead of a raw `.displayNameHe` access.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "`grep -rn getCurriculumDisplayName lib/ test/` returns no results after removal",
+    "hebrew_terms_test.dart no longer has two groups named 'getCurriculumDisplayName'"
+   ],
+   "labels": [
+    "rule-5",
+    "dead-code",
+    "test-quality"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-small-a",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Remove dead DuplicateCompletionException / InvalidTrackOperationException or wire them up \u2014 neither is thrown in production",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-6 dead-code (Fowler speculative generality) + secondary EH-5 (hardcoded English userMessage)",
+   "area": "learning_tracker/lib/core/exceptions",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/exceptions/duplicate_completion_exception.dart",
+     "line": 34,
+     "quote": "String get userMessage {"
+    },
+    {
+     "file": "learning_tracker/lib/core/exceptions/duplicate_completion_exception.dart",
+     "line": 35,
+     "quote": "return 'Already completed under $existingTrackName track';"
+    },
+    {
+     "file": "learning_tracker/lib/core/exceptions/invalid_track_operation_exception.dart",
+     "line": 7,
+     "quote": "class InvalidTrackOperationException extends ValidationException {"
+    },
+    {
+     "file": "learning_tracker/test/core/exceptions/duplicate_completion_exception_test.dart",
+     "line": 1,
+     "quote": "// Tests for DuplicateCompletionException \u2014 covers toString and userMessage."
+    }
+   ],
+   "sites": 2,
+   "why": "Repo-wide grep (lib/ and test/) shows DuplicateCompletionException is referenced nowhere outside its own definition file and its own single-purpose test file; InvalidTrackOperationException is thrown nowhere in lib/ \u2014 track_repository.dart only re-exports the type 'so existing importers of this file don't need updating,' and completion_writer.dart's current duplicate-completion handling is idempotent (silently returns the existing row, no exception thrown), confirming both exceptions' original call sites were refactored away. Both classes also bake a raw, hardcoded English message rather than a stable code (DuplicateCompletionException.userMessage is explicitly documented as 'for display in snackbars/dialogs') \u2014 if either is revived by a future feature without noticing this, it reintroduces an EH-5 violation (unlocalized English shown to Hebrew-locale users) on day one. Today the risk is purely maintenance/documentation drift: a developer debugging track-deactivation or completion-marking who searches for these classes' names will be misled into thinking they're live guards.",
+   "recommendation": "Delete both classes and duplicate_completion_exception_test.dart, or wire them into a live call site. If a real duplicate-completion/invalid-track-operation UI error is still needed, add a stable enum/code to a new exception rather than reviving these hardcoded-English ones.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep for DuplicateCompletionException/InvalidTrackOperationException across lib/ shows either a live throw+catch pair or zero results",
+    "No orphaned test file whose only coverage is a dead exception's string formatting"
+   ],
+   "labels": [
+    "dead-code",
+    "eh-5",
+    "exceptions"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-small-a",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Fix or delete NaturalKey.forLearnerProfile's fragile non-null-Object emptiness check \u2014 fallbackProfileId branch is effectively unreachable and untested",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Type-safety design flaw in dead code",
+   "area": "learning_tracker/lib/core/ids",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/ids/natural_key.dart",
+     "line": 86,
+     "quote": "required Object profileIdOrRow,"
+    },
+    {
+     "file": "learning_tracker/lib/core/ids/natural_key.dart",
+     "line": 89,
+     "quote": "profileIdOrRow.toString().isNotEmpty"
+    }
+   ],
+   "sites": 1,
+   "why": "profileIdOrRow is typed as non-nullable Object, so it can never be null, and Object.toString() is non-empty for every realistic value (an int, a non-empty String, or the default 'Instance of X') \u2014 the only way to hit the fallbackProfileId branch is to pass a literal empty string, which is nowhere documented as the sentinel. This reads like an attempt to model 'optional row value, else use this id' that should have used `Object?` with a null check instead of a string-emptiness check. It has zero callers repo-wide (confirmed via grep across lib/ and test/), so this has never been exercised and the bug would surface silently the moment someone starts using it expecting the fallback to work.",
+   "recommendation": "If kept, change the signature to `Object? profileIdOrRow` and check `== null` instead of `.toString().isNotEmpty`. If truly unused going forward, delete it along with the other 5 unused factories (see companion finding).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "If kept: a unit test constructs NaturalKey.forLearnerProfile with profileIdOrRow omitted/null and asserts the fallbackProfileId branch actually executes",
+    "If deleted: covered by the companion 'unused factories' finding's acceptance criteria"
+   ],
+   "labels": [
+    "dead-code",
+    "type-safety",
+    "natural-key"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-small-a",
+  "findingIndex": 6,
+  "finding": {
+   "title": "core/time/local_day_clock.dart's currentLocalDayClock global has no compiler-enforced set/reset pairing for tests",
+   "severity": "P3",
+   "confidence": "SUSPECTED",
+   "rule": "SM-7 spirit (no global/static mutable singletons) / TQ-6 hermetic tests",
+   "area": "learning_tracker/lib/core/time",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/time/local_day_clock.dart",
+     "line": 73,
+     "quote": "LocalDayClock currentLocalDayClock = const SystemLocalDayClock();"
+    },
+    {
+     "file": "learning_tracker/lib/core/time/local_day_clock.dart",
+     "line": 77,
+     "quote": "/// reset to the default in `tearDown`."
+    }
+   ],
+   "sites": 1,
+   "why": "This mutable top-level variable backs DateTimeFactory, which is called from 15+ production sites across DAOs/repositories/mergers (e.g. track_dao.dart, a churn hotspot, calls it 8 times). Test isolation relies entirely on every caller of useLocalDayClock() remembering to pair it with `tearDown(resetLocalDayClock)` per the doc comment's 'MUST' \u2014 nothing in the type system enforces this. A test file that calls useLocalDayClock() without the tearDown pairing would silently freeze time for every later test in that file/isolate, producing flaky failures unrelated to the code under test. I checked the two actual test files that use it (only outbox_processor_test.dart and one other) and both correctly pair set/reset via `tearDown(resetLocalDayClock)`, so this is a latent, convention-enforced risk rather than a demonstrated failure today.",
+   "recommendation": "Add a shared test helper (e.g. `withFakeClock(seed, body)`) that calls `addTearDown(resetLocalDayClock)` itself so individual tests can't forget the reset, and migrate the existing 2 call sites to it.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "A shared test helper pairs useLocalDayClock with an auto-registered tearDown reset",
+    "Existing call sites in outbox_processor_test.dart (and any sibling) migrated to the helper"
+   ],
+   "labels": [
+    "sm-7",
+    "test-hygiene",
+    "global-state"
+   ]
+  }
+ }
+]

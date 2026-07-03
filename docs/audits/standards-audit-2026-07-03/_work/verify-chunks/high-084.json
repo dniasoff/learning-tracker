@@ -1,0 +1,55 @@
+[
+ {
+  "sourceBatch": "t1-feat-sync-p4",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Rewire or retarget tutored_wipe_wrong_id_test.dart \u2014 its D18 fix symbols (resolveOwnerAccountIdForWipe, wipeRevokedMirrors) have zero production callers",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "core/sync tutoring \u2014 tests",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/sync/tutored_wipe_wrong_id_test.dart",
+     "line": 4,
+     "quote": "// accounts.id rather than a stale id derived from currentAccountIdProvider,"
+    },
+    {
+     "file": "learning_tracker/test/sync/tutored_wipe_wrong_id_test.dart",
+     "line": 174,
+     "quote": "await svc.wipeRevokedMirrors("
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/providers/tutored_pull_providers.dart",
+     "line": 187,
+     "quote": "Future<int> resolveOwnerAccountIdForWipe(Ref ref) async {"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/providers/manage_tutors_providers.dart",
+     "line": 97,
+     "quote": "final accountId = ref.watch(currentAccountIdProvider);"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/providers/manage_tutors_providers.dart",
+     "line": 131,
+     "quote": "await wipeService.wipeMirrorForGrant(gid);"
+    }
+   ],
+   "sites": 1,
+   "why": "This file's entire premise is regression-testing the D18 fix: resolve the mirror-wipe owner id from accounts.id, not from currentAccountIdProvider (which it says returns the talmid's learner_profiles.id during an active tutored session). But grep across lib/ shows the fix helper `resolveOwnerAccountIdForWipe` (tutored_pull_providers.dart:187) has no call site anywhere outside its own declaration, and `TutoredMirrorWipeService.wipeRevokedMirrors` has no caller outside this test file. The actual D18 incoming-grants reconcile path (manage_tutors_providers.dart:97-131, `incomingTutorGrantsProvider`) does its own inline reconciliation: it resolves the mirror-lookup scope via `ref.watch(currentAccountIdProvider)` directly \u2014 the exact provider this test's own docstring names as unsafe \u2014 then wipes stale mirrors one-by-one through a third method, `wipeMirrorForGrant`, that this test never touches either. All four tests in this file pass, but they protect a code path nothing in production calls; the code path that actually runs on grant revocation is completely unguarded against the bug class this file describes. If `currentAccountIdProvider` really does misresolve while `incomingTutorGrantsProvider` evaluates, a revoked tutor keeps local mirrored access to the child's already-revoked data \u2014 a child-privacy-adjacent silent-wipe failure this suite cannot catch.",
+   "recommendation": "Either wire resolveOwnerAccountIdForWipe + wipeRevokedMirrors into manage_tutors_providers.dart's incomingTutorGrantsProvider (replacing the inline currentAccountIdProvider-scoped loop) and re-point this test's asserts at that call site, or delete resolveOwnerAccountIdForWipe/wipeRevokedMirrors as dead code and rewrite this test against incomingTutorGrantsProvider with a fake AuthState whose currentUser.profileId is a tutored-mirror id, proving the reconcile scope still lands on the tutor's accounts.id.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "grep -rn 'resolveOwnerAccountIdForWipe(' lib/ (excluding the declaration line) returns at least one call site, OR resolveOwnerAccountIdForWipe and wipeRevokedMirrors are removed and this test is rewritten against the code that actually runs.",
+    "A test drives manage_tutors_providers.dart's incoming-grants reconcile logic with an AuthState/currentAccountIdProvider resolving to a tutored-mirror profile id and asserts the mirror-wipe scope still resolves to the tutor's accounts.id."
+   ],
+   "labels": [
+    "sync",
+    "tutoring",
+    "coverage-gap",
+    "child-privacy",
+    "dead-code"
+   ]
+  }
+ }
+]

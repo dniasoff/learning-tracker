@@ -1,0 +1,45 @@
+[
+ {
+  "sourceBatch": "t1-core-sync-merge",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Fix StudyDayConfigMerger to use DriftMergeStore.remoteIsNewer instead of the pre-Phase-3 merge_rules.remoteIsNewer",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "FB-2 (server-timestamp / clock-skew LWW ordering, never client-clock-only)",
+   "area": "core/sync/merge",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/sync/merge/study_day_config_merger.dart",
+     "line": 78,
+     "quote": "if (!remoteIsNewer("
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/merge/study_day_config_merger.dart",
+     "line": 13,
+     "quote": "import 'package:learning_tracker/core/sync/merge/merge_rules.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/merge/merge_rules.dart",
+     "line": 66,
+     "quote": "bool remoteIsNewer({\n  required DateTime? localUpdatedAt,"
+    }
+   ],
+   "sites": 1,
+   "why": "Every other LWW merger in this batch (bookmark, track_config, settings, stage_definition, learning_order, profile_program, goal, learner_profile, gamification_settings, notification_settings, ui_preferences \u2014 11 of 12 natural-key/singleton mergers) was upgraded in the documented 'Phase 3' pass to call `_store.remoteIsNewer`, which adds the \u00b15s clock-skew window plus Firestore server-timestamp (synced_at) tie-break specifically to fix FB-2's 'faster clock always wins' problem (see drift_merge_store.dart:34-38, 111-152, including the D15 fix). StudyDayConfigMerger alone still calls the plain free function from merge_rules.dart, which has neither: it is a strict `remoteUpdatedAt.isAfter(localUpdatedAt)` with no skew tolerance and no server-timestamp fallback. A device whose clock runs even a few seconds fast will have its study-day-config edits always win the comparison, silently discarding a genuinely newer edit made on a second device.",
+   "recommendation": "Give StudyDayConfigMerger a MergeStore dependency (constructor param, like every sibling merger) and call store.remoteIsNewer with the row's synced_at; drop its import of merge_rules.dart.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Unit test: two devices' clocks 3s apart, both writes inside the \u00b15s window, no synced_at on one side \u2014 StudyDayConfigMerger resolves identically to DriftMergeStoreTest's D15 clock-skew group, not via strict remote.isAfter(local).",
+    "grep confirms study_day_config_merger.dart no longer imports the free-function remoteIsNewer from merge_rules.dart."
+   ],
+   "labels": [
+    "sync",
+    "merge",
+    "LWW",
+    "clock-skew",
+    "consistency"
+   ]
+  }
+ }
+]

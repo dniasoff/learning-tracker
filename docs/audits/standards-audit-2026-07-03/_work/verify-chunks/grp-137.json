@@ -1,0 +1,225 @@
+[
+ {
+  "sourceBatch": "t1-story-epic-27",
+  "findingIndex": 11,
+  "finding": {
+   "title": "Split epic_27_story_14_analytics_test.dart and epic_27_story_27_8_..._test.dart under the 400-line AG-3 cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "test/story_acceptance \u2014 hygiene",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_27_story_14_analytics_test.dart",
+     "line": 1,
+     "quote": "/// Story acceptance tests for DNI-390 (27.14) \u2014 12 named analytics events."
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_27_story_27_8_rules_and_offline_flush_test.dart",
+     "line": 1,
+     "quote": "/// Story acceptance tests for Story 27.8 (DNI-384) \u2014 integration coverage"
+    }
+   ],
+   "sites": 2,
+   "why": "AG-3 caps hand-written Dart files at 400 lines; epic_27_story_14_analytics_test.dart is 493 lines and epic_27_story_27_8_rules_and_offline_flush_test.dart is 953 lines (more than 2x). File 27_8's size is substantially the ~370-line hand-rolled FirestoreGateway fake (see the paired duplication finding) \u2014 fixing that alone would bring it much closer to the cap. docs/coding-standards.md:631 mandates 'one file per epic' for story_acceptance tests with no stated line-count exemption, so every multi-story epic is structurally pushed toward this ceiling; this epic already has two offenders.",
+   "recommendation": "Split each file by story group the way this same epic's naming already does elsewhere (e.g. epic_27_story_05_..., epic_27_story_06_...) instead of one umbrella file per multi-AC story; or extract the fake gateway per the paired duplication finding; or add an explicit story_acceptance exemption to AG-3 in coding-standards.md if the convention is intended to allow this.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "Both files are \u2264400 lines, or coding-standards.md records an explicit AG-3 exemption for test/story_acceptance/."
+   ],
+   "labels": [
+    "hygiene",
+    "AG-3"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epics-09-16",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Replace tautological literal-vs-literal assertions in epic_15/epic_16 story-acceptance tests with real checks against the code under test",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "test/story_acceptance (epic_15, epic_16)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_15_multi_profile_test.dart",
+     "line": 1318,
+     "quote": "expect(p1.id, isNot(p2.id));"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_15_multi_profile_test.dart",
+     "line": 2896,
+     "quote": "() => throw const ChildSelfMarkException(),"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_16_pace_dashboard_test.dart",
+     "line": 1007,
+     "quote": "expect(0 <= 0, isTrue); // Badge guard condition"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_16_pace_dashboard_test.dart",
+     "line": 1013,
+     "quote": "expect('${11}x', '11x');"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_16_pace_dashboard_test.dart",
+     "line": 1226,
+     "quote": "expect(const Duration(milliseconds: 800).inMilliseconds, 800);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_16_pace_dashboard_test.dart",
+     "line": 1253,
+     "quote": "expect(1 >= 1, isTrue); // triggers \"Great start!\""
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_16_pace_dashboard_test.dart",
+     "line": 1260,
+     "quote": "expect(0 <= 0, isTrue);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_16_pace_dashboard_test.dart",
+     "line": 1293,
+     "quote": "expect(const Duration(milliseconds: 300).inMilliseconds, 300);"
+    }
+   ],
+   "sites": 8,
+   "why": "Each of these 8 test() blocks asserts a Dart-literal identity (0<=0, '${11}x'=='11x', Duration(milliseconds:800).inMilliseconds==800, 1>=1) or throws-and-catches a locally-constructed exception, instead of pumping ReviewCountBadge/AnimatedProgressBar, calling the satisfaction-message function, invoking the real manual-completion use case, or exercising reward-isolation logic. Every one of these is mathematically incapable of failing regardless of what the corresponding production code does: delete ReviewCountBadge, change the satisfaction-cue thresholds, or reintroduce a reward-isolation bug, and all 8 stay green. CI reports these ACs (16.4 badge/format, 16.6 progress-bar/satisfaction/animation, 15.11/15.16 reward-isolation/child-self-mark) as covered when they provide zero regression protection.",
+   "recommendation": "For each site, either (a) pump/construct the real widget or call the real function and assert on its output, or (b) mark the test/group skip: with a reason, matching the convention this same file already uses for retired ACs (e.g. epic_15's 'ContentVersionCheckService removed' skips).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Each of the 8 listed tests either asserts against a real widget/service call (ReviewCountBadge, AnimatedProgressBar, the satisfaction-cue function, the manual-completion use case, reward-isolation logic) or is skip:-wrapped with a stated reason.",
+    "No test in story_acceptance/ asserts a boolean/string/Duration literal against itself as its only check.",
+    "No deterministic Rule-0 checker exists for this pattern; verify by code review that each assertion's left-hand side traces to a call into lib/, not a value constructed entirely within the test."
+   ],
+   "labels": [
+    "TQ-8",
+    "tautological-test",
+    "test-quality"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epics-09-16",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Fix epic_16 AC-4/AC-7 tests asserting against a fabricated, already-drifted copy of the onboarding phase order",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "test/story_acceptance/epic_16 (onboarding phase order, Story 16.5)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_16_pace_dashboard_test.dart",
+     "line": 1087,
+     "quote": "expect(studyDaysIdx, wizardIdx + 1);\n          expect(scopeIdx, studyDaysIdx + 1);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_16_pace_dashboard_test.dart",
+     "line": 1146,
+     "quote": "expect(phases.contains('studyDays'), isTrue);"
+    }
+   ],
+   "sites": 2,
+   "why": "Both tests build a local `phases` list by hand ('profileCreation', 'languageSelection', ..., 'learningProcessWizard', 'studyDays', 'scopeSelection', 'bulkMark', ...) and assert index relationships within that self-made list. The real, current `_ScreenPhase` enum (lib/features/onboarding/presentation/screens/onboarding_screen.dart:45-55) is `profileCreation, parentPinSetup, intentChooser, addTrack, addAnotherPrompt, permissionPrompt, handoff, done` \u2014 none of languageSelection/selection/importing/learningProcessWizard/studyDays/scopeSelection/bulkMark/goalSetup/rewardsSetup/error exist there, and a repo-wide grep finds no enum with those values anywhere in lib/. The closest living equivalent, `AddTrackStep` (lib/features/tracks/setup/domain/entities/add_track_result.dart:102-111, explicitly commented 'Program comes BEFORE Scope'), orders `scope` BEFORE `studyDays` \u2014 the opposite of what these tests assert (studyDays before scope). Both tests pass unconditionally forever: they cannot catch a phase-ordering regression, and if read as documentation they teach the next engineer the wrong, inverted order.",
+   "recommendation": "Delete both tests (there is no live seam to assert the claimed order against) or expose the real enum via a @visibleForTesting accessor and assert its .values order directly, the way epic_15's 'AC2: Correct flow order' test (line ~2569) already avoids hardcoding the private enum and instead tests behavior through the public childAwareText function.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Neither test asserts index relationships on a hand-typed phase-name list; each either reads the real enum via a visibleForTesting export or is removed.",
+    "If kept, the assertion matches the currently-shipped flow (verified against onboarding_screen.dart's _ScreenPhase or AddTrackStep, whichever now owns the AC)."
+   ],
+   "labels": [
+    "TQ-8",
+    "stale-test",
+    "test-quality"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epics-09-16",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Give ParentDashboardAggregator's streak test a fixed/injectable clock instead of mixing UTC-anchored seed data with SystemLocalDayClock's local-day read",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6",
+   "area": "test/story_acceptance/epic_10 (parent dashboard streak/engagement, Story 10.2)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_10_parent_mode_test.dart",
+     "line": 578,
+     "quote": "for (var i = 4; i >= 0; i--) {\n        final day = now.subtract(Duration(days: i + 1));"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_10_parent_mode_test.dart",
+     "line": 601,
+     "quote": "expect(data.currentStreak, equals(5));\n      expect(data.maxStreak, equals(5));"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_10_parent_mode_test.dart",
+     "line": 508,
+     "quote": "expect(data.engagement.daysActiveThisWeek, greaterThan(0));\n        expect(data.engagement.averageDailyCompletions, greaterThan(0));"
+    }
+   ],
+   "sites": 2,
+   "why": "The test seeds streak events using a UTC-anchored 'today' (now = DateTime.now().toUtc()), but ParentDashboardAggregator's internal StreakStateProvider is hardcoded to `SystemLocalDayClock()` in its constructor (lib/features/dashboard/domain/services/parent_dashboard_aggregator.dart:94-96) whose .today() reads the machine's LOCAL calendar day (lib/core/time/local_day_clock.dart's SystemLocalDayClock.today() calls plain DateTime.now(), not .toUtc()). compute()'s `now:` parameter is documented 'pass explicitly for testability' but is never forwarded to the streak read, so there is no override hook at all for this value. On any machine whose local UTC offset is nonzero, for the hours each day where the local calendar date and UTC calendar date disagree, the seeded 5-day run and the clock's 'today' land on different day boundaries, flipping currentStreak/maxStreak and failing the exact-match assertion `equals(5)` \u2014 a systematic, timezone-correlated failure window, not a rare race. The neighboring 'engagement metrics' test in the same group sidesteps the same hazard by using `greaterThan(0)`, an assertion too weak to catch an off-by-one day-boundary bug either way.",
+   "recommendation": "Add a constructor-injectable LocalDayClock to ParentDashboardAggregator (defaulting to SystemLocalDayClock) and thread it into StreakStateProvider instead of hardcoding it; then pass a FakeLocalDayClock fixed at a constant date from the test, mirroring StreakAlertService's existing streakClock: parameter already used correctly in epic_12_notifications_test.dart.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "ParentDashboardAggregator accepts an injectable LocalDayClock (or the now: param is threaded into the streak read) so tests can pin 'today'.",
+    "epic_10's 'full dashboard aggregates streak, points, and curricula' test passes a FakeLocalDayClock instead of relying on DateTime.now(), and the test passes deterministically regardless of the host machine's timezone."
+   ],
+   "labels": [
+    "TQ-6",
+    "flaky-test",
+    "clock-injection"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epics-09-16",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Replace fixed 50ms Future.delayed polling with stream.first awaits in epic_15's curriculum-scope watch-stream test",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6",
+   "area": "test/story_acceptance/epic_15 (curriculum scope watch, Story 15.15)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_15_multi_profile_test.dart",
+     "line": 3549,
+     "quote": "await Future<void>.delayed(const Duration(milliseconds: 50));"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_15_multi_profile_test.dart",
+     "line": 3561,
+     "quote": "await Future<void>.delayed(const Duration(milliseconds: 50));"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_15_multi_profile_test.dart",
+     "line": 3572,
+     "quote": "await Future<void>.delayed(const Duration(milliseconds: 50));"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_15_multi_profile_test.dart",
+     "line": 3578,
+     "quote": "await Future<void>.delayed(const Duration(milliseconds: 50));"
+    }
+   ],
+   "sites": 4,
+   "why": "'scope watch stream emits on every change for provider reactivity' uses a fixed 50ms sleep 4 times as a stand-in for 'the stream has emitted by now', when the same test group already shows the deterministic alternative 100 lines earlier ('watchScopes emits updates when scopes change', lines 3439-3462, uses `await stream.first`). A timed sleep is a generic flakiness anti-pattern (no upper bound is ever truly safe under load) even though the practical risk here is low since the stream is backed by an in-memory NativeDatabase.memory() with no real I/O latency.",
+   "recommendation": "Replace the 4 Future.delayed calls with `await emissions stream.first` / a captured StreamQueue read, consistent with the pattern already used at lines 3446 and 3459 in the same test group.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "The test contains no Future.delayed/sleep-based synchronization; each emission is awaited directly from the stream.",
+    "Test still asserts the same 4 transitions (initial empty, set, change, clear)."
+   ],
+   "labels": [
+    "TQ-6",
+    "flaky-test-pattern"
+   ]
+  }
+ }
+]

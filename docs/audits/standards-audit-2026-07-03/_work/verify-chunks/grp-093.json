@@ -1,0 +1,185 @@
+[
+ {
+  "sourceBatch": "t1-feat-scheduler-p2",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Guard SkippedTasks.build()'s fire-and-forget prefs load with ref.mounted",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "SM-2 / SM-4",
+   "area": "scheduler/presentation/providers",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/scheduler/presentation/providers/scheduler_providers.dart",
+     "line": 184,
+     "quote": "  Set<String> build() {"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/presentation/providers/scheduler_providers.dart",
+     "line": 185,
+     "quote": "    unawaited(_loadFromPrefs());"
+    }
+   ],
+   "sites": 1,
+   "why": "build() kicks off an un-awaited async side effect (SM-2 forbids side effects in build). _loadFromPrefs() then does `await SharedPreferences.getInstance()` and further awaits before writing `state = ...` twice, with no `ref.mounted` check (SM-4) anywhere in the method. If the provider is disposed (e.g. the user navigates off the Scheduler screen quickly) before the load resolves, the post-await `state = ...` throws Riverpod 3's UnmountedRefException \u2014 which the surrounding try/catch swallows and logs via `AppLogger.instance.error(event: 'Failed to load skipped tasks', ...)`, i.e. a routine dispose race gets misreported as a genuine load failure in production logs/Crashlytics breadcrumbs, obscuring real failures of the same code path.",
+   "recommendation": "Check `ref.mounted` immediately before each `state = ...` assignment in _loadFromPrefs, and return early (without logging) when unmounted, matching Riverpod 3's documented SM-4 pattern used elsewhere in the codebase.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "_loadFromPrefs checks ref.mounted before both `state = refs.toSet()` and `state = {}`.",
+    "A widget test that disposes the ProviderContainer/screen mid-load does not produce an AppLogger error log."
+   ],
+   "labels": [
+    "SM-2",
+    "SM-4",
+    "riverpod"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-scheduler-p2",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Wrap the DB write in StudyDayConfigScreen._toggleDay with catch/log and a consistent mounted guard",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "EH-2 / EH-3",
+   "area": "scheduler/presentation/screens",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/scheduler/presentation/screens/study_day_config_screen.dart",
+     "line": 288,
+     "quote": "ref.invalidate(allDailyTasksProvider);"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/presentation/screens/study_day_config_screen.dart",
+     "line": 299,
+     "quote": "if (context.mounted && e.code == 'permission-denied') {"
+    }
+   ],
+   "sites": 1,
+   "why": "_toggleDay runs its DB lookup + db.studyDayConfigDao.upsertDayConfig(...) inside a detached `.then()` async closure with no surrounding try/catch and no caller awaiting the result \u2014 if upsertDayConfig throws (constraint violation, disk error), the failure is silently swallowed by the Future machinery with no AppLogger call and no user feedback (unlike the sync-push call three lines later, which IS wrapped in `on TutorWriteException catch`). The same closure calls `ref.invalidate(allDailyTasksProvider)` at line 288 with no `context.mounted` check, yet the SAME method DOES check `context.mounted` before the SnackBar at line 299 just after \u2014 an inconsistent, incomplete guard that leaves the earlier call exposed to a disposed-widget race if the user navigates away quickly after tapping a day toggle.",
+   "recommendation": "Wrap the DB write in try/catch with an AppLogger.error call and user-facing feedback on failure; check `context.mounted` (or equivalent) before the `ref.invalidate` call, matching the guard already present for the SnackBar.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "A thrown exception from upsertDayConfig is logged via AppLogger and does not vanish silently.",
+    "ref.invalidate(allDailyTasksProvider) is only called when the widget is still mounted."
+   ],
+   "labels": [
+    "EH-2",
+    "EH-3",
+    "error-handling"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-scheduler-p2",
+  "findingIndex": 8,
+  "finding": {
+   "title": "Delete the dead onCompleted callback chain from DailyTaskCard/GroupedDailyView/SchedulerScreen",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "dead-code",
+   "area": "scheduler/presentation (widgets + screens)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/scheduler/presentation/widgets/daily_task_card.dart",
+     "line": 29,
+     "quote": "  final VoidCallback onCompleted;"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/presentation/screens/scheduler_screen.dart",
+     "line": 244,
+     "quote": "              ref.invalidate(allDailyTasksProvider);"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/presentation/widgets/grouped_daily_view.dart",
+     "line": 60,
+     "quote": "onDismissed: () => onTaskDismissed(curriculum, i),\n              onCompleted: () => onTaskCompleted(curriculum, i),"
+    }
+   ],
+   "sites": 4,
+   "why": "DailyTaskCard.onCompleted is `required` (every caller must supply it) but nothing inside DailyTaskCard ever invokes `onCompleted()` \u2014 its own doc comment even admits 'Kept for call-site compatibility; invoked externally', but no external invocation exists either. The real completion-triggered refresh path is `completionCommittedProvider`, incremented by text_display_screen.dart:696 and watched by allDailyTasksProvider (scheduler_providers.dart:321) \u2014 a reactive mechanism unrelated to this callback. daily_task_card_test.dart confirms this: every test passes `onCompleted: () {}` and none assert it fires. The whole chain (DailyTaskCard's param, SchedulerScreen._TaskList's and GroupedDailyView-wiring's invalidate closures, GroupedDailyView's pass-through) is vestigial from a pre-completionCommittedProvider design.",
+   "recommendation": "Remove the onCompleted parameter from DailyTaskCard and GroupedDailyView, and the corresponding dead closures in scheduler_screen.dart.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "DailyTaskCard and GroupedDailyView no longer declare onCompleted/onTaskCompleted.",
+    "daily_task_card_test.dart and scheduler_screen tests updated accordingly and still pass."
+   ],
+   "labels": [
+    "dead-code",
+    "callback"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-scheduler-p2",
+  "findingIndex": 9,
+  "finding": {
+   "title": "Delete or wire in the dead scheduler PaceIndicator/ProjectedCompletionText widget file",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "dead-code / AG-4",
+   "area": "scheduler/presentation/widgets",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/scheduler/presentation/widgets/pace_indicator.dart",
+     "line": 9,
+     "quote": "class PaceIndicator extends StatelessWidget {"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/widgets/pace_indicator.dart",
+     "line": 16,
+     "quote": "const PaceIndicator({super.key, required this.pace, this.subtitleCaption});"
+    }
+   ],
+   "sites": 1,
+   "why": "Grepping lib/ for `PaceIndicator(` and `ProjectedCompletionText(` shows the scheduler version is instantiated nowhere in production code \u2014 only its own dedicated widget test (pace_indicator_test.dart) exercises it. The app's real pace indicator on curriculum_progress_screen.dart uses a DIFFERENT, differently-shaped `PaceIndicator` class from features/progress/presentation/widgets/pace_indicator.dart (different constructor: `pace`+`subtitleCaption` vs `paceStatus`). Two same-named top-level classes (AG-4 duplicate) strongly suggests the scheduler one was superseded and simply never deleted, along with its fully-passing but functionally pointless test file.",
+   "recommendation": "Delete lib/features/scheduler/presentation/widgets/pace_indicator.dart and its test, or if a scheduler-local pace badge is genuinely still wanted, rename the class to avoid the AG-4 collision and wire it into a screen.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Only one public `PaceIndicator` class exists in lib/, or the two are clearly distinctly named.",
+    "No orphaned widget file with zero production call sites remains."
+   ],
+   "labels": [
+    "dead-code",
+    "AG-4",
+    "duplicate-name"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-scheduler-p2",
+  "findingIndex": 10,
+  "finding": {
+   "title": "Delete or properly @Deprecated the dead, self-documented-buggy toggleStudyDay provider",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "dead-code",
+   "area": "scheduler/presentation/providers",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/scheduler/presentation/providers/study_day_config_providers.dart",
+     "line": 66,
+     "quote": "  ///   1. It does not push sync (no syncFacade call)."
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/presentation/providers/study_day_config_providers.dart",
+     "line": 100,
+     "quote": "  // BUG: this fires before the write completes (STUDYDAY-TOGGLE-RACE-14)."
+    }
+   ],
+   "sites": 1,
+   "why": "toggleStudyDayProvider has zero call sites anywhere in lib/ or test/ (confirmed by repo-wide grep) and its own doc comment states it is dead and buggy (no sync push, plus a documented race condition already fixed in study_day_config_screen.dart's _toggleDay). Yet it is not marked `@Deprecated`, so nothing \u2014 not the analyzer, not code review tooling \u2014 stops a future contributor from wiring it up and reintroducing the documented race, since a doc-comment warning is easy to miss while an `@Deprecated` annotation surfaces as an analyzer diagnostic at the call site.",
+   "recommendation": "Delete the provider (it has no callers) or, if it must stay for build_runner stability as the comment claims, mark it `@Deprecated('Use study_day_config_screen._toggleDay instead \u2014 this has a known race, DNI-####')`.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "toggleStudyDay is either removed or carries an @Deprecated annotation with a Linear id.",
+    "Confirm via grep that no call sites exist before deleting."
+   ],
+   "labels": [
+    "dead-code",
+    "deprecated"
+   ]
+  }
+ }
+]

@@ -1,0 +1,55 @@
+[
+ {
+  "sourceBatch": "t2-firebase-rules-functions-p1",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Verify emailVerified (or the invite_token) before granting tutor-invite acceptance by email match",
+   "severity": "P0",
+   "confidence": "CONFIRMED",
+   "rule": "SR-5 (tutor cross-user access) / child-privacy",
+   "area": "functions/tutor-grants",
+   "evidence": [
+    {
+     "file": "learning_tracker/functions/src/index.ts",
+     "line": 691,
+     "quote": "// This prevents anyone from claiming an invite not addressed to them."
+    },
+    {
+     "file": "learning_tracker/functions/src/index.ts",
+     "line": 693,
+     "quote": "const callerEmail = (callerRecord.email ?? \"\").toLowerCase().trim();"
+    },
+    {
+     "file": "learning_tracker/functions/src/index.ts",
+     "line": 1006,
+     "quote": "// without needing the emailed deep link. Match the caller's verified email."
+    },
+    {
+     "file": "learning_tracker/functions/src/index.ts",
+     "line": 657,
+     "quote": "const { grantId } = request.data ?? {};"
+    },
+    {
+     "file": "learning_tracker/functions/src/index.ts",
+     "line": 597,
+     "quote": "const inviteToken = crypto.randomBytes(32).toString(\"hex\");"
+    }
+   ],
+   "sites": 3,
+   "why": "Firebase Auth lets anyone register an account with any unverified email string. acceptTutorInvite, declineTutorInvite, and listTutorGrants({mode:'pending_for_me'}) all authorize 'is this caller the invited tutor' purely by comparing the caller's Auth email to grant.tutor_email -- none of them checks callerRecord.emailVerified (or the token claim), despite comments at both call sites explicitly (and incorrectly) claiming this 'prevents anyone from claiming an invite not addressed to them' / matches the 'verified' email. An attacker who front-runs registration of the invited tutor's email address can call listTutorGrants(pending_for_me) to discover the grantId, then acceptTutorInvite to gain ongoing read access (and any write permissions the parent granted) to the child's full learning profile -- without ever proving ownership of that inbox. The invite_token generated specifically to prevent exactly this (comment: 'single-use, per NFR-3') is stored on the grant doc but is never read back or compared anywhere in the file, so it provides zero actual protection. cf_grant_invite.test.mjs's own header comment confirms this exact gate is never exercised by any test.",
+   "recommendation": "Require callerRecord.emailVerified === true in acceptTutorInvite/declineTutorInvite before trusting the email match, and/or require the caller to supply invite_token and compare it against grant.invite_token (the mechanism already built for this). Apply the same emailVerified gate to listTutorGrants' pending_for_me query so an unverified account cannot even discover invites addressed to an email it doesn't own.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "A new Auth-emulator-backed test in cf_grant_invite.test.mjs seeds an unverified-email account and asserts acceptTutorInvite rejects it (e.g. permission-denied).",
+    "acceptTutorInvite/declineTutorInvite check emailVerified or invite_token before authorizing by email match.",
+    "make test-functions (or a new CI job per the companion finding) seeds Auth-emulator users so this path is actually exercised, not skipped."
+   ],
+   "labels": [
+    "security",
+    "child-privacy",
+    "cloud-functions",
+    "P0"
+   ]
+  }
+ }
+]

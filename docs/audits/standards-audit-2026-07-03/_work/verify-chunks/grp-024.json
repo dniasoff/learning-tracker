@@ -1,0 +1,208 @@
+[
+ {
+  "sourceBatch": "t1-core-services",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Merge duplicate LearningProgramRepository test suites (learning_program_repository_test.dart + learning_program_service_test.dart)",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler duplication lens + TQ-1 (pyramid/test-suite hygiene, avoid redundant suites)",
+   "area": "test/core/services (redundant coverage)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/services/learning_program_repository_test.dart",
+     "line": 27,
+     "quote": "test('programs have sequential ids starting at 1', () {"
+    },
+    {
+     "file": "learning_tracker/test/core/services/learning_program_service_test.dart",
+     "line": 39,
+     "quote": "test('program ids are sequential starting from 1', () {"
+    }
+   ],
+   "sites": 2,
+   "why": "Both files exist purely to test LearningProgramRepository (a ~60-line class) via LearningProgramRepository.instance, and both independently cover getAllPrograms, getActivePrograms, getProgramById (valid/0/out-of-range), getProgramByName (found/missing) and getProgramsByCurriculumType/getActiveProgramsByCurriculumType with near-identical assertions restated in different words. 329 combined lines maintain one class's coverage in two places that can silently drift \u2014 one file hardcodes 'daf_yomi'/'bavli' fixture literals the other lacks \u2014 and a reviewer who finds only one of the two would reasonably (and wrongly) believe it is the sole coverage. This is the concrete cost the AG-5 mispathing finding predicted: because neither test sits at the discoverable mirrored path, whoever wrote the second file evidently didn't find the first.",
+   "recommendation": "Merge into a single file at the mirrored path test/features/scheduler/domain/services/learning_program_service_test.dart, keeping the union of unique cases (the daf_yomi/bavli literal checks, testConfig/displayName field checks) and dropping exact duplicates.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "Exactly one test file covers LearningProgramRepository, at the mirrored path",
+    "flutter test green; no unique assertion from either original file is lost"
+   ],
+   "labels": [
+    "test-quality",
+    "duplication",
+    "maintenance-cost"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-services",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Replace tautological isNotNull assertion on non-nullable testConfig field in learning_program_service_test.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (tautological assertion \u2014 asserts what the type system already guarantees, not real behavior)",
+   "area": "test/core/services (weak assertion)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/services/learning_program_service_test.dart",
+     "line": 189,
+     "quote": "expect(p.testConfig, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/domain/services/learning_program_service.dart",
+     "line": 36,
+     "quote": "final String testConfig;"
+    }
+   ],
+   "sites": 1,
+   "why": "LearningProgramData.testConfig is declared as a non-nullable String, so expect(p.testConfig, isNotNull) can never fail \u2014 it's checking a compile-time guarantee, not runtime behavior. The test's evident intent (verify the '{}' fallback applied in learning_program_service.dart:86 when a seed omits test_config) is never actually asserted, so a regression that defaults testConfig to '' or breaks the fallback would pass this test silently.",
+   "recommendation": "Replace with a behavioral assertion, e.g. expect(p.testConfig, isNotEmpty), or explicitly assert the '{}' default for seeds that omit test_config.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Assertion changed to one that can fail (verified by temporarily breaking the source default and confirming red, then reverting to green)"
+   ],
+   "labels": [
+    "test-quality",
+    "tautological-test"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-services",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Localize TransactionalEmail subject/body strings before wiring a real email provider",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AX-2 \u2014 no hardcoded user-facing strings; EN/HE ARB parity",
+   "area": "core/email (i18n)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/email/transactional_email_service.dart",
+     "line": 44,
+     "quote": "/// Subject line (in English; localisation deferred to the email template)."
+    },
+    {
+     "file": "learning_tracker/lib/core/email/transactional_email_service.dart",
+     "line": 68,
+     "quote": "'$parentName invited you to tutor $childName on Learning Tracker';"
+    }
+   ],
+   "sites": 1,
+   "why": "All five email subject/body getters are hardcoded English with no AppLocalizations/ARB involvement, in a bilingual EN/HE app whose 1421-key ARB parity check would not catch this since these are plain Dart string literals, not l10n keys. Impact is currently nil \u2014 the only bound implementation is LoggingTransactionalEmailService, so no real recipient has ever seen this text \u2014 but the moment a real provider (SendGrid/Firebase Extension) is wired per the file's own WAKE-UP banner, Hebrew-speaking tutors/parents will receive tutor-invite/accept/decline/revoke/resign notifications only in English.",
+   "recommendation": "Route subject/body through locale-aware templates (e.g. Flutter's generated lookupAppLocalizations(locale) keyed off the recipient's stored locale, not the sender's device) before cutting over to a real provider; gate the provider cutover on this in the same Linear item that tracks provisioning.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "A Linear DNI-#### ticket exists gating real-email-provider cutover on localized templates",
+    "Once implemented, HE-locale recipients receive Hebrew subject/body; EN/HE parity is checkable the same way ARB keys are"
+   ],
+   "labels": [
+    "i18n",
+    "AX-2",
+    "deferred-scope"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-small-a",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Split core/constants/curriculum_defaults.dart (1270 lines) \u2014 curriculum-label rendering engine misplaced outside core/labels/",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3 (400-line cap) + Fowler misplaced-responsibility / Rule-5 label-placement spirit",
+   "area": "learning_tracker/lib/core/constants",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/constants/curriculum_defaults.dart",
+     "line": 8,
+     "quote": "class CurriculumDefaults {"
+    },
+    {
+     "file": "learning_tracker/lib/core/constants/curriculum_defaults.dart",
+     "line": 177,
+     "quote": "class CurriculumLabels {"
+    }
+   ],
+   "sites": 1,
+   "why": "At 1270 lines (3.2x the 400-line hand-written cap, confirmed via the AG-3 checker command in coding-standards.md: `find lib test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400'`) this single file bundles four distinct responsibilities: (1) stage/points/daily-target defaults (~45 lines), (2) an 800+ entry two-dialect (Ashkenazi/Sephardi) transliteration dictionary, (3) per-book hierarchy overrides, and (4) a ~900-line CurriculumLabels rendering engine with 15+ static methods (level(), fullPath(), stripStructuralPrefix(), containerCountLabel(), etc). 62 files import this module \u2014 matching AG-3's own stated rationale that oversized files 'exceed per-file agent read budgets... become dumping grounds' \u2014 so every consumer needing only the page-size default map pays the cost of a 900-line rendering engine living alongside it. That rendering/transliteration logic is exactly the kind of curriculum-label code Rule 5 designates for core/labels/ (where curriculum_label_renderer.dart and curriculum_label.dart already implement the same displayNameHe/En rendering pattern) \u2014 a maintainer fixing a Hebrew-label bug who greps core/labels/ first will miss half the logic. The bloat has already produced test sprawl: 4 separate test files (1213 combined lines) with 5+ duplicate assertion groups re-testing the same methods under different names (see companion test-duplication finding), concrete evidence that the file is too large for any one owner to track existing coverage.",
+   "recommendation": "Split into: core/constants/curriculum_defaults.dart (CurriculumDefaults + DefaultStageDefinition only, stays well under 400 lines), and move LevelLabels/CurriculumLabels/LevelValueKind/TransliterationVariant plus the transliteration dictionary into core/labels/ (new file, or merged into curriculum_label.dart), consistent with Rule 5's designated home for curriculum-label rendering.",
+   "effort": "L",
+   "acceptance_criteria": [
+    "Enable the AG-3 line-count check (`find lib test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400'`) in `make audit`, at minimum warn-only for this file",
+    "curriculum_defaults.dart and its extracted sibling(s) each \u2264400 lines",
+    "All 4 existing curriculum_defaults*/curriculum_labels*_test.dart suites still pass after the split with import paths updated"
+   ],
+   "labels": [
+    "ag-3",
+    "file-size",
+    "architecture",
+    "rule-5"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-small-a",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Adopt or delete 6 of 7 unused NaturalKey.forX factories \u2014 mergers duplicate the exact key-format logic inline",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler duplication (DRY) / natural-key single-source-of-truth invariant",
+   "area": "learning_tracker/lib/core/ids",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/ids/natural_key.dart",
+     "line": 13,
+     "quote": "/// [DriftMergeStore] splits on `|` to decode composite keys, so the"
+    },
+    {
+     "file": "learning_tracker/lib/core/ids/natural_key.dart",
+     "line": 57,
+     "quote": "factory NaturalKey.forTrackConfig({required String curriculumId}) =>"
+    },
+    {
+     "file": "learning_tracker/lib/core/ids/natural_key.dart",
+     "line": 63,
+     "quote": "factory NaturalKey.forStageDefinition({"
+    },
+    {
+     "file": "learning_tracker/lib/core/ids/natural_key.dart",
+     "line": 72,
+     "quote": "factory NaturalKey.forSettings({required String curriculumId}) =>"
+    },
+    {
+     "file": "learning_tracker/lib/core/ids/natural_key.dart",
+     "line": 79,
+     "quote": "factory NaturalKey.forBookmark({required String curriculumId}) =>"
+    },
+    {
+     "file": "learning_tracker/lib/core/ids/natural_key.dart",
+     "line": 97,
+     "quote": "factory NaturalKey.forLearningOrder({"
+    },
+    {
+     "file": "learning_tracker/lib/core/ids/natural_key.dart",
+     "line": 105,
+     "quote": "factory NaturalKey.fromSingle(String value) => NaturalKey(value);"
+    }
+   ],
+   "sites": 6,
+   "why": "The file's own doc comment claims these factories 'replac[e] ad-hoc `$a|$b` string concatenations that were scattered across the merger layer' \u2014 but a repo-wide grep of lib/ and test/ shows forTrackConfig, forStageDefinition, forSettings, forBookmark, forLearningOrder and fromSingle all have zero callers; only forCompletion is used (1 call site, in completion_event_merger.dart). The mergers still hand-roll the identical shapes instead: core/sync/merge/stage_definition_merger.dart:48 builds `'${decoded.curriculumId}|${decoded.trackId}|${decoded.stageOrder}'` by hand \u2014 the exact 3-column shape forStageDefinition exists for \u2014 and core/sync/merge/learning_order_merger.dart:35 does the same for the 2-column shape forLearningOrder exists for. Because DriftMergeStore decodes these keys by splitting on `|` (the documented invariant at line 13-14), the format is load-bearing for sync correctness but is maintained by convention across 8+ merger files instead of the one factory meant to own it \u2014 a future edit to one merger's key shape without updating the others would silently break natural-key matching (double-inserts or dropped LWW comparisons) with no compiler check to catch the drift.",
+   "recommendation": "Either route the unused-factory mergers (stage_definition, settings, track_config, bookmark, learning_order) through the matching NaturalKey.forX calls, or delete the unused factories and correct the misleading doc comment. Prefer adoption since it centralizes the `|`-separator invariant DriftMergeStore depends on.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "Every core/sync/merge/*_merger.dart natural-key construction calls a NaturalKey.forX factory, or the doc comment at natural_key.dart:9-11 is corrected to stop claiming repo-wide adoption",
+    "A regression test asserts NaturalKey.forStageDefinition/forLearningOrder produce the exact strings the mergers currently hand-build, so a future format change breaks loudly in one place instead of silently"
+   ],
+   "labels": [
+    "duplication",
+    "sync",
+    "natural-key",
+    "dead-code"
+   ]
+  }
+ }
+]

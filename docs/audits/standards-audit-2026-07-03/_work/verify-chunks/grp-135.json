@@ -1,0 +1,191 @@
+[
+ {
+  "sourceBatch": "t1-story-epic-27",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Extract scheduler_providers.dart's isTaskCompleted to a top-level function so epic_27_story_f5 tests the real code",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 / Feathers seam",
+   "area": "test/story_acceptance \u2014 scheduler",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_27_story_f5_prior_learning_filter_test.dart",
+     "line": 30,
+     "quote": "bool _isTaskCompletedBuggy(DailyTask task, List<Completion> completions) {\n  return completions.any((c) {"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_27_story_f5_prior_learning_filter_test.dart",
+     "line": 117,
+     "quote": "'BUG REPRO: buggy isTaskCompleted returns true for sentinel completion '\n          '(this test documents the pre-fix behaviour and must FAIL until F5 is applied)',"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/presentation/providers/scheduler_providers.dart",
+     "line": 414,
+     "quote": "bool isTaskCompleted(DailyTask task) {"
+    }
+   ],
+   "sites": 1,
+   "why": "isTaskCompleted is a private closure declared inside allDailyTasksProvider's @riverpod build function (scheduler_providers.dart:414-427) \u2014 it is not importable, so this file hand-copies it into two local mirrors (_isTaskCompletedBuggy / _isTaskCompletedFixed) instead of calling production code. The file's own 'BUG REPRO' test claims it 'must FAIL until F5 is applied' (line 118), but _isTaskCompletedBuggy is a static local function that reproduces the bug unconditionally forever \u2014 that claim is false, and `flutter test` confirms all 4 tests pass today regardless of the real source. A real regression to the production sentinel-skip logic would not be caught by this file (though test/features/scheduler/presentation/providers/scheduler_all_daily_tasks_test.dart's 'SP4' test does exercise the real provider and would catch it, so this is false assurance in the acceptance artifact rather than a total coverage gap).",
+   "recommendation": "Extract the matching predicate at scheduler_providers.dart:414-427 to a top-level pure function (e.g. on SchedulerEngine or a new daily_task_completion_matcher.dart) that both the provider and this test import; delete the hand-copied mirrors. Alternatively delete this file's duplicated logic and move the story_f5 tag onto scheduler_all_daily_tasks_test.dart's SP4 test.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "epic_27_story_f5_prior_learning_filter_test.dart imports and calls the production matching function directly; no local re-implementation of isTaskCompleted remains.",
+    "`flutter analyze` and the scheduler test suite pass after extraction."
+   ],
+   "labels": [
+    "testing",
+    "scheduler",
+    "TQ-8",
+    "feathers-seam"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epic-27",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Back epic_27_story_27_8's tutor/rules security-boundary tests with real rule evaluation, not substring matching",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 / SR-5",
+   "area": "test/story_acceptance \u2014 firestore.rules",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_27_story_27_8_rules_and_offline_flush_test.dart",
+     "line": 194,
+     "quote": "// as Group A \u2014 the `fake_firebase_security_rules` package cannot evaluate\n  // `request.auth.uid` comparisons dynamically, but string-scanning the rules"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_27_story_27_8_rules_and_offline_flush_test.dart",
+     "line": 246,
+     "quote": "expect(\n          block,\n          isNot(contains('isTutorOf')),"
+    }
+   ],
+   "sites": 1,
+   "why": "The file's own comment admits the dynamic rules-emulation package can't evaluate request.auth.uid, so the 'LOAD-BEARING security invariant' tests (line 199) fall back to scanning firestore.rules TEXT for substrings. A rule edit that inserts a bypass while preserving the substrings \u2014 e.g. `allow create: if isOwner(uid) || request.auth != null;` \u2014 still contains 'isOwner(uid)', still omits 'isTutorOf', and would pass every assertion here while granting any authenticated user write access to completions. Per the audit baseline, the real emulator-based rules suite (firestore_rules.test.mjs) is currently soft-skipped in `make ci` (TQ-9, already known) \u2014 so this Dart text-matching suite may be the only thing CI runs today for the tutor-write-block boundary this file calls load-bearing.",
+   "recommendation": "Assert the tutor-write-block and owner-write invariants against the actual Firestore Rules emulator (@firebase/rules-unit-testing) with real auth contexts (assertFails/assertSucceeds), not string containment on the rules source; keep the text-scan tests only as a fast pre-check, not the sole gate.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "An emulator-backed test asserts a tutor-authenticated write to completions/{completionId} is denied and an owner-authenticated write succeeds.",
+    "CI runs this test unconditionally (ties into the existing TQ-9 soft-skip fix)."
+   ],
+   "labels": [
+    "testing",
+    "security",
+    "firestore-rules",
+    "TQ-8"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epic-27",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Extract a shared FakeFirestoreGateway test helper instead of re-implementing FirestoreGateway in 23 test files",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler \u2014 duplication / shotgun surgery",
+   "area": "test/story_acceptance \u2014 sync",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_27_story_27_8_rules_and_offline_flush_test.dart",
+     "line": 584,
+     "quote": "class _ToggleableFakeGateway implements FirestoreGateway {"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_27_story_27_8_rules_and_offline_flush_test.dart",
+     "line": 811,
+     "quote": "// \u2500\u2500 Step 1 additions (DNI-333 cutover) \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_27_story_27_8_rules_and_offline_flush_test.dart",
+     "line": 927,
+     "quote": "// W6.13: fetchAuditLogEntries added to FirestoreGateway interface."
+    }
+   ],
+   "sites": 1,
+   "why": "`grep -rl \"implements FirestoreGateway\" test/` finds 23 files, of which this ~370-line _ToggleableFakeGateway is one; the other 22 are independent hand-rolled implementations of the same 25+-method interface. This file's own accretion comments ('Step 1 additions', 'W6.13', 'T1.gateway \u2014 stub') show the interface has grown at least 3 times since this fake was written \u2014 each growth requires editing every one of the 23 fakes or the analyzer fails each independently (classic shotgun surgery). This is also the single largest contributor to the file's AG-3 overage (see the paired finding).",
+   "recommendation": "Extract one canonical InMemoryFirestoreGateway/FakeFirestoreGateway to test/helpers/, parameterized for online/offline + failure-injection behaviour used here, and have call sites configure it instead of re-implementing the interface.",
+   "effort": "L",
+   "acceptance_criteria": [
+    "A shared fake gateway exists under test/helpers/ implementing FirestoreGateway once.",
+    "This file's _ToggleableFakeGateway is replaced by (or extends) the shared fake; repo-wide count of independent `implements FirestoreGateway` fakes decreases."
+   ],
+   "labels": [
+    "testing",
+    "duplication",
+    "sync"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epic-27",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Replace epic_27_story_4_widget_golden_test.dart's 'AC structural verification' tautologies with real assertions",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "test/story_acceptance \u2014 widgets/goldens",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_27_story_4_widget_golden_test.dart",
+     "line": 254,
+     "quote": "expect(BulkMarkScreen, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_27_story_4_widget_golden_test.dart",
+     "line": 351,
+     "quote": "expect(shapes, hasLength(4));"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_27_story_4_widget_golden_test.dart",
+     "line": 361,
+     "quote": "expect(expectedLocales, contains('he'));"
+    }
+   ],
+   "sites": 3,
+   "why": "All three assertions are structurally guaranteed to pass regardless of the real code: (1) a bare class-type literal like `BulkMarkScreen` is never null in Dart \u2014 this can only fail if the file doesn't compile; (2) `shapes` at line 345-350 is a locally hardcoded copy of the golden-loop shape list (lines 107-112), fully disconnected from it \u2014 deleting 3 of the 4 real `goldenTest('track_card_...)` calls would not fail this test; (3) `expectedLocales` at line 360 is a hardcoded 2-element literal, disconnected from golden_runner.dart \u2014 changing that helper to skip the Hebrew variant (exactly what the comment at line 358-359 claims this test guards against) would not fail it either.",
+   "recommendation": "Replace with real assertions: e.g. have golden_runner.dart expose the locale list / registered test count it actually iterates, and assert against that value, not a local copy; for BulkMarkScreen, either delete the vacuous check or assert something meaningful about its public constructor surface.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "The 'AC structural verification' tests fail when the real 4-shape loop or the real he-locale emission in golden_runner.dart is removed/broken."
+   ],
+   "labels": [
+    "testing",
+    "TQ-8",
+    "tautological"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epic-27",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Attach a Linear id to the CompletionButton TODO in epic_27_story_4_widget_golden_test.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-6",
+   "area": "test/story_acceptance \u2014 hygiene",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_27_story_4_widget_golden_test.dart",
+     "line": 240,
+     "quote": "// TODO: CompletionButton was removed in the Wave-3/4 refactor.\n      // Skip until a replacement widget is identified or this test is deleted."
+    }
+   ],
+   "sites": 1,
+   "why": "AG-6 requires every TODO/FIXME to carry a DNI-#### id so it's tracked; this one has none, so the permanently-skipped test with a dead `expect(true, isTrue)` body has no queue entry telling anyone to replace or delete it.",
+   "recommendation": "Attach a DNI-#### id, or just delete the dead skipped test now that CompletionButton is confirmed gone (its skip reason already states this).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "The TODO carries a DNI id, or the skipped test is removed."
+   ],
+   "labels": [
+    "hygiene",
+    "AG-6"
+   ]
+  }
+ }
+]

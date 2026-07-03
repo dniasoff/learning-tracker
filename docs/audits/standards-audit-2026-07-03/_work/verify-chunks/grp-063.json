@@ -1,0 +1,220 @@
+[
+ {
+  "sourceBatch": "t1-feat-notifications-p1",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Give streakAlertSyncEffect the same cold-start defense and test coverage as reminderSyncEffect",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "SM-2 / TQ-1",
+   "area": "features/notifications/presentation/providers",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/notifications/presentation/providers/notification_providers.dart",
+     "line": 463,
+     "quote": "// M3 fix: the pref notifiers return defaults (enabled=true, 19:00)\n  // synchronously, then async-load the real values."
+    },
+    {
+     "file": "learning_tracker/lib/features/notifications/presentation/providers/notification_providers.dart",
+     "line": 725,
+     "quote": "final enabled = ref.watch(streakAlertEnabledProvider);\n  final time = ref.watch(streakAlertTimeProvider);"
+    }
+   ],
+   "sites": 1,
+   "why": "reminderSyncEffect was patched (M3) specifically because trusting the raw preference-provider state schedules with transient defaults first; streakAlertSyncEffect, structurally identical and in the same file, still watches streakAlertEnabledProvider/streakAlertTimeProvider directly and inherits the same defect. No test in the notifications suite drives streakAlertSyncEffectProvider's real body -- every reference to it anywhere in the repo's notifications tests stubs it to `(ref) async {}` -- so a regression that schedules/cancels a streak alert against the user's actual saved preference during a cold-start or profile-switch window would go undetected.",
+   "recommendation": "Apply the same direct-SharedPreferences-read pattern reminderSyncEffect uses (or fix at the root per the SM-2 finding), and add a streak_alert_cold_start_test.dart mirroring reminder_sync_sacred_time_test.dart's recording-gateway approach.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "A new test with a recording NotificationGateway/StreakAlertService fake asserts streakAlertSyncEffect does not schedule/cancel using default streak-alert settings when the persisted value differs, mirroring reminder_sync_sacred_time_test.dart."
+   ],
+   "labels": [
+    "riverpod",
+    "notifications",
+    "test-gap"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-notifications-p1",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Delete the dead pre-per-profile notification scheduling API in NotificationGateway/NotificationScheduler",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler dead code",
+   "area": "features/notifications/domain/services",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/notifications/domain/services/notification_gateway.dart",
+     "line": 168,
+     "quote": "Future<void> scheduleDailyReminder({"
+    },
+    {
+     "file": "learning_tracker/lib/features/notifications/domain/services/notification_gateway.dart",
+     "line": 197,
+     "quote": "Future<void> cancelDailyReminder() async {"
+    },
+    {
+     "file": "learning_tracker/lib/features/notifications/domain/services/notification_gateway.dart",
+     "line": 212,
+     "quote": "Future<void> scheduleBatchReminders({"
+    },
+    {
+     "file": "learning_tracker/lib/features/notifications/domain/services/notification_gateway.dart",
+     "line": 244,
+     "quote": "Future<void> cancelBatchReminders() async {"
+    },
+    {
+     "file": "learning_tracker/lib/features/notifications/domain/services/notification_gateway.dart",
+     "line": 335,
+     "quote": "Future<void> scheduleStreakAlert({"
+    },
+    {
+     "file": "learning_tracker/lib/features/notifications/domain/services/notification_gateway.dart",
+     "line": 365,
+     "quote": "Future<void> cancelStreakAlert() async {"
+    },
+    {
+     "file": "learning_tracker/lib/features/notifications/domain/services/notification_scheduler.dart",
+     "line": 127,
+     "quote": "Future<void> schedule({"
+    },
+    {
+     "file": "learning_tracker/lib/features/notifications/domain/services/notification_scheduler.dart",
+     "line": 150,
+     "quote": "Future<void> cancelForSacredTime() async {"
+    },
+    {
+     "file": "learning_tracker/lib/features/notifications/domain/services/notification_scheduler.dart",
+     "line": 161,
+     "quote": "Future<void> cancel() async {"
+    }
+   ],
+   "sites": 9,
+   "why": "WS5.per-profile replaced these with *ForProfile equivalents (per the 'H1 fix' comments elsewhere in the file); a repo-wide grep for non-declaration, non-test callers of all 9 methods returns nothing, confirming zero production callers. Yet they still compile and are still exercised by roughly 780 of notification_gateway_test.dart's 1415 lines plus the entirety of notification_scheduler_test.dart and notification_service_test.dart. A future edit that calls scheduler.schedule()/.cancel() instead of the *ForProfile variant -- same class, plausible-looking name -- would silently reintroduce H1 (two competing ID schemes per profile) with no compiler or test signal, since the dead path still 'works' and stays green in CI.",
+   "recommendation": "Delete the 9 legacy methods and the singleton ID constants, delete/collapse the corresponding dead tests, and keep only the *ForProfile surface.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "grep -rn for the 9 legacy method names in lib/ returns zero results once removed.",
+    "notification_gateway_test.dart / notification_scheduler_test.dart / notification_service_test.dart shrink accordingly with no loss of coverage on the *ForProfile paths."
+   ],
+   "labels": [
+    "dead-code",
+    "notifications",
+    "hotspot"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-notifications-p1",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Wire up or delete the unused SharedPrefsNotificationPreferencesRepository",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler dead code / SM-7",
+   "area": "features/notifications/data/repositories",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/notifications/data/repositories/shared_prefs_notification_preferences_repository.dart",
+     "line": 5,
+     "quote": "/// All key strings and default values are centralised here rather than\n/// being scattered across multiple Riverpod notifiers."
+    },
+    {
+     "file": "learning_tracker/lib/features/notifications/presentation/providers/notification_providers.dart",
+     "line": 67,
+     "quote": "final prefs = await SharedPreferences.getInstance();"
+    }
+   ],
+   "sites": 1,
+   "why": "SharedPrefsNotificationPreferencesRepository is constructed nowhere in lib/ outside its own constructor declaration -- a repo-wide grep confirms zero call sites. Its doc comment claims prefs are centralised here instead of being scattered across notifiers, but every one of the 5 preference providers in notification_providers.dart still reads/writes SharedPreferences key-by-key inline via the static key helpers, exactly the scattered pattern the class claims to replace. It has zero test coverage and misleads a reader into believing there is a repository DI seam here when there isn't one.",
+   "recommendation": "Either finish the migration (route the 5 providers' load/save through a provider constructing this repository) or delete the class and the interface's now-pointless abstract load()/save(), keeping only the static key helpers that are actually used.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "Either a provider constructs SharedPrefsNotificationPreferencesRepository and the 5 notifiers call load()/save() through it with a test exercising both methods; or the class and abstract methods are removed and dart analyze stays clean."
+   ],
+   "labels": [
+    "dead-code",
+    "notifications",
+    "repository-pattern"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-notifications-p1",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Route sacred_window_repository.dart through the sacred_time barrel instead of deep cross-feature imports (Rule 2)",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Rule 2",
+   "area": "features/notifications/data/services",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/notifications/data/services/sacred_window_repository.dart",
+     "line": 4,
+     "quote": "import 'package:learning_tracker/features/sacred_time/domain/models/sacred_location.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/features/notifications/data/services/sacred_window_repository.dart",
+     "line": 6,
+     "quote": "import 'package:learning_tracker/features/sacred_time/domain/services/zmanim_window_service.dart';"
+    },
+    {
+     "file": "learning_tracker/learning_tracker/Makefile",
+     "line": 380,
+     "quote": "match($1, /features\\/([^\\/]+)\\//, a); match($0, /features\\/([^\\/]+)\\//, b); if(a[1] != b[1]) print"
+    }
+   ],
+   "sites": 1,
+   "why": "features/notifications reaches directly into features/sacred_time's domain internals instead of features/sacred_time/sacred_time.dart (itself an empty stub barrel with no exports), so a refactor inside sacred_time's domain layer can silently break notification scheduling with no barrel-boundary warning. Separately, make audit check 15's awk pattern always compares a feature name against itself: it runs match() against $0 (the whole grep -rn line, which starts with the FILE PATH), so the first 'features/X/' match in $0 is always the same X captured from $1 -- a[1] and b[1] can never differ, so check 15 can never print a warning for ANY file. This is confirmed empirically: check 15 produced zero WARN output in the clean-tree baseline despite this real cross-feature import existing.",
+   "recommendation": "Populate features/sacred_time/sacred_time.dart with the needed exports (SacredLocation, SacredWindow, ZmanimWindowService) and import through it; separately fix the Makefile check 15 awk pattern to extract the import path (not the full grep line) before comparing feature names.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "make audit check 15, once its awk bug is fixed, flags this file today and reports clean after the barrel fix is applied."
+   ],
+   "labels": [
+    "layering",
+    "rule-2",
+    "notifications",
+    "make-audit-bug"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-notifications-p1",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Wrap SacredWindowEntries clear+insert in one transaction (DB-2)",
+   "severity": "P2",
+   "confidence": "SUSPECTED",
+   "rule": "DB-2",
+   "area": "features/notifications/data/services",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/notifications/data/services/sacred_window_repository.dart",
+     "line": 50,
+     "quote": "_dao?.clearAll();"
+    },
+    {
+     "file": "learning_tracker/lib/features/notifications/data/services/sacred_window_repository.dart",
+     "line": 167,
+     "quote": "dao.clearAll().then((_) => dao.insertAll(companions)).ignore();"
+    }
+   ],
+   "sites": 2,
+   "why": "The table is briefly empty between clearAll() completing and insertAll() starting; neither call is awaited by any caller and neither is wrapped in a transaction. invalidate()'s own separate unawaited clearAll() (line 50) can also interleave with _persistToDb()'s clear-then-insert pair (line 167) in either order. The class's own doc says this cache exists so 'background notification-fire-time checks can read them on cold-start without the Flutter engine' -- a background read landing in the empty gap, or after invalidate() wins a race against a slower insertAll(), sees no Sacred Time windows and could fail to suppress a notification during Shabbos/Yom Tov, the entire point of DNI-367. Confirming the full consequence requires reading the background notification-fire-time isolate handler, which is outside this batch.",
+   "recommendation": "Wrap clear+insert in one db.transaction(...) and await it from both invalidate() and _persistToDb(), or add an explicit generation-counter guard so a stale clear can't stomp a newer insert.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "A DAO-level test that races invalidate() against a concurrent _persistToDb() cycle never observes SacredWindowEntries transition through an empty state once a non-empty write has committed."
+   ],
+   "labels": [
+    "drift",
+    "db-2",
+    "notifications",
+    "race-condition"
+   ]
+  }
+ }
+]

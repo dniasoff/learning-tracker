@@ -1,0 +1,76 @@
+[
+ {
+  "sourceBatch": "t1-core-database-tables",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Add profileId FK+CASCADE to 6 tables \u2014 tutored-mirror wipe currently orphans a mirrored child's data",
+   "severity": "P0",
+   "confidence": "CONFIRMED",
+   "rule": "profileId-in-PK Invariant / DB-6 (sync-able entity integrity, FK-cascade discipline)",
+   "area": "core/database/tables + core/sync (tutoring mirror lifecycle)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/database/tables/curriculum_tracks.dart",
+     "line": 16,
+     "quote": "IntColumn get profileId => integer()();"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/tables/daily_plans.dart",
+     "line": 11,
+     "quote": "IntColumn get profileId => integer()();"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/tables/outbox_table.dart",
+     "line": 16,
+     "quote": "IntColumn get profileId => integer()();"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/tables/point_configs.dart",
+     "line": 10,
+     "quote": "IntColumn get profileId => integer()();"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/tables/profile_programs.dart",
+     "line": 8,
+     "quote": "IntColumn get profileId => integer()();"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/tables/study_day_configs.dart",
+     "line": 5,
+     "quote": "IntColumn get profileId => integer()();"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/tutored_mirror_wipe_service.dart",
+     "line": 12,
+     "quote": "the learner_profiles row cascades to all mirrored rows in completions, ... curriculum_tracks, etc. No explicit child-row deletion is needed."
+    },
+    {
+     "file": "learning_tracker/lib/core/database/daos/profile_dao.dart",
+     "line": 174,
+     "quote": "The FK `ON DELETE CASCADE` on every child table (completions, streak_events, learning_ledger, bookmarks, goals, etc.)"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/data/repositories/profile_repository_impl.dart",
+     "line": 232,
+     "quote": "// `outbox` has no FK \u2014 without this its pending pushes for the deleted profile would survive."
+    }
+   ],
+   "sites": 6,
+   "why": "None of these 6 tables declare `.references(LearnerProfiles, #id, onDelete: KeyAction.cascade)` on their profileId column (every sibling table that IS correctly protected does). `ProfileRepositoryImpl.deleteProfile()` compensates by explicitly deleting from all 6 before removing the profile row \u2014 the team clearly knows about this gap. But `TutoredMirrorWipeService.wipeMirrorForGrant/wipeAllMirrors/wipeRevokedMirrors` (used on tutor grant revoke/resign, tutor sign-out, and the D18 revoke-reconcile path) does NOT replicate that compensation \u2014 it only calls `ProfileDao.deleteTutoredMirrorByGrantId`, a bare delete of the `learner_profiles` row, while its own top-of-file comment incorrectly asserts universal FK cascade covering `curriculum_tracks, etc.`. `tutored_pull_service.dart` (line 99, 'a point_configs FK violation') confirms these tables are actually populated for a live mirror. Net effect: when a tutoring relationship ends, the tutored child's mirrored curriculum_tracks/daily_plans/point_configs/profile_programs/study_day_configs rows silently persist on the tutor's device forever \u2014 a child-privacy data-retention failure that contradicts the code's own stated invariant, with no error or log to reveal it.",
+   "recommendation": "Either (a) add `.references(LearnerProfiles, #id, onDelete: KeyAction.cascade)` to profileId on all 6 tables (schema migration + schema export per DB-4), or (b) make `TutoredMirrorWipeService` explicitly delete from all 6 tables before removing the `learner_profiles` row, mirroring `ProfileRepositoryImpl.deleteProfile`'s existing pattern (no migration needed, lower risk, matches established precedent). Fix the false comment either way.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "New regression test: after wipeMirrorForGrant/wipeAllMirrors, querying curriculum_tracks/daily_plans/outbox/point_configs/profile_programs/study_day_configs WHERE profileId = <wiped id> returns 0 rows.",
+    "tutored_mirror_wipe_service.dart's header comment no longer claims universal FK cascade for tables that don't have it.",
+    "tool/schema_check.dart (or a new companion checker) flags any core/database/tables profileId column lacking a `.references(LearnerProfiles, ...)` FK, so a future new table can't silently reintroduce the gap."
+   ],
+   "labels": [
+    "child-privacy",
+    "data-integrity",
+    "sync",
+    "tutoring",
+    "P0"
+   ]
+  }
+ }
+]

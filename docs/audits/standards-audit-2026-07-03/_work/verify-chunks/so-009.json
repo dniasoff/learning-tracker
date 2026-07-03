@@ -1,0 +1,259 @@
+[
+ {
+  "sourceBatch": "t1-feat-gamification-p3",
+  "chunk": "grp-057",
+  "finding": {
+   "title": "Introduce test/helpers/pump_app.dart \u2014 6 gamification test files hand-roll near-identical MaterialApp/ProviderScope boilerplate",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-3",
+   "area": "features/gamification presentation tests",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/gamification/presentation/screens/child_redemption_screen_l1_test.dart",
+     "line": 98,
+     "quote": "Future<void> _pumpScreen(\n  WidgetTester tester, {"
+    },
+    {
+     "file": "learning_tracker/test/features/gamification/presentation/screens/gamification_screen_l1_test.dart",
+     "line": 124,
+     "quote": "Widget _buildApp({\n  AsyncValue<AchievementsOverview>? achievementsState,"
+    },
+    {
+     "file": "learning_tracker/test/features/gamification/presentation/widgets/achievement_unlock_celebration_test.dart",
+     "line": 272,
+     "quote": "final db = createTestUserDatabase();\n        await tester.pumpWidget("
+    },
+    {
+     "file": "learning_tracker/test/features/gamification/presentation/widgets/achievement_unlock_celebration_test.dart",
+     "line": 297,
+     "quote": "final db2 = createTestUserDatabase();\n        await tester.pumpWidget("
+    }
+   ],
+   "sites": 6,
+   "why": "docs/coding-standards.md:462-465 (TQ-3) names `test/helpers/pump_app.dart` as 'the reviewed convention' for this exact ProviderScope+localization-delegate boilerplate, but the file doesn't exist anywhere in the repo (confirmed via ls test/helpers/). In this batch alone, child_redemption_screen_l1_test.dart (_pumpScreen + _pumpScreenWithRouter), gamification_screen_l1_test.dart (_buildApp), parent_pending_redemptions_screen_l1_test.dart (_buildScreen + buildWithRouter), reward_configuration_screen_l1_test.dart (_buildFake), streak_widget_test.dart (buildWidget) and achievement_unlock_celebration_test.dart (_buildHarness) each reimplement the same ~20-30 line scaffold independently; achievement_unlock_celebration_test.dart even duplicates its own _buildHarness body inline twice (lines 272-294 and 297-319) instead of calling it, showing the drift risk in practice \u2014 any future fix to the shared scaffold (e.g. a new required delegate) must be hand-applied at every site.",
+   "recommendation": "Create test/helpers/pump_app.dart per the standards doc and migrate these builders to call it, parameterizing only the feature-specific overrides.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "test/helpers/pump_app.dart exists.",
+    "The 6 cited builder functions delegate to it instead of duplicating MaterialApp/localizationsDelegates/ProviderScope setup."
+   ],
+   "labels": [
+    "duplication",
+    "fowler",
+    "test-infra"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-database-tables",
+  "chunk": "grp-016",
+  "finding": {
+   "title": "Update docs/delete-policy.md \u2014 curriculum_tracks moved from deletedAt to state/stateChangedAt in W3.28/W3.29",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-8 (schema diffs update their paired doc in the same PR) / Tier-4 canonical-doc factual drift",
+   "area": "docs/delete-policy.md vs core/database/tables/curriculum_tracks.dart",
+   "evidence": [
+    {
+     "file": "docs/delete-policy.md",
+     "line": 7,
+     "quote": "| `curriculum_tracks` | Soft-delete | `deletedAt` \u2014 null = active; non-null = deleted |"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/tables/curriculum_tracks.dart",
+     "line": 9,
+     "quote": "replaced ad-hoc `isActive`/`deletedAt`/`deactivatedAt` tombstone columns with a single unified `state` enum column"
+    }
+   ],
+   "sites": 1,
+   "why": "curriculum_tracks has no `deletedAt` column at all today \u2014 it was replaced by `state`/`stateChangedAt`. A reader implementing new delete-policy-adjacent code from this doc would query/write a column that doesn't exist. The same doc's coverage table also never mentions daily_plans/point_configs/profile_programs/study_day_configs/outbox/curriculum_scopes/prior_completion_imports, all of which track_dao.dart and profile_repository_impl.dart delete explicitly.",
+   "recommendation": "Update the table row to 'state = deleted + stateChangedAt'; consider adding rows for the other tables track_dao.dart/profile_repository_impl.dart already delete explicitly so the doc is a complete map of delete behavior.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Doc's column-name claim matches an actual column in the current schema (grep-checkable)."
+   ],
+   "labels": [
+    "docs-drift",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-sync-p2",
+  "chunk": "grp-108",
+  "finding": {
+   "title": "Consolidate test/sync/'s merger and round-trip tests into the AG-5-mirrored test/core/sync/ location \u2014 they duplicate existing coverage",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-5 (test/ mirrors lib/ 1:1); Fowler duplication",
+   "area": "test/sync/** (this batch) vs test/core/sync/**",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/sync/merge/learning_ledger_roundtrip_test.dart",
+     "line": 1,
+     "quote": "/// Round-trip test: the canonical write serializer (LearningLedgerCodec.encode)"
+    },
+    {
+     "file": "learning_tracker/test/core/sync/merge/learning_ledger_merger_test.dart",
+     "line": 1,
+     "quote": "/// Regression tests for [LearningLedgerMerger]."
+    },
+    {
+     "file": "learning_tracker/test/sync/merge/streak_events_roundtrip_test.dart",
+     "line": 1,
+     "quote": "/// Round-trip test: the canonical write serializer (StreakEventCodec.encode)"
+    },
+    {
+     "file": "learning_tracker/test/core/sync/merge/streak_event_merger_test.dart",
+     "line": 1,
+     "quote": "/// Regression tests for [StreakEventMerger]."
+    },
+    {
+     "file": "learning_tracker/test/sync/merge/curriculum_tracks_roundtrip_test.dart",
+     "line": 1,
+     "quote": "/// Round-trip test: the canonical write serializer (TrackCodec.encode) must"
+    },
+    {
+     "file": "learning_tracker/test/sync/merge/learner_profile_roundtrip_test.dart",
+     "line": 1,
+     "quote": "/// Round-trip test: the canonical write serializer (LearnerProfileCodec.encode)"
+    },
+    {
+     "file": "learning_tracker/test/core/sync/merge/mergers_test.dart",
+     "line": 1,
+     "quote": "/// Unit tests for the LWW merge implementations:\n/// [TrackConfigMerger], [SettingsMerger], [LearnerProfileMerger]."
+    },
+    {
+     "file": "learning_tracker/test/sync/merge/stage_definitions_roundtrip_test.dart",
+     "line": 1,
+     "quote": "/// Round-trip test: the canonical write serializer (StageDefinitionCodec.encode)"
+    },
+    {
+     "file": "learning_tracker/test/sync/location_device_scope_test.dart",
+     "line": 1,
+     "quote": "/// WS6 \u2014 Location Device-Scope Consistency (DEC-26)"
+    },
+    {
+     "file": "learning_tracker/test/sync/sacred_time_all_profiles_test.dart",
+     "line": 1,
+     "quote": "/// Regression tests for sacred-time / location scope in the UI-preferences"
+    },
+    {
+     "file": "learning_tracker/test/core/sync/codecs_and_mergers_test.dart",
+     "line": 2,
+     "quote": "///   - [StageDefinitionCodec] encode\u2194decode round-trips (all schedule branches,\n///   - [UiPreferencesMerger] LWW gate, per-field writes, cross-profile isolation,"
+    },
+    {
+     "file": "learning_tracker/test/sync/merge/lww_symmetric_test.dart",
+     "line": 1,
+     "quote": "/// Phase 3 LWW symmetry tests for every LWW merger."
+    },
+    {
+     "file": "learning_tracker/test/sync/merge/persist_updated_at_test.dart",
+     "line": 1,
+     "quote": "/// Phase 3: assert every LWW merger persists the remote `updated_at` via"
+    }
+   ],
+   "sites": 9,
+   "why": "All 24 files in this batch live under test/sync/, not the AG-5-mandated mirror of lib/core/sync/ (test/core/sync/), which already exists and is independently populated (12 files). For at least 9 of this batch's files the overlap is not just structural placement \u2014 it is the same merger/scenario tested twice: LearningLedgerMerger's snake_case-shape regression ('C1 regression' in learning_ledger_merger_test.dart) is retested by learning_ledger_roundtrip_test.dart's codec round-trip; StreakEventMerger's study_date-shape regression ('C2 regression') is retested by streak_events_roundtrip_test.dart; TrackConfigMerger/SettingsMerger/LearnerProfileMerger's LWW behavior (mergers_test.dart, against a hand-rolled fake MergeStore) is retested by curriculum_tracks_roundtrip_test.dart/learner_profile_roundtrip_test.dart/lww_symmetric_test.dart/persist_updated_at_test.dart (against the real DriftMergeStore); StageDefinitionMerger's schedule-shape and UiPreferencesMerger's 'no sacred_time clobber' behavior (codecs_and_mergers_test.dart, 1298 lines) is retested by stage_definitions_roundtrip_test.dart, location_device_scope_test.dart, and sacred_time_all_profiles_test.dart. docs/test-options.md documents test/sync/** as THE location for this coverage and never mentions test/core/sync/ existing \u2014 this is undocumented drift, not a deliberate two-tier split (both directories tag tests 'unit'). Every schema/key-name change to these ~9 mergers now needs edits in two independently-evolving files to stay correct, and a change is more likely to update one and silently leave the other testing stale behavior. This also explains a large slice of the orchestrator's own global ag5-unmirrored.txt pre-scan, which lists nearly all of lib/core/sync/merge/*.dart and lib/core/sync/codec/*.dart as having no exact-path test.",
+   "recommendation": "Pick test/core/sync/ as canonical (per AG-5's own 1:1 rule). For each duplicate pair, fold any scenario unique to the era-1 file (e.g. mergers_test.dart's fake-MergeStore isolation, if it adds value beyond the real-store versions) into the era-2 roundtrip test, then delete the superseded file. Update docs/test-options.md's test/sync/** references to match wherever coverage ends up.",
+   "effort": "L",
+   "acceptance_criteria": [
+    "an AG-5 unmirrored-test audit shows zero lib/core/sync/merge/*.dart or lib/core/sync/codec/*.dart entries once consolidation lands",
+    "the consolidated LearningLedgerMerger/StreakEventMerger/TrackConfigMerger/SettingsMerger/LearnerProfileMerger/StageDefinitionMerger/UiPreferencesMerger suites keep every distinct scenario from both current suites while removing exact duplicates (test count is not simply additive)"
+   ],
+   "labels": [
+    "ag-5",
+    "duplication",
+    "test-structure",
+    "sync"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-network",
+  "chunk": "grp-021",
+  "finding": {
+   "title": "Rename connectivity_service_test.dart to connectivity_gateway_test.dart to match its renamed source class",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-5 (test mirrors lib 1:1) / snake_case file-naming convention",
+   "area": "test/core/network (naming)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/network/connectivity_service_test.dart",
+     "line": 5,
+     "quote": "group('ConnectivityGateway', () {"
+    },
+    {
+     "file": "learning_tracker/test/mocks/mock_services.dart",
+     "line": 8,
+     "quote": "// Connectivity Gateway (formerly ConnectivityService \u2014 renamed W5.20)"
+    }
+   ],
+   "sites": 1,
+   "why": "The source class was renamed from ConnectivityService to ConnectivityGateway (W5.20) but its test file was never renamed to match connectivity_gateway.dart. A contributor grepping for the naturally-mirrored connectivity_gateway_test.dart won't find the existing test and may create a duplicate instead of extending it.",
+   "recommendation": "git mv test/core/network/connectivity_service_test.dart test/core/network/connectivity_gateway_test.dart.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "File exists at the mirrored path; no remaining *_service_test.dart file for ConnectivityGateway"
+   ],
+   "labels": [
+    "naming",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tutoring-p1",
+  "chunk": "grp-121",
+  "finding": {
+   "title": "Stop interpolating e.toString() directly into tutoring error/snackbar text",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "custom_lint no_e_to_string_in_ui / EH-5",
+   "area": "features/tutoring/presentation + data",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/manage_grants_screen.dart",
+     "line": 272,
+     "quote": "SnackBar(content: Text(l10n.manageGrantsResignError(e.toString()))),"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/manage_tutors_screen.dart",
+     "line": 230,
+     "quote": "l10n.manageTutorsLoadError(e.toString()),"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/manage_tutors_screen.dart",
+     "line": 404,
+     "quote": "SnackBar(content: Text(l10n.manageTutorsRevokeError(e.toString()))),"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/data/repositories/firestore_tutor_grant_repository.dart",
+     "line": 54,
+     "quote": "return TutorGrantFailure(message: e.toString());"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/data/services/tutor_write_service.dart",
+     "line": 76,
+     "quote": "return TutorWriteFailure(message: e.toString());"
+    }
+   ],
+   "sites": 11,
+   "why": "manage_grants_screen.dart and manage_tutors_screen.dart interpolate a raw Dart exception's toString() into an otherwise-localized ARB string 4 times, so a Hebrew UI sentence ends with an untranslated English/technical fragment (e.g. a gRPC status string). The 6 matching data-layer sites (firestore_tutor_grant_repository.dart x6, tutor_write_service.dart x1) manufacture that raw string in the first place by stuffing `e.toString()` into the Failure.message field instead of a stable code, which is exactly the custom_lint `no_e_to_string_in_ui` rule this repo already has defined (currently non-enforcing because custom_lint is broken repo-wide).",
+   "recommendation": "In the 4 UI catch blocks, map to a generic localized fallback (as invite_tutor_screen.dart already does for TutorGrantFailure) instead of interpolating e.toString(); in the data layer, log e.toString() via AppLogger and return a stable failure code instead of stashing the raw text in the value the UI eventually reads.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep -rn 'e.toString()' lib/features/tutoring/presentation/ returns no UI-text interpolation sites.",
+    "Widget test confirms a thrown exception during revoke/rescind/load shows a fixed localized string regardless of the exception's message."
+   ],
+   "labels": [
+    "l10n",
+    "custom-lint",
+    "error-handling"
+   ]
+  }
+ }
+]

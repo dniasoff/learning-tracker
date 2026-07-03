@@ -1,0 +1,44 @@
+[
+ {
+  "sourceBatch": "t1-feat-profiles-p4",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Replace ws4_mode_boundaries_test.dart's hand-rolled WS4.boundary dialog with the real production widget",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (tautological test \u2014 asserts against a copy, not the source under test)",
+   "area": "test/features/profiles/presentation/ws4_mode_boundaries_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/profiles/presentation/ws4_mode_boundaries_test.dart",
+     "line": 90,
+     "quote": "Widget dialogTestWidget({\n      required String childName,"
+    },
+    {
+     "file": "learning_tracker/test/features/profiles/presentation/ws4_mode_boundaries_test.dart",
+     "line": 104,
+     "quote": "return AlertDialog(\n                      title: Text(dl10n.switchIntoChildTitle),"
+    },
+    {
+     "file": "learning_tracker/lib/l10n/app_en.arb",
+     "line": 729,
+     "quote": "\"switchIntoChildTitle\": \"Switch to child view\","
+    }
+   ],
+   "sites": 1,
+   "why": "The file's header claims to guard DEC-4 ('parent-portal tab-0 shows a confirmation dialog before switching into the child's full experience; cancelling does not proceed'), but the whole 'WS4.boundary' group (both testWidgets) never imports a single symbol from lib/features/profiles or lib/app/router \u2014 it builds its own AlertDialog inline (lines 90-127) and asserts against that copy. A repo-wide grep for the three l10n getters it exercises (switchIntoChildTitle/Message/Confirm) shows zero usages anywhere under lib/ outside the generated l10n files themselves \u2014 the real confirmation dialog this test claims to protect is either unimplemented or was implemented and later removed without updating this test. Either way the suite reports green regardless of whether DEC-4 actually holds in the app: a regression that lets a parent land directly in a child's full experience from tab-0 with no confirmation would not be caught by these two tests.",
+   "recommendation": "Locate the actual tab-0 entry point into a child's full experience (or confirm it isn't implemented yet) and rewrite the WS4.boundary group to pump the real screen/widget and drive its real confirmation dialog. If the feature genuinely doesn't exist in production, delete these two tests (or mark them skip with a linked ticket) rather than leaving a green suite that implies the guard exists.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "WS4.boundary tests import and pump the actual production widget that shows the switch-into-child confirmation, not an inline AlertDialog copy",
+    "grep -rn 'switchIntoChildTitle|switchIntoChildMessage|switchIntoChildConfirm' lib/ --include=*.dart shows a production (non-l10n-generated, non-test) usage, or the feature/test is explicitly retired with a linked ticket"
+   ],
+   "labels": [
+    "profiles",
+    "tautological-test",
+    "test-quality",
+    "parent-mode"
+   ]
+  }
+ }
+]

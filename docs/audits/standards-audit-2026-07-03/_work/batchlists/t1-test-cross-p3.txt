@@ -1,0 +1,8 @@
+learning_tracker/test/e2e/journeys/overflow_sweep_p2_test.dart  (1576 lines)
+learning_tracker/test/e2e/journeys/profiles_p0_test.dart  (672 lines)
+learning_tracker/test/e2e/journeys/profiles_p1_test.dart  (918 lines)
+learning_tracker/test/e2e/journeys/profiles_tutoring_p2_test.dart  (551 lines)
+learning_tracker/test/e2e/journeys/progress_p0_test.dart  (729 lines)
+learning_tracker/test/e2e/journeys/progress_p1_test.dart  (861 lines)
+learning_tracker/test/e2e/journeys/reference_onboarding_to_dashboard_journey_test.dart  (141 lines)
+learning_tracker/test/e2e/journeys/scheduler_p0_test.dart  (676 lines)

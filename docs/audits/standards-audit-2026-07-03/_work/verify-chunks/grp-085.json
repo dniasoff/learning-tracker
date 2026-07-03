@@ -1,0 +1,227 @@
+[
+ {
+  "sourceBatch": "t1-feat-progress-p3",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Rewrite CP-02/ILP-01/PP-4 progress-provider regression guards to exercise the real provider instead of a hand-rewritten stand-in",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "test/features/progress/presentation/providers",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/progress/presentation/providers/curriculum_progress_reactivity_test.dart",
+     "line": 27,
+     "quote": "curriculumProgressProvider('mishnayos').overrideWith((ref) async {"
+    },
+    {
+     "file": "learning_tracker/test/features/progress/presentation/providers/curriculum_progress_reactivity_test.dart",
+     "line": 29,
+     "quote": "ref.watch<int>(completionCommittedProvider);"
+    },
+    {
+     "file": "learning_tracker/test/features/progress/presentation/providers/items_learned_reactivity_test.dart",
+     "line": 41,
+     "quote": "              )).overrideWith((ref) async {"
+    },
+    {
+     "file": "learning_tracker/test/features/progress/presentation/providers/items_learned_reactivity_test.dart",
+     "line": 99,
+     "quote": "              )).overrideWith((ref) async {"
+    },
+    {
+     "file": "learning_tracker/test/features/progress/presentation/providers/items_learned_reactivity_test.dart",
+     "line": 146,
+     "quote": "itemsLearnedSummariesProvider(1).overrideWith((ref) async {"
+    },
+    {
+     "file": "learning_tracker/test/features/progress/presentation/providers/pp4_lifetime_chazaros_count_test.dart",
+     "line": 107,
+     "quote": "final buggyCount = completions.length;"
+    },
+    {
+     "file": "learning_tracker/test/features/progress/presentation/providers/pp4_lifetime_chazaros_count_test.dart",
+     "line": 118,
+     "quote": "final fixedCount = completions.where((c) => c.stageId > 1).length;"
+    }
+   ],
+   "sites": 6,
+   "why": "Each 'regression guard' replaces the real provider body with a hand-written stub (curriculum_progress_reactivity_test.dart, items_learned_reactivity_test.dart x3) or bypasses the provider entirely and recomputes the intended formula inline (pp4_lifetime_chazaros_count_test.dart x2, which never touches lifetimeHeaderCountersProvider or even a ProviderContainer). I confirmed the real implementations at progress_providers.dart:67/118/166, items_learned_providers.dart:182/221, and lifetime_knowledge_providers.dart:531/562 currently contain the fix (ref.watch(completionCommittedProvider) / .where((c) => c.stageId > 1)), and that these are the ONLY tests tagged CP-02/ILP-01/PP-4 in the repo. If a future refactor of any of these 6 providers drops the watch call or reverts totalChazaros to completions.length, all 6 tests keep passing and CI stays green while the previously-shipped, user-visible bugs (stale Progress/Items-Learned/Lifetime-View screens after a completion; self-contradictory 'N chazaros' header) silently ship again.",
+   "recommendation": "Follow the pattern already used correctly in this same batch (lifetime_knowledge_providers_test.dart's 'D9' group, journey_providers_test.dart): seed a real in-memory UserDatabase, read the REAL provider via ProviderContainer with only DB/content-repo/profile overridden, mutate the DB, tick completionCommittedProvider, and assert the real provider's re-fetched value changed. For PP-4, call container.read(lifetimeHeaderCountersProvider(...).future) against seeded rows instead of recomputing the formula in the test.",
+   "acceptance_criteria": [
+    "Temporarily reverting the ref.watch(completionCommittedProvider) line in curriculumProgressProvider/itemsLearnedDataProvider/lifetimeViewDataProvider/itemsLearnedSummariesProvider makes the corresponding rewritten test fail red.",
+    "Temporarily reverting lifetimeHeaderCountersProvider's totalChazaros to completions.length makes the PP-4 test fail red.",
+    "No test in these 3 files fully overrides the provider under test with a hand-written body that duplicates the fix logic."
+   ],
+   "effort": "M",
+   "labels": [
+    "testing",
+    "riverpod",
+    "progress",
+    "tautological-test"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-progress-p3",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Remove or relocate the notifications-feature Part B tests duplicated inside lifetime_folder_styled_and_notif_providers_test.dart",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-5",
+   "area": "test/features/progress",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/progress/lifetime_folder_styled_and_notif_providers_test.dart",
+     "line": 1224,
+     "quote": "group('ReminderEnabled \u2014 default and persistence', () {"
+    },
+    {
+     "file": "learning_tracker/test/features/notifications/presentation/providers/notification_providers_test.dart",
+     "line": 80,
+     "quote": "group('ReminderEnabled', () {"
+    }
+   ],
+   "sites": 1,
+   "why": "lifetime_folder_styled_and_notif_providers_test.dart lives under test/features/progress/ but its ~430-line 'Part B' (lines 1220-1654) tests lib/features/notifications/... (ReminderEnabled, ReminderTime, StreakAlertEnabled, StreakAlertTime, RewardNotificationEnabled defaults/toggle/persistence, key-constant helpers) \u2014 code that belongs to a completely different feature. The properly-mirrored test/features/notifications/presentation/providers/notification_providers_test.dart already covers the identical group names and scenarios. A developer changing NotificationPreferencesRepository or notification_providers.dart will update the correctly-located suite and has no reason to look inside test/features/progress/ for a second copy, so the two copies drift apart silently across fix waves and CI pays to run duplicate coverage twice.",
+   "recommendation": "Delete Part B from lifetime_folder_styled_and_notif_providers_test.dart; diff it against notification_providers_test.dart/notification_providers_deep_test.dart/reminder_*_cold_start_test.dart and port any genuinely uncovered scenario (e.g. isSacredTimeActiveProvider, keyForProfile) into the notifications suite. Rename the remaining Part A (widget tests for lifetime_folder_styled_widgets.dart) to test/features/progress/presentation/widgets/lifetime_folder_styled_widgets_test.dart, dropping the 'notif' abbreviation.",
+   "acceptance_criteria": [
+    "grep -c \"group('Reminder\\|group('StreakAlert\\|group('RewardNotification\" under test/features/progress/ returns 0.",
+    "Every scenario unique to the removed Part B still exists somewhere under test/features/notifications/.",
+    "Widget-only file lives at a path that mirrors lib/features/progress/presentation/widgets/lifetime_folder_styled_widgets.dart."
+   ],
+   "effort": "M",
+   "labels": [
+    "testing",
+    "duplication",
+    "AG-5",
+    "notifications",
+    "progress"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-progress-p3",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Reuse test/helpers/overflow_harness.dart instead of hand-rolling single-point FlutterError.onError overflow checks in lifetime_folder_styled_and_notif_providers_test.dart",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-3",
+   "area": "test/features/progress",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/progress/lifetime_folder_styled_and_notif_providers_test.dart",
+     "line": 53,
+     "quote": "Widget _wrap("
+    },
+    {
+     "file": "learning_tracker/test/features/progress/lifetime_folder_styled_and_notif_providers_test.dart",
+     "line": 147,
+     "quote": "final prev = FlutterError.onError;"
+    }
+   ],
+   "sites": 6,
+   "why": "coding-standards.md TQ-3 specifies test/helpers/pump_app.dart as 'the reviewed convention' for widget-test pumping, but that file does not exist anywhere in the repo (only an unrelated pumpApp lives in test/e2e/harness/e2e_harness.dart for E2E journeys) \u2014 this file's local _wrap/_pump/_tearDown (lines 53-86) is a from-scratch reimplementation. Separately, 6 tests (lines 147, 269, 343, 507, 797, 1146) hand-roll a FlutterError.onError capture to detect RTL overflow at exactly one (size, textScale) point, duplicating and weakening test/helpers/overflow_harness.dart's expectNoOverflowAcrossDevices \u2014 an already-adopted (18 call sites), purpose-built matrix checker with a documented central home at test/overflow/overflow_guard_test.dart. The hand-rolled single-point checks in this file cannot catch overflow that only manifests at the tablet width or the 2.0x text-scale corner, which the shared matrix helper is specifically designed to catch.",
+   "recommendation": "Add the 6 Hebrew-locale/dark-theme cases to test/overflow/overflow_guard_test.dart via expectNoOverflowAcrossDevices instead of the local FlutterError.onError pattern; separately, either build test/helpers/pump_app.dart per TQ-3's spec or point TQ-3 at overflow_harness.dart's _wrap-equivalent so future widget tests have one place to look.",
+   "acceptance_criteria": [
+    "The 6 sites at lines 147/269/343/507/797/1146 are replaced by expectNoOverflowAcrossDevices calls (in this file or test/overflow/overflow_guard_test.dart).",
+    "A shared, importable pump helper exists and this file imports it rather than defining its own _wrap/_pump."
+   ],
+   "effort": "M",
+   "labels": [
+    "testing",
+    "duplication",
+    "TQ-3",
+    "rtl",
+    "a11y"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-progress-p3",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Split the 5 hand-written progress test files that exceed the AG-3 400-line cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "test/features/progress",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/progress/domain/services/chart_data_service_w1b_test.dart",
+     "line": 633,
+     "quote": "}"
+    },
+    {
+     "file": "learning_tracker/test/features/progress/presentation/providers/curriculum_pace_status_provider_test.dart",
+     "line": 554,
+     "quote": "}"
+    },
+    {
+     "file": "learning_tracker/test/features/progress/presentation/providers/journey_providers_test.dart",
+     "line": 836,
+     "quote": "}"
+    },
+    {
+     "file": "learning_tracker/test/features/progress/presentation/providers/lifetime_knowledge_providers_test.dart",
+     "line": 597,
+     "quote": "}"
+    },
+    {
+     "file": "learning_tracker/test/features/progress/lifetime_folder_styled_and_notif_providers_test.dart",
+     "line": 1654,
+     "quote": "}"
+    }
+   ],
+   "sites": 5,
+   "why": "AG-3's own enforcement command (`find lib test -name '*.dart' ... | xargs wc -l | awk '$1>400'`) explicitly scopes to both lib/ and test/. Content past a file's read window becomes invisible to an editing agent, so these 5 files (633/554/836/597/1654 lines) risk partial edits that silently drop earlier test groups; the 1654-line file is the most severe case and is a direct symptom of the cross-feature duplication captured in a separate finding.",
+   "recommendation": "Split by the natural group() boundaries already present in each file (e.g. chart_data_service_w1b_test.dart's #2/#3/#5/#6 task groups; lifetime_folder_styled_and_notif_providers_test.dart's Part A/Part B) into per-concern files at their mirrored lib/ paths.",
+   "acceptance_criteria": [
+    "`find lib test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400'` no longer lists any of these 5 paths."
+   ],
+   "effort": "L",
+   "labels": [
+    "hygiene",
+    "AG-3",
+    "file-size"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-progress-p3",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Add a PaceCalculator regression test for bulkBaseline exceeding totalItems",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "test/features/progress/domain/services",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/progress/domain/services/pace_calculator_test.dart",
+     "line": 1,
+     "quote": "import 'package:flutter_test/flutter_test.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/domain/services/pace_calculator.dart",
+     "line": 150,
+     "quote": "? ((totalItems - bulkBaseline) / trackDays).clamp(0.0, double.infinity)"
+    }
+   ],
+   "sites": 1,
+   "why": "pace_calculator.dart's class doc explicitly documents 'Clamped to 0 when bulkBaseline > totalItems (over-marked prior learning)' as a named edge case, but no test in the file constructs bulkBaseline > totalItems (test 6 only reaches bulkBaseline == totalItems, which is 0 without needing the clamp). A real scenario producing this \u2014 a curriculum's content set shrinks after a user already bulk-marked more items than now exist \u2014 would silently regress to a negative requiredVelocity (and a nonsensical paceStatus) if the .clamp(0.0, double.infinity) at pace_calculator.dart:150 were ever narrowed or removed, with nothing in the suite to catch it.",
+   "recommendation": "Add a test with totalItems < bulkBaseline (e.g. totalItems: 50, bulkBaseline: 80) asserting requiredVelocity == 0.0 and paceStatus is never ahead/behind.",
+   "acceptance_criteria": [
+    "New test fails red if pace_calculator.dart:150's .clamp(0.0, double.infinity) is changed to allow negative values."
+   ],
+   "effort": "S",
+   "labels": [
+    "testing",
+    "coverage-gap",
+    "pace"
+   ]
+  }
+ }
+]

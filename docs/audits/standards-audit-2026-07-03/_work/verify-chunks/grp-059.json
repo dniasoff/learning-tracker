@@ -1,0 +1,178 @@
+[
+ {
+  "sourceBatch": "t1-feat-learning-p1",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Inject RewardMilestoneService into CompletionRepositoryImpl instead of constructing it ad hoc per call",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "SM-7",
+   "area": "learning/data/repositories",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/learning/data/repositories/completion_repository_impl.dart",
+     "line": 134,
+     "quote": "final rewardService = RewardMilestoneService(\n          _database,"
+    },
+    {
+     "file": "learning_tracker/lib/features/learning/data/repositories/completion_repository_impl.dart",
+     "line": 512,
+     "quote": "final rewardService = RewardMilestoneService(\n      _database,"
+    }
+   ],
+   "sites": 2,
+   "why": "Both markComplete and _markCompleteSingleInTransaction build a fresh RewardMilestoneService with `new` instead of receiving it via the constructor, unlike CompletionDetectionService which completionRepositoryProvider correctly injects. There is no seam to substitute a fake reward-milestone evaluator in a repository-level test without exercising the real Drift-backed class (Feathers), and any future dependency added to RewardMilestoneService must be threaded through by hand at both call sites.",
+   "recommendation": "Accept RewardMilestoneService as an optional constructor parameter on CompletionRepositoryImpl (defaulting to a provider-supplied instance), matching the existing pattern for CompletionDetectionService/BookmarkRepository in the same class.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "RewardMilestoneService is injected via CompletionRepositoryImpl's constructor; no `RewardMilestoneService(...)` construction remains inside markComplete or _markCompleteSingleInTransaction."
+   ],
+   "labels": [
+    "sm-7",
+    "di",
+    "testability"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-learning-p1",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Wire BatchPlan into CompletionWriter.commitBatch or delete the unused sealed hierarchy and its test",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "dead-code",
+   "area": "learning/domain/entities",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/learning/domain/entities/batch_plan.dart",
+     "line": 7,
+     "quote": "/// [CompletionWriter.commitBatch] receives a [BatchPlan] so it knows which"
+    },
+    {
+     "file": "learning_tracker/lib/features/learning/data/completion_writer.dart",
+     "line": 86,
+     "quote": "Future<List<CompletionWriteResult>> commitBatch(\n    List<CompletionCommand> commands,"
+    },
+    {
+     "file": "learning_tracker/lib/features/learning/data/repositories/completion_repository_impl.dart",
+     "line": 475,
+     "quote": "static CompletionSource _bulkSourceFor(BulkCompletionRequest request) {"
+    }
+   ],
+   "sites": 1,
+   "why": "batch_plan.dart's own doc comment asserts CompletionWriter.commitBatch takes a BatchPlan; the real signature takes a raw List<CompletionCommand> and never references BatchPlan anywhere in lib/ \u2014 grep confirms the only non-doc-comment usages of BatchPlan/LiveBatchPlan/BulkInTrackPlan/LifetimeOnlyPlan are inside batch_plan_test.dart itself (132 lines exercising a class nothing production calls). The same three-tier classification BatchPlan.classify already encodes is instead re-derived independently via CompletionRepositoryImpl._bulkSourceFor \u2014 an Evans-lens 'invariant re-derived instead of enforced once' split that could silently diverge (e.g. a fourth CompletionSource value added later would need updating in two unconnected places). MarkCompletionResult.newMilestoneUnlocks is a related vestige of the same pre-DEC-32 design \u2014 it is now hard-coded to `const []` at every call site since the auto-unlock ladder was replaced by the spend economy.",
+   "recommendation": "Either make CompletionWriter.commitBatch accept a BatchPlan and delete _bulkSourceFor in favor of BatchPlan.classify, or delete batch_plan.dart and batch_plan_test.dart as speculative generality that was superseded before it shipped.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "grep for `BatchPlan` in lib/ returns either a real call site inside completion_writer.dart/completion_repository_impl.dart, or zero results (type and test deleted); the doc comment on the class matches what actually calls it."
+   ],
+   "labels": [
+    "dead-code",
+    "fowler",
+    "evans"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-learning-p1",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Narrow and log the catch-all in CompletionRepositoryImpl._appendStreakEvent",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "EH-3",
+   "area": "learning/data/repositories",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/learning/data/repositories/completion_repository_impl.dart",
+     "line": 767,
+     "quote": "} catch (_) {\n      // Defensive: never let a telemetry tee block the primary write."
+    }
+   ],
+   "sites": 1,
+   "why": "catch (_) swallows every exception from BOTH the streak_events Drift insert and the outbox enqueue (facade.enqueueStreakPayload) with no AppLogger call anywhere in this file \u2014 a codec bug, closed-DB race, or genuine corruption is indistinguishable from the expected benign duplicate-key case this comment is defending against. This is also EH-4-adjacent (catches Error subtypes, not just typed Exceptions) and evades the Rule-0 'no empty catch blocks' Makefile grep (`catch\\s*(_\\?\\w*)\\s*{}`), which only matches a literal same-line `{}` \u2014 this multi-line comment-only body is functionally empty but textually invisible to that checker. Per the file's own header comment, the outbox enqueue here is what 'closes the gap' where a second device sees a frozen streak; if enqueueStreakPayload throws, that gap silently reopens with zero diagnostic trail and no retry.",
+   "recommendation": "Catch a specific expected type (e.g. the Drift unique-constraint exception) for the benign-duplicate case and let everything else propagate or be logged via AppLogger.instance.warning/error before swallowing, so a genuine failure is at least visible in Crashlytics/Talker.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "The catch narrows to the specific expected exception type; every other path logs via AppLogger before returning; a regression test that makes enqueueStreakPayload throw asserts the failure is logged, not silently dropped."
+   ],
+   "labels": [
+    "eh-3",
+    "eh-4",
+    "error-handling",
+    "sync"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-learning-p1",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Add the required inline keepAlive justification to CompletionCommitted and OptimisticCompletionState",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "SM-6",
+   "area": "learning/presentation/providers",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/learning/presentation/providers/completion_writer_providers.dart",
+     "line": 28,
+     "quote": "@Riverpod(keepAlive: true)\nclass CompletionCommitted extends _$CompletionCommitted {"
+    },
+    {
+     "file": "learning_tracker/lib/features/learning/presentation/providers/optimistic_completion_provider.dart",
+     "line": 17,
+     "quote": "@Riverpod(keepAlive: true)\nclass OptimisticCompletionState extends _$OptimisticCompletionState {"
+    }
+   ],
+   "sites": 2,
+   "why": "Both classes have doc comments explaining what they do, but neither explains why keepAlive: true (vs default autoDispose) is required. The codebase already has an established convention for this \u2014 content_providers.dart:12, sync_orchestrator_providers.dart:51 and pin_flow_controller.dart:127 all lead with 'keepAlive: ...' explicitly justifying the lifecycle choice \u2014 so this is a real, checkable deviation from a convention this same codebase demonstrably follows elsewhere, not a style nit invented for this review.",
+   "recommendation": "Prefix each doc comment (or add an adjacent `// keepAlive: ...` line) explicitly stating why autoDispose would break the provider \u2014 e.g. 'keepAlive: true \u2014 must survive across screens so completion-dependent providers can detect a commit that happened while they were unmounted.'",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Both keepAlive: true annotations carry an adjacent comment starting with 'keepAlive:' explaining the lifecycle choice, matching the convention in content_providers.dart / sync_orchestrator_providers.dart."
+   ],
+   "labels": [
+    "sm-6",
+    "riverpod",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-learning-p1",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Remove the completion_source.dart re-export from mark_completion_use_case.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Rule-2",
+   "area": "learning/domain/use_cases",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/learning/domain/use_cases/mark_completion_use_case.dart",
+     "line": 8,
+     "quote": "export 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';"
+    },
+    {
+     "file": "learning_tracker/test/features/learning/domain/use_cases/mark_completion_use_case_siyum_routing_test.dart",
+     "line": 41,
+     "quote": "import 'package:learning_tracker/features/learning/domain/use_cases/mark_completion_use_case.dart';"
+    }
+   ],
+   "sites": 1,
+   "why": "coding-standards.md Rule 2 states providers.dart is 'the only sanctioned re-export file... do not add other barrel/re-export files \u2014 deep re-export chains defeat \"where is X defined?\" search'. mark_completion_use_case.dart re-exports a domain entity from an unrelated file. This isn't theoretical: mark_completion_use_case_siyum_routing_test.dart imports only the use-case file and uses CompletionSource entirely via the transitive re-export, demonstrating exactly the defined-where? confusion the rule warns about.",
+   "recommendation": "Delete the export statement; update the one demonstrated consumer (and any others `dart analyze` surfaces) to import completion_source.dart directly.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "mark_completion_use_case.dart has no export statement; all consumers of CompletionSource import completion_source.dart directly; `dart analyze` stays clean."
+   ],
+   "labels": [
+    "rule-2",
+    "barrel",
+    "hygiene"
+   ]
+  }
+ }
+]

@@ -1,0 +1,43 @@
+[
+ {
+  "sourceBatch": "t1-core-sync-outbox",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Move _decodePayload() calls inside outbox_processor.dart's per-row try blocks so one bad payload can't abort the whole drain",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "EH-2 / EH-3",
+   "area": "core/sync/outbox",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/sync/outbox/outbox_processor.dart",
+     "line": 292,
+     "quote": "representativePayload[row.entityKey] = _decodePayload(row.payload);"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/outbox/outbox_processor.dart",
+     "line": 383,
+     "quote": "final payload = _decodePayload(row.payload);\n        try {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/outbox/outbox_processor.dart",
+     "line": 404,
+     "quote": "// Continue draining other rows \u2014 don't abort the whole batch on\n          // a single failure."
+    }
+   ],
+   "sites": 2,
+   "why": "_decodePayload throws FormatException when a row's payload isn't a JSON object (DB corruption, a future write bug, or jsonEncode(null)). Both call sites sit OUTSIDE any try/catch: line 292 is inside the eligibleCompletions loop before the try at line 306, and line 383 is immediately before the per-row try at line 384. A single malformed row therefore throws all the way out of _drainForProfile \u2192 _doDrain \u2192 drain()'s try/finally (the finally still clears the single-flight guard, but nothing catches or converts the error), skipping every other pending completion, every remaining non-completion kind, AND the profile-0 account sweep in _doDrain \u2014 on every one of the 5 wired drain triggers, forever, until the row is fixed out of band. This directly contradicts the code's own stated invariant quoted above.",
+   "recommendation": "Wrap each _decodePayload call in its own try/catch (or catch FormatException specifically) so a bad payload is treated like any other per-row failure: logged, markAttempted (or immediately dead-lettered, since it can never succeed), and does not block sibling rows or other kinds.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Regression test: insert one outbox row with a non-JSON-object payload (e.g. payload: 'null') alongside a valid row of a different kind; drain() must not throw, the valid row must still be pushed, and the bad row must be marked attempted without blocking siblings.",
+    "Same test repeated for a malformed completion-kind row."
+   ],
+   "labels": [
+    "sync",
+    "error-handling",
+    "reliability"
+   ]
+  }
+ }
+]

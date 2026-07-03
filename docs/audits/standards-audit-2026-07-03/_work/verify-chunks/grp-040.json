@@ -1,0 +1,222 @@
+[
+ {
+  "sourceBatch": "t1-feat-account-p3",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Rewrite account_picker_an4_test.dart to exercise AccountPickerScreen's real sort/tap-guard code instead of a hand-copied replica",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (regression test must pin the actual fix) / Feathers seam",
+   "area": "features/account/presentation/screens/account_picker_an4_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/account/presentation/screens/account_picker_an4_test.dart",
+     "line": 15,
+     "quote": "// Test strategy: we test the ordering logic in isolation using the same sort\n// algorithm as the fix, and verify the _switching guard behavior via a minimal"
+    },
+    {
+     "file": "learning_tracker/test/features/account/presentation/screens/account_picker_an4_test.dart",
+     "line": 66,
+     "quote": "List<String> _sortedAccountDbFileNames({\n  required List<String> accountDbFileNames,"
+    },
+    {
+     "file": "learning_tracker/test/features/account/presentation/screens/account_picker_an4_test.dart",
+     "line": 31,
+     "quote": "class _TapGuardWidget extends StatefulWidget {"
+    },
+    {
+     "file": "learning_tracker/lib/features/account/presentation/screens/account_picker_screen.dart",
+     "line": 69,
+     "quote": "...rawAccounts.where((a) => a.dbFileName == activeDbFileName),"
+    },
+    {
+     "file": "learning_tracker/lib/features/account/presentation/screens/account_picker_screen.dart",
+     "line": 430,
+     "quote": "if (_switching) return;\n    if (mounted) setState(() => _switching = true);"
+    }
+   ],
+   "sites": 1,
+   "why": "The file never imports account_picker_screen.dart. AN-4 fixed two real bugs (unstable account ordering; no re-entrancy guard on rapid double-tap causing concurrent account switches \u2014 a genuine data-integrity risk for a local-first synced app). This test file instead hand-copies the sort comparator into `_sortedAccountDbFileNames` and hand-copies the `_switching` guard into `_TapGuardWidget`, then tests its own copies. If a future change to the real `_AccountTile._switching` guard or the real sort in AccountPickerScreen.build reintroduces either bug, this suite keeps passing because it never touches the production code \u2014 the regression protection is illusory.",
+   "recommendation": "Test the real AccountPickerScreen (as account_picker_screen_l1_test.dart and account_picker_local_data_missing_test.dart in this same batch correctly do): drive the ordering assertion by seeding accounts via the registry and pumping the real screen (asserting tile order), and drive the tap-guard assertion by tapping the real _AccountTile through the pumped widget tree with a slow-resolving fake switch action.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "account_picker_an4_test.dart imports and pumps the real AccountPickerScreen (no private replica of the sort comparator or the _switching guard).",
+    "Reverting the AN-4 fix in account_picker_screen.dart (either the sort or the guard) makes this test fail red."
+   ],
+   "labels": [
+    "test-quality",
+    "regression-test",
+    "feathers-seam"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-account-p3",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Replace sign_in_context_reset_test.dart's source-text-matching 'wiring' assertions with real call-chain verification",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-1/TQ-8 methodology (Feathers seam)",
+   "area": "features/account/sign_in_context_reset_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/account/sign_in_context_reset_test.dart",
+     "line": 150,
+     "quote": "controllerSrc = File(\n        'lib/features/account/presentation/notifiers/sign_in_controller.dart',"
+    },
+    {
+     "file": "learning_tracker/test/features/account/sign_in_context_reset_test.dart",
+     "line": 167,
+     "quote": "controllerSrc,\n        contains('activeTutoredProfileSelectionProvider.notifier).exit()'),"
+    },
+    {
+     "file": "learning_tracker/test/features/account/sign_in_context_reset_test.dart",
+     "line": 180,
+     "quote": "final navIdx = controllerSrc.indexOf('_navigateAfterSignIn(StackRouter');\n      expect(navIdx, greaterThanOrEqualTo(0));"
+    }
+   ],
+   "sites": 4,
+   "why": "The 'wiring' group (4 tests) reads sign_in_controller.dart / account_picker_screen.dart as raw text with File.readAsStringSync() and asserts substring presence (e.g. 'routerProvider).pinGuard.lock()' appears somewhere after another substring). This proves the token exists in the file \u2014 including inside a comment, a dead branch, or an `if (false)` \u2014 not that the reset actually runs during a real sign-in. A refactor that renames a local variable, extracts the same call into a helper, or reorders it outside the funnel would either false-fail (token literally moved) or false-pass (token still present but now unreachable) without any real Riverpod/router state ever being observed. The file's own 'runtime semantics' group shows the better pattern is available (it drives the real PinGuard/activeTutoredProfileSelectionProvider primitives directly) \u2014 it just never chains them through an actual signInWithEmail/signInWithGoogle call.",
+   "recommendation": "Replace the source-grep assertions with an end-to-end check: seed a tutored selection + authenticated PIN scope, drive SignInController.signInWithEmail/signInWithGoogle (as sign_in_controller_test.dart and the sign_in_*_throws_test.dart files in this batch already do with a stub router), and assert the real providers were cleared afterward \u2014 the same technique the 'runtime semantics' group in this file already uses for the primitives themselves.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "No test in this file reads a .dart source file as text to assert behavior.",
+    "Commenting out (not deleting) the _resetSessionContextForFreshSignIn() call inside _navigateAfterSignIn makes the corresponding test fail red."
+   ],
+   "labels": [
+    "test-quality",
+    "feathers-seam",
+    "fragile-test"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-account-p3",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Add try/catch around onSendAgain/onVerified in EmailVerificationConfirmPanel and un-skip the C6/E5 regression tests",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "EH-2/EH-3 (typed exceptions handled at the boundary; no log-less catch) discovered via disclosed-but-unfixed test skips",
+   "area": "features/account/presentation/widgets/email_verification_confirm_panel.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/account/presentation/widgets/email_verification_confirm_panel.dart",
+     "line": 165,
+     "quote": "Future<void> _wrapSendAgain() async {\n    setState(() => _sendingAgain = true);"
+    },
+    {
+     "file": "learning_tracker/lib/features/account/presentation/widgets/email_verification_confirm_panel.dart",
+     "line": 167,
+     "quote": "try {\n      await widget.onSendAgain();"
+    },
+    {
+     "file": "learning_tracker/test/features/account/presentation/widgets/email_verification_confirm_panel_test.dart",
+     "line": 520,
+     "quote": "// BUG: _wrapSendAgain uses try/finally but not try/catch, so exceptions\n      // from onSendAgain propagate as unhandled async errors, crashing the"
+    },
+    {
+     "file": "learning_tracker/test/features/account/presentation/widgets/email_verification_confirm_panel_test.dart",
+     "line": 525,
+     "quote": "skip: true,"
+    }
+   ],
+   "sites": 2,
+   "why": "`_wrapSendAgain`/`_wrapVerified` use try/finally with no catch, so any exception from the injected callback propagates as an unhandled async error instead of a graceful error state. The onVerified callback built in sign_in_controller.dart's buildVerificationCallback calls _refreshAndCheckVerified -> authRepo.reloadCurrentUser() with no surrounding try/catch, so a transient network error while the user is mid email-verification is a real, reachable path to this unhandled exception -- not just a theoretical one. Both regression tests that would catch this (C6, E5) are disclosed but left skip:true with no Linear id, so the gap is invisible to anyone not reading test source.",
+   "recommendation": "Add a catch clause to both wrapper methods that resets the loading flag and surfaces the failure (e.g. via a callback/snackbar, matching the pattern already used for signOut() failures elsewhere in this feature), then remove skip: true from C6 and E5.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "_wrapSendAgain and _wrapVerified catch and handle exceptions from the injected callbacks (no bare try/finally).",
+    "C6 and E5 in email_verification_confirm_panel_test.dart run (skip: true removed) and pass."
+   ],
+   "labels": [
+    "error-handling",
+    "unhandled-exception",
+    "untracked-bug"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-account-p3",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Add ref.mounted guards to SignInController's post-await state writes and a dispose-mid-flight regression test",
+   "severity": "P2",
+   "confidence": "SUSPECTED",
+   "rule": "SM-4 (check ref.mounted after await in a Notifier before touching ref/state)",
+   "area": "features/account/presentation/notifiers/sign_in_controller.dart + its test suite",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/account/presentation/notifiers/sign_in_controller.dart",
+     "line": 754,
+     "quote": "await _navigateAfterSignIn(router);\n        state = const SignInIdle();"
+    },
+    {
+     "file": "learning_tracker/lib/features/account/presentation/notifiers/sign_in_controller.dart",
+     "line": 1013,
+     "quote": "final signInControllerProvider =\n    NotifierProvider.autoDispose<SignInController, SignInState>("
+    },
+    {
+     "file": "learning_tracker/test/features/account/presentation/notifiers/sign_in_controller_test.dart",
+     "line": 207,
+     "quote": "final container = _makeContainer(authRepo: mockAuth);\n        addTearDown(container.dispose);"
+    }
+   ],
+   "sites": 1,
+   "why": "signInControllerProvider is autoDispose and its methods await many things (registry lookups, Firestore fetches, SharedPreferences, sync-orchestrator pulls with 8s timeouts) with zero `ref.mounted` checks anywhere in the ~1000-line file, then keep calling `_ref.read(...)` / `state = ...` afterward. If the user navigates away (dialog dismissed, screen popped) while a sign-in is in flight, the provider can be disposed mid-await and the next `state = ...` throws Riverpod 3's UnmountedRefException in the app's most security-critical flow. None of the 5 sign-in notifier tests in this batch dispose the container between an await and the following state mutation, so this path is completely unexercised. (This gap is systemic \u2014 only 3 of ~32 autoDispose notifiers in lib/features use ref.mounted at all \u2014 so the fix likely belongs to a broader SM-4 sweep; flagged here specifically because this batch's test suite is the one place positioned to catch it for the highest-stakes notifier.)",
+   "recommendation": "Add `if (!ref.mounted) return;` (or equivalent) after each await inside signInWithEmail/signInWithGoogle/_navigateAfterSignIn/etc. before the next state or ref.read, and add a test that disposes the container mid-flight (e.g. between two awaits in a stubbed slow authRepo call) and asserts no unhandled exception surfaces.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "A test that disposes the ProviderContainer while signInWithEmail/signInWithGoogle is suspended on an await passes without an uncaught UnmountedRefException.",
+    "sign_in_controller.dart checks ref.mounted (or ref is otherwise guarded) after every await that is followed by a state or ref.read/ref.invalidate call."
+   ],
+   "labels": [
+    "riverpod",
+    "sm-4",
+    "autodispose",
+    "test-gap"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-account-p3",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Remove the stale skip and stale RTL-overflow comment from email_verification_confirm_panel_test.dart's H1 test",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-7 (stale-test hygiene / lost coverage)",
+   "area": "features/account/presentation/widgets/email_verification_confirm_panel_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/account/presentation/widgets/email_verification_confirm_panel_test.dart",
+     "line": 973,
+     "quote": "// BUG: The Send-Again + Cancel Row overflows 16 px on the right under\n      // RTL layout (he locale).  The Row uses two Expanded children with a"
+    },
+    {
+     "file": "learning_tracker/test/features/account/presentation/widgets/email_verification_confirm_panel_test.dart",
+     "line": 979,
+     "quote": "skip: true,"
+    },
+    {
+     "file": "learning_tracker/test/features/account/presentation/widgets/email_verification_confirm_panel_overflow_test.dart",
+     "line": 51,
+     "quote": "'EmailVerificationConfirmPanel does not overflow in Hebrew (RTL) \u2014 the '\n        'former H1 action-Row overflow',"
+    }
+   ],
+   "sites": 1,
+   "why": "I ran the H1 test with `skip: true` removed (scratch copy, `flutter test ... --plain-name H1`) and it passes today. The sibling overflow-matrix test in this same batch (email_verification_confirm_panel_overflow_test.dart) independently confirms the RTL Row overflow was fixed by wrapping the button labels in Flexible+ellipsis, and its own docstring calls it 'the former H1 action-Row overflow.' The skip and its bug description in email_verification_confirm_panel_test.dart were simply never cleaned up after the fix landed, so a real, currently-passing RTL layout+content assertion sits permanently disabled.",
+   "recommendation": "Remove skip: true and the stale BUG comment from the H1 test.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "H1 in email_verification_confirm_panel_test.dart runs (no skip) and passes in CI."
+   ],
+   "labels": [
+    "stale-skip",
+    "test-hygiene",
+    "coverage-gap"
+   ]
+  }
+ }
+]

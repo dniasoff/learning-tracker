@@ -1,0 +1,191 @@
+[
+ {
+  "sourceBatch": "t1-core-database-root-p1",
+  "chunk": "grp-011",
+  "finding": {
+   "title": "Type and log the swallowed catch blocks in content_database.dart, seed_manager.dart, and DeviceAccountX",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "EH-3",
+   "area": "learning_tracker/lib/core/database",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/database/content/content_database.dart",
+     "line": 84,
+     "quote": "} catch (_) {\n            // no-op: CREATE IF NOT EXISTS is defensive; failure here is non-fatal"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/content/content_database.dart",
+     "line": 104,
+     "quote": "} catch (_) {\n            // no-op: ALTER TABLE fails if column already exists (prior upgrade path); non-fatal"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/seed_manager.dart",
+     "line": 336,
+     "quote": "} catch (_) {\n        // Best effort"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/registry/device_registry_database.dart",
+     "line": 22,
+     "quote": "} on ArgumentError {\n      return AccountTier.local;"
+    }
+   ],
+   "sites": 6,
+   "why": "content_database.dart's 4 migration catches use untyped `catch (_)` with only a comment, no AppLogger call \u2014 if an ALTER/CREATE fails for a real reason (disk full, corrupt file) rather than the anticipated 'already exists' case, the content DB silently proceeds on a half-migrated schema with zero diagnostic trail; contrast with ContentDbHealthChecker in this same batch, which does this correctly with typed `on SqliteException catch (e, st)` plus logger calls, but never gets a chance to react because no exception escapes here. seed_manager.dart's _rollback() catch(_) is a log-less outlier inside a file where every other catch (_extractSeedDb, _atomicReplace, _readSchemaVersion, _readInstalledVersion, _stampInstalledVersion) does call _logger?.error \u2014 a reader following this file's own dominant convention would log here too. DeviceAccountX.accountTier catches ArgumentError, an Error subtype EH-4 explicitly says never to catch (Errors are meant to crash loudly on programming bugs); here a malformed/legacy tier string in the DB silently downgrades to AccountTier.local with no signal that stored data is bad.",
+   "recommendation": "Give the content_database.dart and seed_manager.dart catches typed `on SqliteException`/`on Exception` clauses plus an AppLogger call (matching content_db_health_checker.dart's pattern). Change AccountTier.fromStorageKey to expose a non-throwing tryFromStorageKey returning null (or throw a non-Error type) so accountTier doesn't catch Error.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "No catch block in these 3 files is both untyped and log-less; EH-3's Pending tightened log-less-catch checker returns zero for them.",
+    "DeviceAccountX.accountTier no longer catches an Error subtype (EH-4's Pending avoid_catching_errors)."
+   ],
+   "labels": [
+    "EH-3",
+    "EH-4",
+    "logging"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-network",
+  "chunk": "grp-022",
+  "finding": {
+   "title": "Use `is TalkerDioLogger` instead of a runtimeType.toString() string match in dio_client_test.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Feathers/hygiene \u2014 type-safe test assertions",
+   "area": "test/core/network (test quality)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/network/dio_client_test.dart",
+     "line": 51,
+     "quote": "dio.interceptors.any(\n          (i) => i.runtimeType.toString() == 'TalkerDioLogger',"
+    }
+   ],
+   "sites": 1,
+   "why": "Comparing runtimeType.toString() to a string literal bypasses the type system: a rename or a subclass would silently break or falsely pass this check with a confusing failure message, where `is TalkerDioLogger` (talker_dio_logger is already a transitive dependency of tool/lib/dio_client.dart) is both safer and clearer.",
+   "recommendation": "Import package:talker_dio_logger/talker_dio_logger.dart and replace the check with `dio.interceptors.any((i) => i is TalkerDioLogger)`.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Test uses an `is` type check, no runtimeType.toString() comparison remains, test still passes"
+   ],
+   "labels": [
+    "test-quality",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-streak",
+  "chunk": "grp-026",
+  "finding": {
+   "title": "Relocate test/core/streak/*_test.dart to mirror lib/features/gamification/streak/ (AG-5)",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-5",
+   "area": "learning_tracker/test/core/streak/",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/streak/streak_event_test.dart",
+     "line": 3,
+     "quote": "import 'package:learning_tracker/features/gamification/streak/streak_event.dart';"
+    },
+    {
+     "file": "learning_tracker/test/core/streak/streak_state_provider_test.dart",
+     "line": 10,
+     "quote": "import 'package:learning_tracker/features/gamification/streak/streak_state_provider.dart';"
+    }
+   ],
+   "sites": 2,
+   "why": "Commit 92125f82 ('refactor(W2.22): promote core/streak/ -> features/gamification/streak/', 20 May 2026) moved all 5 streak source files out of core/, but left both test files behind at test/core/streak/. AG-5 requires lib/a/b/foo.dart <-> test/a/b/foo_test.dart. A contributor working on lib/features/gamification/streak/ who checks test/features/gamification/streak/ (as AG-5 promises) finds nothing, risking duplicate tests or a false 'no coverage' assumption for a module that actually has 305 lines of tests, including two named D17 regression tests.",
+   "recommendation": "git mv both files to test/features/gamification/streak/{streak_event_test.dart,streak_state_provider_test.dart}. Note the new location is one directory level deeper, so streak_state_provider_test.dart's helper import must change from '../../helpers/drift_memory.dart' to '../../../helpers/drift_memory.dart'. Verify `flutter test test/features/gamification/streak/` is green and delete the now-empty test/core/streak/ dir.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "test/core/streak/ no longer exists; both suites pass unchanged at test/features/gamification/streak/.",
+    "The [Pending] AG-5 unmirrored-test-file audit check referenced at docs/coding-standards.md:523, once implemented, reports zero violations for this module."
+   ],
+   "labels": [
+    "AG-5",
+    "test-hygiene",
+    "repo-layout"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-profiles-p2",
+  "chunk": "grp-078",
+  "finding": {
+   "title": "Show user-facing error feedback on the StateError path in TutoredChildrenSection._fireEntryPullAndNavigate",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "EH-2 / UX completeness",
+   "area": "features/profiles/presentation/widgets/tutored_children_section.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/widgets/tutored_children_section.dart",
+     "line": 662,
+     "quote": "} on StateError catch (e) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/widgets/tutored_children_section.dart",
+     "line": 669,
+     "quote": "dismissLoading();"
+    }
+   ],
+   "sites": 1,
+   "why": "The permissionDenied and error branches of the preceding switch both show a ScaffoldMessenger snackbar so the user learns why they didn't land in the talmid view. The `on StateError catch` block three lines later only logs via AppLogger and calls exit()+dismissLoading() \u2014 no snackbar, no dialog. If buildTutoredPullServiceFromWidget throws (documented as the 'non-cloud accounts' case), the user taps a tutored-child row, watches the loading spinner, and it disappears with zero explanation \u2014 indistinguishable from a silent hang.",
+   "recommendation": "Add the same ScaffoldMessenger snackbar pattern (with an AppLocalizations-backed message) to the StateError catch block.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "A widget test stubs the pull service to throw StateError and asserts a SnackBar/error message appears",
+    "The StateError catch block gives feedback consistent with the permissionDenied/error branches"
+   ],
+   "labels": [
+    "error-handling",
+    "ux",
+    "tutoring"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-sync-providers",
+  "chunk": "grp-032",
+  "finding": {
+   "title": "Resolve outboxProcessor lazily in syncOrchestratorProvider instead of capturing it by value",
+   "severity": "P2",
+   "confidence": "SUSPECTED",
+   "rule": "SM-6 lazy-resolver consistency / Nygard-lens: stale capture across DB swap",
+   "area": "learning_tracker/lib/core/sync/providers/sync_orchestrator_providers.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/sync/providers/sync_orchestrator_providers.dart",
+     "line": 129,
+     "quote": "final outboxProcessor = ref.read(outboxProcessorProvider);"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/providers/sync_orchestrator_providers.dart",
+     "line": 160,
+     "quote": "outboxProcessor: outboxProcessor,"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/providers/sync_orchestrator_providers.dart",
+     "line": 164,
+     "quote": "resolveOutboxDao: () => ref.read(userDatabaseProvider).outboxDao,"
+    }
+   ],
+   "sites": 1,
+   "why": "Every other volatile build-time dependency in this same constructor call (gateway, merge router, outbox DAO, identity status) is deliberately passed as a lazy `() => ref.read(...)` resolver specifically \u2014 per the inline comments at lines 136-137, 161-163 \u2014 'so a DB swap (multi-account flow) is picked up without rebuilding the orchestrator singleton.' outboxProcessor is the one exception: it's read once (line 129) and stored as a plain value field. outboxProcessorProvider (outbox_providers.dart) watches userDatabaseProvider and rebuilds on a DB swap; database_provider.dart confirms userDatabaseProvider swaps via the independently-mutable accountDbFileNameProvider, decoupled from authStateProvider (the only thing syncOrchestratorProvider itself watches). If a DB swap can occur without authStateProvider's watched value also changing in the same tick, the orchestrator keeps draining through an OutboxProcessor bound to the pre-swap, superseded UserDatabase/outboxDao while its other lazily-resolved collaborators (gateway, merge router) may already be pointing at the new account \u2014 a split-identity state. Confirming this needs tracing whether the app's account-switch flow (account_actions.dart) can complete a DB swap before authStateProvider's emitted value settles to the new account.",
+   "recommendation": "Change the outboxProcessor parameter to a lazy `resolveOutboxProcessor: () => ref.read(outboxProcessorProvider)` resolver, matching resolveGateway/resolveMergeRouter/resolveOutboxDao, so it can't go stale relative to its siblings.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "syncOrchestratorProvider resolves outboxProcessor via a lazy resolver rather than a captured value.",
+    "Regression/integration test: trigger a userDatabaseProvider swap while syncOrchestratorProvider stays alive (authState unchanged) and assert the next drain operates against the new outboxDao's pending rows, not the pre-swap instance."
+   ],
+   "labels": [
+    "sync",
+    "riverpod",
+    "multi-account",
+    "nygard"
+   ]
+  }
+ }
+]

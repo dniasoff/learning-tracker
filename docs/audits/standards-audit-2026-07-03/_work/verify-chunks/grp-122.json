@@ -1,0 +1,201 @@
+[
+ {
+  "sourceBatch": "t1-feat-tutoring-p1",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Move TutorAuditLogReadRepository/TutorGrantRepository interfaces into domain/repositories/ to remove the data\u2192presentation import",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Placement guide (\"New repository interface \u2192 domain/repositories/\") / layering",
+   "area": "features/tutoring/data + domain + presentation",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tutoring/data/repositories/firestore_audit_log_read_repository.dart",
+     "line": 17,
+     "quote": "import '...presentation/providers/audit_log_providers.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/providers/audit_log_providers.dart",
+     "line": 20,
+     "quote": "abstract interface class TutorAuditLogReadRepository {"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart",
+     "line": 29,
+     "quote": "abstract interface class TutorGrantRepository {"
+    }
+   ],
+   "sites": 2,
+   "why": "coding-standards.md's placement guide says a new repository interface belongs at `domain/repositories/<name>_repository.dart`. None of tutoring's three repository interfaces live there: TutorAuditLogReadRepository is defined inside presentation/providers/audit_log_providers.dart, so the DATA-layer implementation (firestore_audit_log_read_repository.dart) has to import a PRESENTATION file to satisfy `implements` \u2014 the exact inverse of the documented data-flow direction \u2014 pulling Riverpod Provider definitions and an unrelated stub class into what should be a lean, presentation-agnostic data module and complicating isolated unit-testing of the repository (Feathers seam). TutorGrantRepository is at least kept in domain/ but lives in a use_cases file instead of domain/repositories/, the same underlying placement drift.",
+   "recommendation": "Create lib/features/tutoring/domain/repositories/tutor_audit_log_repository.dart (read) and tutor_grant_repository.dart, move the three interfaces there, and update data-layer implementations plus presentation/providers imports accordingly.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep -rn 'presentation/' lib/features/tutoring/data/ returns nothing.",
+    "TutorAuditLogReadRepository, TutorAuditLogRepository, TutorGrantRepository all resolve from lib/features/tutoring/domain/repositories/."
+   ],
+   "labels": [
+    "layering",
+    "architecture",
+    "placement"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tutoring-p1",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Replace source-text-matching and self-asserting tests with real behavioral tests (ws3_3f_manage_remove_tutors_test.dart, firestore_tutor_grant_repository_test.dart)",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (tautological / non-behavioral tests)",
+   "area": "test/features/tutoring",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/tutoring/ws3_3f_manage_remove_tutors_test.dart",
+     "line": 71,
+     "quote": "manageTutorsSrc,\n        contains('_revoke'),"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/firestore_tutor_grant_repository_test.dart",
+     "line": 39,
+     "quote": "const result = TutorGrantFailure(message: message, code: code);"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/manage_tutors_screen_l1_test.dart",
+     "line": 675,
+     "quote": ").thenAnswer((_) async => const TutorGrantSuccess());"
+    }
+   ],
+   "sites": 2,
+   "why": "ws3_3f_manage_remove_tutors_test.dart never mounts a widget or runs the app \u2014 every one of its 8 assertions is `expect(File(...).readAsStringSync(), contains('some_identifier'))` against manage_tutors_screen.dart's own source text. It would pass unchanged even if `_revoke()`/`_rescind()` were completely broken, which they currently are (see the discarded-TutorGrantResult finding). firestore_tutor_grant_repository_test.dart's 'exception mapping' tests construct a TutorGrantFailure literal and then assert it equals the literal they just built ('We verify the mapping contract by replicating the repo logic') \u2014 they never call the real repository or its catch blocks. Separately, every mock override of revoke/rescind/resign in manage_tutors_screen_l1_test.dart and manage_grants_screen_l1_test.dart returns only TutorGrantSuccess(); TutorGrantFailure/TutorGrantPreconditionError are never stubbed anywhere in the tutoring widget-test suite. This is precisely the coverage gap that let the P1 discarded-result bug ship.",
+   "recommendation": "Rewrite ws3_3f_manage_remove_tutors_test.dart's assertions as widget tests that tap Revoke/Rescind and assert the resulting UI state and provider calls; delete or fold firestore_tutor_grant_repository_test.dart's self-asserting exception-mapping tests into the comprehensive test/features/tutoring/data/repositories/firestore_tutor_grant_repository_test.dart, which does exercise the real class via the FirebaseFunctionsPlatform seam.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "ws3_3f_manage_remove_tutors_test.dart no longer reads manage_tutors_screen.dart as a string; each test exercises ProviderContainer/widget behavior.",
+    "At least one test per revoke/resign/rescind path stubs TutorGrantFailure and asserts the UI does not take the success branch (ties into the P1 finding's acceptance test)."
+   ],
+   "labels": [
+    "test-quality",
+    "TQ-8",
+    "tautological-test"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tutoring-p1",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Convert TutorPermissions to @freezed instead of hand-writing ==/hashCode",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Naming/placement \u2014 \"never hand-write ==/hashCode for data classes\"",
+   "area": "features/tutoring/domain/models",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tutoring/domain/models/tutor_permissions.dart",
+     "line": 137,
+     "quote": "bool operator ==(Object other) =>"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/domain/models/tutor_permissions.dart",
+     "line": 151,
+     "quote": "int get hashCode => Object.hash("
+    }
+   ],
+   "sites": 1,
+   "why": "coding-standards.md is explicit: domain value objects must be `@freezed` with generated `==`/`hashCode`/`copyWith`, specifically because hand-rolled equality drifts from the field list. TutorPermissions \u2014 its own doc-comment calls it 'Immutable value object' / 'VO' \u2014 hand-writes both operators across 9 fields, plus a separately hand-written constructor, copyWith, toFirestore, and fromFirestore: 5 places a future field addition must be updated by hand. The drift risk is already visible today: `canMarkLiveCompletion` is deliberately excluded from both `==` and `hashCode` (harmless only because it is hardcoded false for every instance) \u2014 exactly the kind of silent omission @freezed generation would make structurally impossible.",
+   "recommendation": "Convert TutorPermissions to a @freezed class (keeping canMarkLiveCompletion as a computed getter rather than a constructor field, or a private default so it can't be set), and delete the hand-written ==/hashCode/copyWith.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "TutorPermissions.freezed.dart is generated; no hand-written operator == or hashCode remains in tutor_permissions.dart.",
+    "Existing TutorPermissions unit tests (defaults/readOnly/toFirestore round-trip) still pass unmodified."
+   ],
+   "labels": [
+    "freezed",
+    "value-object",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tutoring-p1",
+  "findingIndex": 8,
+  "finding": {
+   "title": "Handle mid-loop failure in TutoredWriteRouter.pushStageDefinitions (tutored_write_router.dart)",
+   "severity": "P2",
+   "confidence": "SUSPECTED",
+   "rule": "Nygard (partial I/O failure) / DB-6 offline-first parity",
+   "area": "features/tutoring/data/routers",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tutoring/data/routers/tutored_write_router.dart",
+     "line": 141,
+     "quote": "for (final stage in stages) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/data/routers/tutored_write_router.dart",
+     "line": 157,
+     "quote": "_handleResult(result, 'tutorUpsertStageDefinition[$stageId]');"
+    }
+   ],
+   "sites": 1,
+   "why": "pushStageDefinitions awaits one Cloud Function call per stage sequentially and _handleResult throws immediately on the first TutorWriteFailure. If a tutor edits several stages at once and the network drops partway through, the earlier stages are already committed server-side while the remaining ones are simply lost \u2014 the thrown TutorWriteException names only the failing stage, not which stages already succeeded. Unlike the normal (non-tutored) write path, tutored writes deliberately bypass the local outbox (per this file's own header comment), so there is no retry queue to pick the dropped stages back up on reconnect \u2014 the class's offline-first guarantee (DB-6, exercised everywhere else in this app) does not hold here. This is architectural/edge-case reasoning, not a reproduced runtime failure.",
+   "recommendation": "Either batch the per-stage calls into a single CF invocation (atomic on the server) or collect per-stage results and surface a structured partial-failure summary (which stages succeeded/failed) so the caller can retry just the failed subset instead of losing silent state.",
+   "effort": "L",
+   "acceptance_criteria": [
+    "A test that fails the 2nd of 3 stage upserts asserts the caller learns which stages succeeded (not just a single opaque exception).",
+    "Documented decision (in tutored_write_router.dart's header) on whether partial multi-stage failure is an accepted risk or gets a retry path."
+   ],
+   "labels": [
+    "offline-first",
+    "nygard",
+    "partial-failure"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tutoring-p1",
+  "findingIndex": 9,
+  "finding": {
+   "title": "Split the four tutoring screens over the AG-3 400-line cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3 (hand-written Dart file \u2264400 lines)",
+   "area": "features/tutoring/presentation/screens",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/accept_invite_screen.dart",
+     "line": 1,
+     "quote": "565 lines total (wc -l)"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/tutor_audit_log_screen.dart",
+     "line": 1,
+     "quote": "563 lines total (wc -l)"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/manage_tutors_screen.dart",
+     "line": 1,
+     "quote": "559 lines total (wc -l)"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/decline_invite_screen.dart",
+     "line": 1,
+     "quote": "411 lines total (wc -l)"
+    }
+   ],
+   "sites": 4,
+   "why": "AG-3 caps hand-written Dart files at 400 lines; these four screens run 411\u2013565, mostly from each _buildXxx step (loading/success/error/confirm) being a full private widget class inlined in the same file. Not a correctness bug, but each screen mixes route-level state machine logic with 4-5 fully-styled sub-widgets, making them slower to review/diff and easy to keep growing.",
+   "recommendation": "Extract each screen's per-step bodies (_buildReadyToAccept/_buildSuccess/_buildError etc., and the _GrantRow/_TutorGrantRow row widgets) into presentation/widgets/ files.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "find lib/features/tutoring -name '*.dart' ! -name '*.g.dart' | xargs wc -l | awk '$1>400' returns empty."
+   ],
+   "labels": [
+    "AG-3",
+    "file-size",
+    "hygiene"
+   ]
+  }
+ }
+]

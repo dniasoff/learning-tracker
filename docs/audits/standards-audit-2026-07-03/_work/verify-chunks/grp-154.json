@@ -1,0 +1,218 @@
+[
+ {
+  "sourceBatch": "t2-build-ci-guardrails",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Fix root Makefile's audit/analyze/test-all targets so they stop reporting false passes",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Rule 0 (checker failures must exit non-zero)",
+   "area": "Makefile / guardrail infra",
+   "evidence": [
+    {
+     "file": "Makefile",
+     "line": 217,
+     "quote": "cd learning_tracker && dart run custom_lint; \\\n\techo \"audit PASSED.\""
+    },
+    {
+     "file": "Makefile",
+     "line": 86,
+     "quote": "@echo \"Running all tests...\"\n\t@cd learning_tracker && flutter test"
+    },
+    {
+     "file": "Makefile",
+     "line": 90,
+     "quote": "@echo \"Running dart analyze...\"\n\t@cd learning_tracker && dart analyze"
+    }
+   ],
+   "sites": 3,
+   "why": "The whole `audit` recipe is one shell invocation (backslash-continued); its final two statements are joined by `;`, not `&&`, so the recipe's exit status is that of the LAST command (`echo \"audit PASSED.\"`), never custom_lint's. Empirically reproduced: a `false;`-then-`echo` recipe in a throwaway Makefile prints the trailing text and `make` still exits 0. Since custom_lint is currently broken (crashes, per baseline), running `make audit` from the repo root today prints the crash output and then unconditionally declares \"audit PASSED.\" Separately, root `analyze` omits `--fatal-infos` and `test-all` omits `--coverage`, unlike learning_tracker/Makefile's equivalents (which say \"matches CI --fatal-infos flag\" and are correct) \u2014 so `make ci` from repo root can go green on issues the real CI gate (which always runs from learning_tracker/) would reject.",
+   "recommendation": "Replace the trailing `;` with `&&` (or check `$?` explicitly) so a lint failure fails the recipe; add `--fatal-infos` to root `analyze` and `--coverage` to root `test-all`, or better, make the root Makefile's targets thin `cd learning_tracker && make $@` wrappers so there is exactly one place these flags can drift.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "`make audit` from the repo root exits non-zero when the underlying custom_lint invocation fails.",
+    "root `make analyze` uses --fatal-infos and root `make test-all`/`ci` produce coverage output, matching learning_tracker/Makefile."
+   ],
+   "labels": [
+    "rule-0",
+    "makefile",
+    "guardrails",
+    "bypassable-gate"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-build-ci-guardrails",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Correct learning_tracker/CLAUDE.md's false custom-lint enforcement claims",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-2 (CLAUDE.md exact commands) / Rule 0",
+   "area": "CLAUDE.md / documentation",
+   "evidence": [
+    {
+     "file": "learning_tracker/CLAUDE.md",
+     "line": 59,
+     "quote": "**Enforced by:** `no-feature-cross-import` custom lint (DNI-386)."
+    },
+    {
+     "file": "learning_tracker/CLAUDE.md",
+     "line": 71,
+     "quote": "**Enforced by:** `no-firebase-outside-core` custom lint (DNI-387)."
+    },
+    {
+     "file": "learning_tracker/CLAUDE.md",
+     "line": 77,
+     "quote": "**Enforced by:** `no-raw-talker` custom lint (DNI-387)."
+    },
+    {
+     "file": "learning_tracker/CLAUDE.md",
+     "line": 83,
+     "quote": "**Enforced by:** `no-curriculum-display-name-bypass` custom lint (DNI-386)."
+    },
+    {
+     "file": "learning_tracker/CLAUDE.md",
+     "line": 87,
+     "quote": "Run `make audit` to execute every layering grep and lint check locally before pushing."
+    }
+   ],
+   "sites": 5,
+   "why": "Two independent falsehoods compound here. (1) custom_lint is currently broken and enforces nothing (baselined fact) \u2014 yet all five 'Enforced by: <custom lint> (DNI-38x)' lines assert active enforcement. (2) Even ignoring that, `make audit` (learning_tracker/Makefile:277-505) never invokes custom_lint at all \u2014 that's a separate `lint` target (lines 270-275) that this file never mentions running. An AI agent or developer reading this file (the FIRST and most authoritative guardrail doc for the app package) will reasonably skip manually checking Rules 1/2 (feature-import boundaries) since those are the two rules whose grep-based backstop is itself only warn-only (known backlog) \u2014 meaning Rules 1/2 currently have NO effective enforcement at all despite this file's confident claim.",
+   "recommendation": "Update the five 'Enforced by' lines to note custom_lint is currently non-functional (link to the tracking issue) and either fix `make audit` to also run `make lint`, or change line 87 to say 'Run `make audit && make lint`'.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "learning_tracker/CLAUDE.md's enforcement claims match what `make audit` and custom_lint actually do today, verified by re-reading the file against learning_tracker/Makefile after the fix."
+   ],
+   "labels": [
+    "ag-2",
+    "documentation",
+    "claude-md",
+    "rule-0"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-build-ci-guardrails",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Replace make audit's dead literal-phrase TODO/FIXME/XXX grep with a real AG-6 check",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-6 (every TODO/FIXME carries a Linear DNI-#### id) / Rule 0",
+   "area": "Makefile / guardrail infra",
+   "evidence": [
+    {
+     "file": "learning_tracker/Makefile",
+     "line": 350,
+     "quote": "if grep -rn \"TODO: refactor later\\|FIXME: hardcoded for now\\|XXX: temporary\" lib/ --include=\"*.dart\" | grep -q .; then \\"
+    },
+    {
+     "file": "learning_tracker/integration_test/app_test.dart",
+     "line": 25,
+     "quote": "  // TODO: Add more integration tests as features are implemented:"
+    }
+   ],
+   "sites": 2,
+   "why": "Audit check 10/15 ('No banned TODO/FIXME/XXX markers') matches only three exact, oddly-specific literal phrases. Verified: `grep -rn \"TODO: refactor later\\|FIXME: hardcoded for now\\|XXX: temporary\" learning_tracker/lib/` returns zero hits anywhere in the app, and always will \u2014 no developer writes that literal string. Meanwhile there are real, uncaught TODOs with no Linear id anywhere (`grep -c \"DNI-[0-9]\"` on all lib/ TODO/FIXME lines returns 0 of 4), and my own batch contains a live example the check silently misses: integration_test/app_test.dart:25. This grep gives the false impression that TODO/FIXME hygiene (AG-6) is enforced by `make audit`, when in fact it enforces nothing a real comment would ever trip.",
+   "recommendation": "Change the pattern to match any `// TODO`/`// FIXME`/`// XXX` NOT followed by `DNI-\\d+` (e.g. `grep -rnE '//\\s*(TODO|FIXME|XXX)' lib/ | grep -vE 'DNI-[0-9]+'`), which is what AG-6 actually requires.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "`make audit` fails on any TODO/FIXME/XXX comment in lib/ (or test/) lacking a DNI-#### id.",
+    "A regression fixture (one TODO with a DNI id, one without) proves the new grep distinguishes them."
+   ],
+   "labels": [
+    "ag-6",
+    "dead-check",
+    "makefile",
+    "rule-0"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-build-ci-guardrails",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Consolidate the two divergent arb_parity_check.dart implementations",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-1 (route through committed scripts; no ad-hoc variants) / Rule 0",
+   "area": "tool/ scripts / Makefile drift",
+   "evidence": [
+    {
+     "file": "Makefile",
+     "line": 222,
+     "quote": "@dart run tool/arb_parity_check.dart"
+    },
+    {
+     "file": "tool/arb_parity_check.dart",
+     "line": 24,
+     "quote": "    'learning_tracker/lib/l10n/app_en.arb';"
+    },
+    {
+     "file": "learning_tracker/tool/arb_parity_check.dart",
+     "line": 15,
+     "quote": "  const enPath = 'lib/l10n/app_en.arb';"
+    }
+   ],
+   "sites": 3,
+   "why": "Two independently-maintained copies of the same nominal checker exist: root Makefile's `arb-parity` target runs tool/arb_parity_check.dart (repo-root paths, --en/--he flags, try/catch around JSON parse errors returning exit 2 with a clear message), while .github/workflows/ci.yml's arb-parity job runs `dart run tool/arb_parity_check.dart` from `working-directory: learning_tracker`, resolving to the DIFFERENT learning_tracker/tool/arb_parity_check.dart (learning_tracker-relative paths, no flags, uncaught jsonDecode exceptions crash with a raw stack trace instead of a clean exit(2)+message). Both currently pass because each is correctly paired with its own CWD, but a future fix to one (e.g. better error messages, a new --strict flag) has no reason to land in the other, and the two already silently diverge in behavior on the identical malformed-JSON failure mode.",
+   "recommendation": "Delete one copy and have both call sites invoke the same script (e.g. keep only learning_tracker/tool/arb_parity_check.dart and have the root Makefile's arb-parity target `cd learning_tracker &&` into it).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Exactly one arb_parity_check.dart exists in the repo, and both the root Makefile target and CI's arb-parity job invoke it."
+   ],
+   "labels": [
+    "ag-1",
+    "duplication",
+    "makefile",
+    "tooling"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-build-ci-guardrails",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Fix nonexistent example make targets in learning_tracker/README.md and CLAUDE.md",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-2 / AG-1 (exact commands)",
+   "area": "documentation",
+   "evidence": [
+    {
+     "file": "learning_tracker/README.md",
+     "line": 23,
+     "quote": "| `make test-story-1.2` | Run one story's acceptance tests |"
+    },
+    {
+     "file": "learning_tracker/README.md",
+     "line": 24,
+     "quote": "| `make test-epic-1` | Run all stories in Epic 1 |"
+    },
+    {
+     "file": "learning_tracker/README.md",
+     "line": 25,
+     "quote": "| `make test-all-stories` | Run the full acceptance suite |"
+    },
+    {
+     "file": "learning_tracker/CLAUDE.md",
+     "line": 9,
+     "quote": "make test-story-X.Y     # e.g. make test-story-1.2"
+    }
+   ],
+   "sites": 4,
+   "why": "None of these three example commands exist as real Makefile targets: `grep -oE '^[a-zA-Z0-9_.-]+:' learning_tracker/Makefile` lists no `test-story-1.2`, no `test-epic-1` (there is no test-epic-N target for any N in 1-7, 11, 16-20, 22-23), and no `test-all-stories` at all (the closest real target is bare `test`). learning_tracker/CLAUDE.md's very first workflow instruction \u2014 'always validate it' before marking a story done \u2014 tells the reader to run `make test-story-X.Y # e.g. make test-story-1.2`, which is the first command a new contributor or AI coding agent following this file would try, and it fails immediately with 'No rule to make target'.",
+   "recommendation": "Replace the fictional examples with real ones that exist today (e.g. `make test-story-4.1`, `make test-epic-8`) and fix or remove the `test-all-stories` row (use `make test`).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Every make command in learning_tracker/README.md's Key Targets table and learning_tracker/CLAUDE.md's quickstart resolves via `make -n <target>` without error."
+   ],
+   "labels": [
+    "ag-2",
+    "documentation",
+    "onboarding"
+   ]
+  }
+ }
+]

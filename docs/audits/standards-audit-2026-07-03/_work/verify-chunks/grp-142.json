@@ -1,0 +1,189 @@
+[
+ {
+  "sourceBatch": "t1-story-epics-28plus",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Make epic_28_curriculum_overlap_test.dart's subset-union helper exercise the real lifetimeDataProvider path instead of its diverged local duplicate",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "test/story_acceptance",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_28_curriculum_overlap_test.dart",
+     "line": 105,
+     "quote": "/// its subset curricula \u2014 mirrors the logic in [lifetimeDataProvider]."
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_28_curriculum_overlap_test.dart",
+     "line": 120,
+     "quote": "refs = refs.union(subCompletions.map((c) => c.sefariaRef).toSet());"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/providers/lifetime_knowledge_providers.dart",
+     "line": 212,
+     "quote": "// P0 (composite-credit) fix: completions are unioned across subsets above,"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/providers/lifetime_knowledge_providers.dart",
+     "line": 244,
+     "quote": "completedRefs = completedRefs.union(subsetLearned);"
+    }
+   ],
+   "sites": 1,
+   "why": "The helper's own doc comment claims to mirror lifetimeDataProvider, but it only unions direct completion-event refs across subsets (getCompletionsByCurriculumAndProfile). Production lifetimeDataProvider \u2014 same file, same story (I-4) \u2014 was later hardened with a SECOND, ledger-derived subset union that the code explicitly labels a 'P0 (composite-credit) fix' for a real over/under-credit bug (a lifetime mark made in the standalone Chumash UI wasn't propagating to Tanach). This test's private duplicate never adopted that fix. Because the acceptance test calls its own copy of the algorithm rather than the production function, a future regression in the real union (dropping either union step, or breaking the synthetic-container-level1 filter above it) can ship with this suite fully green, since the test only re-verifies its own now-stale copy, not lifetimeDataProvider itself.",
+   "recommendation": "Either (a) drive the assertions through a real ProviderContainer.read(lifetimeDataProvider(...).future) with a fixture ContentRepository so the actual production algorithm executes, or (b) if the DAO-level check is intentionally a lower-layer test, narrow the doc comment at line 105 to state it covers only the completion-event union primitive, and add a case that seeds a ledger-only (no completion-event) subset mark and asserts it propagates to the superset via the real provider \u2014 closing the gap the current docstring implies is already closed.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "A test in this file (or a cross-referenced file reachable from it) invokes the real lifetimeDataProvider \u2014 not a local reimplementation \u2014 and fails if the ledger-based subset union (lines 226-246 of lifetime_knowledge_providers.dart) is removed or short-circuited.",
+    "The doc comment at line 105 no longer claims full parity with lifetimeDataProvider unless the test genuinely exercises it end-to-end."
+   ],
+   "labels": [
+    "testing",
+    "TQ-8",
+    "story-acceptance",
+    "drift"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epics-28plus",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Split epic_28_curriculum_overlap_test.dart under the 400-line hand-written Dart file cap (AG-3)",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "test/story_acceptance",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_28_curriculum_overlap_test.dart",
+     "line": 401,
+     "quote": "expect(subsetsOf(CurriculumId.mishnehTorah), isEmpty);"
+    }
+   ],
+   "sites": 1,
+   "why": "The file is 445 lines (confirmed via `wc -l`), past the 400-line hand-written Dart file cap. Grepping tool/ and the Makefile turns up no line-count gate, so nothing stops it (or its siblings) from growing further unchecked \u2014 matching the digest's own note that AG-3 is a [P]ending rule with no checker yet.",
+   "recommendation": "Extract the shared helpers (_openDb, _insertProfile, _insertTrack, _insertCompletion, _completedRefsWithSubsets \u2014 lines 29-123) into a small support file, or fold the reusable ones into test/helpers/drift_memory.dart (see the duplicate-helpers finding), bringing the test body under 400 lines. Add a Rule-0 checker \u2014 e.g. a `make audit` step running `find lib test -name '*.dart' ! -name '*.g.dart' | xargs wc -l` and failing on any file >400 lines \u2014 since AG-3 has no enforcement today.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "wc -l on the file (post-refactor) reports <=400.",
+    "A checker (new make audit step or tool/ script) prints file:line-count and exits non-zero for any hand-written .dart file >400 lines, wired into `make audit`."
+   ],
+   "labels": [
+    "hygiene",
+    "AG-3",
+    "file-size"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epics-28plus",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Register epic_28/story_i4 tags in dart_test.yaml so the tag registry stays a working typo guard",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Rule 0 (checker fidelity) / tooling hygiene",
+   "area": "test tooling / dart_test.yaml",
+   "evidence": [
+    {
+     "file": "learning_tracker/dart_test.yaml",
+     "line": 2,
+     "quote": "# Prevents \"unknown tag\" warnings when running `flutter test --tags`."
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_28_curriculum_overlap_test.dart",
+     "line": 13,
+     "quote": "@Tags(['epic_28', 'story_i4'])"
+    }
+   ],
+   "sites": 1,
+   "why": "Running `flutter test test/story_acceptance/epic_28_curriculum_overlap_test.dart` prints (confirmed by execution): \"Warning: Tags were used that weren't specified in dart_test.yaml. epic_28 was used... story_i4 was used...\". dart_test.yaml's own header states its entire purpose is to prevent exactly this warning, but the registry stops around Epic 27 and was never updated for Epic 28/story I-4 \u2014 a repo-wide grep shows it is also missing many Epic 24-27 tags already in active use (story_24_*, story_25_15/16/17/18/19/20/22, story_26_20/22/31, story_27_4/5/6/8/9/f5, story_i3, story_dec34, epic_20, epic_24). A registry this stale trains reviewers to ignore the warning, so a genuinely misspelled tag (silently orphaning a test from `--tags` filtering) blends into the noise instead of standing out.",
+   "recommendation": "Add `epic_28:` and `story_i4:` to dart_test.yaml (and reconcile the other missing tags while touching the file). Longer term, add a checker that extracts every @Tags([...])/tags: [...] literal under test/story_acceptance and diffs it against dart_test.yaml's registry, failing CI on any gap instead of just warning.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "`flutter test test/story_acceptance/epic_28_curriculum_overlap_test.dart` no longer prints an 'unknown tag' warning.",
+    "A checker diffing declared vs. registered tags exists and is wired into `make audit` or `make ci`."
+   ],
+   "labels": [
+    "hygiene",
+    "tooling",
+    "test-config"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epics-28plus",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Reuse drift_memory.dart's seedTrack/seedProfile instead of re-deriving _insertProfile/_insertTrack in epic_28_curriculum_overlap_test.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler duplication (test fixtures)",
+   "area": "test/story_acceptance",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_28_curriculum_overlap_test.dart",
+     "line": 61,
+     "quote": "Future<int> _insertTrack("
+    },
+    {
+     "file": "learning_tracker/test/helpers/drift_memory.dart",
+     "line": 82,
+     "quote": "Future<int> seedTrack("
+    }
+   ],
+   "sites": 2,
+   "why": "_insertTrack (lines 61-78) reimplements test/helpers/drift_memory.dart's seedTrack almost line-for-line (same table, same CurriculumTracksCompanion.insert shape, same Future<int> return) instead of calling seedTrack with an explicit activatedAt. _insertProfile (lines 32-58) similarly reimplements seedProfile's account+profile insert. The file already imports drift_memory.dart for seedCompletion, so this isn't a discoverability gap \u2014 it's a second, hand-kept copy of the insert shape that can silently drift from the shared one (e.g. a future required column added to CurriculumTracksCompanion.insert needs updating in two places, and only one of them is exercised by every other test that already uses drift_memory.dart).",
+   "recommendation": "Replace _insertTrack's body with `seedTrack(db, profileId: profileId, curriculumId: curriculumId, activatedAt: DateTime.utc(2026, 1, 1))`. For _insertProfile, either reuse seedProfile if its hardcoded id=1 contract is acceptable here, or extend seedProfile to return the inserted profile id so both call sites share one implementation.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "_insertTrack delegates to (or is deleted in favor of) drift_memory.dart's seedTrack; no second copy of the CurriculumTracksCompanion.insert shape remains in this file."
+   ],
+   "labels": [
+    "hygiene",
+    "duplication",
+    "test-helpers"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-test-cross-p1",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Remove the stale R-GA-boot skip on gamification_p0_test.dart E2E-601 \u2014 the bug it cites is already fixed",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "test/e2e/journeys/gamification_p0_test.dart (E2E-601 \u2014 parent creates a reward, child redeems it)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/e2e/journeys/gamification_p0_test.dart",
+     "line": 197,
+     "quote": "// BUG R-GA-boot: RewardConfigurationScreen.initState calls\n    // `unawaited(ref.read(rewardConfigControllerProvider.notifier).bootstrap())`"
+    },
+    {
+     "file": "learning_tracker/lib/features/gamification/presentation/screens/reward_configuration_screen.dart",
+     "line": 59,
+     "quote": "WidgetsBinding.instance.addPostFrameCallback((_) {\n      if (!mounted) return;"
+    }
+   ],
+   "sites": 1,
+   "why": "The skip's doc-comment says bootstrap() runs synchronously inside initState and trips Riverpod's build-phase-mutation guard. That was true when the test was authored (commit d89bbb41, 2026-06-19 07:55) but commit 7bfc3669 landed the same day at 11:24 titled '...defer reward bootstrap (R-PR10, R-GA-boot)' \u2014 it moved the bootstrap() call into WidgetsBinding.instance.addPostFrameCallback, the exact bug this skip cites. I removed the skip locally and ran `flutter test --plain-name E2E-601`: the app navigated past RestoreGuard/ProfileGuard into RewardConfigurationScreen with zero Riverpod build-phase exception, proving the cited bug does not reproduce. (It then hit an unrelated `find.text('Save Reward')` \"Too many elements\" StateError inside scrollUntilVisible, so the group needs a small fix, not just an unskip.) Net effect: E2E-601 \u2014 the file's #1-listed journey and the catalog's P0 'parent creates reward / child redeems it' scenario \u2014 has had zero active coverage for about two weeks, silently, because the doc comment describing why it's skipped no longer describes the code.",
+   "recommendation": "Delete the stale skip and its doc-comment (file header lines 4-5 and group lines 196-209), disambiguate the Save Reward finder (add a Key or `.first`), and get E2E-601 green so the P0 happy path is exercised again.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "`flutter test test/e2e/journeys/gamification_p0_test.dart --plain-name E2E-601` passes with no `skip:`",
+    "File header doc-comment no longer lists E2E-601 as 'SKIP \u2014 BUG R-GA-boot'",
+    "make ci / make test-all-stories runs this group as part of the normal suite"
+   ],
+   "labels": [
+    "TQ-8",
+    "stale-test",
+    "gamification",
+    "P0-coverage-gap"
+   ]
+  }
+ }
+]

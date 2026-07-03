@@ -1,0 +1,177 @@
+[
+ {
+  "sourceBatch": "t1-core-content",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Hoist the child-list sort out of the per-curriculum loop in ContentTree.fromCurricula",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler \u2014 hoist loop-invariant code",
+   "area": "core/content/content_tree.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/content/content_tree.dart",
+     "line": 93,
+     "quote": "for (final entry in byCurriculum.entries) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/content/content_tree.dart",
+     "line": 126,
+     "quote": "// Sort each child list by sortOrder so display is stable.\n      for (final list in childrenByContainerKey.values) {"
+    }
+   ],
+   "sites": 1,
+   "why": "The sort block at lines 126-129 iterates `childrenByContainerKey.values` \u2014 the map accumulated across ALL curricula processed so far \u2014 but it sits inside the outer `for (final entry in byCurriculum.entries)` loop (opens line 93, the sort closes at line 130 still inside it). For 9 curricula this re-sorts every earlier curriculum's already-sorted child lists up to 9 times each instead of once. contentTree is a keepAlive provider built synchronously (no isolate offload) the first time any screen reads it, so this redundant O(9x) work sits directly on that first-access latency, not merely a style nit.",
+   "recommendation": "Move the sort block outside the curriculum loop (one dedent) so each child list is sorted exactly once after all curricula are indexed.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "The sort loop executes once, after the curriculum loop, in content_tree.dart.",
+    "Existing children()-ordering assertions in epic_25_schema_core_test.dart continue to pass."
+   ],
+   "labels": [
+    "core/content",
+    "performance",
+    "startup-latency"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-content",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Route hierarchy_browser.dart's empty-state text through AppLocalizations instead of a hardcoded English literal",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AX-2 \u2014 no hardcoded user-facing strings; EN/HE parity",
+   "area": "core/content/hierarchy_browser.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/content/hierarchy_browser.dart",
+     "line": 193,
+     "quote": ": const Center(child: Text('No content available'));"
+    },
+    {
+     "file": "learning_tracker/lib/l10n/app_en.arb",
+     "line": 520,
+     "quote": "\"contentHierarchyNoContent\": \"No content available\","
+    }
+   ],
+   "sites": 1,
+   "why": "This is the default emptyBuilder used whenever the caller doesn't supply one. The sole current caller, HierarchySelectionPanel (hierarchy_selection_panel.dart:299), does not pass emptyBuilder, so this branch is live and reachable whenever path/scope filtering leaves zero items at a level (a real occurrence in the bulk-mark, lifetime-marking, and add-track-flow screens that embed this panel). A Hebrew-locale user who hits it sees raw English 'No content available' instead of the Hebrew translation \u2014 even though the exact ARB key needed (`contentHierarchyNoContent`) already exists and is used correctly one file over in content_hierarchy_screen.dart's own empty-state branch.",
+   "recommendation": "Replace the literal with `AppLocalizations.of(context)!.contentHierarchyNoContent` (already translated, already in the ARB catalog) or require callers to always pass an emptyBuilder.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "hierarchy_browser.dart's default empty state renders via AppLocalizations, not a string literal.",
+    "A Locale('he') widget test pumping HierarchySelectionPanel with a filtered-to-empty item set asserts the Hebrew string renders."
+   ],
+   "labels": [
+    "core/content",
+    "i18n",
+    "AX-2"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-content",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Move hierarchy_selection_test.dart to its AG-5-mirrored path under test/core/content/",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-5 \u2014 test/ mirrors lib/ 1:1",
+   "area": "core/content/hierarchy_selection.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/onboarding/domain/services/hierarchy_selection_test.dart",
+     "line": 1,
+     "quote": "// Tests for HierarchySelection \u2014 covers == and hashCode (lines 218-228)."
+    }
+   ],
+   "sites": 1,
+   "why": "git log shows commit ee270013 ('extract ContentBrowserTree widget; move HierarchySelection to core') relocated the class from features/onboarding/domain/services/ into lib/core/content/hierarchy_selection.dart, but its test file was never moved \u2014 it still lives at the pre-move features/onboarding path, and its own header comment cites line numbers ('218-228') that haven't existed since the move. AG-5's stated purpose is exactly this: an agent globbing test/core/content/ for HierarchySelection's tests today finds nothing (only the unrelated coarse_unit_leaf_refs_test.dart), and could easily write a duplicate test file instead of finding/extending the real one.",
+   "recommendation": "git mv test/features/onboarding/domain/services/hierarchy_selection_test.dart to test/core/content/hierarchy_selection_test.dart and fix the stale header comment.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "hierarchy_selection_test.dart exists at test/core/content/hierarchy_selection_test.dart and nowhere else.",
+    "The pending AG-5 unmirrored-test audit check (once implemented) passes for this file."
+   ],
+   "labels": [
+    "core/content",
+    "AG-5",
+    "test-hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-content",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Consolidate the duplicate 0-indexed/1-indexed level-value accessors in content_grouping.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler \u2014 duplicated code / confusing near-twins",
+   "area": "core/content/content_grouping.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/content/content_grouping.dart",
+     "line": 74,
+     "quote": "String? _levelValueAt(ContentItem item, int depth) => switch (depth) {\n  0 => item.level1,"
+    },
+    {
+     "file": "learning_tracker/lib/core/content/content_grouping.dart",
+     "line": 83,
+     "quote": "String? levelValueAt(ContentItem item, int level) => switch (level) {\n  1 => item.level1,"
+    }
+   ],
+   "sites": 1,
+   "why": "Two functions differing only by a leading underscore implement the identical level1..level4 switch, one 0-indexed (internal, used by groupItemsByNextLevel) and one 1-indexed (public, used by hierarchy_browser.dart and hierarchy_selection_panel.dart). The near-identical names with different index conventions is exactly the kind of thing a future edit touches in one copy and forgets in the other, or a caller picks the wrong one and is off by one level.",
+   "recommendation": "Keep only the public 1-indexed levelValueAt and have groupItemsByNextLevel call it with `depth + 1`, deleting the private 0-indexed twin.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "content_grouping.dart has one level-value accessor function, not two.",
+    "coarse_unit_leaf_refs_test.dart and existing grouping behavior are unchanged."
+   ],
+   "labels": [
+    "core/content",
+    "duplication",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-content",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Add direct unit/widget tests for content_grouping.dart's groupItemsByNextLevel and for HierarchyBrowser",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-5 + TQ-1 (pyramid-shaped suite)",
+   "area": "core/content",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/content/content_grouping.dart",
+     "line": 19,
+     "quote": "List<ContentItem> groupItemsByNextLevel({"
+    },
+    {
+     "file": "learning_tracker/lib/core/content/hierarchy_browser.dart",
+     "line": 34,
+     "quote": "class HierarchyBrowser extends ConsumerStatefulWidget {"
+    }
+   ],
+   "sites": 2,
+   "why": "Repo-wide grep for groupItemsByNextLevel(, collapseAmudLeaf(, itemDisplayName(, levelValueAt(, and HierarchyBrowser( inside test/ finds zero direct references. content_grouping.dart's only test file, coarse_unit_leaf_refs_test.dart, covers 2 of its ~8 exported symbols and isn't even AG-5-named for this source (the mirrored name would be content_grouping_test.dart, which doesn't exist). HierarchyBrowser is exercised only transitively, three levels down, through unrelated parent-widget tests (bulk_mark_screen_test.dart, recent_activity_and_hierarchy_panel_l1_test.dart, r2_panel_leaf_crumb_ellipsis_test.dart) \u2014 never directly. This is the concrete reason the maxBrowseDepth dead-branch bug (separate finding) and content_tree.dart's parent() off-by-one (separate finding, in the sibling keepAlive-provider file which likewise has no direct unit test, only story-acceptance coverage) went unnoticed: the pure logic they live in has no focused unit test that would exercise the argument or the ordering that triggers them.",
+   "recommendation": "Add test/core/content/content_grouping_test.dart covering groupItemsByNextLevel (including the maxBrowseDepth branch), collapseAmudLeaf, itemDisplayName, and levelValueAt directly; add a HierarchyBrowser widget test independent of HierarchySelectionPanel.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "test/core/content/content_grouping_test.dart exists and unit-tests groupItemsByNextLevel directly, including a maxBrowseDepth case.",
+    "A widget test pumps HierarchyBrowser directly (drill-down, navigateBack, autoAdvanceSingleOption, empty state) without going through HierarchySelectionPanel."
+   ],
+   "labels": [
+    "core/content",
+    "AG-5",
+    "test-coverage"
+   ]
+  }
+ }
+]

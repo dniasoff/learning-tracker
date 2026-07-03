@@ -1,0 +1,219 @@
+[
+ {
+  "sourceBatch": "t1-feat-gamification-p1",
+  "findingIndex": 8,
+  "finding": {
+   "title": "Fix the Makefile check-15 awk pipeline so cross-feature deep-import detection can actually fire",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Rule 0 / Rule 2 / AG-11 (a standard ships with a deterministic checker; checker failures print file:line and exit non-zero -- a check that structurally cannot fire is a broken guardrail)",
+   "area": "learning_tracker/Makefile (tooling, evidenced via features/gamification)",
+   "evidence": [
+    {
+     "file": "learning_tracker/Makefile",
+     "line": 378,
+     "quote": "awk -F: '{match($$1, /features\\/([^\\/]+)\\//, a); match($$0, /features\\/([^\\/]+)\\//, b); if(a[1] != b[1]) print}'"
+    },
+    {
+     "file": "learning_tracker/lib/features/dashboard/presentation/providers/dashboard_providers.dart",
+     "line": 13,
+     "quote": "import 'package:learning_tracker/features/gamification/domain/models/streak_recovery_info.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/features/notifications/domain/services/streak_alert_service.dart",
+     "line": 7,
+     "quote": "import 'package:learning_tracker/features/gamification/streak/streak_state_provider.dart';"
+    }
+   ],
+   "sites": 1,
+   "why": "$1 (awk field 1, the file path column) and $0 (the whole grep output line, which starts with that same file path) are both matched against the identical regex `features/([^/]+)/` -- since the file's own path is always the leftmost occurrence of that pattern in $0 too, `a[1]` and `b[1]` are always extracted from the SAME text (the importing file's own feature folder), so `a[1] != b[1]` can never be true and the check prints nothing, always, regardless of what's actually imported. I reproduced the exact pipeline directly: the grep -P pre-filter stage alone finds 70+ candidate cross-feature import lines (including at least 10 genuine features/{dashboard,learning,notifications,sync,content_browsing}/** files deep-importing into features/gamification/**), but piping through the full check-15 awk command yields exactly 0 output lines. Unlike check 14 (which lists its ~32-edge backlog so it's at least visible for future cleanup), check 15 gives zero visibility into the Rule 2 backlog size today, and -- more importantly -- will never flag a brand-new cross-feature deep import added by any future change, even once the check is flipped from warn-only to enforcing.",
+   "recommendation": "Fix the awk script to compare the importing file's feature folder against the IMPORTED path's feature folder specifically (e.g. split $1 and the import-statement portion of $0 separately, or use two distinct match targets), then re-run make audit and confirm it lists the real backlog the way check 14 does.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Running the check-15 pipeline against the current tree (unchanged) prints the real cross-feature deep-import edges instead of nothing",
+    "A synthetic new deep import added between two features is caught (non-zero WARN output) after the fix"
+   ],
+   "labels": [
+    "Rule-0",
+    "AG-11",
+    "Makefile",
+    "tooling-bug"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-gamification-p1",
+  "findingIndex": 9,
+  "finding": {
+   "title": "Replace hardcoded Color(0x...) literals with theme/AppColors tokens across gamification presentation widgets",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "custom_lint no_color_literal_outside_theme (currently non-functional since dart run custom_lint crashes; not covered by any make audit grep)",
+   "area": "features/gamification/presentation (screens, widgets)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/gamification/presentation/screens/point_config_screen.dart",
+     "line": 25,
+     "quote": "const Color _kScreenBg = Color(0xFFF8F9FB);"
+    },
+    {
+     "file": "learning_tracker/lib/features/gamification/presentation/widgets/pro_tip_card.dart",
+     "line": 15,
+     "quote": "color: const Color(0xFFFFEFD5),"
+    },
+    {
+     "file": "learning_tracker/lib/features/gamification/presentation/widgets/achievement_unlock_celebration.dart",
+     "line": 177,
+     "quote": "Color(0xFFFF6B6B),\n  Color(0xFFFFD93D),"
+    },
+    {
+     "file": "learning_tracker/lib/features/gamification/presentation/screens/child_redemption_screen.dart",
+     "line": 242,
+     "quote": "Color(0xFF1E52D4), // kChildRewardsCardBlueTop"
+    },
+    {
+     "file": "learning_tracker/lib/features/gamification/presentation/widgets/achievement_tier_card.dart",
+     "line": 187,
+     "quote": "colors: [Color(0xFF1A237E), Color(0xFF4A148C)],"
+    },
+    {
+     "file": "learning_tracker/lib/features/gamification/presentation/widgets/locked_achievement_shell.dart",
+     "line": 58,
+     "quote": "? const Color(0xFF455A64)\n                            : const Color(0xFF37474F),"
+    },
+    {
+     "file": "learning_tracker/lib/features/gamification/presentation/widgets/progress_summary_card.dart",
+     "line": 29,
+     "quote": "color: Color(0x330038A8),"
+    },
+    {
+     "file": "learning_tracker/lib/features/gamification/presentation/screens/reward_configuration_screen.dart",
+     "line": 23,
+     "quote": "const Color _kPreviewBg = Color(0xFFEEF3FA);"
+    },
+    {
+     "file": "learning_tracker/lib/features/gamification/presentation/screens/parent_pending_redemptions_screen.dart",
+     "line": 227,
+     "quote": "color: Color(0xFFEEF3FA),"
+    },
+    {
+     "file": "learning_tracker/lib/features/gamification/presentation/widgets/avatar_picker_row.dart",
+     "line": 6,
+     "quote": "const Color _kFieldFill = Color(0xFFF2F4F8);"
+    }
+   ],
+   "sites": 38,
+   "why": "38 raw Color(0x...) literals across these 10 files bypass the design-token system entirely (contrast with achievement_unlock_celebration.dart:179-180, which correctly reuses AppColors.chartGreen/chartBlue in the same list). This is exactly the pattern the no_color_literal_outside_theme custom_lint rule exists to catch, but that lint currently can't run at all (custom_lint_core/analyzer version mismatch, already flagged by the orchestrator), so nothing today prevents new color literals from being added or flags the existing ones. Concrete cost: no single place to retheme/dark-mode this feature, and visually-identical colors (e.g. several near-duplicate blues/creams) are redefined independently per file instead of shared.",
+   "recommendation": "Extract the repeated literals into named constants in core/theme/app_colors.dart (or reuse existing ones where a near-duplicate already exists) and reference those from all 10 files; once dart run custom_lint is repaired, let no_color_literal_outside_theme enforce this going forward.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "No lib/features/gamification/**/*.dart file (excluding generated) contains a Color(0x...) literal outside core/theme",
+    "no_color_literal_outside_theme reports zero violations in this feature once custom_lint is functional again"
+   ],
+   "labels": [
+    "design-tokens",
+    "theming",
+    "P3",
+    "custom-lint"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-gamification-p1",
+  "findingIndex": 10,
+  "finding": {
+   "title": "Delete or wire up the unreachable form.error branch in reward_configuration_screen.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Dead code (Fowler lens / AG-6 hygiene)",
+   "area": "features/gamification/presentation/screens",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/gamification/presentation/screens/reward_configuration_screen.dart",
+     "line": 287,
+     "quote": "if (form.error != null) {\n      return Scaffold("
+    },
+    {
+     "file": "learning_tracker/lib/features/gamification/presentation/widgets/reward_form.dart",
+     "line": 17,
+     "quote": "this.error,\n  });"
+    }
+   ],
+   "sites": 1,
+   "why": "RewardForm.error defaults to null and is never set to a non-null value anywhere: RewardConfigController.bootstrap() explicitly sets `error: null`, and grep across the whole gamification feature finds no other `copyWith(error: ...)` call. The `if (form.error != null)` branch and its whole error Scaffold (lines 287-293) are therefore unreachable dead code -- a maintenance trap for the next person who assumes it's live error-handling.",
+   "recommendation": "Either delete the dead branch, or wire a real failure path (e.g. bootstrap()'s try/catch setting a localized error) that actually reaches it.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Either the form.error != null branch is removed, or a test demonstrates a real code path setting it and rendering the error Scaffold"
+   ],
+   "labels": [
+    "dead-code",
+    "P3"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-gamification-p1",
+  "findingIndex": 11,
+  "finding": {
+   "title": "Delete PointsPopupWidget or give it a real call site",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Dead code / speculative generality (Fowler lens)",
+   "area": "features/gamification/presentation/widgets",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/gamification/presentation/widgets/points_display_widget.dart",
+     "line": 70,
+     "quote": "class PointsPopupWidget extends StatelessWidget {"
+    }
+   ],
+   "sites": 1,
+   "why": "grep across lib/ and test/ shows PointsPopupWidget is only ever referenced from its own test file (points_display_widget_test.dart) -- it is never instantiated by any screen (not learning_screen.dart, not bulk_mark_screen.dart, nowhere completion-triggered popups would plausibly live). It's fully-formed, styled, and tested code that the app never actually shows to a user.",
+   "recommendation": "Either remove PointsPopupWidget and its test, or wire it into the completion-celebration flow it was clearly built for (alongside AchievementUnlockCelebration) and add a widget test proving it renders from a real screen.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "PointsPopupWidget is either deleted (with its test) or has at least one production call site exercised by a widget test"
+   ],
+   "labels": [
+    "dead-code",
+    "P3"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-gamification-p1",
+  "findingIndex": 12,
+  "finding": {
+   "title": "Add .autoDispose to points_providers.dart's family providers",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "SM-6 (parameterized/family providers stay autoDispose)",
+   "area": "features/gamification/presentation/providers",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/gamification/presentation/providers/points_providers.dart",
+     "line": 16,
+     "quote": "final curriculumPointsProvider = FutureProvider.family<int, CurriculumId>(("
+    },
+    {
+     "file": "learning_tracker/lib/features/gamification/presentation/providers/points_providers.dart",
+     "line": 61,
+     "quote": "FutureProvider.family<List<PointsHistoryEntry>, CurriculumId?>(("
+    }
+   ],
+   "sites": 2,
+   "why": "Both are classic (non-@riverpod) family providers with no `.autoDispose` -- in this Riverpod version, a manually-declared provider not marked autoDispose is kept alive for the container's lifetime once first read. Because CurriculumId is a small finite enum, the leak is bounded (at most ~15-20 cached results per provider), so the practical memory cost is small, but it's inconsistent with every other parameterized provider this same feature declares (achievementsOverviewProvider, _pointConfigDataProvider, pendingRedemptionsProvider are all explicitly .autoDispose), suggesting an oversight rather than a deliberate choice.",
+   "recommendation": "Add `.autoDispose` to both curriculumPointsProvider and pointsHistoryProvider.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Both family providers in points_providers.dart are declared with .autoDispose"
+   ],
+   "labels": [
+    "SM-6",
+    "riverpod",
+    "P3"
+   ]
+  }
+ }
+]

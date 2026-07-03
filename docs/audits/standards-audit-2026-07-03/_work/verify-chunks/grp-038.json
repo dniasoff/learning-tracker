@@ -1,0 +1,196 @@
+[
+ {
+  "sourceBatch": "t1-feat-account-p1",
+  "findingIndex": 11,
+  "finding": {
+   "title": "Make AppUser/AuthState/AuthUser @freezed instead of hand-rolled classes without value equality",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "naming/placement (\"domain/state models are immutable @freezed classes\")",
+   "area": "features/account/domain/models",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/account/domain/models/app_user.dart",
+     "line": 6,
+     "quote": "class AppUser {\n  const AppUser({"
+    },
+    {
+     "file": "learning_tracker/lib/features/account/domain/models/auth_state.dart",
+     "line": 49,
+     "quote": "class AuthState {\n  const AuthState({"
+    }
+   ],
+   "sites": 2,
+   "why": "AppUser, AuthState and AuthUser are plain hand-written classes (immutable, but no @freezed, no custom ==/hashCode), so two instances with identical field values compare unequal by reference identity \u2014 AuthState is literally the `state` type of a keepAlive Riverpod Notifier. Current consumers avoid the fallout by exclusively `.select()`-ing down to primitive sub-fields (e.g. `s.currentUser?.firebaseUid`, a String, in manage_tutors_providers.dart/app_shell.dart/persistent_switcher_scaffold.dart) rather than comparing whole AuthState values, so no concrete rebuild-storm is demonstrated today \u2014 but it is a landmine for the next `ref.watch(authStateProvider)` call that doesn't remember to add a `.select()`.",
+   "recommendation": "Convert to @freezed (or at minimum implement value ==/hashCode) \u2014 low-risk given the classes are small and already immutable.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "AuthState(...) == AuthState(...) is true for equal field values (documents the fix via a unit test)",
+    "build_runner regenerates cleanly with no call-site breakage"
+   ],
+   "labels": [
+    "freezed",
+    "naming",
+    "equality"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-account-p1",
+  "findingIndex": 12,
+  "finding": {
+   "title": "Rename one of the two generated authStateProvider symbols to remove the name clash",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-4",
+   "area": "features/account/presentation/providers",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/account/presentation/providers/auth_providers.dart",
+     "line": 18,
+     "quote": "Stream<AppUser?> authState(Ref ref) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/account/account.dart",
+     "line": 28,
+     "quote": "export 'presentation/providers/auth_providers.dart'\n    hide AuthStateProvider, authStateProvider;"
+    }
+   ],
+   "sites": 2,
+   "why": "auth_providers.dart's codegen'd `authState()` function and auth_state_provider.dart's codegen'd `AuthStateNotifier` class both generate a top-level `authStateProvider` symbol of DIFFERENT types (Stream<AppUser?> vs AuthState notifier). The feature only works today because every internal call site remembers the workaround: the public barrel `hide`s one, and sign_in_controller.dart/account_picker_screen.dart import with an explicit prefix or hide clause. Any new file that imports auth_providers.dart directly without replicating that discipline gets the wrong authStateProvider (a compile-time type mismatch today, but still a maintenance trap that costs someone debugging time).",
+   "recommendation": "Rename the stream provider (e.g. firebaseAuthUserStreamProvider) so the collision \u2014 and the need for every future importer to remember the hide/prefix workaround \u2014 is removed entirely.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Only one top-level authStateProvider symbol exists in the account feature",
+    "account.dart's barrel export no longer needs a hide clause for this symbol"
+   ],
+   "labels": [
+    "ag-4",
+    "naming-clash",
+    "riverpod"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-account-p2",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Stop leaking raw English InvalidInputException.reason to users; unify the diverged 6-vs-8 password-length rule",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "EH-5 (stable codes, never pre-formatted human messages) + Evans invariant-in-one-place",
+   "area": "features/account/domain + i18n",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/account/domain/services/local_auth_service.dart",
+     "line": 129,
+     "quote": "throw const InvalidInputException('email', 'invalid format');"
+    },
+    {
+     "file": "learning_tracker/lib/features/account/onboarding/domain/validators/auth_validators.dart",
+     "line": 24,
+     "quote": "if (value.length < 6) {\n    return 'Password must be at least 6 characters';"
+    },
+    {
+     "file": "learning_tracker/test/features/account/onboarding/presentation/screens/signup_screen_l1_test.dart",
+     "line": 805,
+     "quote": "expect(find.textContaining('invalid format'), findsOneWidget);"
+    }
+   ],
+   "sites": 2,
+   "why": "InvalidInputException.reason is a hardcoded English string ('invalid format', 'must be at least 8 characters') and signup_screen.dart's `on InvalidInputException catch (e) { _showError(e.reason); }` (used by both _signUpCloud and _signUpLocal) renders it straight to the UI with no AppLocalizations pass \u2014 proven by this batch's own test asserting the literal English substring appears. For a bilingual EN/HE app, a Hebrew-locale user hitting this path sees untranslated English. The bug is latent today only because the sole live caller of LocalAuthService.signUp (_createOfflineAccount) always supplies a synthetic, always-valid UUID email/password \u2014 but the underlying invariant has already drifted: the form-level validator (auth_validators.validatePassword) accepts 6+ characters while LocalAuthService._minPasswordLength requires 8, so a form-valid 6-7 character password fed through any future real caller of LocalAuthService.signUp would throw this untranslated exception.",
+   "recommendation": "Give InvalidInputException (and siblings) a stable code/enum instead of a free-text reason, and have signup_screen.dart resolve it via AppLocalizations the same way _mapAuthError already does for Firebase codes; extract one shared minimum-password-length constant used by both auth_validators.dart and local_auth_service.dart.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "InvalidInputException exposes a typed code instead of (or alongside) a raw English reason string",
+    "signup_screen.dart resolves the code via AppLocalizations before showing it",
+    "auth_validators.dart and local_auth_service.dart reference one shared minimum-password-length constant",
+    "regression test: a 6-7 character password does not throw InvalidInputException through any LocalAuthService.signUp caller"
+   ],
+   "labels": [
+    "i18n",
+    "eh-5",
+    "duplication"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-account-p2",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Add a tap-through test for SignupScreen's offline account-creation flow; expose LocalAuthService via a provider",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (bug-prone paths need regression tests) + SM-7 (services constructed only via @riverpod provider)",
+   "area": "features/account/onboarding/testing",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/account/onboarding/presentation/screens/signup_screen_l1_test.dart",
+     "line": 17,
+     "quote": "//   \u2022 Offline path \u2014 credential-less explicit \"Create Offline Account\""
+    },
+    {
+     "file": "learning_tracker/test/features/account/onboarding/presentation/screens/signup_screen_l1_test.dart",
+     "line": 250,
+     "quote": "find.widgetWithText(FilledButton, 'Create Offline Account'),"
+    },
+    {
+     "file": "learning_tracker/lib/features/account/onboarding/presentation/screens/signup_screen.dart",
+     "line": 227,
+     "quote": "final service = LocalAuthService(dao: dao);"
+    }
+   ],
+   "sites": 1,
+   "why": "The file's own header claims 'Offline path' coverage, but every offline test only checks the button's text/visibility \u2014 none ever call tester.tap on it. Tapping it runs _createOfflineAccount -> _signUpLocal, which does a registry collision check, a SharedPreferences email reservation, a live DB-file swap via accountDbFileNameProvider, a real argon2id hash, a PendingLocalSignupStore.writePayload, and a recover() rollback invoked from three separate catch clauses. None of that orchestration is exercised. A regression in recover() (e.g. failing to release the reserved email or delete the orphan DB file) would permanently block future signups for that device/email or leave a stale DB-file pointer, and ship unnoticed. LocalAuthService has no @riverpod provider anywhere in the codebase (grep-confirmed only inline `LocalAuthService(dao: dao)` constructions in signup_screen.dart and twice in sign_in_controller.dart) so there is no seam to inject a fast fake PasswordHasher for a tap-through test \u2014 unlike sign_in_controller_routing_test.dart's Branches D/E, which hit the identical argon2id cost and transparently document and justify the skip with a `skip:` reason citing exact line numbers. This gap carries no such acknowledgment.",
+   "recommendation": "Add a provider (or accept an injectable PasswordHasher through the existing constructor param) so LocalAuthService can be faked in tests, then add a testWidgets case that taps 'Create Offline Account' and asserts the registry/DB/payload side effects plus a forced-failure case asserting recover() actually rolls back, following the tester.runAsync pattern already established in sign_in_controller_routing_test.dart.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "a testWidgets case taps 'Create Offline Account' and asserts a DeviceAccount row + PendingLocalSignupStore payload are written",
+    "a second case forces a failure mid-_signUpLocal and asserts recover() released the reserved email and deleted the orphan DB file",
+    "LocalAuthService is obtainable through a provider/injectable seam that tests can override with a fake PasswordHasher"
+   ],
+   "labels": [
+    "testing",
+    "coverage-gap",
+    "sm-7",
+    "hotspot"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-account-p2",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Extract the duplicated drift .sqlite-suffix delete helper out of AccountLifecycleService and PendingLocalSignupStore",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler: duplicated code (Extract Method)",
+   "area": "features/account/domain",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/account/domain/services/account_lifecycle_service.dart",
+     "line": 126,
+     "quote": "final driftFile = File('$_dbPath/$dbFileName.sqlite');"
+    },
+    {
+     "file": "learning_tracker/lib/features/account/domain/services/pending_local_signup.dart",
+     "line": 222,
+     "quote": "final driftFile = File('$databasesPath/$dbFileName.sqlite');"
+    }
+   ],
+   "sites": 2,
+   "why": "Both private _deleteDbFile methods encode the identical drift_flutter '.sqlite'-suffix-with-bare-name-fallback workaround, each discovered and fixed as a separate bug (each carries its own header comment and its own dedicated regression test in this batch: account_lifecycle_db_delete_test.dart and pending_local_signup_file_cleanup_test.dart). Any future drift_flutter version change to the on-disk filename scheme means this exact fix has to be found and reapplied in two places; missing one leaves orphaned .sqlite files on disk or a delete that silently no-ops.",
+   "recommendation": "Extract one shared deleteDriftDbFile(databasesPath, dbFileName) utility (e.g. under core/database/ or core/utils/) that both services call; keep both existing regression tests but retarget them at the shared utility.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "one shared function implements the .sqlite-suffix delete-with-fallback logic",
+    "AccountLifecycleService and PendingLocalSignupStore both delegate to it instead of each defining their own copy",
+    "both existing regression tests still pass"
+   ],
+   "labels": [
+    "duplication",
+    "fowler"
+   ]
+  }
+ }
+]

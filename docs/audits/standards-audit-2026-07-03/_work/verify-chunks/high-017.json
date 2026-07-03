@@ -1,0 +1,55 @@
+[
+ {
+  "sourceBatch": "t1-core-services",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Redact TransactionalEmail.plaintextBody before logging in LoggingTransactionalEmailService.send()",
+   "severity": "P0",
+   "confidence": "CONFIRMED",
+   "rule": "Child-privacy logging hygiene (PV-family principle) \u2014 breaks the PiiRedactor.sensitiveKeys contract in core/logging/logger.dart that the same function's sibling field already relies on",
+   "area": "core/email + core/logging (PII redaction)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/email/transactional_email_service.dart",
+     "line": 194,
+     "quote": "fields: {'body': email.plaintextBody},"
+    },
+    {
+     "file": "learning_tracker/lib/core/email/transactional_email_service.dart",
+     "line": 113,
+     "quote": "'$tutorEmail has declined your invitation to tutor $childName.\\n\\n'"
+    },
+    {
+     "file": "learning_tracker/lib/core/logging/logger.dart",
+     "line": 263,
+     "quote": "entry.key: sensitiveKeys.contains(entry.key)"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/presentation/utils/send_logs_service.dart",
+     "line": 12,
+     "quote": "/// `users/{uid}/diagnostic_logs/{auto-id}` in Firestore via [FirestoreGateway]."
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/domain/services/tutor_notification_service.dart",
+     "line": 70,
+     "quote": "TutorDeclinedEmail("
+    }
+   ],
+   "sites": 1,
+   "why": "LoggingTransactionalEmailService.send() (the only bound TransactionalEmailService implementation today) logs the full plaintextBody under the key 'body' via AppLogger.instance.debug(). PiiRedactor.redactFields() only blanks values whose KEY is in the 49-entry sensitiveKeys allowlist (logger.dart:203-251) \u2014 'body' is not in it, even though 'to'/'recipient'/'email_to' were deliberately added and regression-tested (test/core/logging/logger_extended_test.dart:271-304, tag V2-R5 C2) for the exact same call site two lines above. TutorDeclinedEmail, TutorResignedEmail and TutorGrantRevokedEmail are already constructed and sent today from tutor_notification_service.dart (decline/resign/revoke flows), so a child's name and a tutor's raw email address (embedded in TutorDeclinedEmail's prose body) land in the log buffer in cleartext on every one of those events. That buffer is exactly what features/settings/.../send_logs_service.dart uploads (unfiltered by level, last 10 minutes) to `users/{uid}/diagnostic_logs/` in Firestore, a collection its own docstring says a developer can view/query directly in the Firebase console. Once TutorInviteEmail (defined but not yet wired) goes live, the same gap will additionally leak the invite deep link. This directly contradicts the redaction guarantee the codebase already built and tested for the sibling 'to' field in the same function.",
+   "recommendation": "Add 'body' (or a dedicated key such as 'email_body') to PiiRedactor.sensitiveKeys in core/logging/logger.dart, or stop passing plaintextBody to the logger entirely (log email.runtimeType/a template id instead of the rendered body). Extend the existing V2-R5 C2 test group in test/core/logging/logger_extended_test.dart to cover the debug() 'Payload' call the same way it already covers the warning() call.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "PiiRedactor.redactFields({'body': 'contains tutor@example.com and a child name'})['body'] == '[REDACTED]', or LoggingTransactionalEmailService.send() no longer logs the raw plaintextBody at all",
+    "A new/updated test in test/core/logging/logger_extended_test.dart fails against current logger.dart and passes after the fix",
+    "flutter analyze and make ci remain green"
+   ],
+   "labels": [
+    "privacy",
+    "child-data",
+    "logging",
+    "P0"
+   ]
+  }
+ }
+]

@@ -1,0 +1,217 @@
+[
+ {
+  "sourceBatch": "t1-feat-sync-p3",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Trim or split the 8 test/sync files exceeding the 400-line AG-3 cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "test/sync",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/sync/tutored_mirror_wipe_test.dart",
+     "line": 1,
+     "quote": "/// T5.lifecycle regression tests \u2014 mirror wipe on revoke/resign/sign-out."
+    },
+    {
+     "file": "learning_tracker/test/sync/sync_status_emission_test.dart",
+     "line": 1,
+     "quote": "/// Acceptance test for Plan \u00a7F Phase 4 deliverable 2."
+    },
+    {
+     "file": "learning_tracker/test/sync/sync_rework_curriculum_completion_doc_id_test.dart",
+     "line": 1,
+     "quote": "/// Per-curriculum completion doc-ID and tombstone-propagation tests."
+    },
+    {
+     "file": "learning_tracker/test/sync/sync_rework_orchestrator_test.dart",
+     "line": 1,
+     "quote": "/// Wave 2 \u2014 S7: the SyncOrchestrator singleton invariant."
+    }
+   ],
+   "sites": 8,
+   "why": "wc -l over the batch shows 8 of 16 files exceed the 400-line hand-written-file cap: tutored_mirror_wipe_test.dart (858), sync_status_emission_test.dart (672), sync_rework_curriculum_completion_doc_id_test.dart (662), sync_rework_orchestrator_test.dart (642), sync_orchestrator_drain_triggers_test.dart (514), sync_rework_push_test.dart (455), study_day_config_sync_test.dart (409), sync_rework_profile_programs_pull_test.dart (405). For 3 of these the direct cause is the duplicated-fake pattern (see companion finding); the rest are large multi-scenario suites that would read and diff more easily split along their own top-level group() boundaries.",
+   "recommendation": "Apply the shared-fake fix first for the 3 fake-driven files; for the rest, split by the file's own group() boundaries (e.g. one file per T/S/P trigger in tutored_mirror_wipe_test.dart).",
+   "effort": "M",
+   "acceptance_criteria": [
+    "`find learning_tracker/test/sync -name '*_test.dart' | xargs wc -l | awk '$1>400'` returns empty or only an explicit recorded ratchet baseline"
+   ],
+   "labels": [
+    "hygiene",
+    "file-size",
+    "sync"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-sync-p3",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Delete sync_rework_engine_test.dart \u2014 all 5 groups are skip-only placeholders with zero assertions",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "dead code (Everything sweep); TQ-7 spirit",
+   "area": "test/sync",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/sync/sync_rework_engine_test.dart",
+     "line": 19,
+     "quote": "skip: 'Retired W2.35 \u2014 covered by OutboxProcessor tests',"
+    },
+    {
+     "file": "learning_tracker/test/sync/sync_rework_engine_test.dart",
+     "line": 21,
+     "quote": "test('placeholder', () {});"
+    }
+   ],
+   "sites": 1,
+   "why": "SyncEngine was deleted in W2.35 (per the file's own docstring) and every one of the file's 5 groups is skip:-disabled with an empty test('placeholder', () {}) body \u2014 the file runs zero real assertions and no longer mirrors any lib/ source file. It shows up as '5 skipped' in every CI run for no regression-protection value; the redirect notes belong as a comment on the replacement suites, not a standing test file.",
+   "recommendation": "Delete the file; fold its 'moved to X' pointers into the header comments of the replacement suites (OutboxProcessor tests, CompletionMerger tests, SyncOrchestratorImpl tests) if not already present, and state the deletion reason in the commit message per TQ-7.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "sync_rework_engine_test.dart is removed from the repo, or its groups are un-skipped with real assertions",
+    "no reduction in real (non-skip) test count results from the deletion"
+   ],
+   "labels": [
+    "hygiene",
+    "dead-code",
+    "sync"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-sync-p3",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Use FakeLocalDayClock instead of wall-clock (SystemLocalDayClock/DateTime.now()) in test/sync hermetic tests",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6 (pending: extend hermetic-test check to test/)",
+   "area": "test/sync",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/sync/stage_definition_single_path_test.dart",
+     "line": 58,
+     "quote": "clock: const SystemLocalDayClock(),"
+    },
+    {
+     "file": "learning_tracker/test/sync/stage_definition_single_path_test.dart",
+     "line": 118,
+     "quote": "clock: const SystemLocalDayClock(),"
+    },
+    {
+     "file": "learning_tracker/test/sync/tutored_listener_supervisor_test.dart",
+     "line": 191,
+     "quote": "'updated_at': DateTime.now().toIso8601String(),"
+    }
+   ],
+   "sites": 5,
+   "why": "stage_definition_single_path_test.dart wires the real system clock into OutboxSyncWriteFacade under test; its sibling study_day_config_sync_test.dart uses FakeLocalDayClock(DateTime.utc(...)) for the identical facade, showing the fixed-clock convention exists and was simply not followed here. tutored_listener_supervisor_test.dart uses DateTime.now() three times (lines 191, 313, 354) for filler payload values. Neither instance drives a flaky assertion today, but both stand as standing violations of the hermetic-test rule the moment a future edit asserts against the timestamp, and both make the test's inputs non-reproducible from a bug report.",
+   "recommendation": "Replace `const SystemLocalDayClock()` with `FakeLocalDayClock(DateTime.utc(...))` in stage_definition_single_path_test.dart; replace the three DateTime.now() payload fillers in tutored_listener_supervisor_test.dart with a fixed ISO string.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep for 'SystemLocalDayClock' and 'DateTime.now()' in stage_definition_single_path_test.dart and tutored_listener_supervisor_test.dart returns empty"
+   ],
+   "labels": [
+    "testing",
+    "determinism",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-sync-p4",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Route two_device_sync_test.dart's S1/S3 through the real MergeRouter instead of hand-decoding outbox JSON",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "core/sync \u2014 tests",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/sync/two_device_sync_test.dart",
+     "line": 76,
+     "quote": "final data = jsonDecode(row.payload) as Map<String, dynamic>;"
+    },
+    {
+     "file": "learning_tracker/test/sync/two_device_sync_test.dart",
+     "line": 1,
+     "quote": "/// I-5: Two-device sync end-to-end tests."
+    },
+    {
+     "file": "learning_tracker/test/integration/two_device_sync_test.dart",
+     "line": 14,
+     "quote": "@Tags(['i5', 'two_device_sync'])"
+    },
+    {
+     "file": "docs/sync-conflict-resolution.md",
+     "line": 67,
+     "quote": "`test/integration/two_device_sync_test.dart` covers:"
+    }
+   ],
+   "sites": 1,
+   "why": "test/sync/two_device_sync_test.dart and test/integration/two_device_sync_test.dart share the exact same name and the same group label ('I-5: two-device sync scenarios' / 'Two-device convergence test harness (I-5)'), created about an hour apart on the same day. The integration version carries @Tags(['i5','two_device_sync']) and drives the real MergeRouter/CompletionEventMerger/EntityMerger stack \u2014 it is the file docs/sync-conflict-resolution.md names as the canonical I-5 harness (completion set-union, track-deactivation LWW, idempotent re-merge). The file in this batch has no tags at all and, for S1 ('completion propagates to Device B'), never imports MergeRouter/EntityMerger \u2014 it hand-decodes the outbox JSON payload and calls completionEventDao.appendEvent directly, bypassing every line of the actual merge/dispatch code Device B's real pull uses. A regression in CompletionEventMerger's field mapping or LWW comparison would not be caught here; a reader trusting the group name would believe cross-device merge logic is under test when it isn't, and it also doesn't cover track-deactivation LWW at all (only the integration twin does).",
+   "recommendation": "Either delete test/sync/two_device_sync_test.dart's S1/S3 in favor of the tag-carrying, merge-router-driven test/integration/two_device_sync_test.dart (keeping S2's soft-delete-outbox scenario, relocated since it's not duplicated there), or rewrite S1's simulated pull to dispatch through the real MergeRouter/CompletionEventMerger so the test exercises production code and add the i5/two_device_sync tags for consistency.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "Only one file covers I-5 two-device completion propagation end-to-end through MergeRouter/CompletionEventMerger, or the two files are clearly differentiated in name and purpose.",
+    "Any surviving two_device_sync_test.dart file carries @Tags(['i5','two_device_sync']) matching its sibling."
+   ],
+   "labels": [
+    "sync",
+    "tests",
+    "duplication",
+    "false-confidence"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-sync-p4",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Add a test for OutboxSyncWriteFacade's onEnqueueDrain chain \u2014 write_tee_status_update_test.dart only unit-tests recordDrainAttempt() in isolation",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 / AG-5",
+   "area": "core/sync \u2014 tests",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/sync/write_tee_status_update_test.dart",
+     "line": 6,
+     "quote": "/// `outboxProcessor.drain()` directly, bypassing the orchestrator's"
+    },
+    {
+     "file": "learning_tracker/test/sync/write_tee_status_update_test.dart",
+     "line": 191,
+     "quote": "await orchestrator.recordDrainAttempt();"
+    },
+    {
+     "file": "learning_tracker/lib/features/sync/presentation/providers/sync_providers.dart",
+     "line": 105,
+     "quote": "onEnqueueDrain: () async {"
+    },
+    {
+     "file": "learning_tracker/lib/features/sync/presentation/providers/sync_providers.dart",
+     "line": 108,
+     "quote": "await ref.read(syncOrchestratorProvider)?.recordDrainAttempt();"
+    }
+   ],
+   "sites": 1,
+   "why": "The file's own docstring names the bug precisely: OutboxSyncWriteFacade.onEnqueueDrain called drain() without the follow-up recordDrainAttempt(), so the sync badge stayed falsely 'Synced'. The fix \u2014 chaining recordDrainAttempt() after drain() \u2014 is correctly wired today at sync_providers.dart:105-108 (verified by reading it). But both tests in this file build a bare SyncOrchestratorImpl and call `orchestrator.recordDrainAttempt()` directly; neither constructs an OutboxSyncWriteFacade or exercises the onEnqueueDrain closure at all. recordDrainAttempt() is a one-line wrapper (`=> _recomputeOutboxStatus()`), so this mostly re-tests status computation, not the chaining bug. There is no test file for sync_providers.dart or outbox_sync_write_facade.dart anywhere in test/ (checked via `find`), so nothing would fail if a future provider refactor drops the recordDrainAttempt() call again \u2014 the exact original bug could silently reappear with this whole suite green.",
+   "recommendation": "Add a test (e.g. test/features/sync/presentation/providers/sync_providers_test.dart or test/features/sync/data/outbox_sync_write_facade_test.dart, mirroring AG-5) that builds the real OutboxSyncWriteFacade/onEnqueueDrain closure with a failing pipeline and asserts the sync-status badge updates without a manual recordDrainAttempt() call from the test body.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "A test exists at a path mirroring lib/features/sync/presentation/providers/sync_providers.dart or lib/features/sync/data/outbox_sync_write_facade.dart.",
+    "That test drives OutboxSyncWriteFacade's write-tee (enqueue \u2192 onEnqueueDrain) end to end and asserts recordDrainAttempt() fires without the test calling it directly."
+   ],
+   "labels": [
+    "sync",
+    "tests",
+    "coverage-gap",
+    "AG-5"
+   ]
+  }
+ }
+]

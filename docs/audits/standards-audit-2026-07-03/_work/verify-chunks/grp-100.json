@@ -1,0 +1,279 @@
+[
+ {
+  "sourceBatch": "t1-feat-settings-p1",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Throw a typed ValidationException, not dart:core FormatException, from DataExportImportService.validateAndPreview",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "EH-2 / Evans ubiquitous-language consistency",
+   "area": "features/settings/domain/services",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart",
+     "line": 463,
+     "quote": "throw const FormatException('Invalid JSON format');"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart",
+     "line": 474,
+     "quote": "throw FormatException('Missing required section: $section');"
+    }
+   ],
+   "sites": 4,
+   "why": "Every other domain exception in this batch (e.g. LastActiveCurriculumException) extends the project's AppException/ValidationException hierarchy in core/exceptions/app_exception.dart, letting callers catch by stable project type and letting presentation map to a localized message by type. validateAndPreview instead throws bare dart:core FormatException at 4 sites (463, 468, 474, 477), indistinguishable from the FormatException json.decode itself can throw two lines above -- a caller can't tell 'malformed JSON' from 'well-formed JSON missing a required section' without string-matching the message, and can't localize it the way the rest of the domain layer does.",
+   "recommendation": "Introduce a typed exception (e.g. ImportValidationException extends ValidationException) and throw it in place of FormatException at all 4 sites; update the tests currently asserting throwsA(isA<FormatException>()).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "validateAndPreview/importData throw the new typed exception, not FormatException; existing malformed-import tests updated to assert the new type."
+   ],
+   "labels": [
+    "error-handling",
+    "settings",
+    "consistency"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-settings-p2",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Route UserProfileHeaderCard through feature barrels instead of 6 deep cross-feature imports; settings.dart barrel is dead (Rule 2)",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Rule 2 (cross-feature barrel) + Rule-0 checker defect",
+   "area": "features/settings presentation layering",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/settings/presentation/widgets/user_profile_header_card.dart",
+     "line": 4,
+     "quote": "import 'package:learning_tracker/features/account/domain/models/app_user.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/presentation/widgets/user_profile_header_card.dart",
+     "line": 5,
+     "quote": "import 'package:learning_tracker/features/account/domain/models/auth_state.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/presentation/widgets/user_profile_header_card.dart",
+     "line": 6,
+     "quote": "import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/presentation/widgets/user_profile_header_card.dart",
+     "line": 7,
+     "quote": "import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/presentation/widgets/user_profile_header_card.dart",
+     "line": 8,
+     "quote": "import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/presentation/widgets/user_profile_header_card.dart",
+     "line": 9,
+     "quote": "import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/settings.dart",
+     "line": 3,
+     "quote": "// Import this barrel (features/settings/settings.dart) from outside this"
+    }
+   ],
+   "sites": 7,
+   "why": "Rule 2 requires cross-feature references go through a barrel; UserProfileHeaderCard instead reaches directly into 3 files under features/account and 3 under features/profiles. Meanwhile features/settings/settings.dart -- the feature's only declared public surface, per its own header comment -- exports nothing and a repo-wide grep shows zero files import it. This is invisible in the audit baseline because the Makefile's own Rule-2 checker (make audit check 15/15, learning_tracker/Makefile:374-386) is broken: its awk step compares the feature name parsed from the file-path column against the feature name parsed from the FIRST 'features/X/' match in the whole grep line, which is always the importing file's own path (it appears before the import statement in `grep -n` output) -- so a[1] always equals b[1] and the WARN branch can never fire, for any file, repo-wide. I confirmed this by running the exact Makefile pipeline against this file: it produced zero matches despite the 6 genuine cross-feature imports above. Concrete cost: renaming/restructuring AppUser, AuthState or ProfileModel inside account/profiles breaks this widget with no barrel boundary to absorb the change, and nothing in CI would warn about it even though Rule 2 is nominally 'enforced'.",
+   "recommendation": "Either populate settings.dart (and account's/profiles' equivalents) with a real public surface and route UserProfileHeaderCard's imports through them, or delete the dead settings.dart if the barrel convention is being abandoned. Separately, fix the awk field-comparison in Makefile check 15/15 so it diffs the importing file's own feature (from the path column) against the feature parsed specifically from the `package:learning_tracker/features/...` import string, not the first match in the whole line.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "make audit check 15/15 flags a deliberately-reintroduced cross-feature deep import in a scratch file (proves the checker actually fires)",
+    "user_profile_header_card.dart imports account/profiles symbols only via their barrels, or settings.dart is removed if the barrel convention is dropped"
+   ],
+   "labels": [
+    "layering",
+    "rule-2",
+    "tooling-defect"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-settings-p2",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Move account_management_service_test.dart and curriculum_activation_service_test.dart to their mirrored feature test paths (AG-5)",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-5",
+   "area": "test/ tree mirroring",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/settings/domain/services/account_management_service_test.dart",
+     "line": 6,
+     "quote": "import 'package:learning_tracker/features/account/domain/services/account_management_service.dart';"
+    },
+    {
+     "file": "learning_tracker/test/features/settings/domain/services/curriculum_activation_service_test.dart",
+     "line": 10,
+     "quote": "import 'package:learning_tracker/features/tracks/domain/services/curriculum_activation_service.dart';"
+    }
+   ],
+   "sites": 2,
+   "why": "AccountManagementService lives at lib/features/account/domain/services/ but its only test file lives under test/features/settings/domain/services/ -- nothing exists at the mirrored test/features/account/domain/services/. Same pattern for CurriculumActivationService, whose real home is lib/features/tracks/domain/services/. An engineer refactoring or deleting either service and grepping its own feature's test tree finds nothing, and may not realize 9+ regression tests (including the Bug-5/Bug-6 delete-account teardown-in-finally tests) live in a different feature's tree entirely.",
+   "recommendation": "Move both files to test/features/account/domain/services/account_management_service_test.dart and test/features/tracks/domain/services/curriculum_activation_service_test.dart respectively.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "account_management_service_test.dart lives at test/features/account/domain/services/",
+    "curriculum_activation_service_test.dart lives at test/features/tracks/domain/services/",
+    "flutter test passes unchanged after the move"
+   ],
+   "labels": [
+    "test-hygiene",
+    "ag-5"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-settings-p2",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Split the 3 hand-written files over the 400-line AG-3 ceiling encountered in this batch",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "features/settings (file size)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/settings/presentation/widgets/user_profile_header_card.dart",
+     "line": 34,
+     "quote": "class UserProfileHeaderCard extends ConsumerStatefulWidget {"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart",
+     "line": 63,
+     "quote": "class DataExportImportService {"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/presentation/screens/lifetime_marking_screen.dart",
+     "line": 30,
+     "quote": "class LifetimeMarkingScreen extends ConsumerWidget {"
+    }
+   ],
+   "sites": 3,
+   "why": "AG-3 caps hand-written Dart files at 400 lines; these run 457 / 938 / 986 lines respectively (confirmed via wc -l). DataExportImportService alone merges whole-DB export serialization (~350 lines) and whole-DB import/deserialization with legacy-format migration (~400 lines) in one class -- a Divergent Change magnet, evidenced by needing 7 separate test files (3200+ combined lines) in this batch to cover it. lifetime_marking_screen.dart literally contains two independent top-level screen widgets (LifetimeMarkingScreen at line 30, LifetimeCurriculumMarkingScreen at line 294) in one file. UserProfileHeaderCard bundles two presentation surfaces (_SettingsProfileSurface/_ParentProfileSurface) plus a second full row-widget (_LocalBornProfileRow) alongside the main widget.",
+   "recommendation": "Split DataExportImportService into DataExportService/DataImportService (already implied by the test file names); split lifetime_marking_screen.dart into one file per screen class; extract _LocalBornProfileRow/_NoBackupInlineText out of user_profile_header_card.dart.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "An AG-3 line-count checker (once Rule 0 ships one) reports 0 violators for these 3 files."
+   ],
+   "labels": [
+    "ag-3",
+    "file-size",
+    "fowler-large-class"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-settings-p2",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Batch DataExportImportService.importData's 16 per-row insert loops instead of awaiting each row individually (DB-3)",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "DB-3",
+   "area": "features/settings domain service (paired with 7 tests in this batch)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart",
+     "line": 538,
+     "quote": "for (final u in data['userProfiles'] as List) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart",
+     "line": 558,
+     "quote": "for (final p in (data['learnerProfiles'] as List? ?? [])) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart",
+     "line": 581,
+     "quote": "for (final t in data['curriculumTracks'] as List) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart",
+     "line": 621,
+     "quote": "for (final s in (data['curriculumScopes'] as List? ?? [])) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart",
+     "line": 638,
+     "quote": "for (final p in (data['profilePrograms'] as List? ?? [])) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart",
+     "line": 658,
+     "quote": "for (final s in data['stageDefinitions'] as List) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart",
+     "line": 678,
+     "quote": "for (final p in data['pointConfigs'] as List) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart",
+     "line": 694,
+     "quote": "for (final c in (data['studyDayConfigs'] as List? ?? [])) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart",
+     "line": 717,
+     "quote": "for (final e in (data['completionEvents'] as List? ?? [])) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart",
+     "line": 749,
+     "quote": "for (final p in (data['dailyPlans'] as List? ?? [])) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart",
+     "line": 777,
+     "quote": "for (final e in (data['learningLedger'] as List? ?? [])) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart",
+     "line": 802,
+     "quote": "for (final b in data['bookmarks'] as List) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart",
+     "line": 818,
+     "quote": "for (final l in data['learningOrder'] as List) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart",
+     "line": 838,
+     "quote": "for (final t in (data['trackLearningOrder'] as List? ?? [])) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart",
+     "line": 852,
+     "quote": "for (final g in data['goals'] as List) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart",
+     "line": 887,
+     "quote": "for (final e in (data['streakEvents'] as List? ?? [])) {"
+    }
+   ],
+   "sites": 16,
+   "why": "importData wraps everything in one _database.transaction() (correct per DB-2), but every one of its 16 section loops does `for (row in list) { await _database.into(table).insert(...); }` instead of `batch((b) => b.insertAll(...))`, violating DB-3. This app's core value proposition is years of daily learning history; restoring a real backup can mean thousands of completionEvents/learningLedger rows, each serialized as its own awaited round-trip inside one transaction on the isolate that called it -- risking a long block on the user-initiated 'Restore backup' action instead of one bulk statement per table. None of the 7 paired test files in this batch exercise import volumes large enough to surface this (all use 0-2 rows per section).",
+   "recommendation": "Replace each per-row loop with `_database.batch((b) => b.insertAll(table, companions))`, keeping the existing outer transaction().",
+   "effort": "M",
+   "acceptance_criteria": [
+    "A regression test seeds an import payload with several thousand completionEvents/learningLedger rows and asserts importData completes in bounded time, or a DB-3 checker (once Rule 0 ships one) confirms batch()/insertAll usage in this method."
+   ],
+   "labels": [
+    "db-3",
+    "performance",
+    "data-export-import"
+   ]
+  }
+ }
+]

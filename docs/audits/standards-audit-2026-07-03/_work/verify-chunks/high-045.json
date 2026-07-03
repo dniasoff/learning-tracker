@@ -1,0 +1,48 @@
+[
+ {
+  "sourceBatch": "t1-feat-dashboard-p2",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Guard ref.invalidate with a mounted check in SkippedOnboardingCtaBanner's dismiss handler",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "SM-4",
+   "area": "lib/features/dashboard/presentation/widgets/skipped_onboarding_cta_banner.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/dashboard/presentation/widgets/skipped_onboarding_cta_banner.dart",
+     "line": 164,
+     "quote": "await clearOnboardingSkipState();"
+    },
+    {
+     "file": "learning_tracker/lib/features/dashboard/presentation/widgets/skipped_onboarding_cta_banner.dart",
+     "line": 165,
+     "quote": "ref.invalidate(onboardingSkipStateProvider);"
+    },
+    {
+     "file": "learning_tracker/lib/features/dashboard/presentation/widgets/skipped_onboarding_cta_banner.dart",
+     "line": 146,
+     "quote": "if (!context.mounted) return;"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/widgets/add_profile_dialog.dart",
+     "line": 241,
+     "quote": "if (context.mounted) ref.invalidate(profileListProvider);"
+    }
+   ],
+   "sites": 1,
+   "why": "clearOnboardingSkipState() performs two awaited SharedPreferences.remove() platform-channel calls. If the widget is disposed during that window \u2014 e.g. the user taps Dismiss then immediately navigates away, a plausible fast-tap-and-swipe sequence \u2014 the following ref.invalidate() fires on an unmounted ref. Riverpod 3.3.1 (pinned in pubspec.yaml) throws UnmountedRefException in that case. The same file already demonstrates the correct guard two callbacks earlier (line 146), and the identical operation is guarded correctly in add_profile_dialog.dart:241, so this is a one-line omission, not a missing pattern.",
+   "recommendation": "Guard the invalidate call: await clearOnboardingSkipState(); if (!context.mounted) return; ref.invalidate(onboardingSkipStateProvider); \u2014 matching the pattern already used at line 146 and in add_profile_dialog.dart.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "widget test: pump SkippedOnboardingCtaBanner, tap Dismiss, dispose the widget tree before the SharedPreferences future resolves, assert tester.takeException() is null / no UnmountedRefException"
+   ],
+   "labels": [
+    "riverpod",
+    "sm-4",
+    "crash-risk",
+    "dashboard"
+   ]
+  }
+ }
+]

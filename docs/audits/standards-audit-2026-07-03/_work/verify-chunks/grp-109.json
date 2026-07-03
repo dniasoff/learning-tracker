@@ -1,0 +1,209 @@
+[
+ {
+  "sourceBatch": "t1-feat-sync-p2",
+  "findingIndex": 5,
+  "finding": {
+   "title": "listener_overflow_recovery_test.dart's per-channel throttle test bypasses the project's injectable clock seam, depending on real wall-clock proximity",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6",
+   "area": "test/sync/listener_overflow_recovery_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/sync/listener_overflow_recovery_test.dart",
+     "line": 95,
+     "quote": "test('a second at-limit snapshot within 60 s does NOT retrigger the pull '\n        '(per-channel throttle)', () async {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/listener_supervisor.dart",
+     "line": 357,
+     "quote": "final now = DateTimeFactory.nowUtc();\n    final last = _lastRecoveryPull[channel];"
+    }
+   ],
+   "sites": 1,
+   "why": "ListenerSupervisor's recovery-pull throttle reads the wall clock through DateTimeFactory.nowUtc(), which the codebase built as an overridable seam (useLocalDayClock / localDayClockProvider.overrideWithValue) precisely so tests don't depend on real elapsed time. This test never overrides it, so 'within 60 s' is proven only by the test happening to execute in milliseconds, not by construction \u2014 and it forfeits the ability to assert the OTHER side of the boundary (a snapshot fired after 60s DOES retrigger), which cannot be tested without fast-forwarding a real clock.",
+   "recommendation": "Override the clock with a FakeLocalDayClock in setUp/tearDown (matching the pattern already used in learner_profile_delete_enqueue_profile0_test.dart) and advance it between the two at-limit snapshots to assert both 'inside window \u2192 coalesced' and 'past window \u2192 retriggers'.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "the throttle test overrides LocalDayClock and asserts both sides of the 60s boundary without a real wait"
+   ],
+   "labels": [
+    "testing",
+    "hygiene",
+    "clock-seam"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-sync-p2",
+  "findingIndex": 6,
+  "finding": {
+   "title": "lifecycle_observer_test.dart's 'hidden and detached' test never exercises AppLifecycleState.detached",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 / naming drift",
+   "area": "test/sync/lifecycle_observer_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/sync/lifecycle_observer_test.dart",
+     "line": 136,
+     "quote": "test('hidden and detached states also flag as backgrounded', () async {"
+    },
+    {
+     "file": "learning_tracker/test/sync/lifecycle_observer_test.dart",
+     "line": 149,
+     "quote": "await observer.didChangeAppLifecycleState(AppLifecycleState.hidden);\n      await observer.didChangeAppLifecycleState(AppLifecycleState.resumed);"
+    }
+   ],
+   "sites": 1,
+   "why": "The test name promises 'detached' is covered alongside 'hidden'; the body only drives hidden \u2192 resumed. No test in this file drives detached \u2192 resumed, so a regression that special-cased hidden but mishandled detached in LifecycleObserver's background-state classification would pass this suite while the title implies otherwise \u2014 a false sense of coverage for whoever next reads this file to decide if a test is needed.",
+   "recommendation": "Either add a second assertion block for AppLifecycleState.detached \u2192 resumed (same 5-line pattern as the hidden case), or rename the test to 'hidden state also flags as backgrounded' to stop overclaiming.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "the test body exercises AppLifecycleState.detached, or the test name no longer mentions detached"
+   ],
+   "labels": [
+    "hygiene",
+    "naming-drift",
+    "test-coverage"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-sync-p3",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Extract a shared FirestoreGateway/AuthRepository test fake instead of duplicating ~200-line stub classes per file",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler-duplication (shotgun surgery); TQ-4 spirit; drives AG-3",
+   "area": "test/sync",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/sync/tutored_mirror_wipe_test.dart",
+     "line": 118,
+     "quote": "class _RevokedGateway implements FirestoreGateway {"
+    },
+    {
+     "file": "learning_tracker/test/sync/tutored_mirror_wipe_test.dart",
+     "line": 651,
+     "quote": "class _ErrorGateway implements FirestoreGateway {"
+    },
+    {
+     "file": "learning_tracker/test/sync/sync_rework_orchestrator_test.dart",
+     "line": 53,
+     "quote": "class _ChannelCountingGateway implements FirestoreGateway {"
+    },
+    {
+     "file": "learning_tracker/test/sync/sync_rework_profile_programs_pull_test.dart",
+     "line": 42,
+     "quote": "class _ProfileProgramsGateway implements FirestoreGateway {"
+    },
+    {
+     "file": "learning_tracker/test/sync/sync_rework_curriculum_completion_doc_id_test.dart",
+     "line": 44,
+     "quote": "class _StubAuthRepository implements AuthRepository {"
+    },
+    {
+     "file": "learning_tracker/test/sync/sync_rework_push_test.dart",
+     "line": 36,
+     "quote": "class _StubAuthRepository implements AuthRepository {"
+    }
+   ],
+   "sites": 6,
+   "why": "tutored_mirror_wipe_test.dart hand-rolls the ~46-method FirestoreGateway interface TWICE: diffing _RevokedGateway (118-332) against _ErrorGateway (651-858) shows only the two thrown-exception lines differ, everything else is byte-identical boilerplate. sync_rework_orchestrator_test.dart and sync_rework_profile_programs_pull_test.dart each re-implement the same ~46 no-op methods again from scratch. _StubAuthRepository (28 throw-UnimplementedError overrides) is copy-pasted verbatim across two files even though test/mocks/mock_repositories.dart already ships `class MockAuthRepository extends Mock implements AuthRepository {}` for exactly this purpose, and one file in this same batch (sync_orchestrator_profile0_status_test.dart's `_Gw extends Fake implements FirestoreGateway {}`) already shows the one-line alternative. Every time FirestoreGateway gains a method (evidenced by repeated 'W7.15: pushStageDefinition added', 'W6.13: fetchAuditLogEntries added', 'T1.gateway \u2014 parent-scoped child reads' comments scattered across these same files) every one of these fakes needs a matching edit or the build breaks, and this duplication is the direct cause of 3 of this batch's 8 AG-3 line-count violations.",
+   "recommendation": "Add one `class NoOpFirestoreGateway extends Fake implements FirestoreGateway {}` to test/helpers (mirroring _Gw in sync_orchestrator_profile0_status_test.dart) and have each test override only the 1-3 methods it actually drives; replace both _StubAuthRepository copies with the existing MockAuthRepository plus a `when(() => mock.currentUser).thenReturn(...)` stub.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "test/helpers/ contains a Fake-based no-op FirestoreGateway reused by test/sync files instead of per-file full implementations",
+    "tutored_mirror_wipe_test.dart's _RevokedGateway and _ErrorGateway collapse to one shared base plus two small overrides",
+    "_StubAuthRepository is removed from sync_rework_curriculum_completion_doc_id_test.dart and sync_rework_push_test.dart in favor of MockAuthRepository"
+   ],
+   "labels": [
+    "testing",
+    "duplication",
+    "sync",
+    "maintainability"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-sync-p3",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Give sync_status_emission_test.dart's 'empty outbox + online + after pull \u2192 synced' test actual assertions",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (tautological/vacuous test)",
+   "area": "test/sync",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/sync/sync_status_emission_test.dart",
+     "line": 113,
+     "quote": "test('empty outbox + online + after pull \u2192 synced', () async {"
+    },
+    {
+     "file": "learning_tracker/test/sync/sync_status_emission_test.dart",
+     "line": 139,
+     "quote": "// No assertion here \u2014 pre-pull, status remains whatever the failed"
+    }
+   ],
+   "sites": 1,
+   "why": "The test's name and the file's own header matrix both promise to verify the 'synced' cell (empty outbox + online + a completed pull), but the body ends after recordDrainAttempt() with a comment admitting no assertion is made, because _EmptyGateway cannot simulate a successful pull (every real fetch throws via noSuchMethod). The test always passes regardless of whether synced emission is broken for this exact scenario \u2014 it is pure green-checkmark noise. SyncStatusSynced IS exercised elsewhere in the same file, but only via the throttled-resume branch (_everPulledOnLaunch force-set by the throttle, not by a genuinely completed pull), so the 'real successful cold pull \u2192 synced' path this test is named for has no working assertion anywhere in the file.",
+   "recommendation": "Either delete the test, or give it a gateway fake that lets pullOnLaunch complete successfully (mirroring _ProfileProgramsGateway in sync_rework_profile_programs_pull_test.dart) and assert `orchestrator.currentStatus is SyncStatusSynced` afterward.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "the 'empty outbox + online + after pull \u2192 synced' test contains at least one expect() against SyncStatus, or is removed",
+    "if kept, the pull it drives completes successfully (non-throttled) before the synced assertion"
+   ],
+   "labels": [
+    "testing",
+    "sync",
+    "coverage-gap"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-sync-p3",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Share local-track-id resolution across mergers instead of re-deriving it per merger",
+   "severity": "P3",
+   "confidence": "SUSPECTED",
+   "rule": "Evans (invariant re-derived, not enforced in one place) \u2014 needs full merger source read to confirm behavioral divergence",
+   "area": "core/sync/merge (surfaced by test/sync)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/sync/tutored_mirror_projection_inputs_test.dart",
+     "line": 99,
+     "quote": "'stage_definitions with a remote track_id bind to the local mirror track',"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/merge/drift_merge_store.dart",
+     "line": 417,
+     "quote": "Future<int> _resolveLocalTrackId({"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/merge/goal_merger.dart",
+     "line": 57,
+     "quote": "final localTrack = await _db.trackDao.getTrackByProfileAndCurriculum("
+    }
+   ],
+   "sites": 3,
+   "why": "tutored_mirror_projection_inputs_test.dart (4 test cases) and study_day_config_sync_test.dart (2 more 'Bug 3' cases) together needed 6 separate test cases to pin the same 'remote track_id \u2192 local mirror track_id' remap across StageDefinitionMerger, GoalMerger, StudyDayConfigMerger and GamificationSettingsMerger. grep confirms goal_merger.dart:57, gamification_settings_merger.dart:124 and study_day_config_merger.dart:56 each call `trackDao.getTrackByProfileAndCurriculum` directly instead of routing through the one shared `DriftMergeStore._resolveLocalTrackId` helper that already exists for this exact purpose. study_day_config_sync_test.dart shows StudyDayConfigMerger SKIPPING a row when no local track exists, which looks like different fallback semantics than _resolveLocalTrackId's `local?.id ?? fallbackTrackId` (falls back to the stale remote id rather than skipping) \u2014 if that divergence is real, a future fix to one merger's skip/fallback rule will not propagate to the others. Confirming this needs reading goal_merger.dart, gamification_settings_merger.dart, study_day_config_merger.dart and stage_definition_merger.dart in full, which are outside this batch's file list.",
+   "recommendation": "Route every child-row merger's local-track resolution through DriftMergeStore._resolveLocalTrackId (or one shared helper), and add one test proving the fallback/skip behavior is identical across all mergers when no local track exists.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "goal_merger.dart, gamification_settings_merger.dart and study_day_config_merger.dart resolve the local track id through the same shared helper as drift_merge_store.dart's other call sites",
+    "a single test (or shared test helper) proves identical skip/fallback behavior across all child-row mergers when the local track is missing"
+   ],
+   "labels": [
+    "sync",
+    "merge",
+    "duplication",
+    "cross-file",
+    "needs-followup"
+   ]
+  }
+ }
+]

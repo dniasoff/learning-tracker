@@ -1,0 +1,49 @@
+[
+ {
+  "sourceBatch": "t1-test-cross-p2",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Localize SyncStatusDegraded.reason in BackupSyncSection._buildDegradedCard's identity-mismatch branch",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "EH-5 / AX-2",
+   "area": "core/sync + features/settings (BackupSyncSection), surfaced by test/e2e/journeys/infra_p1_test.dart E2E-1113",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/settings/presentation/widgets/backup_sync_section.dart",
+     "line": 150,
+     "quote": "? '$reason ($pendingChanges queued)'"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/presentation/widgets/backup_sync_section.dart",
+     "line": 161,
+     "quote": "final isStuckOutbox = reason.contains('row(s) stuck');"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+     "line": 1121,
+     "quote": "? 'Signed in as ${identity.signedInEmail ?? 'a different account'}' ' \u2014 sign in as $activeEmail to back up this account.'"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/infra_p1_test.dart",
+     "line": 864,
+     "quote": "skip: true, // BUG R-IC11: see test name above"
+    }
+   ],
+   "sites": 1,
+   "why": "_buildDegradedCard's isMismatch branch (backup_sync_section.dart:145-154) interpolates SyncStatusDegraded.reason directly into the card subtitle with no localization at all, unlike the sibling non-mismatch branch two lines below which explicitly maps stuck-outbox reasons to a friendly ARB string (the 'ST-4 fix'). Because sync_orchestrator.dart hardcodes the mismatch reason as raw English sentences ('Signed in as the wrong account \u2014 sign in again to back up.') rather than a stable code/enum, EVERY time a device is signed into the wrong Firebase account with pending changes \u2014 a normal, easily reproduced state, not an edge case \u2014 Hebrew-locale users see untranslated English in the Backup & Sync card. On top of that, because syncStatusProvider (derived from the orchestrator's own statusStream) and syncIdentityStatusProvider (derived independently from authStateProvider) recompute on unrelated triggers with no atomic coupling, a stale 'outbox has N row(s) stuck after 3+ attempts' engineering string can also transiently appear in the same card. The test that documents this (E2E-1113) keeps the correct assertion but is skipped with only a risk-register id (R-IC11), no Linear ticket, so it will not resurface in planning.",
+   "recommendation": "Apply the same isStuckOutbox \u2192 l10nLocal.backupSyncOutboxStuck substitution in the isMismatch branch before interpolating reason; longer-term, stop authoring English sentences in sync_orchestrator.dart and emit a stable DegradedReason enum that presentation maps 1:1 to ARB keys (removing the substring-sniffing pattern entirely).",
+   "effort": "M",
+   "acceptance_criteria": [
+    "Widget test: SyncStatus.degraded(pendingChanges>0, reason: <either hardcoded orchestrator sentence or 'outbox has N row(s) stuck...'>) + SyncIdentityStatus.mismatched(...) renders only localized strings in BackupSyncSection \u2014 find.textContaining of the raw English/engineering substrings returns nothing.",
+    "test/e2e/journeys/infra_p1_test.dart E2E-1113 un-skipped and green."
+   ],
+   "labels": [
+    "i18n",
+    "EH-5",
+    "sync",
+    "settings"
+   ]
+  }
+ }
+]

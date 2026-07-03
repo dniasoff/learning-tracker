@@ -1,0 +1,206 @@
+[
+ {
+  "sourceBatch": "t1-core-database-daos-p3",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Replace DateTime.now() wall-clock filler with fixed dates in track_dao_test.dart and track_scoped_dao_test.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6",
+   "area": "test/core/database/daos",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/database/daos/track_dao_test.dart",
+     "line": 116,
+     "quote": "stateChangedAt: DateTime.now().toUtc(),\n              activatedAt: DateTime.now().toUtc(),"
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/track_dao_test.dart",
+     "line": 297,
+     "quote": "final now = DateTime.now().toUtc();"
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/track_scoped_dao_test.dart",
+     "line": 26,
+     "quote": "final now = DateTime.now();"
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/track_scoped_dao_test.dart",
+     "line": 44,
+     "quote": "stateChangedAt: DateTime.now(),\n            activatedAt: DateTime.now(),"
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/track_scoped_dao_test.dart",
+     "line": 424,
+     "quote": "final now = DateTime.now();"
+    }
+   ],
+   "sites": 15,
+   "why": "15 call sites across these 2 files (5 in track_dao_test.dart: lines 116,117,256,297,330; 10 in track_scoped_dao_test.dart: lines 26,44,45,55,56,77,177,203,280,424) use the system wall clock for row timestamps, breaking TQ-6 hermeticity and diverging from every sibling file in this batch, which uses fixed DateTime.utc(2026,...) literals or the drift_memory.dart helper's DateTimeFactory.nowUtc(). None of these values are currently asserted against an exact expected instant, so there is no live flakiness today, but the inconsistency means a future assertion added against 'now' in these files would be non-deterministic where every other DAO test file in the directory is not.",
+   "recommendation": "Replace DateTime.now()/DateTime.now().toUtc() with fixed DateTime.utc(2026, 1, 1)-style literals (matching the convention in track_dao_delete_test.dart, track_dao_extended_test.dart, etc.) or route through DateTimeFactory.nowUtc() as drift_memory.dart's seed helpers already do.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "track_dao_test.dart and track_scoped_dao_test.dart contain no direct DateTime.now() calls for row timestamps."
+   ],
+   "labels": [
+    "test-quality",
+    "hermetic",
+    "wall-clock"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-database-daos-p3",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Batch TrackDao.purgeHistory's per-completion purgedAt UPDATE loop instead of awaiting it row-by-row",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "DB-3",
+   "area": "core/database/daos",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/database/daos/track_dao.dart",
+     "line": 417,
+     "quote": "for (final c in completionsForTrack) {\n        await (db.update(db.completionEvents)..where("
+    }
+   ],
+   "sites": 1,
+   "why": "purgeHistory tombstones every completion row for a track by awaiting one UPDATE per row inside a for-loop. Unlike the TrackLearningOrderDao finding, this loop is already inside the surrounding db.transaction(), so atomicity is not at risk \u2014 but it is still the exact 'awaited per-row loop instead of batch()' pattern DB-3 forbids, and it costs N sequential round-trips (proportional to a track's full completion history) instead of one batched statement.",
+   "recommendation": "Replace the loop with db.batch((b) { for (final c in completionsForTrack) { b.update(db.completionEvents, CompletionEventsCompanion(purgedAt: Value(purgedAt)), where: (t) => ...); } }) inside the existing transaction.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "TrackDao.purgeHistory issues one db.batch() for the completion-tombstoning step instead of an awaited for-loop.",
+    "Existing purgeHistory tests (track_dao_last_curriculum_guard_test.dart's N8 invariant tests, track_dao_delete_test.dart) still pass unchanged."
+   ],
+   "labels": [
+    "drift",
+    "performance",
+    "dao"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-database-root-p1",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Delete the dead app_database_test.dart.skip and dao_merge_methods_test.dart.skip",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-6",
+   "area": "learning_tracker/test/core/database",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/database/app_database_test.dart.skip",
+     "line": 4,
+     "quote": "import 'package:learning_tracker/core/database/app_database.dart';"
+    },
+    {
+     "file": "learning_tracker/test/core/database/dao_merge_methods_test.dart.skip",
+     "line": 3,
+     "quote": "import 'package:learning_tracker/core/database/app_database.dart';"
+    }
+   ],
+   "sites": 2,
+   "why": "Both files import lib/core/database/app_database.dart, which does not exist anywhere in the repo \u2014 it was split into ContentDatabase/UserDatabase/DeviceRegistryDatabase per commit ce43a2d9. Both also use a pre-split schema (sefariaRef typed as `int`, schemaVersion 3) that predates today's text-keyed CompletionEvents. The `.dart.skip` extension means flutter test's `*_test.dart` glob never sees these files at all \u2014 they're not 'skipped tests', they're 1032 combined lines of uncompilable dead code with zero CI signal. The last touch was a 'fix: DNI-79 Complete compilation error fixes and code cleanup' commit, implying they were parked rather than deleted because they wouldn't compile, and nobody has revisited them since. An agent searching test/core/database/ for existing CompletionDao merge/dedup coverage will find these, spend time working out why they don't run, and only then discover the class they test was deleted long ago.",
+   "recommendation": "Delete both files. If CompletionDao merge/dedup behavior (completionExists, insert dedup) isn't covered by a current test, add fresh coverage at the mirrored path against CompletionDao directly instead of the deleted AppDatabase.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Both .dart.skip files are removed (or their commit message states why any surviving assertions were ported first, per TQ-7).",
+    "An audit check bans new *.dart.skip/*.skip files under test/ going forward."
+   ],
+   "labels": [
+    "dead-code",
+    "AG-6",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-database-root-p1",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Fix migration_test.dart and hebrew_migration_test.dart to exercise UserDatabase's real onUpgrade",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "DB-4",
+   "area": "learning_tracker/test/core/database",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/database/migration_test.dart",
+     "line": 8,
+     "quote": "group('Schema migration v15 to v16', () {"
+    },
+    {
+     "file": "learning_tracker/test/core/database/hebrew_migration_test.dart",
+     "line": 8,
+     "quote": "group('Schema migration v23\u2192v24: Hebrew stage names', () {"
+    },
+    {
+     "file": "learning_tracker/test/core/database/hebrew_migration_test.dart",
+     "line": 284,
+     "quote": "Future<void> _runHebrewMigration(UserDatabase db) async {"
+    }
+   ],
+   "sites": 2,
+   "why": "Neither test actually drives UserDatabase.migration. migration_test.dart's group is titled 'v15 to v16' but user_database.dart's onUpgrade has no `if (from < 16)` block (only from<25 onward exists) \u2014 the test just creates a fresh onCreate'd v32 database via createTestDatabase() and asserts current column defaults, never running an upgrade. hebrew_migration_test.dart is worse: it hand-copies the English-to-Hebrew stage-name UPDATE statements into a local _runHebrewMigration helper and calls that \u2014 there is no `if (from < 24)` block in onUpgrade for it to call instead, so the helper is entirely disconnected from production migration code. Both give the false impression that UserDatabase's historical migrations are regression-tested; neither would catch a real regression, and neither caught the gap in finding 1.",
+   "recommendation": "Either rebuild these as genuine migration tests using Drift's SchemaVerifier (open an old-schema fixture DB, call verifier.migrateAndValidate(db, 32), assert data survives) once drift_schemas/ exists per DB-4, or rename/rescope them honestly as current-schema behavior tests and delete the misleading version-number titles and the hand-copied SQL helper.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "Either the test constructs a real old-schema Drift database and runs it through UserDatabase's actual MigrationStrategy, or the file/group name no longer claims to test a migration version that doesn't exist in onUpgrade.",
+    "A red-first check: breaking the Hebrew-name mapping in production code (if/when it's reintroduced) fails this test; today nothing in production feeds it."
+   ],
+   "labels": [
+    "DB-4",
+    "TQ-8",
+    "test-integrity"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-database-root-p1",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Type and log the swallowed catch blocks in content_database.dart, seed_manager.dart, and DeviceAccountX",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "EH-3",
+   "area": "learning_tracker/lib/core/database",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/database/content/content_database.dart",
+     "line": 84,
+     "quote": "} catch (_) {\n            // no-op: CREATE IF NOT EXISTS is defensive; failure here is non-fatal"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/content/content_database.dart",
+     "line": 104,
+     "quote": "} catch (_) {\n            // no-op: ALTER TABLE fails if column already exists (prior upgrade path); non-fatal"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/seed_manager.dart",
+     "line": 336,
+     "quote": "} catch (_) {\n        // Best effort"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/registry/device_registry_database.dart",
+     "line": 22,
+     "quote": "} on ArgumentError {\n      return AccountTier.local;"
+    }
+   ],
+   "sites": 6,
+   "why": "content_database.dart's 4 migration catches use untyped `catch (_)` with only a comment, no AppLogger call \u2014 if an ALTER/CREATE fails for a real reason (disk full, corrupt file) rather than the anticipated 'already exists' case, the content DB silently proceeds on a half-migrated schema with zero diagnostic trail; contrast with ContentDbHealthChecker in this same batch, which does this correctly with typed `on SqliteException catch (e, st)` plus logger calls, but never gets a chance to react because no exception escapes here. seed_manager.dart's _rollback() catch(_) is a log-less outlier inside a file where every other catch (_extractSeedDb, _atomicReplace, _readSchemaVersion, _readInstalledVersion, _stampInstalledVersion) does call _logger?.error \u2014 a reader following this file's own dominant convention would log here too. DeviceAccountX.accountTier catches ArgumentError, an Error subtype EH-4 explicitly says never to catch (Errors are meant to crash loudly on programming bugs); here a malformed/legacy tier string in the DB silently downgrades to AccountTier.local with no signal that stored data is bad.",
+   "recommendation": "Give the content_database.dart and seed_manager.dart catches typed `on SqliteException`/`on Exception` clauses plus an AppLogger call (matching content_db_health_checker.dart's pattern). Change AccountTier.fromStorageKey to expose a non-throwing tryFromStorageKey returning null (or throw a non-Error type) so accountTier doesn't catch Error.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "No catch block in these 3 files is both untyped and log-less; EH-3's Pending tightened log-less-catch checker returns zero for them.",
+    "DeviceAccountX.accountTier no longer catches an Error subtype (EH-4's Pending avoid_catching_errors)."
+   ],
+   "labels": [
+    "EH-3",
+    "EH-4",
+    "logging"
+   ]
+  }
+ }
+]

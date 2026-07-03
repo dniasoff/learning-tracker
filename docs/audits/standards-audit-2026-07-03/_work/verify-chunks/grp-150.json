@@ -1,0 +1,193 @@
+[
+ {
+  "sourceBatch": "t1-test-helpers",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Remove flutter_test_config.dart's FlutterError.onError GoogleFonts filter \u2014 TestWidgetsFlutterBinding never lets it run during a test",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Test-infra correctness (no direct coding-standards rule ID)",
+   "area": "learning_tracker/test/flutter_test_config.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/flutter_test_config.dart",
+     "line": 18,
+     "quote": "FlutterError.onError = (details) {"
+    },
+    {
+     "file": "/home/daniel/flutter/packages/flutter_test/lib/src/binding.dart",
+     "line": 1773,
+     "quote": "FlutterError.onError = (FlutterErrorDetails details) {"
+    }
+   ],
+   "sites": 1,
+   "why": "The comment above this block claims it suppresses 'residual font not found errors... cosmetic rendering issues, not test logic failures' during test execution. I traced the installed Flutter SDK (3.44.1, matching this repo's `flutter --version`): TestWidgetsFlutterBinding._runTest() (binding.dart:1770) saves whatever handler is currently installed into _oldExceptionHandler, then unconditionally overwrites FlutterError.onError with its own handler that just does `_pendingExceptionDetails = details` \u2014 it never calls the previously-installed handler. postTest() (binding.dart:2131-2134) restores _oldExceptionHandler only after the test body has finished. Since _runTest() wraps every individual test()/testWidgets() body, the custom GoogleFonts-substring filter installed in flutter_test_config.dart is captured as 'the old handler' before the first test and is never invoked while any test is actually running \u2014 exactly the window in which a font-not-found FlutterError would fire. If such an error does occur during a pump, it is captured into _pendingExceptionDetails and fails the test outright, contradicting the file's own comment about what it does.",
+   "recommendation": "Delete the dead FlutterError.onError override (lines 17-22), or replace it with a mechanism proven to run mid-test (e.g. wrap only the specific pump inside affected tests, or fix the font-loading gap in finding 'golden_runner.dart never renders real glyphs' so the underlying error stops occurring). Do not rely on a global onError swap in this file for anything that needs to suppress errors during pumpWidget/pumpAndSettle.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "A widget test that deliberately throws/renders a FlutterError whose message contains 'GoogleFonts' mid-pump either fails (proving the current filter does nothing) or is demonstrated to pass only via a mechanism that actually executes during _runTest's window.",
+    "The doc comment above the handler is removed or corrected to match what the code can actually do."
+   ],
+   "labels": [
+    "test-infra",
+    "dead-code",
+    "misleading-comment",
+    "sdk-traced"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-test-helpers",
+  "findingIndex": 4,
+  "finding": {
+   "title": "infrastructure_test.dart's 'database is isolated between tests' only proves two objects aren't identical(), not that data is isolated",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (assertions weaker than what the source under test can actually do wrong)",
+   "area": "learning_tracker/test/infrastructure_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/infrastructure_test.dart",
+     "line": 132,
+     "quote": "test('database is isolated between tests', () async {"
+    },
+    {
+     "file": "learning_tracker/test/infrastructure_test.dart",
+     "line": 137,
+     "quote": "expect(identical(db1, db2), false);"
+    }
+   ],
+   "sites": 1,
+   "why": "createTestDatabase() is a plain constructor call with no caching, so identical(db1, db2) is guaranteed false for any two invocations regardless of whether UserDatabase has any shared/static state that leaks data between instances \u2014 the assertion cannot fail even if isolation were genuinely broken. Running this test (`flutter test test/infrastructure_test.dart`) confirms it passes today, and also prints a real Drift runtime warning at exactly this test's stack frame: 'It looks like you've created the database class UserDatabase multiple times... race conditions will occur and might corrupt the database' (createTestDatabase at test_database.dart:13, called from infrastructure_test.dart:134). Twenty-plus other test files in this repo (app_shell_test.dart, e2e_harness.dart, the sync/merge/* roundtrip suite) already know about this and explicitly set `driftRuntimeOptions.dontWarnAboutMultipleDatabases = true` when intentionally creating multiple in-memory DBs \u2014 this test does not follow that established convention, so it emits unnecessary warning noise on every run on top of not checking the property its name promises. A real cross-instance state leak (e.g. an accidental static/singleton in UserDatabase) would sail through this test undetected.",
+   "recommendation": "Replace the identical() check with a real isolation assertion: insert a row into db1 (e.g. via seedProfile) and assert it is absent when querying db2, or that db2's relevant table starts empty. Also set driftRuntimeOptions.dontWarnAboutMultipleDatabases = true here to match the repo's established pattern for intentional multi-instance in-memory DBs.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "The test inserts data into db1 and asserts it is not visible from db2 (or vice versa), not just that the two references are non-identical.",
+    "Running the test no longer prints the Drift multiple-database-instantiation warning."
+   ],
+   "labels": [
+    "test-quality",
+    "tq-8",
+    "tautological-test",
+    "empirically-verified"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-test-helpers",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Delete the remaining tautological instantiation/fixture-echo tests in infrastructure_test.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (tautological tests \u2014 assert what the mock/fixture was hardcoded to return)",
+   "area": "learning_tracker/test/infrastructure_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/infrastructure_test.dart",
+     "line": 22,
+     "quote": "final mockAuthRepo = MockAuthRepository();\n        expect(mockAuthRepo, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/infrastructure_test.dart",
+     "line": 44,
+     "quote": "expect(mishna.curriculumId, CurriculumId.mishnayos.storageKey);"
+    },
+    {
+     "file": "learning_tracker/test/fixtures/content_fixtures.dart",
+     "line": 24,
+     "quote": "curriculumId ?? CurriculumId.mishnayos.storageKey,"
+    }
+   ],
+   "sites": 9,
+   "why": "This file (self-described as 'Example test demonstrating test infrastructure usage') contains 9 tests that cannot fail short of a compile error: 'MockAuthRepository/MockConnectivityService can be instantiated' asserts isNotNull on a non-nullable constructor result; 'can be stubbed with mocktail' asserts isA<MockAuthRepository>() on a freshly-constructed MockAuthRepository (necessarily true) and its body is otherwise a comment showing example usage that is never executed; 'creates valid mishna/daf/pasuk/container' and 'provides default curriculum' assert that ContentItemFixtures/CurriculumFixtures return exactly the literal defaults hardcoded into those same fixture files (content_fixtures.dart / curriculum_fixtures.dart) \u2014 they test the fixture's own defaults, not ContentItem or any production logic; 'creates test database successfully' asserts isNotNull plus `schemaVersion >= 1` (a comment notes 'current value is 23', itself now stale \u2014 actual is 32) which can only fail on a catastrophic schema-version regression. None of these tests can distinguish correct behavior from a broad class of real bugs; they run in CI as 9 of 780+ 'green' tests contributing nothing beyond compile-time verification. (MockConnectivityService, notably, has no other consumer anywhere in the repo \u2014 its only use is this smoke test.)",
+   "recommendation": "Delete the 9 tautological assertions, or replace them with real behavior checks (the file's own 'converts storage key to curriculum' and 'provides all storage keys' tests already show the right pattern \u2014 they exercise CurriculumFixtures.fromStorageKey's actual lookup/orElse logic instead of echoing a literal).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Remaining tests in infrastructure_test.dart each assert a property that a plausible code change to the class under test could actually violate.",
+    "MockConnectivityService is either exercised by a real interaction test or removed if it stays unused."
+   ],
+   "labels": [
+    "test-quality",
+    "tq-8",
+    "tautological-test"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-test-helpers",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Delete dead test fixtures: completion_fixtures.dart.skip (removed schema) and unused StageFixtures",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Dead code (general 'Everything' sweep; no single named rule ID)",
+   "area": "learning_tracker/test/fixtures",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/fixtures/completion_fixtures.dart.skip",
+     "line": 6,
+     "quote": "import 'package:learning_tracker/core/database/app_database.dart';"
+    },
+    {
+     "file": "learning_tracker/test/helpers/drift_memory.dart",
+     "line": 21,
+     "quote": "NOTE (W3.20): The `completions` legacy table was dropped."
+    },
+    {
+     "file": "learning_tracker/test/fixtures/curriculum_fixtures.dart",
+     "line": 29,
+     "quote": "class StageFixtures {"
+    }
+   ],
+   "sites": 2,
+   "why": "completion_fixtures.dart.skip imports lib/core/database/app_database.dart and references CompletionsCompanion/class Completions \u2014 none of which exist anywhere in the repo (grep confirms zero matches for app_database.dart, CompletionsCompanion, or CompletionFixtures outside this one file). drift_memory.dart's own comment confirms the `completions` table was dropped in favor of completion_events. This file cannot be revived by simply renaming it back to .dart \u2014 the schema it targets is gone \u2014 so it is not 'paused', it is unsalvageable dead weight sitting since Feb 2026 (git log) with no tooling anywhere that tracks or revisits *.dart.skip files. Separately, StageFixtures (curriculum_fixtures.dart) has zero callers anywhere in the repo (grep-confirmed) despite CurriculumFixtures in the same file being actively used by infrastructure_test.dart \u2014 it's dead code sitting in an otherwise-live file.",
+   "recommendation": "Delete completion_fixtures.dart.skip and the StageFixtures class outright; git history preserves them if the completions-table fixture pattern is ever needed again for a genuinely revivable feature.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "completion_fixtures.dart.skip is removed from the tree.",
+    "StageFixtures is removed from curriculum_fixtures.dart, or gains a real caller."
+   ],
+   "labels": [
+    "dead-code",
+    "hygiene",
+    "test-fixtures"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-test-helpers",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Fix migration_test_helper.dart's doc comment \u2014 claims post-migration schemaVersion 19, actual is 32",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Docs/comment drift (hygiene; no direct rule ID)",
+   "area": "learning_tracker/test/helpers/migration_test_helper.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/helpers/migration_test_helper.dart",
+     "line": 12,
+     "quote": "// DB is now at v19 (all migrations ran)."
+    },
+    {
+     "file": "learning_tracker/lib/core/database/user/user_database.dart",
+     "line": 159,
+     "quote": "int get schemaVersion => 32;"
+    }
+   ],
+   "sites": 1,
+   "why": "The usage example at the top of the file illustrates openDbAtVersion(15, ...) landing the DB 'at v19 (all migrations ran)' \u2014 accurate when written, but schemaVersion is now 32. The helper itself is functionally unaffected (Drift's migration runner walks every step up to the real schemaVersion regardless of what the docstring says), so this is pure documentation drift, but a future reader relying on the comment to understand 'how far migrations run' gets a wrong mental model.",
+   "recommendation": "Update the docstring to say 'all migrations ran' without a hardcoded version number, or reference `UserDatabase.schemaVersion` instead of a literal so it can't go stale again.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "The usage example no longer states a specific stale schemaVersion number."
+   ],
+   "labels": [
+    "hygiene",
+    "docs-drift",
+    "P3"
+   ]
+  }
+ }
+]

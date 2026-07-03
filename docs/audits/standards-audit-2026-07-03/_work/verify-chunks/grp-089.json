@@ -1,0 +1,188 @@
+[
+ {
+  "sourceBatch": "t1-feat-sacred_time",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Move LocationFetchResult out of data/services/location_service.dart so presentation stops importing data/ directly",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "presentation->data import ban (Layout/Placement, [P])",
+   "area": "layering",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/sacred_time/presentation/widgets/sacred_time_settings_card.dart",
+     "line": 7,
+     "quote": "import 'package:learning_tracker/features/sacred_time/data/services/location_service.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/features/sacred_time/data/services/location_service.dart",
+     "line": 25,
+     "quote": "class LocationFetchError extends LocationFetchResult {"
+    }
+   ],
+   "sites": 1,
+   "why": "sacred_time_settings_card.dart is a presentation/widgets file; it imports data/services/location_service.dart purely to pattern-match on LocationFetchResult/LocationFetchSuccess/etc. in _showOutcome(). Every other cross-layer type this feature exposes to presentation (City, SacredLocation, SacredWindow) correctly lives in domain/models/ \u2014 LocationFetchResult is the one outcome type stranded in data/, forcing presentation to reach past domain into data, breaking the layering the rest of the feature follows consistently.",
+   "recommendation": "Move the LocationFetchResult sealed hierarchy to domain/models/ (LocationService in data/ still constructs and returns it); presentation then only ever imports domain/ or providers/ from this feature, never data/.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "LocationFetchResult and its variants live under domain/",
+    "No file under sacred_time's presentation/{screens,widgets}/ imports anything from data/",
+    "flutter analyze / make audit stay clean after the move"
+   ],
+   "labels": [
+    "layering",
+    "misplaced-responsibility"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-sacred_time",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Narrow LocationService's `on Object catch` clauses so programming errors aren't swallowed",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "EH-4",
+   "area": "error-handling",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/sacred_time/data/services/location_service.dart",
+     "line": 73,
+     "quote": "} on Object catch (e) {\n      return LocationFetchError(e.toString());"
+    },
+    {
+     "file": "learning_tracker/lib/features/sacred_time/data/services/location_service.dart",
+     "line": 86,
+     "quote": "} on Object {\n      return null;"
+    }
+   ],
+   "sites": 2,
+   "why": "`on Object` catches everything Dart can throw, including Error subtypes (TypeError, NoSuchMethodError, StateError, ...) that only_throw_errors-compliant code elsewhere in the app throws for genuine programming bugs. A plugin-level type mismatch or null-safety violation inside geolocator/geocoding would silently become 'location fetch failed' (or a silently-null country code) forever, with no crash report and no log line \u2014 exactly the bug-masking EH-4 exists to prevent.",
+   "recommendation": "Change both clauses to `on Exception catch (e)` (or the specific exception types geolocator/geocoding document), letting Error subtypes propagate and reach Crashlytics/crash loudly.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Both catch clauses in location_service.dart are typed to Exception (or narrower), not Object",
+    "A test asserts a thrown Error from the fake platform is NOT converted to LocationFetchError/null but propagates"
+   ],
+   "labels": [
+    "error-handling",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-sacred_time",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Fix ZmanimWindowService polar-fallback candle-lighting/tzais to use the target location's time, not the device's",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Nygard failure-mode / domain-logic correctness",
+   "area": "domain",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/sacred_time/domain/services/zmanim_window_service.dart",
+     "line": 163,
+     "quote": "return DateTime(forDate.year, forDate.month, forDate.day, 17).toUtc();"
+    },
+    {
+     "file": "learning_tracker/lib/features/sacred_time/domain/services/zmanim_window_service.dart",
+     "line": 182,
+     "quote": "return DateTime(forDate.year, forDate.month, forDate.day, 21).toUtc();"
+    }
+   ],
+   "sites": 2,
+   "why": "DateTime(y, m, d, 17) (no .utc) constructs a device-local wall-clock time; .toUtc() then converts using the DEVICE's current timezone offset, not the offset of latitude/longitude \u2014 an arbitrary location the user picked, which the feature explicitly lets differ from the device's own timezone (manual city/coords). The doc comment above promises 'a wide local-time window' at the target, but the fallback is local to whichever timezone the device (or test runner) happens to be in. It only fires at extreme (polar) latitudes when getCandleLighting()/getTzais() return null, and zmanim_window_service_test.dart has no test forcing that branch, so it has never been exercised.",
+   "recommendation": "Compute the fallback from a fixed offset derived from longitude (or explicitly switch to UTC and correct the 'local-time' claim in the comment) instead of relying on DateTime's device-local constructor.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Fallback candle-lighting/tzais no longer depends on the executing device's timezone",
+    "A unit test at an extreme-latitude fixture forces getCandleLighting()/getTzais() to return null and asserts the returned UTC instant is stable regardless of the test machine's TZ"
+   ],
+   "labels": [
+    "domain-logic",
+    "timezone",
+    "edge-case"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-sacred_time",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Reduce precision of persisted/synced SacredLocation coordinates and confirm the Sacred Time card is parent-gated",
+   "severity": "P2",
+   "confidence": "SUSPECTED",
+   "rule": "PV / child-privacy (judgment call, no exact numbered rule)",
+   "area": "privacy",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/sacred_time/data/services/sacred_time_preferences.dart",
+     "line": 41,
+     "quote": "await prefs.setDouble(_latKey, loc.latitude);\n    await prefs.setDouble(_longKey, loc.longitude);"
+    },
+    {
+     "file": "learning_tracker/lib/features/sacred_time/presentation/providers/sacred_location_provider.dart",
+     "line": 115,
+     "quote": "Future<void> _pushSnapshot() async {\n    await ref.read(syncWriteFacadeProvider)?.pushUiPreferencesSnapshot();"
+    }
+   ],
+   "sites": 1,
+   "why": "Full-precision GPS coordinates (LocationAccuracy.medium, still well under 100m) flow from Geolocator into SharedPreferences and then into Firestore via pushUiPreferencesSnapshot with no rounding step anywhere in this batch. The card sits in Settings' DEVICE section (settings_screen.dart) with no PIN gate visible in the code around it, so on a shared family device a child profile may be able to trigger 'Detect location' itself. This batch alone can't confirm whether the settings screen restricts DEVICE-section actions to an authenticated parent, or how firestore.rules scope the synced ui_preferences document \u2014 if either already fully mitigates this, the finding should be downgraded/closed. Precise home-location coordinates are exactly the class of data COPPA singles out.",
+   "recommendation": "Round latitude/longitude to ~2-3 decimal places (about 1km, plenty for zmanim purposes) before persisting/syncing as defense in depth; separately confirm (or add) a parent-PIN gate on the Sacred Time card's location actions, and confirm firestore.rules scope the synced document to the account only.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "SacredTimePreferences.writeLocation stores/syncs coordinates rounded to a documented precision",
+    "Settings DEVICE section location actions are confirmed (or made) to require parent authentication for child profiles",
+    "product-rules.md or coding-standards.md records the decision either way"
+   ],
+   "labels": [
+    "privacy",
+    "coppa",
+    "child-data",
+    "needs-confirmation"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-sacred_time",
+  "findingIndex": 8,
+  "finding": {
+   "title": "Add the required `// keepAlive:` justification comment to Sacred Time's 6 keepAlive providers",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "SM-6",
+   "area": "state-management/providers",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/sacred_time/presentation/providers/cities_provider.dart",
+     "line": 7,
+     "quote": "@Riverpod(keepAlive: true)\nCitiesRepository citiesRepository(Ref ref) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/sacred_time/presentation/providers/sacred_location_provider.dart",
+     "line": 12,
+     "quote": "@Riverpod(keepAlive: true)\nLocationService locationService(Ref ref) => const LocationService();"
+    },
+    {
+     "file": "learning_tracker/lib/features/sacred_time/presentation/providers/sacred_windows_provider.dart",
+     "line": 13,
+     "quote": "@Riverpod(keepAlive: true)\nList<SacredWindow> sacredWindows(Ref ref) {"
+    }
+   ],
+   "sites": 6,
+   "why": "coding-standards.md SM-6 requires every keepAlive: true to carry an inline // keepAlive: comment; these 6 declarations (cities_provider.dart:7, sacred_location_provider.dart:12/17/123, sacred_windows_provider.dart:13/33) have nearby doc comments explaining rationale but none use the required tag, so a future audit grep for the literal marker (as SM-6's own Enforce plan proposes) would still flag all 6 as unjustified even though they are reasoned. This mirrors a repo-wide gap (only ~6/86 keepAlive sites in lib/ use the tag), not something unique to this feature.",
+   "recommendation": "Prefix each keepAlive declaration's existing rationale with the literal `// keepAlive: ...` tag so the future audit grep can find it.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "All 6 keepAlive providers in this batch carry a // keepAlive:-prefixed comment",
+    "A grep for 'keepAlive: true' paired with a check for the tag on the preceding line finds no gaps in this feature"
+   ],
+   "labels": [
+    "hygiene",
+    "riverpod",
+    "documentation"
+   ]
+  }
+ }
+]

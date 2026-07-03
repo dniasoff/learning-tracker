@@ -1,0 +1,44 @@
+[
+ {
+  "sourceBatch": "t1-feat-tracks-p2",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Log and surface the swallowed exceptions in step_starting_position.dart._loadContent and step_starting_position_calendar.dart._refreshCalendarEntry instead of silently stranding the user",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "EH-3",
+   "area": "presentation/tracks-setup",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/steps/step_starting_position.dart",
+     "line": 113,
+     "quote": "} catch (_) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/steps/step_starting_position.dart",
+     "line": 114,
+     "quote": "if (mounted) setState(() => _loading = false);"
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/steps/step_starting_position_calendar.dart",
+     "line": 95,
+     "quote": "final service = await ref.read(calendarProgramServiceProvider.future);"
+    }
+   ],
+   "sites": 2,
+   "why": "step_starting_position.dart._loadContent catches everything and only flips _loading to false \u2014 it never logs via AppLogger and never sets an error flag. Since _containers/_leaves default to [], build() falls straight through to `_buildContainerList` with an EMPTY list and no CircularProgressIndicator, no error text, and no retry action: the user lands on a blank, silently-broken 'starting position' step of the Add-Track wizard with the Continue button permanently disabled (onPressed requires _selectedLeaf != null, which can never become non-null from an empty list) and zero indication anything went wrong. step_starting_position_calendar.dart._refreshCalendarEntry has no catch at all (only `finally`) around two awaits, and every caller invokes it via `unawaited(...)`, so a thrown exception becomes an unhandled Future rejection with no AppLogger trail; the user instead sees the ALSO-hardcoded 'No local calendar entry found for this date.' fallback, which mislabels a real fetch/service failure as 'no data for this date'.",
+   "recommendation": "In both catches (or the missing one in the calendar file), log via AppLogger with context (curriculumId/programKey), and expose a distinct error state to the widget (e.g. an AppErrorView with retry, matching the pattern TrackManagementBody already uses via ref.watch(...).when(error: ...)) instead of silently falling through to an indistinguishable empty/fallback UI.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Both catch paths call AppLogger.error/warning with the caught exception before updating state.",
+    "A widget test that makes the repository/service throw asserts a visible error affordance (not a blank list / not the generic 'no entry' text) appears.",
+    "EH-3's log-less-catch grep (once made a checker) passes on both files."
+   ],
+   "labels": [
+    "error-handling",
+    "silent-failure",
+    "ux-dead-end"
+   ]
+  }
+ }
+]

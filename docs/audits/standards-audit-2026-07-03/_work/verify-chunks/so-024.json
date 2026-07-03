@@ -1,0 +1,179 @@
+[
+ {
+  "sourceBatch": "t1-feat-onboarding-p3",
+  "chunk": "grp-071",
+  "finding": {
+   "title": "Localize signup_screen.dart's hardcoded 'you@quest.com' email hint and extend the iter9 l10n regression test to cover it",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AX-2",
+   "area": "features/account/onboarding/presentation/screens",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/account/onboarding/presentation/screens/signup_screen.dart",
+     "line": 599,
+     "quote": "hintText: 'you@quest.com',"
+    },
+    {
+     "file": "learning_tracker/lib/l10n/app_en.arb",
+     "line": 1041,
+     "quote": "\"signInEmailHint\": \"yourname@quest.com\","
+    },
+    {
+     "file": "learning_tracker/test/features/onboarding/presentation/screens/signup_screen_test.dart",
+     "line": 270,
+     "quote": "group('iter9 l10n regression: signup screen strings localized', () {"
+    }
+   ],
+   "sites": 1,
+   "why": "Every other hint/label on this form goes through l10n (signUpScholarNameHint, signUpPasswordHint, signUpEmailAddressLabel); the email field's placeholder is the one stray literal, almost certainly copy-pasted from SignInScreen's l10n.signInEmailHint ('yourname@quest.com') without the l10n wrapper. The test file's own 'iter9 l10n regression' group states its purpose is exactly to verify l10n keys are wired up correctly across this screen, and checks every other field/label/CTA in both locales \u2014 but has no assertion for the email hint, so this single miss ships silently.",
+   "recommendation": "Route the hint through AppLocalizations (reuse signInEmailHint or add signUpEmailHint) and add it to the existing iter9 l10n regression group's EN/HE assertions.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "signup_screen.dart's email field hintText comes from AppLocalizations",
+    "the iter9 l10n regression group asserts the hint text in both EN and HE"
+   ],
+   "labels": [
+    "i18n",
+    "AX-2",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tracks-p3",
+  "chunk": "grp-118",
+  "finding": {
+   "title": "De-duplicate the Hebrew-script detection regex in TrackLearningOrderScreen",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler duplication",
+   "area": "lib/features/tracks/track_order/presentation/screens/track_learning_order_screen.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tracks/track_order/presentation/screens/track_learning_order_screen.dart",
+     "line": 161,
+     "quote": "static final RegExp _hebrewScript = RegExp('[\u0590-\u05ff]');"
+    }
+   ],
+   "sites": 1,
+   "why": "The adjacent comment admits this is a copy of CurriculumLabel's private _hebrew regex (core/labels/curriculum_label.dart:364); the same literal also appears in core/theme/text_styles.dart and core/enums/curriculum_id.dart, for four independent copies repo-wide of one RTL-detection regex. A future Unicode-range fix (e.g. extending to Hebrew presentation forms) has to be found and applied in all four places; missing one silently reintroduces a mis-directioned label in only that spot.",
+   "recommendation": "Expose CurriculumLabel's Hebrew-detection as a small public helper in core/labels and call it here instead of a private copy.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Only one canonical Hebrew-script RegExp definition remains in core/labels; this screen calls it"
+   ],
+   "labels": [
+    "duplication",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-content_browsing-p1",
+  "chunk": "grp-045",
+  "finding": {
+   "title": "Replace raw Colors.* literals with theme colors in content_browsing widgets",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "custom_lint no_color_literal_outside_theme",
+   "area": "features/content_browsing/presentation",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/content_browsing/presentation/widgets/hierarchy_selection_panel.dart",
+     "line": 231,
+     "quote": "color: Colors.grey,"
+    },
+    {
+     "file": "learning_tracker/lib/features/content_browsing/presentation/screens/text_display_screen.dart",
+     "line": 567,
+     "quote": "color: Colors.white,"
+    },
+    {
+     "file": "learning_tracker/lib/features/content_browsing/presentation/screens/text_display_screen.dart",
+     "line": 937,
+     "quote": "foregroundColor: Colors.white,"
+    }
+   ],
+   "sites": 3,
+   "why": "Every other color reference in this batch routes through AppTheme.brand*/Theme.of(context).colorScheme.*; these three raw Colors.* literals won't repaint with a future theme/brand change, and since dart run custom_lint is currently broken (baselined separately), nothing catches new instances of this today.",
+   "recommendation": "Swap Colors.grey for theme.colorScheme.onSurfaceVariant (matching the sibling separator in breadcrumb_navigation.dart) and the two Colors.white for the equivalent theme token used elsewhere in text_display_screen.dart.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "once dart run custom_lint is repaired, no_color_literal_outside_theme reports zero hits in these 2 files"
+   ],
+   "labels": [
+    "theming",
+    "hygiene",
+    "custom-lint"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-profiles-p2",
+  "chunk": "grp-079",
+  "finding": {
+   "title": "Replace DateTime.now() wall-clock calls with DateTimeFactory.nowUtc() in profile_creation_use_case_test.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6",
+   "area": "test/features/profiles/domain/use_cases/profile_creation_use_case_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/profiles/domain/use_cases/profile_creation_use_case_test.dart",
+     "line": 226,
+     "quote": "createdAt: DateTime.now().toUtc(),"
+    },
+    {
+     "file": "learning_tracker/test/features/profiles/domain/use_cases/profile_creation_use_case_test.dart",
+     "line": 277,
+     "quote": "createdAt: DateTime.now().toUtc(),"
+    }
+   ],
+   "sites": 4,
+   "why": "TQ-6 requires hermetic tests with no wall-clock; check 6/15 of make audit already forbids DateTime.now() in lib/ (outside core/time) but doesn't scan test/, so this slipped through. This same file's own setUp (line 37-38) correctly uses DateTimeFactory.nowUtc() \u2014 these 4 calls (lines 226, 227, 277, 278) are the only wall-clock use in the file, seeding LearnerProfilesCompanion.insert rows directly. Currently harmless since no assertion reads the timestamp, but it's an inconsistent, uncontrolled precedent in an otherwise clock-disciplined test file.",
+   "recommendation": "Swap all 4 occurrences to DateTimeFactory.nowUtc().",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep 'DateTime.now()' test/features/profiles/domain/use_cases/profile_creation_use_case_test.dart returns nothing",
+    "The repo-wide DateTime.now() Rule-0 grep is extended to cover test/ (TQ-6 checker)"
+   ],
+   "labels": [
+    "tq-6",
+    "testing",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-profiles-p4",
+  "chunk": "grp-081",
+  "finding": {
+   "title": "Log TutoredChildrenSection's AsyncValue error branch instead of swallowing it silently",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "EH-3 (no log-less catch)",
+   "area": "features/profiles/presentation/widgets/tutored_children_section.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/widgets/tutored_children_section.dart",
+     "line": 47,
+     "quote": "error: (_, __) => const SizedBox.shrink(),"
+    }
+   ],
+   "sites": 1,
+   "why": "AppLogger is already imported in this file (line 6) but the error branch of incomingTutorGrantsProvider's AsyncValue.when discards both the error and stack trace with no log call. Hiding the section on a load failure is a defensible UX call (the batch's own test even labels it 'silent fail' intentionally), but the total absence of a log means a persistently failing grants query \u2014 e.g. a Firestore rule regression on the tutoring collection \u2014 leaves zero trace in AppLogger/Crashlytics breadcrumbs for anyone to diagnose.",
+   "recommendation": "Add an AppLogger.instance.warning(event: ..., exception: error, stackTrace: stack) call in the error branch before returning SizedBox.shrink().",
+   "effort": "S",
+   "acceptance_criteria": [
+    "The error branch of TutoredChildrenSection's AsyncValue.when logs via AppLogger.instance before rendering SizedBox.shrink()"
+   ],
+   "labels": [
+    "profiles",
+    "error-handling",
+    "logging",
+    "hygiene"
+   ]
+  }
+ }
+]

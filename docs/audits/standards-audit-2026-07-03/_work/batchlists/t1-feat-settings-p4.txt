@@ -1,0 +1,7 @@
+learning_tracker/test/features/settings/presentation/widgets/backup_sync_section_l1_test.dart  (866 lines)
+learning_tracker/test/features/settings/presentation/widgets/delete_account_dialog_l10n_test.dart  (202 lines)
+learning_tracker/test/features/settings/presentation/widgets/password_dialogs_l10n_test.dart  (203 lines)
+learning_tracker/test/features/settings/presentation/widgets/sign_out_dialog_l10n_test.dart  (172 lines)
+learning_tracker/test/features/settings/presentation/widgets/user_profile_header_card_l1_test.dart  (203 lines)
+learning_tracker/test/features/settings/settings_screen_and_point_config_l1_test.dart  (1255 lines)
+learning_tracker/test/features/settings/settings_utils_test.dart  (573 lines)

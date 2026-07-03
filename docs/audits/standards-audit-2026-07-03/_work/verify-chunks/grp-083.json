@@ -1,0 +1,229 @@
+[
+ {
+  "sourceBatch": "t1-feat-progress-p1",
+  "findingIndex": 9,
+  "finding": {
+   "title": "Remove the unused HierarchyLevelProgress.levelLabel field and its 'Level 1'/'Level 2' fallback computation",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "dead code (Fowler speculative generality)",
+   "area": "features/progress/domain (models + curriculum_progress_service.dart)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/progress/domain/models/curriculum_progress_data.dart",
+     "line": 45,
+     "quote": "final String levelLabel;"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/domain/services/curriculum_progress_service.dart",
+     "line": 143,
+     "quote": "final level1Label = levelLabels.isNotEmpty ? levelLabels[0] : 'Level 1';"
+    }
+   ],
+   "sites": 1,
+   "why": "hierarchy_progress_card.dart (the only production consumer of HierarchyLevelProgress) reads level.level and level.levelName, never level.levelLabel \u2014 a whole-tree grep for '.levelLabel' turns up zero non-definitional reads outside this field's own computation and test call sites. The field, its threading through CurriculumProgressService's three private builder methods, and its hardcoded 'Level 1'/'Level 2' English fallback are all computed on every progress-screen load for no consumer; that fallback would itself have been an AX-2 violation had this field ever actually reached a Text widget.",
+   "recommendation": "Delete HierarchyLevelProgress.levelLabel, the levelLabel/levelLabels parameters through CurriculumProgressService's builder methods, and update the ~15 test call sites that currently pass/assert it.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep -rn '\\.levelLabel\\b' lib/ test/ (excluding the removed definition) returns no hits after the change; curriculum_progress_service_test.dart assertions are updated accordingly."
+   ],
+   "labels": [
+    "dead-code"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-progress-p2",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Fix Makefile check-15 cross-feature-import grep \u2014 it can structurally never detect a violation",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Rule 2 (cross-feature deep imports) / Rule 0 checker correctness / AG-11",
+   "area": "layering / tooling",
+   "evidence": [
+    {
+     "file": "learning_tracker/Makefile",
+     "line": 378,
+     "quote": "awk -F: '{match($$1, /features\\/([^\\/]+)\\//, a); match($$0, /features\\/([^\\/]+)\\//, b); if(a[1] != b[1]) print}'"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/widgets/siyumim_grouped_view.dart",
+     "line": 10,
+     "quote": "import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/features/content_browsing/content_browsing.dart",
+     "line": 7,
+     "quote": "library content_browsing;"
+    }
+   ],
+   "sites": 1,
+   "why": "match($0, /features\\/([^\\/]+)\\//, b) re-scans the WHOLE line (path:linenum:import-text) for the leftmost 'features/X/' substring, which is always inside the file-path field that a[1] already captured \u2014 so b[1] is always identical to a[1] and the check can never print a WARN, no matter how many real cross-feature deep imports exist. I reproduced the exact pipeline against a real offending line and confirmed a[1]=b[1]='progress' even though the import target feature is 'content_browsing'. As a direct, concrete consequence, siyumim_grouped_view.dart:10 deep-imports content_browsing's provider file instead of the (currently empty) content_browsing.dart barrel, and make audit reports check 15 as clean regardless. The correctly-written custom_lint equivalent (no_feature_cross_import, ERROR severity) would catch this, but that tool currently crashes on every run \u2014 so both enforcement layers for Rule 2 are simultaneously non-functional, for two unrelated reasons, and nobody would know new violations are accumulating.",
+   "recommendation": "Rewrite the awk to isolate the imported feature name from the import-URI field only (not re-scan $0), add a Makefile-test fixture proving check 15 fires on a synthetic cross-feature deep import and stays silent on a same-feature one, then re-run make audit to see and triage the real (likely multi-file) backlog this uncovers across lib/features/.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "A fixture cross-feature deep import makes check 15 print a WARN; a same-feature deep import does not.",
+    "make audit re-run after the fix lists siyumim_grouped_view.dart:10 under check 15.",
+    "Decision recorded on whether the newly-surfaced backlog gets baselined (like the 32 Rule-1 edges) or fixed before check 15 can be promoted off warn-only."
+   ],
+   "labels": [
+    "rule-0",
+    "layering",
+    "tooling",
+    "makefile"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-progress-p2",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Centralize the 29 raw Color(0x...) hex literals in progress widgets into core/theme tokens",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "no_color_literal_outside_theme (custom_lint rule, currently non-functional because the tool crashes)",
+   "area": "presentation / theming",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/widgets/streak_calendar.dart",
+     "line": 219,
+     "quote": "const activeColor = Color(0xFF103BAC);"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/widgets/monthly_activity_sliver_calendar.dart",
+     "line": 347,
+     "quote": "const activeColor = Color(0xFF103BAC);"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/widgets/lifetime_folder_styled_widgets.dart",
+     "line": 379,
+     "quote": "LifetimeNodeState.partial => const Color(0xFFFFD26A),"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/widgets/lifetime_folder_styled_widgets.dart",
+     "line": 517,
+     "quote": "MarkingRowVisual.partial => const Color(0xFFFFD26A),"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/widgets/cumulative_line_chart.dart",
+     "line": 58,
+     "quote": "colors: [Color(0x33123DAE), Color(0x00123DAE)],"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/widgets/points_over_time_chart.dart",
+     "line": 47,
+     "quote": "color: const Color(0xFFF2D9B3),"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/widgets/progress_tier_counter_row.dart",
+     "line": 104,
+     "quote": "accent: const Color(0xFFFF6F77),"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/widgets/siyumim_grouped_view.dart",
+     "line": 163,
+     "quote": "const gold = Color(0xFFFFB300);"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/widgets/limudim_chazaros_bar_chart.dart",
+     "line": 14,
+     "quote": "const Color _kChazaraColor = Color(0xFFF2A93B);"
+    }
+   ],
+   "sites": 29,
+   "why": "The custom_lint rule that bans this exists and is correctly written but the tool crashes on every invocation, so nothing currently enforces it (29 call sites across 8 of the batch's 15 widget files, 15 of them in lifetime_folder_styled_widgets.dart alone). The cost isn't hypothetical: the identical 'active-day' blue (0xFF103BAC) is independently retyped in both streak_calendar.dart:219 and monthly_activity_sliver_calendar.dart:347, and the identical amber (0xFFFFD26A) is independently retyped in lifetime_folder_styled_widgets.dart:379 and :517 \u2014 proof that without a shared token, a future brand-color tweak requires hunting every file by eye and will eventually miss one, producing a visibly inconsistent color for the same semantic state.",
+   "recommendation": "Add named constants to core/theme/app_colors.dart (or app_theme.dart) for each distinct value and replace the 29 call sites; once custom_lint is unbroken (tracked separately), no_color_literal_outside_theme prevents regression.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "grep -o 'Color(0x[0-9A-Fa-f]\\{6,8\\})' lib/features/progress/presentation/widgets/*.dart returns zero hits.",
+    "no_color_literal_outside_theme passes clean on this directory once custom_lint is functional again."
+   ],
+   "labels": [
+    "theming",
+    "duplication",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-progress-p2",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Delete or wire up the dead MonthlyActivitySliverCalendar spike widget",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Dead code / AG-4 duplicate top-level name",
+   "area": "presentation / widgets",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/widgets/monthly_activity_sliver_calendar.dart",
+     "line": 64,
+     "quote": "/// This widget is **not wired into any screen yet** \u2014 it is a layout proof of"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/screens/recent_activity_screen.dart",
+     "line": 367,
+     "quote": "if (timeRange == ChartTimeRange.allTime)\n            _AllTimeSummaryCard(window: window)"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/tables/monthly_activity_rollups.dart",
+     "line": 16,
+     "quote": "@DataClassName('MonthlyActivityRollup')"
+    }
+   ],
+   "sites": 1,
+   "why": "The device-freeze problem this widget was built to solve (~9,600 daily cells for an All Time streak calendar) was actually solved a different way: recent_activity_screen.dart swaps in a totals-only _AllTimeSummaryCard for the All Time range instead of ever rendering a per-day grid. So this 404-line widget \u2014 plus its own hand-rolled MonthlyActivityRollup class, which duplicates the name of the real Drift-generated MonthlyActivityRollup in core/database/tables/monthly_activity_rollups.dart (its own doc comment at lines 4-12 flags this as a temporary stand-in to delete once wired in) \u2014 has no live caller and is exercised only by its own dedicated spike test. It sits in lib/ counting toward file-size/symbol-count backlogs for a problem the team already solved elsewhere.",
+   "recommendation": "Delete monthly_activity_sliver_calendar.dart and its spike test, or file a follow-up to actually wire it in and delete the hand-rolled MonthlyActivityRollup DTO in favor of the generated one. Don't leave a superseded proof-of-concept in the production lib/ tree.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep -rn MonthlyActivitySliverCalendar lib/ finds either zero results (deleted) or a real screen-level caller (wired in)."
+   ],
+   "labels": [
+    "dead-code",
+    "hygiene",
+    "ag-4"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-progress-p2",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Localize MonthlyActivitySliverCalendar's hardcoded English strings",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AX-2 (no hardcoded user-facing strings; AppLocalizations/ARB with ICU plurals)",
+   "area": "i18n",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/widgets/monthly_activity_sliver_calendar.dart",
+     "line": 106,
+     "quote": "return const Center(child: Text('No activity data'));"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/widgets/monthly_activity_sliver_calendar.dart",
+     "line": 193,
+     "quote": "'$monthLabel  \u2014  ${rollup.activeDays} active '\n                '${rollup.activeDays == 1 ? 'day' : 'days'}',"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/widgets/monthly_activity_sliver_calendar.dart",
+     "line": 258,
+     "quote": "'${rollup.totalCompletions} '\n            '${rollup.totalCompletions == 1 ? 'completion' : 'completions'}',"
+    }
+   ],
+   "sites": 3,
+   "why": "Every other widget in this EN/HE batch routes text through AppLocalizations, but this file hand-rolls English-only pluralization with a raw ternary. It's currently unreachable (see the companion dead-code finding) so no Hebrew user sees it today \u2014 but if anyone wires this widget into a screen without noticing, it ships untranslated text into the Hebrew build silently, since no grep in this repo's audit checks widget files for bare Text('literal') calls.",
+   "recommendation": "If the widget is kept, replace the three literals with AppLocalizations getters and ICU plural messages before it is ever attached to a route.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "No bare string literal is passed to Text(...) in this file; make arb-parity stays green after adding the new keys."
+   ],
+   "labels": [
+    "i18n",
+    "dead-code",
+    "ax-2"
+   ]
+  }
+ }
+]

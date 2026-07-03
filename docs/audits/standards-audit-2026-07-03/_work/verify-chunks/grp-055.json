@@ -1,0 +1,174 @@
+[
+ {
+  "sourceBatch": "t1-feat-gamification-p2",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Delete streak_service_extended_test.dart \u2014 fully superseded by streak_service_recovery_test.dart",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler (duplicated code)",
+   "area": "test/features/gamification/domain/services",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/gamification/domain/services/streak_service_extended_test.dart",
+     "line": 1,
+     "quote": "/// Extended tests for StreakService covering getRecoveryInfo, getStreak,\n/// and watchStreak \u2014 methods not exercised by streak_service_test.dart."
+    },
+    {
+     "file": "learning_tracker/test/features/gamification/domain/services/streak_service_recovery_test.dart",
+     "line": 1,
+     "quote": "// Tests for StreakService.getRecoveryInfo, getStreak, watchStreak \u2014 the\n// getStreakCalendar path is already covered by streak_service_test.dart."
+    }
+   ],
+   "sites": 2,
+   "why": "Both files independently claim, in their own docstrings, to cover the exact same 3 methods (getStreak, watchStreak, getRecoveryInfo) that streak_service_test.dart doesn't \u2014 they were each written to fill the same gap without checking whether it had already been filled. streak_service_recovery_test.dart is a strict superset: it uses exact-value assertions (expect(streak.currentStreak, 12)) where streak_service_extended_test.dart uses weaker greaterThanOrEqualTo checks, and it adds two cross-profile-isolation tests extended_test.dart doesn't have. extended_test.dart contributes nothing recovery_test.dart lacks.",
+   "recommendation": "Delete streak_service_extended_test.dart.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "streak_service_extended_test.dart removed from the repo.",
+    "dart test test/features/gamification/domain/services/streak_service_recovery_test.dart still passes, covering getStreak/watchStreak/getRecoveryInfo."
+   ],
+   "labels": [
+    "duplication",
+    "testing",
+    "streak"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-gamification-p2",
+  "findingIndex": 8,
+  "finding": {
+   "title": "Replace wall-clock Future.delayed synchronization with deterministic waits in gamification staleness tests",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6 (hermetic tests: no wall-clock)",
+   "area": "test/features/gamification/presentation/providers",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/gamification/presentation/providers/curriculum_breakdown_staleness_test.dart",
+     "line": 66,
+     "quote": "await Future<void>.delayed(const Duration(milliseconds: 50));"
+    },
+    {
+     "file": "learning_tracker/test/features/gamification/presentation/providers/points_providers_reactive_test.dart",
+     "line": 61,
+     "quote": "await Future<void>.delayed(const Duration(milliseconds: 20));"
+    },
+    {
+     "file": "learning_tracker/test/features/gamification/presentation/providers/points_providers_reactive_test.dart",
+     "line": 68,
+     "quote": "await Future<void>.delayed(const Duration(milliseconds: 50));"
+    }
+   ],
+   "sites": 7,
+   "why": "7 sites across 2 files (curriculum_breakdown_staleness_test.dart:66; points_providers_reactive_test.dart:61,68,100,111,154,164) synchronize on a Riverpod stream/FutureProvider re-emission by sleeping a fixed real-world duration instead of awaiting the actual event \u2014 the same feature area's achievements_overview_staleness_after_redemption_test.dart shows the deterministic alternative already in use (container.invalidate(...) + await container.read(provider.future)). A fixed delay is a flaky-under-CI-load bet: too short and a legitimately-fixed provider that happens to take longer intermittently fails the test; the tests exist specifically to pin reactive-update timing, so racing against the clock to verify timing is a contradiction in terms.",
+   "recommendation": "Await the stream's next matching emission via a Completer or StreamQueue keyed on the expected value (or pumpEventQueue() for Drift's microtask-driven watch streams) instead of a fixed delay.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Zero `Future<void>.delayed` calls remain in curriculum_breakdown_staleness_test.dart and points_providers_reactive_test.dart.",
+    "Both files pass 20 consecutive runs under --test-randomize-ordering-seed=random without flake."
+   ],
+   "labels": [
+    "flaky-test",
+    "hermeticity",
+    "riverpod"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-gamification-p2",
+  "findingIndex": 9,
+  "finding": {
+   "title": "Rename StreakStateProvider \u2014 it is a plain service class, not a @riverpod provider",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "naming/placement (suffix encodes role) / SM applicability",
+   "area": "features/gamification/streak",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/gamification/streak/streak_state_provider.dart",
+     "line": 24,
+     "quote": "class StreakStateProvider {\n  StreakStateProvider({required UserDatabase db, required LocalDayClock clock})"
+    }
+   ],
+   "sites": 1,
+   "why": "The file/class name (streak_state_provider.dart, StreakStateProvider) matches the app-wide convention for @riverpod codegen providers, but this is a hand-written plain class with no @riverpod annotation, no part '*.g.dart', and no Notifier/AsyncNotifier base \u2014 it's constructed directly by 5 different callers (parent_dashboard_aggregator.dart, streak_milestone_analytics_observer.dart, streak_alert_service.dart, streak_service.dart, dashboard_providers.dart). An auditor or agent grepping for '_provider.dart' files to apply the SM-1..8 rule family would misclassify this file and either skip real SM-7 questions (is it constructed only inside a real provider?) or misapply provider-specific rules that don't fit a plain service.",
+   "recommendation": "Rename to streak_state_service.dart / StreakStateService (or similar) to match its actual role.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep -rn 'class StreakStateProvider' lib/ returns zero hits after rename; all 5 call sites updated."
+   ],
+   "labels": [
+    "naming",
+    "riverpod"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-gamification-p2",
+  "findingIndex": 10,
+  "finding": {
+   "title": "StreakEvent domain class name collides with the Drift-generated StreakEvent row class",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-4",
+   "area": "features/gamification/streak",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/gamification/streak/streak_event.dart",
+     "line": 3,
+     "quote": "/// Distinct from Drift's row class (also called `StreakEvent` and\n/// generated from `tables/streak_events.dart`): this one is what the"
+    }
+   ],
+   "sites": 1,
+   "why": "lib/features/gamification/streak/streak_event.dart and the Drift-generated lib/core/database/user/user_database.g.dart both define a top-level class named StreakEvent. The doc comment shows the author was aware and every consumer (streak_event_log.dart, streak_restorer.dart, streak_state_provider.dart) works around it with `import '...user_database.dart' hide StreakEvent`, so today it's contained \u2014 but per AG-4's own rationale, agents/devs locate code by grep, and 'class StreakEvent' now returns two unrelated definitions; a new file that imports user_database.dart without remembering the hide clause gets an ambiguous-import compile error rather than a clean import.",
+   "recommendation": "Rename the domain value type (e.g. StreakLogEvent or StreakDomainEvent) so the name is unique across lib/.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep -rn '^class StreakEvent\\b' lib/ (excluding .g.dart) returns exactly one hit under the new name; the `hide StreakEvent` import qualifiers become unnecessary and are removed."
+   ],
+   "labels": [
+    "AG-4",
+    "naming",
+    "duplicate-symbol"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-gamification-p2",
+  "findingIndex": 11,
+  "finding": {
+   "title": "Fix regression-test provenance drift in ga4/ga8 gamification test files",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-5 / hygiene (test placement and doc accuracy)",
+   "area": "test/features/gamification",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/gamification/ga4_reentrance_guard_test.dart",
+     "line": 18,
+     "quote": "/// For the InviteTutor send busy-guard, we verify that the _isLoading flag is\n/// raised synchronously (before any await) so the button is disabled while"
+    },
+    {
+     "file": "learning_tracker/test/features/gamification/ga8_capitalization_test.dart",
+     "line": 56,
+     "quote": "group('GA-8: manageTutors section headers must use consistent casing', () {\n    test('manageTutorsActiveSection must NOT be all-caps \"ACTIVE\"', () {"
+    }
+   ],
+   "sites": 2,
+   "why": "ga4_reentrance_guard_test.dart's docstring describes testing the InviteTutor _isLoading busy-guard, but the file contains only 4 GamificationRoutePushGuard tests \u2014 that behavior is actually tested in test/features/tutoring/invite_tutor_screen_l1_test.dart, so a reader trusting this docstring will believe coverage exists here that doesn't. ga8_capitalization_test.dart is tagged/located under gamification but 2 of its 3 groups assert ARB strings owned by the tutoring feature (manageTutorsActiveSection/manageTutorsPendingSection) rather than gamification's own rewardConfigurationTitle \u2014 a feature-boundary placement drift that will confuse anyone searching for gamification vs. tutoring test coverage.",
+   "recommendation": "Trim ga4's docstring to what the file actually tests; move the manageTutors* groups out of ga8_capitalization_test.dart into a tutoring-scoped l10n test (or split/rename the file to reflect its actual multi-feature scope).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "ga4_reentrance_guard_test.dart's docstring only references GamificationRoutePushGuard.",
+    "manageTutorsActiveSection/manageTutorsPendingSection assertions live under test/features/tutoring/ or the file is explicitly re-scoped."
+   ],
+   "labels": [
+    "hygiene",
+    "test-placement",
+    "docs-drift"
+   ]
+  }
+ }
+]

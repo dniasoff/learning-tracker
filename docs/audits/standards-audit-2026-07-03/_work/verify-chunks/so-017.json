@@ -1,0 +1,207 @@
+[
+ {
+  "sourceBatch": "t1-core-database-daos-p1",
+  "chunk": "grp-007",
+  "finding": {
+   "title": "Replace awaited per-row insert/update loops with Drift batch() in curriculum_scope_dao, stage_dao, and track_dao.purgeHistory",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "DB-3",
+   "area": "core/database/daos",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/database/daos/curriculum_scope_dao.dart",
+     "line": 63,
+     "quote": "for (final value in scopeValues) {\n        await into(curriculumScopes).insert("
+    },
+    {
+     "file": "learning_tracker/lib/core/database/daos/stage_dao.dart",
+     "line": 89,
+     "quote": "for (final stage in stages) {\n        await insertStageDefinition(stage);"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/daos/stage_dao.dart",
+     "line": 128,
+     "quote": "for (final stage in stages) {\n        await insertStageDefinition(stage);"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/daos/track_dao.dart",
+     "line": 417,
+     "quote": "for (final c in completionsForTrack) {\n        await (db.update(db.completionEvents)..where("
+    }
+   ],
+   "sites": 4,
+   "why": "These four loops are all already inside a db.transaction() (so DB-2 is satisfied \u2014 no partial-write risk), but each issues N sequential awaited statements where Drift's batch() would send one. track_dao.purgeHistory is the worst case: on 'delete and wipe history' for a track with hundreds of completions, it round-trips once per row to stamp purgedAt instead of one batched UPDATE. The three sites from the companion DB-2 finding (point_config_dao.seedDefaults, study_day_config_dao.seedDefaults, track_learning_order_dao.upsertOrder) share the identical pattern and compound this once they're wrapped in a transaction.",
+   "recommendation": "Convert each loop to `batch((b) { for (...) { b.insert(...)/b.update(...); } })`, which Drift supports for both inserts and per-row updates with distinct WHERE clauses inside one batch call.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "curriculum_scope_dao.setScopes, stage_dao.replaceStagesForTrack/replaceStagesForCurriculum, and track_dao.purgeHistory's tombstone step use batch() instead of a per-row await loop.",
+    "Existing tests for these methods pass unchanged (behavior-preserving refactor)."
+   ],
+   "labels": [
+    "DB-3",
+    "batch",
+    "performance"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-sync-merge",
+  "chunk": "grp-030",
+  "finding": {
+   "title": "Fix hand-rolled test _FakeMergeStore.remoteIsNewer implementations to match DriftMergeStore's clock-skew/D15 semantics",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-4/TQ-8 fake fidelity; Fowler duplication",
+   "area": "test/core/sync/merge",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/sync/merge/mergers_test.dart",
+     "line": 94,
+     "quote": "// Mirror DriftMergeStore semantics: strict `remote > local` outside\n    // the \u00b15 s window; inside the window, server timestamp decides."
+    },
+    {
+     "file": "learning_tracker/test/core/sync/merge/notification_settings_merger_round_trip_test.dart",
+     "line": 69,
+     "quote": "return remoteUpdatedAt.isAfter(localUpdatedAt);"
+    }
+   ],
+   "sites": 2,
+   "why": "mergers_test.dart's fake claims to 'Mirror DriftMergeStore semantics' but omits the D15 fallback (drift_merge_store.dart:140-146): inside the clock-skew window with no decisive synced_at on both sides, the fake unconditionally prefers remote, whereas the real store first falls back to comparing raw updated_at (protecting a newer un-pushed local edit from being clobbered by an older remote). notification_settings_merger_round_trip_test.dart's fake is simpler still \u2014 no clock-skew window at all. Neither test currently uses timestamps close enough to trigger the divergent branch, so the suite passes today, but any future near-tie/clock-skew test added against these fakes would silently validate the WRONG (pre-D15) behavior, hiding exactly the bug class DriftMergeStoreTest exists to pin down.",
+   "recommendation": "Replace both hand-rolled remoteIsNewer bodies with a delegate to the real DriftMergeStore.remoteIsNewer (construct a throwaway DriftMergeStore over an in-memory DB inside the fake, or extract the pure comparison so both share one implementation) instead of re-deriving the algorithm by hand.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "A within-skew-window / no-syncedAt / older-remote test case added to either file fails before the fix and passes after, or the fake is proven identical to DriftMergeStore.remoteIsNewer by delegation (making such drift structurally impossible)."
+   ],
+   "labels": [
+    "testing",
+    "test-fidelity",
+    "TQ-4"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-app-l10n-p1",
+  "chunk": "grp-000",
+  "finding": {
+   "title": "Centralize app_shell.dart / persistent_switcher_scaffold.dart color literals into AppTheme instead of scattering/duplicating hex values",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "no_color_literal_outside_theme (custom_lint, currently non-functional) / Fowler (duplicated knowledge)",
+   "area": "app/router",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/app/router/app_shell.dart",
+     "line": 25,
+     "quote": "const _tutorAccentColor = Color(0xFFD97706); // Amber-600"
+    },
+    {
+     "file": "learning_tracker/lib/app/router/app_shell.dart",
+     "line": 367,
+     "quote": "color: selected ? const Color(0xFF0038A8) : Colors.transparent,"
+    },
+    {
+     "file": "learning_tracker/lib/app/router/app_shell.dart",
+     "line": 436,
+     "quote": "const barBackground = Color(0xFFF1F3FA); // opaque pale blue"
+    },
+    {
+     "file": "learning_tracker/lib/app/router/app_shell.dart",
+     "line": 437,
+     "quote": "const barBorder = Color(0xFFD7DEF0);"
+    },
+    {
+     "file": "learning_tracker/lib/app/router/persistent_switcher_scaffold.dart",
+     "line": 157,
+     "quote": "color: const Color(0xFFF1F3FA),"
+    }
+   ],
+   "sites": 9,
+   "why": "app_shell.dart has 8 raw Color(0x...) literals and persistent_switcher_scaffold.dart has 1 more \u2014 all outside lib/core/theme/, exactly what the (currently non-functional, custom_lint is broken repo-wide) no_color_literal_outside_theme rule targets. Worse, the SAME hex value (0xFFF1F3FA, 'opaque pale blue') is hand-copied in both files as an unrelated local constant rather than a shared AppTheme token, and 0xFF0038A8 is a bespoke blue never defined in AppTheme at all (AppTheme.brandBlueDeep is a different value, 0xFF3F41AB). The file's own comments document this exact bar going through TWO rounds of contrast bugs ('Bug 7' and 'Bug 7 (re-fix)') \u2014 duplicated, untracked magic colors are precisely what makes a third recurrence likely, since a future contrast fix to one copy can silently miss the other.",
+   "recommendation": "Move _tutorAccentColor, _childViewAccentColor, barBackground/barBorder, and the nav-item selected-color into AppTheme/AppColors named constants; have persistent_switcher_scaffold.dart reference the same constant app_shell.dart uses.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "All Color(0x...) literals in app_shell.dart and persistent_switcher_scaffold.dart are replaced with AppTheme/AppColors named constants.",
+    "Once custom_lint's analyzer-version incompatibility is fixed, `dart run custom_lint` reports zero no_color_literal_outside_theme violations in these two files.",
+    "0xFFF1F3FA exists as exactly one named constant referenced from both files."
+   ],
+   "labels": [
+    "theming",
+    "duplication",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-network",
+  "chunk": "grp-022",
+  "finding": {
+   "title": "Cancel or document the leaked DNS-lookup Future in ConnectivityGateway.isOnline on timeout",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Nygard lens \u2014 what happens when I/O fails halfway",
+   "area": "core/network (resource handling)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/network/connectivity_gateway.dart",
+     "line": 14,
+     "quote": "final result = await InternetAddress.lookup(\n        'dns.google',\n      ).timeout(const Duration(seconds: 2));"
+    }
+   ],
+   "sites": 1,
+   "why": "Future.timeout() races a Timer against the lookup but cannot cancel the underlying OS-level DNS resolution \u2014 dart:io gives no cancellable primitive for InternetAddress.lookup. Under packet loss or a captive portal (exactly when this check matters most), the original lookup keeps running past the 2s timeout with no way to observe or cancel it; repeated calls (e.g. retrying a failed offline-account conversion in account_actions.dart) can accumulate abandoned lookups.",
+   "recommendation": "Either document the accepted tradeoff inline (dart:io has no cancellable DNS API) with a bounded-impact justification, or switch to a primitive that supports cancellation (e.g. a raw socket connect with explicit close on timeout).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Either an inline comment documents the accepted leak and its bound, or a test demonstrates no more than one lookup stays in flight after repeated rapid isOnline calls under a simulated timeout"
+   ],
+   "labels": [
+    "resource-leak",
+    "nygard-lens"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epic-26",
+  "chunk": "grp-130",
+  "finding": {
+   "title": "Confirm TrackManagementBody is wired into a real screen \u2014 it currently has zero callers in lib/",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "test/story_acceptance + features/tracks",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_26_story_26_22_track_management_body_test.dart",
+     "line": 33,
+     "quote": "const widget = TrackManagementBody(showBackButton: false);\n          expect(widget.showBackButton, isFalse);"
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/widgets/track_management_body.dart",
+     "line": 21,
+     "quote": "/// Shared body widget for both parent and child track-management screens.\n///\n/// Both screens are structurally identical."
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/screens/track_management_hub_screen.dart",
+     "line": 24,
+     "quote": "bool trackDeletionAllowed({required int activeCurriculumCount}) {\n  return activeCurriculumCount > 1;"
+    }
+   ],
+   "sites": 1,
+   "why": "TrackManagementBody's own doc comment says it unifies 'both parent and child track-management screens.' grep -rn \"TrackManagementBody\" lib/ finds only its own definition file \u2014 no @RoutePage() screen, and no entry in the generated app_router.gr.dart, ever instantiates it. The actual routed hub screen, track_management_hub_screen.dart (340 lines, near-identical import list), is a separate hand-rolled implementation with its own 'TS-16' deactivation guard (trackDeletionAllowed) \u2014 the exact concept Story 26.22 AC2 put in the service layer \u2014 and it was touched by a later bug-fix wave ('fix(tracks-scheduler): fix all 8 confirmed-bug clusters TS-1 through TS-16', 2026-06-11) that track_management_body.dart never received (last touched 2026-05-20, a mechanical colour-literal pass). The acceptance test only constructs TrackManagementBody in isolation and reads a constructor field, so it reports Story 26.22's central claim as verified while the shipped app still runs a duplicate, drifting implementation \u2014 and if TrackManagementBody is ever wired in later without reconciling the drift, it will reintroduce the 8 bugs TS-1..TS-16 fixed only in the hub screen.",
+   "recommendation": "Either finish the consolidation \u2014 replace track_management_hub_screen.dart's build() with TrackManagementBody(showBackButton: ...) and delete the duplicated logic (carrying the TS-1..TS-16 fixes into the shared widget) \u2014 or, if the widget was superseded, delete the dead track_management_body.dart and this test. Add a source-grep assertion (matching the pattern already used in 26.20 AC3/4) proving the real screen references TrackManagementBody(.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "grep -rn 'TrackManagementBody(' lib/features/ matches at least one real @RoutePage() screen's build method",
+    "a story-acceptance test asserts track_management_hub_screen.dart's source contains 'TrackManagementBody(', the same way 26.20 AC4 checks settings_screen.dart",
+    "the TS-16 deactivation guard logic exists in exactly one place, not duplicated between the widget and the hub screen"
+   ],
+   "labels": [
+    "testing",
+    "epic-26",
+    "dead-code",
+    "duplication"
+   ]
+  }
+ }
+]

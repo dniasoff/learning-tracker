@@ -1,0 +1,262 @@
+[
+ {
+  "sourceBatch": "t1-feat-scheduler-p1",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Resolve the ambiguous stageId/stageOrder dual-interpretation in SchedulerCompletionRepositoryImpl.resolveStageOrder",
+   "severity": "P2",
+   "confidence": "SUSPECTED",
+   "rule": "Evans lens \u2014 a single field pattern-matched against two overlapping ID spaces with no way to tell them apart",
+   "area": "features/scheduler/data repositories",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/scheduler/data/repositories/scheduler_completion_repository_impl.dart",
+     "line": 33,
+     "quote": "final stageOrderMap = {for (final s in stages) s.id: s.stageOrder};\n    final knownStageOrders = {for (final s in stages) s.stageOrder};"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/data/repositories/scheduler_completion_repository_impl.dart",
+     "line": 39,
+     "quote": "if (knownStageOrders.contains(rawStageId)) return rawStageId;"
+    }
+   ],
+   "sites": 1,
+   "why": "The comment says newer completion rows store a stage's stageOrder in c.stageId while older rows store the stage's DB id; resolveStageOrder tries to guess which format a given row used by checking 'does rawStageId match some CURRENT stage's stageOrder' first. Stage id (a table-wide autoincrement) and stageOrder (a small 1..N per-curriculum ordinal) share the same small-integer space, especially for the first curriculum/stages ever created in a fresh install or test DB (id and stageOrder can be identical by coincidence, e.g. 1,2,3). When they collide, an OLD-format row that really means 'stage id 3' gets misread as 'stageOrder 3' and silently resolves to the wrong stage \u2014 which would misreport a chazara/review stage as complete (or vice versa) with no error. I have not constructed a concrete seed scenario proving the collision fires against real data (id values grow globally across curricula, so the window narrows over an install's lifetime), so this is reported as SUSPECTED, not CONFIRMED \u2014 a runtime/unit test seeding a stage whose id equals a different stage's stageOrder plus an old-format completion would confirm or rule it out.",
+   "recommendation": "Give completion rows an explicit format marker (or normalize all stored stageId values to stageOrder in a one-time migration) instead of guessing per-row from an ambiguous value.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "A targeted unit test seeds two stages where one stage's DB id equals another (or the same) stage's stageOrder, adds an old-format completion using the id, and asserts resolveStageOrder resolves to the correct stage rather than the coincidentally-matching one.",
+    "If the test confirms a collision, resolveStageOrder no longer disambiguates by value coincidence (explicit format tag, or a completed one-time backfill removes the dual-format need)."
+   ],
+   "labels": [
+    "data-migration",
+    "ambiguous-id-space",
+    "completion-mapping"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-scheduler-p1",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Log SchedulerStageRepositoryImpl's schedule-JSON decode failure instead of silently swallowing it",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "EH-3 [P log-less] \u2014 no log-less catch",
+   "area": "features/scheduler/data repositories",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/scheduler/data/repositories/scheduler_stage_repository_impl.dart",
+     "line": 32,
+     "quote": "} catch (_) {\n      sched = {'type': 'delay', 'delay_days': 0};"
+    }
+   ],
+   "sites": 1,
+   "why": "If a stage's schedule JSON column is ever malformed (migration bug, manual DB edit, a bad sync-merge write), every read of that stage silently substitutes a hardcoded delay_days:0 default with zero AppLogger call \u2014 changing that stage's chazara/review timing with no diagnostic trail to explain a future 'my review schedule looks wrong' report. SchedulerStageRepositoryImpl also has no dedicated unit test file (grep across test/ confirms it is only exercised indirectly, with well-formed data, through SchedulerEngine/DailyTaskGenerator integration tests), so this fallback path is completely unexercised by the suite.",
+   "recommendation": "Log via AppLogger (including the row id and raw schedule string) in the catch before falling back, and add a unit test for the fallback path.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "The catch in _rowToSchedulerStage calls AppLogger.warning/error with the stage row id and raw schedule string before falling back to the default.",
+    "New unit test constructs a StageDefinition row with malformed schedule JSON and asserts both the fallback SchedulerStage values and that the log call fired."
+   ],
+   "labels": [
+    "error-handling",
+    "EH-3",
+    "silent-failure"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-scheduler-p1",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Decouple ProgramLabelResolver from Flutter/Riverpod so its label logic can be unit-tested without pumpWidget",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "naming/placement layering (features/<f>/{data,domain,presentation}); Feathers testability lens",
+   "area": "features/scheduler/domain/labels",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/scheduler/domain/labels/program_label_resolver.dart",
+     "line": 1,
+     "quote": "import 'package:flutter/widgets.dart';\nimport 'package:flutter_riverpod/flutter_riverpod.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/domain/labels/program_label_resolver.dart",
+     "line": 29,
+     "quote": "const ProgramLabelResolver._(this._labels);"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/domain/labels/program_label_resolver.dart",
+     "line": 41,
+     "quote": "factory ProgramLabelResolver.fromRef(Ref ref) =>\n      ProgramLabelResolver._(domainTermLabelsFromRef(ref));"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/domain/projection/projection.dart",
+     "line": 18,
+     "quote": "/// Layering: pure Dart domain layer \u2014 no Flutter, Riverpod, Drift, or Firebase."
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/domain/labels/program_label_resolver_test.dart",
+     "line": 36,
+     "quote": "testWidgets('Hebrew ON \u2192 Hebrew name from CalendarProgramRegistry', (\n      tester,\n    ) async {"
+    }
+   ],
+   "sites": 1,
+   "why": "ProgramLabelResolver sits in domain/labels/ next to projection/, whose own docstring declares the module 'pure Dart domain layer \u2014 no Flutter, Riverpod, Drift, or Firebase' \u2014 but this file imports flutter/widgets.dart and flutter_riverpod directly, and its only public constructors take a WidgetRef or a Riverpod Ref (the plain constructor is private). The label-selection methods themselves (learningProgramLabel, calendarEntryLabel, calendarEntryTodayRef) only need a DomainTermLabels value and, for one method, an AppLocalizations instance \u2014 none of that requires Flutter widgets. Because the constructor is gated behind Ref, every one of program_label_resolver_test.dart's ~13 cases is forced into testWidgets + pumpWidget(ProviderScope(MaterialApp(Scaffold(Consumer(...))))) + pumpAndSettle, for what is fundamentally a handful of ternary/fallback string picks \u2014 a real, measured cost in test complexity and runtime versus a plain test().",
+   "recommendation": "Expose a public ProgramLabelResolver(DomainTermLabels labels) constructor (or move the file to presentation/) so the label logic is unit-testable directly; keep .of(ref)/.fromRef(ref) as thin wiring factories.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "ProgramLabelResolver has a public constructor independent of WidgetRef/Ref.",
+    "The majority of program_label_resolver_test.dart's cases are converted to plain test() cases against the new constructor; only the .of(ref)/.fromRef(ref) wiring keeps a thin widget/provider test."
+   ],
+   "labels": [
+    "testability",
+    "layering",
+    "riverpod"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-scheduler-p1",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Guard the remaining bare CurriculumId/DayType.firstWhere enum lookups with the same orElse fallback used elsewhere in these same files",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "EH-2/EH-4 (typed exceptions handled at the data boundary); internal consistency",
+   "area": "features/scheduler/data repositories + domain models",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/scheduler/data/repositories/daily_plan_repository.dart",
+     "line": 113,
+     "quote": "curriculumId: CurriculumId.values.firstWhere(\n        (c) => c.storageKey == row.curriculumId,\n      ),"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/data/repositories/daily_plan_repository.dart",
+     "line": 119,
+     "quote": "priority: DailyTaskPriority.values.firstWhere(\n        (p) => p.name == row.priority,\n        orElse: () => DailyTaskPriority.newLearning,"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/data/repositories/goal_repository_impl.dart",
+     "line": 192,
+     "quote": "curriculumId: CurriculumId.values.firstWhere(\n        (c) => c.storageKey == goal.curriculumId,\n      ),"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/domain/models/day_type.dart",
+     "line": 7,
+     "quote": "static DayType fromStorageKey(String key) =>\n      DayType.values.firstWhere((e) => e.storageKey == key);"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/domain/models/goal_entity.dart",
+     "line": 198,
+     "quote": "orElse: () =>\n            throw ArgumentError('Unknown curriculumId: $rawCurriculumId'),"
+    }
+   ],
+   "sites": 3,
+   "why": "A curriculumId/dayType storage-key value that no longer matches any current enum member (a deprecated/renamed curriculum, a stale row surviving a schema change, or a value synced from an older app version) throws an uncaught StateError deep inside a repository read \u2014 crashing the daily-plan or goal-loading flow with no typed error and nothing logged. The codebase already knows how to defend against exactly this: daily_plan_repository.dart's own _rowToTask guards the analogous DailyTaskPriority lookup 6 lines below its unguarded CurriculumId lookup, and GoalEntity.fromFirestore guards the identical CurriculumId lookup with a clear thrown ArgumentError \u2014 but GoalRepositoryImpl._toEntity (reading the same enum from the local DB) and DayType.fromStorageKey apply no such guard.",
+   "recommendation": "Apply the same orElse fallback-or-typed-throw already used elsewhere in these files to the three bare firstWhere call sites.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "DayType.fromStorageKey and the two bare CurriculumId.values.firstWhere calls (daily_plan_repository.dart, goal_repository_impl.dart) each supply an orElse fallback or typed/logged error.",
+    "New regression test seeds a DailyPlan/Goal/StudyDayConfig row with a storage key matching no current enum member and asserts a handled outcome instead of an uncaught StateError."
+   ],
+   "labels": [
+    "error-handling",
+    "robustness",
+    "enum-parsing"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-scheduler-p1",
+  "findingIndex": 8,
+  "finding": {
+   "title": "Convert scheduler domain value types to @freezed instead of hand-rolled or missing equality",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "naming/placement \u2014 \"Domain/state models are immutable @freezed classes; never hand-write ==/hashCode for data classes\"",
+   "area": "features/scheduler/domain models, projection, repositories",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/scheduler/domain/models/delta_value.dart",
+     "line": 14,
+     "quote": "final class DateDelta {"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/domain/models/delta_value.dart",
+     "line": 38,
+     "quote": "final class PaceDelta {"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/domain/models/delta_value.dart",
+     "line": 65,
+     "quote": "final class DateScheduleDelta extends ScheduleDelta {"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/domain/models/delta_value.dart",
+     "line": 82,
+     "quote": "final class PaceScheduleDelta extends ScheduleDelta {"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/domain/models/goal_entity.dart",
+     "line": 41,
+     "quote": "final class DeadlineTarget extends PaceTarget {"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/domain/models/goal_entity.dart",
+     "line": 58,
+     "quote": "final class PacePeriodTarget extends PaceTarget {"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/domain/projection/overdue_types.dart",
+     "line": 17,
+     "quote": "class ScheduledUnit {"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/domain/projection/overdue_types.dart",
+     "line": 48,
+     "quote": "class StudyDayPattern {"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/domain/projection/overdue_types.dart",
+     "line": 87,
+     "quote": "class ProjectionResult {"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/domain/repositories/scheduler_completion_repository.dart",
+     "line": 4,
+     "quote": "class SchedulerCompletion {"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/domain/repositories/scheduler_content_repository.dart",
+     "line": 10,
+     "quote": "class SchedulerContentItem {"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/domain/repositories/scheduler_stage_repository.dart",
+     "line": 5,
+     "quote": "class SchedulerStage {"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/domain/repositories/scheduler_learning_order_repository.dart",
+     "line": 4,
+     "quote": "class SchedulerOrderItem {"
+    }
+   ],
+   "sites": 13,
+   "why": "9 of the 13 classes hand-write ==/hashCode/toString (delta_value.dart's 4 types, goal_entity.dart's PaceTarget subtypes, overdue_types.dart's 3 types) \u2014 correct today, but every future field addition must remember to update the hand-written equality by hand (Fowler shotgun-surgery risk that @freezed removes entirely). The other 4 (SchedulerCompletion, SchedulerContentItem, SchedulerStage, SchedulerOrderItem \u2014 the scheduler-local adapter DTOs returned across every repository interface in this batch) have NO equality override at all, so they compare by identity; any future Set/contains/expect(x,y)-by-value usage of these types will silently pass or fail for the wrong reason.",
+   "recommendation": "Convert to @freezed, or record the zero-codegen-dependency rationale (stated in overdue_types.dart's docstring) as an explicit documented judgment call in coding-standards.md so it stops being flagged.",
+   "effort": "L",
+   "acceptance_criteria": [
+    "Each listed class is either converted to @freezed, or the deliberate non-freezed choice is recorded in coding-standards.md's judgment-call list.",
+    "A Rule-0 grep/lint flags hand-written operator== under lib/features/*/domain/ (excluding generated files) so the decision stays enforced either way."
+   ],
+   "labels": [
+    "naming-placement",
+    "freezed",
+    "value-equality"
+   ]
+  }
+ }
+]

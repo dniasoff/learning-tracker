@@ -1,0 +1,214 @@
+[
+ {
+  "sourceBatch": "t1-core-sync-codec",
+  "chunk": "grp-027",
+  "finding": {
+   "title": "Correct FirestoreCodec.encodeDateTime's false claim that the Firestore SDK auto-converts ISO-8601 strings to Timestamp",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-8-adjacent doc/code truth + Evans (one place for an invariant)",
+   "area": "core/sync/codec",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/sync/codec/firestore_codec.dart",
+     "line": 57,
+     "quote": "The Firestore SDK converts ISO-8601 strings into Timestamp objects on write, so this format is safe to use in push documents."
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/firestore_gateway_impl.dart",
+     "line": 164,
+     "quote": "in Firestore Security Rules a `string <= timestamp` comparison is `false`, which would deny EVERY completion create."
+    },
+    {
+     "file": "learning_tracker/firestore.rules",
+     "line": 248,
+     "quote": "timestamp), so a `created_at <= request.time` guard compared a string to request.time and was rejected at the type level \u2014"
+    }
+   ],
+   "sites": 1,
+   "why": "The claim is false \u2014 the SDK does not auto-convert a Dart String to a Timestamp. That's exactly why firestore_gateway_impl.dart carries a dedicated `_timestampifyCompletedAt` patch (lines 158-219) that rewrites `completed_at`/`purged_at` from String/DateTime to a real Timestamp AFTER every codec's encode() output runs, and exactly why streak_events' equivalent `created_at <= request.time` rule check was deleted after it denied every write in production. The real fix for a timestamp-compared field lives two layers away from the codec, in a hand-maintained per-field allowlist inside firestore_gateway_impl.dart \u2014 a mechanism entity_codec.dart's own 'Responsibilities' docstring never mentions. The next engineer who adds a new entity kind with a `<= request.time` rule, trusts this codec's comment, and skips the gateway patch will reproduce the exact 'permission-denied on every create' incident this codebase has already hit twice (completions, streak_events).",
+   "recommendation": "Fix the doc comment to state the SDK does NOT auto-convert and cross-reference firestore_gateway_impl.dart's `_timestampifyCompletedAt` as the actual mechanism. Consider moving that per-field patch logic into the codec/EntityCodec layer (or documenting it explicitly in entity_codec.dart's 'Push encoding \u2014 SyncWriteFacade territory' note) so the full push contract for a timestamp-compared field lives in one discoverable place instead of three.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "encodeDateTime's doc comment no longer claims SDK auto-conversion; it states the true behavior and points to the gateway patch.",
+    "A note is added (in entity_merger.dart's 'adding a new entity kind' checklist, or equivalent) that a request.time-compared field needs a gateway-side Timestamp conversion, not just a codec change."
+   ],
+   "labels": [
+    "sync",
+    "docs",
+    "footgun"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-scheduler-p2",
+  "chunk": "grp-093",
+  "finding": {
+   "title": "Wrap the DB write in StudyDayConfigScreen._toggleDay with catch/log and a consistent mounted guard",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "EH-2 / EH-3",
+   "area": "scheduler/presentation/screens",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/scheduler/presentation/screens/study_day_config_screen.dart",
+     "line": 288,
+     "quote": "ref.invalidate(allDailyTasksProvider);"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/presentation/screens/study_day_config_screen.dart",
+     "line": 299,
+     "quote": "if (context.mounted && e.code == 'permission-denied') {"
+    }
+   ],
+   "sites": 1,
+   "why": "_toggleDay runs its DB lookup + db.studyDayConfigDao.upsertDayConfig(...) inside a detached `.then()` async closure with no surrounding try/catch and no caller awaiting the result \u2014 if upsertDayConfig throws (constraint violation, disk error), the failure is silently swallowed by the Future machinery with no AppLogger call and no user feedback (unlike the sync-push call three lines later, which IS wrapped in `on TutorWriteException catch`). The same closure calls `ref.invalidate(allDailyTasksProvider)` at line 288 with no `context.mounted` check, yet the SAME method DOES check `context.mounted` before the SnackBar at line 299 just after \u2014 an inconsistent, incomplete guard that leaves the earlier call exposed to a disposed-widget race if the user navigates away quickly after tapping a day toggle.",
+   "recommendation": "Wrap the DB write in try/catch with an AppLogger.error call and user-facing feedback on failure; check `context.mounted` (or equivalent) before the `ref.invalidate` call, matching the guard already present for the SnackBar.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "A thrown exception from upsertDayConfig is logged via AppLogger and does not vanish silently.",
+    "ref.invalidate(allDailyTasksProvider) is only called when the widget is still mounted."
+   ],
+   "labels": [
+    "EH-2",
+    "EH-3",
+    "error-handling"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-profiles-p4",
+  "chunk": "grp-081",
+  "finding": {
+   "title": "Move ProfileSwitcherBar out of app/router/app_shell.dart to restore AG-5 test mirroring",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-5 (test mirrors lib 1:1) / placement",
+   "area": "app/router/app_shell.dart <-> test/features/profiles/presentation/widgets/profile_switcher_bar_badge_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/profiles/presentation/widgets/profile_switcher_bar_badge_test.dart",
+     "line": 21,
+     "quote": "import 'package:learning_tracker/app/router/app_shell.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/app/router/app_shell.dart",
+     "line": 418,
+     "quote": "class ProfileSwitcherBar extends ConsumerWidget {"
+    }
+   ],
+   "sites": 1,
+   "why": "profile_switcher_bar_badge_test.dart sits at the AG-5-mirrored path test/features/profiles/presentation/widgets/, but the widget it tests is defined in lib/app/router/app_shell.dart (a named churn hotspot) rather than lib/features/profiles/presentation/widgets/ \u2014 so there is no lib file this test actually mirrors. ProfileSwitcherBar only reads profile/tutoring providers (parentPinAuthenticatedProfileIdProvider, activeProfileIdProvider, profileListStreamProvider, activeTutoredProfileSelectionProvider) and has no router-scaffolding responsibility of its own; it reads as profiles-feature presentation code that landed in the shell file by accretion.",
+   "recommendation": "Move the ProfileSwitcherBar class into lib/features/profiles/presentation/widgets/profile_switcher_bar.dart (app_shell.dart keeps a plain usage/import), and the test file already sits at the correctly-mirrored path once the source moves.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "lib/features/profiles/presentation/widgets/profile_switcher_bar.dart exists and profile_switcher_bar_badge_test.dart's sole lib-under-test import points there, restoring AG-5 mirroring"
+   ],
+   "labels": [
+    "profiles",
+    "placement",
+    "AG-5",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-sync-providers",
+  "chunk": "grp-032",
+  "finding": {
+   "title": "Delete the dead duplicate syncStatusStreamProvider/syncStatusProvider in features/sync/presentation/providers/sync_providers.dart and fix the false 'delegates here' comment in sync_status_providers.dart",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-4 duplicate top-level symbol names / dead code",
+   "area": "learning_tracker/lib/core/sync/providers/sync_status_providers.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/sync/providers/sync_status_providers.dart",
+     "line": 18,
+     "quote": "UI can watch this directly; [syncStatusProvider] in sync_providers.dart\n/// also delegates here."
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/providers/sync_status_providers.dart",
+     "line": 20,
+     "quote": "final syncStatusStreamProvider = StreamProvider<SyncStatus>((ref) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/sync/presentation/providers/sync_providers.dart",
+     "line": 25,
+     "quote": "final syncStatusStreamProvider = StreamProvider<SyncStatus>((ref) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/sync/presentation/providers/sync_providers.dart",
+     "line": 47,
+     "quote": "final syncStatusProvider = Provider<SyncStatus>((ref) {"
+    }
+   ],
+   "sites": 1,
+   "why": "sync_status_providers.dart:17-19 and :34-36 both assert that sync_providers.dart's syncStatusProvider 'delegates here.' It doesn't: sync_providers.dart independently re-declares both syncStatusStreamProvider and syncStatusProvider with character-for-character identical bodies (same orchestrator watch, same late-subscriber loading-state workaround, same error mapping), under the same names. Grepping every consumer of these two symbol names across lib/ shows dashboard_screen.dart, backup_sync_section.dart and sync_status_indicator.dart all import exclusively from core/sync/providers/sync_status_providers.dart; nothing anywhere imports or references the copy in sync_providers.dart. It is fully dead code with a misleading doc comment, and it demonstrates the exact shotgun-surgery risk duplication creates: the 'late subscriber to a broadcast stream' loading-state fix (the loop-iter2/orchestrator.currentStatus fallback) had to be applied to both copies in parallel, and nothing prevents the next fix from being applied to only one.",
+   "recommendation": "Delete syncStatusStreamProvider/syncStatusProvider from features/sync/presentation/providers/sync_providers.dart (confirmed zero production consumers); any future consumer should import core/sync/providers/sync_status_providers.dart directly. Correct or remove the 'also delegates here' comment once the duplicate is gone.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "features/sync/presentation/providers/sync_providers.dart no longer defines syncStatusStreamProvider or syncStatusProvider.",
+    "grep -rn 'final syncStatusStreamProvider\\|final syncStatusProvider' lib/ returns exactly one definition site each.",
+    "flutter analyze and the existing sync-status widget tests (sync_status_indicator_l1_test.dart, backup_sync_section_l1_test.dart, sync_status_provider_loading_state_test.dart) still pass unchanged."
+   ],
+   "labels": [
+    "dead-code",
+    "duplication",
+    "riverpod",
+    "AG-4"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-gamification-p1",
+  "chunk": "grp-051",
+  "finding": {
+   "title": "Split point_config_screen.dart and reward_configuration_screen.dart (and trim 3 more) below the 400-line hand-written file cap",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3 (hand-written Dart files <= 400 lines; generated exempt)",
+   "area": "features/gamification (domain/services, presentation/screens, presentation/widgets)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/gamification/presentation/screens/point_config_screen.dart",
+     "line": 1,
+     "quote": "790 lines total (wc -l)"
+    },
+    {
+     "file": "learning_tracker/lib/features/gamification/presentation/screens/reward_configuration_screen.dart",
+     "line": 1,
+     "quote": "718 lines total (wc -l)"
+    },
+    {
+     "file": "learning_tracker/lib/features/gamification/presentation/screens/child_redemption_screen.dart",
+     "line": 1,
+     "quote": "414 lines total (wc -l)"
+    },
+    {
+     "file": "learning_tracker/lib/features/gamification/presentation/widgets/achievement_unlock_celebration.dart",
+     "line": 1,
+     "quote": "413 lines total (wc -l)"
+    },
+    {
+     "file": "learning_tracker/lib/features/gamification/domain/services/reward_milestone_service.dart",
+     "line": 1,
+     "quote": "403 lines total (wc -l)"
+    }
+   ],
+   "sites": 5,
+   "why": "point_config_screen.dart and reward_configuration_screen.dart are each ~2x the cap: both conflate a data-fetching FutureProvider, a stateful screen with pending-edit tracking, AND 5+ private presentational widgets (_HeroHeader, _CurriculumPointsCard, _StepperControl, _RoundStepButton, _SaveBar in point_config_screen.dart; _RewardPreview, _InlineRewardsSection in reward_configuration_screen.dart) all in one file -- unlike gamification_screen.dart in the same feature, which correctly extracts its presentational pieces into presentation/widgets/ files. This makes the private widgets unreusable and untestable in isolation, and any single-line style tweak risks an unrelated diff touching 700+ lines of unrelated screen logic.",
+   "recommendation": "Extract each private widget class into its own file under presentation/widgets/, matching the pattern gamification_screen.dart already follows; the 3 smaller overages (403-414 lines) likely just need trimming of inline widget trees into extracted sub-widgets.",
+   "effort": "L",
+   "acceptance_criteria": [
+    "wc -l on every hand-written .dart file in features/gamification/ reports <= 400",
+    "AG-3's line-count checker (once added to make audit) reports zero violators in this feature"
+   ],
+   "labels": [
+    "AG-3",
+    "god-file",
+    "refactor"
+   ]
+  }
+ }
+]

@@ -1,0 +1,208 @@
+[
+ {
+  "sourceBatch": "t1-feat-profiles-p3",
+  "chunk": "grp-080",
+  "finding": {
+   "title": "Split 4 oversized hand-written test files in features/profiles/presentation (805-1079 lines) \u2014 over the AG-3 400-line cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "test/features/profiles/presentation/{screens,widgets}",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/profiles/presentation/widgets/parent_pin_keypad_dialog_test.dart",
+     "line": 1,
+     "quote": "// L1 widget tests for ParentPinKeypadDialog"
+    },
+    {
+     "file": "learning_tracker/test/features/profiles/presentation/screens/parent_settings_screen_l1_test.dart",
+     "line": 1,
+     "quote": "// L1 widget tests for ParentSettingsScreen"
+    },
+    {
+     "file": "learning_tracker/test/features/profiles/presentation/screens/parent_track_management_screen_l1_test.dart",
+     "line": 1,
+     "quote": "/// L1 widget tests for ParentTrackManagementScreen."
+    },
+    {
+     "file": "learning_tracker/test/features/profiles/presentation/screens/profile_picker_screen_l1_test.dart",
+     "line": 1,
+     "quote": "/// L1 widget tests for ProfilePickerScreen."
+    }
+   ],
+   "sites": 4,
+   "why": "parent_pin_keypad_dialog_test.dart (1079 lines), parent_settings_screen_l1_test.dart (999), parent_track_management_screen_l1_test.dart (902), and profile_picker_screen_l1_test.dart (805) each run 2-2.7x over the 400-line AG-3 cap, each covering many unrelated scenario groups (e.g. parent_settings mixes the tutor-permission-tile matrix, the Adjust-Points dialog, and the Pending-Prizes subtitle in one file/one main()), which is harder to navigate and increases merge-conflict surface on churned files.",
+   "recommendation": "Split each by scenario group, mirroring the ppNN/tsN per-scenario file convention already used elsewhere in this same directory (e.g. peel Adjust-Points-dialog and Pending-Prizes tests out of parent_settings_screen_l1_test.dart into their own files).",
+   "effort": "M",
+   "acceptance_criteria": [
+    "`find learning_tracker/test -name '*.dart' | xargs wc -l | awk '$1>400'` reports zero files under test/features/profiles/presentation/."
+   ],
+   "labels": [
+    "AG-3",
+    "hygiene",
+    "test-quality",
+    "profiles"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tutoring-p2",
+  "chunk": "grp-124",
+  "finding": {
+   "title": "Catch and log exceptions around TutorPinService calls in the PIN entry/setup async handlers",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "EH-2 / EH-3",
+   "area": "features/tutoring/presentation/screens",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_entry_gate.dart",
+     "line": 90,
+     "quote": "try {\n      final service = ref.read(tutorPinServiceProvider);"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_entry_gate.dart",
+     "line": 117,
+     "quote": "} finally {\n      if (mounted) setState(() => _isVerifying = false);"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_setup_screen.dart",
+     "line": 118,
+     "quote": "try {\n      final service = ref.read(tutorPinServiceProvider);"
+    }
+   ],
+   "sites": 2,
+   "why": "_onPinComplete (gate) and _onConfirmPinEntered (setup) wrap their await in try/finally with no catch clause. TutorPinService.verifyTutorPin/setTutorPin only converts PinLockoutException \u2014 an underlying secure-storage failure (a real class of Android keystore/PlatformException issue this environment has hit before per the App Check debug-token flakiness on wipes) propagates as a raw, uncaught exception. Because _onPinComplete is invoked fire-and-forget (not awaited) from _appendDigit, the failure is swallowed by whatever global handler exists, with zero AppLogger call from this site and zero user feedback: _isVerifying resets to false in the finally block but _errorMessage stays null and _digits stays at 4 filled dots, leaving the user staring at a stalled numpad with no explanation and no way to retype until they notice backspace still works.",
+   "recommendation": "Add a typed catch around the await that logs via AppLogger and sets a generic, localized _errorMessage (consistent with EH-2's 'no raw exception reaches presentation').",
+   "effort": "S",
+   "acceptance_criteria": [
+    "_onPinComplete and _onConfirmPinEntered both have a catch block that calls AppLogger.instance.error and sets a localized _errorMessage",
+    "a test that makes the stubbed TutorPinService throw confirms the screen shows an error state instead of a silent stall"
+   ],
+   "labels": [
+    "EH-2",
+    "EH-3",
+    "P2"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-settings-p4",
+  "chunk": "grp-105",
+  "finding": {
+   "title": "Override the injectable LocalDayClock in backup_sync_section_l1_test.dart's relative-time assertions",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6",
+   "area": "features/settings (test suite) \u2014 presentation/widgets",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/settings/presentation/widgets/backup_sync_section_l1_test.dart",
+     "line": 179,
+     "quote": "final now = DateTime.now(); / final lastSynced = now.subtract(const Duration(seconds: 30));"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/presentation/widgets/backup_sync_section.dart",
+     "line": 478,
+     "quote": "final diff = DateTimeFactory.nowLocal().difference(dateTime);"
+    }
+   ],
+   "sites": 5,
+   "why": "_formatTimeAgo reads DateTimeFactory.nowLocal(), which resolves through the overridable localDayClockProvider \u2014 a FakeLocalDayClock already exists in lib/core/time/local_day_clock.dart for exactly this purpose. This file never overrides it: it seeds 'just now'/'Xm ago' assertions from real DateTime.now() at 5 call sites (lines 155, 179, 201, 227, 657), then the widget independently re-reads the clock a pump later. Today's margins (e.g. a 30s buffer under the 60s 'just now' cliff) make an actual flake unlikely, but the suite is non-deterministic by construction and the gap between test-now and widget-build-now is unbounded on a loaded/slow CI runner.",
+   "recommendation": "In _buildHarness, call useLocalDayClock(FakeLocalDayClock(fixedInstant)) (or override localDayClockProvider) and derive lastSynced from that same fixed instant, removing the wall-clock dependency entirely.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "backup_sync_section_l1_test.dart's relative-time tests construct lastSyncedAt from a fixed instant and override localDayClockProvider/useLocalDayClock to that same instant.",
+    "The suite still passes with no bare DateTime.now() feeding a time-relative text assertion."
+   ],
+   "labels": [
+    "testing",
+    "settings",
+    "hermeticity",
+    "flake-risk"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-gamification-p3",
+  "chunk": "grp-056",
+  "finding": {
+   "title": "Stop testing RewardSaveNoTrack/RewardSaveDuplicateThreshold \u2014 both sealed variants are unreachable post-DEC-32/GA-3",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (tests must exercise the branch they claim) / Fowler speculative generality",
+   "area": "features/gamification/presentation/providers, presentation/screens",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/gamification/presentation/providers/reward_config_controller_test.dart",
+     "line": 231,
+     "quote": "// Manually inject a track into the state so setGlobalReward respects\n      // the parameter. We can do this by mutating state via the notifier's"
+    },
+    {
+     "file": "learning_tracker/test/features/gamification/presentation/providers/reward_config_controller_test.dart",
+     "line": 850,
+     "quote": "test('returns empty list when per-track mode but no track selected', () async {"
+    },
+    {
+     "file": "learning_tracker/test/features/gamification/presentation/providers/reward_config_controller_test.dart",
+     "line": 956,
+     "quote": "isGlobalReward: false,\n          selectedTrackId: null,"
+    },
+    {
+     "file": "learning_tracker/test/features/gamification/presentation/screens/reward_configuration_screen_l1_test.dart",
+     "line": 353,
+     "quote": "saveResult: const RewardSaveDuplicateThreshold(),"
+    }
+   ],
+   "sites": 4,
+   "why": "reward_config_controller.dart's bootstrap() hardcodes `tracks: const []` (comment: 'the form is always global and no track list is loaded'), so RewardForm.usesGlobalLadder is always true and the per-track/no-track-selected code in saveReward() is unreachable; separately, GA-3 removed the duplicate-threshold rejection entirely ('the old RewardSaveDuplicateThreshold result is no longer returned'). Despite that, 3 tests in reward_config_controller_test.dart claim to cover 'allows non-global when tracks is non-empty', 'per-track mode but no track selected', and 'RewardSaveNoTrack' but either exercise the identical tracks-empty branch under a different name or never call saveReward() at all (they assert on a hand-built RewardForm instead); a 4th test in reward_configuration_screen_l1_test.dart renders UI for a RewardSaveDuplicateThreshold result the real controller can never produce. A future revert or refactor that mangles these dead branches would ship with zero real regression coverage despite the suite appearing to test exactly that.",
+   "recommendation": "Remove the dead tracks/selectedTrackId/RewardSaveNoTrack/RewardSaveDuplicateThreshold machinery (and the screen's switch arm for it) now that DEC-32/GA-3 are final, deleting these 4 tests with it; or if per-track rewards are coming back, rewrite the tests to actually seed RewardForm.tracks through a real bootstrap path.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "`grep -rn \"RewardSaveNoTrack\\|RewardSaveDuplicateThreshold\" lib/` returns no hits after cleanup, or a new test drives RewardForm.tracks non-empty via the real controller and asserts the branch.",
+    "No test in reward_config_controller_test.dart asserts on a hand-constructed RewardForm as a substitute for calling the notifier method the test's group() claims to cover."
+   ],
+   "labels": [
+    "dead-code",
+    "test-quality",
+    "gamification"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tracks-p4",
+  "chunk": "grp-119",
+  "finding": {
+   "title": "Tighten the granularity and pace-floor assertions in step_chazara_goal_l1_test.dart and edit_track_and_detail_l1_test.dart to match what their own titles/comments claim",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "features/tracks/setup/presentation/steps+screens",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/tracks/setup/presentation/steps/step_chazara_goal_l1_test.dart",
+     "line": 779,
+     "quote": "goal.rawLearningUnit,\n          isNotNull,"
+    },
+    {
+     "file": "learning_tracker/test/features/tracks/setup/presentation/screens/edit_track_and_detail_l1_test.dart",
+     "line": 791,
+     "quote": "// Just verifying the value \"1\" is visible (loading completed).\n        expect(find.text('1'), findsWidgets);"
+    }
+   ],
+   "sites": 2,
+   "why": "The chazara-goal test titled 'selecting coarse (perek) emits paceGranularity=perek' taps the 'Perakim' segment then only asserts goal.rawLearningUnit isNotNull \u2014 but _paceGranularity is set to a non-null default in initState() before any tap, so the assertion passes identically whether or not the tap actually changed anything. The edit-track test titled 'pace increment button is disabled when paceValue is 1 (minimum)' never inspects the stepper button's onPressed at all (its own comment admits 'Just verifying the value \"1\" is visible') \u2014 floor enforcement for EditTrackScreen's pace stepper is untested anywhere in the tree (grepped for 'remove_rounded'/'onPressed.*isNull' in the sibling edit_track_screen_l1_test.dart: no match).",
+   "recommendation": "Assert goal.rawLearningUnit equals the coarse key's storage value ('perek') rather than isNotNull. In the edit-track test, find the decrement IconButton (ancestor of Icons.remove_rounded) and assert its onPressed is null at paceValue==1, then non-null after an increment.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Granularity test asserts goal.rawLearningUnit == the expected coarse key, not just non-null",
+    "Pace-floor test asserts tester.widget<IconButton>(...).onPressed is null at value 1 and non-null after incrementing"
+   ],
+   "labels": [
+    "tests",
+    "weak-assertion",
+    "tracks-setup"
+   ]
+  }
+ }
+]

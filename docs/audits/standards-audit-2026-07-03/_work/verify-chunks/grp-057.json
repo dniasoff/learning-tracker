@@ -1,0 +1,210 @@
+[
+ {
+  "sourceBatch": "t1-feat-gamification-p3",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Split the 6 gamification test files that exceed the 400-line AG-3 cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "features/gamification test suite",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/gamification/presentation/providers/reward_config_controller_test.dart",
+     "line": 1041,
+     "quote": "(file length: 1041 lines)"
+    },
+    {
+     "file": "learning_tracker/test/features/gamification/presentation/screens/child_redemption_screen_l1_test.dart",
+     "line": 859,
+     "quote": "(file length: 859 lines)"
+    },
+    {
+     "file": "learning_tracker/test/features/gamification/presentation/screens/parent_pending_redemptions_screen_l1_test.dart",
+     "line": 748,
+     "quote": "(file length: 748 lines)"
+    },
+    {
+     "file": "learning_tracker/test/features/gamification/presentation/screens/reward_configuration_screen_l1_test.dart",
+     "line": 709,
+     "quote": "(file length: 709 lines)"
+    },
+    {
+     "file": "learning_tracker/test/features/gamification/presentation/screens/gamification_screen_l1_test.dart",
+     "line": 672,
+     "quote": "(file length: 672 lines)"
+    },
+    {
+     "file": "learning_tracker/test/features/gamification/presentation/widgets/achievement_unlock_celebration_test.dart",
+     "line": 575,
+     "quote": "(file length: 575 lines)"
+    }
+   ],
+   "sites": 6,
+   "why": "docs/coding-standards.md:512 states oversized files 'exceed per-file agent read budgets... become dumping grounds.' reward_config_controller_test.dart at 1041 lines is 2.6x the 400-line cap; content past an agent's read window is effectively invisible on future edits/audits.",
+   "recommendation": "Split each file along its existing group() boundaries (e.g. reward_config_controller_test.dart's 22 numbered groups) into separate files per concern, mirroring how the smaller staleness/reactive/overflow regression tests already live as separate files.",
+   "effort": "L",
+   "acceptance_criteria": [
+    "`find lib test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400'` (the checker named in docs/coding-standards.md:513) reports none of these 6 files."
+   ],
+   "labels": [
+    "hygiene",
+    "AG-3",
+    "file-size"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-gamification-p3",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Introduce test/helpers/pump_app.dart \u2014 6 gamification test files hand-roll near-identical MaterialApp/ProviderScope boilerplate",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-3",
+   "area": "features/gamification presentation tests",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/gamification/presentation/screens/child_redemption_screen_l1_test.dart",
+     "line": 98,
+     "quote": "Future<void> _pumpScreen(\n  WidgetTester tester, {"
+    },
+    {
+     "file": "learning_tracker/test/features/gamification/presentation/screens/gamification_screen_l1_test.dart",
+     "line": 124,
+     "quote": "Widget _buildApp({\n  AsyncValue<AchievementsOverview>? achievementsState,"
+    },
+    {
+     "file": "learning_tracker/test/features/gamification/presentation/widgets/achievement_unlock_celebration_test.dart",
+     "line": 272,
+     "quote": "final db = createTestUserDatabase();\n        await tester.pumpWidget("
+    },
+    {
+     "file": "learning_tracker/test/features/gamification/presentation/widgets/achievement_unlock_celebration_test.dart",
+     "line": 297,
+     "quote": "final db2 = createTestUserDatabase();\n        await tester.pumpWidget("
+    }
+   ],
+   "sites": 6,
+   "why": "docs/coding-standards.md:462-465 (TQ-3) names `test/helpers/pump_app.dart` as 'the reviewed convention' for this exact ProviderScope+localization-delegate boilerplate, but the file doesn't exist anywhere in the repo (confirmed via ls test/helpers/). In this batch alone, child_redemption_screen_l1_test.dart (_pumpScreen + _pumpScreenWithRouter), gamification_screen_l1_test.dart (_buildApp), parent_pending_redemptions_screen_l1_test.dart (_buildScreen + buildWithRouter), reward_configuration_screen_l1_test.dart (_buildFake), streak_widget_test.dart (buildWidget) and achievement_unlock_celebration_test.dart (_buildHarness) each reimplement the same ~20-30 line scaffold independently; achievement_unlock_celebration_test.dart even duplicates its own _buildHarness body inline twice (lines 272-294 and 297-319) instead of calling it, showing the drift risk in practice \u2014 any future fix to the shared scaffold (e.g. a new required delegate) must be hand-applied at every site.",
+   "recommendation": "Create test/helpers/pump_app.dart per the standards doc and migrate these builders to call it, parameterizing only the feature-specific overrides.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "test/helpers/pump_app.dart exists.",
+    "The 6 cited builder functions delegate to it instead of duplicating MaterialApp/localizationsDelegates/ProviderScope setup."
+   ],
+   "labels": [
+    "duplication",
+    "fowler",
+    "test-infra"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-gamification-p3",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Wire or remove the no-op profileMode parameter on reward_config_controller_test.dart's _makeContainer",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-7-adjacent (test helper must do what its doc comment claims)",
+   "area": "features/gamification/presentation/providers (test helper)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/gamification/presentation/providers/reward_config_controller_test.dart",
+     "line": 53,
+     "quote": "/// Pass [profileMode] as 'child' or 'adult' to test profile-type branching."
+    },
+    {
+     "file": "learning_tracker/test/features/gamification/presentation/providers/reward_config_controller_test.dart",
+     "line": 876,
+     "quote": "final c = _makeContainer(profileId: 1, profileMode: 'adult');"
+    }
+   ],
+   "sites": 1,
+   "why": "_makeContainer's doc comment promises profileMode drives 'profile-type branching' overrides, but the function body only ever reads profileId \u2014 profileMode is accepted and silently discarded. The one call site that passes profileMode: 'adult' (in the 'product rule: adults have no points' test) gets zero behavioral effect from it; a future test adding profileMode: 'child' expecting a different container wiring would get a false pass.",
+   "recommendation": "Either delete the unused parameter, or wire it to an actual profile-mode override (e.g. a stubbed profileModeProvider) so it matches its doc comment.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "_makeContainer's profileMode parameter is either removed or demonstrably changes container behavior, with a test asserting the difference between 'adult' and 'child'."
+   ],
+   "labels": [
+    "hygiene",
+    "test-quality"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-gamification-p3",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Replace fixed-duration Future.delayed sleeps with deterministic sync in gamification reactive-stream tests",
+   "severity": "P3",
+   "confidence": "SUSPECTED",
+   "rule": "TQ-6 hermetic tests",
+   "area": "features/gamification presentation tests (staleness/reactive group)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/gamification/presentation/screens/child_redemption_balance_reactive_test.dart",
+     "line": 57,
+     "quote": "await Future<void>.delayed(const Duration(milliseconds: 20));"
+    },
+    {
+     "file": "learning_tracker/test/features/gamification/presentation/screens/child_redemption_rewards_staleness_test.dart",
+     "line": 99,
+     "quote": "await Future<void>.delayed(const Duration(milliseconds: 150));"
+    },
+    {
+     "file": "learning_tracker/test/features/gamification/presentation/screens/pending_redemptions_reactive_test.dart",
+     "line": 89,
+     "quote": "await Future<void>.delayed(const Duration(milliseconds: 20));"
+    }
+   ],
+   "sites": 3,
+   "why": "These 3 files (10 occurrences total) use hard-coded 20/50/150ms real-time sleeps as the only synchronization before asserting a Drift Stream has propagated a new emission, with no retry/poll and no use of pumpEventQueue() (confirmed 0 usages repo-wide). On a loaded CI runner a slower-than-budgeted FFI round-trip would fail the assertion with no code regression involved \u2014 exactly the kind of flake that erodes trust in the 'staleness regression' suite meant to guard DG-RDMP-01/02 and DG-PND-05.",
+   "recommendation": "Replace `Future.delayed(fixedDuration)` with `pumpEventQueue()` or a small poll-until-condition helper bounded by a generous timeout, so the wait tracks actual event-loop drain rather than a guessed duration.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "No test in these 3 files gates its only assertion on a bare Future.delayed(fixed duration); a poll/pumpEventQueue-based helper is used instead."
+   ],
+   "labels": [
+    "flaky-test",
+    "test-quality"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-gamification-p3",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Fix stale 'flagged as BUG (no UI lock)' header comment in parent_pending_redemptions_screen_l1_test.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Documentation must not contradict the code/tests it sits beside",
+   "area": "features/gamification/presentation/screens (test file header)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/gamification/presentation/screens/parent_pending_redemptions_screen_l1_test.dart",
+     "line": 12,
+     "quote": "///   - Double-tap guard: tapping Approve twice \u2014 flagged as BUG (no UI lock)."
+    },
+    {
+     "file": "learning_tracker/test/features/gamification/presentation/screens/parent_pending_redemptions_screen_l1_test.dart",
+     "line": 589,
+     "quote": "// guard: _RedemptionCard disables Fulfil/Decline (_busy) while the async is"
+    }
+   ],
+   "sites": 1,
+   "why": "The file's own header (line 12) claims Approve double-tap is an open, un-guarded bug, but parent_pending_redemptions_screen.dart:199-207/263/286 has a `_busy` flag disabling both Fulfil and Decline while an operation is in flight, and this same test file's later comment (lines 588-594) correctly describes that guard. A maintainer skimming only the header would believe there's live unfixed work here or file a duplicate bug report.",
+   "recommendation": "Update the header bullet to describe the _busy guard instead of the stale 'flagged as BUG' claim, matching lines 588-594.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Header comment at the top of the file no longer claims an unguarded double-tap bug on Approve."
+   ],
+   "labels": [
+    "hygiene",
+    "stale-comment"
+   ]
+  }
+ }
+]

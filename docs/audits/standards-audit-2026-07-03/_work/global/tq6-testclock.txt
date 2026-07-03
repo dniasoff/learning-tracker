@@ -1,0 +1,377 @@
+test/core/database/migration_test.dart:21:              stateChangedAt: DateTime.now(),
+test/core/database/migration_test.dart:22:              activatedAt: DateTime.now(),
+test/core/database/migration_test.dart:33:      final now = DateTime.now().toUtc();
+test/core/database/migration_test.dart:55:      final now = DateTime.now().toUtc();
+test/core/database/migration_test.dart:79:      final now = DateTime.now().toUtc();
+test/core/database/migration_test.dart:101:      final now = DateTime.now().toUtc();
+test/core/database/hebrew_migration_test.dart:23:              stateChangedAt: DateTime.now(),
+test/core/database/hebrew_migration_test.dart:24:              activatedAt: DateTime.now(),
+test/core/database/hebrew_migration_test.dart:33:              stateChangedAt: DateTime.now(),
+test/core/database/hebrew_migration_test.dart:34:              activatedAt: DateTime.now(),
+test/core/database/hebrew_migration_test.dart:43:              stateChangedAt: DateTime.now(),
+test/core/database/hebrew_migration_test.dart:44:              activatedAt: DateTime.now(),
+test/core/database/daos/completion_dao_test.dart:23:            stateChangedAt: DateTime.now(),
+test/core/database/daos/completion_dao_test.dart:24:            activatedAt: DateTime.now(),
+test/features/notifications/presentation/providers/notification_providers_deep_test.dart:452:      final now = DateTime.now().toUtc();
+test/integration/bulk_prior_completion_b6_b8_test.dart:493:        final before = DateTime.now().toUtc();
+test/integration/bulk_prior_completion_b6_b8_test.dart:499:        final after = DateTime.now().toUtc();
+test/integration/bulk_prior_completion_b6_b8_test.dart:1224:  updatedAt: DateTime.now(),
+test/core/database/daos/point_config_dao_test.dart:27:            createdAt: DateTime.now(),
+test/core/database/daos/point_config_dao_test.dart:28:            updatedAt: DateTime.now(),
+test/core/database/daos/point_config_dao_test.dart:37:            stateChangedAt: DateTime.now(),
+test/core/database/daos/point_config_dao_test.dart:38:            activatedAt: DateTime.now(),
+test/core/database/daos/point_config_dao_test.dart:262:              stateChangedAt: DateTime.now(),
+test/core/database/daos/point_config_dao_test.dart:263:              activatedAt: DateTime.now(),
+test/core/database/daos/point_config_dao_test.dart:272:              stateChangedAt: DateTime.now(),
+test/core/database/daos/point_config_dao_test.dart:273:              activatedAt: DateTime.now(),
+test/features/dashboard/presentation/providers/dashboard_user_mode_test.dart:18:  final now = DateTime.now().toUtc();
+test/features/onboarding/domain/services/bulk_prior_completion_service_test.dart:566:    completedAt: DateTime.now(),
+test/features/onboarding/domain/services/bulk_prior_completion_service_test.dart:576:    updatedAt: DateTime.now(),
+test/core/database/schema_v1_smoke_test.dart:43:      final now = DateTime.now().toUtc();
+test/core/database/schema_v1_smoke_test.dart:80:      final now = DateTime.now().toUtc();
+test/core/database/schema_v1_smoke_test.dart:111:              stateChangedAt: DateTime.now().toUtc(),
+test/core/database/schema_v1_smoke_test.dart:112:              activatedAt: DateTime.now().toUtc(),
+test/core/database/schema_v1_smoke_test.dart:126:          eventTimestamp: DateTime.now().toUtc(),
+test/core/database/schema_v1_smoke_test.dart:143:              stateChangedAt: DateTime.now().toUtc(),
+test/core/database/schema_v1_smoke_test.dart:144:              activatedAt: DateTime.now().toUtc(),
+test/core/database/schema_v1_smoke_test.dart:148:      final now = DateTime.now().toUtc();
+test/core/database/schema_v1_smoke_test.dart:177:              stateChangedAt: DateTime.now().toUtc(),
+test/core/database/schema_v1_smoke_test.dart:178:              activatedAt: DateTime.now().toUtc(),
+test/core/database/schema_v1_smoke_test.dart:188:          updatedAt: DateTime.now().toUtc(),
+test/core/database/schema_v1_smoke_test.dart:205:              stateChangedAt: DateTime.now().toUtc(),
+test/core/database/schema_v1_smoke_test.dart:206:              activatedAt: DateTime.now().toUtc(),
+test/core/database/schema_v1_smoke_test.dart:217:          updatedAt: DateTime.now().toUtc(),
+test/core/database/schema_v1_smoke_test.dart:235:              stateChangedAt: DateTime.now().toUtc(),
+test/core/database/schema_v1_smoke_test.dart:236:              activatedAt: DateTime.now().toUtc(),
+test/core/database/schema_v1_smoke_test.dart:274:      final now = DateTime.now().toUtc();
+test/features/gamification/domain/services/points_service_test.dart:29:            stateChangedAt: DateTime.now(),
+test/features/gamification/domain/services/points_service_test.dart:30:            activatedAt: DateTime.now(),
+test/features/gamification/domain/services/points_service_test.dart:34:    final now = DateTime.now();
+test/features/gamification/domain/services/points_service_test.dart:69:        eventTimestamp: completedAt ?? DateTime.now(),
+test/features/gamification/domain/services/points_service_test.dart:269:                stateChangedAt: DateTime.now(),
+test/features/gamification/domain/services/points_service_test.dart:270:                activatedAt: DateTime.now(),
+test/features/gamification/domain/services/points_service_test.dart:288:            eventTimestamp: DateTime.now(),
+test/core/database/daos/learning_ledger_dao_test.dart:13:    final now = DateTime.now();
+test/features/onboarding/presentation/screens/onboarding_bulk_l1_test.dart:742:      expect(isBulkPriorSentinel(DateTime.now()), isFalse);
+test/core/database/daos/profile_dao_test.dart:23:            createdAt: DateTime.now(),
+test/core/database/daos/profile_dao_test.dart:24:            updatedAt: DateTime.now(),
+test/core/database/daos/profile_dao_test.dart:34:            createdAt: DateTime.now(),
+test/core/database/daos/profile_dao_test.dart:35:            updatedAt: DateTime.now(),
+test/core/database/daos/profile_dao_test.dart:51:      final now = DateTime.now();
+test/core/database/daos/profile_dao_test.dart:117:          updatedAt: Value(DateTime.now()),
+test/core/database/daos/curriculum_scope_dao_test.dart:25:            stateChangedAt: DateTime.now(),
+test/core/database/daos/curriculum_scope_dao_test.dart:26:            activatedAt: DateTime.now(),
+test/core/database/daos/curriculum_scope_dao_test.dart:214:              stateChangedAt: DateTime.now(),
+test/core/database/daos/curriculum_scope_dao_test.dart:215:              activatedAt: DateTime.now(),
+test/core/database/daos/bookmark_dao_test.dart:37:      final now = DateTime.now();
+test/core/database/daos/bookmark_dao_test.dart:56:      final now = DateTime.now();
+test/core/database/daos/bookmark_dao_test.dart:83:      final now = DateTime.now();
+test/core/database/daos/bookmark_dao_test.dart:110:      final now = DateTime.now();
+test/core/database/daos/bookmark_dao_test.dart:129:      final now = DateTime.now();
+test/core/database/daos/completion_event_dao_test.dart:12:    final now = DateTime.now();
+test/features/progress/recent_activity_and_hierarchy_panel_l1_test.dart:1054:      final today = DateTime.now();
+test/core/database/daos/track_scoped_dao_test.dart:26:    final now = DateTime.now();
+test/core/database/daos/track_scoped_dao_test.dart:44:            stateChangedAt: DateTime.now(),
+test/core/database/daos/track_scoped_dao_test.dart:45:            activatedAt: DateTime.now(),
+test/core/database/daos/track_scoped_dao_test.dart:55:            stateChangedAt: DateTime.now(),
+test/core/database/daos/track_scoped_dao_test.dart:56:            activatedAt: DateTime.now(),
+test/core/database/daos/track_scoped_dao_test.dart:77:            eventTimestamp: DateTime.now(),
+test/core/database/daos/track_scoped_dao_test.dart:177:      final now = DateTime.now();
+test/core/database/daos/track_scoped_dao_test.dart:203:      final now = DateTime.now();
+test/core/database/daos/track_scoped_dao_test.dart:280:      final now = DateTime.now().toUtc();
+test/core/database/daos/track_scoped_dao_test.dart:424:      final now = DateTime.now();
+test/core/database/daos/track_dao_test.dart:116:              stateChangedAt: DateTime.now().toUtc(),
+test/core/database/daos/track_dao_test.dart:117:              activatedAt: DateTime.now().toUtc(),
+test/core/database/daos/track_dao_test.dart:256:          eventTimestamp: DateTime.now().toUtc(),
+test/core/database/daos/track_dao_test.dart:297:      final now = DateTime.now().toUtc();
+test/core/database/daos/track_dao_test.dart:330:          eventTimestamp: DateTime.now().toUtc(),
+test/golden/store_screenshots_test.dart:108:      final now = DateTime.now();
+test/features/learning/data/repositories/completion_repository_impl_test.dart:38:    final now = DateTime.now();
+test/features/learning/data/repositories/completion_repository_impl_test.dart:443:          updatedAt: DateTime.now().toUtc(),
+test/core/database/daos/stage_dao_test.dart:20:            stateChangedAt: DateTime.now(),
+test/core/database/daos/stage_dao_test.dart:21:            activatedAt: DateTime.now(),
+test/core/database/daos/stage_dao_test.dart:116:              stateChangedAt: DateTime.now(),
+test/core/database/daos/stage_dao_test.dart:117:              activatedAt: DateTime.now(),
+test/core/database/daos/stage_dao_test.dart:159:                stateChangedAt: DateTime.now(),
+test/core/database/daos/stage_dao_test.dart:160:                activatedAt: DateTime.now(),
+test/features/gamification/domain/services/streak_service_test.dart:39:            stateChangedAt: DateTime.now(),
+test/features/gamification/domain/services/streak_service_test.dart:40:            activatedAt: DateTime.now(),
+test/core/utils/date_utils_test.dart:11:      final actualNow = DateTime.now().toUtc();
+test/features/dashboard/presentation/providers/dashboard_providers_test.dart:662:      final today = DateTime.now().toUtc();
+test/core/analytics/streak_milestone_analytics_observer_test.dart:129:      final todayUtc = DateTime.now().toUtc();
+test/core/analytics/streak_milestone_analytics_observer_test.dart:167:      final deadline = DateTime.now().add(const Duration(seconds: 5));
+test/core/analytics/streak_milestone_analytics_observer_test.dart:168:      while (DateTime.now().isBefore(deadline) &&
+test/core/database/daos/goal_dao_test.dart:20:            stateChangedAt: DateTime.now(),
+test/core/database/daos/goal_dao_test.dart:21:            activatedAt: DateTime.now(),
+test/features/settings/settings_utils_test.dart:251:    final now = DateTime.now().toUtc();
+test/features/settings/settings_utils_test.dart:290:    final now = DateTime.now().toUtc();
+test/features/settings/settings_utils_test.dart:371:      final now = DateTime.now().toUtc();
+test/features/settings/settings_utils_test.dart:420:    final now = DateTime.now().toUtc();
+test/features/settings/settings_utils_test.dart:465:    final now = DateTime.now().toUtc();
+test/features/settings/settings_utils_test.dart:509:    final beforeCall = DateTime.now().toUtc();
+test/features/settings/settings_utils_test.dart:520:    final afterCall = DateTime.now().toUtc();
+test/features/gamification/domain/services/streak_service_extended_test.dart:34:    final now = DateTime.now().toUtc();
+test/features/settings/domain/services/account_management_service_test.dart:101:        updatedAt: DateTime.now(),
+test/features/settings/domain/services/account_management_service_test.dart:136:        updatedAt: DateTime.now(),
+test/features/parent_mode/domain/services/parent_dashboard_aggregator_compute_test.dart:122:      final today = DateTime.now().toUtc();
+test/core/sync/sync_orchestrator_test.dart:608:          DateTime.now().toUtc().millisecondsSinceEpoch - 30 * 1000;
+test/core/sync/sync_orchestrator_test.dart:625:          DateTime.now().toUtc().millisecondsSinceEpoch - 10 * 60 * 1000;
+test/features/gamification/domain/services/streak_service_recovery_test.dart:42:    final today = DateTime.now().toUtc();
+test/features/progress/domain/services/curriculum_progress_service_test.dart:30:            stateChangedAt: DateTime.now(),
+test/features/progress/domain/services/curriculum_progress_service_test.dart:31:            activatedAt: DateTime.now(),
+test/features/learning/data/repositories/bookmark_repository_impl_test.dart:46:            stateChangedAt: DateTime.now(),
+test/features/learning/data/repositories/bookmark_repository_impl_test.dart:47:            activatedAt: DateTime.now(),
+test/features/learning/data/repositories/bookmark_repository_impl_test.dart:58:            stateChangedAt: DateTime.now(),
+test/features/learning/data/repositories/bookmark_repository_impl_test.dart:59:            activatedAt: DateTime.now(),
+test/features/learning/data/repositories/bookmark_repository_impl_test.dart:214:      final before = DateTime.now().toUtc();
+test/features/learning/data/repositories/bookmark_repository_impl_test.dart:256:        final localTime = DateTime.now().toUtc().subtract(
+test/features/learning/data/repositories/bookmark_repository_impl_test.dart:270:        final remoteTime = DateTime.now().toUtc();
+test/features/learning/data/repositories/bookmark_repository_impl_test.dart:295:        final olderRemoteTime = DateTime.now().toUtc().subtract(
+test/features/learning/domain/use_cases/bulk_mark_completion_use_case_test.dart:185:  // can accidentally write DateTime.now() for a prior-mark row.
+test/features/learning/domain/use_cases/bulk_mark_completion_use_case_test.dart:264:        // the repository defaults null → DateTime.now() at write time.
+test/features/profiles/domain/use_cases/profile_creation_use_case_test.dart:226:              createdAt: DateTime.now().toUtc(),
+test/features/profiles/domain/use_cases/profile_creation_use_case_test.dart:227:              updatedAt: DateTime.now().toUtc(),
+test/features/profiles/domain/use_cases/profile_creation_use_case_test.dart:277:            createdAt: DateTime.now().toUtc(),
+test/features/profiles/domain/use_cases/profile_creation_use_case_test.dart:278:            updatedAt: DateTime.now().toUtc(),
+test/features/notifications/domain/services/streak_alert_service_test.dart:57:            stateChangedAt: DateTime.now(),
+test/features/notifications/domain/services/streak_alert_service_test.dart:58:            activatedAt: DateTime.now(),
+test/features/profiles/presentation/screens/ts3_parent_track_archive_test.dart:186:            stateChangedAt: Value(DateTime.now().toUtc()),
+test/features/tutoring/firestore_tutor_grant_repository_test.dart:92:      final now = DateTime.now().toUtc().toIso8601String();
+test/features/tutoring/firestore_tutor_grant_repository_test.dart:112:      final now = DateTime.now().toUtc().toIso8601String();
+test/features/tutoring/firestore_tutor_grant_repository_test.dart:113:      final expiresAt = DateTime.now()
+test/features/tutoring/firestore_tutor_grant_repository_test.dart:134:      final now = DateTime.now().toUtc().toIso8601String();
+test/features/account/domain/services/account_lifecycle_db_delete_test.dart:22:  final now = DateTime.now();
+test/features/learning/domain/services/completion_detection_service_test.dart:66:            stateChangedAt: DateTime.now(),
+test/features/learning/domain/services/completion_detection_service_test.dart:67:            activatedAt: DateTime.now(),
+test/features/learning/domain/services/completion_detection_service_test.dart:303:                stateChangedAt: DateTime.now(),
+test/features/learning/domain/services/completion_detection_service_test.dart:304:                activatedAt: DateTime.now(),
+test/features/learning/domain/services/completion_detection_service_test.dart:498:                stateChangedAt: DateTime.now(),
+test/features/learning/domain/services/completion_detection_service_test.dart:499:                activatedAt: DateTime.now(),
+test/features/learning/domain/services/completion_detection_service_test.dart:604:              stateChangedAt: DateTime.now(),
+test/features/learning/domain/services/completion_detection_service_test.dart:605:              activatedAt: DateTime.now(),
+test/story_acceptance/epic_02_content_test.dart:45:          stateChangedAt: DateTime.now(),
+test/story_acceptance/epic_02_content_test.dart:46:          activatedAt: DateTime.now(),
+test/story_acceptance/epic_02_content_test.dart:414:            eventTimestamp: DateTime.now(),
+test/story_acceptance/epic_02_content_test.dart:423:          updatedAt: DateTime.now().toUtc(),
+test/story_acceptance/epic_02_content_test.dart:461:            eventTimestamp: DateTime.now(),
+test/story_acceptance/epic_02_content_test.dart:796:          eventTimestamp: DateTime.now().toUtc(),
+test/story_acceptance/epic_02_content_test.dart:820:          updatedAt: DateTime.now().toUtc(),
+test/features/scheduler/domain/services/daily_task_generator_test.dart:48:            stateChangedAt: DateTime.now(),
+test/features/scheduler/domain/services/daily_task_generator_test.dart:49:            activatedAt: DateTime.now(),
+test/features/learning/data/repositories/completion_repository_curriculum_dedup_test.dart:38:    final now = DateTime.now().toUtc();
+test/features/learning/data/repositories/completion_repository_curriculum_dedup_test.dart:57:    final now = DateTime.now().toUtc();
+test/features/settings/presentation/widgets/backup_sync_error_l10n_test.dart:121:            failedAt: DateTime.now().toUtc(),
+test/features/settings/presentation/widgets/backup_sync_error_l10n_test.dart:157:            failedAt: DateTime.now().toUtc(),
+test/story_acceptance/epic_18_track_overhaul_test.dart:37:          stateChangedAt: DateTime.now(),
+test/story_acceptance/epic_18_track_overhaul_test.dart:38:          activatedAt: DateTime.now(),
+test/story_acceptance/epic_18_track_overhaul_test.dart:136:                  createdAt: DateTime.now(),
+test/story_acceptance/epic_18_track_overhaul_test.dart:137:                  updatedAt: DateTime.now(),
+test/story_acceptance/epic_18_track_overhaul_test.dart:147:                  createdAt: DateTime.now(),
+test/story_acceptance/epic_18_track_overhaul_test.dart:148:                  updatedAt: DateTime.now(),
+test/story_acceptance/epic_18_track_overhaul_test.dart:432:                    stateChangedAt: DateTime.now(),
+test/story_acceptance/epic_18_track_overhaul_test.dart:433:                    activatedAt: DateTime.now(),
+test/story_acceptance/epic_18_track_overhaul_test.dart:468:                    stateChangedAt: DateTime.now(),
+test/story_acceptance/epic_18_track_overhaul_test.dart:469:                    activatedAt: DateTime.now(),
+test/features/progress/data/repositories/progress_repository_test.dart:31:            stateChangedAt: DateTime.now(),
+test/features/progress/data/repositories/progress_repository_test.dart:32:            activatedAt: DateTime.now(),
+test/features/progress/data/repositories/progress_repository_test.dart:55:            eventTimestamp: DateTime.now(),
+test/features/progress/data/repositories/progress_repository_test.dart:68:            eventTimestamp: DateTime.now(),
+test/features/progress/data/repositories/progress_repository_test.dart:81:            eventTimestamp: DateTime.now(),
+test/features/progress/data/repositories/progress_repository_test.dart:106:              eventTimestamp: DateTime.now(),
+test/features/progress/data/repositories/progress_repository_test.dart:133:              eventTimestamp: DateTime.now(),
+test/features/progress/data/repositories/progress_repository_test.dart:146:              eventTimestamp: DateTime.now(),
+test/features/progress/data/repositories/progress_repository_test.dart:178:            eventTimestamp: DateTime.now(),
+test/features/progress/data/repositories/progress_repository_test.dart:191:            eventTimestamp: DateTime.now(),
+test/features/progress/data/repositories/progress_repository_test.dart:220:              eventTimestamp: DateTime.now(),
+test/features/progress/data/repositories/progress_repository_test.dart:233:              eventTimestamp: DateTime.now(),
+test/features/progress/data/repositories/progress_repository_test.dart:246:              eventTimestamp: DateTime.now(),
+test/features/progress/data/repositories/progress_repository_test.dart:284:            eventTimestamp: DateTime.now(),
+test/features/progress/data/repositories/progress_repository_test.dart:297:            eventTimestamp: DateTime.now(),
+test/features/tracks/setup/presentation/screens/add_track_flow_screen_l1_test.dart:1103:      final beforeNow = DateTime.now().toUtc();
+test/features/scheduler/data/repositories/goal_repository_impl_test.dart:77:            stateChangedAt: DateTime.now(),
+test/features/scheduler/data/repositories/goal_repository_impl_test.dart:78:            activatedAt: DateTime.now(),
+test/features/scheduler/data/repositories/goal_repository_impl_test.dart:89:            stateChangedAt: DateTime.now(),
+test/features/scheduler/data/repositories/goal_repository_impl_test.dart:90:            activatedAt: DateTime.now(),
+test/features/settings/domain/services/curriculum_activation_service_test.dart:236:            eventTimestamp: DateTime.now(),
+test/features/settings/domain/services/curriculum_activation_service_test.dart:275:          updatedAt: DateTime.now().toUtc(),
+test/features/learning/data/repositories/learning_ledger_repository_impl_test.dart:31:            createdAt: Value(DateTime.now().toUtc()),
+test/features/learning/data/repositories/learning_ledger_repository_impl_test.dart:32:            updatedAt: Value(DateTime.now().toUtc()),
+test/features/learning/data/repositories/learning_ledger_repository_impl_test.dart:44:            stateChangedAt: Value(DateTime.now().toUtc()),
+test/features/learning/data/repositories/learning_ledger_repository_impl_test.dart:45:            activatedAt: Value(DateTime.now().toUtc()),
+test/features/learning/data/repositories/learning_ledger_repository_impl_test.dart:284:      // (DateTime.utc(2000, 1, 1)) to stored rows, NOT DateTime.now(). The
+test/track_setup/clear_overdue_button_test.dart:108:  // Fixed "today" — never use DateTime.now() for determinism.
+test/features/settings/presentation/widgets/backup_sync_section_l1_test.dart:155:      final now = DateTime.now();
+test/features/settings/presentation/widgets/backup_sync_section_l1_test.dart:179:      final now = DateTime.now();
+test/features/settings/presentation/widgets/backup_sync_section_l1_test.dart:201:        final lastSynced = DateTime.now().subtract(const Duration(minutes: 5));
+test/features/settings/presentation/widgets/backup_sync_section_l1_test.dart:227:      final lastSynced = DateTime.now().subtract(const Duration(seconds: 30));
+test/features/settings/presentation/widgets/backup_sync_section_l1_test.dart:283:          syncStatus: SyncStatus.syncing(startedAt: DateTime.now()),
+test/features/settings/presentation/widgets/backup_sync_section_l1_test.dart:363:            failedAt: DateTime.now(),
+test/features/settings/presentation/widgets/backup_sync_section_l1_test.dart:394:            failedAt: DateTime.now(),
+test/features/settings/presentation/widgets/backup_sync_section_l1_test.dart:657:        final synced = SyncStatus.synced(lastSyncedAt: DateTime.now());
+test/features/settings/presentation/widgets/backup_sync_section_l1_test.dart:733:            lastSyncedAt: DateTime.now().subtract(const Duration(minutes: 2)),
+test/features/settings/presentation/widgets/backup_sync_section_l1_test.dart:754:            lastSyncedAt: DateTime.now().subtract(const Duration(hours: 1)),
+test/features/tracks/setup/presentation/steps/step_starting_position_l1_test.dart:787:        final today = DateTime.now();
+test/features/tracks/setup/presentation/steps/step_starting_position_l1_test.dart:811:      final today = DateTime.now();
+test/features/tracks/setup/presentation/steps/step_starting_position_l1_test.dart:834:      final today = DateTime.now();
+test/features/tracks/setup/presentation/steps/step_starting_position_l1_test.dart:848:      final today = DateTime.now();
+test/features/tracks/setup/presentation/steps/step_starting_position_l1_test.dart:861:      final today = DateTime.now();
+test/features/tracks/setup/presentation/steps/step_starting_position_l1_test.dart:880:      final today = DateTime.now();
+test/features/scheduler/domain/services/scheduler_engine_integration_test.dart:51:              stateChangedAt: DateTime.now(),
+test/features/scheduler/domain/services/scheduler_engine_integration_test.dart:52:              activatedAt: DateTime.now(),
+test/features/account/presentation/notifiers/sign_in_google_signout_throws_test.dart:77:        createdAt: DateTime.now(),
+test/features/account/presentation/notifiers/sign_in_google_signout_throws_test.dart:78:        lastUsedAt: DateTime.now(),
+test/features/account/presentation/notifiers/sign_in_google_signout_throws_test.dart:209:            createdAt: DateTime.now(),
+test/features/account/presentation/notifiers/sign_in_google_signout_throws_test.dart:210:            lastUsedAt: DateTime.now(),
+test/features/stages/data/repositories/stage_definition_repository_impl_26_26_test.dart:54:          stateChangedAt: DateTime.now(),
+test/features/stages/data/repositories/stage_definition_repository_impl_26_26_test.dart:55:          activatedAt: DateTime.now(),
+test/features/stages/data/repositories/stage_definition_repository_impl_26_26_test.dart:661:              stateChangedAt: DateTime.now(),
+test/features/stages/data/repositories/stage_definition_repository_impl_26_26_test.dart:662:              activatedAt: DateTime.now(),
+test/features/stages/data/repositories/stage_definition_repository_impl_26_26_test.dart:671:              stateChangedAt: DateTime.now(),
+test/features/stages/data/repositories/stage_definition_repository_impl_26_26_test.dart:672:              activatedAt: DateTime.now(),
+test/features/stages/data/repositories/stage_definition_repository_impl_26_26_test.dart:790:                stateChangedAt: DateTime.now(),
+test/features/stages/data/repositories/stage_definition_repository_impl_26_26_test.dart:791:                activatedAt: DateTime.now(),
+test/features/stages/data/repositories/stage_definition_repository_impl_26_26_test.dart:803:                stateChangedAt: DateTime.now(),
+test/features/stages/data/repositories/stage_definition_repository_impl_26_26_test.dart:804:                activatedAt: DateTime.now(),
+test/features/settings/presentation/screens/scope_lifetime_l1_test.dart:419:          createdAt: DateTime.now().toUtc(),
+test/features/settings/presentation/screens/scope_lifetime_l1_test.dart:420:          updatedAt: DateTime.now().toUtc(),
+test/features/settings/presentation/screens/scope_lifetime_l1_test.dart:430:          createdAt: DateTime.now().toUtc(),
+test/features/settings/presentation/screens/scope_lifetime_l1_test.dart:431:          updatedAt: DateTime.now().toUtc(),
+test/features/settings/presentation/screens/scope_lifetime_l1_test.dart:446:          stateChangedAt: DateTime.now().toUtc(),
+test/features/settings/presentation/screens/scope_lifetime_l1_test.dart:447:          activatedAt: DateTime.now().toUtc(),
+test/story_acceptance/epic_09_onboarding_test.dart:51:          stateChangedAt: DateTime.now(),
+test/story_acceptance/epic_09_onboarding_test.dart:52:          activatedAt: DateTime.now(),
+test/story_acceptance/epic_09_onboarding_test.dart:88:              createdAt: DateTime.now(),
+test/story_acceptance/epic_09_onboarding_test.dart:89:              updatedAt: DateTime.now(),
+test/story_acceptance/epic_09_onboarding_test.dart:99:              createdAt: DateTime.now(),
+test/story_acceptance/epic_09_onboarding_test.dart:100:              updatedAt: DateTime.now(),
+test/story_acceptance/epic_09_onboarding_test.dart:115:              createdAt: DateTime.now(),
+test/story_acceptance/epic_09_onboarding_test.dart:116:              updatedAt: DateTime.now(),
+test/story_acceptance/epic_09_onboarding_test.dart:126:              createdAt: DateTime.now(),
+test/story_acceptance/epic_09_onboarding_test.dart:127:              updatedAt: DateTime.now(),
+test/story_acceptance/epic_09_onboarding_test.dart:659:              completedAt: DateTime.now(),
+test/story_acceptance/epic_09_onboarding_test.dart:680:          updatedAt: DateTime.now(),
+test/story_acceptance/epic_03_learning_cycle_test.dart:60:          stateChangedAt: DateTime.now(),
+test/story_acceptance/epic_03_learning_cycle_test.dart:61:          activatedAt: DateTime.now(),
+test/story_acceptance/epic_03_learning_cycle_test.dart:119:          DateTime.now().difference(completion.completedAt).abs().inSeconds,
+test/story_acceptance/epic_03_learning_cycle_test.dart:134:              createdAt: DateTime.now(),
+test/story_acceptance/epic_03_learning_cycle_test.dart:135:              updatedAt: DateTime.now(),
+test/story_acceptance/epic_03_learning_cycle_test.dart:146:              stateChangedAt: DateTime.now(),
+test/story_acceptance/epic_03_learning_cycle_test.dart:147:              activatedAt: DateTime.now(),
+test/story_acceptance/epic_03_learning_cycle_test.dart:158:          createdAt: DateTime.now().toUtc(),
+test/story_acceptance/epic_03_learning_cycle_test.dart:159:          updatedAt: DateTime.now().toUtc(),
+test/features/sync/domain/models/sync_status_test.dart:8:        final now = DateTime.now();
+test/features/sync/domain/models/sync_status_test.dart:25:        final now = DateTime.now();
+test/features/sync/domain/models/sync_status_test.dart:102:        final now = DateTime.now();
+test/features/sync/domain/models/sync_status_test.dart:123:        final now = DateTime.now();
+test/features/sync/domain/models/sync_status_test.dart:131:        final now = DateTime.now();
+test/features/sync/domain/models/sync_status_test.dart:140:        final now = DateTime.now();
+test/features/sync/domain/models/sync_status_test.dart:157:        final status = SyncStatus.syncing(startedAt: DateTime.now());
+test/features/sync/domain/models/sync_status_test.dart:173:        final status = SyncStatus.syncing(startedAt: DateTime.now());
+test/story_acceptance/epic_14_settings_test.dart:40:          stateChangedAt: DateTime.now(),
+test/story_acceptance/epic_14_settings_test.dart:41:          activatedAt: DateTime.now(),
+test/story_acceptance/epic_14_settings_test.dart:520:        'exportedAt': DateTime.now().toIso8601String(),
+test/story_acceptance/epic_14_settings_test.dart:677:          updatedAt: DateTime.now(),
+test/story_acceptance/epic_14_settings_test.dart:701:        updatedAt: DateTime.now(),
+test/story_acceptance/epic_12_notifications_test.dart:57:          stateChangedAt: DateTime.now(),
+test/story_acceptance/epic_12_notifications_test.dart:58:          activatedAt: DateTime.now(),
+test/story_acceptance/epic_19_offline_first_test.dart:90:              createdAt: DateTime.now(),
+test/story_acceptance/epic_19_offline_first_test.dart:91:              updatedAt: DateTime.now(),
+test/story_acceptance/epic_19_offline_first_test.dart:116:                createdAt: DateTime.now(),
+test/story_acceptance/epic_19_offline_first_test.dart:117:                updatedAt: DateTime.now(),
+test/story_acceptance/epic_19_offline_first_test.dart:185:      final now = DateTime.now().toUtc();
+test/integration/stage_sync_test.dart:21:          stateChangedAt: DateTime.now(),
+test/integration/stage_sync_test.dart:22:          activatedAt: DateTime.now(),
+test/features/parent_mode/child_mode_guard_test.dart:30:          createdAt: DateTime.now().toUtc(),
+test/features/parent_mode/child_mode_guard_test.dart:31:          updatedAt: DateTime.now().toUtc(),
+test/story_acceptance/epic_07_dashboard_test.dart:61:          stateChangedAt: DateTime.now(),
+test/story_acceptance/epic_07_dashboard_test.dart:62:          activatedAt: DateTime.now(),
+test/story_acceptance/epic_01_foundation_test.dart:58:          stateChangedAt: DateTime.now(),
+test/story_acceptance/epic_01_foundation_test.dart:59:          activatedAt: DateTime.now(),
+test/story_acceptance/epic_01_foundation_test.dart:135:          eventTimestamp: DateTime.now(),
+test/story_acceptance/epic_01_foundation_test.dart:274:      final syncing = SyncStatus.syncing(startedAt: DateTime.now());
+test/story_acceptance/epic_01_foundation_test.dart:275:      final synced = SyncStatus.synced(lastSyncedAt: DateTime.now());
+test/story_acceptance/epic_01_foundation_test.dart:277:      final error = SyncStatus.error(message: 'test', failedAt: DateTime.now());
+test/scheduler/overdue_projection_test.dart:204:  //   5. Use a FIXED today (not DateTime.now()) for full determinism.
+test/scheduler/overdue_projection_test.dart:220:      // Fixed "today" — must never be DateTime.now().
+test/story_acceptance/epic_08_gamification_test.dart:31:          stateChangedAt: DateTime.now(),
+test/story_acceptance/epic_08_gamification_test.dart:32:          activatedAt: DateTime.now(),
+test/story_acceptance/epic_08_gamification_test.dart:50:      final now = DateTime.now();
+test/story_acceptance/epic_08_gamification_test.dart:85:          eventTimestamp: DateTime.now(),
+test/story_acceptance/epic_06_scheduler_test.dart:41:          stateChangedAt: DateTime.now(),
+test/story_acceptance/epic_06_scheduler_test.dart:42:          activatedAt: DateTime.now(),
+test/story_acceptance/epic_10_parent_mode_test.dart:76:          stateChangedAt: DateTime.now(),
+test/story_acceptance/epic_10_parent_mode_test.dart:77:          activatedAt: DateTime.now(),
+test/story_acceptance/epic_10_parent_mode_test.dart:207:              createdAt: DateTime.now(),
+test/story_acceptance/epic_10_parent_mode_test.dart:208:              updatedAt: DateTime.now(),
+test/story_acceptance/epic_10_parent_mode_test.dart:218:              createdAt: DateTime.now(),
+test/story_acceptance/epic_10_parent_mode_test.dart:219:              updatedAt: DateTime.now(),
+test/story_acceptance/epic_10_parent_mode_test.dart:353:      final base = completionBaseDate ?? DateTime.now().toUtc();
+test/story_acceptance/epic_10_parent_mode_test.dart:440:              eventTimestamp: DateTime.now().toUtc(),
+test/story_acceptance/epic_10_parent_mode_test.dart:487:        final now = DateTime.now().toUtc();
+test/story_acceptance/epic_10_parent_mode_test.dart:516:      final now = DateTime.now().toUtc();
+test/story_acceptance/epic_10_parent_mode_test.dart:567:      final now = DateTime.now().toUtc();
+test/story_acceptance/epic_10_parent_mode_test.dart:731:          eventTimestamp: DateTime.now().toUtc(),
+test/story_acceptance/epic_10_parent_mode_test.dart:778:                stateChangedAt: DateTime.now(),
+test/story_acceptance/epic_10_parent_mode_test.dart:779:                activatedAt: DateTime.now(),
+test/story_acceptance/epic_10_parent_mode_test.dart:900:            eventTimestamp: DateTime.now().toUtc(),
+test/story_acceptance/epic_10_parent_mode_test.dart:919:            createdAt: DateTime.now().toUtc(),
+test/story_acceptance/epic_10_parent_mode_test.dart:920:            updatedAt: DateTime.now().toUtc(),
+test/story_acceptance/epic_05_stages_order_test.dart:43:          stateChangedAt: DateTime.now(),
+test/story_acceptance/epic_05_stages_order_test.dart:44:          activatedAt: DateTime.now(),
+test/story_acceptance/regression_invariants_test.dart:397:          final createdAt = DateTime.now().subtract(const Duration(days: 7));
+test/story_acceptance/regression_invariants_test.dart:421:          final nowBased = DateTime.now().add(const Duration(days: 70));
+test/story_acceptance/epic_25_schema_core_test.dart:1141:        final sysNow = DateTime.now();
+test/story_acceptance/epic_25_schema_core_test.dart:1255:        'grep "DateTime.now()" in lib/ outside core/time/ returns zero results',
+test/story_acceptance/epic_25_schema_core_test.dart:1259:          // loudly the moment a new rogue DateTime.now() lands.
+test/story_acceptance/epic_25_schema_core_test.dart:1270:            'DateTime.now()',
+test/story_acceptance/epic_25_schema_core_test.dart:1280:                'DateTime.now() is forbidden outside lib/core/time/. '
+test/story_acceptance/epic_15_multi_profile_test.dart:56:          stateChangedAt: DateTime.now(),
+test/story_acceptance/epic_15_multi_profile_test.dart:57:          activatedAt: DateTime.now(),
+test/story_acceptance/epic_15_multi_profile_test.dart:137:              eventTimestamp: DateTime.now().toUtc(),
+test/story_acceptance/epic_15_multi_profile_test.dart:149:              eventTimestamp: DateTime.now().toUtc(),
+test/story_acceptance/epic_15_multi_profile_test.dart:192:              updatedAt: DateTime.now().toUtc(),
+test/story_acceptance/epic_15_multi_profile_test.dart:201:              updatedAt: DateTime.now().toUtc(),
+test/story_acceptance/epic_15_multi_profile_test.dart:224:              createdAt: DateTime.now().toUtc(),
+test/story_acceptance/epic_15_multi_profile_test.dart:225:              updatedAt: DateTime.now().toUtc(),
+test/story_acceptance/epic_15_multi_profile_test.dart:426:                eventTimestamp: DateTime.now().toUtc(),
+test/story_acceptance/epic_15_multi_profile_test.dart:435:                updatedAt: DateTime.now().toUtc(),
+test/story_acceptance/epic_15_multi_profile_test.dart:443:                createdAt: DateTime.now().toUtc(),
+test/story_acceptance/epic_15_multi_profile_test.dart:444:                updatedAt: DateTime.now().toUtc(),
+test/story_acceptance/epic_15_multi_profile_test.dart:508:              eventTimestamp: DateTime.now().toUtc(),
+test/story_acceptance/epic_15_multi_profile_test.dart:520:              eventTimestamp: DateTime.now().toUtc(),
+test/story_acceptance/epic_15_multi_profile_test.dart:1034:              eventTimestamp: DateTime.now().toUtc(),
+test/story_acceptance/epic_15_multi_profile_test.dart:1136:                eventTimestamp: DateTime.now().toUtc(),
+test/story_acceptance/epic_15_multi_profile_test.dart:1148:                eventTimestamp: DateTime.now().toUtc(),
+test/story_acceptance/epic_15_multi_profile_test.dart:1186:              eventTimestamp: DateTime.now().toUtc(),
+test/story_acceptance/epic_15_multi_profile_test.dart:1198:              eventTimestamp: DateTime.now().toUtc(),
+test/story_acceptance/epic_15_multi_profile_test.dart:1231:            updatedAt: DateTime.now().toUtc(),
+test/story_acceptance/epic_15_multi_profile_test.dart:1238:            updatedAt: DateTime.now().toUtc(),
+test/story_acceptance/epic_15_multi_profile_test.dart:1278:              createdAt: DateTime.now().toUtc(),
+test/story_acceptance/epic_15_multi_profile_test.dart:1279:              updatedAt: DateTime.now().toUtc(),
+test/story_acceptance/epic_15_multi_profile_test.dart:1287:              createdAt: DateTime.now().toUtc(),
+test/story_acceptance/epic_15_multi_profile_test.dart:1288:              updatedAt: DateTime.now().toUtc(),
+test/story_acceptance/epic_15_multi_profile_test.dart:1384:                eventTimestamp: DateTime.now().toUtc(),
+test/story_acceptance/epic_15_multi_profile_test.dart:1396:                eventTimestamp: DateTime.now().toUtc(),
+test/story_acceptance/epic_15_multi_profile_test.dart:1439:                eventTimestamp: DateTime.now().toUtc(),
+test/story_acceptance/epic_15_multi_profile_test.dart:1454:              eventTimestamp: DateTime.now().toUtc(),
+test/story_acceptance/epic_15_multi_profile_test.dart:1496:          final now = DateTime.now().toUtc();
+test/story_acceptance/epic_15_multi_profile_test.dart:1517:              eventTimestamp: DateTime.now().toUtc(),
+test/story_acceptance/epic_15_multi_profile_test.dart:1532:              eventTimestamp: DateTime.now().toUtc(),
+test/story_acceptance/epic_15_multi_profile_test.dart:2278:                  stateChangedAt: DateTime.now(),
+test/story_acceptance/epic_15_multi_profile_test.dart:2279:                  activatedAt: DateTime.now(),
+test/story_acceptance/epic_15_multi_profile_test.dart:2716:              eventTimestamp: DateTime.now(),
+test/story_acceptance/epic_15_multi_profile_test.dart:2914:                createdAt: DateTime.now().toUtc(),
+test/story_acceptance/epic_15_multi_profile_test.dart:2915:                updatedAt: DateTime.now().toUtc(),
+test/story_acceptance/epic_15_multi_profile_test.dart:3285:                createdAt: DateTime.now().toUtc(),
+test/story_acceptance/epic_15_multi_profile_test.dart:3286:                updatedAt: DateTime.now().toUtc(),
+test/sync/tutored_pull_isolation_test.dart:662:          now: DateTime.now(),
+test/sync/tutored_pull_isolation_test.dart:701:          clock: FakeLocalDayClock(DateTime.now()),
+test/story_acceptance/epic_16_pace_dashboard_test.dart:34:          stateChangedAt: DateTime.now(),
+test/story_acceptance/epic_16_pace_dashboard_test.dart:35:          activatedAt: DateTime.now(),
+test/story_acceptance/epic_16_pace_dashboard_test.dart:774:      final now = DateTime.now().toUtc();
+test/story_acceptance/epic_16_pace_dashboard_test.dart:812:        final now = DateTime.now().toUtc();
+test/story_acceptance/epic_16_pace_dashboard_test.dart:860:        final now = DateTime.now().toUtc();
+test/story_acceptance/epic_16_pace_dashboard_test.dart:931:      final now = DateTime.now().toUtc();
+test/sync/tutored_listener_supervisor_test.dart:191:            'updated_at': DateTime.now().toIso8601String(),
+test/sync/tutored_listener_supervisor_test.dart:313:            'updated_at': DateTime.now().toIso8601String(),
+test/sync/tutored_listener_supervisor_test.dart:354:            'updated_at': DateTime.now().toIso8601String(),

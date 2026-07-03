@@ -1,0 +1,48 @@
+[
+ {
+  "sourceBatch": "t1-feat-tracks-p3",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Scope LearningOrderDao.getLearningOrderByCurriculum/deleteAllForCurriculum by profileId to stop cross-sibling data leak",
+   "severity": "P0",
+   "confidence": "CONFIRMED",
+   "rule": "profileId-in-PK (Naming/placement/invariants) + data-loss",
+   "area": "lib/features/tracks/whole_curriculum_order/data/repositories/learning_order_repository_impl.dart (consumer, in batch); lib/core/database/daos/learning_order_dao.dart (root cause, different batch)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tracks/whole_curriculum_order/data/repositories/learning_order_repository_impl.dart",
+     "line": 57,
+     "quote": "final rows = await _database.learningOrderDao.getLearningOrderByCurriculum("
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/whole_curriculum_order/data/repositories/learning_order_repository_impl.dart",
+     "line": 163,
+     "quote": "await _database.learningOrderDao.deleteAllForCurriculum("
+    },
+    {
+     "file": "learning_tracker/lib/core/database/daos/learning_order_dao.dart",
+     "line": 34,
+     "quote": "..where((t) => t.curriculumId.equals(curriculumId))"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/daos/learning_order_dao.dart",
+     "line": 110,
+     "quote": ")..where((t) => t.curriculumId.equals(curriculumId))).go();"
+    }
+   ],
+   "sites": 2,
+   "why": "learning_order's own composite PK is {profileId, curriculumId, sefariaRef} and saveOrder correctly stamps profileId on writes \u2014 but getOrder/resetToDefault read and delete by curriculumId alone. On any household with 2+ profiles sharing a curriculum (the app's core multi-child use case), profile B's getOrder() returns profile A's saved custom order (wrong order shown to the wrong child), and profile B tapping 'Reset to default' silently deletes profile A's saved custom order too \u2014 permanent cross-profile data loss with no confirmation naming the affected profile.",
+   "recommendation": "Add a required profileId parameter to LearningOrderDao.getLearningOrderByCurriculum/deleteAllForCurriculum, filter by t.profileId.equals(profileId) in both, and update the two call sites here to pass _profileId.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Regression test: seed learning_order rows for 2 profiles on the same curriculum; profile B's getOrder() must not return profile A's rows and profile B's resetToDefault() must not delete profile A's rows",
+    "DAO methods require profileId as a compile-time parameter"
+   ],
+   "labels": [
+    "data-integrity",
+    "multi-profile",
+    "P0"
+   ]
+  }
+ }
+]

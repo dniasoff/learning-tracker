@@ -1,0 +1,203 @@
+[
+ {
+  "sourceBatch": "t1-feat-learning-p3",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Rename/relocate completion_button_optimistic_test.dart to presentation/providers/optimistic_completion_provider_test.dart",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-5",
+   "area": "test/features/learning/presentation/widgets",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/learning/presentation/widgets/completion_button_optimistic_test.dart",
+     "line": 3,
+     "quote": "import 'package:learning_tracker/features/learning/presentation/providers/optimistic_completion_provider.dart';"
+    },
+    {
+     "file": "learning_tracker/test/features/learning/presentation/widgets/completion_button_optimistic_test.dart",
+     "line": 6,
+     "quote": "group('OptimisticCompletionState', () {"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_27_story_4_widget_golden_test.dart",
+     "line": 240,
+     "quote": "// TODO: CompletionButton was removed in the Wave-3/4 refactor."
+    }
+   ],
+   "sites": 1,
+   "why": "This file imports only a provider (no flutter/material.dart, no pumpWidget, no widget under test anywhere) yet lives at presentation/widgets/ and is named for 'CompletionButton' \u2014 a widget that epic_27_story_4_widget_golden_test.dart:240-243 confirms was deleted in the Wave-3/4 refactor. It is the ONLY test in the repo for optimistic_completion_provider.dart (verified: no other test file references optimisticCompletionStateProvider or optimisticKey), so its coverage is real, but AG-5's mirrored-path convention would lead anyone looking for that provider's test to test/features/learning/presentation/providers/optimistic_completion_provider_test.dart and find nothing. Meanwhile the two widgets that actually live in presentation/widgets/ (completion_animation.dart, completion_feedback_controller.dart) have their own separate coverage story (the latter is tested via test/story_acceptance/epic_08_gamification_test.dart) \u2014 this file's presence in that directory adds no signal about them and is pure historical debris.",
+   "recommendation": "git mv to test/features/learning/presentation/providers/optimistic_completion_provider_test.dart; rename the file to drop the 'completion_button' name that refers to deleted code.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "File exists at test/features/learning/presentation/providers/optimistic_completion_provider_test.dart",
+    "No file under test/ contains 'completion_button' in its name unless a CompletionButton widget exists in lib/"
+   ],
+   "labels": [
+    "AG-5",
+    "stale-test",
+    "naming",
+    "placement"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-learning-p3",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Extract a shared pump helper in learning_screen_l1_test.dart instead of 4 inline MaterialApp/localizationsDelegates blocks",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-3",
+   "area": "test/features/learning/presentation/screens",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/learning/presentation/screens/learning_screen_l1_test.dart",
+     "line": 220,
+     "quote": "child: MaterialApp(\n      locale: locale,"
+    },
+    {
+     "file": "learning_tracker/test/features/learning/presentation/screens/learning_screen_l1_test.dart",
+     "line": 812,
+     "quote": "ProviderScope(\n          overrides: ["
+    },
+    {
+     "file": "learning_tracker/test/features/learning/presentation/screens/learning_screen_l1_test.dart",
+     "line": 861,
+     "quote": "ProviderScope(\n          retry: (_, __) => null, // disable retry so error state persists"
+    },
+    {
+     "file": "learning_tracker/test/features/learning/presentation/screens/learning_screen_l1_test.dart",
+     "line": 958,
+     "quote": "ProviderScope(\n          overrides: overrides,"
+    }
+   ],
+   "sites": 4,
+   "why": "The R6-4 AsyncLoading test, the R6-4 AsyncError test, and the E4 regression test each re-declare their own ProviderScope + MaterialApp + the full 4-delegate localizationsDelegates list inline instead of extending _buildScreen (which already exists in the same file) with a streakStream/router parameter. Any future change to the delegates list or supportedLocales must be replicated across 4 places in this one file; the pattern in test/e2e/harness/e2e_harness.dart (pumpApp(...)) shows the repo already knows how to centralize this, it just isn't used at the widget-test tier.",
+   "recommendation": "Add optional streakStream and router parameters to _buildScreen and route all 4 call sites through it, or adopt a shared test/helpers/pump_app.dart per TQ-3's stated convention.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "localizationsDelegates/supportedLocales list appears exactly once in learning_screen_l1_test.dart",
+    "All testWidgets in the file that pump LearningScreen go through _buildScreen or a shared helper"
+   ],
+   "labels": [
+    "TQ-3",
+    "duplication",
+    "pump-helper"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-learning-p3",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Remove duplicate TutorPermissions invariant tests from learning_screen_l1_test.dart \u2014 already covered in ws3_3d_tutor_permissions_surface_test.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-1",
+   "area": "test/features/learning/presentation/screens",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/learning/presentation/screens/learning_screen_l1_test.dart",
+     "line": 411,
+     "quote": "test(\n    'PRODUCT INVARIANT: TutorPermissions VO always enforces canMarkLiveCompletion=false',"
+    },
+    {
+     "file": "learning_tracker/test/features/learning/presentation/screens/learning_screen_l1_test.dart",
+     "line": 452,
+     "quote": "test(\n    'PRODUCT INVARIANT: TutoredProfileSelection.permissions always has canMarkLiveCompletion=false',"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/ws3_3d_tutor_permissions_surface_test.dart",
+     "line": 202,
+     "quote": "expect(perms.canMarkLiveCompletion, isFalse);"
+    }
+   ],
+   "sites": 2,
+   "why": "These two `test(...)` blocks (not testWidgets \u2014 no LearningScreen is ever pumped) construct TutorPermissions/TutoredProfileSelection directly and assert canMarkLiveCompletion is always false. The file's own comments (lines 13-16, 455-457) admit LearningScreen doesn't enforce this invariant at all \u2014 TextDisplayScreen does. The identical assertion (perms.canMarkLiveCompletion, isFalse against the same constructor/defaults/copyWith surface) already exists in test/features/tutoring/ws3_3d_tutor_permissions_surface_test.dart:202,217. Placed here, they add no unique protection, cost double maintenance if TutorPermissions' constructor changes, and could mislead a reviewer into thinking LearningScreen is where this security-relevant invariant is guarded.",
+   "recommendation": "Delete tests 8/8b from learning_screen_l1_test.dart; if screen-level reassurance is wanted, replace with a genuine widget-level assertion that no live-mark affordance renders in LearningScreen during an active tutor session.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "learning_screen_l1_test.dart contains no plain test(...) block (only testWidgets) asserting TutorPermissions/TutoredProfileSelection VO state",
+    "test/features/tutoring/ws3_3d_tutor_permissions_surface_test.dart remains the single source of truth for the canMarkLiveCompletion invariant"
+   ],
+   "labels": [
+    "TQ-1",
+    "duplicate-tests",
+    "misplaced-scope"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-learning-p3",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Split learning_screen_l1_test.dart (1021 lines) \u2014 exceeds AG-3's 400-line hand-written-file cap by 2.5x",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "test/features/learning/presentation/screens",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/learning/presentation/screens/learning_screen_l1_test.dart",
+     "line": 1,
+     "quote": "// L1 widget-behaviour tests for LearningScreen"
+    }
+   ],
+   "sites": 1,
+   "why": "1021 lines (wc -l confirmed) against AG-3's 400-line cap for hand-written Dart files \u2014 no test exemption is stated for AG-3 (only AG-5's mirroring rule exempts story_acceptance). The file's own header comment already documents 19 numbered logical groups (loading/error/empty-state/data-state/daily-tasks/icons/RTL/R6-4 regression/E4 regression), a ready-made split boundary.",
+   "recommendation": "Split along the file's own documented section numbers, e.g. learning_screen_state_test.dart (loading/error/empty/data), learning_screen_daily_tasks_test.dart (daily-tasks + icons), learning_screen_regressions_test.dart (R6-4, E4, Hebrew smoke), each sharing _buildScreen via a small test-only library part or helper file.",
+   "effort": "L",
+   "acceptance_criteria": [
+    "No hand-written file under test/features/learning/presentation/screens/ exceeds 400 lines",
+    "Total test count and assertions are preserved across the split (no `weaken-ok` markers needed since nothing is removed, only relocated)"
+   ],
+   "labels": [
+    "AG-3",
+    "file-size",
+    "hotspot"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-learning_order",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Move test/features/learning_order/** to mirror lib/features/tracks/whole_curriculum_order/** per AG-5",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-5",
+   "area": "test/features/learning_order/** (unmirrored test directory)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/learning_order/data/repositories/learning_order_repository_impl_test.dart",
+     "line": 8,
+     "quote": "import 'package:learning_tracker/features/tracks/whole_curriculum_order/data/repositories/learning_order_repository_impl.dart';"
+    },
+    {
+     "file": "learning_tracker/test/features/learning_order/presentation/screens/learning_order_screen_test.dart",
+     "line": 6,
+     "quote": "import 'package:learning_tracker/features/tracks/whole_curriculum_order/presentation/providers/learning_order_providers.dart';"
+    },
+    {
+     "file": "learning_tracker/test/features/learning_order/presentation/screens/learning_order_screen_reset_test.dart",
+     "line": 10,
+     "quote": "import 'package:learning_tracker/features/tracks/whole_curriculum_order/presentation/screens/learning_order_screen.dart';"
+    }
+   ],
+   "sites": 3,
+   "why": "lib/features/learning_order/ was deleted and its canonical replacement moved to lib/features/tracks/whole_curriculum_order/ in commit 43b6de92 ('delete duplicate feature trees', 2026-05-20) \u2014 every symbol these 3 test files import now lives under lib/features/tracks/whole_curriculum_order/, but the test directory was never renamed to match. Three weeks later, commit bd2c985c (2026-06-11) added a brand-new test file (learning_order_screen_reset_test.dart) still under the stale test/features/learning_order/ path, proving the drift keeps compounding rather than being a one-time leftover. A developer following AG-5 mirroring to find existing coverage for lib/features/tracks/whole_curriculum_order/ (or to place a new test) would look in test/features/tracks/whole_curriculum_order/, find nothing, and risk writing duplicate tests; the same stale-directory pattern independently affects test/features/track_learning_order/ (a different batch's file, corroborating this is a repeated refactor gap, not a one-off).",
+   "recommendation": "git mv the 3 files to test/features/tracks/whole_curriculum_order/{data/repositories,presentation/screens}/..., recalculating the relative ../../../../helpers/... import depth for the new nesting level, and remove the now-empty test/features/learning_order/ directory.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "test/features/learning_order/ no longer exists; its 3 files live under test/features/tracks/whole_curriculum_order/ at paths mirroring their lib/ counterparts 1:1 (AG-5).",
+    "Relative helper imports (drift_memory.dart) are corrected for the new nesting depth and `flutter test` passes unchanged from the old location."
+   ],
+   "labels": [
+    "AG-5",
+    "test-hygiene",
+    "repo-structure"
+   ]
+  }
+ }
+]

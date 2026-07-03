@@ -1,0 +1,7 @@
+learning_tracker/lib/core/email/transactional_email_service.dart  (211 lines)
+learning_tracker/lib/core/services/.gitkeep  (0 lines)
+learning_tracker/test/core/services/calendar_program_registry_test.dart  (138 lines)
+learning_tracker/test/core/services/calendar_program_service_ref_extraction_test.dart  (66 lines)
+learning_tracker/test/core/services/cross_curriculum_aggregator_test.dart  (98 lines)
+learning_tracker/test/core/services/learning_program_repository_test.dart  (130 lines)
+learning_tracker/test/core/services/learning_program_service_test.dart  (199 lines)

@@ -1,0 +1,222 @@
+[
+ {
+  "sourceBatch": "t1-feat-gamification-p1",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Log RewardMilestoneService.getAllMilestones/getAllUnlocks JSON-decode failures instead of silently returning an empty list that can later overwrite cloud data",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "EH-3 (log-less catch is a pending violation; every catch rethrows, converts, or logs via AppLogger)",
+   "area": "features/gamification/domain/services",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/gamification/domain/services/reward_milestone_service.dart",
+     "line": 89,
+     "quote": "} catch (_) {\n      return const [];"
+    },
+    {
+     "file": "learning_tracker/lib/features/gamification/domain/services/reward_milestone_service.dart",
+     "line": 112,
+     "quote": "} catch (_) {\n      return const [];"
+    }
+   ],
+   "sites": 2,
+   "why": "If the SharedPreferences-stored reward config JSON is unreadable (process death mid-write, storage corruption, cross-version format mismatch), getAllMilestones/getAllUnlocks silently treat 'corrupt' the same as 'genuinely empty', with zero AppLogger call. That empty result then flows straight into exportCloudPayload(), which is what pushGamificationSettingsSnapshot() uploads as the authoritative reward_settings snapshot on the next sync -- silently overwriting the family's real, previously-configured reward list on every other synced device, with no diagnostic trail to explain why rewards 'disappeared'. The existing test suite (reward_milestone_service_test.dart 'getAllMilestones edge cases', lines 536-574) exercises invalid/blank/non-list JSON but only ever asserts the method returns empty -- it pins the silent-swallow as the specified behavior rather than testing that the failure is surfaced or logged.",
+   "recommendation": "Log via AppLogger.error (or similar) inside both catch blocks before returning the fallback list, including enough context (profileId, key) to diagnose; consider whether a corrupt-vs-genuinely-empty distinction should block the next cloud push instead of silently exporting empty.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Both catch(_) blocks in getAllMilestones/getAllUnlocks call AppLogger before returning the empty fallback",
+    "A test seeds corrupted JSON, calls the method, and asserts the logger recorded the failure (fake/spy AppLogger sink)"
+   ],
+   "labels": [
+    "EH-3",
+    "data-loss",
+    "sync",
+    "logging"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-gamification-p1",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Fix mergeCloudPayload treating a non-empty remote payload with a missing/unparseable updated_at as unconditionally newer than local",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "EH-2 / Nygard lens (LWW ordering must not silently clobber on ambiguous input; mirrors FB-3's null-timestamp guard even though this path is SharedPreferences-based, not core/sync)",
+   "area": "features/gamification/domain/services",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/gamification/domain/services/reward_milestone_service.dart",
+     "line": 315,
+     "quote": "final remoteUpdatedAt = DateTime.tryParse(\n      (remote['updated_at'] ?? '').toString(),\n    );"
+    },
+    {
+     "file": "learning_tracker/lib/features/gamification/domain/services/reward_milestone_service.dart",
+     "line": 319,
+     "quote": "if (remoteUpdatedAt != null && !remoteUpdatedAt.isAfter(localUpdatedAt)) {\n      return;"
+    }
+   ],
+   "sites": 1,
+   "why": "The short-circuit `remoteUpdatedAt != null && ...` means: when the remote payload is non-empty but its 'updated_at' fails to parse (missing key, malformed string, cross-version format drift), the early-return guard never fires, so the method falls through and unconditionally overwrites local milestones/unlocks with the remote payload -- treating 'timestamp unknown' as 'always newer' instead of the safer 'cannot prove newer, keep local'. This is the exact malformed-timestamp branch never exercised by either reward_milestone_service_test.dart's mergeCloudPayload group (only null/empty/older/newer-with-valid-ISO-dates are tested) or test/sync/merge/gamification_reward_merge_test.dart (same gap, confirmed by grep -- only valid ISO8601 updated_at values appear in that file too).",
+   "recommendation": "Change the guard so a null/unparseable remoteUpdatedAt is treated as NOT provably newer (skip the merge, same as the older-timestamp branch) rather than falling through to an unconditional overwrite.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "mergeCloudPayload with a non-empty milestones/unlocks payload and a missing or garbage 'updated_at' leaves existing local data untouched",
+    "A new test in the mergeCloudPayload group covers this exact case and fails against the current code"
+   ],
+   "labels": [
+    "EH-2",
+    "sync",
+    "LWW",
+    "data-loss"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-gamification-p1",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Wrap RewardMilestoneService/StreakService/StreakStateProvider in @riverpod providers instead of constructing them ad-hoc at every call site",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "SM-7 (repositories/services/DAOs constructed only inside their @riverpod provider; no ad-hoc construction/service-locator lookups)",
+   "area": "features/gamification (domain/services, presentation/providers, presentation/screens)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/gamification/domain/services/points_service.dart",
+     "line": 139,
+     "quote": "final reward = RewardMilestoneService(_database, profileId: profileId);"
+    },
+    {
+     "file": "learning_tracker/lib/features/gamification/presentation/providers/reward_config_controller.dart",
+     "line": 129,
+     "quote": "final svc = RewardMilestoneService(db, profileId: profileId);"
+    },
+    {
+     "file": "learning_tracker/lib/features/gamification/presentation/providers/achievements_overview_provider.dart",
+     "line": 86,
+     "quote": "final service = RewardMilestoneService(db, profileId: profileId);"
+    },
+    {
+     "file": "learning_tracker/lib/features/gamification/presentation/screens/child_redemption_screen.dart",
+     "line": 53,
+     "quote": "final svc = RewardMilestoneService(db, profileId: profileId);"
+    },
+    {
+     "file": "learning_tracker/lib/features/gamification/presentation/screens/gamification_screen.dart",
+     "line": 35,
+     "quote": "final streakService = StreakService(db, profileId: profileId);"
+    },
+    {
+     "file": "learning_tracker/lib/features/gamification/domain/services/streak_service.dart",
+     "line": 17,
+     "quote": "_provider = StreakStateProvider(\n        db: db,\n        clock: const SystemLocalDayClock(),"
+    }
+   ],
+   "sites": 9,
+   "why": "No @riverpod/Provider wraps RewardMilestoneService, StreakService, or StreakStateProvider anywhere in the codebase (grep confirms zero matches for 'Provider<RewardMilestoneService>' etc.); instead `RewardMilestoneService(db, profileId: profileId)` is repeated at 12 call sites repo-wide (7 inside this batch alone across 4 files, plus reward_config_controller.dart has 4 separate occurrences of the identical two-line construction), and StreakService/StreakStateProvider follow the same pattern. Every call site must independently obtain a UserDatabase and profileId and re-derive the same object graph. A constructor signature change, a swap of the SharedPreferences-backed store, or a test override all require touching every call site instead of one provider. It also means these classes can only be faked in tests by injecting a fake UserDatabase all the way through, not by a single ProviderScope override.",
+   "recommendation": "Introduce rewardMilestoneServiceProvider / streakServiceProvider @riverpod providers (mirroring the existing, correct pointsServiceProvider pattern in points_providers.dart) and have every listed call site use ref.watch/ref.read of the provider instead of constructing directly.",
+   "effort": "L",
+   "acceptance_criteria": [
+    "A single @riverpod provider exists for each of RewardMilestoneService, StreakService, and StreakStateProvider",
+    "All 9 in-batch construction sites (and the additional sites in dashboard/learning/sync features) are replaced with ref.watch/ref.read of the provider",
+    "Existing service unit tests continue to pass by overriding the provider rather than constructing the service directly"
+   ],
+   "labels": [
+    "SM-7",
+    "riverpod",
+    "DI",
+    "testability"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-gamification-p1",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Route child_redemption_screen.dart and parent_pending_redemptions_screen.dart error states through AppLocalizations instead of raw e.toString()",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "EH-5 / AX-2 (no raw exception reaches presentation; everything user-facing via AppLocalizations/ARB) -- matches the currently-non-functional custom_lint rule no_e_to_string_in_ui",
+   "area": "features/gamification/presentation/screens",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/gamification/presentation/screens/child_redemption_screen.dart",
+     "line": 107,
+     "quote": "error: (e, _) => Center(child: Text(e.toString())),"
+    },
+    {
+     "file": "learning_tracker/lib/features/gamification/presentation/screens/parent_pending_redemptions_screen.dart",
+     "line": 84,
+     "quote": "error: (e, _) => Center(child: Text(e.toString())),"
+    }
+   ],
+   "sites": 2,
+   "why": "Both screens render the raw exception's toString() as the entire error-state UI, completely bypassing localization -- in an EN/Hebrew app, a Hebrew-locale user sees untranslated (and potentially technical/internal) English text if the balance or pending-redemptions stream errors. This is not a missing capability: the very same feature already has a sanctioned pattern for this (point_config_screen.dart:222,267 use `AppLocalizations.of(context)!.errorGeneric(e.toString())`, and gamification_screen.dart uses `l10n.errorLoadingCalendar` for its own error states) -- these two sites simply don't use it, an inconsistency within one feature slice.",
+   "recommendation": "Replace `Text(e.toString())` with `Text(AppLocalizations.of(context)!.errorGeneric(e.toString()))` (or a more specific localized string) in both files, matching the pattern already used elsewhere in the same feature.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Neither file renders a bare e.toString() as UI text; both route through an AppLocalizations-resolved string",
+    "A widget test pumps each screen in an error AsyncValue state under Locale('he') and asserts the rendered text is not raw English exception text"
+   ],
+   "labels": [
+    "EH-5",
+    "AX-2",
+    "i18n",
+    "hebrew"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-gamification-p1",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Split point_config_screen.dart and reward_configuration_screen.dart (and trim 3 more) below the 400-line hand-written file cap",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3 (hand-written Dart files <= 400 lines; generated exempt)",
+   "area": "features/gamification (domain/services, presentation/screens, presentation/widgets)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/gamification/presentation/screens/point_config_screen.dart",
+     "line": 1,
+     "quote": "790 lines total (wc -l)"
+    },
+    {
+     "file": "learning_tracker/lib/features/gamification/presentation/screens/reward_configuration_screen.dart",
+     "line": 1,
+     "quote": "718 lines total (wc -l)"
+    },
+    {
+     "file": "learning_tracker/lib/features/gamification/presentation/screens/child_redemption_screen.dart",
+     "line": 1,
+     "quote": "414 lines total (wc -l)"
+    },
+    {
+     "file": "learning_tracker/lib/features/gamification/presentation/widgets/achievement_unlock_celebration.dart",
+     "line": 1,
+     "quote": "413 lines total (wc -l)"
+    },
+    {
+     "file": "learning_tracker/lib/features/gamification/domain/services/reward_milestone_service.dart",
+     "line": 1,
+     "quote": "403 lines total (wc -l)"
+    }
+   ],
+   "sites": 5,
+   "why": "point_config_screen.dart and reward_configuration_screen.dart are each ~2x the cap: both conflate a data-fetching FutureProvider, a stateful screen with pending-edit tracking, AND 5+ private presentational widgets (_HeroHeader, _CurriculumPointsCard, _StepperControl, _RoundStepButton, _SaveBar in point_config_screen.dart; _RewardPreview, _InlineRewardsSection in reward_configuration_screen.dart) all in one file -- unlike gamification_screen.dart in the same feature, which correctly extracts its presentational pieces into presentation/widgets/ files. This makes the private widgets unreusable and untestable in isolation, and any single-line style tweak risks an unrelated diff touching 700+ lines of unrelated screen logic.",
+   "recommendation": "Extract each private widget class into its own file under presentation/widgets/, matching the pattern gamification_screen.dart already follows; the 3 smaller overages (403-414 lines) likely just need trimming of inline widget trees into extracted sub-widgets.",
+   "effort": "L",
+   "acceptance_criteria": [
+    "wc -l on every hand-written .dart file in features/gamification/ reports <= 400",
+    "AG-3's line-count checker (once added to make audit) reports zero violators in this feature"
+   ],
+   "labels": [
+    "AG-3",
+    "god-file",
+    "refactor"
+   ]
+  }
+ }
+]

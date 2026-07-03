@@ -1,0 +1,49 @@
+[
+ {
+  "sourceBatch": "t1-feat-sync-p1",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Sync push payloads embed client-clock timestamps as the cross-device LWW ordering field instead of FieldValue.serverTimestamp()",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "FB-2",
+   "area": "core/sync (features/sync push path)",
+   "evidence": [
+    {
+     "file": "docs/sync-conflict-resolution.md",
+     "line": 29,
+     "quote": "the device with the\nstrictly newer timestamp wins."
+    },
+    {
+     "file": "learning_tracker/lib/features/sync/data/local_data_upload_service.dart",
+     "line": 205,
+     "quote": "// remote document carries a valid LWW timestamp. The merger"
+    },
+    {
+     "file": "learning_tracker/lib/features/sync/data/outbox_sync_write_facade.dart",
+     "line": 160,
+     "quote": "'updated_at': now.toIso8601String(),"
+    },
+    {
+     "file": "learning_tracker/lib/features/sync/data/outbox_sync_write_facade.dart",
+     "line": 217,
+     "quote": "'updated_at': now.toIso8601String(),"
+    }
+   ],
+   "sites": 3,
+   "why": "docs/sync-conflict-resolution.md's own Push/pull invariant says the device with the 'strictly newer timestamp' wins LWW races. Every updated_at value this batch's push payloads carry comes from `_clock.nowUtc()` (LocalDayClock, ultimately the device's own system clock) or a Drift-stored value stamped by the device clock at write time -- never FieldValue.serverTimestamp(). coding-standards.md's own FB-2 rationale names the exact failure: 'two devices with skewed clocks writing client timestamps make last-write-wins non-deterministic -- the faster clock always wins and silently overwrites newer data.' A device with a wrong/stuck system clock (common on hand-me-down or long-offline tablets, which this family-learning app explicitly supports offline) will have every goals/curriculum_tracks/settings/gamification_settings push either always lose or always win LWW races regardless of actual edit recency, silently discarding another device's real edits with no error surfaced anywhere.",
+   "recommendation": "Route the LWW ordering field for mutable-document pushes through FieldValue.serverTimestamp() at the Firestore-gateway layer (the codebase already does this correctly for the separate synced_at field in firestore_gateway_impl.dart), keeping the client timestamp only as a local optimistic-ordering hint per FB-2's own wording. The fix site is core/sync/ (gateway + merge layer), outside this batch; these two files are the clearest evidence, not the fix location.",
+   "effort": "L",
+   "acceptance_criteria": [
+    "FB-2 Rule-0 checker per coding-standards.md: audit grep asserting no DateTime.now()-derived value feeds a sync codec's ordering field, plus an emulator test asserting the persisted ordering field is a server Timestamp.",
+    "Extend test/integration/two_device_sync_test.dart (or add a sibling test) with a case that sets one device's local clock backward and asserts its genuinely later edit still wins the LWW race."
+   ],
+   "labels": [
+    "FB-2",
+    "sync",
+    "data-loss",
+    "clock-skew"
+   ]
+  }
+ }
+]

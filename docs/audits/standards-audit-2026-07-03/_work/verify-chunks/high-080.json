@@ -1,0 +1,44 @@
+[
+ {
+  "sourceBatch": "t1-feat-settings-p1",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Scope DataExportImportService.importData()'s 16 bare table deletes to the imported profile, not every profile on the device",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "Documented class invariant (data_export_import_service.dart:501-504) + Evans invariant-enforced-in-one-place",
+   "area": "features/settings/domain/services",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart",
+     "line": 502,
+     "quote": "/// Per-profile import: deletes all existing rows and re-inserts from the\n  /// export payload. Does not hard-delete accounts not present in the export"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart",
+     "line": 517,
+     "quote": "await _database.delete(_database.streakEvents).go();"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart",
+     "line": 532,
+     "quote": "await _database.delete(_database.accounts).go();"
+    }
+   ],
+   "sites": 16,
+   "why": "Every delete in importData() (lines 517-532, one per user-data table) calls Drift's `delete(table).go()` with no `.where()` clause, which executes an unconditional DELETE FROM on that table. On a device with more than one local account or learner profile (the app's own account-switcher/registry and sibling-profile model), importing ONE profile's exported JSON silently erases every OTHER profile's/account's rows in all 16 tables first -- directly contradicting the method's own doc comment. The multi-account round-trip test (epic_26_story_23_data_export_round_trip_test.dart) can't catch this because it manually wipes the ENTIRE database before calling importData(), so a scoped delete and this unscoped one are indistinguishable to that test. DataExportImportService has zero production callers today (grepped repo-wide across lib/), so no user is exposed yet, but it is fully implemented and covered by ~900 lines of tests across 8 test files -- clear signal a 'restore backup' UI hookup is imminent, at which point the first restore on a multi-child/multi-account device would silently erase a sibling's entire Torah-study history.",
+   "recommendation": "Thread profileId/accountId into importData() and scope every delete with `..where((tbl) => tbl.profileId.equals(profileId))` (account-level equivalent for accounts/learnerProfiles); extend the round-trip test to seed two profiles and import only one.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "New/updated test seeds profile A and profile B, exports+imports only A, and asserts profile B's rows in all 16 tables are byte-for-byte unchanged (not just non-empty).",
+    "Every _database.delete(...) call in importData() carries a matching .where(...) scoping clause -- checkable by a Rule-0 grep asserting no bare `delete(_database.` call lacks a following `..where(` in this file."
+   ],
+   "labels": [
+    "data-loss",
+    "settings",
+    "drift",
+    "dormant-code"
+   ]
+  }
+ }
+]

@@ -1,0 +1,214 @@
+[
+ {
+  "sourceBatch": "t1-core-domain-learning",
+  "chunk": "grp-017",
+  "finding": {
+   "title": "Give StartDateWindowException a stable error code instead of a raw pre-formatted English message (EH-5)",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "EH-5",
+   "area": "core/domain/value_objects (tracks/setup)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/domain/value_objects/program_starting_position.dart",
+     "line": 62,
+     "quote": "'Program start date cannot be in the future. '"
+    },
+    {
+     "file": "learning_tracker/lib/core/domain/value_objects/program_starting_position.dart",
+     "line": 182,
+     "quote": "class StartDateWindowException extends ValidationException {"
+    },
+    {
+     "file": "learning_tracker/lib/core/exceptions/app_exception.dart",
+     "line": 33,
+     "quote": "final String message;"
+    }
+   ],
+   "sites": 1,
+   "why": "EH-5 requires domain/data errors to carry stable codes/enums rather than pre-formatted human messages, specifically because this is an EN+Hebrew app where a raw English string renders untranslated for Hebrew-locale users. StartDateWindowException (thrown from the live B2/B3 date-window invariant, reached via ProgramStartingPosition.fromLegacyGrammar \u2192 track_blueprint.dart) is constructed with a fully-formatted English sentence, and it extends AppException whose only payload field is `final String message` \u2014 there is no code/enum to key an ARB lookup off. A repo-wide grep found no catch site for StartDateWindowException anywhere in lib/, so if the 30-day window is ever violated by legacy/migrated data (not just live UI input, which the picker constrains), the raw English text is the only representation available to whatever eventually surfaces it to the user.",
+   "recommendation": "Add a stable code/enum to StartDateWindowException (or to the AppException hierarchy generally) and have the presentation layer resolve it via AppLocalizations instead of displaying `message` directly.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "StartDateWindowException exposes a stable, locale-independent identifier (enum/const code) alongside or instead of the free-text message.",
+    "Any UI that surfaces this exception resolves the user-facing string via AppLocalizations/ARB, verified by an EN+HE widget test."
+   ],
+   "labels": [
+    "EH-5",
+    "i18n",
+    "error-handling"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-profiles-p1",
+  "chunk": "grp-074",
+  "finding": {
+   "title": "Delete four dead domain-layer files in features/profiles/domain (pin_flow_machine.dart, profile_creation_use_case.dart, set_parent_pin_use_case.dart, verify_parent_pin_use_case.dart)",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-6 dead code / Fowler dead code",
+   "area": "features/profiles/domain",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/profiles/domain/services/pin_flow_machine.dart",
+     "line": 6,
+     "quote": "// The thin Riverpod adapter (PinFlowController) in\n// `features/profiles/presentation/providers/pin_flow_controller.dart`"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/domain/services/pin_flow_machine.dart",
+     "line": 138,
+     "quote": "class PinFlowMachine {"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/domain/use_cases/profile_creation_use_case.dart",
+     "line": 59,
+     "quote": "class ProfileCreationUseCase {"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/domain/use_cases/set_parent_pin_use_case.dart",
+     "line": 33,
+     "quote": "class SetParentPinUseCase {"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/domain/use_cases/verify_parent_pin_use_case.dart",
+     "line": 38,
+     "quote": "class VerifyParentPinUseCase {"
+    }
+   ],
+   "sites": 4,
+   "why": "Repo-wide grep for the class names (PinFlowMachine, ProfileCreationUseCase, SetParentPinUseCase, VerifyParentPinUseCase) finds zero constructors/imports anywhere in lib/ outside each class's own file. ProfileCreationUseCase has a dedicated passing unit test (profile_creation_use_case_test.dart) that exercises code no production path ever runs; SetParentPinUseCase/VerifyParentPinUseCase have neither callers nor tests. pin_flow_machine.dart's own header claims PinFlowController 'wraps this machine' \u2014 false; PinFlowController reimplements the same state machine independently (see next finding). Combined this is 647 lines of orphaned domain logic (atomic profile+curriculum creation, PIN set/verify as sealed results) that misleads a reader into thinking PIN/profile-creation business rules live here, when the real logic is duplicated directly in the presentation layer.",
+   "recommendation": "Delete all four files and their now-orphaned tests, or if the atomic profile+curriculum-seed behavior in ProfileCreationUseCase is actually wanted, wire it into a @riverpod provider and call it from showAddProfileDialog instead of ProfileRepositoryImpl.createProfile.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep for PinFlowMachine/ProfileCreationUseCase/SetParentPinUseCase/VerifyParentPinUseCase across lib/ returns zero hits outside deleted files (or, if kept, returns a real caller)",
+    "flutter analyze and dart run build_runner build stay clean after removal",
+    "orphaned test files for the deleted classes are removed in the same change"
+   ],
+   "labels": [
+    "dead-code",
+    "profiles",
+    "pin-flow",
+    "cleanup"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-streak",
+  "chunk": "grp-026",
+  "finding": {
+   "title": "Rename the domain StreakEvent so it stops colliding with Drift's generated StreakEvent row class",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-4",
+   "area": "learning_tracker/lib/features/gamification/streak/",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/gamification/streak/streak_event.dart",
+     "line": 10,
+     "quote": "class StreakEvent {"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/user/user_database.g.dart",
+     "line": 8896,
+     "quote": "class StreakEvent extends DataClass implements Insertable<StreakEvent> {"
+    },
+    {
+     "file": "learning_tracker/lib/features/gamification/streak/streak_state_provider.dart",
+     "line": 17,
+     "quote": "import 'package:learning_tracker/core/database/user/user_database.dart'\n    hide StreakEvent;"
+    }
+   ],
+   "sites": 2,
+   "why": "Two unrelated public top-level classes share the name StreakEvent: the hand-written domain value type that streak_event_test.dart exercises, and Drift's generated row class. It's self-aware (the domain class's own doc comment explains the collision) and worked around with `hide StreakEvent` at the one call site needing both today, but every future file that needs both the Drift row and the domain value is one missing hide/alias away from a confusing 'wrong StreakEvent' type error, and the name can't be used unqualified in review comments, Linear tickets, or docs.",
+   "recommendation": "Rename the domain class (e.g. StreakLogEvent) -- it's the smaller of the two and all its call sites are internal to the streak feature.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "`grep -rn 'class StreakEvent' learning_tracker/lib/` returns exactly one hand-written match plus the Drift-generated one, under distinguishable names."
+   ],
+   "labels": [
+    "AG-4",
+    "naming",
+    "ubiquitous-language"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-l10n",
+  "chunk": "grp-018",
+  "finding": {
+   "title": "Move test/core/l10n/app_localizations_test.dart to test/l10n/ \u2014 it has no lib/core/l10n/ mirror and duplicates app_localizations_coverage_test.dart",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-5",
+   "area": "learning_tracker/test/core/l10n/app_localizations_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/l10n/app_localizations_test.dart",
+     "line": 32,
+     "quote": "test('appTitle is non-empty', () => expect(en.appTitle, isNotEmpty));"
+    },
+    {
+     "file": "learning_tracker/test/l10n/app_localizations_coverage_test.dart",
+     "line": 19,
+     "quote": "ignore = en.appTitle;"
+    },
+    {
+     "file": "docs/coding-standards.md",
+     "line": 522,
+     "quote": "**Why:** predictable structure lets agents glob straight to the right test... scattered tests cause missing or duplicated coverage."
+    }
+   ],
+   "sites": 1,
+   "why": "lib/core/ has no l10n/ subdirectory \u2014 the real source (AppLocalizationsEn/He) lives at lib/l10n/, and test/l10n/ already holds 7 other l10n test files including app_localizations_coverage_test.dart, which exercises every one of the ~13 getters (appTitle, dashboard, learn, progress, settings, goodMorning/Afternoon/Evening, streak, done, points, pages, todaysLearning) this file also checks. Git history shows this is not a hypothetical risk but an already-realized cost: two independent same-day commits (88e2e690 'test-coverage-f3' adding this file, 80a8399a 'test-coverage-f2' adding the coverage test) wrote overlapping l10n smoke tests because the wrong-path file wasn't discoverable from test/l10n/. AG-5's own stated rationale (coding-standards.md:522) predicts exactly this failure mode. Any future ARB key rename now has to be reconciled in two files, and the next 'raise coverage' pass is equally likely to duplicate this work again since nothing signals the file's existence from the correct location.",
+   "recommendation": "Relocate this file's unique value (localeName identity checks, the todaysLearning interpolation-content check, the cross-locale appTitle-distinctness sanity check) into test/l10n/ \u2014 either fold them into app_localizations_coverage_test.dart or land them as test/l10n/app_localizations_test.dart \u2014 delete the getter checks that are now pure duplicates of the coverage test's exercised getters, and remove the now-empty test/core/l10n/ directory. Land the AG-5 checker that coding-standards.md:523 lists as [Pending] (a script diffing test/ subdirectories against lib/ subdirectories) so this class of misplacement fails make audit instead of silently recurring.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "test/core/l10n/ no longer exists in the repo tree",
+    "No getter assertion for AppLocalizationsEn/AppLocalizationsHe is duplicated verbatim across two test files under test/l10n/",
+    "AG-5 gains a committed checker (script or make target) that fails when a test/ subdirectory has no lib/ counterpart, and it is wired into make audit"
+   ],
+   "labels": [
+    "test-quality",
+    "AG-5",
+    "duplication",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epic-26",
+  "chunk": "grp-131",
+  "finding": {
+   "title": "Dedupe the copy-pasted DB-wipe block in epic_26_story_23 \u2014 duplicate per-table delete calls in both tests",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler duplicated code",
+   "area": "test/story_acceptance",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_26_story_23_data_export_round_trip_test.dart",
+     "line": 451,
+     "quote": "await db.delete(db.streakEvents).go();\n          await db.delete(db.streakEvents).go();"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_26_story_23_data_export_round_trip_test.dart",
+     "line": 691,
+     "quote": "await db.delete(db.completionEvents).go();\n          await db.delete(db.completionEvents).go();"
+    }
+   ],
+   "sites": 2,
+   "why": "Both the multi-profile round-trip test and the C3-tombstone test wipe the database with the same ~17-statement manual delete sequence, each accidentally issuing the delete for two tables twice (streakEvents+completionEvents in the first block, completionEvents+streakEvents in the second) \u2014 harmless no-ops against an already-empty table, but evidence the block was copy-pasted rather than shared, so a future added/renamed table now needs updating in two independently-drifting copies.",
+   "recommendation": "Extract a `_wipeAllUserTables(db)` test helper (one db.transaction, one delete per table) and call it from both tests.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "the two wipe blocks collapse to one shared helper with no duplicate per-table delete call"
+   ],
+   "labels": [
+    "testing",
+    "duplication",
+    "epic-26"
+   ]
+  }
+ }
+]

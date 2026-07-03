@@ -1,0 +1,257 @@
+[
+ {
+  "sourceBatch": "t1-app-l10n-p1",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Log Firebase/App Check init failures in firebase_bootstrap.dart instead of swallowing them silently",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "EH-3 (log-less catch)",
+   "area": "app/bootstrap",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/app/bootstrap/firebase_bootstrap.dart",
+     "line": 39,
+     "quote": "} catch (_) {\n  // App Check unavailable \u2014 continue; sync may be rejected if enforced."
+    },
+    {
+     "file": "learning_tracker/lib/app/bootstrap/firebase_bootstrap.dart",
+     "line": 50,
+     "quote": "} catch (_) {\n  // Firebase init failed \u2014 app continues in local-first mode."
+    }
+   ],
+   "sites": 2,
+   "why": "Both catches are comment-only (no AppLogger call), so they pass the built-in empty_catches lint (which accepts a comment as content) but violate EH-3's log-less clause. AppLogger.instance is lazily constructable at this point (bootstrap.dart calls bootstrapFirebase() before AppLogger.init(), but AppLogger.instance auto-initializes on first access), so logging was possible and simply omitted. If Firebase.initializeApp() or App Check activation fails in production (corrupt Installation ID, blocked network, Play Services missing), the app correctly falls back to local-first mode but leaves zero diagnostic trail anywhere \u2014 not even a local Talker entry \u2014 making 'sync never works on this install' field reports undiagnosable.",
+   "recommendation": "Add an AppLogger.instance.warning/error call with a stable event code in each catch before falling through, e.g. `AppLogger.instance.error(event: 'firebase_init_failed', exception: e, stackTrace: s)`.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Both catch blocks in firebase_bootstrap.dart call AppLogger.instance.{warning,error} with a stable event code before continuing.",
+    "A test that injects a throwing Firebase.initializeApp (or App Check activate) stub and asserts an error/warning log event fires.",
+    "A Rule-0 grep/lint flags any catch block in lib/ that neither rethrows/converts nor calls AppLogger (EH-3 currently has no checker)."
+   ],
+   "labels": [
+    "error-handling",
+    "observability",
+    "bootstrap"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-app-l10n-p1",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Split app_shell.dart's 834-line build() into focused widgets \u2014 exceeds AG-3's 400-line cap by 2x",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3 (>400-line hand-written Dart file) / Fowler (misplaced responsibility, long method)",
+   "area": "app/router",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/app/router/app_shell.dart",
+     "line": 40,
+     "quote": "class _AppShellScreenState extends ConsumerState<AppShellScreen> {"
+    },
+    {
+     "file": "learning_tracker/lib/app/router/app_shell.dart",
+     "line": 52,
+     "quote": "Widget build(BuildContext context) {"
+    }
+   ],
+   "sites": 1,
+   "why": "app_shell.dart is 834 lines \u2014 more than double the 400-line cap \u2014 and its single build() method interleaves auth-state listening, tutor-session watching, profile auto-selection, offline-banner geometry math, a scheduled MaterialBanner side effect, and three separate context-indicator-bar widget classes. This file is also explicitly named a churn HOTSPOT in the audit's own file list (most fix-wave churn), which is the concrete, empirically-observed cost of the God-Widget shape: every unrelated fix (offline banner, tutor bar, PIN elevation, profile switcher) has had to touch the same enormous build() and risk regressing an unrelated concern.",
+   "recommendation": "Extract appBarBuilder's banner stack, the upgrade-prompt scheduling, and the three banner widget classes into separate files under lib/app/router/widgets/, leaving AppShellScreen as a thin composition.",
+   "effort": "L",
+   "acceptance_criteria": [
+    "app_shell.dart is at or under 400 lines after extraction.",
+    "A Rule-0 line-count checker (`AG-3`) exists that greps lib/ for hand-written .dart files over 400 lines and exits non-zero with file:line, currently absent per the digest's [P] status.",
+    "Existing app_shell/app_shell_an6 widget tests still pass unchanged after the extraction (behavior-preserving refactor)."
+   ],
+   "labels": [
+    "architecture",
+    "maintainability",
+    "hotspot"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-app-l10n-p1",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Centralize app_shell.dart / persistent_switcher_scaffold.dart color literals into AppTheme instead of scattering/duplicating hex values",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "no_color_literal_outside_theme (custom_lint, currently non-functional) / Fowler (duplicated knowledge)",
+   "area": "app/router",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/app/router/app_shell.dart",
+     "line": 25,
+     "quote": "const _tutorAccentColor = Color(0xFFD97706); // Amber-600"
+    },
+    {
+     "file": "learning_tracker/lib/app/router/app_shell.dart",
+     "line": 367,
+     "quote": "color: selected ? const Color(0xFF0038A8) : Colors.transparent,"
+    },
+    {
+     "file": "learning_tracker/lib/app/router/app_shell.dart",
+     "line": 436,
+     "quote": "const barBackground = Color(0xFFF1F3FA); // opaque pale blue"
+    },
+    {
+     "file": "learning_tracker/lib/app/router/app_shell.dart",
+     "line": 437,
+     "quote": "const barBorder = Color(0xFFD7DEF0);"
+    },
+    {
+     "file": "learning_tracker/lib/app/router/persistent_switcher_scaffold.dart",
+     "line": 157,
+     "quote": "color: const Color(0xFFF1F3FA),"
+    }
+   ],
+   "sites": 9,
+   "why": "app_shell.dart has 8 raw Color(0x...) literals and persistent_switcher_scaffold.dart has 1 more \u2014 all outside lib/core/theme/, exactly what the (currently non-functional, custom_lint is broken repo-wide) no_color_literal_outside_theme rule targets. Worse, the SAME hex value (0xFFF1F3FA, 'opaque pale blue') is hand-copied in both files as an unrelated local constant rather than a shared AppTheme token, and 0xFF0038A8 is a bespoke blue never defined in AppTheme at all (AppTheme.brandBlueDeep is a different value, 0xFF3F41AB). The file's own comments document this exact bar going through TWO rounds of contrast bugs ('Bug 7' and 'Bug 7 (re-fix)') \u2014 duplicated, untracked magic colors are precisely what makes a third recurrence likely, since a future contrast fix to one copy can silently miss the other.",
+   "recommendation": "Move _tutorAccentColor, _childViewAccentColor, barBackground/barBorder, and the nav-item selected-color into AppTheme/AppColors named constants; have persistent_switcher_scaffold.dart reference the same constant app_shell.dart uses.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "All Color(0x...) literals in app_shell.dart and persistent_switcher_scaffold.dart are replaced with AppTheme/AppColors named constants.",
+    "Once custom_lint's analyzer-version incompatibility is fixed, `dart run custom_lint` reports zero no_color_literal_outside_theme violations in these two files.",
+    "0xFFF1F3FA exists as exactly one named constant referenced from both files."
+   ],
+   "labels": [
+    "theming",
+    "duplication",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-app-l10n-p1",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Remove duplicate top-level keys in app_en.arb \u2014 they silently shadow earlier definitions and the parity checker can't see it",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AX-2 (ARB integrity) / Rule 0 gap in tool/arb_parity_check.dart",
+   "area": "l10n",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/l10n/app_en.arb",
+     "line": 15,
+     "quote": "\"todaysLearning\": \"Today's Learning\","
+    },
+    {
+     "file": "learning_tracker/lib/l10n/app_en.arb",
+     "line": 1265,
+     "quote": "\"todaysLearning\": \"Today's learning ({count})\","
+    },
+    {
+     "file": "learning_tracker/lib/l10n/app_en.arb",
+     "line": 433,
+     "quote": "\"today\": \"TODAY\","
+    },
+    {
+     "file": "learning_tracker/lib/l10n/app_en.arb",
+     "line": 2200,
+     "quote": "\"today\": \"Today\","
+    },
+    {
+     "file": "learning_tracker/lib/l10n/app_en.arb",
+     "line": 1938,
+     "quote": "\"notificationReminderBody\": \"{taskCount,plural, =0{No tasks today \u2014 stay on track!} =1{...} other{...}}\","
+    },
+    {
+     "file": "learning_tracker/lib/l10n/app_en.arb",
+     "line": 2834,
+     "quote": "\"notificationReminderBody\": \"You have {taskCount, plural, =1{1 task} other{{taskCount} tasks}} across ... today\","
+    },
+    {
+     "file": "learning_tracker/lib/l10n/app_localizations_en.dart",
+     "line": 3657,
+     "quote": "return 'You have $_temp0 across $_temp1 today';"
+    },
+    {
+     "file": "learning_tracker/tool/arb_parity_check.dart",
+     "line": 30,
+     "quote": "final enMap = jsonDecode(enFile.readAsStringSync()) as Map<String, dynamic>;"
+    }
+   ],
+   "sites": 5,
+   "why": "app_en.arb defines 5 keys twice each (todaysLearning, errorLoadingTasks, today, notificationReminderTitle, notificationReminderBody \u2014 verified via a full-file duplicate-key scan, not sampling). JSON silently keeps only the last occurrence, and I confirmed via the generated app_localizations_en.dart that the LAST definition always wins: today ships as 'Today' (line 2200) not 'TODAY' (line 433, dead); notificationReminderBody ships WITHOUT the friendlier zero-task branch authored at line 1938 ('No tasks today \u2014 stay on track!') \u2014 the later, lesser definition at line 2834 (no =0 case) is what's actually generated. That specific gap is currently masked because notification_providers.dart's D2 fix cancels the reminder instead of calling this method when taskCount==0 \u2014 but the dead ARB content and the blind spot are real: tool/arb_parity_check.dart uses jsonDecode, which structurally cannot see intra-file duplicate keys (it only diffs the already-deduped EN/HE key SETS), so this class of bug has no tooling coverage at all and could recur invisibly.",
+   "recommendation": "Delete the stale first definitions (lines 15, 397, 433, 1937-1938) keeping one definition per key, and extend the parity checker to detect duplicate raw top-level keys.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "app_en.arb has exactly one definition per top-level key (verified by a duplicate-key scan over the raw text, not just jsonDecode).",
+    "tool/arb_parity_check.dart (or a new checker) fails non-zero with file:line when a duplicate top-level key is present, wired into `make arb-parity`/CI.",
+    "A regression test asserts notificationReminderBody's intended content (with or without an explicit =0 branch, decided deliberately) matches what ships in app_localizations_en.dart."
+   ],
+   "labels": [
+    "l10n",
+    "data-integrity",
+    "tooling-gap"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-app-l10n-p1",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Finish the W1.2 router migration \u2014 delete lib/core/navigation/{app_router,app_shell,router_provider,guards/auth_guard}.dart re-export shims and repoint every importer",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Rule 1 dependency-direction principle (app \u2192 features \u2192 core) / AG-5 (test mirrors lib/)",
+   "area": "app/router",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/navigation/router_provider.dart",
+     "line": 1,
+     "quote": "// Re-export: canonical location is lib/app/router/router_provider.dart (W1.2)\nexport 'package:learning_tracker/app/router/router_provider.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/core/navigation/guards/auth_guard.dart",
+     "line": 1,
+     "quote": "// Re-export: canonical location is lib/app/router/guards/auth_guard.dart (W1.2)\nexport 'package:learning_tracker/app/router/guards/auth_guard.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/app/learning_tracker_app.dart",
+     "line": 9,
+     "quote": "import 'package:learning_tracker/core/navigation/router_provider.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/app/restore/device_restore_screen.dart",
+     "line": 5,
+     "quote": "import 'package:learning_tracker/core/navigation/app_router.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/app/bootstrap/notifications_bootstrap.dart",
+     "line": 3,
+     "quote": "import 'package:learning_tracker/core/navigation/router_provider.dart';"
+    },
+    {
+     "file": "learning_tracker/test/core/navigation/app_shell_test.dart",
+     "line": 17,
+     "quote": "import 'package:learning_tracker/core/navigation/app_router.dart';"
+    },
+    {
+     "file": "learning_tracker/test/core/navigation/auth_guard_test.dart",
+     "line": 3,
+     "quote": "// Decision tree (lib/app/router/guards/auth_guard.dart):"
+    }
+   ],
+   "sites": 7,
+   "why": "lib/core/navigation/{app_router,app_shell,router_provider,guards/auth_guard}.dart are pure 2-line re-export shims pointing at the canonical lib/app/router/** files (which this batch confirms are the real implementations). This means lib/core/ files import lib/app/ \u2014 the inverse of CLAUDE.md's stated 'app \u2192 features \u2192 core' dependency direction \u2014 and it structurally can't be caught by the existing Rule-1 checker, which only greps lib/core/ for `package:learning_tracker/features/` imports, not `lib/app/`. A repo-wide grep shows the shim is still load-bearing for 60+ files across nearly every feature area, including 3 files in THIS batch (learning_tracker_app.dart, device_restore_screen.dart, notifications_bootstrap.dart) that sit right next to the canonical files they should import directly. The concrete, already-realized cost: two substantial test suites (test/core/navigation/app_shell_test.dart, 1352 lines, and auth_guard_test.dart, 383 lines) never got moved to the mirrored test/app/router/** path \u2014 because the old import still compiles via the shim, nothing forced the move \u2014 so AG-5 mirroring is broken and a developer searching test/app/router/ for full coverage finds only narrow *_an6_test.dart/*_an8_test.dart scenario files, missing the real suites entirely.",
+   "recommendation": "Delete the 4 shim files, repoint every importer (start with the 3 in this batch) at lib/app/router/**, and move the two stale test files to test/app/router/**.",
+   "effort": "L",
+   "acceptance_criteria": [
+    "lib/core/navigation/{app_router,app_shell,router_provider,guards/auth_guard}.dart no longer exist; no file imports them.",
+    "test/core/navigation/app_shell_test.dart and auth_guard_test.dart are moved to test/app/router/** (or merged with the existing _an6/_an8 files there).",
+    "The Rule-1 `make audit` check (or a new one) also flags lib/core/** importing lib/app/**, not just lib/features/**, so this inversion can't silently reappear."
+   ],
+   "labels": [
+    "architecture",
+    "migration-debt",
+    "testing"
+   ]
+  }
+ }
+]

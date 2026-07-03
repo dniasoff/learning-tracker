@@ -1,0 +1,213 @@
+[
+ {
+  "sourceBatch": "t2-app-tool-p2",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Split tool/seed/lib/sefaria_mongo.dart (542), tool/seed_content_db.dart (809), tool/validate_seed_coverage.dart (401) under AG-3's 400-line cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "tool/ hand-written Dart CLI scripts",
+   "evidence": [
+    {
+     "file": "learning_tracker/tool/seed/lib/sefaria_mongo.dart",
+     "line": 1,
+     "quote": "// ignore_for_file: avoid_print"
+    },
+    {
+     "file": "learning_tracker/tool/seed_content_db.dart",
+     "line": 1,
+     "quote": "// ignore_for_file: avoid_print"
+    },
+    {
+     "file": "learning_tracker/tool/validate_seed_coverage.dart",
+     "line": 1,
+     "quote": "// Comprehensive validator for the bundled content.db seed."
+    }
+   ],
+   "sites": 3,
+   "why": "AG-3 caps hand-written Dart files at 400 lines (generated files exempt); `wc -l` confirms these three are 542, 809, and 401 lines respectively, none carrying a generated-code header. seed_content_db.dart in particular interleaves CLI parsing, calendar generation, content-hash computation, xz orchestration, and DB validation in one file along its own '// \u2500\u2500 Phase N \u2500\u2500' comment seams \u2014 a natural Extract-Class/Extract-File split once the AG-3 checker exists.",
+   "recommendation": "Split each file along its existing section markers once tooling for AG-3 lands: seed_content_db.dart along its '// \u2500\u2500 Phase N \u2500\u2500' comments; sefaria_mongo.dart into ref-parsing vs. navigation/collection vs. index-loading modules; validate_seed_coverage.dart into report-formatting vs. diff-computation.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "wc -l on all three files reports \u2264400",
+    "Once the pending AG-3 checker lands, these three files pass it"
+   ],
+   "labels": [
+    "AG-3",
+    "tool",
+    "hygiene",
+    "file-size"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-app-tool-p2",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Log the caught exception at 7 silent/overbroad catch sites across tool/ fetch-and-resolve helpers",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "EH-3 (log-less catch) / EH-4 (Error-subtype catch) \u2014 general lens applied to tool/",
+   "area": "tool/ fetch & ref-resolution helpers",
+   "evidence": [
+    {
+     "file": "learning_tracker/tool/seed_text_content.dart",
+     "line": 141,
+     "quote": "} catch (_) {"
+    },
+    {
+     "file": "learning_tracker/tool/seed_text_content.dart",
+     "line": 146,
+     "quote": "} catch (_) {"
+    },
+    {
+     "file": "learning_tracker/tool/verify_seed_calendar.dart",
+     "line": 202,
+     "quote": "} on Object {"
+    },
+    {
+     "file": "learning_tracker/tool/text_extract/extract_books.py",
+     "line": 184,
+     "quote": "except Exception:"
+    },
+    {
+     "file": "learning_tracker/tool/text_extract/extract_books.py",
+     "line": 199,
+     "quote": "except Exception:"
+    },
+    {
+     "file": "learning_tracker/tool/text_extract/extract_books.py",
+     "line": 207,
+     "quote": "except Exception:"
+    },
+    {
+     "file": "learning_tracker/tool/text_extract/main.py",
+     "line": 78,
+     "quote": "except Exception:"
+    }
+   ],
+   "sites": 7,
+   "why": "None of these seven catch/except blocks log the caught error before discarding it \u2014 Dart sites return a generic error flag, Python sites `pass`/`continue`/`return None`. When a fetch or ref-resolution genuinely fails, the operator sees only an aggregate 'N errors'/'SKIP' count, never why (network error vs. malformed data vs. a real bug in the resolver itself), making failures expensive to diagnose. verify_seed_calendar.dart:202 additionally catches `Object` \u2014 broader than even `Error` \u2014 so it would also swallow a `TypeError`/`RangeError` from a bug in the tool's own JSON-parsing code and silently retry it up to 4 times before reporting the day as a generic 'live fetch failed', masking a real programming defect as a transient network blip.",
+   "recommendation": "Add a log line (print/stderr.writeln/sys.stderr.write) with the caught exception's message and ref/date context at each of the 7 sites before falling through to the existing error-flag return. Narrow verify_seed_calendar.dart:202's `on Object` to the specific exception types the HTTP client/JSON decoder can actually throw.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Each of the 7 cited sites logs the caught exception before returning its existing failure value",
+    "verify_seed_calendar.dart:202 no longer catches bare Object"
+   ],
+   "labels": [
+    "EH-3",
+    "EH-4",
+    "tool",
+    "hygiene",
+    "log-less-catch"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-app-tool-p2",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Add automated unit tests for sefaria_mongo.dart's ref/address-parsing engine (currently zero, only a manual eyeball script)",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Feathers testability lens (TQ-1/TQ-8 spirit applied to tool/)",
+   "area": "tool/seed/lib/sefaria_mongo.dart (Sefaria ref-resolution engine)",
+   "evidence": [
+    {
+     "file": "learning_tracker/tool/seed/lib/sefaria_mongo.dart",
+     "line": 347,
+     "quote": "final daf = int.parse(m.group(1)!);"
+    },
+    {
+     "file": "learning_tracker/tool/seed/sample_validate.dart",
+     "line": 4,
+     "quote": "/// Validates the Mongo ref\u2192text resolution on the required sample refs."
+    }
+   ],
+   "sites": 1,
+   "why": "sefaria_mongo.dart implements longest-prefix title matching, schema-node walking with boundary rules, Talmud daf\u2192array-index arithmetic (2a\u21922, 2b\u21923, 3a\u21924\u2026), multi-section range flattening, and cross-version segment-wise text merging \u2014 542 lines that decide exactly which Hebrew/English text a child sees for any given ref. `find test/tool -type f` returns only android_manifest_deep_links_test.dart, audit_and_arb_parity_test.dart, build_cities_db_admin1_test.dart, and schema_check_test.dart \u2014 none touch this file, and a repo-wide grep for 'SefariaMongo'/'sefaria_mongo' under test/ returns nothing. The only check is tool/seed/sample_validate.dart, a 34-line script that prints 9 hardcoded refs for a human to eyeball against a live local Mongo; it asserts nothing, isn't wired into make ci/make seed, and a regression in, say, the Talmud `(daf-1)*2+amud` formula would silently ship the wrong daf's text to every user of that program unless a human happens to notice the printed output looks off.",
+   "recommendation": "Add a unit-test file exercising SchemaNode walking, the Talmud daf-index formula, range flattening, and version-priority merge-first-non-empty against small in-memory fixtures (SefariaMongo's dependency is a concrete mongo_dart Db, but the pure helper methods \u2014 _parseTuple, _addressToIndex, _collectAddressed, _flatten \u2014 can be tested directly without a live connection).",
+   "effort": "L",
+   "acceptance_criteria": [
+    "A new test file exercises: Talmud daf\u2192index (2a\u21922, 2b\u21923, 3a\u21924), a multi-section range flatten, longest-prefix title matching against a comma-bearing child title, and version-priority merge-first-non-empty, using fixture data with no live Mongo",
+    "That test runs green under `dart test`/`flutter test` without Docker/Mongo present"
+   ],
+   "labels": [
+    "testing",
+    "feathers",
+    "tool",
+    "data-quality"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-app-tool-p2",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Decode xz's stderr before interpolating it in seed_content_db.dart's failure message (currently prints a raw byte list)",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Nygard I/O-failure lens / general correctness",
+   "area": "tool/seed_content_db.dart (seed build finalize/compress phase)",
+   "evidence": [
+    {
+     "file": "learning_tracker/tool/seed_content_db.dart",
+     "line": 319,
+     "quote": "throw StateError('xz failed: ${xzResult.stderr}');"
+    }
+   ],
+   "sites": 1,
+   "why": "Process.runSync is called at line 312-317 with `stderrEncoding: null`, so ProcessResult.stderr holds raw bytes (a Uint8List), not a decoded String. String-interpolating it at line 319 invokes List.toString(), producing something like 'xz failed: [120, 122, 58, 32, ...]' instead of xz's actual human-readable stderr text \u2014 exactly when a maintainer most needs a readable error, during a failing release build.",
+   "recommendation": "Pass `stderrEncoding: systemEncoding` (or explicit `utf8`) to this Process.runSync call, or explicitly `utf8.decode(xzResult.stderr as List<int>)` before interpolating it into the thrown StateError.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Triggering an xz failure (e.g. temporarily pointing dbPath at a nonexistent file, or aliasing xz unavailable) prints a human-readable message, not a numeric byte-list",
+    "seed_content_db.dart's xz Process.runSync call sets stderrEncoding to a real Encoding, or decodes stderr before use"
+   ],
+   "labels": [
+    "correctness",
+    "tool",
+    "hygiene",
+    "error-handling"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-build-ci-guardrails",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Gate deploy-play-store.yml on a passing CI run for the exact SHA being deployed",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Rule 0 / AG-11 (bypassable gates)",
+   "area": "GitHub Actions / release guardrails",
+   "evidence": [
+    {
+     "file": ".github/workflows/deploy-play-store.yml",
+     "line": 15,
+     "quote": "on:\n  workflow_dispatch:"
+    },
+    {
+     "file": ".github/workflows/deploy-play-store.yml",
+     "line": 28,
+     "quote": "  push:\n    tags:"
+    }
+   ],
+   "sites": 1,
+   "why": "deploy-play-store.yml has no `needs:`/`workflow_run:` dependency on ci.yml and no step that checks the target SHA's check-run status. Its only steps between checkout and Play Store upload are checkout, codegen, and `flutter build appbundle --release` \u2014 no `flutter test`, `dart analyze`, `make audit`, or firestore-rules check. A maintainer who tags a commit that never went through review/CI (an emergency hotfix, a stale local branch, the wrong SHA) or whose ci.yml run is still red/in-progress can ship straight to Google Play production with nothing in the committed config to stop it \u2014 the only backstop is human diligence, which is exactly the kind of implicit, non-deterministic gate Rule 0 says not to rely on.",
+   "recommendation": "Add a job that queries the GitHub Checks API for the deploying SHA's required workflows before the build/upload steps run (or trigger deploys via a `workflow_call` from a successful ci.yml run instead of independent `push: tags`/`workflow_dispatch` triggers).",
+   "effort": "M",
+   "acceptance_criteria": [
+    "deploy-play-store.yml fails fast if the deploying SHA has no green ci.yml run, before any build/signing steps execute.",
+    "A dry run against a SHA with a failing/missing CI run demonstrates the new gate blocking the deploy."
+   ],
+   "labels": [
+    "ci",
+    "deploy",
+    "bypassable-gate",
+    "release"
+   ]
+  }
+ }
+]

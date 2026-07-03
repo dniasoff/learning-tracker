@@ -1,0 +1,200 @@
+[
+ {
+  "sourceBatch": "t1-app-l10n-p2",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Stop using app_localizations_coverage_test.dart's 1482 zero-assertion lines to pad the CI coverage floor over generated l10n code",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 / Rule 0 (coverage floor's stated generated-file exclusion is unenforced)",
+   "area": "test/l10n",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/l10n/app_localizations_coverage_test.dart",
+     "line": 3,
+     "quote": "return paths. No assertion is made on the text \u2014 the goal is line coverage of the generated translation strings."
+    },
+    {
+     "file": "learning_tracker/.github/workflows/ci.yml",
+     "line": 256,
+     "quote": "SUMMARY=$(lcov --summary \"$LCOV_FILE\" 2>&1)"
+    }
+   ],
+   "sites": 1,
+   "why": "grep -c 'expect(' on the file returns 0 \u2014 in 1482 lines, nothing can ever fail except a compile error (e.g. a renamed getter), which would abort the whole file rather than flag the specific key. The file's own docstring admits its purpose is purely to drive line-execution through lib/l10n/app_localizations_en.dart and _he.dart (5100+ generated lines each) for the CI-enforced coverage floor. docs/coding-standards.md states the 60% line-coverage floor is measured with 'generated files excluded', but .github/workflows/ci.yml's coverage-floor step runs `lcov --summary` directly on the raw lcov.info with no `lcov --remove` step anywhere in the repo (verified: no lcov --remove/genhtml exclude pattern exists in Makefile or ci.yml) \u2014 so generated files are NOT excluded in practice, and this file's 725-getter roll call launders thousands of auto-generated, logic-free lines into the numerator that the doc claims shouldn't count. Concrete cost: every new l10n key needs a manual line added here (already 725, and easy to forget silently since forgetting produces no failure), for a test that cannot catch a wrong translation, a missing plural case, or the exact ARB duplicate-key bug found elsewhere in this batch.",
+   "recommendation": "Either (a) wire the promised exclusion into the CI coverage step (lcov --remove coverage/lcov.info 'lib/l10n/app_localizations_*.dart' '*.g.dart' ... before lcov --summary) and delete this file, or (b) if kept for its doc-verification role, replace the per-getter roll call with a real check (e.g. that every ARB key has a corresponding generated getter) instead of 1482 lines that assert nothing.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "CI's coverage-floor step excludes generated files from the denominator (matching the doc's claim) OR this file is deleted/replaced with an assertive test.",
+    "docs/coding-standards.md's 'generated files excluded' claim matches what .github/workflows/ci.yml actually does."
+   ],
+   "labels": [
+    "testing",
+    "coverage-gaming",
+    "ci"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-app-l10n-p2",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Delete the dead nullService ternary in sy2_device_restore_idle_blank_test.dart's _buildHarness",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "hygiene / dead code",
+   "area": "test/app/restore",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/app/restore/sy2_device_restore_idle_blank_test.dart",
+     "line": 86,
+     "quote": ": null, // always null \u2014 no service needed for these tests"
+    },
+    {
+     "file": "learning_tracker/test/app/restore/sy2_device_restore_idle_blank_test.dart",
+     "line": 77,
+     "quote": "bool nullService = false,"
+    }
+   ],
+   "sites": 1,
+   "why": "`nullService ? null : null` evaluates to null on both branches \u2014 the nullService bool parameter has zero effect on behavior, yet every call site passes `nullService: true` as if it mattered. A future maintainer who needs a non-null-service variant of this harness will reasonably flip it to `nullService: false` expecting different behavior and get nothing, wasting debugging time on a flag that was already inert.",
+   "recommendation": "Delete the nullService parameter and the ternary; pass deviceRestoreServiceProvider.overrideWithValue(null) directly, matching the comment's own admission of actual behavior.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "nullService parameter and the dead ternary are removed from _buildHarness; dart analyze / dart format stay clean."
+   ],
+   "labels": [
+    "hygiene",
+    "dead-code"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-app-l10n-p2",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Extract the duplicated router/guard mock harness out of 4 test/app/restore/*_test.dart files into one shared helper",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-3 (shared pump/harness helper) / Fowler duplicated code",
+   "area": "test/app/restore",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/app/restore/device_restore_phase_l10n_test.dart",
+     "line": 38,
+     "quote": "class _MockStackRouter extends Mock implements StackRouter {}"
+    },
+    {
+     "file": "learning_tracker/test/app/restore/device_restore_screen_l1_test.dart",
+     "line": 52,
+     "quote": "class _MockStackRouter extends Mock implements StackRouter {}"
+    },
+    {
+     "file": "learning_tracker/test/app/restore/device_restore_screen_overflow_test.dart",
+     "line": 66,
+     "quote": "class _MockStackRouter extends Mock implements StackRouter {}"
+    },
+    {
+     "file": "learning_tracker/test/app/restore/sy2_device_restore_idle_blank_test.dart",
+     "line": 39,
+     "quote": "class _MockStackRouter extends Mock implements StackRouter {}"
+    }
+   ],
+   "sites": 4,
+   "why": "_MockStackRouter, _MockRestoreGuard, _StubAppRouter, and the _makeRouter()/_buildHarness() pattern (ProviderScope overrides for restoreStatusProvider, deviceRestoreServiceProvider, routerProvider, userDatabaseProvider, currentAccountIdProvider, selectedProfileIdProvider wrapped in a MaterialApp with the same localizationsDelegates list) are copy-pasted near-byte-identically across all 4 restore test files in this batch \u2014 confirmed via direct text comparison, not just naming. The project already has a `pumpApp` helper convention used elsewhere (test/e2e/journeys/*), and test/helpers/ has no equivalent for this restore-specific harness, so each new restore test file re-derives it from scratch. Concrete cost: a change to AppRouter's or RestoreGuard's interface (e.g. a new method the screen calls) requires editing the same stub in 4+ places; the next restore test file will likely paste a 5th copy, and any router-mocking bug fixed in one copy silently persists in the other three.",
+   "recommendation": "Extract a shared test/app/restore/restore_test_harness.dart (or add to test/helpers/) exposing the mock classes, _makeRouter()/_makeAppRouter(), and a parameterized _buildHarness()/pumpApp()-style entry point; have all 4 files import it instead of redefining it.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "A single shared helper file defines _MockStackRouter/_MockRestoreGuard/_StubAppRouter and the harness builder.",
+    "The 4 files in this batch (device_restore_phase_l10n_test.dart, device_restore_screen_l1_test.dart, device_restore_screen_overflow_test.dart, sy2_device_restore_idle_blank_test.dart) import it instead of each defining their own copy; grep for 'class _MockStackRouter' across test/app/restore/ returns exactly one hit."
+   ],
+   "labels": [
+    "testing",
+    "duplication",
+    "tq-3"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-app-l10n-p3",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Extract the duplicated ARB-loading helper out of 4 test/l10n regression tests",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler lens \u2014 duplicated code; no numbered TQ rule, but violates this repo's own test/helpers/ convention",
+   "area": "test/l10n (ARB regression tests)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/l10n/b1_vocab_keys_present_test.dart",
+     "line": 71,
+     "quote": "final file = File('lib/l10n/app_$locale.arb');"
+    },
+    {
+     "file": "learning_tracker/test/l10n/hebrew_shabbos_strings_il9_test.dart",
+     "line": 19,
+     "quote": "File('lib/l10n/app_$locale.arb'),\n    File('../lib/l10n/app_$locale.arb'),"
+    },
+    {
+     "file": "learning_tracker/test/l10n/icu_plural_il3_test.dart",
+     "line": 22,
+     "quote": "File('lib/l10n/app_$locale.arb'),\n    File('../lib/l10n/app_$locale.arb'),"
+    },
+    {
+     "file": "learning_tracker/test/l10n/no_hardcoded_percent_in_chart_subtitle_test.dart",
+     "line": 21,
+     "quote": "final arbFile = File('lib/l10n/app_$locale.arb');"
+    }
+   ],
+   "sites": 4,
+   "why": "Each file hand-rolls its own private _loadArb (or inlines the equivalent) instead of using the test/helpers/ pattern already established by test_database.dart, firestore_fake.dart, etc. The copies have already drifted: 2 of the 4 (hebrew_shabbos_strings_il9_test.dart, icu_plural_il3_test.dart) gained a `../lib/l10n/...` CWD-fallback candidate list, while b1_vocab_keys_present_test.dart and no_hardcoded_percent_in_chart_subtitle_test.dart still resolve only a single hardcoded path. If the test-invocation CWD convention ever changes (different `flutter test` working directory in CI, a monorepo restructure, running a single file from an IDE rooted elsewhere), half these tests fail with an unhelpful 'file must exist' error while the other half quietly cope \u2014 proof the duplication isn't being kept in sync today, let alone as more l10n regression tests get added (a 5th copy already exists in test/l10n/account_picker_subtitle_copy_test.dart, outside this batch).",
+   "recommendation": "Extract one `Map<String, dynamic> loadArb(String locale)` helper (using the two-candidate CWD-fallback) into a new test/helpers/arb_loader.dart, and have every test/l10n/*_test.dart import it instead of defining/inlining its own copy.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "test/helpers/arb_loader.dart exists and is the single definition of ARB-loading logic used by test/l10n/*_test.dart",
+    "grep -rn \"_loadArb(String locale)\\|final file = File('lib/l10n/app_\" learning_tracker/test/l10n/*.dart outside test/helpers/ returns zero matches (usable as a Rule-0 grep checker)"
+   ],
+   "labels": [
+    "tests",
+    "l10n",
+    "duplication",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-app-l10n-p3",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Drop or wire up dead ARB keys milestoneAggregate/recentActivityShort pinned by b1_vocab_keys_present_test.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-6-adjacent dead code / Evans ubiquitous language (vocabulary the app doesn't actually speak)",
+   "area": "learning_tracker/test/l10n/b1_vocab_keys_present_test.dart + lib/l10n ARB",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/l10n/b1_vocab_keys_present_test.dart",
+     "line": 37,
+     "quote": "'milestoneAggregate',"
+    },
+    {
+     "file": "learning_tracker/test/l10n/b1_vocab_keys_present_test.dart",
+     "line": 40,
+     "quote": "'recentActivityShort',"
+    }
+   ],
+   "sites": 2,
+   "why": "grep -rn '\\bmilestoneAggregate\\b' and '\\brecentActivityShort\\b' across lib/ match only the generated lib/l10n/app_localizations*.dart files \u2014 no screen or widget calls either getter. This test locks both into the ARB contract forever, and a sibling test's comment (test/core/labels/domain_term_labels_vocab_test.dart:114-116: 'milestone, milestoneAggregate, ... \u2014 removed from DomainTermLabels ... tested through widget-level integration tests, not here') claims coverage that doesn't exist for these two keys, so translators keep maintaining EN/HE strings nobody reads and nothing actually exercises the values this test pins.",
+   "recommendation": "Either wire milestoneAggregate/recentActivityShort into the screen(s) they were written for, or delete them from both ARBs, this test's _b1VocabKeys list, and the stale comment in domain_term_labels_vocab_test.dart.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep -rn '\\bmilestoneAggregate\\b\\|\\brecentActivityShort\\b' lib/ --include=*.dart shows a call site outside lib/l10n/, OR both keys are removed from app_en.arb, app_he.arb, and this test's _b1VocabKeys list"
+   ],
+   "labels": [
+    "dead-code",
+    "l10n",
+    "hygiene"
+   ]
+  }
+ }
+]

@@ -1,0 +1,185 @@
+[
+ {
+  "sourceBatch": "t1-core-sync-outbox",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Batch OutboxProcessor's post-commit deleteRow/markAttempted cleanup instead of awaiting it per row",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "DB-3",
+   "area": "core/sync/outbox",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/sync/outbox/outbox_processor.dart",
+     "line": 344,
+     "quote": "for (final id in ids) {\n            await _dao.deleteRow(id);"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/outbox/outbox_processor.dart",
+     "line": 351,
+     "quote": "for (final id in ids) {\n            await _dao.markAttempted(id, error: failedError.toString());"
+    }
+   ],
+   "sites": 2,
+   "why": "pushCompletionsBatch exists specifically 'to eliminate the N-round-trip problem' by pushing up to _completionDrainCeiling=100000 rows in \u2264500-op Firestore batches, but the local cleanup after that push still runs one awaited Drift statement per outbox row. For the large backlogs this ceiling anticipates (bulk_prior_completion_service / bulk_mark_screen can enqueue hundreds of completions at once, or a long offline stretch), this reintroduces the exact per-row round-trip cost DB-3 exists to prevent \u2014 now against the local DB \u2014 and materially lengthens the drain, which (per the concurrency finding above) increases the odds of tripping the drainStaleAfter race.",
+   "recommendation": "Add a bulk DAO method (e.g. deleteRows(List<int> ids) / markAttemptedBulk(List<int> ids, {required String error})) backed by a single batch()/DELETE...WHERE id IN(...) statement and call it once per commit/failure group instead of per row.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "New bulk DAO method(s) wrapped in a single transaction()/batch(); OutboxProcessor calls it once per outcome group.",
+    "Existing K3/K4 BatchPushException accounting tests continue to pass; add a test asserting the bulk DAO method is invoked exactly once for a multi-row commit/failure group."
+   ],
+   "labels": [
+    "sync",
+    "performance",
+    "db"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-sync-outbox",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Split outbox_processor.dart (599 ln) and outbox_processor_test.dart (1773 ln) below the AG-3 400-line ceiling",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "core/sync/outbox",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/sync/outbox/outbox_processor.dart",
+     "line": 1,
+     "quote": "import 'dart:async';"
+    },
+    {
+     "file": "learning_tracker/test/core/sync/outbox/outbox_processor_test.dart",
+     "line": 1,
+     "quote": "/// Tests for OutboxProcessor \u2014 covers drain() dispatch logic with a fake"
+    }
+   ],
+   "sites": 2,
+   "why": "AG-3's own enforcement command (`find lib test -name '*.dart' ... | xargs wc -l | awk '$1>400'`) explicitly scans test/ too. outbox_processor.dart is 599 lines (50% over) and already a grab-bag of guard/backoff/dispatch/dead-letter/tutored/identity concerns; outbox_processor_test.dart is 1773 lines (4.4x over) but has 11 clean group() fault lines (single-flight, backoff, dead-letter, tutored-profile guard, identity-mismatch guard, offline behaviour, batch-size ceiling, FIFO ordering, BatchPushException accounting, revive-dead-letters, entity-kind constants) ready to split along.",
+   "recommendation": "Extract the backoff/dead-letter bookkeeping and the single-flight guard out of OutboxProcessor into small collaborators; split the test file along its existing group() boundaries into mirrored test/core/sync/outbox/outbox_processor_*_test.dart files.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "`find lib test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400'` no longer lists either file."
+   ],
+   "labels": [
+    "hygiene",
+    "maintainability"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-sync-outbox",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Add an AnalyticsEvent.outboxDeadLettered constant instead of reusing LogEvents.sync.outboxDeadLettered for analytics",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "PV-5",
+   "area": "core/sync/outbox",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/sync/outbox/outbox_processor.dart",
+     "line": 263,
+     "quote": "LogEvents.sync.outboxDeadLettered,"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/outbox/outbox_processor.dart",
+     "line": 369,
+     "quote": "LogEvents.sync.outboxDeadLettered,"
+    },
+    {
+     "file": "learning_tracker/lib/core/logging/log_events.dart",
+     "line": 6,
+     "quote": "// All [AppLogger] call sites MUST use a constant from this file (or from a"
+    }
+   ],
+   "sites": 2,
+   "why": "PV-5 requires every Analytics event to route through an AnalyticsEvent constant so one regex/format check and one searchable catalog cover all analytics traffic. LogEvents is documented (log_events.dart:6) as the AppLogger structured-log catalog, not the analytics one, and AnalyticsEvent (analytics_service.dart) does not list sync_outbox_dead_lettered at all \u2014 this analytics event is invisible to anyone auditing 'every analytics event we send' via AnalyticsEvent, and once custom_lint's no_raw_logevent check is un-broken it needs to catch this cross-catalog case, not just raw string literals.",
+   "recommendation": "Add `static const outboxDeadLettered = 'sync_outbox_dead_lettered';` to AnalyticsEvent and reference that at both call sites instead of LogEvents.sync.outboxDeadLettered.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "The PV-5 audit grep (or no_raw_logevent once custom_lint is fixed) confirms every logEvent( call site in this file references AnalyticsEvent.*."
+   ],
+   "labels": [
+    "hygiene",
+    "analytics",
+    "pv-5"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-sync-outbox",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Replace outbox_processor.dart's raw 'sync_outbox_push_failed' literal with a LogEvents catalog constant",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Evans (ubiquitous language) / logging convention",
+   "area": "core/sync/outbox",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/sync/outbox/outbox_processor.dart",
+     "line": 329,
+     "quote": "event: 'sync_outbox_push_failed',"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/outbox/outbox_processor.dart",
+     "line": 395,
+     "quote": "event: 'sync_outbox_push_failed',"
+    },
+    {
+     "file": "learning_tracker/lib/core/logging/log_events.dart",
+     "line": 66,
+     "quote": "String get pushFailed => 'sync_push_failed';"
+    }
+   ],
+   "sites": 2,
+   "why": "log_events.dart's own header says every AppLogger call site MUST use a constant from that file rather than an ad-hoc string literal, but both AppLogger.instance.warning(...) calls here hand-type 'sync_outbox_push_failed' \u2014 a name distinct from the catalog's existing sync_push_failed. Two divergent event names now exist for 'a sync push failed'; anyone querying structured logs by the catalog constant misses these two sites, and renaming pushFailed's value later won't touch them.",
+   "recommendation": "Either reuse LogEvents.sync.pushFailed (if semantically equivalent) or add `String get outboxPushFailed => 'sync_outbox_push_failed';` to _SyncEvents and reference it from both call sites.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "`grep -n \"event: '\" lib/core/sync/outbox/outbox_processor.dart` returns no bare string-literal event names."
+   ],
+   "labels": [
+    "hygiene",
+    "logging"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-sync-outbox",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Remove or justify PushPipeline.pushCompletion \u2014 OutboxProcessor never calls it",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler (speculative generality / dead code)",
+   "area": "core/sync/outbox",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/sync/outbox/push_pipeline.dart",
+     "line": 14,
+     "quote": "Future<void> pushCompletion({"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/push_pipeline_impl.dart",
+     "line": 25,
+     "quote": "Future<void> pushCompletion({"
+    }
+   ],
+   "sites": 1,
+   "why": "OutboxProcessor's _dispatch switch has no case for OutboxEntityKind.completion \u2014 completions are handled exclusively via pushCompletionsBatch, consistent with the class doc's own warning ('Never call [pushCompletion] in a loop \u2014 that defeats the batching'). A repo-wide grep for `.pushCompletion(` shows the only caller of PushPipeline's (non-gateway) pushCompletion is test code calling it directly; production code never reaches it through the drain path. It's a fully implemented, individually tested, but currently unreachable interface method \u2014 dead surface area that invites drift (e.g. a future fix applied to pushCompletionsBatch but not mirrored here, or a future caller reintroducing the exact N-round-trip problem batching was built to eliminate).",
+   "recommendation": "Either delete pushCompletion from PushPipeline (and its implementation/tests) or add a doc comment on the interface method naming its actual sanctioned caller/purpose so the next reader doesn't mistake it for reachable code.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Grep confirms either the method is removed (and OutboxPushPipeline/tests updated) or a doc comment states its real caller."
+   ],
+   "labels": [
+    "hygiene",
+    "dead-code"
+   ]
+  }
+ }
+]

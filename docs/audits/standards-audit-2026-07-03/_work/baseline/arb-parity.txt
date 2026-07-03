@@ -1,0 +1,4 @@
+=== arb-parity (root) ===
+Running arb-parity (DNI-389)...
+arb_parity_check OK — 1421 English key(s) all present in Hebrew.
+EXIT:0

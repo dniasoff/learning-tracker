@@ -1,0 +1,61 @@
+[
+ {
+  "sourceBatch": "t1-feat-onboarding-p3",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Localize wizard_steps.dart step text; wizard_steps_l1_test.dart's he-locale tests currently pin the English literals",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "AX-2",
+   "area": "features/onboarding/presentation/steps",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/onboarding/presentation/steps/wizard_steps_l1_test.dart",
+     "line": 332,
+     "quote": "expect(find.text('Custom schedule'), findsOneWidget);"
+    },
+    {
+     "file": "learning_tracker/test/features/onboarding/presentation/steps/wizard_steps_l1_test.dart",
+     "line": 703,
+     "quote": "expect(find.text('How many review rounds?'), findsOneWidget);"
+    },
+    {
+     "file": "learning_tracker/test/features/onboarding/presentation/steps/wizard_steps_l1_test.dart",
+     "line": 863,
+     "quote": "expect(find.text('Set delay for each round'), findsOneWidget);"
+    },
+    {
+     "file": "learning_tracker/test/features/onboarding/presentation/steps/wizard_steps_l1_test.dart",
+     "line": 1063,
+     "quote": "expect(find.text('Review your schedule'), findsOneWidget);"
+    },
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/steps/wizard_steps.dart",
+     "line": 134,
+     "quote": "title: 'Custom schedule',"
+    },
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/steps/wizard_steps.dart",
+     "line": 404,
+     "quote": "'Set delay for each round',"
+    }
+   ],
+   "sites": 4,
+   "why": "Every heading, subtitle, option-card title and day-name label in WizardChooseMethodStep/WizardSelectPresetStep/WizardCustomStep1-3 is a raw Dart string literal \u2014 only the Next/Confirm/Days/Weeks CTAs go through AppLocalizations. A Hebrew-speaking parent onboarding a child (the app's core RTL/Hebrew-terms audience) sees raw English through the entire custom-review-builder wizard. Worse, all 4 of the file's own 'Hebrew locale smoke' tests pump the widget under `Locale('he')` and then assert the English string renders (`findsOneWidget`) \u2014 so any future engineer who actually localizes these widgets breaks 4 currently-green tests, and CI flags the fix as the regression.",
+   "recommendation": "Add ARB keys for each literal (curriculumSettingsCustomSchedule already exists for an identical string used elsewhere \u2014 reuse or mirror it), wire via AppLocalizations.of(context)!.xxx in wizard_steps.dart, then rewrite the 4 Hebrew-smoke tests to assert the Hebrew ARB value and findsNothing on the former English literal, matching the pattern already used correctly in permission_prompt_screen_l1_test.dart's 'Hebrew l10n (rationale copy)' group.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "make arb-parity stays green after new keys are added",
+    "wizard_steps_l1_test.dart's 4 he-locale tests assert the Hebrew ARB string and findsNothing on the former English literal",
+    "no raw string literal remains in WizardChooseMethodStep/WizardSelectPresetStep/WizardCustomStep1-3 build methods outside AppLocalizations calls"
+   ],
+   "labels": [
+    "i18n",
+    "hebrew",
+    "onboarding",
+    "test-pinning",
+    "AX-2"
+   ]
+  }
+ }
+]

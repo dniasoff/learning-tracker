@@ -1,0 +1,320 @@
+[
+ {
+  "sourceBatch": "t1-test-cross-p2",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Make E2E-1108 in infra_p1_test.dart exercise the real ReminderEnabled notifier instead of round-tripping SharedPreferences",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (tautological / weaker than the failure modes of the code under test)",
+   "area": "test/e2e/journeys/infra_p1_test.dart (E2E-1108) + features/notifications",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/e2e/journeys/infra_p1_test.dart",
+     "line": 569,
+     "quote": "group('E2E-1108 \u2014 Per-profile notification prefs isolated on profile switch', () {"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/infra_p1_test.dart",
+     "line": 617,
+     "quote": "await prefs.setBool(keyB, false);"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/infra_p1_test.dart",
+     "line": 620,
+     "quote": "final aValue = prefs.getBool(keyA) ?? true;"
+    }
+   ],
+   "sites": 1,
+   "why": "The test titled 'Per-profile notification prefs isolated on profile switch' never switches the active profile and never instantiates the real ReminderEnabled Riverpod notifier \u2014 it calls prefs.setBool(keyB, false) and then asserts prefs.getBool(keyB) is false, which only proves the SharedPreferences mock stores what it was told (an SDK behavior, not app logic). reminderEnabledKey() is a one-line string formatter (base + profileId). A real regression this journey is meant to catch \u2014 e.g. ReminderEnabled.build() caching profile A's value after activeProfileIdProvider flips to B, or the notifier writing under the wrong profile's key \u2014 would not be caught here because the notifier is never built or read through ref. The in-file comment even concedes 'provider rebuilds on activeProfileIdProvider are covered by the widget itself' without pointing to where.",
+   "recommendation": "Drive the real flow: mount /notifications for profile A, toggle the reminder switch, then swap the active identity (second E2EHarness or an activeProfileIdProvider override simulating profile B) and assert the widget/notifier reflects B's independently-loaded state, not just that two SharedPreferences keys hold different bytes.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "E2E-1108 fails red if ReminderEnabled.build() is changed to ignore activeProfileIdProvider and read a single shared key.",
+    "Test reads the reminder toggle state through the widget tree (not direct SharedPreferences access) for at least one of the two profiles."
+   ],
+   "labels": [
+    "tautological-test",
+    "notifications",
+    "TQ-8"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-test-cross-p2",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Deduplicate hand-rolled e2e fakes (_FakeContentRepository, _NullTutoredSelection) before more copies drift like learning_p1_test.dart's broken filterByLevel",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-4 (hand-written fakes) + Fowler duplication lens",
+   "area": "test/e2e/journeys (learning_p0/p1, hebrew_rtl_p1, learning_sched_gam_p2, + 7 more files outside this batch)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/e2e/journeys/learning_p0_test.dart",
+     "line": 143,
+     "quote": "if (level1 != null) items = items.where((i) => i.level1 == level1).toList();"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/learning_p1_test.dart",
+     "line": 130,
+     "quote": "}) async => await getContentForCurriculum(curriculumId);"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/hebrew_rtl_p1_test.dart",
+     "line": 129,
+     "quote": "class _NullTutoredSelection extends ActiveTutoredProfileSelection {"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/learning_p0_test.dart",
+     "line": 968,
+     "quote": "class _NullTutoredSelection extends ActiveTutoredProfileSelection {"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/learning_p1_test.dart",
+     "line": 252,
+     "quote": "class _NullTutoredSelection extends ActiveTutoredProfileSelection {"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/learning_sched_gam_p2_test.dart",
+     "line": 156,
+     "quote": "class _NullTutoredSelection extends ActiveTutoredProfileSelection {"
+    }
+   ],
+   "sites": 6,
+   "why": "Every journey file that needs a no-op tutored-selection notifier or a fake ContentRepository/CompletionRepository hand-rolls its own private copy instead of sharing one via E2EHarness (which already centralizes similar cross-cutting fixtures, e.g. dashboardSilenceOverrides) \u2014 at least 11 files repo-wide redefine _NullTutoredSelection verbatim, 4 of them in this batch. The copies have already diverged: learning_p0_test.dart's _FakeContentRepository.filterByLevel correctly filters by level1..4, while learning_p1_test.dart's same-named, same-interface fake silently ignores every level argument and returns the full unfiltered list. No test in learning_p1_test.dart currently drives level-filtered hierarchy browsing through this fake, so the bug is latent \u2014 but the next engineer who copies this file's pattern to add hierarchy coverage inherits a fake that compiles, matches the interface, and silently returns wrong results.",
+   "recommendation": "Extract _NullTutoredSelection, _FakeContentRepository, and _FakeCompletionRepository into a shared test/e2e/fakes/ module (or onto E2EHarness) and delete the per-file copies; fix the shared filterByLevel to actually filter, matching learning_p0_test.dart's current correct behavior.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "A single _FakeContentRepository/_NullTutoredSelection implementation is imported by every e2e journey file that needs one (grep for 'class _NullTutoredSelection' returns one definition site).",
+    "The shared filterByLevel filters by level1..4 and is exercised by at least one test."
+   ],
+   "labels": [
+    "duplication",
+    "test-doubles",
+    "TQ-4"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-test-cross-p2",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Split 8 of 9 t1-test-cross-p2 e2e journey files under the AG-3 400-line cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "test/e2e/journeys",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/e2e/journeys/learning_p0_test.dart",
+     "line": 982,
+     "quote": "}"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/infra_p1_test.dart",
+     "line": 924,
+     "quote": "}"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/learning_p1_test.dart",
+     "line": 833,
+     "quote": "}"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/hebrew_rtl_p1_test.dart",
+     "line": 655,
+     "quote": "}"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/learning_sched_gam_p2_test.dart",
+     "line": 700,
+     "quote": "}"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/onboarding_tracks_p2_test.dart",
+     "line": 570,
+     "quote": "}"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/onboarding_p1_test.dart",
+     "line": 492,
+     "quote": "}"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/infra_p0_test.dart",
+     "line": 478,
+     "quote": "}"
+    }
+   ],
+   "sites": 8,
+   "why": "AG-3's stated enforcement checker ('find lib test -name *.dart ... | xargs wc -l | awk $1>400') explicitly sweeps test/ as well as lib/, and the digest names a 401-line file as its own canonical P3 example. 8 of the 9 files in this batch exceed the cap, two by more than double (982, 924 lines) \u2014 consistent with AG-3's stated rationale that oversized files exceed per-file agent read budgets and become dumping grounds, which this batch's own duplication finding (fakes hand-rolled per file instead of shared) illustrates.",
+   "recommendation": "Split each file along its existing '\u2500\u2500 E2E-nnn \u2500\u2500' group boundaries into one file per journey-cluster, and extract the shared fakes/override-builders (see the duplication finding) into a common module to shrink each file's boilerplate share.",
+   "effort": "L",
+   "acceptance_criteria": [
+    "find learning_tracker/test -name '*.dart' | xargs wc -l | awk '$1>400 {print}' lists none of the 8 files (or a documented, reviewed exception).",
+    "AG-3 checker script lands per Rule 0 and runs in make audit / CI."
+   ],
+   "labels": [
+    "AG-3",
+    "file-size",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-test-cross-p3",
+  "findingIndex": 0,
+  "finding": {
+   "title": "overflow_sweep_p2_test.dart: 14 skipped overflow tests claim 'swept on device' coverage that does not exist anywhere in the repo",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (weak/false test claim) + AG-8 (doc must not lie)",
+   "area": "learning_tracker/test/e2e/journeys/overflow_sweep_p2_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/e2e/journeys/overflow_sweep_p2_test.dart",
+     "line": 1035,
+     "quote": "true, // device/harness: guarded router.push hangs headless; swept on device"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/overflow_sweep_p2_test.dart",
+     "line": 1076,
+     "quote": "true, // device/harness: guarded router.push hangs headless; swept on device"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/overflow_sweep_p2_test.dart",
+     "line": 1099,
+     "quote": "true, // device/harness: guarded router.push hangs headless; swept on device"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/overflow_sweep_p2_test.dart",
+     "line": 1118,
+     "quote": "true, // device/harness: guarded router.push hangs headless; swept on device"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/overflow_sweep_p2_test.dart",
+     "line": 1169,
+     "quote": "true, // device/harness: guarded router.push hangs headless; swept on device"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/overflow_sweep_p2_test.dart",
+     "line": 1193,
+     "quote": "true, // device/harness: guarded router.push hangs headless; swept on device"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/overflow_sweep_p2_test.dart",
+     "line": 1219,
+     "quote": "true, // device/harness: guarded router.push hangs headless; swept on device"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/overflow_sweep_p2_test.dart",
+     "line": 1260,
+     "quote": "true, // device/harness: guarded router.push hangs headless; swept on device"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/overflow_sweep_p2_test.dart",
+     "line": 1299,
+     "quote": "true, // device/harness: guarded router.push hangs headless; swept on device"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/overflow_sweep_p2_test.dart",
+     "line": 1334,
+     "quote": "true, // device/harness: guarded router.push hangs headless; swept on device"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/overflow_sweep_p2_test.dart",
+     "line": 1373,
+     "quote": "true, // device/harness: guarded router.push hangs headless; swept on device"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/overflow_sweep_p2_test.dart",
+     "line": 1422,
+     "quote": "true, // device/harness: guarded router.push hangs headless; swept on device"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/overflow_sweep_p2_test.dart",
+     "line": 1460,
+     "quote": "true, // device/harness: guarded router.push hangs headless; swept on device"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/overflow_sweep_p2_test.dart",
+     "line": 1501,
+     "quote": "true, // device/harness: guarded router.push hangs headless; swept on device"
+    },
+    {
+     "file": "learning_tracker/integration_test/app_test.dart",
+     "line": 14,
+     "quote": "testWidgets('app launches without crashing', (tester) async {"
+    }
+   ],
+   "sites": 14,
+   "why": "Anyone reading these skip reasons reasonably concludes overflow coverage for ParentSettingsScreen, PointConfigScreen, RewardConfigurationScreen, StudyDayConfigScreen, CurriculumProgressScreen, CurriculumSettingsScreen, LearningOrderScreen, ParentTrackManagementScreen, TutorAuditLogScreen, InviteTutorScreen, AcceptInviteScreen, DeclineInviteScreen, PinFlowSetupRoute and PinFlowVerifyRoute is handled by a device sweep. It is not: integration_test/app_test.dart is the ONLY on-device test file in the repo (no other file exists under integration_test/, no flutter-drive/Firebase-Test-Lab target in the Makefile or .github/workflows) and it only asserts the app widget mounts after launch. These 14 screens \u2014 several of them PIN-gated parent/reward-money surfaces \u2014 have zero automated overflow verification anywhere, contrary to what the comment tells the next reader.",
+   "recommendation": "Either write the actual on-device sweep (integration_test/ + flutter drive/Test Lab target) and point the comment at its file:line, or replace 'swept on device' with an honest 'untested \u2014 DNI-#### tracks the device sweep' per AG-6, or find a headless workaround the way the file already did for screens 11-27.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "Each of the 14 skip reasons either links to a real, currently-passing on-device test file:line, or is replaced with an accurate gap description plus a DNI-#### ticket.",
+    "A repo-wide grep for 'swept on device' in test/ resolves to an actual test file when followed."
+   ],
+   "labels": [
+    "e2e",
+    "test-quality",
+    "coverage-gap",
+    "false-claim",
+    "overflow"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-test-cross-p3",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Extract duplicated E2E fixture helpers (_EmptyContentRepository, _navigateTo, silence overrides) into a shared file instead of copy-pasting across 5 journey files",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler duplication lens (no numbered standards-doc rule; general quality)",
+   "area": "learning_tracker/test/e2e/journeys/{profiles_p0,profiles_p1,profiles_tutoring_p2,progress_p0,progress_p1}_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/e2e/journeys/progress_p0_test.dart",
+     "line": 64,
+     "quote": "class _EmptyContentRepository implements ContentRepository {"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/progress_p1_test.dart",
+     "line": 55,
+     "quote": "class _EmptyContentRepository implements ContentRepository {"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/profiles_p0_test.dart",
+     "line": 135,
+     "quote": "Future<void> _navigateTo(E2EHarness h, PageRouteInfo route) async {"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/profiles_p1_test.dart",
+     "line": 134,
+     "quote": "Future<void> _navigateTo(E2EHarness h, PageRouteInfo route) async {"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/profiles_tutoring_p2_test.dart",
+     "line": 158,
+     "quote": "Future<void> _navigateTo(E2EHarness h, PageRouteInfo route) async {"
+    }
+   ],
+   "sites": 5,
+   "why": "diff confirms progress_p0_test.dart:64-107 and progress_p1_test.dart:55-98 hold a byte-identical 44-line _EmptyContentRepository stub; _navigateTo and six silence-override one-liners (_sacredWindowNullOverride, _connectivitySilenceOverride, _incomingGrantsEmptyOverride, _pendingInvitesEmptyOverride, _pendingRedemptionsZeroOverride, _pointsBalanceZeroOverride, _dashboardSilence) are duplicated 2-3x across profiles_p0/p1/tutoring_p2_test.dart. When a provider's override shape changes, every copy needs an independent, easy-to-miss update \u2014 several in-file comments (e.g. profiles_p0_test.dart:110-128) already document discovering the SAME Drift-timer-leak workaround independently per file, which is the exact 'dumping ground / re-implementation elsewhere' cost AG-3's own rationale warns oversized, uncentralized files produce.",
+   "recommendation": "Move these into E2EHarness itself (alongside the existing dashboardSilenceOverrides getter) or a new test/e2e/helpers/e2e_overrides.dart, and have all 5 files import the shared version \u2014 Fowler's 'Extract Class' / 'Pull Up Method'.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "One canonical implementation of _EmptyContentRepository, _navigateTo, and the silence-override helpers exists under test/e2e/harness/ or test/e2e/helpers/.",
+    "The 5 files import it instead of redefining it; dart analyze is clean and all existing tests in the 5 files still pass unmodified."
+   ],
+   "labels": [
+    "e2e",
+    "duplication",
+    "fowler",
+    "maintainability"
+   ]
+  }
+ }
+]

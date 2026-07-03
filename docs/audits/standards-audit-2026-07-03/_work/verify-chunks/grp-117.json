@@ -1,0 +1,190 @@
+[
+ {
+  "sourceBatch": "t1-feat-tracks-p2",
+  "findingIndex": 13,
+  "finding": {
+   "title": "Add semantics/tooltip to the icon-only close and back buttons in step_starting_position.dart and track_management_body.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AX-3",
+   "area": "presentation/tracks-setup",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/steps/step_starting_position.dart",
+     "line": 219,
+     "quote": "IconButton("
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/steps/step_starting_position.dart",
+     "line": 220,
+     "quote": "icon: const Icon(Icons.close),"
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/widgets/track_management_body.dart",
+     "line": 69,
+     "quote": "icon: const Icon(Icons.arrow_back_ios_new_rounded),"
+    }
+   ],
+   "sites": 2,
+   "why": "Both IconButtons carry no `tooltip` (nor an explicit Semantics label), unlike every other icon-only button in this batch (scope_tiles.dart, scope_views.dart, curriculum_picker_step.dart all set tooltip). A screen-reader user hits an unlabeled 'button' for the selection-clear action and for the track-management screen's primary back action.",
+   "recommendation": "Add tooltip: l10n.<key> to both, mirroring the pattern already used for the other IconButtons in the same files.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Both IconButtons have a non-null, localized tooltip.",
+    "A semantics test (find.bySemanticsLabel or similar) locates each button by its new label."
+   ],
+   "labels": [
+    "accessibility",
+    "semantics"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tracks-p3",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Wrap saveOrder/resetToDefault's reorder-amnesty stamp in the same transaction as the order write",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "DB-2 (>1 write = one transaction()) + Nygard partial-failure lens",
+   "area": "lib/features/tracks/whole_curriculum_order/data/repositories/learning_order_repository_impl.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tracks/whole_curriculum_order/data/repositories/learning_order_repository_impl.dart",
+     "line": 126,
+     "quote": "await _database.transaction(() async {"
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/whole_curriculum_order/data/repositories/learning_order_repository_impl.dart",
+     "line": 147,
+     "quote": "await _stampReorderAt(curriculumId, updatedAt);"
+    }
+   ],
+   "sites": 2,
+   "why": "_stampReorderAt does its own read+write OUTSIDE the transaction that persists the order change, in both saveOrder and resetToDefault. A process death or DB error between the two calls leaves the new order committed but the overdue-amnesty stamp missing (or the delete committed but the stamp missing on resetToDefault) \u2014 the code's own comment about wrapping upserts 'so a mid-loop crash cannot leave a half-shuffled state' shows the author cared about exactly this class of bug but didn't extend it to the second write.",
+   "recommendation": "Move the _stampReorderAt call inside the same _database.transaction(...) block in both saveOrder and resetToDefault.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Test: throw inside a fake trackDao.stampReorderAt call and assert the learning_order upsert rows are also rolled back as one atomic unit"
+   ],
+   "labels": [
+    "data-integrity",
+    "drift",
+    "tracks"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tracks-p3",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Inject FakeLocalDayClock into TrackCreationService's B3 back-date tests instead of reading the wall clock",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6 (hermetic tests: no wall-clock)",
+   "area": "test/features/tracks/setup/domain/services/track_creation_service_atomicity_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/tracks/setup/domain/services/track_creation_service_atomicity_test.dart",
+     "line": 131,
+     "quote": "final before = DateTimeFactory.nowUtc();"
+    },
+    {
+     "file": "learning_tracker/test/features/tracks/setup/domain/services/track_creation_service_atomicity_test.dart",
+     "line": 157,
+     "quote": "expect(daysBack, 5, reason: 'offset:5 must be exactly 5 days in the past');"
+    }
+   ],
+   "sites": 2,
+   "why": "Neither B3 test overrides LocalDayClock, so DateTimeFactory.nowUtc() reads the real system clock both for the test's 'before' and again inside the SUT's _parseProgramStartingRef moments later. Duration.inDays truncates: (Duration(days:5) - Duration(microseconds:1)).inDays == 4, verified directly in this Dart VM; an empirical 200k-iteration back-to-back DateTime.now() sample in this same environment showed roughly 4% of pairs returning a non-zero gap (up to 70us), meaning daysBack can legitimately compute to 4 instead of 5 and fail expect(daysBack, 5, ...) for reasons unrelated to any real regression. This is exactly the flakiness class LocalDayClock/FakeLocalDayClock exists to eliminate, and the sibling provision_track_use_case_test.dart correctly uses FakeLocalDayClock for the equivalent B3 assertions \u2014 this file is the outlier.",
+   "recommendation": "Thread a FakeLocalDayClock(seed) into TrackCreationService/_parseProgramStartingRef so the test's 'before' and the SUT's 'now' are the identical fixed instant, making daysBack deterministic.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "Test passes across many repeated runs with an artificial delay inserted between test setup and SUT invocation",
+    "Test no longer depends on two independent real-clock reads landing in the same tick"
+   ],
+   "labels": [
+    "test-quality",
+    "flaky-test",
+    "clock"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tracks-p3",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Fix the vacuous ChazaraInlineSetup custom-round tests in edit_track_screen_l1_test.dart",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (tautological tests / assertions weaker than what the source can do wrong)",
+   "area": "test/features/tracks/setup/edit_track_screen_l1_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/tracks/setup/edit_track_screen_l1_test.dart",
+     "line": 1016,
+     "quote": "expect(find.byIcon(Icons.add_circle_outline_rounded), findsNothing);"
+    },
+    {
+     "file": "learning_tracker/test/features/tracks/setup/edit_track_screen_l1_test.dart",
+     "line": 1040,
+     "quote": "final addIcons = find.byIcon(Icons.add_rounded);"
+    },
+    {
+     "file": "learning_tracker/test/features/tracks/setup/edit_track_screen_l1_test.dart",
+     "line": 1094,
+     "quote": "closeButtons.evaluate().length,\n        greaterThanOrEqualTo(0),"
+    }
+   ],
+   "sites": 3,
+   "why": "The file's own header claims coverage of 'Custom cycle enforces min 1 / max 5 rounds', and the real production logic exists (step_chazara.dart:295 onRemove null guard, :302-303 'if (_customDelays.length < 5) AddRoundChip'), but all 3 tests against it are vacuous: two probe icon constants (Icons.add_circle_outline_rounded, Icons.add_rounded) that AddRoundChip never renders \u2014 it renders Icons.add, confirmed by reading chazara_widgets.dart:196 \u2014 so their assertions pass independent of real widget behavior, and the third asserts List.length >= 0, a Dart-level tautology that is always true. A future change that broke min/max-round enforcement entirely (always 6+ rounds allowed, or the last round removable) would leave this whole test group green.",
+   "recommendation": "Fix the icon finders to Icons.add scoped via a Key/byWidgetPredicate (to avoid ambiguity with the unrelated TinyCircleButton Icons.add elsewhere), fix initialDelays: [1] to [3] in the add-round test per its own comment so it actually starts in custom mode, and replace the tautological length check with a real assertion on round count / IconButton.onPressed before vs after.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "Deliberately make _customDelays.length < 5 unconditionally true and confirm the 'hidden at 5' test now fails",
+    "Deliberately make onRemove always non-null and confirm the 'remove absent at 1' test now fails"
+   ],
+   "labels": [
+    "test-quality",
+    "tautological-test",
+    "tracks"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tracks-p3",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Re-point add_track_smart_label_test.dart at the code path that actually produces the track-created toast label",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (stale regression test no longer covers the bug it claims to guard)",
+   "area": "test/features/tracks/setup/presentation/screens/add_track_smart_label_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/tracks/setup/presentation/screens/add_track_smart_label_test.dart",
+     "line": 17,
+     "quote": "String smartTrackLabelForScope("
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/screens/add_track_flow_screen.dart",
+     "line": 670,
+     "quote": "String _getSmartDefault() {"
+    }
+   ],
+   "sites": 1,
+   "why": "The test's docstring says smartTrackLabelForScope is a 'Pure helper extracted from AddTrackFlow._getSmartDefault', and defines a local copy that calls CurriculumLabels.transliterateNamedValue directly. But the real, current _getSmartDefault (add_track_flow_screen.dart:670-684) was refactored (comment: 'F-05/F-21/run7: always use the curriculum label for the track's default name... not the last-selected seder') and now calls curriculumLabelText exclusively \u2014 it contains no reference to transliterateNamedValue at all. The test still passes because transliterateNamedValue is real and still used elsewhere (curriculum_label.dart), but it no longer exercises the actual toast-label path it was written to regression-guard (R1: English 'Genesis' leaking into the Hebrew-mode toast). A future regression in curriculumLabelText's Hebrew-terms/transliteration-variant wiring \u2014 the mechanism that actually produces the toast text today \u2014 would ship with this suite fully green.",
+   "recommendation": "Either delete the private-method fiction and retarget this file at curriculumLabelText's transliteration-variant behavior directly, or extract _getSmartDefault's label logic to a public, directly-testable function and call the real thing from the test.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "Test imports and calls the real function on the _getSmartDefault code path, not a hand-copied reimplementation",
+    "Deliberately breaking curriculumLabelText's Hebrew-terms wiring causes this test to fail"
+   ],
+   "labels": [
+    "test-quality",
+    "stale-test",
+    "tracks"
+   ]
+  }
+ }
+]

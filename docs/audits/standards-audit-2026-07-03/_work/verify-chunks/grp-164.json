@@ -1,0 +1,190 @@
+[
+ {
+  "sourceBatch": "t2-root-tool",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Delete the 4 unused SCREENS_*_ARCHIVED dead-code arrays from tool/vision_find_pass.js",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Tier-2 AREA NOTE: dead code",
+   "area": "tool (vision-audit orchestration prompt)",
+   "evidence": [
+    {
+     "file": "tool/vision_find_pass.js",
+     "line": 11,
+     "quote": "const SCREENS_FR1_ARCHIVED = ["
+    },
+    {
+     "file": "tool/vision_find_pass.js",
+     "line": 29,
+     "quote": "const SCREENS_E2E_R1_ARCHIVED = ["
+    },
+    {
+     "file": "tool/vision_find_pass.js",
+     "line": 53,
+     "quote": "const SCREENS_E2E_R2_ARCHIVED = ["
+    },
+    {
+     "file": "tool/vision_find_pass.js",
+     "line": 71,
+     "quote": "const SCREENS_E2E_R3_ARCHIVED = ["
+    }
+   ],
+   "sites": 4,
+   "why": "These 4 top-level consts (lines 11-87, roughly a third of the file) are grepped nowhere else in the file \u2014 only the separate `SCREENS` const at line 89 feeds the actual orchestration loop at line 224. Git history already preserves prior rounds' screen lists, so keeping ~180 lines of never-executed array literals in the live script is pure clutter that makes the file 3x longer than its live logic and risks a future editor mistaking one of the ARCHIVED arrays for the active one.",
+   "recommendation": "Delete SCREENS_FR1_ARCHIVED, SCREENS_E2E_R1_ARCHIVED, SCREENS_E2E_R2_ARCHIVED, and SCREENS_E2E_R3_ARCHIVED; rely on git log/blame for historical reference instead of committed dead arrays.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "None of SCREENS_FR1_ARCHIVED / SCREENS_E2E_R1_ARCHIVED / SCREENS_E2E_R2_ARCHIVED / SCREENS_E2E_R3_ARCHIVED remain defined in the file."
+   ],
+   "labels": [
+    "dead-code",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-root-tool",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Consolidate the 3 different hardcoded ADB binary paths across driver.py, adb-connect-wsl.sh, and vision_find_pass.js",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Tier-2 AREA NOTE: drift between duplicated configs",
+   "area": "tool (device automation)",
+   "evidence": [
+    {
+     "file": "tool/device_e2e/driver.py",
+     "line": 44,
+     "quote": "ADB = \"/home/daniel/Android/Sdk/platform-tools/adb\""
+    },
+    {
+     "file": "tool/adb-connect-wsl.sh",
+     "line": 29,
+     "quote": "ADB=\"$ANDROID_SDK_WIN/platform-tools/adb.exe\""
+    },
+    {
+     "file": "tool/vision_find_pass.js",
+     "line": 7,
+     "quote": "const ADB = '/home/daniel/bin/adb'"
+    }
+   ],
+   "sites": 3,
+   "why": "Three files that all drive the same physical/emulated devices define the ADB binary location three different, mutually-inconsistent ways (a raw Linux SDK path, a Windows adb.exe path via WSL2 interop, and a third `/home/daniel/bin/adb` alias) with no shared constant or environment variable and no comment explaining why they differ. Whether or not each is individually correct for its use case today, there's no single source of truth, so a future SDK-location change (or a second contributor) has to find and reconcile 3 independent literals with no way to verify they still agree.",
+   "recommendation": "Introduce one documented env var (e.g. LT_ADB, defaulting sensibly per-platform) that driver.py, vision_find_pass.js, and adb-connect-wsl.sh all read, instead of 3 independent hardcoded literals.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "A single documented ADB-path source (env var or one shared config) is referenced by all 3 scripts; no more than one hardcoded '.../adb' or 'adb.exe' literal remains in tool/**."
+   ],
+   "labels": [
+    "drift",
+    "portability",
+    "tooling"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-root-tool",
+  "findingIndex": 8,
+  "finding": {
+   "title": "Hoist the triplicated screenshot names[] list in tool/upload_store_assets.py to one constant",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler duplication (extract constant)",
+   "area": "tool (Play Store asset upload)",
+   "evidence": [
+    {
+     "file": "tool/upload_store_assets.py",
+     "line": 141,
+     "quote": "names = [\"dashboard\", \"learning\", \"progress\", \"scheduler\", \"gamification\"]"
+    },
+    {
+     "file": "tool/upload_store_assets.py",
+     "line": 150,
+     "quote": "names = [\"dashboard\", \"learning\", \"progress\", \"scheduler\", \"gamification\"]"
+    },
+    {
+     "file": "tool/upload_store_assets.py",
+     "line": 159,
+     "quote": "names = [\"dashboard\", \"learning\", \"progress\", \"scheduler\", \"gamification\"]"
+    }
+   ],
+   "sites": 3,
+   "why": "The same 5-element screenshot-name list is retyped verbatim inside the phone, 7-inch-tablet, and 10-inch-tablet upload loops. If a screenshot is ever added/renamed/reordered, all 3 copies must be updated in lockstep by hand; missing one silently mislabels an upload (the loop just indexes names[i-1] against whatever list is present) with no error since the script only checks os.path.exists implicitly via MediaFileUpload's own failure mode.",
+   "recommendation": "Define `SCREENSHOT_NAMES = [\"dashboard\", \"learning\", \"progress\", \"scheduler\", \"gamification\"]` once at module scope (near PACKAGE_NAME/LANGUAGE) and reference it in all 3 loops.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "The literal list `[\"dashboard\", \"learning\", \"progress\", \"scheduler\", \"gamification\"]` appears exactly once in the file."
+   ],
+   "labels": [
+    "duplication",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-root-tool",
+  "findingIndex": 9,
+  "finding": {
+   "title": "tool/merge_arb.py silently no-ops because all 4 hardcoded source branches (r1-tracks2 etc.) no longer exist",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Nygard lens: silent failure on missing input",
+   "area": "tool (ARB merge, one-off R1 fix-wave helper)",
+   "evidence": [
+    {
+     "file": "tool/merge_arb.py",
+     "line": 10,
+     "quote": "BRANCHES = [\"r1-tracks2\", \"r1-content2\", \"r1-locale\", \"r1-gamif2\"]"
+    },
+    {
+     "file": "tool/merge_arb.py",
+     "line": 18,
+     "quote": "if out.returncode != 0:\n        return {}"
+    }
+   ],
+   "sites": 1,
+   "why": "`git branch -a` confirms none of the 4 branches this script reads from still exist locally or on the remote \u2014 they were the ephemeral R1 fix-wave worktree branches, presumably merged and deleted. load_branch_arb() swallows a failing `git show <branch>:<path>` into an empty dict with no warning, so running this script today prints '<path>: no new keys' for both ARBs \u2014 which reads as 'already in sync' when the real reason is 'none of the source branches exist.' A future dev who reruns this expecting it to pick up some other branches' ARB changes gets silent, misleading success.",
+   "recommendation": "Either delete this one-off script now that its job (the R1 merge) is done (git history preserves it), or make it fail loudly when a listed branch doesn't resolve via `git rev-parse --verify <branch>` before attempting `git show`.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Running the script against a nonexistent branch either exits non-zero with a clear error, or the script (and its stale branch list) is removed."
+   ],
+   "labels": [
+    "dead-code",
+    "silent-failure",
+    "tooling"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-root-tool",
+  "findingIndex": 10,
+  "finding": {
+   "title": "tool/device_e2e/journey_01_signup_profile.py promises TEST_UID cleanup that nothing implements",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Dead code / unimplemented contract",
+   "area": "tool/device_e2e (real-device E2E journey)",
+   "evidence": [
+    {
+     "file": "tool/device_e2e/journey_01_signup_profile.py",
+     "line": 139,
+     "quote": "print(f\"TEST_UID={uid}\", flush=True)  # for cleanup"
+    }
+   ],
+   "sites": 1,
+   "why": "Every run of this journey creates a real Firebase Auth account + Firestore learner_profiles doc in the live torah-study-tracker project and prints TEST_UID with a comment implying something downstream consumes it to clean up. Grepping the whole repo finds no script, doc, or Makefile target that reads a TEST_UID= line from this journey's output \u2014 nothing ever deletes the test account or its Firestore docs. Repeated manual runs (the file's own comment: 'Local-only dev tool... run: python3 journey_01_signup_profile.py') accumulate orphaned e2e<timestamp>@example.com accounts and profile documents in the production-named Firebase project indefinitely.",
+   "recommendation": "Either add the promised cleanup step (a small script that reads TEST_UID from stdout/a file and deletes the Identity Toolkit account + its Firestore docs) or remove the misleading '# for cleanup' comment and note in the README that test accounts must be purged manually/periodically.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Either a cleanup script consuming TEST_UID exists and is documented in tool/device_e2e/README.md, or the cleanup comment is removed/replaced with an accurate note about manual purging."
+   ],
+   "labels": [
+    "dead-code",
+    "hygiene",
+    "test-data-hygiene"
+   ]
+  }
+ }
+]

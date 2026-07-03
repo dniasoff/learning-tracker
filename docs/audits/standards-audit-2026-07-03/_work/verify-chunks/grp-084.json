@@ -1,0 +1,202 @@
+[
+ {
+  "sourceBatch": "t1-feat-progress-p2",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Split or trim hand-written progress widget files over the 400-line AG-3 cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3 (hand-written Dart files \u2264400 lines)",
+   "area": "presentation / widgets",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/widgets/lifetime_folder_styled_widgets.dart",
+     "line": 12,
+     "quote": "class LifetimeFolderGradients {"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/widgets/siyumim_grouped_view.dart",
+     "line": 29,
+     "quote": "class SiyumimGroupedView extends ConsumerWidget {"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/widgets/curriculum_breakdown_list.dart",
+     "line": 22,
+     "quote": "class CurriculumBreakdownList extends StatefulWidget {"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/widgets/monthly_activity_sliver_calendar.dart",
+     "line": 69,
+     "quote": "class MonthlyActivitySliverCalendar extends StatefulWidget {"
+    }
+   ],
+   "sites": 4,
+   "why": "lifetime_folder_styled_widgets.dart is 650 lines (62% over the cap) and bundles a theme/gradient constants class with six unrelated standalone widget classes plus an enum in one file \u2014 the kind of file where an unrelated one-line style tweak forces a reviewer to scroll past six other widgets' worth of unrelated diff. siyumim_grouped_view.dart (437), curriculum_breakdown_list.dart (413) and monthly_activity_sliver_calendar.dart (404, also dead \u2014 see companion finding) are more modestly over (1-9%).",
+   "recommendation": "Split lifetime_folder_styled_widgets.dart along its class boundaries (e.g. lifetime_folder_gradients.dart, lifetime_folder_surface.dart, lifetime_marking_scope_row.dart); trim the other three opportunistically on next touch.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "A line-count checker (tool/ script or CI grep) enumerates these 4 paths today and is wired into make audit per Rule 0; count drops to 0 after the split."
+   ],
+   "labels": [
+    "file-size",
+    "hygiene",
+    "ag-3"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-progress-p2",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Stop pinning the dead, unlocalized ChartTimeRange.displayName getter with a coverage-chasing test",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (tautological / coverage-chasing tests) intersecting AX-2",
+   "area": "test quality",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/progress/domain/models/chart_data_test.dart",
+     "line": 1,
+     "quote": "// Tests for ChartTimeRange.displayName \u2014 covers lines 42-45 (uncovered)."
+    },
+    {
+     "file": "learning_tracker/test/features/progress/domain/models/chart_data_test.dart",
+     "line": 8,
+     "quote": "expect(ChartTimeRange.last7Days.displayName, '7 Days');"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/domain/models/chart_data.dart",
+     "line": 66,
+     "quote": "ChartTimeRange.last7Days => '7 Days',"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/screens/recent_activity_screen.dart",
+     "line": 188,
+     "quote": "ChartTimeRange.last7Days => l10n.chartLast7Days,"
+    }
+   ],
+   "sites": 1,
+   "why": "chart_data_test.dart's own header says it exists to 'cover' previously-uncovered lines \u2014 its four tests simply assert the literal English strings the source hardcodes ('7 Days'/'30 Days'/'All Time'), the textbook tautological pattern (compare-against-what-the-source-literally-returns). Worse, the getter under test is dead: the only real caller, recent_activity_screen.dart, ignores ChartTimeRange.displayName entirely and switches through proper AppLocalizations getters (l10n.chartLast7Days etc.) instead. So this test spends 25 lines locking in a hardcoded-English getter that (a) no production code calls and (b) would violate AX-2 the moment anyone wired it up, and its passing status gives false confidence.",
+   "recommendation": "Delete chart_data_test.dart together with the ChartTimeRange.displayName getter itself, since recent_activity_screen.dart already has the correct localized replacement \u2014 don't keep a passing test whose only job is protecting a hardcoded-English string from ever being fixed.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Either ChartTimeRange.displayName and its test are removed, or the getter is rebuilt on AppLocalizations and the test asserts against l10n fixtures instead of literal English."
+   ],
+   "labels": [
+    "test-quality",
+    "dead-code",
+    "i18n"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-progress-p2",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Consolidate the near-duplicate chart_data_service test files spawned across fix waves",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler duplication / AG-5 (one mirrored test suite per source file)",
+   "area": "test quality",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/progress/domain/services/chart_data_service_extended_test.dart",
+     "line": 88,
+     "quote": "test('returns null when goal has no targetDate', () async {"
+    },
+    {
+     "file": "learning_tracker/test/features/progress/domain/services/chart_data_service_extra_test.dart",
+     "line": 77,
+     "quote": "test('returns null when the goal has no targetDate', () async {"
+    },
+    {
+     "file": "learning_tracker/test/features/progress/domain/services/chart_data_service_migration_test.dart",
+     "line": 153,
+     "quote": "test('bulkInTrack rows: INCLUDED on the chart (W1-B / Phase A)', () async {"
+    },
+    {
+     "file": "learning_tracker/test/features/progress/domain/services/chart_data_service_sentinel_test.dart",
+     "line": 116,
+     "quote": "'bulkInTrack rows are charted (new trackAchievement tier)',"
+    }
+   ],
+   "sites": 4,
+   "why": "chart_data_service.dart (697 lines) is covered by FIVE test files totalling ~1,643 lines, and two independent near-duplicate pairs formed inside that set. extended_test.dart and extra_test.dart both claim to add getTargetLine coverage and reimplement the same five cases (null-no-goal, null-no-targetDate, zero-days, happy-path length, monotonic-increase) with their own copies of the same setUp/insertGoal helpers. migration_test.dart and sentinel_test.dart both re-verify the identical W1-B trackAchievement-tier behavior (bulkInTrack charted, lifetimeOnly excluded, live+bulk mixed) for the same two methods, down to near-identical doc-comment framing of the same fix wave. Each pair has exactly one genuinely unique case (extra_test's baselineCount-excludes-pre-goal-completions; sentinel_test's sentinel-timestamp-without-import-record test). This is fix-wave churn: a coverage request spawned a new file instead of extending the existing suite, so the service now needs two files edited in lockstep for the same behavior and the copies can silently drift apart.",
+   "recommendation": "Fold extra_test.dart's one unique case into chart_data_service_extended_test.dart and delete extra_test.dart; fold sentinel_test.dart's sentinel-timestamp case into chart_data_service_migration_test.dart and delete sentinel_test.dart.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "chart_data_service has at most 3 test files after consolidation.",
+    "The two currently-unique cases (baselineCount-excludes-pre-goal completions; sentinel-without-import treated as live) still exist and pass in the retained files.",
+    "No expect( count regresses across the merge (TQ-7 ratchet)."
+   ],
+   "labels": [
+    "test-quality",
+    "duplication",
+    "fowler"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-progress-p2",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Add a semantic label to the icon-only drill-in IconButton in LifetimeMarkingScopeRow",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AX-3 (icon-only buttons carry semantics)",
+   "area": "accessibility",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/widgets/lifetime_folder_styled_widgets.dart",
+     "line": 630,
+     "quote": "IconButton(\n                icon: Icon(\n                  Icons.navigate_next_rounded,"
+    }
+   ],
+   "sites": 1,
+   "why": "This IconButton has no tooltip and isn't wrapped in Semantics, unlike the rest of the batch \u2014 progress_tier_counter_row.dart, for example, explicitly wraps its icon+number tiles in Semantics(label: ...). A screen-reader user landing on this control hears an unlabeled button with no indication it drills into the row's children.",
+   "recommendation": "Add a tooltip (e.g. an l10n 'View details' / drill-in key) to the IconButton.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "The IconButton exposes a non-empty accessible label (tooltip or Semantics wrapper), verifiable via a widget test asserting on Semantics data."
+   ],
+   "labels": [
+    "accessibility",
+    "ax-3"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-progress-p2",
+  "findingIndex": 8,
+  "finding": {
+   "title": "Rename one of the two unrelated PaceIndicator classes (progress vs scheduler features)",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-4 (public top-level symbol names unique across lib/)",
+   "area": "naming",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/widgets/pace_indicator.dart",
+     "line": 15,
+     "quote": "class PaceIndicator extends StatelessWidget {"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/presentation/widgets/pace_indicator.dart",
+     "line": 9,
+     "quote": "class PaceIndicator extends StatelessWidget {"
+    }
+   ],
+   "sites": 2,
+   "why": "Two entirely different widgets share the class name PaceIndicator: progress's takes a PaceCalculator plus an optional subtitleCaption and renders a full card; scheduler's takes a bare PaceStatus and renders a compact dot+label row. Different constructors mean no compile error today, but any grep/'find usages'/agent-generated new call site has a real chance of picking the wrong one, and the two can't be imported into the same file without an alias.",
+   "recommendation": "Rename one (e.g. scheduler's to CompactPaceIndicator, matching its actual inline-row shape) to keep the symbol space unambiguous.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep -rn 'class PaceIndicator' lib/ returns exactly one match."
+   ],
+   "labels": [
+    "naming",
+    "ag-4"
+   ]
+  }
+ }
+]

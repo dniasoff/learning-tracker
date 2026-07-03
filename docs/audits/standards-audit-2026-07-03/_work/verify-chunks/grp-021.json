@@ -1,0 +1,222 @@
+[
+ {
+  "sourceBatch": "t1-core-network",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Delete or reconnect the superseded Sefaria-REST fetcher pipeline (curriculum_content_fetcher.dart + its 989-line test suite)",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Everything sweep: dead code; AG-1 (no ad-hoc variants outside make targets); Fowler speculative generality",
+   "area": "core/network/sefaria (+ tool/, test/core/network)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/network/sefaria/curriculum_content_fetcher.dart",
+     "line": 21,
+     "quote": "abstract class CurriculumContentFetcher {"
+    },
+    {
+     "file": "learning_tracker/test/core/network/dio_client_test.dart",
+     "line": 9,
+     "quote": "import '../../../tool/lib/dio_client.dart';"
+    },
+    {
+     "file": "learning_tracker/test/core/network/sefaria/fetcher_test.dart",
+     "line": 12,
+     "quote": "import '../../../../tool/lib/sefaria/bavli_fetcher.dart';"
+    },
+    {
+     "file": "learning_tracker/tool/seed_content.dart",
+     "line": 26,
+     "quote": "final dio = Dio("
+    },
+    {
+     "file": "docs/seed-build.md",
+     "line": 7,
+     "quote": "Docker. There are **no public Sefaria API calls** in the build path."
+    },
+    {
+     "file": "docs/explainers/content-database.md",
+     "line": 167,
+     "quote": "\u251c\u2500\u2500 seed_content.dart                   # Fetch per-curriculum content"
+    }
+   ],
+   "sites": 3,
+   "why": "CurriculumContentFetcher/FetchResult/SefariaApiException (curriculum_content_fetcher.dart) have zero implementations or callers anywhere in lib/ \u2014 their only implementers are the 7 tool/lib/sefaria/*_fetcher.dart classes, and their only caller is tool/seed_content.dart, which is not invoked by `make seed` (Makefile) or any current doc workflow. docs/seed-build.md states in writing that the canonical pipeline (tool/seed/build_text_cache.dart) replaced 'the old dependency on ... the public Sefaria API' and makes 'no public Sefaria API calls'. Worse, dio_client_test.dart (158 lines) and fetcher_test.dart (831 lines) \u2014 989 of my batch's 1188 lines \u2014 thoroughly test createDioClient/createSefariaClient/RetryInterceptor and the 7 fetchers, none of which the live pipeline calls: seed_content.dart builds its own untested, retry-less, logger-less Dio() inline (line 26) instead of reusing the fully-tested createSefariaClient(). This is a large, continuously-CI-run, thoroughly-documented dead branch that will mislead a future contributor fixing a Sefaria-shape regression into 'fixing' code nothing runs, while docs/explainers/content-database.md and docs/source-tree-analysis.md still list seed_content.dart as if it's live, contradicting docs/seed-build.md.",
+   "recommendation": "Either (a) delete curriculum_content_fetcher.dart, tool/lib/sefaria/*_fetcher.dart, tool/lib/dio_client.dart, tool/seed_content.dart and their two test files, and update docs/explainers/content-database.md + docs/source-tree-analysis.md to drop seed_content.dart from the tree/diagram; or (b) if intentionally kept as a manual fallback, wire tool/seed_content.dart to call createSefariaClient() (so the tested retry/redaction logic is actually exercised) and add a doc note stating its fallback status.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "grep -rn 'CurriculumContentFetcher\\|createSefariaClient\\|createDioClient' across lib/ and tool/ shows either zero results (deleted) or a real caller in tool/seed_content.dart (reconnected)",
+    "docs/explainers/content-database.md and docs/source-tree-analysis.md source-tree listings match what actually exists post-fix",
+    "`make seed` (or its documented fallback) is the only content-build path referenced by both code and docs"
+   ],
+   "labels": [
+    "dead-code",
+    "core-network",
+    "docs-drift",
+    "tooling"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-network",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Convert ContentItem/CurriculumHierarchyConfig/FetchResult to @freezed instead of hand-rolled or absent equality",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Naming/placement/invariants \u2014 'Domain/state models are immutable @freezed classes ... never hand-write ==/hashCode for data classes \u2014 hand-rolled equality drifts from the fields and silently breaks rebuild-skipping.'",
+   "area": "core/network/sefaria/models",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/network/sefaria/models/content_item.dart",
+     "line": 51,
+     "quote": "other is ContentItem &&\n          runtimeType == other.runtimeType &&"
+    },
+    {
+     "file": "learning_tracker/lib/core/network/sefaria/models/content_item.dart",
+     "line": 55,
+     "quote": "curriculumId == other.curriculumId &&\n          sefariaRef == other.sefariaRef;"
+    },
+    {
+     "file": "learning_tracker/lib/core/network/sefaria/models/curriculum_hierarchy_config.dart",
+     "line": 18,
+     "quote": "final List<String> levelLabels;"
+    },
+    {
+     "file": "learning_tracker/lib/core/network/sefaria/curriculum_content_fetcher.dart",
+     "line": 6,
+     "quote": "class FetchResult {"
+    }
+   ],
+   "sites": 3,
+   "why": "ContentItem's == compares only curriculumId+sefariaRef, silently ignoring level1-4/displayNameHe/displayNameEn/sortOrder/isLeaf \u2014 two items differing only in display text or sort order compare equal, so any future Set/Map-keyed-by-item or equality-based diff would silently drop a real change. CurriculumHierarchyConfig has no == at all (falls back to identity), so two field-identical instances are never equal, AND exposes a directly-mutable List<String> levelLabels with no defensive copy \u2014 content_repository_impl.dart caches these instances in _configCache and hands the same object to every reader, so one caller mutating the list would corrupt it for all subsequent readers. FetchResult (the public return type of fetchAllContent()) has the same gap.",
+   "recommendation": "Make all three @freezed with generated ==/hashCode/copyWith; for CurriculumHierarchyConfig use an immutable list wrapper (e.g. List.unmodifiable or IList) for levelLabels.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "dart run build_runner build --delete-conflicting-outputs regenerates these as @freezed with no manual ==/hashCode remaining",
+    "a regression test proves two ContentItems differing only in sortOrder/displayNameHe are NOT ==",
+    "levelLabels cannot be mutated through the public CurriculumHierarchyConfig API"
+   ],
+   "labels": [
+    "freezed",
+    "equality",
+    "immutability"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-network",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Fix ContentItem's doc comment claiming it maps to a content_items DB table that no longer exists",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Everything sweep / Evans ubiquitous-language accuracy",
+   "area": "core/network/sefaria/models",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/network/sefaria/models/content_item.dart",
+     "line": 4,
+     "quote": "/// (individual mishna, daf, pasuk, etc.). Maps directly to the\n/// `content_items` table schema."
+    },
+    {
+     "file": "learning_tracker/lib/core/database/tables/bookmarks.dart",
+     "line": 8,
+     "quote": "/// replacing the old contentItemId FK to the content_items table."
+    },
+    {
+     "file": "learning_tracker/lib/features/content_browsing/data/repositories/content_repository_impl.dart",
+     "line": 15,
+     "quote": "/// Loads hierarchy content from bundled JSON assets on first access"
+    }
+   ],
+   "sites": 1,
+   "why": "There is no `content_items` table anywhere in lib/core/database/tables/ today; the only other repo references to it (bookmarks.dart, learning_order.dart) describe it in the past tense as an FK that was removed. The actual runtime source, per ContentRepositoryImpl's own doc comment, is bundled JSON assets (assets/content/hierarchy/*.json), not a database table. A maintainer trusting this comment could waste time hunting for a Drift migration that doesn't exist.",
+   "recommendation": "Update the doc comment to describe the current asset-backed source and drop the content_items-table claim (or mark it explicitly historical).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Comment text matches ContentRepositoryImpl's actual loading mechanism; no remaining present-tense 'content_items table' claim outside historical-context comments"
+   ],
+   "labels": [
+    "docs-drift",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-network",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Rewrite ConnectivityGateway's only test \u2014 it is tautologically true and hits the real network",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6 (hermetic tests: no network) + TQ-8 (assertion weaker than what the source can do wrong)",
+   "area": "core/network (test hermeticity)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/network/connectivity_service_test.dart",
+     "line": 14,
+     "quote": "expect(online, isNot(offline));"
+    },
+    {
+     "file": "learning_tracker/lib/core/network/connectivity_gateway.dart",
+     "line": 26,
+     "quote": "Future<bool> get isOffline async => !(await isOnline);"
+    },
+    {
+     "file": "learning_tracker/lib/core/network/connectivity_gateway.dart",
+     "line": 14,
+     "quote": "final result = await InternetAddress.lookup(\n        'dns.google',"
+    }
+   ],
+   "sites": 2,
+   "why": "isOffline is defined as the literal negation of isOnline, so expect(online, isNot(offline)) reduces to 'online == online' \u2014 true for every possible return value, including if isOnline were hardcoded to `return true;`. The test can never catch a regression in the actual DNS-lookup logic. Because ConnectivityGateway has no injectable seam for the lookup, the test cannot fake a response either way and instead performs a live DNS query to dns.google on every run \u2014 flaky/slow/blocked in network-restricted CI or sandboxes, and this is the class's only test.",
+   "recommendation": "Add an injectable lookup function (e.g. `Future<List<InternetAddress>> Function(String)`, defaulting to InternetAddress.lookup) to ConnectivityGateway, then test both the true and false paths via a fake with zero real network access.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "test asserts isOnline == true for a faked successful lookup and == false for a faked SocketException/timeout",
+    "test suite passes with network access disabled",
+    "renamed to connectivity_gateway_test.dart (see naming finding)"
+   ],
+   "labels": [
+    "testing",
+    "hermeticity",
+    "tautological-test"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-network",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Rename connectivity_service_test.dart to connectivity_gateway_test.dart to match its renamed source class",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-5 (test mirrors lib 1:1) / snake_case file-naming convention",
+   "area": "test/core/network (naming)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/network/connectivity_service_test.dart",
+     "line": 5,
+     "quote": "group('ConnectivityGateway', () {"
+    },
+    {
+     "file": "learning_tracker/test/mocks/mock_services.dart",
+     "line": 8,
+     "quote": "// Connectivity Gateway (formerly ConnectivityService \u2014 renamed W5.20)"
+    }
+   ],
+   "sites": 1,
+   "why": "The source class was renamed from ConnectivityService to ConnectivityGateway (W5.20) but its test file was never renamed to match connectivity_gateway.dart. A contributor grepping for the naturally-mirrored connectivity_gateway_test.dart won't find the existing test and may create a duplicate instead of extending it.",
+   "recommendation": "git mv test/core/network/connectivity_service_test.dart test/core/network/connectivity_gateway_test.dart.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "File exists at the mirrored path; no remaining *_service_test.dart file for ConnectivityGateway"
+   ],
+   "labels": [
+    "naming",
+    "hygiene"
+   ]
+  }
+ }
+]

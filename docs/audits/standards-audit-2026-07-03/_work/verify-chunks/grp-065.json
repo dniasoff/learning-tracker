@@ -1,0 +1,218 @@
+[
+ {
+  "sourceBatch": "t1-feat-notifications-p1",
+  "findingIndex": 12,
+  "finding": {
+   "title": "Replace Future.delayed wall-clock waits with deterministic signals in notification cold-start tests (TQ-6)",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6",
+   "area": "test/features/notifications/presentation/providers",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/notifications/presentation/providers/reminder_enabled_cold_start_test.dart",
+     "line": 106,
+     "quote": "await Future<void>.delayed(const Duration(milliseconds: 100));"
+    },
+    {
+     "file": "learning_tracker/test/features/notifications/presentation/providers/reminder_time_cold_start_test.dart",
+     "line": 94,
+     "quote": "await Future<void>.delayed(const Duration(milliseconds: 100));"
+    },
+    {
+     "file": "learning_tracker/test/features/notifications/presentation/providers/notification_providers_deep_test.dart",
+     "line": 184,
+     "quote": "await Future<void>.delayed(const Duration(milliseconds: 200));"
+    },
+    {
+     "file": "learning_tracker/test/features/notifications/presentation/providers/notification_providers_test.dart",
+     "line": 48,
+     "quote": "await Future<void>.delayed(const Duration(milliseconds: 200));"
+    }
+   ],
+   "sites": 19,
+   "why": "These bare-ProviderContainer tests (no WidgetTester/FakeAsync virtualization) use a real-wall-clock Future.delayed(100ms/200ms) to 'give async load time to complete' instead of awaiting a concrete signal. This encodes an unstated assumption about how fast SharedPreferences-mock plus microtasks resolve rather than an explicit dependency, and is non-hermetic under CI scheduler contention.",
+   "recommendation": "Replace with pumpEventQueue() (package:test) or listen-and-await-first-matching-value instead of fixed sleeps.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "None of the 4 listed files contain Future.delayed combined with a millisecond Duration literal."
+   ],
+   "labels": [
+    "tq-6",
+    "test-quality",
+    "notifications"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-notifications-p1",
+  "findingIndex": 13,
+  "finding": {
+   "title": "Add Android/iOS branch coverage for NotificationGateway.requestPermission()/hasPermission()",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-1 / testability",
+   "area": "features/notifications/domain/services",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/notifications/domain/services/notification_gateway.dart",
+     "line": 121,
+     "quote": "final android = _plugin\n        .resolvePlatformSpecificImplementation<"
+    },
+    {
+     "file": "learning_tracker/test/features/notifications/domain/services/notification_gateway_test.dart",
+     "line": 219,
+     "quote": "'returns true when no platform-specific impl is available (non-mobile)',"
+    }
+   ],
+   "sites": 1,
+   "why": "resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>() (and the iOS equivalent) always return null against the mock plugin in a plain unit test, so requestPermission/hasPermission's tests only exercise the trivial fallback branch. The actual Android (POST_NOTIFICATIONS + exact-alarm) and iOS (alert/badge/sound) request logic -- the code that determines whether real users on real devices actually get permission requested correctly -- has no unit-test seam at all.",
+   "recommendation": "Introduce a thin platform-request abstraction NotificationGateway can take a fake for, or verify mocktail can stub AndroidFlutterLocalNotificationsPlugin/IOSFlutterLocalNotificationsPlugin directly so the branch logic becomes testable.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "A test exercising the Android branch asserts both requestNotificationsPermission() and requestExactAlarmsPermission() are called and the granted flag is threaded through correctly; an equivalent test exists for iOS."
+   ],
+   "labels": [
+    "test-gap",
+    "notifications",
+    "testability"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-notifications-p1",
+  "findingIndex": 14,
+  "finding": {
+   "title": "Convert ReminderPreferences to @freezed instead of hand-rolled ==/hashCode/copyWith",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "naming/placement \u2014 data classes must be @freezed",
+   "area": "features/notifications/domain/models",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/notifications/domain/models/reminder_preferences.dart",
+     "line": 75,
+     "quote": "bool operator ==(Object other) =>\n      identical(this, other) ||"
+    },
+    {
+     "file": "learning_tracker/lib/features/notifications/domain/models/reminder_preferences.dart",
+     "line": 88,
+     "quote": "int get hashCode => Object.hash(\n    reminderEnabled,"
+    }
+   ],
+   "sites": 1,
+   "why": "Matches the coding standard's explicit rule to never hand-write ==/hashCode for data classes. The 7 fields are consistent between == and hashCode today, but every future field addition is a manual 3-way sync across the constructor, ==, hashCode and copyWith -- an easy place to introduce a silent equality bug (a field present in the constructor but missed in == makes two logically-different instances compare equal).",
+   "recommendation": "Convert to @freezed class ReminderPreferences with _$ReminderPreferences.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "dart run build_runner build generates the freezed file and existing tests (e.g. notification_providers_deep_test.dart groups H/A-E) keep passing unmodified."
+   ],
+   "labels": [
+    "hygiene",
+    "freezed",
+    "notifications"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-notifications-p2",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Override reminderSyncEffectProvider/streakAlertSyncEffectProvider in notifications_screen_test.dart and ws5_two_layers_test.dart to stop opening a real Drift database",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6 (hermetic tests, Pending) \u2014 novel violation",
+   "area": "features/notifications/presentation (tests, hermeticity)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/notifications/presentation/screens/notifications_screen_test.dart",
+     "line": 29,
+     "quote": "return ProviderScope(\n      overrides: [notificationServiceProvider.overrideWithValue(mockService)],"
+    },
+    {
+     "file": "learning_tracker/test/features/notifications/ws5_two_layers_test.dart",
+     "line": 30,
+     "quote": "overrides: [\n      if (gatewayOverride != null)"
+    }
+   ],
+   "sites": 2,
+   "why": "NotificationsScreen.build() unconditionally does `ref.watch(reminderSyncEffectProvider)` / `ref.watch(streakAlertSyncEffectProvider)` (both @Riverpod(keepAlive) FutureProviders that chain into notificationSchedulerProvider -> sacredWindowRepositoryProvider -> userDatabaseProvider, i.e. a real drift_flutter-backed UserDatabase opened via driftDatabase(name: 'learning_tracker')). Neither buildSubject() (notifications_screen_test.dart) nor _buildWithProviders() (ws5_two_layers_test.dart) overrides these two effects, unlike the newer notifications_screen_l1_test.dart which does so explicitly \"to isolate the UI tests\" (its own header comment). Actually running `flutter test test/features/notifications/presentation/screens/notifications_screen_test.dart` reproduces Drift's own runtime warning verbatim: \"It looks like you've created the database class UserDatabase multiple times. When these two databases use the same QueryExecutor, race conditions will occur and might corrupt the database\" (fires because the file pumps a fresh ProviderScope 5 times against the same default DB name in one process). ws5_two_layers_test.dart pumps the same unguarded path once, so the warning doesn't fire there today, but the identical missing-override defect is present and would manifest the same way if a second pump were added.",
+   "recommendation": "Add `reminderSyncEffectProvider.overrideWith((ref) async {})` and `streakAlertSyncEffectProvider.overrideWith((ref) async {})` to both builders, matching notifications_screen_l1_test.dart's pattern, so no real UserDatabase/scheduler chain is ever constructed in these widget tests.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "buildSubject() in notifications_screen_test.dart and _buildWithProviders() in ws5_two_layers_test.dart both override reminderSyncEffectProvider and streakAlertSyncEffectProvider with no-ops.",
+    "Re-running `flutter test test/features/notifications/presentation/screens/notifications_screen_test.dart` prints no \"WARNING (drift): It looks like you've created the database class UserDatabase multiple times\" output.",
+    "(Rule-0, Pending) TQ-6 audit grep: any widget test file that pumps NotificationsScreen must also override both keepAlive sync-effect providers in the same overrides list."
+   ],
+   "labels": [
+    "testing",
+    "hermeticity",
+    "riverpod",
+    "drift"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-notifications-p2",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Extract the 7 duplicated ProviderScope/MaterialApp blocks in notifications_screen_l1_test.dart into a shared helper to clear the 400-line cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3 (Pending) + Fowler duplication (Extract Method)",
+   "area": "features/notifications/presentation/screens (tests, file size)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/notifications/presentation/screens/notifications_screen_l1_test.dart",
+     "line": 292,
+     "quote": "notificationServiceProvider.overrideWithValue(_gateway),\n              reminderSyncEffectProvider.overrideWith((ref) async {}),"
+    },
+    {
+     "file": "learning_tracker/test/features/notifications/presentation/screens/notifications_screen_l1_test.dart",
+     "line": 332,
+     "quote": "ProviderScope("
+    },
+    {
+     "file": "learning_tracker/test/features/notifications/presentation/screens/notifications_screen_l1_test.dart",
+     "line": 372,
+     "quote": "ProviderScope("
+    },
+    {
+     "file": "learning_tracker/test/features/notifications/presentation/screens/notifications_screen_l1_test.dart",
+     "line": 529,
+     "quote": "ProviderScope("
+    },
+    {
+     "file": "learning_tracker/test/features/notifications/presentation/screens/notifications_screen_l1_test.dart",
+     "line": 567,
+     "quote": "ProviderScope("
+    },
+    {
+     "file": "learning_tracker/test/features/notifications/presentation/screens/notifications_screen_l1_test.dart",
+     "line": 664,
+     "quote": "ProviderScope("
+    },
+    {
+     "file": "learning_tracker/test/features/notifications/presentation/screens/notifications_screen_l1_test.dart",
+     "line": 702,
+     "quote": "ProviderScope("
+    }
+   ],
+   "sites": 7,
+   "why": "The file is 977 lines against the 400-line ratchet (checker: `find lib test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400'`). ~133 of those lines are 7 byte-for-byte-identical 19-line ProviderScope+MaterialApp+localizationsDelegates blocks (lines 290-307, 332-349, 372-389, 529-546, 567-584, 664-681, 702-719) that don't reuse the file's own `_buildApp` helper, because those 7 tests need the real stateful Notifier (SharedPreferences-seeded) rather than `_buildApp`'s `overrideWithValue(...)` shortcut (which would make `.notifier` throw). Any future change to the localizationsDelegates list or ProviderScope wiring needs 8 edits instead of 1, and the file's size already exceeds per-file agent read budgets per AG-3's own rationale.",
+   "recommendation": "Add a `useRealNotifiers` (or similar) flag to `_buildApp` that skips the `overrideWithValue(...)` entries for the preference providers while still applying notificationServiceProvider/reminderSyncEffectProvider/streakAlertSyncEffectProvider, then replace all 7 inline ProviderScope literals with a single call to the extended helper (or extract a dedicated `_pumpWithRealNotifier(tester, gateway, seed: {...})` helper). Consider also splitting the file along its existing group boundaries (render / reminder / streak / reward / device-toggle / RTL) if it's still over 400 lines afterward.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "All 7 inline ProviderScope(...) blocks are replaced by calls to one shared, parameterized builder.",
+    "`wc -l` on the file is at or under 400, or the file is split into cohesive sub-files each \u2264400 lines.",
+    "(Rule-0, Pending) AG-3 audit check `find lib test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400'` no longer lists this file."
+   ],
+   "labels": [
+    "testing",
+    "file-size",
+    "duplication",
+    "AG-3"
+   ]
+  }
+ }
+]

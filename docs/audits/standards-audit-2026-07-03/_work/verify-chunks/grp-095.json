@@ -1,0 +1,198 @@
+[
+ {
+  "sourceBatch": "t1-feat-scheduler-p3",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Add regression tests for GoalRepositoryImpl's not-found and delete-sync payload paths",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "EH-2 (typed exceptions surfaced correctly) / TQ-8 (every reachable error branch needs a red-first test)",
+   "area": "features/scheduler/data/repositories tests",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/scheduler/data/repositories/goal_repository_impl.dart",
+     "line": 93,
+     "quote": "if (existing == null) {\n        throw ArgumentError('Goal not found: $goalId');"
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/data/repositories/goal_repository_impl_test.dart",
+     "line": 21,
+     "quote": "@override\n  Future<void> deleteGoal(Map<String, dynamic> payload) async {}"
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/data/repositories/goal_repository_impl_test.dart",
+     "line": 161,
+     "quote": "test('deleteGoal removes the goal', () async {"
+    }
+   ],
+   "sites": 2,
+   "why": "(a) updateGoal throws ArgumentError when goalId doesn't exist (e.g. the goal was deleted from another device and the sync merge already removed the local row before this device's in-flight edit lands) \u2014 no test in this file ever calls updateGoal with a nonexistent id, so nothing pins whether it throws, what it throws, or that a future refactor doesn't silently swallow/change it. (b) The file's own 'sync payload completeness (R4-6)' group exists specifically because create/update once shipped without profile_id/id in the outbox payload \u2014 but that hardening was never extended to deleteGoal: _RecordingGoalSyncFacade.deleteGoal is a blind no-op with no payload recorder (unlike goalPayloads for pushGoal), and the sole 'deleteGoal removes the goal' test uses the sync-less `repo` instance, so _syncDeleteGoal's {firestore_id, curriculum_id} payload is completely unverified. A key rename or dropped field in _syncDeleteGoal would ship silently \u2014 the exact class of bug R4-6 was written to catch for create/update.",
+   "recommendation": "Add a test asserting updateGoal(goalId: <nonexistent>) throws ArgumentError; add a deletePayloads recorder to _RecordingGoalSyncFacade and a test asserting deleteGoal() pushes the expected firestore_id/curriculum_id payload, mirroring the existing R4-6 create/update tests.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "New red-first test fails against a deliberately-broken updateGoal (e.g. the null check removed) and passes against current code.",
+    "New deleteGoal-payload test fails if _syncDeleteGoal's field names are renamed or dropped, mirroring the existing R4-6 create/update tests."
+   ],
+   "labels": [
+    "tq-8",
+    "eh-2",
+    "coverage-gap"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-scheduler-p3",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Split the four scheduler_engine test files that exceed AG-3's 400-line cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3 (hand-written Dart files <=400 lines)",
+   "area": "features/scheduler/domain/services tests",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/scheduler/domain/services/scheduler_engine_test.dart",
+     "line": 1,
+     "quote": "import 'package:flutter_test/flutter_test.dart';"
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/domain/services/scheduler_engine_schedule_types_test.dart",
+     "line": 1,
+     "quote": "// Extra coverage for SchedulerEngine \u2014 weekly and rolling schedule types."
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/domain/services/scheduler_engine_self_paced_test.dart",
+     "line": 1,
+     "quote": "import 'package:flutter_test/flutter_test.dart';"
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/domain/services/scheduler_engine_dni346_test.dart",
+     "line": 1,
+     "quote": "/// Unit tests for Story 26.3 (DNI-346) scheduler bug fixes."
+    }
+   ],
+   "sites": 4,
+   "why": "AG-3 caps hand-written Dart files (tests included, generated exempt) at 400 lines; these four all exceed it: scheduler_engine_test.dart 516, scheduler_engine_schedule_types_test.dart 507, scheduler_engine_self_paced_test.dart 431, scheduler_engine_dni346_test.dart 553 lines (wc -l, confirmed). Content quality in all four is otherwise good \u2014 distinct scenarios, hermetic hand-rolled fakes, strong exact-value assertions \u2014 the size comes from accretion across fix waves without ever re-splitting. Large files raise merge-conflict surface and make it harder for a contributor to find which of several hundred tests already covers a given branch of the 747-line scheduler_engine.dart they collectively exercise (itself already over AG-3, but that lib file is outside this batch).",
+   "recommendation": "Split by the group()s each file already has: e.g. scheduler_engine_dni346_test.dart's five 'Fix N' groups each become their own file; scheduler_engine_test.dart's legacy-pacing vs custom-order/priority-ranking groups split similarly.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "`wc -l` on every hand-written file under test/features/scheduler/ is <=400, matching the AG-3 [P]ending checker's intended threshold once implemented."
+   ],
+   "labels": [
+    "ag-3",
+    "file-size",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-scheduler-p3",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Move overdue_from_elapsed_study_days_test.dart to mirror its domain/projection lib target",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-5 (test/ mirrors lib/ 1:1)",
+   "area": "features/scheduler test placement",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/scheduler/data/repositories/overdue_from_elapsed_study_days_test.dart",
+     "line": 19,
+     "quote": "import 'package:learning_tracker/features/scheduler/domain/projection/projection.dart';"
+    }
+   ],
+   "sites": 1,
+   "why": "The code under test is lib/features/scheduler/domain/projection/{projection,overdue_projection,overdue_schedule,overdue_types}.dart \u2014 pure Dart with zero Drift/repository dependency (the test file itself has no db/DAO setup at all, only elapsedStudyDays/selfPacedSchedule/project calls) \u2014 yet it lives at test/features/scheduler/data/repositories/. No test/features/scheduler/domain/projection/ directory exists at all (confirmed via find), so this is the projection module's only test and it's unmirrored. A future contributor searching test/.../domain/projection/ for existing coverage before adding a new projection test would find nothing and could re-create the exact duplication pattern flagged above for goal_entity/scheduler_content_repository/daily_task_generator.",
+   "recommendation": "Move the file to test/features/scheduler/domain/projection/overdue_from_elapsed_study_days_test.dart (create the directory); no import changes are needed since it already imports via the projection.dart barrel.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "File relocated; `flutter test test/features/scheduler/domain/projection/` runs and passes."
+   ],
+   "labels": [
+    "ag-5",
+    "test-placement"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-scheduler-p3",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Replace the hardcoded trackId:1 literal with the captured track id in two scheduler tests",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Feathers fragile-test / general test hygiene",
+   "area": "features/scheduler/domain/services tests",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/scheduler/domain/services/daily_task_generator_test.dart",
+     "line": 52,
+     "quote": "trackId = trackRow.id;"
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/domain/services/daily_task_generator_test.dart",
+     "line": 108,
+     "quote": "trackId: 1,"
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/domain/services/scheduler_engine_integration_test.dart",
+     "line": 55,
+     "quote": "trackId = trackRow.id;"
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/domain/services/scheduler_engine_integration_test.dart",
+     "line": 105,
+     "quote": "trackId: 1,"
+    }
+   ],
+   "sites": 2,
+   "why": "Both files insert a real curriculumTracks row and capture its autoincrement id into a `trackId` local specifically so downstream code can reference the real id \u2014 and both then ignore that variable and hardcode `trackId: 1` in the ScheduleConfig/generator.generate() calls that drive the assertions, while still correctly using the captured `trackId` variable a few lines away for the StageDefinitions/CompletionEvents inserts. It works today only because a fresh in-memory DB's first insert is always id 1 (verified: neither seedProfile nor seedProfileZero touch curriculumTracks). If either helper is ever extended to seed a track, or a second track is inserted earlier in a shared setUp, config.trackId/DailyTask.trackId would silently diverge from the row the stages/completions actually reference, and no assertion in either file would catch it since nothing currently checks task.trackId's value.",
+   "recommendation": "Replace the `trackId: 1` literals with the captured `trackId` variable in both files; add one assertion per file that a produced DailyTask.trackId equals the seeded track's real id, so the variable is load-bearing rather than decorative.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "`grep -n 'trackId: 1,'` in both files returns nothing after the fix.",
+    "At least one test per file asserts DailyTask.trackId against the captured trackId variable."
+   ],
+   "labels": [
+    "test-quality",
+    "fragile-test",
+    "magic-number"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-scheduler-p3",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Drop the hard-coded 500ms wall-clock assertion from scheduler_engine_performance_test.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6 (hermetic tests) / Nygard erratic test",
+   "area": "features/scheduler/domain/services tests",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/scheduler/domain/services/scheduler_engine_performance_test.dart",
+     "line": 102,
+     "quote": "final stopwatch = Stopwatch()..start();\n      final tasks = await engine.generateDailyTasks(config);"
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/domain/services/scheduler_engine_performance_test.dart",
+     "line": 107,
+     "quote": "stopwatch.elapsedMilliseconds,\n        lessThan(500),"
+    }
+   ],
+   "sites": 1,
+   "why": "This test asserts a hard wall-clock budget (elapsedMilliseconds < 500) for a 5,000-item/10,000-completion synchronous computation, running inside the same hermetic unit suite as every other file in this batch (no @Tags/exclusion). It passed on this run, but pass/fail now depends on host CPU speed and contention from parallel test-runner isolates/CI-runner noise, not on SchedulerEngine's correctness \u2014 a classic Nygard/Fowler 'erratic test.' A spurious failure on a busy CI runner produces a false-negative unrelated to the diff under review, and the natural response ('just rerun it') erodes trust in the suite over time.",
+   "recommendation": "Tag it out of the default hermetic run (e.g. `@Tags(['perf'])`, matching how the repo already tags story-acceptance suites) so it runs in a dedicated, less contention-sensitive job, or replace the absolute threshold with a much wider safety margin / relative-regression check.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Test is excluded from the default `flutter test` sweep, or its threshold is widened enough (e.g. 5-10x measured baseline) to tolerate CI contention while still catching a genuine algorithmic regression (e.g. an accidental O(n^2) reintroduction)."
+   ],
+   "labels": [
+    "tq-6",
+    "flaky-test",
+    "performance"
+   ]
+  }
+ }
+]

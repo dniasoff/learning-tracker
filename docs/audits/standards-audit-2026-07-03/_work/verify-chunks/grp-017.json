@@ -1,0 +1,274 @@
+[
+ {
+  "sourceBatch": "t1-core-domain-learning",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Wire core/learning/completion_constants.dart's kBulkPriorSentinelMs into its would-be callers instead of leaving it dead and re-duplicated 3x",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler-duplication / Evans (invariant re-derived instead of enforced in one place)",
+   "area": "core/learning (completion semantics)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/learning/completion_constants.dart",
+     "line": 3,
+     "quote": "These constants are used across domain services and providers to identify"
+    },
+    {
+     "file": "learning_tracker/lib/core/learning/completion_constants.dart",
+     "line": 18,
+     "quote": "const int kBulkPriorSentinelMs ="
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/domain/services/scheduler_engine.dart",
+     "line": 43,
+     "quote": "static final int kBulkPriorSentinelMs = DateTime.utc("
+    },
+    {
+     "file": "learning_tracker/lib/features/onboarding/domain/services/bulk_prior_completion_service.dart",
+     "line": 27,
+     "quote": "core\u2192features layering violation and is the single source of truth for the"
+    },
+    {
+     "file": "learning_tracker/lib/features/gamification/streak/streak_restorer.dart",
+     "line": 46,
+     "quote": "const bulkPriorSentinelMs = 946684800000; // DateTime.utc(2000,1,1) ms"
+    }
+   ],
+   "sites": 4,
+   "why": "completion_constants.dart's docstring claims kBulkPriorSentinelMs is 'used across domain services and providers,' but a repo-wide grep shows zero imports of this file anywhere in lib/ or test/ \u2014 it is dead code. Meanwhile SchedulerEngine, BulkPriorCompletionService, and StreakRestorer each independently hand-redefine the identical magic literal 946684800000 (DateTime.utc(2000,1,1)). Two of the three duplicate definitions explicitly self-describe as 'the single source of truth,' a direct contradiction between files. All copies currently agree, so there is no live bug today, but the sentinel governs whether a completion counts toward streak/daily-bar-chart 'live activity' \u2014 if any one of the 4 independent copies is ever edited (e.g. during the W3.27-style migrations already underway elsewhere in this codebase) without updating the others, gamification data would silently miscategorize bulk-imported completions as live activity or vice versa for affected users, with no compiler or test signal since nothing imports the canonical constant to compare against.",
+   "recommendation": "Pick one true source (core/learning/completion_constants.dart is the natural core-layer home) and have SchedulerEngine, BulkPriorCompletionService, and StreakRestorer import and reuse it; if a core\u2192features layering constraint genuinely blocks that, document why in coding-standards.md and delete the now-provably-false 'used across... providers' claim from whichever copy remains a local duplicate.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "grep for the literal 946684800000 (or DateTime.utc(2000, 1, 1) used as a sentinel) outside test/ resolves to exactly one definition plus its importers, not 4 independent literals.",
+    "core/learning/completion_constants.dart's docstring claim is verifiably true (has real importers) or the file is removed.",
+    "Existing bulk-prior/streak/scheduler regression tests continue passing after de-duplication (points_service_test.dart, chart_data_service tests, streak tests already reference the sentinel and act as the regression check)."
+   ],
+   "labels": [
+    "duplication",
+    "dead-code",
+    "gamification"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-domain-learning",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Wire up or delete the 4 unused core/domain/value_objects/ types (Pin, StageOrder, ScopeLevel/ScopeValue/CurriculumScope, CalendarSystem)",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler-speculative-generality / AG-6 dead code",
+   "area": "core/domain/value_objects",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/domain/value_objects/pin.dart",
+     "line": 24,
+     "quote": "class Pin {"
+    },
+    {
+     "file": "learning_tracker/lib/core/domain/value_objects/stage_order.dart",
+     "line": 25,
+     "quote": "class StageOrder {"
+    },
+    {
+     "file": "learning_tracker/lib/core/domain/value_objects/scope.dart",
+     "line": 80,
+     "quote": "class CurriculumScope {"
+    },
+    {
+     "file": "learning_tracker/lib/core/domain/value_objects/calendar_system.dart",
+     "line": 10,
+     "quote": "enum CalendarSystem {"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/domain/use_cases/set_parent_pin_use_case.dart",
+     "line": 55,
+     "quote": "bool _isNumeric(String s) => RegExp(r'^\\d{4}$').hasMatch(s);"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/user/user_database.g.dart",
+     "line": 2038,
+     "quote": "class CurriculumScope extends DataClass implements Insertable<CurriculumScope> {"
+    }
+   ],
+   "sites": 4,
+   "why": "A repo-wide grep for constructor/import usage of Pin, StageOrder, ScopeLevel, ScopeValue, CurriculumScope (the domain VO), and CalendarSystem finds zero call sites in lib/ outside their own files \u2014 each is exercised only by its own unit test. This isn't a harmless unused-import: it has a concrete duplication cost (set_parent_pin_use_case.dart independently hand-rolls the exact same `^\\d{4}$` regex Pin.parse already implements, so the 4-digit PIN invariant now has two unlinked sources of truth) and a naming-collision cost (the domain `CurriculumScope` in scope.dart and the Drift-generated row class `CurriculumScope` in user_database.g.dart are two unrelated types with the identical name, which is exactly what would happen if the intended repository\u2192domain mapping was never implemented). Each of these 4 files also drags a full unit-test file along for code that provides zero runtime value today, inflating the maintenance surface with no compensating benefit.",
+   "recommendation": "For each: either finish the primitive-obsession migration the docstrings reference (route set_parent_pin_use_case.dart through Pin, route curriculum_scope_dao.dart mapping through ScopeLevel/ScopeValue/CurriculumScope, adopt StageOrder/CalendarSystem at their intended call sites) or delete the type and its test if there is no near-term plan to adopt it.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "For each of Pin/StageOrder/ScopeLevel-ScopeValue-CurriculumScope/CalendarSystem: at least one production (non-test) import exists, or the file + its test are removed.",
+    "set_parent_pin_use_case.dart's hand-rolled `_isNumeric` regex is replaced by (or asserted equivalent to) Pin.parse's validation once a decision is made.",
+    "No two public top-level classes in lib/ share the name CurriculumScope (AG-4)."
+   ],
+   "labels": [
+    "dead-code",
+    "speculative-generality",
+    "AG-4",
+    "AG-6"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-domain-learning",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Give StartDateWindowException a stable error code instead of a raw pre-formatted English message (EH-5)",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "EH-5",
+   "area": "core/domain/value_objects (tracks/setup)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/domain/value_objects/program_starting_position.dart",
+     "line": 62,
+     "quote": "'Program start date cannot be in the future. '"
+    },
+    {
+     "file": "learning_tracker/lib/core/domain/value_objects/program_starting_position.dart",
+     "line": 182,
+     "quote": "class StartDateWindowException extends ValidationException {"
+    },
+    {
+     "file": "learning_tracker/lib/core/exceptions/app_exception.dart",
+     "line": 33,
+     "quote": "final String message;"
+    }
+   ],
+   "sites": 1,
+   "why": "EH-5 requires domain/data errors to carry stable codes/enums rather than pre-formatted human messages, specifically because this is an EN+Hebrew app where a raw English string renders untranslated for Hebrew-locale users. StartDateWindowException (thrown from the live B2/B3 date-window invariant, reached via ProgramStartingPosition.fromLegacyGrammar \u2192 track_blueprint.dart) is constructed with a fully-formatted English sentence, and it extends AppException whose only payload field is `final String message` \u2014 there is no code/enum to key an ARB lookup off. A repo-wide grep found no catch site for StartDateWindowException anywhere in lib/, so if the 30-day window is ever violated by legacy/migrated data (not just live UI input, which the picker constrains), the raw English text is the only representation available to whatever eventually surfaces it to the user.",
+   "recommendation": "Add a stable code/enum to StartDateWindowException (or to the AppException hierarchy generally) and have the presentation layer resolve it via AppLocalizations instead of displaying `message` directly.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "StartDateWindowException exposes a stable, locale-independent identifier (enum/const code) alongside or instead of the free-text message.",
+    "Any UI that surfaces this exception resolves the user-facing string via AppLocalizations/ARB, verified by an EN+HE widget test."
+   ],
+   "labels": [
+    "EH-5",
+    "i18n",
+    "error-handling"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-domain-learning",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Replace hardcoded 'cloudBorn' literal and profile_model.dart's reimplemented switch with AccountTier/ProfileMode's own storageKey/fromStorageKey",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler-duplication (self-flagged by each VO's own 'Migration note')",
+   "area": "core/domain/value_objects (account/profile)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/domain/value_objects/account_tier.dart",
+     "line": 14,
+     "quote": "Direct string comparisons (`account.tier == 'cloudBorn'`) should be"
+    },
+    {
+     "file": "learning_tracker/lib/features/account/domain/services/upgrade_to_cloud_service.dart",
+     "line": 183,
+     "quote": "'cloudBorn',"
+    },
+    {
+     "file": "learning_tracker/lib/features/account/domain/services/upgrade_to_cloud_service.dart",
+     "line": 221,
+     "quote": "'cloudBorn',"
+    },
+    {
+     "file": "learning_tracker/lib/features/account/domain/services/upgrade_to_cloud_service.dart",
+     "line": 324,
+     "quote": "'cloudBorn',"
+    },
+    {
+     "file": "learning_tracker/lib/features/account/domain/services/upgrade_to_cloud_service.dart",
+     "line": 361,
+     "quote": "'cloudBorn',"
+    },
+    {
+     "file": "learning_tracker/lib/core/domain/value_objects/profile_mode.dart",
+     "line": 10,
+     "quote": "Direct string comparisons (`profile.mode == 'child'`) should be replaced"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/domain/models/profile_model.dart",
+     "line": 28,
+     "quote": "ProfileMode get profileMode => switch (mode) {"
+    }
+   ],
+   "sites": 5,
+   "why": "account_tier.dart's own docstring names exactly this anti-pattern as the W5.11 sweep target, yet the primary caller of DeviceRegistryDatabase.updateAccountTier (the local\u2192cloud upgrade flow) hardcodes the raw literal 'cloudBorn' at all 4 of its call sites instead of using AccountTier.cloud.storageKey \u2014 the read path (DeviceAccountX.accountTier) already goes through the typed enum, so write and read now use two unlinked representations of the same key. Separately, profile_model.dart re-implements ProfileMode's string\u2194enum mapping with its own switch (silently defaulting to adult) instead of calling ProfileMode.fromStorageKey (which throws on unrecognized values). Neither currently misbehaves \u2014 the literals happen to match \u2014 but a typo or a future storage-key rename in the VO would not be caught by the compiler at any of these 5 sites, and the two ProfileMode mappings already have different error-handling semantics (throw vs. silent default) for what is meant to be the same conversion.",
+   "recommendation": "Replace the 4 'cloudBorn' literals with AccountTier.cloud.storageKey; have profile_model.dart's profileMode getter delegate to ProfileMode.fromStorageKey (wrapped in the same kind of fail-safe try/catch pattern already used in child_mode_guard.dart) instead of re-switching.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "upgrade_to_cloud_service.dart contains zero raw 'cloudBorn'/'localBorn' string literals; all go through AccountTier.*.storageKey.",
+    "profile_model.dart's profileMode getter calls ProfileMode.fromStorageKey (or documents why it deliberately diverges)."
+   ],
+   "labels": [
+    "duplication",
+    "primitive-obsession"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-domain-learning",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Migrate core/domain/value_objects/ hand-written ==/hashCode/toString classes to @freezed",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Naming/placement \u2014 \"Domain/state models are immutable @freezed classes; never hand-write ==/hashCode for data classes\"",
+   "area": "core/domain/value_objects",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/domain/value_objects/pin.dart",
+     "line": 58,
+     "quote": "bool operator ==(Object other) =>"
+    },
+    {
+     "file": "learning_tracker/lib/core/domain/value_objects/program_starting_position.dart",
+     "line": 163,
+     "quote": "bool operator ==(Object other) =>"
+    },
+    {
+     "file": "learning_tracker/lib/core/domain/value_objects/schedule_spec.dart",
+     "line": 106,
+     "quote": "bool operator ==(Object other) =>"
+    },
+    {
+     "file": "learning_tracker/lib/core/domain/value_objects/scope.dart",
+     "line": 26,
+     "quote": "bool operator ==(Object other) =>"
+    },
+    {
+     "file": "learning_tracker/lib/core/domain/value_objects/sefaria_ref.dart",
+     "line": 113,
+     "quote": "bool operator ==(Object other) =>"
+    },
+    {
+     "file": "learning_tracker/lib/core/domain/value_objects/stage_order.dart",
+     "line": 77,
+     "quote": "bool operator ==(Object other) =>"
+    },
+    {
+     "file": "learning_tracker/lib/core/domain/value_objects/study_day_pattern.dart",
+     "line": 125,
+     "quote": "bool operator ==(Object other) {"
+    }
+   ],
+   "sites": 7,
+   "why": "Every non-enum class in this batch (Pin; ProgramStartingPosition; DelaySchedule/WeeklySchedule/RollingSchedule; ScopeLevel/ScopeValue/CurriculumScope; SefariaRef; StageOrder; StudyDayPattern \u2014 10 classes across 7 files) hand-writes operator==/hashCode/toString rather than using @freezed, contrary to the stated codebase convention. All the ones I traced are currently correct, so this is not a live bug, but it is the exact pattern the standard calls out as risky: every future field addition to any of these classes requires manually keeping three methods in sync by hand with no compiler help, whereas @freezed generates all three from the field list and can't drift.",
+   "recommendation": "Migrate these VOs to @freezed where the validating-factory pattern (private const constructor + public validating factory) fits, which all of these already structurally resemble; note any VO where freezed genuinely doesn't fit as a documented exception in coding-standards.md rather than leaving it a silent inconsistency.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "New or materially-changed value objects in core/domain/value_objects/ use @freezed, or coding-standards.md documents an explicit lightweight-VO exception.",
+    "No behavior change: existing equality/hashCode/toString tests for these 7 files continue passing unmodified after any migration."
+   ],
+   "labels": [
+    "freezed",
+    "naming-placement",
+    "hygiene"
+   ]
+  }
+ }
+]

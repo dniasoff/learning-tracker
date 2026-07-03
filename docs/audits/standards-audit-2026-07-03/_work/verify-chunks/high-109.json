@@ -1,0 +1,50 @@
+[
+ {
+  "sourceBatch": "t2-firebase-rules-functions-p1",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Wire functions/test/cf_*.test.mjs and a functions build step into CI",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-9",
+   "area": "functions/ci",
+   "evidence": [
+    {
+     "file": "learning_tracker/functions/package.json",
+     "line": 6,
+     "quote": "\"scripts\": {\n    \"build\": \"tsc\","
+    },
+    {
+     "file": "learning_tracker/Makefile",
+     "line": 21,
+     "quote": "test-functions: ## Run Cloud Functions tests (real handlers vs firestore emulator) (L5)"
+    },
+    {
+     "file": "learning_tracker/Makefile",
+     "line": 218,
+     "quote": "ci: analyze validate-calendar test ## Run full CI pipeline (analyze + seed validation + all tests)"
+    },
+    {
+     "file": "learning_tracker/functions/test/cf_grant_invite.test.mjs",
+     "line": 11,
+     "quote": "// Remaining gates and happy paths for acceptTutorInvite/declineTutorInvite are\n// skipped here and documented as requiring the Auth emulator."
+    }
+   ],
+   "sites": 1,
+   "why": "functions/src/index.ts is 2029 lines of Admin-SDK-privileged, rules-bypassing server code -- the highest-privilege code in the repo -- yet no CI job builds, type-checks, or tests it. `make ci` runs only `analyze validate-calendar test` (Flutter side); `test-functions` (which runs the 7 cf_*.test.mjs files, 3,236 lines) and `npm --prefix functions run build` are only reachable via a developer manually typing the make target. This is distinct from the already-known 'make ci doesn't run test-rules' gap (that's the separate firestore_rules.test.mjs suite, which does have a dedicated CI job) -- functions/ has no CI path of any kind. A PR that reintroduces the P0 auth gap above, or any other Cloud Function regression, or a plain TypeScript compile error, gets a green CI check.",
+   "recommendation": "Add a `functions` CI job (parallel to the existing `firestore-rules` job) running `npm --prefix functions run build` then `firebase emulators:exec --only firestore,auth --project demo-cf \"node --test --test-concurrency=1 functions/test/cf_*.test.mjs\"`, mirroring `make test-functions`; fold `test-functions` into `make ci` locally; add a `\"test\"` script to functions/package.json.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "CI fails the PR when any functions/test/cf_*.test.mjs test fails or functions/src fails to compile.",
+    "`make ci` transitively runs `make test-functions`.",
+    "functions/package.json defines a `test` script."
+   ],
+   "labels": [
+    "ci",
+    "cloud-functions",
+    "test-quality",
+    "P1"
+   ]
+  }
+ }
+]

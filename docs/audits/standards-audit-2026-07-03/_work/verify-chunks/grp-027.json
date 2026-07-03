@@ -1,0 +1,186 @@
+[
+ {
+  "sourceBatch": "t1-core-streak",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Parameterize insertEvent() by profileId in streak_state_provider_test.dart instead of duplicating the raw companion insert",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler-duplication (lens pass)",
+   "area": "learning_tracker/test/core/streak/streak_state_provider_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/streak/streak_state_provider_test.dart",
+     "line": 21,
+     "quote": "Future<void> insertEvent(UserDatabase db, DateTime timestamp) async {"
+    },
+    {
+     "file": "learning_tracker/test/core/streak/streak_state_provider_test.dart",
+     "line": 113,
+     "quote": "await db.streakEventDao.appendEvent("
+    }
+   ],
+   "sites": 1,
+   "why": "insertEvent() hardcodes the outer profileId constant, so the one test needing a second profile ('does not count events from another profile', line 111) can't reuse it and instead re-spells the same StreakEventsCompanion.insert(...) call inline (lines 113-121). A future change to the companion's required fields now has two call sites in this file to update instead of one, and they can silently drift apart.",
+   "recommendation": "Add an optional `{int? profileId}` parameter to insertEvent() (defaulting to the outer constant) and use it at line 113 instead of the inline duplicate.",
+   "acceptance_criteria": [
+    "Only one StreakEventsCompanion.insert(...) call site remains in streak_state_provider_test.dart."
+   ],
+   "effort": "S",
+   "labels": [
+    "duplication",
+    "test-hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-streak",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Replace fixed-duration Future.delayed waits with deterministic stream-emission awaits in streak_state_provider_test.dart",
+   "severity": "P3",
+   "confidence": "SUSPECTED",
+   "rule": "TQ-6",
+   "area": "learning_tracker/test/core/streak/streak_state_provider_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/streak/streak_state_provider_test.dart",
+     "line": 165,
+     "quote": "await Future<void>.delayed(Duration.zero);"
+    },
+    {
+     "file": "learning_tracker/test/core/streak/streak_state_provider_test.dart",
+     "line": 222,
+     "quote": "await Future<void>.delayed(const Duration(milliseconds: 10));"
+    },
+    {
+     "file": "learning_tracker/test/core/streak/streak_state_provider_test.dart",
+     "line": 228,
+     "quote": "await Future<void>.delayed(const Duration(milliseconds: 10));"
+    }
+   ],
+   "sites": 4,
+   "why": "All four waits (lines 165, 169, 222, 228) assume the DB-watch -> reduce -> controller.add -> listener chain settles within an arbitrary real-time slice, instead of awaiting the stream's actual next emission. Locally this is stable -- ran the file 3x back-to-back plus once under a forced non-UTC TZ, all green every time -- but a busier CI runner, or a slower query added later in StreakRestorer/the watch() chain, can starve the timer past 10ms and produce a flaky red unrelated to the streak logic under test. This exact Future.delayed-as-flush idiom recurs roughly 85 times across ~20 other test files in this repo, so it's a systemic pattern rather than something unique to this file.",
+   "recommendation": "Await the stream directly (e.g. `await expectLater(states_stream, emitsThrough(predicate))`) or expose an explicit completion signal from the fake instead of guessing a wall-clock delay.",
+   "acceptance_criteria": [
+    "No Future.delayed remains as the sole synchronization mechanism between an async write and a stream-based assertion in this file; assertions instead await the stream's own emission."
+   ],
+   "effort": "M",
+   "labels": [
+    "TQ-6",
+    "test-flakiness"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-sync-codec",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Correct FirestoreCodec.encodeDateTime's false claim that the Firestore SDK auto-converts ISO-8601 strings to Timestamp",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-8-adjacent doc/code truth + Evans (one place for an invariant)",
+   "area": "core/sync/codec",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/sync/codec/firestore_codec.dart",
+     "line": 57,
+     "quote": "The Firestore SDK converts ISO-8601 strings into Timestamp objects on write, so this format is safe to use in push documents."
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/firestore_gateway_impl.dart",
+     "line": 164,
+     "quote": "in Firestore Security Rules a `string <= timestamp` comparison is `false`, which would deny EVERY completion create."
+    },
+    {
+     "file": "learning_tracker/firestore.rules",
+     "line": 248,
+     "quote": "timestamp), so a `created_at <= request.time` guard compared a string to request.time and was rejected at the type level \u2014"
+    }
+   ],
+   "sites": 1,
+   "why": "The claim is false \u2014 the SDK does not auto-convert a Dart String to a Timestamp. That's exactly why firestore_gateway_impl.dart carries a dedicated `_timestampifyCompletedAt` patch (lines 158-219) that rewrites `completed_at`/`purged_at` from String/DateTime to a real Timestamp AFTER every codec's encode() output runs, and exactly why streak_events' equivalent `created_at <= request.time` rule check was deleted after it denied every write in production. The real fix for a timestamp-compared field lives two layers away from the codec, in a hand-maintained per-field allowlist inside firestore_gateway_impl.dart \u2014 a mechanism entity_codec.dart's own 'Responsibilities' docstring never mentions. The next engineer who adds a new entity kind with a `<= request.time` rule, trusts this codec's comment, and skips the gateway patch will reproduce the exact 'permission-denied on every create' incident this codebase has already hit twice (completions, streak_events).",
+   "recommendation": "Fix the doc comment to state the SDK does NOT auto-convert and cross-reference firestore_gateway_impl.dart's `_timestampifyCompletedAt` as the actual mechanism. Consider moving that per-field patch logic into the codec/EntityCodec layer (or documenting it explicitly in entity_codec.dart's 'Push encoding \u2014 SyncWriteFacade territory' note) so the full push contract for a timestamp-compared field lives in one discoverable place instead of three.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "encodeDateTime's doc comment no longer claims SDK auto-conversion; it states the true behavior and points to the gateway patch.",
+    "A note is added (in entity_merger.dart's 'adding a new entity kind' checklist, or equivalent) that a request.time-compared field needs a gateway-side Timestamp conversion, not just a codec change."
+   ],
+   "labels": [
+    "sync",
+    "docs",
+    "footgun"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-sync-codec",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Add test coverage for firestore_codec.dart, settings_codec.dart and tutor_grant_codec.dart \u2014 the only codecs with zero tests",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-1/TQ-8, AG-5",
+   "area": "core/sync/codec",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/sync/codec/firestore_codec.dart",
+     "line": 20,
+     "quote": "abstract class FirestoreCodec {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/codec/settings_codec.dart",
+     "line": 43,
+     "quote": "class SettingsCodec extends EntityCodec<SettingsRow> {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/codec/tutor_grant_codec.dart",
+     "line": 42,
+     "quote": "class TutorGrantCodec extends EntityCodec<TutorGrantRow> {"
+    }
+   ],
+   "sites": 3,
+   "why": "Grepping the whole test/ tree for each of the 15 batch filenames finds zero references to any of these three. Every one of the other 11 non-trivial codecs (bookmark, completion_event, goal, learner_profile, learning_ledger, learning_order, profile_program, stage_definition, streak_event, study_day_config, track) has a test/sync/merge/*_roundtrip_test.dart and most also appear in test/sync/codec_rules_contract_test.dart. firestore_codec.dart is the shared DateTime/int/bool parser transitively exercised by every other codec's decode() path (4 documented DateTime wire shapes, String/num int coercion, string/int bool coercion) but has no direct unit test of any of that logic \u2014 a regression here would silently corrupt every entity kind's pull with nothing to catch it. settings_codec.dart's nested stage-list decode (stagesList?.cast<Map>().map(stageCodec.decode).whereType<StageDefinitionRow>()) is untested. tutor_grant_codec.dart's decode(), which feeds tutor-mode UI state, is untested end to end.",
+   "recommendation": "Add a firestore_codec_test.dart covering all four DateTime wire shapes (DateTime/String/int/Map) plus parseInt/parseBool edge cases (String, num, bool passthrough, malformed input); add a settings roundtrip test covering the nested-stages decode path; add a tutor_grant roundtrip test mirroring the existing *_roundtrip_test.dart pattern.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "A firestore_codec_test.dart (or equivalent) exists and exercises parseDateTime's 4 shapes plus parseInt/parseBool edge cases.",
+    "settings_codec and tutor_grant_codec each gain a roundtrip test mirroring test/sync/merge/*_roundtrip_test.dart siblings."
+   ],
+   "labels": [
+    "testing",
+    "coverage",
+    "sync"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-sync-codec",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Remove or wire up SettingsCodec.encode \u2014 zero callers in lib/ or test/",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler dead code / YAGNI",
+   "area": "core/sync/codec",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/sync/codec/settings_codec.dart",
+     "line": 73,
+     "quote": "Map<String, dynamic> encode(SettingsRow model) => {"
+    }
+   ],
+   "sites": 1,
+   "why": "grep -rn 'SettingsCodec()' across lib/ and test/ finds only the decode-side caller in settings_merger.dart \u2014 nothing calls .encode(), unlike bookmark/track/goal/etc. where encode() is the live push path. A symmetric but unreachable encode() looks load-bearing to a reader and invites either a false assumption that it's exercised, or silent drift from the real settings push shape with nothing to notice if it ever changes.",
+   "recommendation": "Either wire SettingsCodec.encode into whatever currently constructs the settings push payload, or delete it and note in the class doc that settings is currently pull/decode-only.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep for 'SettingsCodec().encode' or 'SettingsCodec.encode' in lib/ returns at least one production call site, OR the method is removed with a comment explaining decode-only status."
+   ],
+   "labels": [
+    "dead-code",
+    "sync"
+   ]
+  }
+ }
+]

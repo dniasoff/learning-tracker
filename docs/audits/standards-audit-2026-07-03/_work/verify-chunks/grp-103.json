@@ -1,0 +1,237 @@
+[
+ {
+  "sourceBatch": "t1-feat-settings-p3",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Split 4 oversized settings-feature test files over the 400-line AG-3 cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "features/settings (test files)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/settings/presentation/screens/scope_lifetime_l1_test.dart",
+     "line": 1499,
+     "quote": "}"
+    },
+    {
+     "file": "learning_tracker/test/features/settings/presentation/utils/account_actions_test.dart",
+     "line": 1087,
+     "quote": "}"
+    },
+    {
+     "file": "learning_tracker/test/features/settings/presentation/screens/upgrade_to_cloud_screen_l1_test.dart",
+     "line": 842,
+     "quote": "}"
+    },
+    {
+     "file": "learning_tracker/test/features/settings/presentation/screens/settings_screen_r5_regression_test.dart",
+     "line": 604,
+     "quote": "}"
+    }
+   ],
+   "sites": 4,
+   "why": "AG-3's stated checker (`find lib test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400'`) would flag all 4 files (1499, 1087, 842, 604 lines). scope_lifetime_l1_test.dart alone bundles tests for 3 unrelated screens (ScopeSelectionScreen, LifetimeMarkingScreen, LifetimeCurriculumMarkingScreen) in one file, which is exactly the 'dumping ground' failure mode AG-3 names \u2014 a future editor grepping for one screen's tests has to read past the other two to find the relevant group.",
+   "recommendation": "Split scope_lifetime_l1_test.dart along its 3 existing screen-boundary comment headers into 3 files; split the other 3 along their existing top-level group() boundaries (e.g. account_actions_test.dart into sign-out vs delete-account-flow files).",
+   "effort": "M",
+   "acceptance_criteria": [
+    "`find learning_tracker/lib learning_tracker/test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400'` no longer lists these 4 files.",
+    "No testWidgets case is deleted in the split \u2014 only relocated."
+   ],
+   "labels": [
+    "AG-3",
+    "file-size",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-settings-p3",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Fix 7 stale 'HARDCODED STRING' comments in upgrade_to_cloud_screen_l1_test.dart \u2014 the strings are l10n-sourced now",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-8-adjacent (comments must not misrepresent current source state) / AX-2",
+   "area": "features/settings/presentation/screens (upgrade-to-cloud)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/settings/presentation/screens/upgrade_to_cloud_screen_l1_test.dart",
+     "line": 230,
+     "quote": "// HARDCODED STRING: \"Confirm your password\" is not sourced from l10n."
+    },
+    {
+     "file": "learning_tracker/test/features/settings/presentation/screens/upgrade_to_cloud_screen_l1_test.dart",
+     "line": 265,
+     "quote": "// HARDCODED STRING: \"You're signed in as \u2026\" body text is hardcoded."
+    },
+    {
+     "file": "learning_tracker/test/features/settings/presentation/screens/upgrade_to_cloud_screen_l1_test.dart",
+     "line": 309,
+     "quote": "// HARDCODED STRING: \"Password required\" is hardcoded in the validator."
+    },
+    {
+     "file": "learning_tracker/test/features/settings/presentation/screens/upgrade_to_cloud_screen_l1_test.dart",
+     "line": 357,
+     "quote": "// HARDCODED STRING: this message is hardcoded in _submit()."
+    },
+    {
+     "file": "learning_tracker/test/features/settings/presentation/screens/upgrade_to_cloud_screen_l1_test.dart",
+     "line": 394,
+     "quote": "// HARDCODED STRING: \"Incorrect password.\" is hardcoded in the catch block."
+    },
+    {
+     "file": "learning_tracker/test/features/settings/presentation/screens/upgrade_to_cloud_screen_l1_test.dart",
+     "line": 577,
+     "quote": "// HARDCODED STRING: internet error message is hardcoded."
+    },
+    {
+     "file": "learning_tracker/test/features/settings/presentation/screens/upgrade_to_cloud_screen_l1_test.dart",
+     "line": 709,
+     "quote": "// HARDCODED STRING: \"You're backed up!\" in _SuccessBlock is not l10n-sourced."
+    }
+   ],
+   "sites": 7,
+   "why": "None of the 7 strings these comments call out as hardcoded actually appear as literals in upgrade_to_cloud_screen.dart \u2014 grepping the source finds zero hits, and every one is confirmed sourced from a matching AppLocalizations getter with an identical English ARB value (e.g. app_en.arb:1514 upgradeToCloudPasswordLabel = 'Confirm your password', :1526 upgradeToCloudSuccessTitle = \"You're backed up!\"). The code was fixed in an earlier wave but these test comments were never updated, so they now misrepresent the file's current AX-2 compliance to the next reader/agent \u2014 who might waste time 'fixing' a non-issue or, worse, assume any future l10n regression here is 'already known'.",
+   "recommendation": "Delete or correct the 7 comments to note the strings are AppLocalizations-sourced (cite the ARB keys), so the file accurately documents current state.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "None of the 7 comments in upgrade_to_cloud_screen_l1_test.dart claim a string is hardcoded/not-l10n-sourced when grepping upgrade_to_cloud_screen.dart shows it is."
+   ],
+   "labels": [
+    "docs-drift",
+    "AX-2",
+    "stale-comment"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-settings-p3",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Close the in-memory UserDatabase created inline in settings test ProviderScope overrides",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6-adjacent (test resource hygiene / Nygard: unreleased I/O resource)",
+   "area": "features/settings (test infrastructure)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/settings/presentation/settings_overflow_guard_test.dart",
+     "line": 201,
+     "quote": "userDatabaseProvider.overrideWithValue(\n      UserDatabase(NativeDatabase.memory()),"
+    },
+    {
+     "file": "learning_tracker/test/features/settings/presentation/utils/account_actions_test.dart",
+     "line": 185,
+     "quote": "userDatabaseProvider.overrideWithValue(\n        UserDatabase(NativeDatabase.memory()),"
+    },
+    {
+     "file": "learning_tracker/test/features/settings/presentation/widgets/account_actions_sheet_nav_test.dart",
+     "line": 135,
+     "quote": "userDatabaseProvider.overrideWithValue(\n        UserDatabase(NativeDatabase.memory()),"
+    },
+    {
+     "file": "learning_tracker/test/features/settings/presentation/widgets/an7_destructive_icon_contrast_test.dart",
+     "line": 112,
+     "quote": "userDatabaseProvider.overrideWithValue(\n        UserDatabase(NativeDatabase.memory()),"
+    }
+   ],
+   "sites": 4,
+   "why": "_sheetOverrides / _buildApp in these 4 files each construct `UserDatabase(NativeDatabase.memory())` inline and never capture a reference to close it \u2014 unlike the `DeviceRegistryDatabase` created in the same functions, which is correctly torn down via `addTearDown(registry.close)` (verified by grep: registry.close appears, db.close never does, in any of the 4 files). account_actions_test.dart alone calls its factory from ~19 separate testWidgets cases, so a single run of just this batch leaks on the order of 25+ native SQLite (FFI) connections that are never released.",
+   "recommendation": "Capture the constructed UserDatabase into a local variable in each factory and close it via addTearDown(db.close) or the existing tearDown, mirroring the registry.close() pattern already present in the same 4 functions.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Each of the 4 files' UserDatabase(NativeDatabase.memory()) instances is closed by the end of every test that constructs one."
+   ],
+   "labels": [
+    "resource-leak",
+    "hygiene",
+    "test-infrastructure"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-settings-p3",
+  "findingIndex": 8,
+  "finding": {
+   "title": "Rename account_actions_sheet_nav_test.dart's single-account Sign Out test \u2014 title claims SignInRoute, assertion checks AccountPickerRoute",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 / Evans ubiquitous-language consistency (test name must match what it verifies)",
+   "area": "features/settings/presentation/widgets (account actions sheet)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/settings/presentation/widgets/account_actions_sheet_nav_test.dart",
+     "line": 265,
+     "quote": "'Sign Out (single account) \u2192 root router.replaceAll([SignInRoute]) \u2014 no regression',"
+    },
+    {
+     "file": "learning_tracker/test/features/settings/presentation/widgets/account_actions_sheet_nav_test.dart",
+     "line": 293,
+     "quote": "expect(routes.first, isA<AccountPickerRoute>());"
+    }
+   ],
+   "sites": 1,
+   "why": "The testWidgets title says the single-account sign-out case routes to SignInRoute, but the assertion checks AccountPickerRoute \u2014 and the test's own inline comment (lines 268-270) shows the author caught the discrepancy while writing it ('Single account: getAllAccounts returns 1 \u2192 still AccountPicker path? No \u2014 sign-out keeps the account row; the picker is correct with \u22651... The SignInRoute branch is the EMPTY-registry case, covered below') but never renamed the test string. A reader skimming test names for the routing invariant would learn the wrong rule.",
+   "recommendation": "Rename the test to 'Sign Out (single account) \u2192 root router.replaceAll([AccountPickerRoute])' to match its assertion.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "The test's title string matches the route type its expect() checks."
+   ],
+   "labels": [
+    "test-naming",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-settings-p3",
+  "findingIndex": 9,
+  "finding": {
+   "title": "Use DateTimeFactory.nowUtc() instead of raw DateTime.now() in scope_lifetime_l1_test.dart and backup_sync_error_l10n_test.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6 (Pending for test/)",
+   "area": "features/settings (test fixtures)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/settings/presentation/screens/scope_lifetime_l1_test.dart",
+     "line": 419,
+     "quote": "createdAt: DateTime.now().toUtc(),"
+    },
+    {
+     "file": "learning_tracker/test/features/settings/presentation/screens/scope_lifetime_l1_test.dart",
+     "line": 430,
+     "quote": "createdAt: DateTime.now().toUtc(),"
+    },
+    {
+     "file": "learning_tracker/test/features/settings/presentation/screens/scope_lifetime_l1_test.dart",
+     "line": 446,
+     "quote": "stateChangedAt: DateTime.now().toUtc(),"
+    },
+    {
+     "file": "learning_tracker/test/features/settings/presentation/widgets/backup_sync_error_l10n_test.dart",
+     "line": 121,
+     "quote": "failedAt: DateTime.now().toUtc(),"
+    },
+    {
+     "file": "learning_tracker/test/features/settings/presentation/widgets/backup_sync_error_l10n_test.dart",
+     "line": 157,
+     "quote": "failedAt: DateTime.now().toUtc(),"
+    }
+   ],
+   "sites": 8,
+   "why": "scope_lifetime_l1_test.dart (6 occurrences: lines 419,420,430,431,446,447) and backup_sync_error_l10n_test.dart (2: lines 121,157) seed DB rows / SyncStatus values with raw `DateTime.now().toUtc()`, even though the sibling file settings_screen_r5_regression_test.dart's `_dbWithProfile` in the same feature directory already uses the project's `DateTimeFactory.nowUtc()` for the identical FK-seeding purpose. TQ-6 is Enforced for lib/ specifically because wall-clock reads are a live nondeterminism source under parallel/randomized test ordering; extending that discipline to test/ is explicitly named as the pending next step, and this batch shows the established in-feature alternative being ignored, not just an isolated slip.",
+   "recommendation": "Replace the 8 call sites with DateTimeFactory.nowUtc(), matching settings_screen_r5_regression_test.dart's convention.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "No DateTime.now() call remains in scope_lifetime_l1_test.dart or backup_sync_error_l10n_test.dart; both use DateTimeFactory.nowUtc() or a fixed DateTime.utc(...) literal."
+   ],
+   "labels": [
+    "TQ-6",
+    "hermeticity",
+    "hygiene"
+   ]
+  }
+ }
+]

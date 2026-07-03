@@ -1,0 +1,241 @@
+[
+ {
+  "sourceBatch": "t1-feat-onboarding-p3",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Add Locale('he') cases to onboarding_steps_overflow_test.dart's four overflow guards",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-3",
+   "area": "features/onboarding/presentation/steps",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/onboarding/presentation/steps/onboarding_steps_overflow_test.dart",
+     "line": 78,
+     "quote": "await expectNoOverflowAcrossDevices("
+    },
+    {
+     "file": "learning_tracker/test/features/onboarding/presentation/steps/onboarding_steps_overflow_test.dart",
+     "line": 92,
+     "quote": "() => const OnboardingAddAnotherPromptStep("
+    },
+    {
+     "file": "learning_tracker/test/features/onboarding/presentation/steps/onboarding_steps_overflow_test.dart",
+     "line": 135,
+     "quote": "await expectNoOverflowAcrossDevices("
+    },
+    {
+     "file": "learning_tracker/test/helpers/overflow_harness.dart",
+     "line": 179,
+     "quote": "Locale locale = const Locale('en'),"
+    }
+   ],
+   "sites": 4,
+   "why": "expectNoOverflowAcrossDevices accepts a locale override but none of this file's 4 cases pass one, so every case renders English-only in an RTL/bilingual app where Hebrew strings routinely run a different length than English (and, per the wizard finding above, several of these exact widgets currently render un-translated English anyway). The OnboardingProfileCreationStep case exists specifically to guard a tablet/keyboard-compressed-height regression (768x640) \u2014 exactly the tight corner where longer Hebrew text (interpolated names, the un-localized 'A profile with this name already exists' error) is most likely to newly overflow \u2014 yet it is never checked there.",
+   "recommendation": "Duplicate each case (or parametrize with a locale list) to also run at locale: const Locale('he'), at minimum for the OnboardingProfileCreationStep keyboard-compressed corner.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "each of the 4 expectNoOverflowAcrossDevices calls in this file also runs at Locale('he') and passes"
+   ],
+   "labels": [
+    "rtl",
+    "hebrew",
+    "overflow",
+    "test-coverage"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-onboarding-p3",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Extract a shared L1 pump helper to remove 8 duplicated ProviderScope/MaterialApp blocks in onboarding presentation tests",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-3",
+   "area": "features/onboarding/presentation",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/onboarding/presentation/screens/permission_prompt_screen_l1_test.dart",
+     "line": 90,
+     "quote": "Widget _buildApp({"
+    },
+    {
+     "file": "learning_tracker/test/features/onboarding/presentation/screens/signup_screen_test.dart",
+     "line": 53,
+     "quote": "Widget createTestWidget({Locale locale = const Locale('en')}) {"
+    },
+    {
+     "file": "learning_tracker/test/features/onboarding/presentation/screens/signup_screen_test.dart",
+     "line": 77,
+     "quote": "Widget createTestWidgetWithDatabase({"
+    },
+    {
+     "file": "learning_tracker/test/features/onboarding/presentation/steps/wizard_steps_l1_test.dart",
+     "line": 132,
+     "quote": "Widget buildDirect({"
+    },
+    {
+     "file": "learning_tracker/test/features/onboarding/presentation/steps/wizard_steps_l1_test.dart",
+     "line": 347,
+     "quote": "Widget buildDirect({"
+    },
+    {
+     "file": "learning_tracker/test/features/onboarding/presentation/steps/wizard_steps_l1_test.dart",
+     "line": 583,
+     "quote": "Widget buildDirect({"
+    },
+    {
+     "file": "learning_tracker/test/features/onboarding/presentation/steps/wizard_steps_l1_test.dart",
+     "line": 725,
+     "quote": "Widget buildDirect({"
+    },
+    {
+     "file": "learning_tracker/test/features/onboarding/presentation/steps/wizard_steps_l1_test.dart",
+     "line": 884,
+     "quote": "Widget buildDirect({"
+    }
+   ],
+   "sites": 8,
+   "why": "TQ-3 calls for a shared pumpApp helper; the only pumpApp in the repo is a method on the E2E harness class (test/e2e/harness/e2e_harness.dart:304), unusable for lightweight L1 widget tests. Every L1 file in this batch hand-rolls its own ProviderScope > MaterialApp(locale, 4 l10n delegates, supportedLocales) > Scaffold scaffold instead, and wizard_steps_l1_test.dart repeats the identical ~20-line block 5 times in the same file, one per step group. onboarding_steps_overflow_test.dart is the one file in this batch that does this correctly via the shared expectNoOverflowAcrossDevices/_wrap helper, proving the pattern is achievable. Any future change (new l10n delegate, new supportedLocales source) requires touching 8 call sites in this batch alone.",
+   "recommendation": "Extract a shared, parameterized pump helper (e.g. test/helpers/pump_l1_widget.dart) taking a Widget-building function plus optional locale/overrides, matching overflow_harness.dart's _wrap shape; migrate these 8 sites onto it.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "a single shared L1 pump helper exists under test/helpers/ and all 8 call sites in this batch use it"
+   ],
+   "labels": [
+    "duplication",
+    "test-infrastructure",
+    "fowler"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-onboarding-p3",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Cover SignupScreen's _signUpCloud/_signUpLocal/_signUpWithGoogle branches beyond client-side validation in signup_screen_test.dart",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "features/account/onboarding/presentation/screens",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/onboarding/presentation/screens/signup_screen_test.dart",
+     "line": 236,
+     "quote": "final originalOnError = FlutterError.onError;"
+    },
+    {
+     "file": "learning_tracker/test/features/onboarding/presentation/screens/signup_screen_test.dart",
+     "line": 257,
+     "quote": "verify(() => mockAuthRepo.signInWithGoogle()).called(1);"
+    },
+    {
+     "file": "learning_tracker/lib/features/account/onboarding/presentation/screens/signup_screen.dart",
+     "line": 344,
+     "quote": "if (existingEntry == null && accounts.length >= kMaxDeviceAccounts) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/account/onboarding/presentation/screens/signup_screen.dart",
+     "line": 359,
+     "quote": "if (localMatch != null && localMatch.accountTier.isLocal) {"
+    }
+   ],
+   "sites": 3,
+   "why": "signup_screen.dart's three account-creation methods (_signUpCloud's ~6 catch/error-mapping branches; _signUpLocal's ~120-line reserve/create/rollback body; _signUpWithGoogle's ~140-line device-cap and local/cloud-collision routing) carry the real account-integrity risk in this file, but signup_screen_test.dart only exercises client-side form validation and initial rendering. The sole test that calls into _signUpWithGoogle installs a FlutterError.onError override that swallows ProviderException/Firebase/core-no-app errors, then asserts only that signInWithGoogle() was called once \u2014 it never reaches, and cannot detect breakage in, the account-cap or collision branches. No test taps 'Create Offline Account' or drives a duplicate-email/network-failure path through _signUpCloud. A regression in the collision guard (e.g. the local/cloud upgrade check firing on the wrong condition, or an off-by-one in the cap check) would ship with every test green.",
+   "recommendation": "Add mocktail-driven tests per branch: registry.getAllAccounts() returning kMaxDeviceAccounts accounts (expect the cap error + signOut), registry.findByEmail() returning a local-tier match (expect authOfflineUseUpgrade + signOut), and a tap on 'Create Offline Account' asserting navigation fires.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "a test drives the 5-account-cap branch and asserts the cap error message plus signOut",
+    "a test drives the local/cloud collision branch and asserts authOfflineUseUpgrade plus signOut",
+    "a test taps 'Create Offline Account' and asserts the resulting navigation"
+   ],
+   "labels": [
+    "test-coverage",
+    "auth",
+    "account-integrity"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-onboarding-p3",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Split permission_prompt_screen_l1_test.dart, signup_screen_test.dart, and wizard_steps_l1_test.dart under the AG-3 400-line cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "features/onboarding/presentation",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/onboarding/presentation/screens/permission_prompt_screen_l1_test.dart",
+     "line": 1,
+     "quote": "// L1 widget tests \u2014 PermissionPromptScreen (985 lines total)"
+    },
+    {
+     "file": "learning_tracker/test/features/onboarding/presentation/screens/signup_screen_test.dart",
+     "line": 1,
+     "quote": "import 'package:auto_route/auto_route.dart'; (429 lines total)"
+    },
+    {
+     "file": "learning_tracker/test/features/onboarding/presentation/steps/wizard_steps_l1_test.dart",
+     "line": 1,
+     "quote": "// L1 widget tests for wizard_steps.dart (1132 lines total)"
+    }
+   ],
+   "sites": 3,
+   "why": "AG-3 caps hand-written Dart files (generated exempt) at 400 lines; nothing in the rule or the digest exempts test/. wizard_steps_l1_test.dart at 1132 lines covers 5 unrelated widgets in one file and is among the largest hand-written files visible to this audit.",
+   "recommendation": "Split wizard_steps_l1_test.dart along its existing group() boundaries into 5 files (one per step widget); split signup_screen_test.dart's l10n-regression group into its own file. Extracting the shared helper from the duplication finding above will shrink all three further.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "no hand-written test/ file in this feature slice exceeds 400 lines"
+   ],
+   "labels": [
+    "hygiene",
+    "AG-3",
+    "file-size"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-onboarding-p3",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Localize signup_screen.dart's hardcoded 'you@quest.com' email hint and extend the iter9 l10n regression test to cover it",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AX-2",
+   "area": "features/account/onboarding/presentation/screens",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/account/onboarding/presentation/screens/signup_screen.dart",
+     "line": 599,
+     "quote": "hintText: 'you@quest.com',"
+    },
+    {
+     "file": "learning_tracker/lib/l10n/app_en.arb",
+     "line": 1041,
+     "quote": "\"signInEmailHint\": \"yourname@quest.com\","
+    },
+    {
+     "file": "learning_tracker/test/features/onboarding/presentation/screens/signup_screen_test.dart",
+     "line": 270,
+     "quote": "group('iter9 l10n regression: signup screen strings localized', () {"
+    }
+   ],
+   "sites": 1,
+   "why": "Every other hint/label on this form goes through l10n (signUpScholarNameHint, signUpPasswordHint, signUpEmailAddressLabel); the email field's placeholder is the one stray literal, almost certainly copy-pasted from SignInScreen's l10n.signInEmailHint ('yourname@quest.com') without the l10n wrapper. The test file's own 'iter9 l10n regression' group states its purpose is exactly to verify l10n keys are wired up correctly across this screen, and checks every other field/label/CTA in both locales \u2014 but has no assertion for the email hint, so this single miss ships silently.",
+   "recommendation": "Route the hint through AppLocalizations (reuse signInEmailHint or add signUpEmailHint) and add it to the existing iter9 l10n regression group's EN/HE assertions.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "signup_screen.dart's email field hintText comes from AppLocalizations",
+    "the iter9 l10n regression group asserts the hint text in both EN and HE"
+   ],
+   "labels": [
+    "i18n",
+    "AX-2",
+    "hygiene"
+   ]
+  }
+ }
+]

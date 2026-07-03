@@ -1,0 +1,39 @@
+[
+ {
+  "sourceBatch": "t1-feat-sacred_time",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Stop surfacing raw exception .toString() text to Sacred Time users",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "EH-5 (no_e_to_string_in_ui)",
+   "area": "error-handling/i18n",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/sacred_time/data/services/location_service.dart",
+     "line": 74,
+     "quote": "return LocationFetchError(e.toString());"
+    },
+    {
+     "file": "learning_tracker/lib/features/sacred_time/presentation/screens/city_picker_screen.dart",
+     "line": 69,
+     "quote": "AppLocalizations.of(context)!.errorSearchFailed(e.toString()),"
+    }
+   ],
+   "sites": 2,
+   "why": "LocationFetchResult already models the common failure modes (service disabled, permission denied) as clean typed variants with their own l10n strings, but the catch-all LocationFetchError carries e.toString() verbatim \u2014 including a TimeoutException after the 15s GPS timeout, a common indoor/poor-signal scenario \u2014 rendered directly via sacredTimeLocationDetectError(message). Separately, CitiesRepository never converts its SQLite/IO exceptions, so citySearchProvider's raw AsyncError is shown via e.toString() in the error branch. Both put untranslated, technical English text inside an otherwise fully-Hebrew screen. coding-standards.md names this exact defect class as recurring, citing prior fixes (ST-4, SY-3).",
+   "recommendation": "Give LocationFetchError (and CitiesRepository's failure paths) a stable enum/code instead of a free-text message, resolved to a localized string in presentation; reserve e.toString() for AppLogger only, never for display.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "LocationFetchError carries a typed reason code, not a raw String message",
+    "CitiesRepository exposes a typed Result/sealed failure for I/O errors instead of letting exceptions reach citySearchProvider raw",
+    "A widget test under Locale('he') asserts no raw exception text (e.g. 'Exception:', 'TimeoutException') ever renders"
+   ],
+   "labels": [
+    "i18n",
+    "error-handling",
+    "hebrew"
+   ]
+  }
+ }
+]

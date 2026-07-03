@@ -1,0 +1,5 @@
+learning_tracker/test/core/sync/codecs_and_mergers_test.dart  (1298 lines)
+learning_tracker/test/core/sync/firestore_gateway_impl_test.dart  (2039 lines)
+learning_tracker/test/core/sync/firestore_listener_source_test.dart  (281 lines)
+learning_tracker/test/core/sync/push_pipeline_impl_test.dart  (1295 lines)
+learning_tracker/test/core/sync/sync_orchestrator_test.dart  (1111 lines)

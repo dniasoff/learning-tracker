@@ -1,0 +1,186 @@
+[
+ {
+  "sourceBatch": "t1-feat-progress-p4",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Split the six progress-feature files exceeding the 400-line hand-written Dart limit",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "lib/features/progress/presentation",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/screens/recent_activity_screen.dart",
+     "line": 42,
+     "quote": "class RecentActivityScreen extends ConsumerStatefulWidget {"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/providers/lifetime_knowledge_providers.dart",
+     "line": 56,
+     "quote": "class PriorImportsForCurriculum {"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/widgets/siyumim_grouped_view.dart",
+     "line": 29,
+     "quote": "class SiyumimGroupedView extends ConsumerWidget {"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/screens/progress_screen.dart",
+     "line": 39,
+     "quote": "class ProgressScreen extends ConsumerWidget {"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/widgets/curriculum_breakdown_list.dart",
+     "line": 22,
+     "quote": "class CurriculumBreakdownList extends StatefulWidget {"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/widgets/monthly_activity_sliver_calendar.dart",
+     "line": 13,
+     "quote": "class MonthlyActivityRollup {"
+    }
+   ],
+   "sites": 6,
+   "why": "wc -l confirms: recent_activity_screen.dart 792 lines, lifetime_knowledge_providers.dart 657, siyumim_grouped_view.dart 437, progress_screen.dart 416, curriculum_breakdown_list.dart 413, monthly_activity_sliver_calendar.dart 404 \u2014 all over the 400-line hand-written-file cap, one nearly 2x. lifetime_knowledge_providers.dart in particular mixes DB access, composite-curriculum business logic, provenance computation and presentation-label resolution in one file, making it the hardest file in the slice to review or safely change.",
+   "recommendation": "Extract cohesive sub-responsibilities (e.g. split lifetime_knowledge_providers.dart's composite/subset-merging logic into its own service; split recent_activity_screen.dart's four chart-section widgets into their own files).",
+   "effort": "L",
+   "acceptance_criteria": [
+    "Each listed file is at or under 400 lines, or the limit is deliberately waived with a stated reason",
+    "AG-3 line-count checker (once it exists) reports zero violators in lib/features/progress/presentation"
+   ],
+   "labels": [
+    "hygiene",
+    "maintainability",
+    "progress"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-progress-p4",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Route the hardcoded 'Curriculum settings' tooltip through AppLocalizations in curriculum_progress_screen.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AX-2 (hardcoded user-facing string)",
+   "area": "lib/features/progress/presentation/screens",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/screens/curriculum_progress_screen.dart",
+     "line": 76,
+     "quote": "tooltip: 'Curriculum settings',"
+    }
+   ],
+   "sites": 1,
+   "why": "The settings-gear IconButton's tooltip is a raw English literal, not resolved via AppLocalizations/ARB, in an EN+Hebrew app. A Hebrew user long-pressing the icon or using a screen reader sees/hears untranslated English. None of curriculum_progress_screen_test.dart's 6 tests \u2014 including its two Hebrew-locale tests \u2014 assert against this tooltip, so the gap is invisible to the suite. (3 more hardcoded tooltip: literals exist elsewhere in the repo outside this batch's scope, not counted here.)",
+   "recommendation": "Add an ARB key (e.g. curriculumProgressSettingsTooltip) in both app_en.arb and app_he.arb and use l10n.curriculumProgressSettingsTooltip instead of the literal.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "tooltip: is sourced from AppLocalizations, not a string literal",
+    "make arb-parity still passes with the new key present in both EN and HE ARBs"
+   ],
+   "labels": [
+    "i18n",
+    "accessibility",
+    "progress"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-progress-p4",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Give pace_indicator.dart, stage_breakdown_row.dart and hierarchy_progress_card.dart their own mirrored test files",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-5 (test/ mirrors lib/ 1:1)",
+   "area": "test/features/progress/presentation/widgets",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/progress/presentation/widgets/progress_widgets_test.dart",
+     "line": 14,
+     "quote": "import 'package:learning_tracker/features/progress/presentation/widgets/stage_breakdown_row.dart';"
+    },
+    {
+     "file": "learning_tracker/test/features/progress/presentation/widgets/progress_widgets_test.dart",
+     "line": 12,
+     "quote": "import 'package:learning_tracker/features/progress/presentation/widgets/hierarchy_progress_card.dart';"
+    }
+   ],
+   "sites": 3,
+   "why": "progress_widgets_test.dart has no lib/ file of its own name \u2014 it bundles StageBreakdownRow, PaceIndicator, OverallStatsCard and HierarchyProgressCard tests into one generic file. OverallStatsCard already has a correctly-mirrored overall_stats_card_i18n_test.dart, but pace_indicator.dart, stage_breakdown_row.dart and hierarchy_progress_card.dart have no dedicated test at their mirrored path, so locating a widget's tests by its natural mirrored path fails for those three.",
+   "recommendation": "Split progress_widgets_test.dart into pace_indicator_test.dart, stage_breakdown_row_test.dart and hierarchy_progress_card_test.dart at their mirrored paths.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "pace_indicator.dart, stage_breakdown_row.dart and hierarchy_progress_card.dart each have a test file at their mirrored test/ path",
+    "AG-5 mirroring checker (once it exists) passes for these three files"
+   ],
+   "labels": [
+    "testing",
+    "hygiene",
+    "progress"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-progress-p4",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Replace hand-rolled ==/hashCode on RecentActivityWindow with @freezed or a record",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "naming/placement (no hand-written ==/hashCode on data classes)",
+   "area": "lib/features/progress/presentation/providers",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/providers/recent_activity_providers.dart",
+     "line": 46,
+     "quote": "bool operator ==(Object other) =>\n      other is RecentActivityWindow &&"
+    }
+   ],
+   "sites": 1,
+   "why": "Standards mandate immutable @freezed classes with generated equality, never hand-written ==/hashCode. RecentActivityWindow hand-writes both. Its sibling family-key type in the very same feature, lifetimeDataProvider's `({int profileId, CurriculumId curriculumId})` record (lifetime_knowledge_providers.dart:148-151), gets structural equality for free and cannot drift out of sync \u2014 RecentActivityWindow's hand-rolled version would silently under-compare (stale FutureProvider.family cache hits) if a field were ever added to the class but forgotten in operator==.",
+   "recommendation": "Convert RecentActivityWindow to @freezed, or to a record matching the lifetimeDataProvider sibling's pattern.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "RecentActivityWindow has no hand-written operator==/hashCode",
+    "Adding a field to the type cannot silently break FutureProvider.family memoization"
+   ],
+   "labels": [
+    "riverpod",
+    "hygiene",
+    "progress"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-progress-p4",
+  "findingIndex": 8,
+  "finding": {
+   "title": "Fix the stale 'fr-FR test below' comment in siyumim_timeline_month_key_ts13_test.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-7 / test-comment documentation drift",
+   "area": "test/features/progress/presentation/widgets",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/progress/presentation/widgets/siyumim_timeline_month_key_ts13_test.dart",
+     "line": 91,
+     "quote": "// rely on the fr-FR test below to catch the regression."
+    }
+   ],
+   "sites": 1,
+   "why": "The file's 3 tests are all pinned to en_US / default locale; no fr-FR or any other non-English-locale test exists anywhere in the file. The comment claims a locale-switch test 'below' catches the TS-13 regression, but the actual detection comes from test 2's format-string comparison (abbreviated 'Jan 2026' vs the old hardcoded 'January 2026'), not a locale switch. A reader trusting the comment would wrongly believe the DateFormat.yMMM(locale) fix is verified against an actual non-English locale (e.g. Hebrew), when it is not \u2014 only date-format granularity is tested.",
+   "recommendation": "Either add the promised non-English-locale test (Locale('he') or Locale('fr')) or delete the stale comment so it stops overstating coverage.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Comment matches actual test content, or a real non-English-locale test is added and asserts a locale-specific month header"
+   ],
+   "labels": [
+    "testing",
+    "documentation",
+    "progress"
+   ]
+  }
+ }
+]

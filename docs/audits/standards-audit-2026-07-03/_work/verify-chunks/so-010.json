@@ -1,0 +1,253 @@
+[
+ {
+  "sourceBatch": "t1-feat-tutoring-p3",
+  "chunk": "grp-126",
+  "finding": {
+   "title": "Replace source-text-grep assertions with real widget tests in t3_readonly_surfaces_gating_test.dart and r3_shell_revocation_exit_test.dart",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "test/features/tutoring",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/tutoring/t3_readonly_surfaces_gating_test.dart",
+     "line": 59,
+     "quote": "contains('TutorModeIndicatorBar extends ConsumerWidget'),"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/t3_readonly_surfaces_gating_test.dart",
+     "line": 72,
+     "quote": "contains('activeTutoredProfileSelectionProvider.notifier'),"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/t3_readonly_surfaces_gating_test.dart",
+     "line": 124,
+     "quote": "contains('TutorModeIndicatorBar'), // TUT-04 persistent-scaffold check"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/t3_readonly_surfaces_gating_test.dart",
+     "line": 156,
+     "quote": "contains('isTutorElevated'),"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/t3_readonly_surfaces_gating_test.dart",
+     "line": 197,
+     "quote": "contains('!isTutoredSession && !isChildProfile'),"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/t3_readonly_surfaces_gating_test.dart",
+     "line": 248,
+     "quote": "guardIdx = settingsSrc.lastIndexOf('if (!isTutoredSession)', headerIdx);"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/t3_readonly_surfaces_gating_test.dart",
+     "line": 307,
+     "quote": "contains('canEditStages'), // Add Track CTA gating"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/t3_readonly_surfaces_gating_test.dart",
+     "line": 334,
+     "quote": "isNot(contains('isChildMode: isChildMode || isTutoredSession')),"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/t3_readonly_surfaces_gating_test.dart",
+     "line": 374,
+     "quote": "contains('isTutor'), // live-mark button gating"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/r3_shell_revocation_exit_test.dart",
+     "line": 246,
+     "quote": "shellSrc, contains('incomingTutorGrantsProvider'),"
+    }
+   ],
+   "sites": 24,
+   "why": "These tests call File(...).readAsStringSync() and assert expect(src, contains('token')) against the raw source text of 5 other-feature screens (app_shell.dart, settings_screen.dart, learning_screen.dart, dashboard_body.dart, text_display_screen.dart). A string search passes whenever the token appears anywhere in the file \u2014 in a comment, on an inverted condition, or on unreachable code. Concretely: if a future edit flips the Add Track CTA gate to `!canEditStages`, moves the `if (!isTutoredSession)` guard so UserProfileHeaderCard (the tutor's own sign-out/delete-account surface) renders during a tutored session again (this already shipped once, per the file's own 'BUG 2' comment), or removes the MarkLiveCompletionUseCase call from the live-mark button's onPressed while leaving the string 'MarkLiveCompletionUseCase' in an unrelated comment, every one of these 24 test blocks (23 in t3 across AC1-AC5 plus TUT-04, 1 block/3 assertions in r3's self-labelled 'Structural tests (source-level)' group) keeps passing. Repo-wide grep confirms no other test file references isTutorElevated/isTutoredSession for these screens, so this is the SOLE regression coverage for tutor-mode UI gating outside the tutoring feature. r3's other 3 tests in the same file are genuine provider-level regression tests and are not affected by this finding.",
+   "recommendation": "Convert each assertion to a widget test that pumps the real screen with canEditStages/isTutoredSession toggled via provider overrides and asserts the CTA/surface is actually present or absent in the render tree \u2014 the pattern r3's own first 3 tests and every other l1 test in this batch already use correctly. Delete r3's redundant structural block once covered, or replace it with a widget-level assertion.",
+   "effort": "L",
+   "acceptance_criteria": [
+    "Each AC1-AC5 group in t3_readonly_surfaces_gating_test.dart is a testWidgets pumping the real screen and asserting on Finder/rendered output, not File.readAsStringSync() text",
+    "A regression test fails if the `if (!isTutoredSession)` guard is removed from UserProfileHeaderCard in settings_screen.dart (BUG 2 class)",
+    "A regression test fails if learning_screen.dart's Add Track CTA gate is inverted to `!canEditStages`"
+   ],
+   "labels": [
+    "testing",
+    "tutoring",
+    "tq-8",
+    "tautological-test"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-nav-utils",
+  "chunk": "grp-020",
+  "finding": {
+   "title": "Remove dead isShabbos/isYomTov/formatHebrewDate from HebrewCalendarUtils (superseded by zmanim_window_service)",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Evans lens (ubiquitous language re-derived, not enforced in one place) + dead code",
+   "area": "lib/core/utils/hebrew_calendar_utils.dart (duplication/dead-code)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/utils/hebrew_calendar_utils.dart",
+     "line": 82,
+     "quote": "static bool isShabbos(DateTime gregorianDate) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/utils/hebrew_calendar_utils.dart",
+     "line": 94,
+     "quote": "static bool isYomTov(DateTime gregorianDate) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/utils/hebrew_calendar_utils.dart",
+     "line": 114,
+     "quote": "static String formatHebrewDate("
+    },
+    {
+     "file": "learning_tracker/lib/core/utils/hebrew_calendar_utils.dart",
+     "line": 81,
+     "quote": "/// For precise zmanim (sunset/nightfall), use ComplexZmanimCalendar with a GeoLocation."
+    }
+   ],
+   "sites": 3,
+   "why": "`grep -rn` across all of lib/ finds zero production callers of isShabbos, isYomTov, or formatHebrewDate outside their own definition file \u2014 only test/core/utils/hebrew_calendar_utils_test.dart and one story-acceptance test call isShabbos, testing code nothing else ever runs. Meanwhile lib/features/sacred_time/domain/services/zmanim_window_service.dart implements the real, GeoLocation/zmanim-aware Shabbos+Yom-Tov window (candle-lighting offset, tzais, JewishCalendar.isAssurBemelacha) that actually drives the Sacred Time lock feature \u2014 and isShabbos's own doc comment admits its 18:00-local-clock-hour heuristic is inferior (\"For precise zmanim... use ComplexZmanimCalendar with a GeoLocation\"). Because this dead code lives in core/utils/ (importable by any feature \u2014 Rule 1 only blocks core\u2192features, not the reverse) and is unit-tested (making it look supported), a future feature needing \"is it Shabbos right now\" is one natural-language search away from wiring up the crude, timezone-naive version instead of the correct geo-aware one \u2014 and if the caller passes a UTC DateTime (the P5-mandated storage format everywhere else in this codebase), isShabbos's `.hour >= 18` check reads UTC hour, not true local hour, silently wrong for any locale far from UTC.",
+   "recommendation": "Delete isShabbos, isYomTov, and formatHebrewDate (and their test coverage) from HebrewCalendarUtils. If a lightweight non-geo fallback is genuinely wanted somewhere, rename it to make the approximation explicit (e.g. isApproximateShabbosNoGeo) and doc-link to zmanim_window_service.dart as the source of truth.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "`grep -rn \"isShabbos\\|isYomTov\\|formatHebrewDate\" learning_tracker/lib/` shows zero references outside sacred_time/ (or the methods are removed entirely).",
+    "hebrew_calendar_utils_test.dart's corresponding groups are removed alongside the source methods."
+   ],
+   "labels": [
+    "dead-code",
+    "duplication",
+    "evans"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-scheduler-p3",
+  "chunk": "grp-095",
+  "finding": {
+   "title": "Add regression tests for GoalRepositoryImpl's not-found and delete-sync payload paths",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "EH-2 (typed exceptions surfaced correctly) / TQ-8 (every reachable error branch needs a red-first test)",
+   "area": "features/scheduler/data/repositories tests",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/scheduler/data/repositories/goal_repository_impl.dart",
+     "line": 93,
+     "quote": "if (existing == null) {\n        throw ArgumentError('Goal not found: $goalId');"
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/data/repositories/goal_repository_impl_test.dart",
+     "line": 21,
+     "quote": "@override\n  Future<void> deleteGoal(Map<String, dynamic> payload) async {}"
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/data/repositories/goal_repository_impl_test.dart",
+     "line": 161,
+     "quote": "test('deleteGoal removes the goal', () async {"
+    }
+   ],
+   "sites": 2,
+   "why": "(a) updateGoal throws ArgumentError when goalId doesn't exist (e.g. the goal was deleted from another device and the sync merge already removed the local row before this device's in-flight edit lands) \u2014 no test in this file ever calls updateGoal with a nonexistent id, so nothing pins whether it throws, what it throws, or that a future refactor doesn't silently swallow/change it. (b) The file's own 'sync payload completeness (R4-6)' group exists specifically because create/update once shipped without profile_id/id in the outbox payload \u2014 but that hardening was never extended to deleteGoal: _RecordingGoalSyncFacade.deleteGoal is a blind no-op with no payload recorder (unlike goalPayloads for pushGoal), and the sole 'deleteGoal removes the goal' test uses the sync-less `repo` instance, so _syncDeleteGoal's {firestore_id, curriculum_id} payload is completely unverified. A key rename or dropped field in _syncDeleteGoal would ship silently \u2014 the exact class of bug R4-6 was written to catch for create/update.",
+   "recommendation": "Add a test asserting updateGoal(goalId: <nonexistent>) throws ArgumentError; add a deletePayloads recorder to _RecordingGoalSyncFacade and a test asserting deleteGoal() pushes the expected firestore_id/curriculum_id payload, mirroring the existing R4-6 create/update tests.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "New red-first test fails against a deliberately-broken updateGoal (e.g. the null check removed) and passes against current code.",
+    "New deleteGoal-payload test fails if _syncDeleteGoal's field names are renamed or dropped, mirroring the existing R4-6 create/update tests."
+   ],
+   "labels": [
+    "tq-8",
+    "eh-2",
+    "coverage-gap"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-onboarding-p2",
+  "chunk": "grp-069",
+  "finding": {
+   "title": "Split the 6 hand-written onboarding files that exceed the 400-line AG-3 cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "onboarding (widgets + tests)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/widgets/intro_rewards_page.dart",
+     "line": 1,
+     "quote": "import 'package:flutter/material.dart';"
+    },
+    {
+     "file": "learning_tracker/test/features/onboarding/domain/services/bulk_prior_completion_service_test.dart",
+     "line": 1,
+     "quote": "import 'package:drift/native.dart';"
+    },
+    {
+     "file": "learning_tracker/test/features/onboarding/domain/services/learning_process_wizard_service_test.dart",
+     "line": 1,
+     "quote": "/// Tests for [LearningProcessWizardService]."
+    },
+    {
+     "file": "learning_tracker/test/features/onboarding/presentation/screens/app_intro_screen_l1_test.dart",
+     "line": 1,
+     "quote": "// L1 behaviour tests for AppIntroScreen."
+    },
+    {
+     "file": "learning_tracker/test/features/onboarding/presentation/screens/onboarding_screen_l1_test.dart",
+     "line": 1,
+     "quote": "// L1 widget tests for OnboardingScreen phase router."
+    },
+    {
+     "file": "learning_tracker/test/features/onboarding/presentation/screens/onboarding_bulk_l1_test.dart",
+     "line": 1,
+     "quote": "// L1 widget tests \u2014 OnboardingScreen phase flow + BulkMarkScreen sentinel-date"
+    }
+   ],
+   "sites": 6,
+   "why": "Exact line counts: intro_rewards_page.dart 418, bulk_prior_completion_service_test.dart 578, learning_process_wizard_service_test.dart 619, app_intro_screen_l1_test.dart 472, onboarding_screen_l1_test.dart 841, onboarding_bulk_l1_test.dart 1262. Per AG-3's own rationale, content past the read-budget threshold becomes invisible to the next agent \u2014 exactly how onboarding_screen_test.dart and half of learning_process_wizard_service_test.dart's groups (finding 7) came to duplicate coverage that already existed elsewhere in the same directory.",
+   "recommendation": "Split intro_rewards_page.dart by widget (hero illustration / feature cards / child-mode tag / scholar card are already 4 independent classes). Split the 3 largest test files by group/screen, matching the split already done between onboarding_screen_l1_test.dart and onboarding_bulk_l1_test.dart.",
+   "effort": "L",
+   "acceptance_criteria": [
+    "`find lib test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400'` (AG-3's own specified checker) no longer lists these 6 files"
+   ],
+   "labels": [
+    "hygiene",
+    "file-size",
+    "onboarding"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-onboarding-p2",
+  "chunk": "grp-068",
+  "finding": {
+   "title": "Fix the always-passing awk comparison in Makefile check 15/15 (no-cross-feature-deep-imports)",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Rule 0, Rule 2",
+   "area": "tooling/Makefile",
+   "evidence": [
+    {
+     "file": "learning_tracker/Makefile",
+     "line": 378,
+     "quote": "match($$1, /features\\/([^\\/]+)\\//, a); match($$0, /features\\/([^\\/]+)\\//, b); if(a[1] != b[1]) print"
+    }
+   ],
+   "sites": 1,
+   "why": "match($0, ...) scans the whole 'path:lineno:content' grep line and matches the FIRST 'features/xxx/' occurrence, which is always inside the file-path prefix \u2014 identical to what match($1, ...) already extracted. a[1] and b[1] are therefore always equal and the filter never prints, regardless of which feature is actually imported. Running the exact command directly against the current tree confirms 0 output even though the 18 cross-feature-import lines cited in the paired finding (and ~26 total repo-wide) exist. Rule 2 has had zero real enforcement, even as a warning, since this check was written.",
+   "recommendation": "Match the import path portion only (e.g. split on the literal single-quote around the package path before matching, or grep the content field explicitly by re-slicing on the first two colons). Add a fixture case to the audit's own coverage so a future edit to this check can't silently break it again.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Running the check-15/15 grep+awk pipeline against a temporary file containing a known deep cross-feature import produces WARN output instead of silently passing",
+    "After the fix, `make audit` output for the current tree lists the auth_validators.dart / onboarding_screen.dart cross-feature imports from finding 3"
+   ],
+   "labels": [
+    "tooling",
+    "rule-0",
+    "makefile"
+   ]
+  }
+ }
+]

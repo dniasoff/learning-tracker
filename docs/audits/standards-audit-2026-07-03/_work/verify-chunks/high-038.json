@@ -1,0 +1,49 @@
+[
+ {
+  "sourceBatch": "t1-feat-account-p1",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Route auth/onboarding validators and email-verification/no-backup UI strings through AppLocalizations instead of hardcoded English",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "AX-2 (pending literals) / EH-5",
+   "area": "features/account presentation + onboarding validators (i18n)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/account/onboarding/domain/validators/auth_validators.dart",
+     "line": 10,
+     "quote": "return 'Email is required';"
+    },
+    {
+     "file": "learning_tracker/lib/features/account/presentation/widgets/email_verification_confirm_panel.dart",
+     "line": 139,
+     "quote": "this.title = 'Confirm Your Email',"
+    },
+    {
+     "file": "learning_tracker/lib/features/account/presentation/widgets/email_verification_confirm_panel.dart",
+     "line": 248,
+     "quote": "child: Text(\n                        'Open Email',"
+    },
+    {
+     "file": "learning_tracker/lib/features/account/presentation/widgets/no_backup_badge.dart",
+     "line": 26,
+     "quote": "message:\n          'This account exists only on this device. '"
+    }
+   ],
+   "sites": 3,
+   "why": "auth_validators.dart's validateEmail/validatePassword/validateDisplayName return raw English strings ('Email is required', 'Please enter a valid email address', 'Password is required', 'Password must be at least 6 characters', 'Display name is required'); its byte-identical live twin at lib/features/onboarding/domain/validators/auth_validators.dart is wired as the TextFormField validator in both signup_screen.dart:75-81 and sign_in_screen.dart:404 \u2014 every Hebrew-locale user sees these in English on the two most-visited auth screens. email_verification_confirm_panel.dart unconditionally hardcodes 'Open Email', 'Send Again', 'Cancel' as button text (no l10n parameter exists for them at all) and defaults title/verifiedLinkLabel to English; email_verification_dialog.dart \u2014 the only production call site, reached from sign_in_controller.dart's real verification flow \u2014 never overrides `title`, so 'Confirm Your Email' always renders in English. no_backup_badge.dart hardcodes both its Tooltip message and its Semantics(label:) in English, so even the screen-reader announcement for this always-visible local-account badge is untranslated. Notably 'Cancel' duplicates an ARB key (`cancel`) already used elsewhere in this exact feature (account_picker_screen.dart's dialog), so the fix for that string is a one-line change, not new-key work.",
+   "recommendation": "Add ARB keys (EN+HE) for 'Open Email'/'Send Again'/panel title/no-backup tooltip+semantics; thread AppLocalizations into the validator functions (or return stable EH-5 error codes resolved via ARB at the call site) instead of literal strings; pass `title:` and button-label params through from callers using existing/added l10n keys.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "A widget test pumping signup_screen.dart / sign_in_screen.dart / EmailVerificationConfirmPanel / NoBackupBadge under Locale('he') asserts no literal English fallback string is rendered",
+    "make arb-parity-style or a new grep-based Rule-0 checker flags string literals inside Text()/Tooltip(message:)/Semantics(label:) under lib/features/**/presentation/**"
+   ],
+   "labels": [
+    "ax-2",
+    "eh-5",
+    "i18n",
+    "hebrew"
+   ]
+  }
+ }
+]

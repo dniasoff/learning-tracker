@@ -1,0 +1,183 @@
+[
+ {
+  "sourceBatch": "t1-feat-profiles-p1",
+  "findingIndex": 8,
+  "finding": {
+   "title": "Replace EdgeInsets.only(left:/right:) with EdgeInsetsDirectional in ParentTrackManagementScreen",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AX-1",
+   "area": "features/profiles/presentation/screens",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/screens/parent_track_management_screen.dart",
+     "line": 120,
+     "quote": "padding: const EdgeInsets.only(\n              left: 16,"
+    }
+   ],
+   "sites": 1,
+   "why": "AX-1 bans `EdgeInsets.only(left:/right:)` outright because this app is RTL (Hebrew). The values here are symmetric (16/16) so there's no visible bug today, but it's exactly the banned pattern and a latent trap: if a future edit makes left/right asymmetric without switching to Directional, it silently breaks in Hebrew. The digest notes the AX-1 grep 'exists only in ROOT Makefile audit' \u2014 this violation surviving in a batch where `make audit` passed suggests that grep doesn't actually scan learning_tracker/lib/** for this pattern, a real coverage gap in an [E]nforced rule.",
+   "recommendation": "Replace with EdgeInsetsDirectional.only(start: 16, end: 16, top: 8, bottom: 96), and verify/extend the AX-1 grep so it actually scans learning_tracker/lib/**.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Line uses EdgeInsetsDirectional.only(start:/end:) instead of left:/right:",
+    "make audit's AX-1 grep is confirmed to scan learning_tracker/lib/** and would have caught this"
+   ],
+   "labels": [
+    "ax-1",
+    "rtl",
+    "i18n"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-profiles-p1",
+  "findingIndex": 9,
+  "finding": {
+   "title": "Fix ProfileEditFormDialog's doc comment claiming profile mode is not editable on edit",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Evans ubiquitous language / doc drift",
+   "area": "features/profiles/presentation/widgets",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/widgets/profile_edit_delete_actions.dart",
+     "line": 148,
+     "quote": "/// Mode is shown but not editable on edit (matching the existing Manage\n/// Learners behaviour \u2014 only name + avatar are persisted)."
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/widgets/profile_edit_delete_actions.dart",
+     "line": 37,
+     "quote": "// PP-2 fix: pass result.mode so that the selected mode (child/adult) is\n    // actually persisted. Previously mode was silently dropped..."
+    }
+   ],
+   "sites": 1,
+   "why": "The class doc comment on ProfileEditFormDialog says mode is 'shown but not editable on edit', but its SegmentedButton is fully interactive (onSelectionChanged sets state) and editProfileFlow explicitly persists `result.mode` via repo.updateProfile \u2014 a documented bugfix (PP-2) three lines below the call site. A maintainer trusting the stale comment could miss that changing a child's mode to adult also has a load-bearing side effect a few lines later (clearing that profile's stored PINs).",
+   "recommendation": "Update the doc comment to state mode IS editable and persisted, and cross-reference the PIN-clearing side effect in editProfileFlow.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Doc comment on ProfileEditFormDialog accurately describes current (editable) mode behavior"
+   ],
+   "labels": [
+    "docs-drift",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-profiles-p1",
+  "findingIndex": 10,
+  "finding": {
+   "title": "Tag every keepAlive:true provider in features/profiles with the grep-able // keepAlive: justification SM-6 requires",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "SM-6",
+   "area": "features/profiles/presentation/providers",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/providers/active_profile_provider.dart",
+     "line": 17,
+     "quote": "@Riverpod(keepAlive: true)\nclass ActiveProfileId extends _$ActiveProfileId {"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/providers/parent_pin_session_provider.dart",
+     "line": 9,
+     "quote": "@Riverpod(keepAlive: true)\nclass ParentPinAuthenticatedProfileId"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/providers/profile_providers.dart",
+     "line": 21,
+     "quote": "@Riverpod(keepAlive: true)\nint currentAccountId(Ref ref) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/providers/profile_providers.dart",
+     "line": 77,
+     "quote": "@Riverpod(keepAlive: true)\nFuture<int?> autoSelectedProfileId(Ref ref) async {"
+    }
+   ],
+   "sites": 8,
+   "why": "SM-6 requires every `keepAlive: true` to carry an inline `// keepAlive:` comment so a checker can grep for compliance. All 8 keepAlive providers in this batch (active_profile_provider.dart:17, parent_pin_session_provider.dart:9, pin_flow_controller.dart:130, profile_providers.dart:21/28/36/77/161) instead use prose `///` doc comments that don't match the required grep pattern \u2014 the same pattern holds nearly everywhere else in the codebase (only sync_orchestrator_providers.dart uses the literal tag), so a Rule-0 checker for SM-6 could not be written against the current codebase without a mass rename.",
+   "recommendation": "Add a literal `// keepAlive: <reason>` line next to each @Riverpod(keepAlive: true) in this batch (can keep the existing prose doc comment alongside it).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Each of the 8 listed keepAlive providers has an inline `// keepAlive:` comment a grep-based checker can match"
+   ],
+   "labels": [
+    "sm-6",
+    "riverpod",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-profiles-p1",
+  "findingIndex": 11,
+  "finding": {
+   "title": "Replace PinFlowController's raw-English error-string matching with a stable error code",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "EH-5 (stable codes, not pre-formatted messages)",
+   "area": "features/profiles/presentation",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/providers/pin_flow_controller.dart",
+     "line": 413,
+     "quote": "String _incorrectPin() => 'Incorrect PIN';\n  String _pinsDoNotMatch() => 'PINs do not match';"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/screens/pin_flow_screen.dart",
+     "line": 194,
+     "quote": "'Incorrect PIN' => l10n.incorrectPin,\n    'PINs do not match' => l10n.pinsDoNotMatch,"
+    }
+   ],
+   "sites": 2,
+   "why": "PinFlowController (no BuildContext/l10n access) emits full English sentences as its error 'codes', and pin_flow_screen.dart's _resolveError matches them by exact string equality to localize. This is the same fragility EH-5 targets one layer up: if a future edit tweaks the wording in one file (e.g. fixes a typo in 'Incorrect PIN'), the switch in the other silently stops matching and falls through to `_ => raw`, showing raw English to Hebrew users with no compiler error to catch the drift.",
+   "recommendation": "Define a small PinFlowError enum returned/stored instead of a String, and switch on the enum in pin_flow_screen.dart.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "PinFlowController exposes a typed error code, not a formatted sentence",
+    "A test renaming/removing one of the four magic strings would fail to compile instead of silently breaking localization"
+   ],
+   "labels": [
+    "eh-5",
+    "i18n",
+    "pin-flow"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-profiles-p1",
+  "findingIndex": 12,
+  "finding": {
+   "title": "Stop autoSelectedProfileId's build() from writing to the DB and mutating sibling providers",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "SM-2 (provider build must be pure)",
+   "area": "features/profiles/presentation/providers",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/providers/profile_providers.dart",
+     "line": 98,
+     "quote": "// Stale id \u2014 clear it and fall through to the auto-select/self-heal path.\n    ref.read(selectedProfileIdProvider.notifier).clear();"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/providers/profile_providers.dart",
+     "line": 109,
+     "quote": "id = await repo.ensureDefaultProfile(\n      accountId: accountId,"
+    }
+   ],
+   "sites": 1,
+   "why": "autoSelectedProfileId's build() function calls `selectedProfileIdProvider.notifier.clear()`/`.select(id)` (mutating a sibling provider), `ref.invalidate(profileListProvider)`, and `repo.ensureDefaultProfile(...)` (which inserts a new learner_profiles row and re-parents orphaned rows) \u2014 all from inside a provider's build(). This is a deliberate, heavily-commented fix for BUG D1 (self-healing a profile-less authenticated account), and the fast path is idempotent, so it is not causing an active bug. But it does mean merely watching/reading this provider can trigger a database write, which is surprising for what looks like a plain derived value and makes the provider harder to unit-test without a real (or faked) UserDatabase.",
+   "recommendation": "Move the self-heal side effect out of build() into an explicit ref.listen-driven effect (e.g. in app_shell.dart, which already watches auth state) or a widget-triggered callback, keeping build() a pure read.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "autoSelectedProfileId's build() (or its replacement) contains no writes to other providers or the database; existing BUG D1 self-heal tests keep passing"
+   ],
+   "labels": [
+    "sm-2",
+    "riverpod",
+    "testability"
+   ]
+  }
+ }
+]

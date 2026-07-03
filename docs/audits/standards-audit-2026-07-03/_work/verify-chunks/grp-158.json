@@ -1,0 +1,211 @@
+[
+ {
+  "sourceBatch": "t2-firebase-rules-functions-p1",
+  "findingIndex": 11,
+  "finding": {
+   "title": "Fix _cf_helpers.mjs's numeric child_profile_id fixture so listTutorGrants' outgoing-mode test can assert real behavior",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-7",
+   "area": "functions/test",
+   "evidence": [
+    {
+     "file": "learning_tracker/functions/test/_cf_helpers.mjs",
+     "line": 66,
+     "quote": "child_profile_id: PROFILE,"
+    },
+    {
+     "file": "learning_tracker/functions/src/index.ts",
+     "line": 572,
+     "quote": "if (typeof childProfileId !== \"string\" || !childProfileId) {"
+    },
+    {
+     "file": "learning_tracker/functions/test/cf_grant_revoke.test.mjs",
+     "line": 289,
+     "quote": "// A length assertion would be fragile due to type coercion in Firestore.\n    assert.ok(res.grants !== undefined);"
+    }
+   ],
+   "sites": 1,
+   "why": "res.grants is always an array (never undefined) per listTutorGrants' own return contract, so `assert.ok(res.grants !== undefined)` cannot fail regardless of whether the outgoing-mode query is correct -- the test labeled 'outgoing mode happy path' gives zero regression protection for that query path. The comment is honest about why (seedActiveGrant stores child_profile_id as a JS number, while inviteTutor -- every real production writer -- requires and stores it as a string, so the '==' query never matches the fixture), but the fix belongs in the shared fixture, not in weakening the assertion, and the weakening carries no `// weaken-ok:` tag per the standard.",
+   "recommendation": "Change seedActiveGrant to store child_profile_id: String(PROFILE), matching every production writer, then strengthen the assertion to check res.grants.length === 1 and the returned grant's fields.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "The 'outgoing mode happy path' test asserts res.grants.length === 1 and fails if the outgoing query breaks."
+   ],
+   "labels": [
+    "test-quality",
+    "cloud-functions",
+    "P2"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-firebase-rules-functions-p1",
+  "findingIndex": 12,
+  "finding": {
+   "title": "Reject NaN points in tutorBulkPriorCompletions' range check",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "functions correctness / SR-2 parity",
+   "area": "functions/tutorBulkPriorCompletions",
+   "evidence": [
+    {
+     "file": "learning_tracker/functions/src/index.ts",
+     "line": 451,
+     "quote": "if (\n      typeof completion.points !== \"number\" ||\n      completion.points < 0 ||"
+    }
+   ],
+   "sites": 1,
+   "why": "typeof NaN === 'number' in JS, and both `NaN < 0` and `NaN > 100` are false, so a points value of NaN passes this check and gets written into the child's completions doc. The equivalent firestore.rules check (`points >= 0 && points <= 100`, an AND) fails closed on NaN, so the tutor bulk-write path is laxer than the owner-direct path it's supposed to mirror on the same collection. Untested: only `points: 101` is covered in cf_tutor_settings_profile.test.mjs.",
+   "recommendation": "Add `!Number.isFinite(completion.points)` to the rejection condition.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "A new test: completions: [{...goodCompletion, points: NaN}] is rejected with invalid-argument."
+   ],
+   "labels": [
+    "cloud-functions",
+    "hygiene",
+    "P3"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-firebase-rules-functions-p1",
+  "findingIndex": 13,
+  "finding": {
+   "title": "Correct cf_tutor_completions.test.mjs's header comment to stop claiming tutorBulkPriorCompletions coverage",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "test hygiene",
+   "area": "functions/test",
+   "evidence": [
+    {
+     "file": "learning_tracker/functions/test/cf_tutor_completions.test.mjs",
+     "line": 1,
+     "quote": "// CF tests \u2014 tutor completion mutations: tutorResetCompletion,\n// tutorBulkPriorCompletions. See _cf_helpers.mjs for the harness."
+    },
+    {
+     "file": "learning_tracker/functions/test/cf_tutor_settings_profile.test.mjs",
+     "line": 321,
+     "quote": "describe('tutorBulkPriorCompletions', () => {"
+    }
+   ],
+   "sites": 1,
+   "why": "A maintainer reading cf_tutor_completions.test.mjs to check or extend tutorBulkPriorCompletions coverage would find nothing there and might conclude it's untested (or add a duplicate suite) -- the real coverage lives in cf_tutor_settings_profile.test.mjs, a file whose name doesn't mention completions at all.",
+   "recommendation": "Move the tutorBulkPriorCompletions describe block into cf_tutor_completions.test.mjs, or fix the header comments in both files to point to the actual location.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Header comments in both files accurately state where tutorBulkPriorCompletions is tested."
+   ],
+   "labels": [
+    "test-quality",
+    "hygiene",
+    "P3"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-firebase-rules-functions-p1",
+  "findingIndex": 14,
+  "finding": {
+   "title": "Split functions/src/index.ts's five unrelated concerns into focused modules",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler lens (misplaced responsibility / god-file); AG-3 intent",
+   "area": "functions/src",
+   "evidence": [
+    {
+     "file": "learning_tracker/functions/src/index.ts",
+     "line": 28,
+     "quote": "/**\n * Triggered when a Firebase Auth user is deleted."
+    },
+    {
+     "file": "learning_tracker/functions/src/index.ts",
+     "line": 206,
+     "quote": "// W3.42 \u2014 Tutor audit-log purge (scheduled, 12-month retention)"
+    },
+    {
+     "file": "learning_tracker/functions/src/index.ts",
+     "line": 533,
+     "quote": "// V2-R3 C3 \u2014 Tutor grant lifecycle Cloud Functions"
+    },
+    {
+     "file": "learning_tracker/functions/src/index.ts",
+     "line": 1123,
+     "quote": "// Tutor write-path Cloud Functions \u2014 S4 (Talmid-View Squad)"
+    }
+   ],
+   "sites": 1,
+   "why": "One 2029-line file houses account-deletion cascades, a scheduled audit-log purge, the bulk-completion proxy, the full invite/accept/decline/revoke/resign grant lifecycle, and 12 near-identical tutor CRUD write-paths. Every change -- including several fixes this audit recommends -- touches the same file, so unrelated concerns share one blast radius for code review, git blame, and merge conflicts.",
+   "recommendation": "Split by concern (e.g. deletes.ts, tutor_invites.ts, tutor_writes.ts, triggers.ts) with index.ts re-exporting every `export const` so deployed function names and functions/test imports are unaffected.",
+   "effort": "L",
+   "acceptance_criteria": [
+    "index.ts (or its replacement barrel) is under a stated line budget (e.g. <300 lines); `npm run build` still compiles; every existing export name is preserved."
+   ],
+   "labels": [
+    "cloud-functions",
+    "maintainability",
+    "P3"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-firebase-rules-functions-p2",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Add SR-2/SR-3/SR-4/SR-5 + TQ-9 ruleCoverage pending hardening tests to firestore_rules.test.mjs",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "SR-2/SR-3/SR-4/SR-5/TQ-9",
+   "area": "firestore-rules-tests (functions/test)",
+   "evidence": [
+    {
+     "file": "docs/coding-standards.md",
+     "line": 298,
+     "quote": "SR-2 \u2014 Validate value types and cap string sizes in rules (`is timestamp`, `is number`, `s.size() <= N`), not just key sets via `hasOnly()`."
+    },
+    {
+     "file": "docs/coding-standards.md",
+     "line": 303,
+     "quote": "SR-3 \u2014 Every event create requires a server-bounded timestamp: present, `is timestamp`, and `<= request.time`."
+    },
+    {
+     "file": "docs/coding-standards.md",
+     "line": 308,
+     "quote": "SR-4 \u2014 Cap `list` queries on per-profile event collections: `allow list: if <cond> && request.query.limit <= 500`."
+    },
+    {
+     "file": "docs/coding-standards.md",
+     "line": 313,
+     "quote": "SR-5 \u2014 Tutor cross-user access checks state and expiry in the rule itself (`state == 'active' && expires_at > request.time`...)."
+    },
+    {
+     "file": "learning_tracker/functions/test/firestore_rules.test.mjs",
+     "line": 36,
+     "quote": "  setDoc,"
+    }
+   ],
+   "sites": 5,
+   "why": "coding-standards.md (2026-07-02) lists SR-2..SR-5 and TQ-9's ruleCoverage clause as [Pending], each with an 'Enforce' line naming the exact test pattern this file should carry. None exist. (1) SR-2: the only type/size check anywhere is `points: '50'` on completions (line 318) \u2014 no oversized-string test, no wrong-type test on any other field in any of the 12 hasOnly/open-bag collections. (2) SR-3: streak_events/learning_ledger/points_ledger accept a timestamp field of any value including far-future dates with zero test coverage \u2014 the deprecated test/firestore-rules/ suite used to test exactly this for 2 of these 3 collections before the schema migration; that coverage was lost, not carried forward. (3) SR-4: the file's own Firestore import list (line 33-40) never imports `getDocs`/`query` \u2014 it is structurally impossible for any test here to issue a list/collection query, so an owner or active tutor enumerating a child's entire event history in one unbounded query is completely untested. (4) SR-5: beforeEach (line 106-122) always seeds an 'active' tutor_grants/tutor_active_access pair; no test seeds a revoked or expired grant to prove tutor access is actually cut off, so a bug in the Cloud Function that deletes tutor_active_access on revoke would go undetected. (5) TQ-9: the emulator's own `ruleCoverage` report (flags rule expressions never evaluated by any test) is never fetched or asserted anywhere in the repo (zero grep hits for 'ruleCoverage'), so dead/unreachable branches in the 447-line rules file can accumulate silently.",
+   "recommendation": "Track as a backlog against SR-2..SR-5 + TQ-9: each lands its named assertFails/assertSucceeds pattern in firestore_rules.test.mjs; SR-4/SR-5 additionally need firestore.rules changes (an allow-list split with a limit cap, and a state/expires_at field) since nothing in the current rule is testable yet; TQ-9's ruleCoverage check is a Makefile/ci.yml addition that curls the emulator's coverage endpoint after the suite runs.",
+   "effort": "L",
+   "acceptance_criteria": [
+    "SR-2: a test asserts a large string and a wrong-typed field are denied on at least one hasOnly-guarded and one open-bag collection",
+    "SR-3: streak_events, learning_ledger and points_ledger each gain a future-timestamp assertFails test mirroring completions'",
+    "SR-4: a test issues `limit(500)` (succeeds) and `limit(1000)`/unbounded (fails) against one event collection after firestore.rules adds an allow-list cap",
+    "SR-5: a test seeds a revoked/expired tutor_active_access scenario and asserts tutor read is denied",
+    "TQ-9: CI fetches the emulator's ruleCoverage report and fails the job on any never-evaluated rule expression"
+   ],
+   "labels": [
+    "security",
+    "test-coverage",
+    "SR-2",
+    "SR-3",
+    "SR-4",
+    "SR-5",
+    "TQ-9",
+    "P2"
+   ]
+  }
+ }
+]

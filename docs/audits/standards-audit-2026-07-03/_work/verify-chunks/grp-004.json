@@ -1,0 +1,192 @@
+[
+ {
+  "sourceBatch": "t1-core-analytics-logging",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Delete logger_extra_test.dart \u2014 near-total weak-assertion duplicate of logger_extended_test.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 / Fowler duplication",
+   "area": "test/core/logging",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/logging/logger_extra_test.dart",
+     "line": 54,
+     "quote": "test('errorMsg() does not throw', () {"
+    },
+    {
+     "file": "learning_tracker/test/core/logging/logger_extended_test.dart",
+     "line": 135,
+     "quote": "test('errorMsg logs the message', () {"
+    }
+   ],
+   "sites": 1,
+   "why": "logger_extra_test.dart's own header comment says it exists to cover 'methods not exercised' elsewhere, but every method it exercises (critical, debugMsg, warningMsg, errorMsg, criticalMsg, log, handle, talker getter) is already covered \u2014 with stronger content assertions via talker.history.last.generateTextMessage() \u2014 in logger_extended_test.dart, apparently added as a separate, later coverage pass unaware of the first. The file adds zero net coverage while doubling the maintenance surface: a signature change to any of these 8 AppLogger methods requires updating two files, and logger_extra_test.dart's `returnsNormally`-only assertions would stay green even if redacted/rendered message content silently regressed \u2014 only logger_extended_test.dart would catch that.",
+   "recommendation": "Delete logger_extra_test.dart; if any exact call shape in it isn't covered by logger_extended_test.dart, fold that one case into the latter.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "logger_extra_test.dart is removed, or every test case in it asserts message content rather than just returnsNormally",
+    "Full test suite line count for test/core/logging drops with no coverage regression"
+   ],
+   "labels": [
+    "test-quality",
+    "duplication",
+    "P3",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-analytics-logging",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Fix misleading 'Keeps alive' doc comment on streakMilestoneAnalyticsObserverProvider \u2014 it is declared autoDispose",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "naming/doc hygiene (Evans ubiquitous language)",
+   "area": "core/analytics",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/analytics/streak_milestone_analytics_observer.dart",
+     "line": 2,
+     "quote": "/// Keeps alive to monitor streak milestones for the active profile."
+    },
+    {
+     "file": "learning_tracker/lib/core/analytics/streak_milestone_analytics_observer.dart",
+     "line": 39,
+     "quote": "StreamProvider.autoDispose<void>((ref) async* {"
+    }
+   ],
+   "sites": 1,
+   "why": "In a codebase where SM-6 gives `keepAlive: true` a specific, load-bearing meaning ('every keepAlive: true carries inline justification'), a doc comment reading 'Keeps alive' directly above a provider declared `.autoDispose` reads as a factual claim about Riverpod lifecycle rather than a plain-English aside \u2014 a maintainer skimming the doc before touching this provider's lifetime semantics is one likely misreading away from a wrong conclusion about whether it's safe to change.",
+   "recommendation": "Reword to something like 'Stays active while watched to monitor...', removing the collision with Riverpod's keepAlive terminology.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Doc comment no longer contains the phrase 'Keeps alive' unless the provider is actually annotated keepAlive: true"
+   ],
+   "labels": [
+    "docs",
+    "P3",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-auth",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Replace hardcoded English StateError messages in FirebaseAuthGatewayImpl with typed error codes",
+   "severity": "P2",
+   "confidence": "SUSPECTED",
+   "rule": "EH-5",
+   "area": "core/auth",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/auth/firebase_auth_gateway_impl.dart",
+     "line": 103,
+     "quote": "throw StateError('No authenticated user found');"
+    },
+    {
+     "file": "learning_tracker/lib/core/auth/firebase_auth_gateway_impl.dart",
+     "line": 175,
+     "quote": "throw StateError('No authenticated user found');"
+    },
+    {
+     "file": "learning_tracker/lib/core/auth/firebase_auth_gateway_impl.dart",
+     "line": 184,
+     "quote": "throw StateError('No authenticated user found');"
+    },
+    {
+     "file": "learning_tracker/lib/core/auth/firebase_auth_gateway_impl.dart",
+     "line": 198,
+     "quote": "throw StateError('No authenticated user found');"
+    }
+   ],
+   "sites": 4,
+   "why": "EH-5 requires domain/data errors to carry a stable code/enum, never a pre-formatted human sentence, because the app ships EN+Hebrew and a raw exception.message/.toString() renders untranslated and un-RTL-shaped. This StateError carries no `.code` field at all \u2014 contrast with the codebase's own established pattern for exactly this kind of condition: 4 presentation files (account_actions.dart, sign_in_controller.dart, signup_screen.dart, account_picker_screen.dart) all switch on `GoogleSignInException.code`, never `.message`. The one caller I traced for this specific StateError (sign_in_controller.dart `_extractFirebaseCode`) happens to fall back safely to a translated generic string because its `[plugin/code]` regex doesn't match a StateError's toString() \u2014 but that's incidental to that call site's defensive regex, not a guarantee, and the other 3 call sites (deleteAccount/changePassword/reauthenticateWithEmail flows in features/account) are outside this batch and unverified. The lint meant to catch a raw .toString() reaching UI (no_e_to_string_in_ui) is currently non-functional (custom_lint crashes \u2014 baselined), so nothing today would catch a future regression at those sites.",
+   "recommendation": "Introduce a small typed exception (e.g. NotAuthenticatedException) or a stable error-code enum instead of StateError('...'); have presentation resolve display text via AppLocalizations, matching the .code-switch pattern already used for GoogleSignInException elsewhere in the codebase.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "No throw StateError('<english sentence>') remains in firebase_auth_gateway_impl.dart; a typed exception without a baked-in human sentence is thrown instead.",
+    "Existing 'throws when no user is signed in' tests updated to assert the new exception type.",
+    "A grep/test confirms no caller of deleteAccount/changePassword/reauthenticateWithEmail/sendEmailVerification renders the exception's raw message/toString() in a widget."
+   ],
+   "labels": [
+    "auth",
+    "EH-5",
+    "i18n"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-auth",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Add regression tests for GoogleSignInGatewayImpl \u2014 currently zero coverage anywhere in the repo",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-5",
+   "area": "core/auth",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/auth/google_sign_in_gateway_impl.dart",
+     "line": 12,
+     "quote": "class GoogleSignInGatewayImpl implements GoogleSignInGateway {"
+    },
+    {
+     "file": "learning_tracker/lib/core/auth/google_sign_in_gateway_impl.dart",
+     "line": 44,
+     "quote": "final future = _googleSignIn.attemptLightweightAuthentication();"
+    }
+   ],
+   "sites": 1,
+   "why": "Its sibling in the same directory, FirebaseAuthGatewayImpl, has a 496-line test suite covering every branch (test/core/auth/firebase_auth_gateway_impl_test.dart). GoogleSignInGatewayImpl owns real logic \u2014 a lazy one-time SDK-init guard (_ensureInitialized, lines 24-28) and 4 distinct short-circuit branches in authenticateSilently (no lightweight-auth future / null account / null idToken / success, lines 39-51) \u2014 with zero tests anywhere: `find test -iname '*google_sign_in*'` and `grep -rl GoogleSignInGatewayImpl test/` both return nothing, and there is no test/core/auth/google_sign_in_gateway_impl_test.dart. AU-1's account-conversion flow and the silent sign-in fast-path both depend on this class returning a correct idToken; a regression in any of the 4 branches (e.g. the null-idToken short-circuit failing to fire) would surface only as an unexplained sign-in failure in the field, with no test to catch it first.",
+   "recommendation": "Add test/core/auth/google_sign_in_gateway_impl_test.dart mocking package:google_sign_in's GoogleSignIn type, following the same 'mock the SDK type, exercise the real gateway' pattern already established and documented in firebase_auth_gateway_impl_test.dart.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "test/core/auth/google_sign_in_gateway_impl_test.dart exists and covers: initialize-once-then-skip, authenticate() happy path, and all 4 authenticateSilently branches (no future / null account / null idToken / success)."
+   ],
+   "labels": [
+    "auth",
+    "testing",
+    "AG-5",
+    "coverage"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-auth",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Extract the duplicated provider-ID mapping in FirebaseAuthGatewayImpl into one helper",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "lens:Fowler-duplication",
+   "area": "core/auth",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/auth/firebase_auth_gateway_impl.dart",
+     "line": 27,
+     "quote": "providers: user.providerData.map((i) => i.providerId).toList(),"
+    },
+    {
+     "file": "learning_tracker/lib/core/auth/firebase_auth_gateway_impl.dart",
+     "line": 243,
+     "quote": "return _firebaseAuth.currentUser?.providerData\n            .map((info) => info.providerId)"
+    }
+   ],
+   "sites": 2,
+   "why": "The same providerData -> providerId-list projection is written twice with different lambda parameter names \u2014 once in _toAppUser (used by currentUser/authStateChanges/reload/sign-in results) and again, independently, in getLinkedProviders (which re-derives from _firebaseAuth.currentUser instead of reusing the mapper). A future change (filtering a synthetic provider id, normalizing case) has to be remembered in two places, and the two are already one accidental edit away from disagreeing about what 'linked providers' means for the same user.",
+   "recommendation": "Extract `List<String> _providerIds(Iterable<UserInfo> data) => data.map((i) => i.providerId).toList();` and call it from both _toAppUser and getLinkedProviders.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Single private helper used by both call sites.",
+    "Existing 'propagates linked-provider IDs' and 'returns provider IDs from the current user' tests stay green."
+   ],
+   "labels": [
+    "auth",
+    "duplication"
+   ]
+  }
+ }
+]

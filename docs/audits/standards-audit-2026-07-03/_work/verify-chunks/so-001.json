@@ -1,0 +1,202 @@
+[
+ {
+  "sourceBatch": "t1-core-nav-utils",
+  "chunk": "grp-020",
+  "finding": {
+   "title": "Replace date_utils_test.dart's real DateTime.now() read with a fixed/injected clock",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6 (hermetic tests: no wall-clock)",
+   "area": "test/core/utils/date_utils_test.dart (hermetic tests)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/utils/date_utils_test.dart",
+     "line": 11,
+     "quote": "final actualNow = DateTime.now().toUtc();"
+    },
+    {
+     "file": "learning_tracker/test/core/utils/date_utils_test.dart",
+     "line": 13,
+     "quote": "expect(diff.inSeconds, lessThan(1));"
+    }
+   ],
+   "sites": 1,
+   "why": "This is the only wall-clock read across all 14 test files in the batch \u2014 every other test in the suite (and in the file's own source, date_utils.dart, which is explicitly designed around a swappable LocalDayClock so \"day-boundary semantics are deterministic in tests\") uses fixed DateTime.utc(...) literals. Comparing DateTimeFactory.nowUtc() against a freshly-read DateTime.now() with a 1-second tolerance is a live flake source: any CI scheduling jitter, GC pause, or slow VM startup between the two calls pushes the gap over 1 second and fails the test for a reason unrelated to the code under test.",
+   "recommendation": "Override the LocalDayClock with a fixed fake instant (per the source file's own documented pattern: `localDayClockProvider.overrideWithValue(...)` or `useLocalDayClock`) and assert DateTimeFactory.nowUtc() returns exactly that fixed instant, rather than \"close to real time\".",
+   "effort": "S",
+   "acceptance_criteria": [
+    "No `DateTime.now()` call remains in test/core/utils/date_utils_test.dart.",
+    "The nowUtc test asserts equality against an injected/fixed clock value, not a real-time tolerance window."
+   ],
+   "labels": [
+    "hermetic-tests",
+    "flake-risk",
+    "tq-6"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-scheduler-p2",
+  "chunk": "grp-094",
+  "finding": {
+   "title": "Migrate scheduler-adjacent tests off the deprecated LearningProgramRepository.instance singleton",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "SM-7",
+   "area": "scheduler/domain/services",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/scheduler/domain/services/learning_program_service.dart",
+     "line": 69,
+     "quote": "  @Deprecated('Use learningProgramRepositoryProvider via Riverpod instead')"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/domain/services/learning_program_service.dart",
+     "line": 70,
+     "quote": "  static final instance = LearningProgramRepository._create();"
+    }
+   ],
+   "sites": 1,
+   "why": "This static singleton is exactly the 'global/static mutable singleton' SM-7 prohibits, and it has zero production (lib/) call sites \u2014 but 30+ test files across the suite (test/core/services/*, test/story_acceptance/*, test/features/tracks/*, test/features/onboarding/*, etc.) construct their fixtures via `LearningProgramRepository.instance` instead of overriding `learningProgramRepositoryProvider`. Because `test/` and `lib/` share one Dart package, Dart's default `deprecated_member_use` lint does not fire for same-package usage (only `deprecated_member_use_from_same_package` would, and it isn't enabled) \u2014 which is exactly why `flutter analyze: No issues found` coexists with 30+ live uses of a member explicitly marked for removal. The singleton can never actually be deleted while this fan-out exists, and every test using it is verifying against a construction path the app itself no longer uses.",
+   "recommendation": "Migrate test fixtures to override learningProgramRepositoryProvider via ProviderContainer overrides instead of reading the singleton directly; once the fan-out is gone, delete the singleton entirely.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "New test code does not introduce further LearningProgramRepository.instance call sites.",
+    "Existing call sites tracked for migration (e.g. a DNI ticket) with a path to eventual deletion of the singleton."
+   ],
+   "labels": [
+    "SM-7",
+    "singleton",
+    "test-quality"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tutoring-p2",
+  "chunk": "grp-124",
+  "finding": {
+   "title": "Stop misreporting a failed local PIN clear as a failed reset email in TutorPinResetScreen",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Nygard-partial-failure",
+   "area": "features/tutoring/presentation/screens",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_reset_screen.dart",
+     "line": 76,
+     "quote": "await authRepo.sendPasswordResetEmail(email);"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_reset_screen.dart",
+     "line": 80,
+     "quote": "await pinService.clearTutorPin(widget.profileId);"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_reset_screen.dart",
+     "line": 91,
+     "quote": ")!.tutorPinResetSendFailed,"
+    }
+   ],
+   "sites": 1,
+   "why": "sendPasswordResetEmail and clearTutorPin are two sequential awaits inside one try block with one shared catch that always sets the l10n key tutorPinResetSendFailed ('Failed to send reset email...'). If the email send succeeds but the subsequent local-PIN-clear throws (a real possibility given documented secure-storage flakiness in this environment), the user is told the email failed when it actually sent \u2014 they will retry, triggering a second real password-reset email, while the actual failure (local PIN not cleared) goes unaddressed and unreported.",
+   "recommendation": "Split the two operations into separate try/catch blocks (or at minimum track which step failed) so the error message and retry behavior match what actually happened.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "a failure in clearTutorPin after a successful sendPasswordResetEmail does not show the 'send failed' string",
+    "a regression test simulates clearTutorPin throwing after a successful email send and asserts the UI does not claim the email failed"
+   ],
+   "labels": [
+    "error-handling",
+    "P2"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-settings-p3",
+  "chunk": "grp-103",
+  "finding": {
+   "title": "Close the in-memory UserDatabase created inline in settings test ProviderScope overrides",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6-adjacent (test resource hygiene / Nygard: unreleased I/O resource)",
+   "area": "features/settings (test infrastructure)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/settings/presentation/settings_overflow_guard_test.dart",
+     "line": 201,
+     "quote": "userDatabaseProvider.overrideWithValue(\n      UserDatabase(NativeDatabase.memory()),"
+    },
+    {
+     "file": "learning_tracker/test/features/settings/presentation/utils/account_actions_test.dart",
+     "line": 185,
+     "quote": "userDatabaseProvider.overrideWithValue(\n        UserDatabase(NativeDatabase.memory()),"
+    },
+    {
+     "file": "learning_tracker/test/features/settings/presentation/widgets/account_actions_sheet_nav_test.dart",
+     "line": 135,
+     "quote": "userDatabaseProvider.overrideWithValue(\n        UserDatabase(NativeDatabase.memory()),"
+    },
+    {
+     "file": "learning_tracker/test/features/settings/presentation/widgets/an7_destructive_icon_contrast_test.dart",
+     "line": 112,
+     "quote": "userDatabaseProvider.overrideWithValue(\n        UserDatabase(NativeDatabase.memory()),"
+    }
+   ],
+   "sites": 4,
+   "why": "_sheetOverrides / _buildApp in these 4 files each construct `UserDatabase(NativeDatabase.memory())` inline and never capture a reference to close it \u2014 unlike the `DeviceRegistryDatabase` created in the same functions, which is correctly torn down via `addTearDown(registry.close)` (verified by grep: registry.close appears, db.close never does, in any of the 4 files). account_actions_test.dart alone calls its factory from ~19 separate testWidgets cases, so a single run of just this batch leaks on the order of 25+ native SQLite (FFI) connections that are never released.",
+   "recommendation": "Capture the constructed UserDatabase into a local variable in each factory and close it via addTearDown(db.close) or the existing tearDown, mirroring the registry.close() pattern already present in the same 4 functions.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Each of the 4 files' UserDatabase(NativeDatabase.memory()) instances is closed by the end of every test that constructs one."
+   ],
+   "labels": [
+    "resource-leak",
+    "hygiene",
+    "test-infrastructure"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tutoring-p3",
+  "chunk": "grp-126",
+  "finding": {
+   "title": "Verify TutoredMirrorWipeService fires on tutor resign/revoke in manage_grants_screen_l1_test.dart and manage_tutors_screen_l1_test.dart",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "test/features/tutoring",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/tutoring/manage_grants_screen_l1_test.dart",
+     "line": 369,
+     "quote": "testWidgets('confirming resignation calls ResignTutorGrantUseCase', ( ... verify(() => mockResignUseCase.call(...)).called(1);"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/manage_grants_screen.dart",
+     "line": 234,
+     "quote": "buildTutoredMirrorWipeServiceFromWidget(ref: ref, onWipe: (_) => ref.read(activeTutoredProfileSelectionProvider.notifier).exit(),"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/manage_tutors_screen_l1_test.dart",
+     "line": 667,
+     "quote": "testWidgets('confirming Revoke calls revokeTutorGrantUseCase with the grant', ( ... only verifies mockRevoke.call, no mirror/session assertion"
+    }
+   ],
+   "sites": 2,
+   "why": "Both the tutor-side resign flow and the parent-side revoke flow fire-and-forget (unawaited) a local Drift mirror wipe plus an active-session exit() callback as an explicit fix (comment tag R4-M3) after the grant use case succeeds. This is the same class of stale-local-data bug this codebase already shipped once and wrote a dedicated regression test for elsewhere (iter10_outgoing_grants_stale_cache_test.dart, DG-TUT-STALE-01) \u2014 yet repo-wide grep for wipeMirrorForGrant/buildTutoredMirrorWipeServiceFromWidget in test/features/tutoring returns zero matches. Neither test file verifies the Drift mirror row is actually removed, or that activeTutoredProfileSelectionProvider clears when the resigned/revoked grant is the active tutored session. A regression that silently drops the unawaited(...) call, or breaks the onWipe wiring, ships undetected.",
+   "recommendation": "Seed an in-memory Drift mirror row for the grant (reusing the inMemoryDb()/_seedActiveMirror pattern from r3_shell_revocation_exit_test.dart), confirm resign/revoke, then assert the mirror row is gone; add a case where the wiped grant is the active tutored selection and assert the provider clears.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "manage_grants_screen_l1_test.dart asserts the Drift tutored-mirror row for a resigned grant is deleted after confirming resignation",
+    "manage_tutors_screen_l1_test.dart asserts the same for a revoked grant",
+    "Both cover the case where the wiped grant is the active tutored session and assert activeTutoredProfileSelectionProvider becomes null"
+   ],
+   "labels": [
+    "testing",
+    "tutoring",
+    "sync",
+    "coverage-gap"
+   ]
+  }
+ }
+]

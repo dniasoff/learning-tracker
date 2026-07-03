@@ -1,0 +1,198 @@
+[
+ {
+  "sourceBatch": "t1-test-cross-p5",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Tighten bulk_prior_completion_b6_b8_test.dart's greaterThanOrEqualTo(2) assertion to an exact count",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-7",
+   "area": "test/integration",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/integration/bulk_prior_completion_b6_b8_test.dart",
+     "line": 984,
+     "quote": "greaterThanOrEqualTo(2),"
+    },
+    {
+     "file": "learning_tracker/test/integration/bulk_prior_completion_b6_b8_test.dart",
+     "line": 986,
+     "quote": "'Should have one active completion per curriculum for Berakhot 2',"
+    }
+   ],
+   "sites": 1,
+   "why": "The test's own reason string states the invariant is exactly one active row per curriculum (2 curricula seeded => exactly 2), but the matcher accepts any count >= 2. A duplicate-insert regression in BulkPriorCompletionService.execute (e.g. a double-write bug) would silently pass this assertion, which is the 'assertion weaker than what the source can do wrong' pattern the audit is hunting for.",
+   "recommendation": "Replace greaterThanOrEqualTo(2) with equals(2) (or hasLength(2)) to match the stated invariant.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Test 2 in the 'Finding 8' group asserts rows.length == 2 (or equivalent exact matcher), and fails if execute() is made to double-insert"
+   ],
+   "labels": [
+    "TQ-7",
+    "TQ-8",
+    "weak-assertion"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-test-cross-p5",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Delete or rewrite bulk_prior_completion_b6_b8_test.dart's stale AC3 test now that supersededAt was dropped",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "test/integration",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/integration/bulk_prior_completion_b6_b8_test.dart",
+     "line": 329,
+     "quote": "// W3.29 dropped `supersededAt`. The helper still inserts 3 stages (2"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/tables/stage_definitions.dart",
+     "line": 16,
+     "quote": "/// W3.29: dropped `supersededAt` \u2014 lifecycle managed via `state`."
+    }
+   ],
+   "sites": 1,
+   "why": "AC3 (lines 325-397) and its helper _seedStagesWithSuperseded (lines 216-239) were written to prove superseded stages are excluded from bulk-mark-prior. W3.29 removed the supersededAt column entirely, so the helper can no longer create a 'superseded' row, and the test's own comment admits 'the only 2 active expectation was outdated' \u2014 it now just re-proves AC1's '3 stages => 3 completions' with extra indirection. The test still reads as coverage for supersession filtering to anyone skimming the group, which is misleading, and the dead helper is pure maintenance cost.",
+   "recommendation": "Remove AC3 and _seedStagesWithSuperseded (their coverage is already fully subsumed by AC1), or repurpose the test name/comment to state plainly it is a duplicate-of-AC1 regression check for the schema migration itself.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "no test or helper in this file references a superseded-stage scenario that the current schema (no supersededAt column) cannot represent"
+   ],
+   "labels": [
+    "TQ-8",
+    "stale-test",
+    "schema-drift"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-test-cross-p5",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Assert the actual curriculum chip, not generic Container count, in tracks_studydays_and_content_hierarchy_l1_test.dart test #20",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "test/features (widget)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/tracks_studydays_and_content_hierarchy_l1_test.dart",
+     "line": 763,
+     "quote": "expect(find.byType(Container), findsAtLeastNWidgets(1));"
+    },
+    {
+     "file": "learning_tracker/lib/features/content_browsing/presentation/screens/content_hierarchy_screen.dart",
+     "line": 578,
+     "quote": "final chip = Container("
+    }
+   ],
+   "sites": 1,
+   "why": "Test #20 is named 'curriculum chip visible in breadcrumb area' but only checks that at least one Container widget exists anywhere on screen. Any full Scaffold/AppBar-based screen contains multiple unrelated Containers, so this assertion is true regardless of whether _RootCurriculumChip (the widget it claims to test, which wraps CurriculumLabel.curriculum(...) in a Container) renders at all \u2014 if the chip were deleted entirely the test would still pass.",
+   "recommendation": "Assert on the chip specifically, e.g. find.byKey(const Key('content_hierarchy_root_chip')) when interactive, or find.byType(CurriculumLabel) / the rendered curriculum text, instead of find.byType(Container).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "test #20 fails if _RootCurriculumChip is removed from the widget tree (verified by temporarily deleting it and observing red)"
+   ],
+   "labels": [
+    "TQ-8",
+    "weak-assertion",
+    "widget-test"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-test-cross-p5",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Register onDispose when overriding userDatabaseProvider with inMemoryDb() in tracks_studydays_and_content_hierarchy_l1_test.dart",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6",
+   "area": "test/features (widget)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/tracks_studydays_and_content_hierarchy_l1_test.dart",
+     "line": 142,
+     "quote": "userDatabaseProvider.overrideWith((ref) => inMemoryDb()),"
+    },
+    {
+     "file": "learning_tracker/lib/core/providers/database_provider.dart",
+     "line": 37,
+     "quote": "final database = UserDatabase(driftDatabase(name: dbName));\n  ref.onDispose(database.close);"
+    },
+    {
+     "file": "learning_tracker/test/helpers/drift_memory.dart",
+     "line": 36,
+     "quote": "/// Callers MUST `await db.close()` in `tearDown` to free the native"
+    }
+   ],
+   "sites": 4,
+   "why": "The production userDatabaseProvider registers ref.onDispose(database.close) so the DB is closed when its ProviderScope is torn down; overriding the provider with a bare `(ref) => inMemoryDb()` replaces that entire body and drops the dispose registration, so none of the 4 fresh NativeDatabase.memory() instances created by this file's 27 widget tests are ever closed \u2014 a direct violation of drift_memory.dart's documented 'Callers MUST await db.close()' contract and a native-resource leak that scales with every widget test using this override pattern.",
+   "recommendation": "Add `ref.onDispose(db.close)` inside each override lambda (e.g. `userDatabaseProvider.overrideWith((ref) { final db = inMemoryDb(); ref.onDispose(db.close); return db; })`), or capture the db per-test and close it in the test's teardown.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "every userDatabaseProvider.overrideWith((ref) => inMemoryDb()) call site in this file registers a matching close via ref.onDispose or explicit teardown"
+   ],
+   "labels": [
+    "TQ-6",
+    "TQ-2",
+    "resource-leak",
+    "riverpod"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-test-cross-p5",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Split the 5 oversized hand-written test files in batch t1-test-cross-p5 below the 400-line AG-3 cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "test/* (file size)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/tutor_pin_dialog_and_goal_setup_l1_test.dart",
+     "line": 1407,
+     "quote": "(file length: 1407 lines, 3.5x the 400-line cap)"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/tutoring_p1_test.dart",
+     "line": 1344,
+     "quote": "(file length: 1344 lines, 3.4x the 400-line cap)"
+    },
+    {
+     "file": "learning_tracker/test/integration/bulk_prior_completion_b6_b8_test.dart",
+     "line": 1225,
+     "quote": "(file length: 1225 lines, 3.1x the 400-line cap)"
+    },
+    {
+     "file": "learning_tracker/test/golden/store_screenshots_test.dart",
+     "line": 1169,
+     "quote": "(file length: 1169 lines, 2.9x the 400-line cap)"
+    },
+    {
+     "file": "learning_tracker/test/features/tracks_studydays_and_content_hierarchy_l1_test.dart",
+     "line": 951,
+     "quote": "(file length: 951 lines, 2.4x the 400-line cap)"
+    }
+   ],
+   "sites": 5,
+   "why": "All 5 exceed AG-3's 400-line hand-written-file cap by 2.4x-3.5x, well past the digest's own '401-line file' minimal example. In bulk_prior_completion_b6_b8_test.dart a concrete driver is visible: BulkPriorCompletionService + CompletionRepositoryImpl are hand-constructed with near-identical arguments roughly 10 separate times (e.g. lines 279-299, 351-369, 412-430, 482-491, 541-552...) instead of one shared builder \u2014 a Fowler Extract-Method opportunity that alone would meaningfully shrink the file. Large files raise merge-conflict odds, slow comprehension/navigation for both humans and agents, and make it harder to run/inspect a single scenario in isolation.",
+   "recommendation": "Split each file along its existing group()/journey boundaries (e.g. one file per E2E-#### journey, one per L1 coverage letter-group, one per Bug-ID), and factor repeated service/repository construction in bulk_prior_completion_b6_b8_test.dart into a single `_buildHarness(...)` helper.",
+   "effort": "L",
+   "acceptance_criteria": [
+    "AG-3 checker (once implemented) reports 0 violators among this batch's files, or each split file is individually \u2264400 hand-written lines"
+   ],
+   "labels": [
+    "AG-3",
+    "file-size",
+    "duplication"
+   ]
+  }
+ }
+]

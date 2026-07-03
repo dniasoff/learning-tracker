@@ -1,0 +1,44 @@
+[
+ {
+  "sourceBatch": "t1-core-sync-root-p1",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Stop FirestoreGatewayImpl.pushGoal from using non-idempotent add() for id-less goals",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "FB-4 / idempotent-write invariant",
+   "area": "core/sync (push/gateway)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/sync/firestore_gateway_impl.dart",
+     "line": 559,
+     "quote": "final docId = data['id']?.toString() ?? data['goal_id']?.toString();"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/firestore_gateway_impl.dart",
+     "line": 566,
+     "quote": "} else {\n      await collection.add({"
+    },
+    {
+     "file": "learning_tracker/lib/features/sync/data/outbox_sync_write_facade.dart",
+     "line": 320,
+     "quote": "final id = goal['id']?.toString() ?? goal['goal_id']?.toString();\n    if (id != null) return id;"
+    }
+   ],
+   "sites": 1,
+   "why": "Every other push* method here (pushCompletion, pushStreak, pushTrack, pushLedgerEntry...) derives a deterministic Firestore doc id so an outbox retry after a lost ack is a safe overwrite via set(merge:true). pushGoal is the one method that falls back to collection.add() -- a fresh random doc id -- whenever the payload carries no id/goal_id. outbox_sync_write_facade.dart's own _goalKey fallback (a composite curriculum_pct_timestamp key) proves this null case is real, not theoretical: it exists specifically to dedupe local enqueues of such goals. If the server commits the add() but the client never sees the ack (timeout, dropped connection -- exactly what the outbox's at-least-once retry exists to survive), the retry calls add() again and creates a second, permanent duplicate goal document in Firestore, which the pull path then merges back down as a duplicate goal locally.",
+   "recommendation": "Assign every goal a stable id before it is ever enqueued (mirror the ULID pattern already used for streak/ledger/points-ledger entries) and have pushGoal always do doc(id).set(merge:true); delete the add() branch.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Regression test: call pushGoal twice with an id-less payload against a fake/emulator Firestore; assert exactly one document exists afterward.",
+    "pushGoal's add() branch is removed or provably unreachable."
+   ],
+   "labels": [
+    "FB-4",
+    "idempotency",
+    "sync",
+    "data-integrity"
+   ]
+  }
+ }
+]

@@ -1,0 +1,20 @@
+=== build_runner ===
+  2s auto_route_generator on 12208 inputs: 12101 skipped, 47 same, 60 no-op; spent 2s analyzing
+  0s auto_route_generator:auto_router_generator on 12208 inputs; integration_test/app_test.dart
+  0s auto_route_generator:auto_router_generator on 12208 inputs: 103 skipped, 1 same, 1 no-op; lib/app/router/app_router.dart.types.temp.dart
+  0s auto_route_generator:auto_router_generator on 12208 inputs: 12131 skipped, 1 same, 76 no-op
+  Built with build_runner/aot in 24s; wrote 1427 outputs.
+=== gen-l10n ===
+To use the command line arguments, delete the l10n.yaml file in the Flutter project.
+
+
+=== git status after regen ===
+ M learning_tracker/lib/core/labels/curriculum_label_providers.g.dart
+ M learning_tracker/lib/features/gamification/presentation/providers/reward_config_controller.g.dart
+ M learning_tracker/lib/features/scheduler/presentation/providers/scheduler_providers.g.dart
+=== diffstat ===
+ .../core/labels/curriculum_label_providers.g.dart  | 22 +++++++++++++++++++++-
+ .../providers/reward_config_controller.g.dart      |  2 +-
+ .../providers/scheduler_providers.g.dart           |  2 +-
+ 3 files changed, 23 insertions(+), 3 deletions(-)
+REGEN-DONE

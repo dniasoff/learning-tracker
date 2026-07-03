@@ -1,0 +1,60 @@
+[
+ {
+  "sourceBatch": "t2-root-tool",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Add Goals to tool/schema_check.dart's whitelist \u2014 the profileId-in-PK Rule-0 checker silently skips it",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "profileId-in-PK [E] (Naming/placement/invariants) + Rule 0 checker coverage",
+   "area": "tool (Rule-0 checkers, wired into make ci)",
+   "evidence": [
+    {
+     "file": "tool/schema_check.dart",
+     "line": 44,
+     "quote": "///   - Completions, Goals, LearningLedger, Streaks: profile-scoped but\n///     lack a composite UNIQUE/index today. DNI-323 / DNI-324 will add"
+    },
+    {
+     "file": "tool/schema_check.dart",
+     "line": 55,
+     "quote": "const _defaultWhitelist = <String>{ 'Bookmarks', ... 'StudyDayConfigs' };  // 'Goals' is absent"
+    },
+    {
+     "file": "docs/planning/epics.md",
+     "line": 775,
+     "quote": "- **DNI-323** \u2014 25.2: Append-only event tables with composite-natural-key UNIQUEs *(Done)*"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/tables/goals.dart",
+     "line": 10,
+     "quote": "IntColumn get id => integer().autoIncrement()();"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/daos/goal_dao.dart",
+     "line": 22,
+     "quote": "Future<List<Goal>> getAllGoals() => select(goals).get();"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/daos/goal_dao.dart",
+     "line": 60,
+     "quote": "Future<int> deleteGoalsByCurriculum(String curriculumId) =>\n      (delete(goals)..where((t) => t.curriculumId.equals(curriculumId))).go();"
+    }
+   ],
+   "sites": 1,
+   "why": "schema_check.dart's own docstring says Goals is deliberately exempted from the profileId-composite-key invariant pending DNI-323/DNI-324 \u2014 but docs/planning/epics.md marks both Done, and the other 3 tables named in the same sentence (CompletionEvents, LearningLedger, StreakEvents) already HAVE their composite @TableIndex and are already in the whitelist \u2014 only Goals was never followed up. Concretely, goals.dart has a bare autoincrement id with profileId as a plain FK column (no composite key/index), and goal_dao.dart's getAllGoals() has zero profileId filter while deleteGoalsByCurriculum(curriculumId) filters only by curriculumId \u2014 which is NOT unique per profile (two child profiles can each have a track on the same curriculum, e.g. Mishnayos). `make ci` runs schema-check and reports green while this gap ships every build, giving false confidence exactly where Story 25.1 (the multi-profile-leak story that motivated this checker) says it matters most.",
+   "recommendation": "Add profileId to a composite uniqueKeys/@TableIndex on the Goals table (migration + schema export per DB-4), add 'Goals' to _defaultWhitelist, and correct the docstring to stop citing DNI-323/DNI-324 as pending. Separately, audit goal_dao.dart's curriculumId-only queries for cross-profile scoping (getAllGoals, deleteGoalsByCurriculum) and add profileId filters or justify their absence explicitly.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "`dart run tool/schema_check.dart` (wired into `make ci` via the `schema-check` target) fails red for Goals until it has profileId in a composite key/index, then passes green after the migration.",
+    "_defaultWhitelist includes 'Goals'; the docstring no longer references DNI-323/DNI-324 as pending work.",
+    "A regression test asserts getAllGoals()/deleteGoalsByCurriculum() cannot return/delete another profile's row when two profiles share a curriculumId."
+   ],
+   "labels": [
+    "data-integrity",
+    "rule-0-gap",
+    "drift",
+    "multi-profile"
+   ]
+  }
+ }
+]

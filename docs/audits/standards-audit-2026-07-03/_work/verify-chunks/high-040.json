@@ -1,0 +1,66 @@
+[
+ {
+  "sourceBatch": "t1-feat-account-p3",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Localize EmailVerificationConfirmPanel's title/Open-Email/Send-Again/Cancel text; stop pinning the English literals in its test suite",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "AX-2 (no hardcoded user-facing strings; EN/HE parity)",
+   "area": "features/account/presentation/widgets/email_verification_confirm_panel.dart + its test suite",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/account/presentation/widgets/email_verification_confirm_panel.dart",
+     "line": 139,
+     "quote": "this.title = 'Confirm Your Email',"
+    },
+    {
+     "file": "learning_tracker/lib/features/account/presentation/widgets/email_verification_confirm_panel.dart",
+     "line": 248,
+     "quote": "'Open Email',"
+    },
+    {
+     "file": "learning_tracker/lib/features/account/presentation/widgets/email_verification_confirm_panel.dart",
+     "line": 299,
+     "quote": "'Send Again',"
+    },
+    {
+     "file": "learning_tracker/lib/features/account/presentation/widgets/email_verification_confirm_panel.dart",
+     "line": 337,
+     "quote": "'Cancel',"
+    },
+    {
+     "file": "learning_tracker/lib/features/account/presentation/widgets/email_verification_dialog.dart",
+     "line": 26,
+     "quote": "child: EmailVerificationConfirmPanel(\n          email: email,"
+    },
+    {
+     "file": "learning_tracker/test/features/account/presentation/widgets/email_verification_confirm_panel_test.dart",
+     "line": 56,
+     "quote": "//   These hardcoded English strings are reported in bugsFound as low-severity\n//   i18n gaps. Tests assert the ACTUAL strings emitted by the widget."
+    },
+    {
+     "file": "learning_tracker/test/features/account/presentation/widgets/email_verification_confirm_panel_test.dart",
+     "line": 1008,
+     "quote": "expect(find.text('Open Email'), findsOneWidget);\n        expect(find.text('Send Again'), findsOneWidget);"
+    }
+   ],
+   "sites": 4,
+   "why": "Both production callers (email_verification_dialog.dart and upgrade_to_cloud_screen.dart) never pass `title:`, so a Hebrew-locale user doing email verification sees the English dialog title 'Confirm Your Email' and the buttons 'Open Email' / 'Send Again' / 'Cancel' \u2014 this is an EN+Hebrew RTL app and the ARB parity check (1421/1421 keys) cannot catch this because these strings never became ARB keys. The test suite doesn't just miss this \u2014 email_verification_confirm_panel_test.dart's A1/A2/A5 assert the literal English strings as the expected/correct output, and its H1 Hebrew-locale test (currently skipped for an unrelated, now-fixed reason \u2014 see companion finding) would, if unskipped as written, assert `find.text('Open Email')` etc. under `locale: he`. Fixing the i18n bug would therefore break these 'passing' tests, actively disincentivizing the fix.",
+   "recommendation": "Give EmailVerificationConfirmPanel access to AppLocalizations (accept the strings as required params from both call sites, mirroring how bodyText/verifiedLinkLabel already flow through, or call AppLocalizations.of(context) internally) using the existing `cancel` ARB key plus new keys for the title and the two action labels. Update the test file's assertions to build against l10n values (see offline_top_banner_l1_test.dart in this same batch for the correct pattern: `he.offlineBannerMessage` + a regression assertion that the pre-fix English literal is absent under `he`).",
+   "effort": "M",
+   "acceptance_criteria": [
+    "email_verification_confirm_panel.dart contains no bare string literal passed to Text() for title/action labels; all route through AppLocalizations/ARB keys.",
+    "make arb-parity stays green with the new EN/HE keys added.",
+    "email_verification_confirm_panel_test.dart's Hebrew-locale test asserts the Hebrew strings render and the pre-fix English literals ('Open Email', 'Send Again', 'Cancel', 'Confirm Your Email') do NOT appear under locale: he.",
+    "A grep-based Rule-0 checker (extending the existing AX-2/arb-parity tooling) flags literal string arguments to Text()/TextSpan() in lib/features/**/presentation/** that are not ARB-key-derived."
+   ],
+   "labels": [
+    "i18n",
+    "hebrew",
+    "ax-2",
+    "rtl"
+   ]
+  }
+ }
+]

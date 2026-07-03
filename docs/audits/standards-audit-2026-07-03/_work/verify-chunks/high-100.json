@@ -1,0 +1,45 @@
+[
+ {
+  "sourceBatch": "t1-feat-tutoring-p2",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Fix tutor_pin_reset_screen.dart's Rule-2 barrel bypass and repair the no-op cross-feature-import checker that missed it",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "Rule 2 / AG-11 / Rule 0",
+   "area": "features/tutoring/presentation + tool/Makefile",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_reset_screen.dart",
+     "line": 21,
+     "quote": "import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'"
+    },
+    {
+     "file": "learning_tracker/lib/features/account/account.dart",
+     "line": 28,
+     "quote": "export 'presentation/providers/auth_providers.dart'\n    hide AuthStateProvider, authStateProvider;"
+    },
+    {
+     "file": "learning_tracker/Makefile",
+     "line": 380,
+     "quote": "awk -F: '{match($$1, /features\\/([^\\/]+)\\//, a); match($$0, /features\\/([^\\/]+)\\//, b); if(a[1] != b[1]) print}'"
+    }
+   ],
+   "sites": 1,
+   "why": "tutor_pin_reset_screen.dart imports features/account's deep presentation/providers path instead of the account.dart barrel, even though the barrel already exports authRepositoryProvider unhidden \u2014 a pure, avoidable Rule-2 violation of one of CLAUDE.md's five 'non-negotiable' layering invariants. It slipped past `make audit` because check 15's awk comparison is a no-op: match($0,...) scans the whole grep line (file-path:linenum:content), so it always matches the FIRST 'features/X/' occurrence, which is in the file-path prefix \u2014 identical to match($1,...) \u2014 making a[1] and b[1] always equal regardless of what is actually imported. Verified empirically: piping all 1186 non-barrel deep-import candidate lines in lib/features/ through the exact Makefile command yields 0 matches. `make audit` reports 'PASSED \u2014 all 22 greps clean' for a check that structurally cannot ever fail, so any current or future cross-feature deep import (this one included) ships silently.",
+   "recommendation": "Swap the import in tutor_pin_reset_screen.dart to package:learning_tracker/features/account/account.dart. Separately, fix the check-15 awk logic to compare the source file's feature name against the TARGET import's feature name specifically (e.g. match on the import statement field, not $0), then re-run against this known-bad line as a regression fixture to confirm it now fails.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "tutor_pin_reset_screen.dart imports the account.dart barrel, not the deep presentation/providers path",
+    "make audit check 15 flags the fixed awk logic against a synthetic cross-feature deep-import fixture (proving it can now fail) before being trusted as a gate",
+    "grep -rn \"package:learning_tracker/features/\" lib/features/tutoring --include=\"*.dart\" shows no remaining cross-feature deep imports outside tutoring.dart re-exports"
+   ],
+   "labels": [
+    "layering",
+    "rule-2",
+    "tooling",
+    "P1"
+   ]
+  }
+ }
+]

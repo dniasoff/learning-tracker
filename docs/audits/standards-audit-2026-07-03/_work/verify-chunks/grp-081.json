@@ -1,0 +1,205 @@
+[
+ {
+  "sourceBatch": "t1-feat-profiles-p4",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Log TutoredChildrenSection's AsyncValue error branch instead of swallowing it silently",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "EH-3 (no log-less catch)",
+   "area": "features/profiles/presentation/widgets/tutored_children_section.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/widgets/tutored_children_section.dart",
+     "line": 47,
+     "quote": "error: (_, __) => const SizedBox.shrink(),"
+    }
+   ],
+   "sites": 1,
+   "why": "AppLogger is already imported in this file (line 6) but the error branch of incomingTutorGrantsProvider's AsyncValue.when discards both the error and stack trace with no log call. Hiding the section on a load failure is a defensible UX call (the batch's own test even labels it 'silent fail' intentionally), but the total absence of a log means a persistently failing grants query \u2014 e.g. a Firestore rule regression on the tutoring collection \u2014 leaves zero trace in AppLogger/Crashlytics breadcrumbs for anyone to diagnose.",
+   "recommendation": "Add an AppLogger.instance.warning(event: ..., exception: error, stackTrace: stack) call in the error branch before returning SizedBox.shrink().",
+   "effort": "S",
+   "acceptance_criteria": [
+    "The error branch of TutoredChildrenSection's AsyncValue.when logs via AppLogger.instance before rendering SizedBox.shrink()"
+   ],
+   "labels": [
+    "profiles",
+    "error-handling",
+    "logging",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-profiles-p4",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Split the three oversized profiles test files under the 400-line AG-3 ceiling",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3 (hand-written Dart files <=400 lines)",
+   "area": "test/features/profiles/**",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/profiles/presentation/widgets/profile_edit_delete_actions_test.dart",
+     "line": 1,
+     "quote": "// Regression tests for:"
+    },
+    {
+     "file": "learning_tracker/test/features/profiles/profile_picker_and_tutored_l1_test.dart",
+     "line": 1,
+     "quote": "// L1 widget tests \u2014 ProfilePickerScreen + TutoredChildrenSection (combined)"
+    },
+    {
+     "file": "learning_tracker/test/features/profiles/profile_picker_deep_l1_test.dart",
+     "line": 1,
+     "quote": "// Deep L1 widget tests \u2014 ProfilePickerScreen + TutoredChildrenSection"
+    }
+   ],
+   "sites": 3,
+   "why": "wc -l puts these at 863 / 652 / 1010 lines \u2014 2.2x to 2.5x the AG-3 ceiling, and none is generated. profile_picker_deep_l1_test.dart's own header documents 7 unrelated concern groups (manage-sheet, rename dialog, delete flow, visual structure, segmentation, tutored-section branches, product rules) accumulated in one file \u2014 a Long File that keeps growing because no group boundary stops the next contributor from appending group K. Large diffs against these files are hard to review, and CI feedback on one failing case requires scanning a 1000-line file to find it.",
+   "recommendation": "Split each along its own documented group boundaries (e.g. profile_picker_deep_l1_test.dart into manage_sheet_test.dart + rename_dialog_test.dart + delete_flow_test.dart + visual_structure_test.dart), factoring the shared _buildPicker/_buildSection helpers into a small test-support file.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "No hand-written test file under test/features/profiles/ exceeds 400 lines",
+    "A Rule-0 checker (repo-wide line-count lint/script, currently missing for AG-3) exists and runs in make audit/CI"
+   ],
+   "labels": [
+    "profiles",
+    "hygiene",
+    "AG-3",
+    "test-organization"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-profiles-p4",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Move ProfileSwitcherBar out of app/router/app_shell.dart to restore AG-5 test mirroring",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-5 (test mirrors lib 1:1) / placement",
+   "area": "app/router/app_shell.dart <-> test/features/profiles/presentation/widgets/profile_switcher_bar_badge_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/profiles/presentation/widgets/profile_switcher_bar_badge_test.dart",
+     "line": 21,
+     "quote": "import 'package:learning_tracker/app/router/app_shell.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/app/router/app_shell.dart",
+     "line": 418,
+     "quote": "class ProfileSwitcherBar extends ConsumerWidget {"
+    }
+   ],
+   "sites": 1,
+   "why": "profile_switcher_bar_badge_test.dart sits at the AG-5-mirrored path test/features/profiles/presentation/widgets/, but the widget it tests is defined in lib/app/router/app_shell.dart (a named churn hotspot) rather than lib/features/profiles/presentation/widgets/ \u2014 so there is no lib file this test actually mirrors. ProfileSwitcherBar only reads profile/tutoring providers (parentPinAuthenticatedProfileIdProvider, activeProfileIdProvider, profileListStreamProvider, activeTutoredProfileSelectionProvider) and has no router-scaffolding responsibility of its own; it reads as profiles-feature presentation code that landed in the shell file by accretion.",
+   "recommendation": "Move the ProfileSwitcherBar class into lib/features/profiles/presentation/widgets/profile_switcher_bar.dart (app_shell.dart keeps a plain usage/import), and the test file already sits at the correctly-mirrored path once the source moves.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "lib/features/profiles/presentation/widgets/profile_switcher_bar.dart exists and profile_switcher_bar_badge_test.dart's sole lib-under-test import points there, restoring AG-5 mirroring"
+   ],
+   "labels": [
+    "profiles",
+    "placement",
+    "AG-5",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-progress-p1",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Log the 5 silent catch blocks in items_learned_providers.dart and lifetime_knowledge_providers.dart (EH-3 log-less catch)",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "EH-3 (no log-less catch)",
+   "area": "features/progress presentation/providers",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/providers/items_learned_providers.dart",
+     "line": 57,
+     "quote": "} catch (_) {\n    return null;"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/providers/items_learned_providers.dart",
+     "line": 119,
+     "quote": "} catch (_) {\n    return null;"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/providers/items_learned_providers.dart",
+     "line": 272,
+     "quote": "} catch (_) {\n    return const {};"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/providers/lifetime_knowledge_providers.dart",
+     "line": 436,
+     "quote": "} catch (_) {\n            overdueCount = 0;"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/providers/lifetime_knowledge_providers.dart",
+     "line": 654,
+     "quote": "} catch (_) {\n    return null;"
+    }
+   ],
+   "sites": 5,
+   "why": "Each swallows any exception (content-asset load failure, calendar-position lookup failure) with zero diagnostic trail, so when a curriculum silently drops out of Items Learned / Lifetime View, or a track's due/overdue badge silently reads zero, nothing in the logs explains why. The same two files already contain the correct pattern twice: _safeLoadLeaves (lifetime_knowledge_providers.dart:577) and _safeHeLabelLookup (:598) both log via AppLogger.instance.warning under a documented 'F20' fix ('surface content-asset load failures so a missing/corrupt asset is diagnosable instead of silently producing an empty tree') \u2014 but that fix was never applied to these 5 other catches doing the identical kind of fallback-on-failure.",
+   "recommendation": "Route all 5 catches through AppLogger.instance.warning with the same event/fields shape as the F20 fix in _safeLoadLeaves, before returning the fallback value.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep for log-less catch blocks (or the custom_lint no_raw_logevent/empty-catch equivalent once fixed) reports zero hits in these two files.",
+    "A test that forces repo.getContentForCurriculum to throw asserts a warning is logged, for at least one of the 5 sites."
+   ],
+   "labels": [
+    "error-handling",
+    "observability"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-progress-p1",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Collapse chart_data_service.dart's *Live methods \u2014 byte-identical duplicates of their non-Live counterparts",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler duplicated code",
+   "area": "features/progress/domain/services/chart_data_service.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/progress/domain/services/chart_data_service.dart",
+     "line": 213,
+     "quote": "Future<List<DailyCompletionData>> getDailyCompletionsLive({"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/domain/services/chart_data_service.dart",
+     "line": 252,
+     "quote": "Future<List<CumulativeProgressPoint>> getCumulativeProgressLive({"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/domain/services/chart_data_service.dart",
+     "line": 55,
+     "quote": "Future<List<DailyCompletionData>> getDailyCompletions({"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/domain/services/chart_data_service.dart",
+     "line": 154,
+     "quote": "Future<List<CumulativeProgressPoint>> getCumulativeProgress({"
+    }
+   ],
+   "sites": 2,
+   "why": "getDailyCompletionsLive's own docstring admits it: 'The method name retains the historic Live suffix for callsite stability; the filter is [trackAchievement]' \u2014 the same default tier getDailyCompletions already uses. Diffing the two bodies shows they run the exact same query, same bucketing, same effective-start logic; getCumulativeProgress/getCumulativeProgressLive are the same story. Roughly 140 lines exist twice with no behavioral difference today. A future change to one (a new tier parameter, a bucketing tweak, a bugfix) has no compiler-enforced reason to also land in its twin, so the two will silently diverge the next time either is touched under time pressure \u2014 the same failure mode already realized in finding #1.",
+   "recommendation": "Make getDailyCompletionsLive / getCumulativeProgressLive one-line delegates to the base methods, or delete them and repoint recent_activity_providers.dart at getDailyCompletions/getCumulativeProgress directly.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "chart_data_service.dart's *Live methods contain no independent query/bucketing logic \u2014 they either don't exist or delegate to the base method in one line."
+   ],
+   "labels": [
+    "duplication",
+    "maintainability"
+   ]
+  }
+ }
+]

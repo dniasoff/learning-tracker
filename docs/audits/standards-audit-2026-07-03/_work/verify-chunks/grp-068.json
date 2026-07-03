@@ -1,0 +1,173 @@
+[
+ {
+  "sourceBatch": "t1-feat-onboarding-p1",
+  "findingIndex": 8,
+  "finding": {
+   "title": "Hoist EmptyLoginScreen's getAllAccounts() future out of build()",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "PF-3",
+   "area": "features/onboarding/presentation/screens",
+   "sites": 1,
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/screens/empty_login_screen.dart",
+     "line": 40,
+     "quote": "future: ref.read(deviceRegistryProvider).getAllAccounts(),"
+    }
+   ],
+   "why": "future: is evaluated fresh on every rebuild of EmptyLoginScreen (theme change, locale change, any ancestor rebuild), so FutureBuilder restarts from its loading/no-data state each time, re-querying the device registry and making the account-switch icon flicker/disappear-and-reappear on unrelated rebuilds instead of staying stable.",
+   "recommendation": "Move the Future into a @riverpod FutureProvider (e.g. allDeviceAccountsProvider) and ref.watch it, or cache it in a late final in a stateful wrapper.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "a widget test that triggers an unrelated rebuild of EmptyLoginScreen asserts getAllAccounts() is called exactly once, not once per rebuild"
+   ],
+   "labels": [
+    "performance",
+    "PF-3",
+    "onboarding"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-onboarding-p1",
+  "findingIndex": 9,
+  "finding": {
+   "title": "Remove unreachable English-only default parameter values in AppIntroScreen's _IntroPage",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "hygiene / dead code",
+   "area": "features/onboarding/presentation/screens",
+   "sites": 2,
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/screens/app_intro_screen.dart",
+     "line": 432,
+     "quote": "String talmidChochomLabel = 'Talmid Chochom',"
+    },
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/screens/app_intro_screen.dart",
+     "line": 457,
+     "quote": "String talmidChochomLabel = 'Talmid Chochom',"
+    }
+   ],
+   "why": "Both call sites (_buildSubtitleBlock at line 292 and its internal call to _subtitleRich) always pass an explicit talmidChochomLabel: terms.talmidChochom argument, so these English-literal defaults can never actually render -- dead code that also looks like (but isn't reachable as) an AX-2 violation, wasting a reviewer's attention when auditing for hardcoded strings.",
+   "recommendation": "Make the parameter `required String talmidChochomLabel` (drop the default) so the compiler enforces callers always supply the localized value.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "flutter analyze clean after making the parameter required (proves no call site relied on the default)"
+   ],
+   "labels": [
+    "dead-code",
+    "hygiene",
+    "onboarding"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-onboarding-p2",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Delete or consolidate the orphaned duplicate features/account/onboarding/domain/validators/auth_validators.dart",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-4, dead code",
+   "area": "onboarding/domain/validators",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/onboarding/domain/validators/auth_validators.dart",
+     "line": 8,
+     "quote": "String? validateEmail(String? value) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/account/onboarding/domain/validators/auth_validators.dart",
+     "line": 8,
+     "quote": "String? validateEmail(String? value) {"
+    }
+   ],
+   "sites": 2,
+   "why": "Two files sharing the same basename define byte-identical bodies for validateEmail/validatePassword/validateDisplayName. A repo-wide grep confirms the features/account/onboarding/ copy has zero importers \u2014 it is dead code left over from the account-feature migration that features/onboarding/onboarding.dart's own doc comment describes as in-progress. An agent grepping 'validateEmail' will find both definitions and may edit the dead one, producing a silent no-op \u2014 exactly the accretion failure AG-4 exists to prevent.",
+   "recommendation": "Delete lib/features/account/onboarding/domain/validators/auth_validators.dart. If features/account/onboarding/ is the intended long-term home per the migration note, move (not copy) the real implementation there instead and repoint the 2 importers found in finding 3.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep -rn \"features/account/onboarding/domain/validators/auth_validators.dart'\" lib/ test/ returns no importers before deletion (already true today)"
+   ],
+   "labels": [
+    "dead-code",
+    "onboarding",
+    "duplication"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-onboarding-p2",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Route features/account/* imports of onboarding validators/screens through the onboarding barrel, not deep paths",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Rule 2",
+   "area": "layering",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/account/onboarding/presentation/screens/signup_screen.dart",
+     "line": 25,
+     "quote": "import 'package:learning_tracker/features/onboarding/domain/validators/auth_validators.dart'"
+    },
+    {
+     "file": "learning_tracker/lib/features/account/presentation/screens/sign_in_screen.dart",
+     "line": 18,
+     "quote": "import 'package:learning_tracker/features/onboarding/domain/validators/auth_validators.dart'"
+    },
+    {
+     "file": "learning_tracker/lib/features/onboarding/onboarding.dart",
+     "line": 3,
+     "quote": "// Import this barrel (features/onboarding/onboarding.dart) from outside this"
+    }
+   ],
+   "sites": 2,
+   "why": "features/onboarding/onboarding.dart is the designated public surface ('Do NOT import deep paths directly') but it is an 8-line stub with zero export statements. Two account-feature screens (both audit HOTSPOT files) have no compliant way to reach auth_validators.dart and instead reach 2-3 directories deep into another feature's domain/ internals. A repo-wide grep shows this same pattern recurring ~26 times across 15 other files reaching into features/onboarding/, so this batch's file is one instance of a feature with an effectively non-functional barrel.",
+   "recommendation": "Populate features/onboarding/onboarding.dart with real exports (at minimum auth_validators.dart's public surface and whatever of onboarding_screen.dart is legitimately consumed cross-feature) and repoint the 2 importers at the barrel.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "Once the check-15/15 fix (paired finding) is in place, `make audit` reports zero cross-feature deep imports into lib/features/onboarding/ from signup_screen.dart and sign_in_screen.dart"
+   ],
+   "labels": [
+    "layering",
+    "architecture",
+    "onboarding"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-onboarding-p2",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Fix the always-passing awk comparison in Makefile check 15/15 (no-cross-feature-deep-imports)",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Rule 0, Rule 2",
+   "area": "tooling/Makefile",
+   "evidence": [
+    {
+     "file": "learning_tracker/Makefile",
+     "line": 378,
+     "quote": "match($$1, /features\\/([^\\/]+)\\//, a); match($$0, /features\\/([^\\/]+)\\//, b); if(a[1] != b[1]) print"
+    }
+   ],
+   "sites": 1,
+   "why": "match($0, ...) scans the whole 'path:lineno:content' grep line and matches the FIRST 'features/xxx/' occurrence, which is always inside the file-path prefix \u2014 identical to what match($1, ...) already extracted. a[1] and b[1] are therefore always equal and the filter never prints, regardless of which feature is actually imported. Running the exact command directly against the current tree confirms 0 output even though the 18 cross-feature-import lines cited in the paired finding (and ~26 total repo-wide) exist. Rule 2 has had zero real enforcement, even as a warning, since this check was written.",
+   "recommendation": "Match the import path portion only (e.g. split on the literal single-quote around the package path before matching, or grep the content field explicitly by re-slicing on the first two colons). Add a fixture case to the audit's own coverage so a future edit to this check can't silently break it again.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Running the check-15/15 grep+awk pipeline against a temporary file containing a known deep cross-feature import produces WARN output instead of silently passing",
+    "After the fix, `make audit` output for the current tree lists the auth_validators.dart / onboarding_screen.dart cross-feature imports from finding 3"
+   ],
+   "labels": [
+    "tooling",
+    "rule-0",
+    "makefile"
+   ]
+  }
+ }
+]

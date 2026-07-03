@@ -1,0 +1,218 @@
+[
+ {
+  "sourceBatch": "t4-docs-canonical-p2",
+  "findingIndex": 8,
+  "finding": {
+   "title": "Correct seed-build.md's bundled seed version \u2014 doc says 14, seed_version.dart says 15",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-8",
+   "area": "docs (seed-build.md) vs core/database",
+   "evidence": [
+    {
+     "file": "docs/seed-build.md",
+     "line": 155,
+     "quote": "the on-device DB when the bundled version is higher. Currently **14**."
+    },
+    {
+     "file": "learning_tracker/lib/core/database/seed_version.dart",
+     "line": 13,
+     "quote": "const int bundledSeedVersion = 15;"
+    }
+   ],
+   "sites": 1,
+   "why": "Low-impact but concretely wrong: the doc's stated current bundled seed version (14) is one behind the actual constant (15), meaning the content DB has been rebuilt/re-seeded at least once since this doc's 'Validation checklist' numbers (113,273 text_cache rows etc., also unverified in this pass) were last confirmed. The rest of the doc \u2014 pipeline steps, prerequisites, the 10 merger/resolver mechanics \u2014 was checked and is accurate and detailed.",
+   "recommendation": "Update the 'Currently 14' line to 15 (or better, drop the hardcoded number and point to the constant), and re-verify the row-count table against the current build/seed.db the next time `make seed` runs.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "seed-build.md's stated bundledSeedVersion matches lib/core/database/seed_version.dart"
+   ],
+   "labels": [
+    "docs",
+    "stale-docs"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t4-docs-canonical-p2",
+  "findingIndex": 9,
+  "finding": {
+   "title": "Verify testing-guide.md's 'progress_providers.g.dart is manually authored' gotcha \u2014 the file now carries a clean, unmodified codegen header",
+   "severity": "P3",
+   "confidence": "SUSPECTED",
+   "rule": "AG-7",
+   "area": "docs (testing-guide.md) vs features/progress",
+   "evidence": [
+    {
+     "file": "docs/testing-guide.md",
+     "line": 598,
+     "quote": "The generated file `progress_providers.g.dart` is manually maintained because the Riverpod code generator does not handle `Map<K, V>` return types correctly. Do not delete or regenerate this file with `build_runner`."
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/providers/progress_providers.g.dart",
+     "line": 1,
+     "quote": "// GENERATED CODE - DO NOT MODIFY BY HAND"
+    }
+   ],
+   "sites": 1,
+   "why": "This 'Known Gotcha' instructs contributors to never regenerate this file. The file's actual header today is the standard, unmodified RiverpodGenerator boilerplate with no hand-maintenance marker, and its source (progress_providers.dart:45) does contain a `Map<String, int>` return type as the doc describes \u2014 so either riverpod_generator (pinned at ^4.0.3, a newer major than whatever version motivated this note) now handles that shape fine and the note is stale, or the file is still hand-edited but deceptively wears a generated-code header (itself an AG-7 problem, worse than the doc issue). Not run to ground: I did not execute `dart run build_runner build --delete-conflicting-outputs` and diff the output, which would settle it definitively.",
+   "recommendation": "Run `dart run build_runner build --delete-conflicting-outputs` and `git diff` on this file. If the diff is empty, delete the gotcha entry (it's safe to regenerate). If the diff is non-empty, the finding shifts to an AG-7 violation on the file itself and the doc's warning should stay, updated with the current reason.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "build_runner + git diff on progress_providers.g.dart is checked; testing-guide.md's gotcha entry either removed or reworded based on the result"
+   ],
+   "labels": [
+    "docs",
+    "testing",
+    "codegen"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t4-docs-triage-p1",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Rewrite docs/explainers/sync-subsystem.md \u2014 it still presents the deleted SyncEngine/OfflineQueue dual-stack as the live, highest-risk architecture",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-8",
+   "area": "docs/explainers",
+   "evidence": [
+    {
+     "file": "docs/explainers/sync-subsystem.md",
+     "line": 46,
+     "quote": "the legacy `SyncEngine`. Several thousand lines, the largest single file in `features/sync/`, marked `@deprecated` and still load-bearing."
+    },
+    {
+     "file": "docs/explainers/sync-subsystem.md",
+     "line": 161,
+     "quote": "`learning_order` has no `EntityMerger` in the new stack \u2014 the orchestrator's pull silently merges nothing for that collection"
+    },
+    {
+     "file": "docs/explainers/sync-subsystem.md",
+     "line": 179,
+     "quote": "\u251c\u2500\u2500 merge/                          # MergeRouter + 8 EntityMergers"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/merge/merge_router.dart",
+     "line": 38,
+     "quote": "case EntityKind.learningOrder: // W2.26 \u2014 closes C3/H3"
+    }
+   ],
+   "sites": 1,
+   "why": "git log shows commit e14479af \"refactor(sync): delete SyncEngine, OfflineQueue, FirestoreDataSource \u2014 W2.35-W2.39\": grepping lib/ for SyncEngine/OfflineQueue/sync_engine.dart today returns zero hits. learning_order_merger.dart exists and is wired in merge_router.dart's switch (18 case labels = 18 concrete *_merger.dart files, not the doc's claimed 8). An engineer or AI agent reading this doc to understand sync architecture \u2014 the coding-standards.md digest itself calls core/sync/** the area needing \"Nygard lens mandatory\" scrutiny \u2014 will hunt for a deleted file, misjudge risk, and may re-attempt a decomposition that is already finished, or skip auditing the 10 mergers the doc doesn't mention.",
+   "recommendation": "Regenerate this explainer against current lib/core/sync/: drop the two-stack narrative entirely (SyncEngine is gone), correct the EntityMerger count to the actual count of *_merger.dart files, and remove the learning_order \"sharp edge\" (closed by W2.26). Re-verify the other two \"known sharp edges\" (curriculum-import collection naming \u2014 already renamed per firestore_gateway_impl.dart:617; DriftMergeStore.currentUpdatedAt nullability) before republishing.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Doc no longer references features/sync/data/sync_engine.dart, SyncEngine, or OfflineQueue as live/current.",
+    "EntityMerger count and the merge/ file listing match `ls learning_tracker/lib/core/sync/merge/*_merger.dart | grep -v entity_merger.dart | wc -l`.",
+    "The \"as of 2026-05-19\" disclaimer date is bumped to the doc's actual re-verification date.",
+    "Optional but recommended: a CI/doc-lint script asserts the merger count named in the doc equals the file-count above, failing non-zero on drift (operationalizes AG-8 for this doc)."
+   ],
+   "labels": [
+    "docs",
+    "sync",
+    "architecture-drift"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t4-docs-triage-p1",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Correct schema-version, table-count, and audit-check numbers in docs/explainers/data-model.md and the file-tree diagram in content-database.md",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-8",
+   "area": "docs/explainers",
+   "evidence": [
+    {
+     "file": "docs/explainers/data-model.md",
+     "line": 18,
+     "quote": "Pick --> User[(User DB<br/>schema v23<br/>read-write<br/>one file per account)]"
+    },
+    {
+     "file": "docs/explainers/data-model.md",
+     "line": 149,
+     "quote": "**User DB** (22 tables + 1 view) \u2014 accounts, learner profiles, curriculum tracks..."
+    },
+    {
+     "file": "docs/explainers/data-model.md",
+     "line": 138,
+     "quote": "make audit                           # 13 enforcement greps"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/user/user_database.dart",
+     "line": 159,
+     "quote": "int get schemaVersion => 32;"
+    },
+    {
+     "file": "docs/explainers/content-database.md",
+     "line": 157,
+     "quote": "\u2502   \u2514\u2500\u2500 tables/                         # text_cache, calendar_cycles, daily_content, seed_metadata"
+    }
+   ],
+   "sites": 2,
+   "why": "user_database.dart is at schemaVersion 32 and declares 24 tables (the current `tables:` list includes PointsBalance/PointsLedger/RewardRedemptions, added by the WS7 rewards remediation on 2026-05-24 \u2014 after this doc's 2026-05-19 snapshot). learning_tracker/Makefile's `audit` target runs 22 numbered checks (confirmed by grepping its own \"N/22\" echo labels), not 13. content-database.md's code-map points a contributor at a `content/tables/` directory that does not exist; the four content-DB table files actually live in the shared top-level lib/core/database/tables/ alongside the User-DB tables. None of these are dangerous, but each sends a reader to the wrong place or the wrong number.",
+   "recommendation": "Update the three numbers in data-model.md (schema v32, 24 tables, 22 audit checks) and fix content-database.md's tree to show `lib/core/database/tables/` as a shared top-level directory rather than nested under content/.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "data-model.md's Mermaid diagram and prose both say schema v32 and 24 tables (or reference `user_database.dart:159` instead of a hardcoded number, to avoid re-drifting).",
+    "`make audit` in data-model.md matches the 22 checks the Makefile actually runs.",
+    "content-database.md's file tree matches `find learning_tracker/lib/core/database/content -type f` and `find learning_tracker/lib/core/database/tables -name '*.dart'` output."
+   ],
+   "labels": [
+    "docs",
+    "schema",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t4-docs-triage-p1",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Retire or clearly re-header the pre-refactor code samples in docs/planning/architecture-quick-reference.md and the stale tech-debt callout in architecture-offline-v2.md",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-8",
+   "area": "docs/planning",
+   "evidence": [
+    {
+     "file": "docs/planning/architecture-quick-reference.md",
+     "line": 269,
+     "quote": "leftOuterJoin(db.completions, db.completions.contentItemId.equalsExp(db.contentItems.id)"
+    },
+    {
+     "file": "docs/planning/architecture-quick-reference.md",
+     "line": 43,
+     "quote": "### D2: Authentication \u2014 Firebase Auth (Email/Password + Google Sign-In)"
+    },
+    {
+     "file": "docs/planning/architecture-quick-reference.md",
+     "line": 356,
+     "quote": "See [project-context.md](../../_bmad/bmm/data/project-context-template.md) for full 120+ rules."
+    },
+    {
+     "file": "docs/planning/architecture-offline-v2.md",
+     "line": 19,
+     "quote": "Production code in `learning_tracker/lib/` currently implements the deleted March architecture \u2014 sealed `AppAuthState`, `LocalAuthGuard`, anonymous `localUid`..."
+    }
+   ],
+   "sites": 2,
+   "why": "architecture-quick-reference.md is linked from docs/index.md as a current \"Reference doc\" (Last Updated 2026-04-19) but its Common-Queries/Key-Data-Models sections query a single unified `db` against `db.completions`/`db.contentItems` \u2014 the pre-three-database-split, pre-multi-profile schema (grep for `db\\.completions` in lib/ today returns zero hits; the Completion model shown has no profileId field at all, though profileId-in-PK is now an [E]nforced rule). D2 never mentions the cloudBorn/localBorn tiers the doc's own Project Overview names. The linked `_bmad/bmm/data/project-context-template.md` does not exist in the repo. Separately, architecture-offline-v2.md's own \"Deliberate tech debt\" box claims the code still implements AppAuthState/LocalAuthGuard/localUid \u2014 none of these symbols exist anywhere in lib/ (grep returns zero); the v2 target model (account_tier.dart, argon2id hash column, UpgradeToCloudService) is fully shipped. A contributor or agent following architecture-quick-reference.md's example queries would write code against a schema that no longer exists.",
+   "recommendation": "In architecture-quick-reference.md: delete or clearly quarantine the Common-Queries/Key-Data-Models code samples as \"Epic 1-5 historical, superseded\" (the way prd.md and architecture-design.md already do), add the cloudBorn/localBorn tier split to D2, and fix or remove the dead _bmad link. In architecture-offline-v2.md: update the \"Deliberate tech debt\" box to state the gap has closed (cite the shipped AccountTier/UpgradeToCloudService) rather than describing a mismatch that no longer exists.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "architecture-quick-reference.md no longer shows Drift query samples against db.completions/db.contentItems as if they are current code.",
+    "The _bmad/bmm/data/project-context-template.md link resolves or is removed.",
+    "architecture-offline-v2.md's tech-debt callout reflects that AppAuthState/LocalAuthGuard/localUid are gone (verifiable via `grep -rl 'AppAuthState\\|LocalAuthGuard\\|localUid' learning_tracker/lib` returning empty)."
+   ],
+   "labels": [
+    "docs",
+    "architecture-drift",
+    "auth"
+   ]
+  }
+ }
+]

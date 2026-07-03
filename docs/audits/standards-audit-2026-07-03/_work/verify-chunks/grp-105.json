@@ -1,0 +1,197 @@
+[
+ {
+  "sourceBatch": "t1-feat-settings-p4",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Override the injectable LocalDayClock in backup_sync_section_l1_test.dart's relative-time assertions",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6",
+   "area": "features/settings (test suite) \u2014 presentation/widgets",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/settings/presentation/widgets/backup_sync_section_l1_test.dart",
+     "line": 179,
+     "quote": "final now = DateTime.now(); / final lastSynced = now.subtract(const Duration(seconds: 30));"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/presentation/widgets/backup_sync_section.dart",
+     "line": 478,
+     "quote": "final diff = DateTimeFactory.nowLocal().difference(dateTime);"
+    }
+   ],
+   "sites": 5,
+   "why": "_formatTimeAgo reads DateTimeFactory.nowLocal(), which resolves through the overridable localDayClockProvider \u2014 a FakeLocalDayClock already exists in lib/core/time/local_day_clock.dart for exactly this purpose. This file never overrides it: it seeds 'just now'/'Xm ago' assertions from real DateTime.now() at 5 call sites (lines 155, 179, 201, 227, 657), then the widget independently re-reads the clock a pump later. Today's margins (e.g. a 30s buffer under the 60s 'just now' cliff) make an actual flake unlikely, but the suite is non-deterministic by construction and the gap between test-now and widget-build-now is unbounded on a loaded/slow CI runner.",
+   "recommendation": "In _buildHarness, call useLocalDayClock(FakeLocalDayClock(fixedInstant)) (or override localDayClockProvider) and derive lastSynced from that same fixed instant, removing the wall-clock dependency entirely.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "backup_sync_section_l1_test.dart's relative-time tests construct lastSyncedAt from a fixed instant and override localDayClockProvider/useLocalDayClock to that same instant.",
+    "The suite still passes with no bare DateTime.now() feeding a time-relative text assertion."
+   ],
+   "labels": [
+    "testing",
+    "settings",
+    "hermeticity",
+    "flake-risk"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-sync-p1",
+  "findingIndex": 1,
+  "finding": {
+   "title": "outboxSyncWriteFacadeProvider mutates DAO state and fires a network re-enqueue from inside its Provider build function",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "SM-2",
+   "area": "features/sync presentation providers",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/sync/presentation/providers/sync_providers.dart",
+     "line": 147,
+     "quote": "ref.read(userDatabaseProvider).pointsBalanceDao.syncSink = null;"
+    },
+    {
+     "file": "learning_tracker/lib/features/sync/presentation/providers/sync_providers.dart",
+     "line": 172,
+     "quote": "database.pointsBalanceDao.syncSink = facade;"
+    },
+    {
+     "file": "learning_tracker/lib/features/sync/presentation/providers/sync_providers.dart",
+     "line": 176,
+     "quote": "unawaited(database.pointsBalanceDao.reEnqueueUnsyncedLedgerRows(profileId));"
+    }
+   ],
+   "sites": 3,
+   "why": "The code directly inside `Provider<OutboxSyncWriteFacade?>((ref) {...})` mutates pointsBalanceDao.syncSink and unawaited-fires reEnqueueUnsyncedLedgerRows(profileId) unconditionally on every build. This provider watches authStateProvider, activeTutoredProfileSelectionProvider, userDatabaseProvider, activeProfileIdProvider, and localDayClockProvider -- any of which changing (e.g. every profile switch in this multi-child app) reruns build and refires the recovery scan, which its own D14 comment says is meant to run once. SM-2 exists precisely because 'side effects in build race and get skipped or duplicated on rebuild' -- here they duplicate on every rebuild instead of running once.",
+   "recommendation": "Move syncSink wiring and the one-time ledger-recovery call out of build into a ref.listen/onDispose pairing or an explicit one-shot recovery triggered on cloud-conversion, leaving build to only construct and return the facade.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "riverpod_lint/custom_lint rule flagging DAO field mutation or unawaited async calls directly inside a Provider build body (SM-2 Enforce backstop).",
+    "Regression test with a spy DAO asserting reEnqueueUnsyncedLedgerRows is invoked at most once per profile per session, not once per rebuild (simulate two profile switches)."
+   ],
+   "labels": [
+    "SM-2",
+    "riverpod",
+    "side-effects",
+    "sync"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-sync-p1",
+  "findingIndex": 2,
+  "finding": {
+   "title": "onEnqueueDrain closures in sync_providers.dart read ref after an await with no ref.mounted guard",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "SM-4",
+   "area": "features/sync presentation providers",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/sync/presentation/providers/sync_providers.dart",
+     "line": 105,
+     "quote": "onEnqueueDrain: () async {"
+    },
+    {
+     "file": "learning_tracker/lib/features/sync/presentation/providers/sync_providers.dart",
+     "line": 108,
+     "quote": "await ref.read(syncOrchestratorProvider)?.recordDrainAttempt();"
+    },
+    {
+     "file": "learning_tracker/lib/features/sync/presentation/providers/sync_providers.dart",
+     "line": 165,
+     "quote": "await ref.read(syncOrchestratorProvider)?.recordDrainAttempt();"
+    }
+   ],
+   "sites": 2,
+   "why": "Both onEnqueueDrain closures (in syncWriteFacadeProvider and outboxSyncWriteFacadeProvider) do a ref.read after an await with no ref.mounted check, violating SM-4. Riverpod 3 throws UnmountedRefException if ref is used after its provider has rebuilt. Both providers watch activeProfileIdProvider/authStateProvider, which change on every profile switch or sign-out -- realistic during the network round-trip a drain takes. If that happens between the two awaits, the second ref.read(syncOrchestratorProvider)?.recordDrainAttempt() throws on a stale ref. The surrounding comment (sync_providers.dart:100-104) spells out the user-visible cost of skipping recordDrainAttempt: 'the badge stays at its old value (e.g. a stale Synced) ... a false-Synced when the push failed.' Because this closure runs inside unawaited(tee().catchError((Object _) {})) in outbox_sync_write_facade.dart, the resulting exception is silently swallowed (see the companion EH-3 finding), so this failure currently has zero observability.",
+   "recommendation": "Check ref.mounted after the first await in both closures before the second ref.read call, per SM-4; extract the duplicated closure body into one shared helper to fix both sites at once.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "custom_lint/riverpod_lint rule flagging ref use after an await without a mounted check (SM-4 Enforce backstop).",
+    "Provider test that rebuilds/switches the active profile mid-drain and asserts no UnmountedRefException reaches the caller and recordDrainAttempt either completes or is safely skipped."
+   ],
+   "labels": [
+    "SM-4",
+    "riverpod",
+    "race-condition",
+    "sync"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-sync-p1",
+  "findingIndex": 3,
+  "finding": {
+   "title": "OutboxSyncWriteFacade._enqueue swallows every drain-tee failure with no log and no AppLogger field in the class",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "EH-3",
+   "area": "features/sync data",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/sync/data/outbox_sync_write_facade.dart",
+     "line": 291,
+     "quote": "unawaited(tee().catchError((Object _) {}));"
+    }
+   ],
+   "sites": 1,
+   "why": "OutboxSyncWriteFacade never declares an AppLogger field, so this catchError has no way to log even if it wanted to. Any exception from the drain tee -- including the UnmountedRefException from the companion SM-4 finding, or a genuine permission-denied/network failure -- is discarded with zero trace. Every push*/enqueue* method in this class, used for every sync write in the app, funnels through this one _enqueue, making it the single choke point where all fire-and-forget drain failures currently vanish silently. No test in this batch (including the 1184-line local_data_upload_service_test.dart, which never wires onEnqueueDrain) exercises this path either.",
+   "recommendation": "Inject an AppLogger into OutboxSyncWriteFacade (mirroring LocalDataUploadService's existing nullable _logger field) and log the swallowed exception at warn/error level inside catchError before discarding it.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "EH-3 Rule-0 checker (log-less catch grep) reports no hits in outbox_sync_write_facade.dart.",
+    "Unit test that stubs onEnqueueDrain to throw and asserts the logger receives the error."
+   ],
+   "labels": [
+    "EH-3",
+    "error-handling",
+    "observability",
+    "sync"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-sync-p1",
+  "findingIndex": 4,
+  "finding": {
+   "title": "syncStatusProvider/syncStatusStreamProvider are duplicated verbatim between core/sync and features/sync -- the unread copy still needed its own bugfix",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-4",
+   "area": "features/sync presentation providers",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/sync/presentation/providers/sync_providers.dart",
+     "line": 25,
+     "quote": "final syncStatusStreamProvider = StreamProvider<SyncStatus>((ref) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/sync/presentation/providers/sync_providers.dart",
+     "line": 47,
+     "quote": "final syncStatusProvider = Provider<SyncStatus>((ref) {"
+    },
+    {
+     "file": "learning_tracker/test/features/sync/presentation/sync_status_provider_loading_state_test.dart",
+     "line": 15,
+     "quote": "// mirroring the core-layer canonical provider in"
+    }
+   ],
+   "sites": 2,
+   "why": "sync_providers.dart's syncStatusStreamProvider/syncStatusProvider are byte-for-byte duplicates of lib/core/sync/providers/sync_status_providers.dart's providers of the same name (outside this batch); each file's doc comment calls the OTHER file canonical while neither actually delegates to the other -- two independent implementations. Grepping all 20 features-layer files that import sync_providers.dart for unrelated symbols (syncWriteFacadeProvider etc.) turns up zero uses of syncStatusProvider/syncStatusStreamProvider from this file; every real consumer (dashboard_screen.dart, backup_sync_section.dart) reads the core copy instead. The features copy is reachable only through its own 115-line dedicated regression test and the also-unreferenced SyncStatusIndicator widget. This is proven, not hypothetical, duplication cost: the 'loop-iter2' late-subscriber bug had to be fixed independently in both copies, exactly as the test file's own comment documents.",
+   "recommendation": "Delete syncStatusStreamProvider/syncStatusProvider from features/sync/presentation/providers/sync_providers.dart; repoint SyncStatusIndicator and sync_status_provider_loading_state_test.dart at the core provider (or delete them per the companion dead-widget finding).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "AG-4 duplicate-symbol audit (orchestrator-level per digest) no longer lists syncStatusProvider/syncStatusStreamProvider twice.",
+    "grep confirms zero remaining declarations of these two names under lib/features/."
+   ],
+   "labels": [
+    "AG-4",
+    "duplication",
+    "dead-code",
+    "sync"
+   ]
+  }
+ }
+]

@@ -1,0 +1,182 @@
+[
+ {
+  "sourceBatch": "t1-core-nav-utils",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Remove dead isShabbos/isYomTov/formatHebrewDate from HebrewCalendarUtils (superseded by zmanim_window_service)",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Evans lens (ubiquitous language re-derived, not enforced in one place) + dead code",
+   "area": "lib/core/utils/hebrew_calendar_utils.dart (duplication/dead-code)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/utils/hebrew_calendar_utils.dart",
+     "line": 82,
+     "quote": "static bool isShabbos(DateTime gregorianDate) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/utils/hebrew_calendar_utils.dart",
+     "line": 94,
+     "quote": "static bool isYomTov(DateTime gregorianDate) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/utils/hebrew_calendar_utils.dart",
+     "line": 114,
+     "quote": "static String formatHebrewDate("
+    },
+    {
+     "file": "learning_tracker/lib/core/utils/hebrew_calendar_utils.dart",
+     "line": 81,
+     "quote": "/// For precise zmanim (sunset/nightfall), use ComplexZmanimCalendar with a GeoLocation."
+    }
+   ],
+   "sites": 3,
+   "why": "`grep -rn` across all of lib/ finds zero production callers of isShabbos, isYomTov, or formatHebrewDate outside their own definition file \u2014 only test/core/utils/hebrew_calendar_utils_test.dart and one story-acceptance test call isShabbos, testing code nothing else ever runs. Meanwhile lib/features/sacred_time/domain/services/zmanim_window_service.dart implements the real, GeoLocation/zmanim-aware Shabbos+Yom-Tov window (candle-lighting offset, tzais, JewishCalendar.isAssurBemelacha) that actually drives the Sacred Time lock feature \u2014 and isShabbos's own doc comment admits its 18:00-local-clock-hour heuristic is inferior (\"For precise zmanim... use ComplexZmanimCalendar with a GeoLocation\"). Because this dead code lives in core/utils/ (importable by any feature \u2014 Rule 1 only blocks core\u2192features, not the reverse) and is unit-tested (making it look supported), a future feature needing \"is it Shabbos right now\" is one natural-language search away from wiring up the crude, timezone-naive version instead of the correct geo-aware one \u2014 and if the caller passes a UTC DateTime (the P5-mandated storage format everywhere else in this codebase), isShabbos's `.hour >= 18` check reads UTC hour, not true local hour, silently wrong for any locale far from UTC.",
+   "recommendation": "Delete isShabbos, isYomTov, and formatHebrewDate (and their test coverage) from HebrewCalendarUtils. If a lightweight non-geo fallback is genuinely wanted somewhere, rename it to make the approximation explicit (e.g. isApproximateShabbosNoGeo) and doc-link to zmanim_window_service.dart as the source of truth.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "`grep -rn \"isShabbos\\|isYomTov\\|formatHebrewDate\" learning_tracker/lib/` shows zero references outside sacred_time/ (or the methods are removed entirely).",
+    "hebrew_calendar_utils_test.dart's corresponding groups are removed alongside the source methods."
+   ],
+   "labels": [
+    "dead-code",
+    "duplication",
+    "evans"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-nav-utils",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Split app_shell_test.dart (1352 lines) and pin_guard_test.dart (646 lines) under the 400-line cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3 (hand-written Dart files \u2264400 lines; checker explicitly scans both lib and test)",
+   "area": "test/core/navigation (hygiene)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/navigation/app_shell_test.dart",
+     "line": 1,
+     "quote": "import 'dart:math' as math;"
+    },
+    {
+     "file": "learning_tracker/test/core/navigation/pin_guard_test.dart",
+     "line": 1,
+     "quote": "// Unit tests for PinGuard \u2014 all onNavigation branches, session helpers,"
+    }
+   ],
+   "sites": 2,
+   "why": "AG-3's own Rule-0 checker command (`find lib test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400'`) explicitly includes test/, so these are real violations, not just lib/-scoped ones. app_shell_test.dart is 3.4x the 400-line cap, pin_guard_test.dart 1.6x \u2014 both are high quality, non-tautological suites with clear existing group() boundaries (bottom-nav, auth flow, persistent switcher, BUG E3 sub-route switcher, TUT-05 tutor header, FIX#7 contrast, tap-target overlap for app_shell_test.dart; B1-B7/S1-S3/G1-G3 for pin_guard_test.dart) that make splitting mechanical rather than risky.",
+   "recommendation": "Split app_shell_test.dart along its existing group() sections into e.g. app_shell_navigation_test.dart, app_shell_switcher_test.dart, app_shell_tutor_test.dart, app_shell_contrast_test.dart. Split pin_guard_test.dart into branch-coverage vs session-helper vs fail-safe files.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "`find learning_tracker/lib learning_tracker/test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400'` (AG-3's own checker) shows neither file."
+   ],
+   "labels": [
+    "hygiene",
+    "ag-3",
+    "tests"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-nav-utils",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Replace date_utils_test.dart's real DateTime.now() read with a fixed/injected clock",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6 (hermetic tests: no wall-clock)",
+   "area": "test/core/utils/date_utils_test.dart (hermetic tests)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/utils/date_utils_test.dart",
+     "line": 11,
+     "quote": "final actualNow = DateTime.now().toUtc();"
+    },
+    {
+     "file": "learning_tracker/test/core/utils/date_utils_test.dart",
+     "line": 13,
+     "quote": "expect(diff.inSeconds, lessThan(1));"
+    }
+   ],
+   "sites": 1,
+   "why": "This is the only wall-clock read across all 14 test files in the batch \u2014 every other test in the suite (and in the file's own source, date_utils.dart, which is explicitly designed around a swappable LocalDayClock so \"day-boundary semantics are deterministic in tests\") uses fixed DateTime.utc(...) literals. Comparing DateTimeFactory.nowUtc() against a freshly-read DateTime.now() with a 1-second tolerance is a live flake source: any CI scheduling jitter, GC pause, or slow VM startup between the two calls pushes the gap over 1 second and fails the test for a reason unrelated to the code under test.",
+   "recommendation": "Override the LocalDayClock with a fixed fake instant (per the source file's own documented pattern: `localDayClockProvider.overrideWithValue(...)` or `useLocalDayClock`) and assert DateTimeFactory.nowUtc() returns exactly that fixed instant, rather than \"close to real time\".",
+   "effort": "S",
+   "acceptance_criteria": [
+    "No `DateTime.now()` call remains in test/core/utils/date_utils_test.dart.",
+    "The nowUtc test asserts equality against an injected/fixed clock value, not a real-time tolerance window."
+   ],
+   "labels": [
+    "hermetic-tests",
+    "flake-risk",
+    "tq-6"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-nav-utils",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Inject ParentAnalyticsRepository into RestoreGuard instead of constructing it inline",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "SM-7 (repositories/services/DAOs constructed only inside their @riverpod provider or a test override)",
+   "area": "lib/core/navigation/guards/restore_guard.dart (DI)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/navigation/guards/restore_guard.dart",
+     "line": 77,
+     "quote": "final analytics = ParentAnalyticsRepositoryImpl(db);"
+    }
+   ],
+   "sites": 1,
+   "why": "RestoreGuard._resolve() hand-constructs ParentAnalyticsRepositoryImpl(db) directly inside the navigation-check method rather than receiving it as an injected dependency \u2014 a literal SM-7 violation. ParentAnalyticsRepository has no Riverpod provider anywhere in the codebase (it's hand-constructed at 2 more sites outside this batch: local_data_upload_service.dart and device_restore_service.dart), so today nothing lets a test or a future caller swap this repository via ProviderScope; a test that wants to fake it has to fake the whole UserDatabase instead. Real-world cost is low today (the class is a thin, stateless DAO wrapper, and RestoreGuard's closure-based constructor is otherwise a deliberately Riverpod-free, easily-testable design \u2014 see its excellent test suite), but if SM-7 ships a checker this line (and its 2 siblings) will need either a wrapping provider or a documented exception.",
+   "recommendation": "Either add a parentAnalyticsRepositoryProvider (@riverpod, takes UserDatabase) and inject it into RestoreGuard's constructor alongside getDatabase, or explicitly document ParentAnalyticsRepositoryImpl as an intentional non-Riverpod infra helper exempt from SM-7.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Once SM-7 has a checker, ParentAnalyticsRepositoryImpl( outside core/analytics/ appears only inside a @riverpod provider body, or is allowlisted with a stated reason."
+   ],
+   "labels": [
+    "sm-7",
+    "di"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-nav-utils",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Delete the two orphaned .gitkeep files in now-populated guards/ and test/core/utils/ dirs",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "hygiene (dead placeholder files)",
+   "area": "lib/core/navigation/guards, test/core/utils (hygiene)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/navigation/guards/.gitkeep",
+     "line": 1,
+     "quote": "(0-byte empty file)"
+    },
+    {
+     "file": "learning_tracker/test/core/utils/.gitkeep",
+     "line": 1,
+     "quote": "(0-byte empty file)"
+    }
+   ],
+   "sites": 2,
+   "why": ".gitkeep exists solely to keep an otherwise-empty directory tracked by git. lib/core/navigation/guards/ now holds 5 real guard files and test/core/utils/ holds 7 real test files, so both placeholders are vestigial clutter left over from before those directories had content.",
+   "recommendation": "git rm both .gitkeep files.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "`find learning_tracker/lib/core/navigation/guards learning_tracker/test/core/utils -name .gitkeep` returns nothing."
+   ],
+   "labels": [
+    "hygiene",
+    "dead-code"
+   ]
+  }
+ }
+]

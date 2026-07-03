@@ -1,0 +1,205 @@
+[
+ {
+  "sourceBatch": "t1-feat-scheduler-p5",
+  "findingIndex": 8,
+  "finding": {
+   "title": "Convert ScheduledUnit/StudyDayPattern/ProjectionResult in overdue_types.dart to @freezed instead of hand-rolled ==/hashCode",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "File Naming Conventions (never hand-write ==/hashCode for data classes)",
+   "area": "features/scheduler/domain/projection",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/scheduler/domain/projection/overdue_types.dart",
+     "line": 27,
+     "quote": "bool operator ==(Object other) =>"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/domain/projection/overdue_types.dart",
+     "line": 66,
+     "quote": "bool operator ==(Object other) =>"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/domain/projection/overdue_types.dart",
+     "line": 107,
+     "quote": "bool operator ==(Object other) =>"
+    }
+   ],
+   "sites": 3,
+   "why": "Every field pairing is currently correct (verified by reading all three operators/hashCodes), so there is no live bug today. But every sibling domain model in the same feature (daily_task.dart, goal_entity.dart, pace_status.dart, schedule_config.dart) uses @freezed, and this file's own doc comment's 'no codegen' rationale doesn't actually require hand-rolled equality \u2014 freezed has no Flutter/Riverpod/Drift dependency either. overdue_projection_test.dart's O1/O3/O5 determinism assertions (expect(r1, equals(r2))) depend entirely on this hand-rolled equality staying correctly paired with every future field addition.",
+   "recommendation": "Convert the three classes to @freezed and regenerate; overdue_projection_test.dart/overdue_durability_test.dart should pass unchanged since the generated == is equivalent.",
+   "acceptance_criteria": [
+    "ScheduledUnit, StudyDayPattern, and ProjectionResult are @freezed classes with no hand-written operator== or hashCode.",
+    "overdue_projection_test.dart and overdue_durability_test.dart pass unchanged after the conversion."
+   ],
+   "labels": [
+    "freezed",
+    "domain-model",
+    "scheduler",
+    "hygiene"
+   ],
+   "effort": "S"
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-settings-p1",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Replace raw e.toString() exception text in settings error messages with the project's own ST-4 friendly-error pattern",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "EH-5 / custom_lint no_e_to_string_in_ui (currently non-enforcing per tooling gap)",
+   "area": "features/settings/presentation",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/settings/presentation/screens/curriculum_settings_screen.dart",
+     "line": 79,
+     "quote": ")!.curriculumSettingsProgramError(e.toString()),"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/presentation/screens/lifetime_marking_screen.dart",
+     "line": 606,
+     "quote": "SnackBar(content: Text(l10n.lifetimeMarkSaveError(e.toString()))),"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/presentation/utils/account_actions.dart",
+     "line": 468,
+     "quote": "_error!,"
+    }
+   ],
+   "sites": 5,
+   "why": "curriculum_settings_screen.dart:79, lifetime_marking_screen.dart:606, account_actions.dart:401(state)/468(render), account_actions.dart:579, and send_logs_service.dart:104 all interpolate the raw Dart exception's toString() into a message shown to the user -- account_actions.dart:468 has no l10n wrapper at all. A Hebrew-speaking parent or child sees a half-English, technical string (exception class names, network error codes) instead of a real message. This is inconsistent with the SAME batch's own upgrade_to_cloud_screen.dart, which explicitly names and implements the pattern to avoid this ('Never surface the raw exception... mirrors the ST-4 friendly-error pattern', upgrade_to_cloud_screen.dart:198-200) -- proving the project already knows how to do this correctly elsewhere.",
+   "recommendation": "Replace each e.toString() interpolation with a fixed, already-localized fallback string per the ST-4 pattern used in upgrade_to_cloud_screen.dart/backup_sync_section.dart; log the real exception via AppLogger for diagnostics instead of showing it.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "None of the 5 sites pass exception content into Text(...)/ARB placeholders; a grep-based check for `.toString())` inside `l10n.`/`Text(` call sites in lib/features/settings can gate regressions once custom_lint's no_e_to_string_in_ui rule is repaired.",
+    "Widget test with Locale('he') asserts each error surface renders only ARB-sourced Hebrew text, never a mocked exception's message."
+   ],
+   "labels": [
+    "i18n",
+    "error-handling",
+    "settings"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-settings-p1",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Replace duplicated inline curriculumTracks lookups with the existing TrackDao.getTrackByProfileAndCurriculum",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler duplication / DAO-layer reuse",
+   "area": "features/settings/presentation/screens",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/settings/presentation/screens/curriculum_settings_screen.dart",
+     "line": 156,
+     "quote": "await (db.select(db.curriculumTracks)"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/presentation/screens/scope_selection_screen.dart",
+     "line": 388,
+     "quote": "await (db.select(db.curriculumTracks)"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/daos/track_dao.dart",
+     "line": 185,
+     "quote": "Future<CurriculumTrack?> getTrackByProfileAndCurriculum("
+    }
+   ],
+   "sites": 2,
+   "why": "Both screens re-implement, inline, the exact (profileId, curriculumId) -> CurriculumTrack? query that TrackDao.getTrackByProfileAndCurriculum already provides -- same where-clause shape, same ..limit(1)).getSingleOrNull(). The DAO method's doc comment records a non-obvious business rule (tutored-mirror local/remote id resolution) that a maintainer fixing that DAO method has no way of knowing also needs re-applying at these 2 inline copies; they will silently drift the next time this query's semantics change.",
+   "recommendation": "Call ref.read(userDatabaseProvider).trackDao.getTrackByProfileAndCurriculum(profileId, curriculumId.storageKey) at both sites instead of the inline Drift query.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Both call sites use TrackDao.getTrackByProfileAndCurriculum; a grep-based check for `db.select(db.curriculumTracks)` outside core/database/ can catch new inline copies."
+   ],
+   "labels": [
+    "duplication",
+    "settings"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-settings-p1",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Split the 7 hand-written settings files that exceed AG-3's 400-line limit",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "features/settings",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/settings/presentation/screens/lifetime_marking_screen.dart",
+     "line": 1,
+     "quote": "986 lines"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart",
+     "line": 1,
+     "quote": "938 lines"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/presentation/screens/upgrade_to_cloud_screen.dart",
+     "line": 1,
+     "quote": "937 lines"
+    }
+   ],
+   "sites": 7,
+   "why": "settings_screen.dart (816), account_actions.dart (586), backup_sync_section.dart (484) and scope_selection_screen.dart (432) also exceed the 400-line hand-written limit, alongside the three cited above. None are generated. Files this large raise review/merge-conflict cost and hide multiple responsibilities in one file -- e.g. data_export_import_service.dart interleaves export-mapping, import-mapping, and back-compat schedule-JSON normalization in one class; lifetime_marking_screen.dart holds two separate @RoutePage screens plus their card/tile widgets.",
+   "recommendation": "Split along existing seams: extract data_export_import_service.dart's per-table export/import blocks into smaller mapper classes; split lifetime_marking_screen.dart's two @RoutePage screens into separate files; extract the already-commented-off private tile/section widgets in settings_screen.dart and account_actions.dart into their own widget files.",
+   "effort": "L",
+   "acceptance_criteria": [
+    "All 7 files <=400 lines; a Rule-0 CI script (find lib -name '*.dart' ! -name '*.g.dart' | xargs wc -l, thresholded at 400) gates regressions per AG-3's pending-checker status."
+   ],
+   "labels": [
+    "hygiene",
+    "file-size",
+    "settings"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-settings-p1",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Batch DataExportImportService.importData()'s 16 per-row insert loops instead of awaiting each row individually",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "DB-3",
+   "area": "features/settings/domain/services",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart",
+     "line": 538,
+     "quote": "for (final u in data['userProfiles'] as List) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart",
+     "line": 717,
+     "quote": "for (final e in (data['completionEvents'] as List? ?? [])) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart",
+     "line": 887,
+     "quote": "for (final e in (data['streakEvents'] as List? ?? [])) {"
+    }
+   ],
+   "sites": 16,
+   "why": "Every one of the 16 imported tables is inserted row-by-row with an individual `await ...insert(...)` inside a for loop instead of Drift's batch()/insertAll for same-shape bulk writes (lines 538-901). The whole thing is correctly wrapped in one _database.transaction() (DB-2 satisfied), but each row still pays its own round-trip; a family with several years of daily completions (thousands of completionEvents/learningLedger rows) multiplies import wall-clock time by roughly the row count instead of running as a handful of batched statements. Same dormant-code caveat as the delete-scoping finding in this file: no production caller exists yet, so this is a design defect ready to bite the first real user of a to-be-built restore feature, not an active incident.",
+   "recommendation": "Replace each per-table loop with _database.batch((b) => b.insertAll(_database.<table>, rows)) inside the existing transaction.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "Import of a large fixture (1,000+ completionEvents) uses batch()/insertAll, verifiable by code review confirming no remaining bare `for` + `await ...insert(` loop in importData(), or by an insert-call-count assertion in a test."
+   ],
+   "labels": [
+    "performance",
+    "settings",
+    "drift",
+    "dormant-code"
+   ]
+  }
+ }
+]

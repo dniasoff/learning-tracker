@@ -1,0 +1,178 @@
+[
+ {
+  "sourceBatch": "t1-feat-tutoring-p4",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Add Locale('he') RTL variant to tutor_pin_reset_screen_l1_test.dart and tutor_pin_setup_screen_l1_test.dart",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-3",
+   "area": "test/features/tutoring",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/tutoring/tutor_pin_reset_screen_l1_test.dart",
+     "line": 72,
+     "quote": "locale: const Locale('en'),"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/tutor_pin_setup_screen_l1_test.dart",
+     "line": 82,
+     "quote": "locale: const Locale('en'),"
+    }
+   ],
+   "sites": 2,
+   "why": "Neither file contains a single Locale('he') pump, so RTL/overflow regressions in the PIN-reset and PIN-setup screens (part of the same security-sensitive tutor-PIN flow) are invisible to this suite. The sibling test in the same directory, tutor_pin_entry_gate_l1_test.dart, DOES carry a Hebrew group ('he locale: renders PIN entry screen without overflow or crash') proving the flow is expected to be RTL-tested \u2014 these two screens are the odd ones out. coding-standards.md's own TQ-3 rationale states this app ships RTL/overflow fixes 'every audit wave', so an LTR-only gap here is a live, stated-cost risk, not a hypothetical one.",
+   "recommendation": "Add a `he` locale smoke test to each file mirroring tutor_pin_entry_gate_l1_test.dart's Hebrew group (pump with Locale('he'), assert no exception and the Scaffold/key text renders).",
+   "acceptance_criteria": [
+    "tutor_pin_reset_screen_l1_test.dart and tutor_pin_setup_screen_l1_test.dart each gain a testWidgets case pumping Locale('he') that asserts the screen renders without throwing."
+   ],
+   "effort": "S",
+   "labels": [
+    "i18n",
+    "RTL",
+    "TQ-3",
+    "tutoring"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tutoring-p4",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Split tutor_pin_entry_gate_l1_test.dart, tutor_pin_setup_screen_l1_test.dart and w3_41_tutor_security_rules_test.dart under the 400-line AG-3 cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "test/features/tutoring",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/tutoring/tutor_pin_entry_gate_l1_test.dart",
+     "line": 1,
+     "quote": "// L1 behaviour tests for TutorPinEntryGate (W6.5 \u2014 FR-5.4)"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/tutor_pin_setup_screen_l1_test.dart",
+     "line": 1,
+     "quote": "// L1 widget tests for TutorPinSetupScreen"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/w3_41_tutor_security_rules_test.dart",
+     "line": 1,
+     "quote": "/// W3.41 \u2014 Tutor Security Boundary: Firestore Rules Tests"
+    }
+   ],
+   "sites": 3,
+   "why": "wc -l confirms 1283, 623, and 459 lines respectively \u2014 the AG-3 checker (`find lib test -name '*.dart' ... | xargs wc -l | awk '$1>400'`) explicitly includes test/, and none of these three are generated. tutor_pin_entry_gate_l1_test.dart is 3.2x the cap: content past the per-file agent read budget is invisible, exactly the failure mode AG-3's rationale names, and each file already has clean group() boundaries a split can follow.",
+   "recommendation": "Split each file along its existing group() boundaries (e.g. tutor_pin_entry_gate_l1_test.dart into loading/error, entry-rendering, correct-PIN, wrong-PIN/lockout, C1-namespace, reset-entry, RTL, and TUT-01 files).",
+   "acceptance_criteria": [
+    "`find lib test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400'` no longer lists these 3 files."
+   ],
+   "effort": "M",
+   "labels": [
+    "hygiene",
+    "AG-3",
+    "tutoring"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tutoring-p4",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Move tutor-PIN screen L1 tests to mirror lib/features/tutoring/presentation/screens/ path",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-5",
+   "area": "test/features/tutoring",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/tutoring/tutor_pin_entry_gate_l1_test.dart",
+     "line": 1,
+     "quote": "// L1 behaviour tests for TutorPinEntryGate (W6.5 \u2014 FR-5.4)"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/tutor_pin_reset_screen_l1_test.dart",
+     "line": 1,
+     "quote": "// L1 widget test for TutorPinResetScreen (W6.6 \u2014 FR-5.5)"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/tutor_pin_setup_screen_l1_test.dart",
+     "line": 1,
+     "quote": "// L1 widget tests for TutorPinSetupScreen"
+    }
+   ],
+   "sites": 3,
+   "why": "Each tests exactly one screen at lib/features/tutoring/presentation/screens/*.dart but lives flat at test/features/tutoring/*_l1_test.dart instead of the mirrored test/features/tutoring/presentation/screens/*_l1_test.dart. Elsewhere in the repo the same _l1_test.dart convention nests properly \u2014 e.g. test/features/account/onboarding/presentation/screens/signup_screen_l1_test.dart, test/features/gamification/presentation/screens/reward_configuration_screen_l1_test.dart \u2014 so an agent globbing the mirrored tutoring path for these tests finds nothing, risking a duplicate file being created there alongside the real one, exactly the 'missing or duplicated coverage' cost AG-5's rationale names. (Sibling batches show the same flat placement for accept_invite_screen_l1_test.dart, manage_tutors_screen_l1_test.dart, etc. \u2014 this is a whole-feature pattern, not isolated to these 3.)",
+   "recommendation": "git mv the 3 files (and their tutoring-feature siblings) into test/features/tutoring/presentation/screens/.",
+   "acceptance_criteria": [
+    "The AG-5 unmirrored-test-file audit check (Pending) does not list these files once moved."
+   ],
+   "effort": "S",
+   "labels": [
+    "hygiene",
+    "AG-5",
+    "tutoring"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tutoring-p4",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Delete the dead permanently-skipped test in w3_41_tutor_security_rules_test.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-1 / dead-code hygiene",
+   "area": "test/features/tutoring/w3_41_tutor_security_rules_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/tutoring/w3_41_tutor_security_rules_test.dart",
+     "line": 341,
+     "quote": "skip:\n            'Structural check superseded by allow create: if isOwner(uid) '"
+    }
+   ],
+   "sites": 1,
+   "why": "The test 'completions write is still owner-only despite tutor read access' (lines 331-345) is permanently skipped with a comment saying it is superseded by the very next test ('...guard is not weakened by C2 change', line 347+), which already covers the same invariant. It carries no Linear id, so it sits inert in CI output forever; a reader scanning for security-boundary coverage sees a 'skipped' result next to a security-sounding name and cannot tell at a glance whether that indicates a real unverified gap or accepted redundancy.",
+   "recommendation": "Delete the skipped test block; the following test already asserts the same isOwner(uid)-only invariant.",
+   "acceptance_criteria": [
+    "grep for 'skip:' in w3_41_tutor_security_rules_test.dart returns nothing."
+   ],
+   "effort": "S",
+   "labels": [
+    "hygiene",
+    "dead-code",
+    "tutoring"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tutoring-p4",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Replace ws3_3e_dual_role_fix_test.dart's naive method-body string slice with depth-matched brace extraction",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Feathers-lens test robustness",
+   "area": "test/features/tutoring/ws3_3e_dual_role_fix_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/tutoring/ws3_3e_dual_role_fix_test.dart",
+     "line": 53,
+     "quote": "methodStart,\n          textDisplaySrc.indexOf('\\n  }', methodStart) + 4,"
+    }
+   ],
+   "sites": 1,
+   "why": "The helper extracts a Dart method's body by finding the FIRST line that is exactly two spaces + '}' after the method start, instead of counting brace depth. It happens to work today only because _isTutorSession is a one-line method; the same fragile logic is duplicated a second time in the same file (AC2, ~line 72-75) instead of being factored out. The codebase already has the correct depth-counting version right next door \u2014 _extractRuleBlock in w3_41_tutor_security_rules_test.dart:438-459 \u2014 that this file doesn't reuse. If _isTutorSession ever grows a nested block whose closing brace lands at the same 2-space indent, the slice truncates early and the isNot(contains(...)) assertion would pass regardless of what the unseen remainder of the method does.",
+   "recommendation": "Extract _extractRuleBlock-style depth-counting into a shared test helper and use it for method-body extraction here instead of the raw indexOf heuristic; de-duplicate the two inline copies in this file.",
+   "acceptance_criteria": [
+    "ws3_3e_dual_role_fix_test.dart's method-body extraction uses depth-matched brace counting (or a shared helper), with a regression case where the target method contains a nested block closing at the same indent."
+   ],
+   "effort": "S",
+   "labels": [
+    "test-quality",
+    "fragile-test",
+    "tutoring"
+   ]
+  }
+ }
+]

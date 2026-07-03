@@ -1,0 +1,7 @@
+learning_tracker/test/core/database/seed_manager_test.dart  (794 lines)
+learning_tracker/test/core/database/text_cache_dao_test.dart  (33 lines)
+learning_tracker/test/core/database/track_scope_test.dart  (63 lines)
+learning_tracker/test/core/database/user_database_companion_coverage_test.dart  (1109 lines)
+learning_tracker/test/core/database/user_database_dataclass_core_test.dart  (1176 lines)
+learning_tracker/test/core/database/user_database_dataclass_extended_test.dart  (1613 lines)
+learning_tracker/test/core/database/user_database_dataclass_test.dart  (853 lines)

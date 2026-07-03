@@ -1,0 +1,40 @@
+[
+ {
+  "sourceBatch": "t1-feat-content_browsing-p3",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Make HierarchySelectionPanel's inline breadcrumb separator direction-aware (reuse breadcrumbSeparatorIcon)",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "AX-3 (directional glyphs) / consistency with established IL-7 invariant",
+   "area": "lib/features/content_browsing/presentation/widgets",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/content_browsing/presentation/widgets/hierarchy_selection_panel.dart",
+     "line": 228,
+     "quote": "const Icon(\n                        Icons.chevron_right,"
+    },
+    {
+     "file": "learning_tracker/lib/features/content_browsing/presentation/widgets/breadcrumb_navigation.dart",
+     "line": 12,
+     "quote": "IconData breadcrumbSeparatorIcon(TextDirection direction) =>\n    direction == TextDirection.rtl ? Icons.chevron_left : Icons.chevron_right;"
+    }
+   ],
+   "sites": 1,
+   "why": "breadcrumb_navigation.dart documents an already-fixed bug (IL-7 / R2 finding 4): \"previously the hardcoded root-chip chevron disagreed with the inner ones in RTL,\" fixed by extracting breadcrumbSeparatorIcon() so \"every separator in one trail points the same way\" \u2014 and il7_il9_breadcrumb_selection_test.dart pins that invariant for BreadcrumbNavigation. HierarchySelectionPanel renders \"its OWN inline breadcrumb (separate from BreadcrumbNavigation)\" (its own docstring) and never adopted that helper: its separator is a bare `const Icon(Icons.chevron_right, ...)`. In RTL/Hebrew-terms mode, a user drilling into a multi-level curriculum via this panel (used across track setup, lifetime marking, and scope selection) sees a breadcrumb separator pointing the wrong way, inconsistent with every other breadcrumb trail in the app. No test catches it: il7_il9 only pumps the standalone BreadcrumbNavigation, and this batch's own r2_panel_leaf_crumb_ellipsis_test.dart pumps HierarchySelectionPanel in both LTR and RTL (lines 159-163) but never asserts the separator icon.",
+   "recommendation": "Replace the hardcoded `Icons.chevron_right` breadcrumb-separator Icon in hierarchy_selection_panel.dart with `breadcrumbSeparatorIcon(Directionality.of(context))` (or `terms.isHebrew ? TextDirection.rtl : TextDirection.ltr`, since `terms` is already in scope in this build method), and add an IL-7-style icon-direction assertion to a HierarchySelectionPanel breadcrumb test.",
+   "acceptance_criteria": [
+    "hierarchy_selection_panel.dart's breadcrumb-separator Icon calls breadcrumbSeparatorIcon(...) instead of a literal Icons.chevron_right.",
+    "A widget test pumping HierarchySelectionPanel in RTL asserts find.byIcon(Icons.chevron_left) and findsNothing for chevron_right (mirroring il7_il9_breadcrumb_selection_test.dart), and is RED against the current hardcoded icon."
+   ],
+   "labels": [
+    "rtl",
+    "i18n",
+    "content_browsing",
+    "AX-3",
+    "duplication"
+   ],
+   "effort": "S"
+  }
+ }
+]

@@ -1,0 +1,215 @@
+[
+ {
+  "sourceBatch": "t1-feat-progress-p4",
+  "findingIndex": 9,
+  "finding": {
+   "title": "Rename the top-level child() test helper in progress_widgets_test.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "naming hygiene",
+   "area": "test/features/progress/presentation/widgets",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/progress/presentation/widgets/progress_widgets_test.dart",
+     "line": 582,
+     "quote": "Widget child(HierarchyLevelProgress level) =>\n    HierarchyProgressCard(level: level);"
+    }
+   ],
+   "sites": 1,
+   "why": "A top-level function literally named `child` is called as `SingleChildScrollView(child: child(level))` (line 483) in the same file \u2014 the free function shares its name with the ubiquitous Flutter `child:` named parameter used dozens of times elsewhere in the same 583-line file, forcing a reader to disambiguate 'parameter or function?' at every occurrence.",
+   "recommendation": "Rename to something like _hostedLevelCard or _buildLevelCard.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "No top-level test helper shares a name with a common Flutter named parameter (child, key, builder, etc.)"
+   ],
+   "labels": [
+    "hygiene",
+    "naming",
+    "progress"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-progress-p5",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Complete B18 in siyumim_timeline_and_lifetime_providers_test.dart to actually exercise the unmark-after-mark ledger conflict it documents",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (tautological / weaker-than-claimed test)",
+   "area": "features/progress (test) \u2014 lifetime_knowledge hotspot",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/progress/siyumim_timeline_and_lifetime_providers_test.dart",
+     "line": 1151,
+     "quote": "// Then unmark the same seder \u2014 FIRST-WRITE WINS per putIfAbsent,\n// so the positive mark placed first takes priority."
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/domain/services/lifetime_tree_builder.dart",
+     "line": 110,
+     "quote": "level1Actions.putIfAbsent(unitId, () => action);"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/daos/learning_ledger_dao.dart",
+     "line": 70,
+     "quote": "..orderBy([(t) => OrderingTerm.desc(t.completedAt)]))"
+    }
+   ],
+   "sites": 1,
+   "why": "B18's name and inline comments describe adding a positive seder mark then an unmark entry for the same seder, asserting the 'first (positive) mark' wins per putIfAbsent. The actual ledgerEntries list (lines 1143-1156) contains only the single positive entry -- the unmark _fakeLedgerData call described in the comment was never written -- so B18 exercises nothing beyond a trivial single-entry seder expansion already covered by B17, under a misleading name. computeLearnedLeafRefs' putIfAbsent (builder) plus getEntriesByCurriculum/getEntriesByTrack's orderBy(desc(completedAt)) (DAO) together implement a real 'most-recent-ledger-action-wins' contract with no shared documentation and no runtime assertion tying the two together; only B18b tests the mirror direction (unmark first, mark second). A regression that flips either half of that contract (e.g. a new query path that forgets the desc ordering, or a putIfAbsent that becomes an overwrite) would silently make an old bulk-mark override a later intentional unmark, and nothing in this suite would catch the positive-first/unmark-second direction.",
+   "recommendation": "Add the described second _fakeLedgerData(..., entryScope: 'unmark_seder') entry after the positive one in B18 and assert the leaf remains learned (mirroring B18b's assertion in the opposite order); add a doc comment on computeLearnedLeafRefs stating the newest-first ordering precondition it relies on from callers.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "B18's ledgerEntries list contains both a positive seder entry and a corresponding unmark_seder entry, and the test fails if putIfAbsent semantics regress",
+    "computeLearnedLeafRefs doc comment states its ledgerEntries-must-be-newest-first-by-completedAt precondition"
+   ],
+   "labels": [
+    "testing",
+    "progress",
+    "hotspot",
+    "lifetime-knowledge"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-progress-p5",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Split recent_activity_and_hierarchy_panel_l1_test.dart and siyumim_timeline_and_lifetime_providers_test.dart under the AG-3 400-line cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "features/progress (test)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/progress/recent_activity_and_hierarchy_panel_l1_test.dart",
+     "line": 1,
+     "quote": "// L1 widget tests \u2014 RecentActivityScreen + HierarchySelectionPanel (combined)"
+    },
+    {
+     "file": "learning_tracker/test/features/progress/siyumim_timeline_and_lifetime_providers_test.dart",
+     "line": 1,
+     "quote": "// Mixed tests: SiyumimTimelineView (widget) + lifetime_knowledge_providers (logic)"
+    }
+   ],
+   "sites": 2,
+   "why": "wc -l reports 1093 and 1328 lines respectively (2.7x and 3.3x the 400-line cap coding-standards.md AG-3 sets specifically because 'content past the window is invisible' to per-file agent read budgets). Both files openly bundle two unrelated lib targets (a progress screen + a cross-feature panel; a widget view + a hotspot provider file) into one file by design (own header comments), each with its own lettered coverage group -- exactly the shape AG-3 asks to be split so an agent editing one target doesn't silently miss or duplicate the sibling section's coverage.",
+   "recommendation": "Split along the existing A/B(/C) section boundaries into per-target files at their AG-5 mirrored paths, e.g. recent_activity_screen_l1_test.dart (progress) + hierarchy_selection_panel_test.dart (content_browsing); siyumim_timeline_view_l1_test.dart + lifetime_knowledge_providers_l1_test.dart (both progress).",
+   "effort": "M",
+   "acceptance_criteria": [
+    "find lib test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400' no longer lists these two files",
+    "the AG-3 checker is wired into make audit per the coding-standards.md Enforce line"
+   ],
+   "labels": [
+    "hygiene",
+    "progress",
+    "file-size",
+    "agentic-workflow"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-progress-p5",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Close every inMemoryDb() opened in the progress test suite via addTearDown per drift_memory.dart's documented contract",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6 (hermetic tests \u2014 no leaked/shared native resources)",
+   "area": "features/progress (test)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/helpers/drift_memory.dart",
+     "line": 40,
+     "quote": "/// Callers MUST `await db.close()` in `tearDown` to free the native\n/// resources."
+    },
+    {
+     "file": "learning_tracker/test/features/progress/recent_activity_and_hierarchy_panel_l1_test.dart",
+     "line": 110,
+     "quote": "_db ??= inMemoryDb();"
+    },
+    {
+     "file": "learning_tracker/test/features/progress/recent_activity_and_hierarchy_panel_l1_test.dart",
+     "line": 589,
+     "quote": "final db = inMemoryDb();"
+    },
+    {
+     "file": "learning_tracker/test/features/progress/siyumim_timeline_and_lifetime_providers_test.dart",
+     "line": 187,
+     "quote": "userDatabaseProvider.overrideWith((ref) => db_helper.inMemoryDb()),"
+    }
+   ],
+   "sites": 3,
+   "why": "test/helpers/drift_memory.dart states callers MUST await db.close() in tearDown; none of these three call sites do. _StubChartDataService's db (recent_activity_and_hierarchy_panel_l1_test.dart:108-112) is static/shared mutable state across every stub instance in the file and is never closed -- currently harmless only because the stub happens to override every ChartDataService method RecentActivityScreen calls today, so a future un-overridden method would silently read a DB polluted by whichever test ran first instead of failing loudly. A9's local db (line 589) is closed inline at line 653, not in addTearDown/tearDown, so any expect() failure earlier in that test (several precede it) skips the close and leaks the native handle. siyumim_timeline_and_lifetime_providers_test.dart:187 opens a brand-new native DB inside a provider-override closure invoked fresh by all 11 Part-A testWidgets, none of which close it.",
+   "recommendation": "Hoist each inMemoryDb() call to a local variable and register addTearDown(db.close) (or tester-level addTearDown) immediately next to it, including inside the override closure at siyumim_timeline_and_lifetime_providers_test.dart:187 and for the static stub db.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "every inMemoryDb() call site in these two files is paired with an addTearDown(...close) (or tearDown()) in the same scope",
+    "A9's db.close() executes even when an earlier expect() in the test throws"
+   ],
+   "labels": [
+    "testing",
+    "hygiene",
+    "progress"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-sacred_time",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Fix vacuous cross-feature deep-import check (Makefile check 15) and route Sacred Time's cross-feature imports through a real barrel",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Rule 2 / Rule 0",
+   "area": "layering/tooling",
+   "evidence": [
+    {
+     "file": "learning_tracker/Makefile",
+     "line": 378,
+     "quote": "awk -F: '{match($$1, /features\\/([^\\/]+)\\//, a); match($$0, /features\\/([^\\/]+)\\//, b); if(a[1] != b[1]) print}'"
+    },
+    {
+     "file": "learning_tracker/lib/features/sacred_time/presentation/providers/sacred_location_provider.dart",
+     "line": 6,
+     "quote": "import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/features/sacred_time/sacred_time.dart",
+     "line": 7,
+     "quote": "library sacred_time;"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/presentation/screens/settings_screen.dart",
+     "line": 23,
+     "quote": "import 'package:learning_tracker/features/sacred_time/presentation/widgets/sacred_time_settings_card.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/screens/permission_prompt_screen.dart",
+     "line": 8,
+     "quote": "import 'package:learning_tracker/features/sacred_time/data/services/location_service.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/features/notifications/domain/services/notification_scheduler.dart",
+     "line": 7,
+     "quote": "import 'package:learning_tracker/features/sacred_time/domain/models/sacred_location.dart';"
+    }
+   ],
+   "sites": 6,
+   "why": "check 15's awk does `match($0, ...)` against the WHOLE grep line (file:line:content); since the file path always starts with the importing file's own 'features/<x>/' prefix, that regex always matches the file's OWN feature name first, so a[1] (from the file path) and b[1] (also latched onto the same leading path) are always equal and the print condition never fires. I ran the exact pipeline against the current tree and confirmed 0 output despite real violations. sacred_time.dart is the feature's designated barrel but exports nothing (7 lines, no export statement) and nobody imports it; meanwhile 6 files \u2014 1 in this batch, 5 across settings/onboarding/notifications \u2014 deep-import sacred_time internals directly (one reaches into sacred_time's data/services/ layer). coding-standards.md's current Rule 2 text also says the barrel must be named providers.dart, but no feature in the repo, including sacred_time, has ever adopted that filename \u2014 every barrel and the checker itself still use the pre-revision <feature>.dart convention, so doc and code disagree about what's even being enforced. Net effect: the one guardrail meant to bound this feature's blast radius is silently non-functional, and where it would apply is already routinely bypassed \u2014 a future sacred_time internal refactor breaks 6 unrelated files with zero warning today.",
+   "recommendation": "Fix the awk to isolate the import target (e.g. split on the quote character or operate on a field after the import keyword) before comparing feature names; then either populate sacred_time.dart's exports and migrate the 6 call sites to import through it, or accept <feature>.dart as the real convention and correct coding-standards.md's Rule 2 text to match.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "make audit check 15 flags a deliberately cross-feature-deep-import test fixture (regression-proves the awk fix)",
+    "coding-standards.md Rule 2 names the barrel filename that actually exists in the repo",
+    "sacred_time.dart either exports its public surface and is used by the 6 identified external call sites, or is removed if the feature intentionally has no barrel yet"
+   ],
+   "labels": [
+    "layering",
+    "tooling",
+    "rule-0",
+    "architecture"
+   ]
+  }
+ }
+]

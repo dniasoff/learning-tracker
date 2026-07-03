@@ -1,0 +1,181 @@
+[
+ {
+  "sourceBatch": "t1-core-database-tables",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Update docs/delete-policy.md \u2014 curriculum_tracks moved from deletedAt to state/stateChangedAt in W3.28/W3.29",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-8 (schema diffs update their paired doc in the same PR) / Tier-4 canonical-doc factual drift",
+   "area": "docs/delete-policy.md vs core/database/tables/curriculum_tracks.dart",
+   "evidence": [
+    {
+     "file": "docs/delete-policy.md",
+     "line": 7,
+     "quote": "| `curriculum_tracks` | Soft-delete | `deletedAt` \u2014 null = active; non-null = deleted |"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/tables/curriculum_tracks.dart",
+     "line": 9,
+     "quote": "replaced ad-hoc `isActive`/`deletedAt`/`deactivatedAt` tombstone columns with a single unified `state` enum column"
+    }
+   ],
+   "sites": 1,
+   "why": "curriculum_tracks has no `deletedAt` column at all today \u2014 it was replaced by `state`/`stateChangedAt`. A reader implementing new delete-policy-adjacent code from this doc would query/write a column that doesn't exist. The same doc's coverage table also never mentions daily_plans/point_configs/profile_programs/study_day_configs/outbox/curriculum_scopes/prior_completion_imports, all of which track_dao.dart and profile_repository_impl.dart delete explicitly.",
+   "recommendation": "Update the table row to 'state = deleted + stateChangedAt'; consider adding rows for the other tables track_dao.dart/profile_repository_impl.dart already delete explicitly so the doc is a complete map of delete behavior.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Doc's column-name claim matches an actual column in the current schema (grep-checkable)."
+   ],
+   "labels": [
+    "docs-drift",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-database-tables",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Delete vestigial .gitkeep from core/database/tables/",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Hygiene (dead artifact)",
+   "area": "core/database/tables",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/database/tables/.gitkeep",
+     "line": 1,
+     "quote": "(empty file)"
+    }
+   ],
+   "sites": 1,
+   "why": ".gitkeep exists only to keep an otherwise-empty directory tracked; this directory holds 27 real table files, so the placeholder is pure clutter.",
+   "recommendation": "git rm the file.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "File removed; directory remains tracked (trivially true \u2014 it has real files)."
+   ],
+   "labels": [
+    "hygiene",
+    "dead-code"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-database-tables",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Declare PointsLedger.redemptionId as a real FK to RewardRedemptions instead of a comment-only reference",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "profileId-in-PK-adjacent referential-integrity discipline / Evans (invariant enforced in one place, not just documented)",
+   "area": "core/database/tables/points_balance.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/database/tables/points_balance.dart",
+     "line": 54,
+     "quote": "/// Optional FK to [RewardRedemptions.id] for redemption-related entries."
+    },
+    {
+     "file": "learning_tracker/lib/core/database/tables/points_balance.dart",
+     "line": 55,
+     "quote": "IntColumn get redemptionId => integer().nullable()();"
+    }
+   ],
+   "sites": 1,
+   "why": "The comment asserts a foreign-key relationship the schema never declares. Nothing stops redemptionId from pointing at a nonexistent row, or (with no DB check) at a redemption belonging to a different profile if a future query bug wires the wrong id.",
+   "recommendation": "Add `.references(RewardRedemptions, #id)` in a schema migration (RewardRedemptions rows are never hard-deleted today, so KeyAction.noAction/restrict is reasonable).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Migration adds the FK; a new test asserts inserting a PointsLedger row with a bogus redemptionId fails."
+   ],
+   "labels": [
+    "data-integrity",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-domain-learning",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Make ScheduleSpec's delayDays/daysOfWeek/rollingWindowSize getters exhaustive instead of using a `_` catch-all",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "EH-6",
+   "area": "core/domain/value_objects (scheduling)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/domain/value_objects/schedule_spec.dart",
+     "line": 75,
+     "quote": "DelaySchedule(:final delayDays) => delayDays,\n    _ => 0,"
+    },
+    {
+     "file": "learning_tracker/lib/core/domain/value_objects/schedule_spec.dart",
+     "line": 81,
+     "quote": "WeeklySchedule(:final daysOfWeek) => daysOfWeek,\n    _ => null,"
+    },
+    {
+     "file": "learning_tracker/lib/core/domain/value_objects/schedule_spec.dart",
+     "line": 87,
+     "quote": "RollingSchedule(:final windowSize) => windowSize,\n    _ => null,"
+    }
+   ],
+   "sites": 3,
+   "why": "EH-6 requires sealed-type switches to be exhaustive with no `default:`/`_` arm, precisely so the compiler forces every call site to be revisited when a new subtype is added. All three convenience getters on the sealed ScheduleSpec base class use `_ =>` to cover 'the other two variants' instead of naming them. The file's own docstring says a W3.27 migration to a single JSON `schedule` column is coming and will touch this exact codec \u2014 when that (or any future) change adds a 4th ScheduleSpec variant, these three getters will compile cleanly and silently return 0/null/null for it instead of forcing a compile error, which is exactly the failure mode sealed classes exist to prevent.",
+   "recommendation": "Rewrite each getter with an explicit arm per subtype (e.g. `WeeklySchedule() => 0, RollingSchedule() => 0` instead of `_ => 0`) so adding a new variant breaks the build until these getters are updated.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "delayDays/daysOfWeek/rollingWindowSize each list DelaySchedule/WeeklySchedule/RollingSchedule explicitly with no `_`/`default` arm.",
+    "Once dart run custom_lint is fixed (already tracked separately), no_hardcoded_domain_term-style exhaustiveness stays enforced; until then, `dart analyze` continues to flag any genuinely non-exhaustive switch if a variant is later added without updating these getters."
+   ],
+   "labels": [
+    "EH-6",
+    "sealed-class",
+    "exhaustiveness"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-domain-learning",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Fix SefariaRef.titlePart/addressPart to match the documented chapter:verse split (or fix the docs)",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Evans (ubiquitous-language contract) / TQ-7-TQ-8 spirit (test encodes the bug instead of catching it)",
+   "area": "core/domain/value_objects (sefaria)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/domain/value_objects/sefaria_ref.dart",
+     "line": 66,
+     "quote": "/// For `\"Mishnah Berakhot 1:1\"` this is `\"Mishnah Berakhot\"`."
+    },
+    {
+     "file": "learning_tracker/lib/core/domain/value_objects/sefaria_ref.dart",
+     "line": 133,
+     "quote": "r'^(.*?)(\\d+[a-z]?)$',"
+    },
+    {
+     "file": "learning_tracker/test/core/domain/value_objects/sefaria_ref_test.dart",
+     "line": 67,
+     "quote": "expect(ref.titlePart, 'Mishnah Berakhot 1:');"
+    }
+   ],
+   "sites": 1,
+   "why": "The class docstring's own worked example says titlePart of \"Mishnah Berakhot 1:1\" is \"Mishnah Berakhot\" (address \"1:1\"). The `_splitTail` regex only strips a single trailing digit run (optionally +1 letter), so it can never cross the ':' in a chapter:verse address \u2014 for that exact documented example it actually produces titlePart == \"Mishnah Berakhot 1:\" and addressPart == \"1\". The test file's own inline comment ('let's assert what we actually produce... The SefariaRef titlePart splits on the LAST pure-numeric token') shows the author noticed the mismatch and wrote the test to lock in the wrong output rather than fix the regex or the docs. Mishnah/Tanach chapter:verse is the single most common ref shape in this Torah-study app, so any future caller of titlePart/addressPart (currently unused in production) inherits silently wrong output for the primary case, with a green regression test giving false confidence.",
+   "recommendation": "Either extend `_splitTail` to also recognize a `\\d+:\\d+` chapter:verse tail as one address token, or correct the docstring to describe the actual single-digit-run behavior \u2014 then update the test to assert the corrected contract, not the current output.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "SefariaRef.parse('Mishnah Berakhot 1:1').titlePart equals whatever the corrected docstring promises (either 'Mishnah Berakhot' with the regex fixed, or the docstring rewritten to match current behavior).",
+    "sefaria_ref_test.dart's titlePart test for chapter:verse refs no longer contains a comment acknowledging the assertion doesn't match the documented contract."
+   ],
+   "labels": [
+    "dead-code",
+    "contract-mismatch",
+    "test-quality"
+   ]
+  }
+ }
+]

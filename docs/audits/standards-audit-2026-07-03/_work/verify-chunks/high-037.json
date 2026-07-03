@@ -1,0 +1,44 @@
+[
+ {
+  "sourceBatch": "t1-feat-account-p1",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Add ref.mounted guards and Timer disposal to SignInController's autoDispose async flows",
+   "severity": "P1",
+   "confidence": "SUSPECTED",
+   "rule": "SM-4",
+   "area": "features/account/presentation/notifiers/sign_in_controller.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/account/presentation/notifiers/sign_in_controller.dart",
+     "line": 1013,
+     "quote": "final signInControllerProvider =\n    NotifierProvider.autoDispose<SignInController, SignInState>("
+    },
+    {
+     "file": "learning_tracker/lib/features/account/presentation/notifiers/sign_in_controller.dart",
+     "line": 706,
+     "quote": "final watchdog = Timer(const Duration(seconds: 15), () {\n      if (state is SignInSubmitting) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/account/presentation/notifiers/sign_in_controller.dart",
+     "line": 878,
+     "quote": "} finally {\n      watchdog.cancel();"
+    }
+   ],
+   "sites": 1,
+   "why": "This 1016-line Notifier<SignInState> is registered autoDispose and performs 84 awaited operations per file (multi-second retries, 8s Firestore timeouts, 350ms polling loops) yet contains zero occurrences of 'mounted' anywhere in the file \u2014 every method touches `state`/`_ref` after an await with no disposal guard. If the user backs out of the sign-in screen mid-request (a completely ordinary action while a 'signing in...' spinner shows), autoDispose tears the notifier down; when the pending await resolves and the code does `state = SignInError(...)` or `_ref.read(...)`, Riverpod 3 throws UnmountedRefException. The watchdog Timer compounds this: it is only cancelled in signInWithEmail/signInWithGoogle's own `finally` block, never via ref.onDispose, so if the notifier is disposed mid-flight the Timer keeps running and fires `state = ...` against an already-disposed notifier up to 45s later. The codebase already has an established ref.mounted convention elsewhere (dashboard_providers.dart, notification_providers.dart, sacred_location_provider.dart all use it), so this file's total omission is an inconsistency, not a repo-wide non-issue.",
+   "recommendation": "After every await that precedes a `state =` or `_ref.read(...)` write, add `if (!ref.mounted) return;`. Register `ref.onDispose(watchdog.cancel)` immediately after each Timer is created (both the 15s and 45s watchdogs).",
+   "effort": "M",
+   "acceptance_criteria": [
+    "A notifier test that disposes the ProviderContainer (or pops the route) while signInWithEmail/signInWithGoogle is mid-await asserts no exception escapes and no post-dispose state write occurs",
+    "Watchdog Timers are cancelled by ref.onDispose in addition to the existing finally-block cancel"
+   ],
+   "labels": [
+    "sm-4",
+    "riverpod",
+    "crash-risk",
+    "autodispose"
+   ]
+  }
+ }
+]

@@ -1,0 +1,186 @@
+[
+ {
+  "sourceBatch": "t1-feat-account-p1",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Watch reactive auth state instead of ref.read-ing currentUser inside _AccountTileState.build()",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "SM-3",
+   "area": "features/account/presentation/screens/account_picker_screen.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/account/presentation/screens/account_picker_screen.dart",
+     "line": 274,
+     "quote": "final fbUser = ref.read(authRepositoryProvider).currentUser;"
+    }
+   ],
+   "sites": 1,
+   "why": "SM-3 requires ref.watch in build and ref.read only in callbacks, precisely because a ref.read snapshot of a mutable getter (`.currentUser`, which changes on sign-in/out/re-auth without the authRepositoryProvider instance itself changing) is only re-evaluated when something else this widget DOES watch happens to force a rebuild \u2014 not when the underlying session actually changes. The tile's 'valid session' vs 'sign in again' pill/warning-icon can go stale after an auth event (e.g. a sibling tile's re-auth flow) that doesn't independently invalidate this tile.",
+   "recommendation": "Replace with a watched, narrow selector, e.g. `ref.watch(authStateProvider.select((s) => s.currentUser?.firebaseUid))`, so the tile is reactive to session changes.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "A widget test changes the live Firebase session via a provider override while the picker is mounted and asserts the affected tile's badge updates without an unrelated rebuild trigger"
+   ],
+   "labels": [
+    "sm-3",
+    "riverpod",
+    "stale-ui"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-account-p1",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Log the comment-only catch blocks that structurally evade the single-line empty-catch grep",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "EH-3",
+   "area": "features/account error handling (log-less catches)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/account/domain/services/account_management_service.dart",
+     "line": 182,
+     "quote": "} catch (e) {\n      // Log but don't rethrow \u2014 auth deletion + local cleanup still proceed."
+    },
+    {
+     "file": "learning_tracker/lib/features/account/domain/services/account_lifecycle_service.dart",
+     "line": 54,
+     "quote": "} catch (_) {\n      // Auth not initialized (tests, or Firebase init failed at"
+    },
+    {
+     "file": "learning_tracker/lib/features/account/presentation/notifiers/sign_in_controller.dart",
+     "line": 614,
+     "quote": "} catch (_) {\n        // Network unavailable or CF error \u2014 fall through to the default path."
+    },
+    {
+     "file": "learning_tracker/lib/features/account/presentation/screens/account_picker_screen.dart",
+     "line": 550,
+     "quote": "} catch (_) {\n        // Silent attempt failed (never shows UI) \u2192 fall through to interactive."
+    },
+    {
+     "file": "learning_tracker/lib/features/account/presentation/screens/account_picker_screen.dart",
+     "line": 588,
+     "quote": "} catch (_) {\n        // Sign-out best-effort; ignore."
+    }
+   ],
+   "sites": 5,
+   "why": "make audit check 9/15 only matches a literal single-line `catch (_) {}`; each of these 5 blocks contains ONLY a comment across 2-3 lines and no AppLogger call, no rethrow, and no state-producing action, so they are functionally empty and log-less but invisible to the enforced grep. account_management_service.dart's is on the GDPR-style account-deletion path where a comment literally claims 'Log but don't rethrow' yet no logging call exists. The codebase's own convention for the identical 'best-effort cleanup, may throw PlatformException' shape IS to log (see the ~6 AppLogger.warning(event: '..._sign_out_failed', ...) sites already in sign_in_controller.dart), making these omissions an inconsistency, not a deliberate style choice \u2014 any of these silent failures is currently undebuggable from production logs.",
+   "recommendation": "Add `AppLogger.instance.warning(event: '<descriptive_event>', exception: e)` (or `.handle`) to each; consider extending the Makefile's empty-catch grep to strip `//`-comment lines before matching `{\\s*}` so this class of gap is caught going forward.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Each of the 5 catch blocks logs via AppLogger",
+    "The empty-catch Rule-0 checker is extended to strip comment-only bodies before matching, or a new checker targets this pattern specifically"
+   ],
+   "labels": [
+    "eh-3",
+    "logging",
+    "silent-failure"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-account-p1",
+  "findingIndex": 8,
+  "finding": {
+   "title": "Delete the dead duplicate auth_validators.dart under features/account/onboarding",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-4 / dead code",
+   "area": "features/account/onboarding/domain/validators",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/account/onboarding/domain/validators/auth_validators.dart",
+     "line": 8,
+     "quote": "String? validateEmail(String? value) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/account/account.dart",
+     "line": 19,
+     "quote": "export 'onboarding/domain/validators/auth_validators.dart';"
+    }
+   ],
+   "sites": 1,
+   "why": "lib/features/account/onboarding/domain/validators/auth_validators.dart is byte-identical (`diff` clean) to lib/features/onboarding/domain/validators/auth_validators.dart, and defines the same public top-level functions (validateEmail, validatePassword, validateDisplayName). A repo-wide grep found zero importers of the features/account copy inside lib/ or test/ \u2014 only the features/onboarding copy is actually imported (by signup_screen.dart, sign_in_screen.dart, and 2 tests). Yet account.dart's public barrel re-exports the dead copy as part of the feature's advertised public surface, so any external caller who imports it via the barrel gets a function that is NOT the one this feature's own screens actually use, and a future fix to one copy (e.g. the password-length policy) will silently not apply to the other.",
+   "recommendation": "Delete lib/features/account/onboarding/domain/validators/auth_validators.dart and its account.dart export line. If validators genuinely need to be shared across features/account and features/onboarding, give them one owning location and have the other import via that feature's barrel.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "File removed; account.dart no longer exports it; flutter analyze / build stays green",
+    "AG-4 duplicate-symbol grep across lib/ no longer flags validateEmail/validatePassword/validateDisplayName twice"
+   ],
+   "labels": [
+    "ag-4",
+    "dead-code",
+    "duplication"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-account-p1",
+  "findingIndex": 9,
+  "finding": {
+   "title": "Centralize the minimum-password-length constant shared by the UI validator and LocalAuthService",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Evans ubiquitous-language / invariant re-derivation",
+   "area": "features/account password policy",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/account/onboarding/domain/validators/auth_validators.dart",
+     "line": 24,
+     "quote": "if (value.length < 6) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/account/domain/services/local_auth_service.dart",
+     "line": 59,
+     "quote": "static const int _minPasswordLength = 8;"
+    }
+   ],
+   "sites": 2,
+   "why": "The same conceptual policy (minimum local-account password length) is hard-coded as 6 in the client-side form validator and 8 in LocalAuthService's domain-layer check. Today the two never collide end-to-end \u2014 the offline-signup path that reaches LocalAuthService.signUp always passes a synthetic UUID password, never the user-typed one gated by the 6-char validator \u2014 but the values being a single conceptual invariant with two different numbers is a landmine for the next call site that wires a real user-typed password through both layers (client says valid at 6-7 chars, domain then throws InvalidInputException).",
+   "recommendation": "Define the constant once (e.g. alongside LocalAuthService or in a small shared constants file) and reference it from auth_validators.dart.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "A single named constant is referenced by both the UI validator and LocalAuthService",
+    "A unit test asserts the two validators agree at the boundary length"
+   ],
+   "labels": [
+    "evans",
+    "invariant",
+    "password-policy"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-account-p1",
+  "findingIndex": 10,
+  "finding": {
+   "title": "Stop interpolating raw exception text into the sign-up failure l10n message",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "custom_lint no_e_to_string_in_ui (currently non-enforcing)",
+   "area": "features/account/onboarding/presentation/screens/signup_screen.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/account/onboarding/presentation/screens/signup_screen.dart",
+     "line": 291,
+     "quote": "_showError(AppLocalizations.of(context)!.signUpFailed(e.toString()));"
+    }
+   ],
+   "sites": 1,
+   "why": "This is the exact pattern the repo's (currently broken/non-enforcing per baseline) custom_lint rule `no_e_to_string_in_ui` targets: a raw exception's .toString() is spliced into a user-facing localized string on the local/offline sign-up failure path, so the user can see a technical exception dump instead of translated, actionable copy. It is the only such site in this batch \u2014 the other three e.toString() uses in the batch are internal to _extractFirebaseCode's regex parsing and never reach the UI directly.",
+   "recommendation": "Map the failure to a stable error code (mirroring the existing _mapAuthError switch) and a dedicated generic ARB message instead of interpolating e.toString().",
+   "effort": "S",
+   "acceptance_criteria": [
+    "signUpFailed(...) or its replacement no longer receives e.toString()",
+    "Once custom_lint is repaired (tracked separately), no_e_to_string_in_ui passes clean on this file"
+   ],
+   "labels": [
+    "custom-lint",
+    "no_e_to_string_in_ui",
+    "i18n"
+   ]
+  }
+ }
+]

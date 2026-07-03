@@ -1,0 +1,248 @@
+[
+ {
+  "sourceBatch": "t1-feat-sync-p2",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Fix docs/sync-conflict-resolution.md's LWW tie-break rule \u2014 it contradicts the implemented and tested behavior",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-8 (doc/code parity); FB-2/FB-3 (LWW ordering, clock-skew handling)",
+   "area": "docs/sync-conflict-resolution.md vs core/sync/merge/drift_merge_store.dart",
+   "evidence": [
+    {
+     "file": "docs/sync-conflict-resolution.md",
+     "line": 30,
+     "quote": "> strictly newer timestamp wins. If both timestamps are equal the remote row\n> is silently dropped (the LWW rule is `remoteTimestamp > localTimestamp`)."
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/merge/drift_merge_store.dart",
+     "line": 148,
+     "quote": "// The one true tie (equal `updated_at`, no decisive server timestamp) is\n    // resolved by preferring remote so two devices that wrote the same value"
+    },
+    {
+     "file": "learning_tracker/test/sync/merge/lww_symmetric_test.dart",
+     "line": 1228,
+     "quote": "test('exactly identical timestamps, no synced_at \u2192 remote wins', () {"
+    }
+   ],
+   "sites": 1,
+   "why": "The canonical doc says ties are dropped in favor of local (strict `remoteTimestamp > localTimestamp`) and never mentions a clock-skew window. The actual implementation and its exhaustive, intentional test coverage do the opposite for the common case: outside a \u00b15s skew window ties do stay local, but *inside* the window \u2014 the realistic case for near-simultaneous writes from a user's own two devices \u2014 an exact tie goes to REMOTE (code comment: 'prefer remote... converge instead of bouncing'), and a `synced_at` server-timestamp tie-break exists that the doc never describes at all. An engineer implementing a new merger or debugging a 'my edit got overwritten' report will read the doc, get the tie-break backwards for the realistic case, and either mis-implement a new merger or chase a phantom bug.",
+   "recommendation": "Rewrite the 'Push/pull invariant' section to describe the actual 3-tier rule in DriftMergeStore.remoteIsNewer: (1) outside \u00b15s skew, strict remote>local wins and ties stay local; (2) inside \u00b15s skew with both sides carrying synced_at, the server timestamp decides; (3) inside the window with no decisive synced_at, remote wins to force convergence. Point the doc at drift_merge_store.dart:113-152 so future changes are easy to diff against it.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "docs/sync-conflict-resolution.md's tie-break wording matches lib/core/sync/merge/drift_merge_store.dart:113-152 exactly, confirmed by re-reading both side by side",
+    "the doc states the \u00b15s clock-skew window and the synced_at tie-break, matching DriftMergeStore.clockSkewTieBreakWindow"
+   ],
+   "labels": [
+    "docs",
+    "sync",
+    "lww",
+    "correctness-adjacent"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-sync-p2",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Consolidate test/sync/'s merger and round-trip tests into the AG-5-mirrored test/core/sync/ location \u2014 they duplicate existing coverage",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-5 (test/ mirrors lib/ 1:1); Fowler duplication",
+   "area": "test/sync/** (this batch) vs test/core/sync/**",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/sync/merge/learning_ledger_roundtrip_test.dart",
+     "line": 1,
+     "quote": "/// Round-trip test: the canonical write serializer (LearningLedgerCodec.encode)"
+    },
+    {
+     "file": "learning_tracker/test/core/sync/merge/learning_ledger_merger_test.dart",
+     "line": 1,
+     "quote": "/// Regression tests for [LearningLedgerMerger]."
+    },
+    {
+     "file": "learning_tracker/test/sync/merge/streak_events_roundtrip_test.dart",
+     "line": 1,
+     "quote": "/// Round-trip test: the canonical write serializer (StreakEventCodec.encode)"
+    },
+    {
+     "file": "learning_tracker/test/core/sync/merge/streak_event_merger_test.dart",
+     "line": 1,
+     "quote": "/// Regression tests for [StreakEventMerger]."
+    },
+    {
+     "file": "learning_tracker/test/sync/merge/curriculum_tracks_roundtrip_test.dart",
+     "line": 1,
+     "quote": "/// Round-trip test: the canonical write serializer (TrackCodec.encode) must"
+    },
+    {
+     "file": "learning_tracker/test/sync/merge/learner_profile_roundtrip_test.dart",
+     "line": 1,
+     "quote": "/// Round-trip test: the canonical write serializer (LearnerProfileCodec.encode)"
+    },
+    {
+     "file": "learning_tracker/test/core/sync/merge/mergers_test.dart",
+     "line": 1,
+     "quote": "/// Unit tests for the LWW merge implementations:\n/// [TrackConfigMerger], [SettingsMerger], [LearnerProfileMerger]."
+    },
+    {
+     "file": "learning_tracker/test/sync/merge/stage_definitions_roundtrip_test.dart",
+     "line": 1,
+     "quote": "/// Round-trip test: the canonical write serializer (StageDefinitionCodec.encode)"
+    },
+    {
+     "file": "learning_tracker/test/sync/location_device_scope_test.dart",
+     "line": 1,
+     "quote": "/// WS6 \u2014 Location Device-Scope Consistency (DEC-26)"
+    },
+    {
+     "file": "learning_tracker/test/sync/sacred_time_all_profiles_test.dart",
+     "line": 1,
+     "quote": "/// Regression tests for sacred-time / location scope in the UI-preferences"
+    },
+    {
+     "file": "learning_tracker/test/core/sync/codecs_and_mergers_test.dart",
+     "line": 2,
+     "quote": "///   - [StageDefinitionCodec] encode\u2194decode round-trips (all schedule branches,\n///   - [UiPreferencesMerger] LWW gate, per-field writes, cross-profile isolation,"
+    },
+    {
+     "file": "learning_tracker/test/sync/merge/lww_symmetric_test.dart",
+     "line": 1,
+     "quote": "/// Phase 3 LWW symmetry tests for every LWW merger."
+    },
+    {
+     "file": "learning_tracker/test/sync/merge/persist_updated_at_test.dart",
+     "line": 1,
+     "quote": "/// Phase 3: assert every LWW merger persists the remote `updated_at` via"
+    }
+   ],
+   "sites": 9,
+   "why": "All 24 files in this batch live under test/sync/, not the AG-5-mandated mirror of lib/core/sync/ (test/core/sync/), which already exists and is independently populated (12 files). For at least 9 of this batch's files the overlap is not just structural placement \u2014 it is the same merger/scenario tested twice: LearningLedgerMerger's snake_case-shape regression ('C1 regression' in learning_ledger_merger_test.dart) is retested by learning_ledger_roundtrip_test.dart's codec round-trip; StreakEventMerger's study_date-shape regression ('C2 regression') is retested by streak_events_roundtrip_test.dart; TrackConfigMerger/SettingsMerger/LearnerProfileMerger's LWW behavior (mergers_test.dart, against a hand-rolled fake MergeStore) is retested by curriculum_tracks_roundtrip_test.dart/learner_profile_roundtrip_test.dart/lww_symmetric_test.dart/persist_updated_at_test.dart (against the real DriftMergeStore); StageDefinitionMerger's schedule-shape and UiPreferencesMerger's 'no sacred_time clobber' behavior (codecs_and_mergers_test.dart, 1298 lines) is retested by stage_definitions_roundtrip_test.dart, location_device_scope_test.dart, and sacred_time_all_profiles_test.dart. docs/test-options.md documents test/sync/** as THE location for this coverage and never mentions test/core/sync/ existing \u2014 this is undocumented drift, not a deliberate two-tier split (both directories tag tests 'unit'). Every schema/key-name change to these ~9 mergers now needs edits in two independently-evolving files to stay correct, and a change is more likely to update one and silently leave the other testing stale behavior. This also explains a large slice of the orchestrator's own global ag5-unmirrored.txt pre-scan, which lists nearly all of lib/core/sync/merge/*.dart and lib/core/sync/codec/*.dart as having no exact-path test.",
+   "recommendation": "Pick test/core/sync/ as canonical (per AG-5's own 1:1 rule). For each duplicate pair, fold any scenario unique to the era-1 file (e.g. mergers_test.dart's fake-MergeStore isolation, if it adds value beyond the real-store versions) into the era-2 roundtrip test, then delete the superseded file. Update docs/test-options.md's test/sync/** references to match wherever coverage ends up.",
+   "effort": "L",
+   "acceptance_criteria": [
+    "an AG-5 unmirrored-test audit shows zero lib/core/sync/merge/*.dart or lib/core/sync/codec/*.dart entries once consolidation lands",
+    "the consolidated LearningLedgerMerger/StreakEventMerger/TrackConfigMerger/SettingsMerger/LearnerProfileMerger/StageDefinitionMerger/UiPreferencesMerger suites keep every distinct scenario from both current suites while removing exact duplicates (test count is not simply additive)"
+   ],
+   "labels": [
+    "ag-5",
+    "duplication",
+    "test-structure",
+    "sync"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-sync-p2",
+  "findingIndex": 2,
+  "finding": {
+   "title": "No test anywhere exercises FirestoreGatewayImpl's local-write-echo suppression (hasPendingWrites) \u2014 the 'listener echo of own writes' scenario this batch is charged with covering",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "FB-3 (skip LWW for hasPendingWrites/isFromCache); Nygard lens \u2014 mandated by this batch's AREA NOTE",
+   "area": "core/sync/firestore_gateway_impl.dart listenToCollection (untested); test/sync charter",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/sync/firestore_gateway_impl.dart",
+     "line": 722,
+     "quote": "// document's change carries `hasPendingWrites == true`. Re-processing that\n    // self-write would loop the merge pipeline."
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/firestore_gateway_impl.dart",
+     "line": 732,
+     "quote": "if (change.doc.metadata.hasPendingWrites) {\n          localOnly.add(change.doc.id);"
+    },
+    {
+     "file": "learning_tracker/test/core/sync/firestore_gateway_impl_test.dart",
+     "line": 1188,
+     "quote": "test('listenToCollection emits rows with firestore_id injected', () async {"
+    }
+   ],
+   "sites": 1,
+   "why": "docs/test-options.md names test/sync/** as the home for this area's coverage, and this batch's AREA NOTE mandates the Nygard lens explicitly cover 'listener echo of own writes.' The production mechanism guarding against exactly that \u2014 filtering hasPendingWrites-only docChanges out of listenToCollection's emitted rows so a device doesn't reprocess its own optimistic write as an incoming remote change \u2014 has no test. Verified with `grep -rn hasPendingWrites test/` across the whole repository (zero hits) and by reading the listenToCollection test group in test/core/sync/firestore_gateway_impl_test.dart (the file that would naturally host it): none of its tests construct a pending-write snapshot or assert on this filter. The code's own comment names the failure mode being guarded against ('would loop the merge pipeline') \u2014 that mechanism can regress silently and nothing in CI would catch it.",
+   "recommendation": "Add a test (test/core/sync/firestore_gateway_impl_test.dart, or a new file under this batch's test/sync/ area) using fake_cloud_firestore's snapshot-metadata support, or a light hand-rolled fake at the docChanges/SnapshotMetadata seam, that: writes a doc, captures a snapshot where it appears only via a pending (not-yet-server-confirmed) local write, and asserts it is excluded from listenToCollection's emitted rows while a server-confirmed doc in the same snapshot is included.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "a new/updated test fails against a reverted firestore_gateway_impl.dart (one that emits regardless of hasPendingWrites) and passes against the current implementation"
+   ],
+   "labels": [
+    "coverage-gap",
+    "sync",
+    "nygard",
+    "listener-echo"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-sync-p2",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Give new_listener_coverage_test.dart a real seam into SyncOrchestratorImpl._channelToKind instead of a hand-copied duplicate switch",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Feathers testability seam; Fowler duplication; TQ-8 (test-signal integrity)",
+   "area": "test/sync/new_listener_coverage_test.dart + core/sync channel routing",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/sync/new_listener_coverage_test.dart",
+     "line": 97,
+     "quote": "/// Mirrors `SyncOrchestratorImpl._channelToKind`. Public copy used by the\n/// supervisor's onEvent handler in this test. If the production switch"
+    },
+    {
+     "file": "learning_tracker/test/sync/new_listener_coverage_test.dart",
+     "line": 101,
+     "quote": "String? _channelToKind(String channel) => switch (channel) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+     "line": 1406,
+     "quote": "static String? _channelToKind(String channel) => switch (channel) {"
+    }
+   ],
+   "sites": 1,
+   "why": "The test file's own comment admits the risk: 'If the production switch changes, this duplicate will diverge.' Because SyncOrchestratorImpl._channelToKind is private, the test cannot call the real one, so it wires its own copy into the ListenerSupervisor under test and then verifies that copy against itself. If a future change re-routes a channel to a different EntityKind in production (not just adds a new channel) without a matching edit here, this suite keeps passing against its own stale copy while production sync silently misroutes \u2014 the exact failure mode the file exists to prevent. This isn't hypothetical: lib/core/sync/tutored_listener_supervisor.dart already carries an independent third copy of the same switch, textually different from both (it omits 'learner_profiles' and 'tutor_grants'), showing this table has already drifted once in this codebase.",
+   "recommendation": "Mark SyncOrchestratorImpl._channelToKind @visibleForTesting (or extract it to a small shared top-level function, e.g. core/sync/sync_channel_kind.dart, imported by both sync_orchestrator.dart and tutored_listener_supervisor.dart) and have new_listener_coverage_test.dart import and call the real function instead of maintaining its own switch.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "new_listener_coverage_test.dart no longer defines its own _channelToKind; it imports and calls the production mapping function",
+    "adding a channel to FirestoreListenerSource without a matching production routing entry fails this suite (spot-checked by temporarily adding a mismatched channel)"
+   ],
+   "labels": [
+    "testability",
+    "duplication",
+    "sync-routing"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-sync-p2",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Split test/sync/merge/lww_symmetric_test.dart (1237 lines) \u2014 3x over the AG-3 400-line cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "test/sync/merge/lww_symmetric_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/sync/merge/lww_symmetric_test.dart",
+     "line": 1,
+     "quote": "/// Phase 3 LWW symmetry tests for every LWW merger."
+    }
+   ],
+   "sites": 1,
+   "why": "1237 hand-written lines \u2014 three times the 400-line ratchet the standard justifies as an 'agent read budget' \u2014 is why this file needed three separate Read calls during this audit. At this length the per-merger coverage is also uneven in a way that's hard to eyeball: some merger groups (BookmarkMerger, SettingsMerger, ProfileProgramMerger) get all 4 LWW invariants tested, others (LearnerProfileMerger, GoalMerger, NotificationSettingsMerger, GamificationSettingsMerger, UiPreferencesMerger) get only 2 \u2014 defensible here since the shared remoteIsNewer comparator is separately exhaustively unit-tested at the bottom of the same file, but that reasoning is only discoverable by reading the whole 1237 lines.",
+   "recommendation": "Split into one file per merger under a shared lww_symmetric/ directory, or convert to a single data-driven test iterating a List<MergerCase> table (merger instance + row builder + EntityKind + naturalKey) through the same assertions \u2014 shrinks the file and makes the per-merger coverage matrix explicit instead of implicit.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "the AG-3 checker (`find lib test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400'`) no longer lists lww_symmetric_test.dart"
+   ],
+   "labels": [
+    "hygiene",
+    "test-structure",
+    "ag-3"
+   ]
+  }
+ }
+]

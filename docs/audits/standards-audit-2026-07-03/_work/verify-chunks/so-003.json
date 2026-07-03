@@ -1,0 +1,205 @@
+[
+ {
+  "sourceBatch": "t1-story-epic-25",
+  "chunk": "grp-130",
+  "finding": {
+   "title": "Extract the 3x-duplicated 4-path file-candidate search in epic_25_story_25_20_locale_theme_test.dart into one helper",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler duplication",
+   "area": "test/story_acceptance",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_25_story_25_20_locale_theme_test.dart",
+     "line": 103,
+     "quote": "final candidates = [\n          File('lib/app/learning_tracker_app.dart'),"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_25_story_25_20_locale_theme_test.dart",
+     "line": 395,
+     "quote": "final candidates = [\n          File('lib/app/learning_tracker_app.dart'),"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_25_story_25_20_locale_theme_test.dart",
+     "line": 422,
+     "quote": "final candidates = [\n          File('lib/app/learning_tracker_app.dart'),"
+    }
+   ],
+   "sites": 3,
+   "why": "The identical 4-item candidate list (lib/app/learning_tracker_app.dart, learning_tracker/lib/app/..., lib/main.dart, learning_tracker/lib/main.dart) plus a near-identical linear-search-and-read loop is pasted three times in one file: once in the AC2/AC3 setUpAll (which caches the result as mainSource) and again inside two separate AC9 tests that re-scan and re-read the same files from disk instead of reusing mainSource. A future path change has to be applied in three places in this file alone; missing one silently leaves a structural AC check reading stale content without failing loudly.",
+   "recommendation": "Factor the candidate list and search loop into one shared helper (or simply reuse the cached mainSource from the AC2/AC3 group) and call it from all three sites.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "only one copy of the 4-path candidate list remains in the file",
+    "AC9's two tests reuse the same source read as AC2/AC3 instead of re-scanning disk"
+   ],
+   "labels": [
+    "fowler-duplication",
+    "test-quality",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tracks-p1",
+  "chunk": "grp-113",
+  "finding": {
+   "title": "Deduplicate TrackCreationService/TrackEditService's verbatim study-day persistence loop",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler duplication + DB-3 (batch()/insertAll over awaited per-row loops)",
+   "area": "features/tracks/setup/domain/services",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/domain/services/track_creation_service.dart",
+     "line": 359,
+     "quote": "for (final entry in studyDays.entries) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/domain/services/track_edit_service.dart",
+     "line": 106,
+     "quote": "for (final entry in studyDays.entries) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/domain/services/track_creation_service.dart",
+     "line": 401,
+     "quote": "for (final scope in scopes) {"
+    }
+   ],
+   "sites": 3,
+   "why": "_saveStudyDaysLocal (track_creation_service.dart:348-368) and _saveStudyDays (track_edit_service.dart:95-115) are byte-for-byte identical except a parameter name \u2014 the exact 'delete then loop-await-upsert' method copy-pasted into two sibling services. A future fix (validation, batching, a new column) applied to one copy silently leaves the other stale. Both loops (plus the unbounded _saveScopes loop) await each row individually instead of using Drift's batch()/insertAll, even though they already run inside an open transaction() so correctness is not at risk \u2014 only round-trip count.",
+   "recommendation": "Extract one shared DAO-level batched helper (e.g. StudyDayConfigDao.replaceAll using batch()) and call it from both services; do the same for _saveScopes.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "One shared helper implements the delete+insert study-day/scope replacement using batch()/insertAll",
+    "TrackCreationService and TrackEditService both call it; no duplicate method body remains"
+   ],
+   "labels": [
+    "duplication",
+    "drift",
+    "performance"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-sacred_time",
+  "chunk": "grp-090",
+  "finding": {
+   "title": "Delete the duplicate readInIsrael/writeInIsrael test group in sacred_time_preferences_test.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ / Fowler duplication",
+   "area": "tests",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/sacred_time/data/services/sacred_time_preferences_test.dart",
+     "line": 171,
+     "quote": "group('SacredTimePreferences.readInIsrael', () {"
+    },
+    {
+     "file": "learning_tracker/test/features/sacred_time/data/services/sacred_time_preferences_test.dart",
+     "line": 191,
+     "quote": "group('SacredTimePreferences.readInIsrael / writeInIsrael', () {"
+    }
+   ],
+   "sites": 1,
+   "why": "The group at line 191 tests the exact same three scenarios as the group at line 171 (default-false, true-after-write, false-after-write-false) with only the test names changed. It adds no coverage and doubles the maintenance cost of any future change to these methods' behavior.",
+   "recommendation": "Delete the second (line 191-209) group; it is fully subsumed by the first.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Only one group covers SacredTimePreferences.readInIsrael/writeInIsrael",
+    "No assertions are lost when the duplicate group is removed"
+   ],
+   "labels": [
+    "test-quality",
+    "duplication",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-progress-p1",
+  "chunk": "grp-082",
+  "finding": {
+   "title": "Stop interpolating raw error.toString() into localized error messages across progress screens",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "EH-5 / custom_lint no_e_to_string_in_ui (currently enforcing nothing repo-wide)",
+   "area": "features/progress presentation/screens",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/screens/lifetime_knowledge_screen.dart",
+     "line": 138,
+     "quote": "message: l10n.lifetimeKnowledgeLoadError(error.toString()),"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/screens/lifetime_knowledge_screen.dart",
+     "line": 243,
+     "quote": "l10n.lifetimeKnowledgeCounterError(error.toString()),"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/screens/curriculum_progress_screen.dart",
+     "line": 208,
+     "quote": "message: l10n.curriculumProgressLoadFailed(error.toString()),"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/screens/siyumim_milestones_screen.dart",
+     "line": 68,
+     "quote": "message: l10n.failedToLoadJourney(error.toString()),"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/screens/progress_screen.dart",
+     "line": 69,
+     "quote": "Center(child: Text(l10n.errorWithMessage(error.toString()))),"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/screens/progress_screen.dart",
+     "line": 291,
+     "quote": "child: Text(l10n.errorWithMessage(error.toString())),"
+    }
+   ],
+   "sites": 6,
+   "why": "error.toString() on a Dart/Firebase/Drift exception is always in English (e.g. 'Bad state: ...', 'SqliteException: ...') and not ICU-pluralizable; interpolating it into an otherwise-Hebrew ARB string means a Hebrew-locale, RTL user who hits any of these error states sees a sentence that switches to raw untranslated English mid-string. recent_activity_screen.dart in the same directory shows the correct pattern (l10n.chartFailedToLoad with no error interpolation, 4 uses) \u2014 the other 4 screens in this same feature diverge from it.",
+   "recommendation": "Replace error.toString() interpolation with the generic localized failure string (as recent_activity_screen.dart already does) and, if diagnostic detail is genuinely needed, log error.toString() via AppLogger instead of rendering it to the user.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "None of the 4 screens' AsyncValue.error branches call .toString() on the error object inside a Text/l10n call.",
+    "Once dart run custom_lint is repaired, no_e_to_string_in_ui reports zero hits in lib/features/progress/."
+   ],
+   "labels": [
+    "i18n",
+    "error-handling"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-account-p1",
+  "chunk": "grp-036",
+  "finding": {
+   "title": "Cache the account list Future instead of constructing it fresh inside AccountPickerScreen.build()",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "PF-3",
+   "area": "features/account/presentation/screens/account_picker_screen.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/account/presentation/screens/account_picker_screen.dart",
+     "line": 59,
+     "quote": "child: FutureBuilder<List<DeviceAccount>>(\n          future: registry.getAllAccounts(),"
+    }
+   ],
+   "sites": 1,
+   "why": "registry.getAllAccounts() is called directly inside `Widget build()`, which returns a brand-new Future object on every rebuild. FutureBuilder tracks futures by identity, so any unrelated rebuild of this ConsumerWidget (a ref.watch(accountDbFileNameProvider) change from switching accounts, a locale/theme change, or any ancestor rebuild) restarts the FutureBuilder into ConnectionState.waiting \u2014 flashing the loading spinner over the already-rendered account list and re-querying the device registry \u2014 the textbook 'Future-in-build' Flutter anti-pattern.",
+   "recommendation": "Hoist the fetch behind a FutureProvider/AsyncNotifier (e.g. deviceAccountsProvider watched via ref.watch), or convert to ConsumerStatefulWidget and cache the Future in State so its identity is stable across rebuilds.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "A widget test triggers an unrelated provider rebuild while AccountPickerScreen is mounted and asserts the list does not revert to the loading spinner and getAllAccounts() is not invoked a second time"
+   ],
+   "labels": [
+    "pf-3",
+    "performance",
+    "futurebuilder"
+   ]
+  }
+ }
+]

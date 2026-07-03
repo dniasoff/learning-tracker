@@ -1,0 +1,266 @@
+[
+ {
+  "sourceBatch": "t1-core-sync-merge",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Add per-row exception isolation to every EntityMerger except LearnerProfileMerger",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Nygard: partial I/O failure containment",
+   "area": "core/sync/merge",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/sync/merge/bookmark_merger.dart",
+     "line": 29,
+     "quote": "for (final row in rows) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/merge/goal_merger.dart",
+     "line": 37,
+     "quote": "for (final row in rows) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/merge/learning_ledger_merger.dart",
+     "line": 39,
+     "quote": "for (final row in rows) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/merge/track_config_merger.dart",
+     "line": 32,
+     "quote": "for (final row in rows) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/merge/stage_definition_merger.dart",
+     "line": 42,
+     "quote": "for (final row in rows) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/merge/settings_merger.dart",
+     "line": 28,
+     "quote": "for (final row in rows) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/merge/streak_event_merger.dart",
+     "line": 46,
+     "quote": "for (final row in rows) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/merge/learning_order_merger.dart",
+     "line": 29,
+     "quote": "for (final row in rows) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/merge/profile_program_merger.dart",
+     "line": 37,
+     "quote": "for (final row in rows) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/merge/points_ledger_merger.dart",
+     "line": 36,
+     "quote": "for (final row in rows) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/merge/reward_redemption_merger.dart",
+     "line": 32,
+     "quote": "for (final row in rows) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/merge/completion_event_merger.dart",
+     "line": 29,
+     "quote": "for (final row in rows) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/merge/study_day_config_merger.dart",
+     "line": 29,
+     "quote": "for (final row in rows) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/merge/gamification_settings_merger.dart",
+     "line": 60,
+     "quote": "Future<void> merge({"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/merge/notification_settings_merger.dart",
+     "line": 41,
+     "quote": "Future<void> merge({"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/merge/ui_preferences_merger.dart",
+     "line": 43,
+     "quote": "Future<void> merge({"
+    }
+   ],
+   "sites": 16,
+   "why": "LearnerProfileMerger wraps each row's merge body in try/catch with an explicit rationale (learner_profile_merger.dart:35-37): 'a single malformed/FK-violating profile row must never abort the whole page... The per-row merger try/catch is the primary guard' \u2014 a claim echoed verbatim at the sync_orchestrator.dart call site. None of the other 16 merge implementations apply that pattern: any exception thrown while processing row 5 of a 200-row page (an FK violation \u2014 see the companion finding on stage_definition/settings/goal \u2014 or any malformed-field cast) propagates out of merge() and aborts the whole page. sync_orchestrator.dart's outer per-step catch keeps the app from crashing (it logs 'sync_pull_step_db_error_nonfatal' and returns), but the other 199 rows in that page are silently deferred to the next full sync instead of 199/200 succeeding immediately.",
+   "recommendation": "Generalize LearnerProfileMerger's per-row try/catch (log via AppLogger, continue to the next row) to the other 16 EntityMerger implementations, or centralize the isolation once inside MergeRouter.dispatch if it's restructured to iterate rows itself.",
+   "effort": "L",
+   "acceptance_criteria": [
+    "A fault-injection test (parametrized over EntityKind.all where practical) merges a page containing one deliberately-malformed/throwing row alongside a valid row and asserts the valid row still applies and the bad one is logged, not that the whole page is dropped."
+   ],
+   "labels": [
+    "sync",
+    "merge",
+    "resilience",
+    "nygard"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-sync-merge",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Split the four hand-written files in core/sync/merge that exceed the 400-line AG-3 cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3 (hand-written Dart file <=400 lines; generated exempt)",
+   "area": "core/sync/merge",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/sync/merge/drift_merge_store.dart",
+     "line": 1,
+     "quote": "788 total lines"
+    },
+    {
+     "file": "learning_tracker/test/core/sync/merge/drift_merge_store_test.dart",
+     "line": 1,
+     "quote": "1842 total lines"
+    },
+    {
+     "file": "learning_tracker/test/core/sync/merge/mergers_test.dart",
+     "line": 1,
+     "quote": "460 total lines"
+    },
+    {
+     "file": "learning_tracker/test/core/sync/merge/notification_settings_merger_round_trip_test.dart",
+     "line": 1,
+     "quote": "453 total lines"
+    }
+   ],
+   "sites": 4,
+   "why": "drift_merge_store.dart alone blends the LWW clock-skew gate, seven distinct per-entity upsert implementations, FK/account resolution logic and schedule JSON encoding in one file \u2014 the 'God File' shape AG-3's cap exists to prevent \u2014 and it is this batch's #1 churn hotspot, so every fix wave re-reads all 788 lines for context. The three oversized test files mirror the same sprawl.",
+   "recommendation": "Split drift_merge_store.dart into one file per upsert group behind the existing MergeStore interface; split drift_merge_store_test.dart/mergers_test.dart/notification_settings_merger_round_trip_test.dart to mirror, no behavior change.",
+   "effort": "L",
+   "acceptance_criteria": [
+    "AG-3 line-count checker (grep/lint over lib/ and test/, generated files exempt) passes for all four files."
+   ],
+   "labels": [
+    "hygiene",
+    "AG-3",
+    "file-size"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-sync-merge",
+  "findingIndex": 8,
+  "finding": {
+   "title": "Remove or reconcile the dead LWW/merge-forward helpers in merge_rules.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Dead code / Fowler speculative generality; Evans ubiquitous-language drift (file claims authority it no longer has)",
+   "area": "core/sync/merge",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/sync/merge/merge_rules.dart",
+     "line": 29,
+     "quote": "MergeResult<T> lwwMerge<T>({"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/merge/merge_rules.dart",
+     "line": 47,
+     "quote": "int mergeForwardMaxInt(int local, int remote) =>"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/merge/merge_rules.dart",
+     "line": 56,
+     "quote": "Set<T> mergeForwardUnion<T>(Iterable<T> local, Iterable<T> remote) => {"
+    }
+   ],
+   "sites": 1,
+   "why": "A repo-wide grep shows lwwMerge, mergeForwardMaxInt, mergeForwardMaxDate, mergeForwardUnion and MergeResult are referenced only by test/features/sync/domain/merge_rules_test.dart and one story-acceptance test \u2014 no production merger calls any of them; the real LWW gate is DriftMergeStore.remoteIsNewer. The file's doc comment ('Conflict resolution rules for non-event-log data... These rules handle the rest') presents itself as the authoritative merge-rule library, misleading a reader when 12 of 13 LWW mergers actually moved to DriftMergeStore in the documented 'Phase 3' upgrade.",
+   "recommendation": "Once StudyDayConfigMerger is migrated off this file's remoteIsNewer (see the paired finding), delete the unused functions/class and their now-orphaned tests, or correct the file's doc comment to state it is superseded/test-only.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Post-fix grep confirms merge_rules.dart has zero production callers left; file is either deleted or its doc comment is corrected."
+   ],
+   "labels": [
+    "hygiene",
+    "dead-code"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-sync-merge",
+  "findingIndex": 9,
+  "finding": {
+   "title": "Extract the duplicated learnerProfiles FK-guard full-table-scan shared by three append-only mergers",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler duplication",
+   "area": "core/sync/merge",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/sync/merge/learning_ledger_merger.dart",
+     "line": 35,
+     "quote": "final existingProfileIds = (await _db.select(_db.learnerProfiles).get())\n        .map((p) => p.id)\n        .toSet();"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/merge/points_ledger_merger.dart",
+     "line": 30,
+     "quote": "final existingProfileIds = (await _db.select(_db.learnerProfiles).get())\n        .map((p) => p.id)\n        .toSet();"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/merge/reward_redemption_merger.dart",
+     "line": 28,
+     "quote": "final existingProfileIds = (await _db.select(_db.learnerProfiles).get())\n        .map((p) => p.id)\n        .toSet();"
+    }
+   ],
+   "sites": 3,
+   "why": "The identical 3-line 'load every learner_profiles row into a Set to guard an FK' snippet is copy-pasted across three mergers, each re-running the full scan once per merge() call. Harmless at today's family-sized profile counts, but three independent copies will silently diverge if the guard logic ever needs to change (e.g. excluding soft-deleted profiles).",
+   "recommendation": "Extract a shared `Future<Set<int>> existingProfileIds()` helper (on UserDatabase or a small mixin) and call it from all three mergers.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "One shared helper exists with its own unit test; the three call sites use it with no behavior change (existing points_sync_merger_test.dart and learning_ledger_merger_test.dart continue to pass)."
+   ],
+   "labels": [
+    "hygiene",
+    "duplication"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-sync-merge",
+  "findingIndex": 10,
+  "finding": {
+   "title": "Fix hand-rolled test _FakeMergeStore.remoteIsNewer implementations to match DriftMergeStore's clock-skew/D15 semantics",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-4/TQ-8 fake fidelity; Fowler duplication",
+   "area": "test/core/sync/merge",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/sync/merge/mergers_test.dart",
+     "line": 94,
+     "quote": "// Mirror DriftMergeStore semantics: strict `remote > local` outside\n    // the \u00b15 s window; inside the window, server timestamp decides."
+    },
+    {
+     "file": "learning_tracker/test/core/sync/merge/notification_settings_merger_round_trip_test.dart",
+     "line": 69,
+     "quote": "return remoteUpdatedAt.isAfter(localUpdatedAt);"
+    }
+   ],
+   "sites": 2,
+   "why": "mergers_test.dart's fake claims to 'Mirror DriftMergeStore semantics' but omits the D15 fallback (drift_merge_store.dart:140-146): inside the clock-skew window with no decisive synced_at on both sides, the fake unconditionally prefers remote, whereas the real store first falls back to comparing raw updated_at (protecting a newer un-pushed local edit from being clobbered by an older remote). notification_settings_merger_round_trip_test.dart's fake is simpler still \u2014 no clock-skew window at all. Neither test currently uses timestamps close enough to trigger the divergent branch, so the suite passes today, but any future near-tie/clock-skew test added against these fakes would silently validate the WRONG (pre-D15) behavior, hiding exactly the bug class DriftMergeStoreTest exists to pin down.",
+   "recommendation": "Replace both hand-rolled remoteIsNewer bodies with a delegate to the real DriftMergeStore.remoteIsNewer (construct a throwaway DriftMergeStore over an in-memory DB inside the fake, or extract the pure comparison so both share one implementation) instead of re-deriving the algorithm by hand.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "A within-skew-window / no-syncedAt / older-remote test case added to either file fails before the fix and passes after, or the fake is proven identical to DriftMergeStore.remoteIsNewer by delegation (making such drift structurally impossible)."
+   ],
+   "labels": [
+    "testing",
+    "test-fidelity",
+    "TQ-4"
+   ]
+  }
+ }
+]

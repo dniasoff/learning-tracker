@@ -1,0 +1,194 @@
+[
+ {
+  "sourceBatch": "t1-app-l10n-p1",
+  "chunk": "grp-001",
+  "finding": {
+   "title": "Close the DeviceRegistryDatabase connection on account_bootstrap.dart's exception path",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Nygard (I/O failure handling) / resource cleanup",
+   "area": "app/bootstrap",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/app/bootstrap/account_bootstrap.dart",
+     "line": 23,
+     "quote": "final registry = DeviceRegistryDatabase(\n  driftDatabase(name: 'device_registry'),\n);"
+    },
+    {
+     "file": "learning_tracker/lib/app/bootstrap/account_bootstrap.dart",
+     "line": 49,
+     "quote": "await registry.close();"
+    },
+    {
+     "file": "learning_tracker/lib/app/bootstrap/account_bootstrap.dart",
+     "line": 51,
+     "quote": "} catch (e, stack) {"
+    }
+   ],
+   "sites": 1,
+   "why": "`registry.close()` sits at the end of the try block, not in a finally. If sessionService.resolveActiveAccountId() (line 30) or registry.findById() (line 33) throws, execution jumps straight to the outer catch (line 51), which logs and returns a fallback filename WITHOUT ever closing the Drift-backed device_registry connection \u2014 the exact 'I/O fails halfway' scenario the Nygard lens asks about. Impact is low in practice (this runs once per app process at startup), but a leaked native database handle held for the app's whole lifetime is still an avoidable defect, and it would compound if this code path were ever retried (e.g. a future hot-reattempt) or re-used in a longer-lived context.",
+   "recommendation": "Move `final registry = ...` construction above a try/finally (or wrap the resolveActiveAccountId/findById calls in try{...}finally{ await registry.close(); }) so every exit path closes the connection.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "registry.close() executes on both the success path and any exception path out of bootstrapAccount.",
+    "A unit test makes sessionService.resolveActiveAccountId() throw and asserts the registry/executor was still closed."
+   ],
+   "labels": [
+    "resource-leak",
+    "hygiene",
+    "bootstrap"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tracks-p3",
+  "chunk": "grp-118",
+  "finding": {
+   "title": "Extract the repeated reorder-amnesty confirm-dialog preamble in the tracks reorder screens",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler duplication (Extract Method)",
+   "area": "lib/features/tracks/track_order/presentation/screens/track_learning_order_screen.dart; lib/features/tracks/whole_curriculum_order/presentation/screens/learning_order_screen.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tracks/track_order/presentation/screens/track_learning_order_screen.dart",
+     "line": 166,
+     "quote": "final overdueCount = await ref.read("
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/track_order/presentation/screens/track_learning_order_screen.dart",
+     "line": 193,
+     "quote": "final overdueCount = await ref.read("
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/whole_curriculum_order/presentation/screens/learning_order_screen.dart",
+     "line": 126,
+     "quote": "final overdueCount = await ref.read("
+    }
+   ],
+   "sites": 3,
+   "why": "The same ~10-line block (fetch overdueCount, bail if unmounted, show ReorderConfirmDialog.showIfNeeded, bail if declined/unmounted) is copy-pasted 3 times across 2 files. A future change to the amnesty-guard contract has to be found and edited in 3 places; missing one leaves that screen silently skipping the guard.",
+   "recommendation": "Extract a shared helper (mixin or top-level function taking WidgetRef/BuildContext/CurriculumId) used by all three call sites.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Single shared implementation; all three call sites delegate to it"
+   ],
+   "labels": [
+    "duplication",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epic-25",
+  "chunk": "grp-129",
+  "finding": {
+   "title": "Replace the tautological AuthRepository mock-shape test in epic_25_schema_core_test.dart with real coverage or delete it",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (tautological/over-mocked test)",
+   "area": "test/story_acceptance",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_25_schema_core_test.dart",
+     "line": 615,
+     "quote": "when(() => repo.currentUser).thenReturn(null);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_25_schema_core_test.dart",
+     "line": 625,
+     "quote": "expect(repo.currentUser, isNull);"
+    }
+   ],
+   "sites": 1,
+   "why": "The test stubs every AuthRepository member on a mocktail Mock and then asserts the mock returns exactly what it was just told to return \u2014 it can never fail regardless of what AuthRepositoryImpl actually does, so it gives false confidence that Story 25.11's 'sole firebase_auth consumer' AC is under test. Real behavioural coverage already exists separately in test/features/auth/data/repositories/auth_repository_impl_test.dart, so today this test adds zero net verification while reading like acceptance coverage for the story.",
+   "recommendation": "Delete the runtime expect() calls and keep this as a documented compile-only shape check (a referenced-but-uncalled function is enough to prove the interface compiles), or point the docstring at auth_repository_impl_test.dart so reviewers don't mistake mock-echo assertions for behavioural coverage.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "test either exercises AuthRepositoryImpl directly or is reduced to a compile-time shape check with no expect() calls that only echo their own stubs"
+   ],
+   "labels": [
+    "tautological-test",
+    "over-mocked",
+    "TQ-8"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tracks-p2",
+  "chunk": "grp-116",
+  "finding": {
+   "title": "Consolidate the tracks/{setup,stages,track_order} test suite onto mirrored paths under test/features/tracks/** (AG-5)",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-5",
+   "area": "test/tracks-setup,tracks-stages,tracks-track_order",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/track_setup/presentation/steps/goal_helpers_test.dart",
+     "line": 12,
+     "quote": "import 'package:learning_tracker/features/tracks/setup/presentation/steps/goal_helpers.dart';"
+    },
+    {
+     "file": "learning_tracker/test/features/stages/data/repositories/stage_definition_repository_impl_test.dart",
+     "line": 7,
+     "quote": "import 'package:learning_tracker/features/tracks/stages/data/repositories/stage_definition_repository_impl.dart';"
+    },
+    {
+     "file": "learning_tracker/test/features/track_learning_order/data/repositories/track_learning_order_repository_impl_test.dart",
+     "line": 16,
+     "quote": "import 'package:learning_tracker/features/tracks/track_order/data/repositories/track_learning_order_repository_impl.dart';"
+    }
+   ],
+   "sites": 3,
+   "why": "test/features/track_setup/**, test/features/stages/**, and test/features/track_learning_order/** all still exist and DO test current lib code (confirmed via their imports) \u2014 they are not stale \u2014 but none of them mirror the actual lib/features/tracks/{setup,stages,track_order}/** layout. A correctly-mirrored tree has also grown alongside them (e.g. test/features/tracks/setup/**, test/features/tracks/track_order/**), so coverage for this feature area is now split across two parallel, differently-named directory trees. A developer adding a new test for goal_helpers.dart would not find the existing one unless they already knew to look under the legacy 'track_setup' (singular, no 'tracks/' prefix) name instead of the mirrored 'tracks/setup' path, risking either an undiscovered duplicate or accidentally-orphaned old tests.",
+   "recommendation": "Move test/features/track_setup/**, test/features/stages/**, and test/features/track_learning_order/** to their AG-5-mirrored locations under test/features/tracks/{setup,stages,track_order}/**, merging with the already-correct parallel tree where both exist for the same source file.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "AG-5's mirroring checker (once implemented) reports zero unmirrored test directories for tracks/setup, tracks/stages, and tracks/track_order.",
+    "No test file is lost or silently duplicated during the move (`flutter test` count before == after)."
+   ],
+   "labels": [
+    "testing",
+    "hygiene",
+    "test-organization"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-progress-p4",
+  "chunk": "grp-086",
+  "finding": {
+   "title": "Log the two silent catch blocks in lifetime_knowledge_providers.dart via AppLogger",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "EH-3 (log-less catch)",
+   "area": "lib/features/progress/presentation/providers",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/providers/lifetime_knowledge_providers.dart",
+     "line": 436,
+     "quote": "} catch (_) {\n            overdueCount = 0;"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/providers/lifetime_knowledge_providers.dart",
+     "line": 654,
+     "quote": "} catch (_) {\n    return null;"
+    }
+   ],
+   "sites": 2,
+   "why": "Both catches swallow every exception with no AppLogger call. If programCalendarPositionProvider throws (line 430-431), overdueCount/todayDueCount silently become 0 \u2014 a falsely reassuring 'nothing overdue' on the dashboard per-track row \u2014 with zero breadcrumb to diagnose it. If getScopedContent throws inside _safeLoadLeavesForTrack (line 648), the track just vanishes from trackDualProgressMetricsProvider's output with no trace. The same file already fixes this exact anti-pattern under the F20 label for _safeLoadLeaves/_safeHeLabelLookup (lines ~570-609, which log via AppLogger.warning with event/fields/exception/stackTrace) \u2014 these two catches were never brought in line with that established, documented convention.",
+   "recommendation": "Log both catches via AppLogger.warning(event:, exception:, stackTrace:) before falling back, matching the F20 pattern used elsewhere in the same file.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Both catch blocks call AppLogger before returning/defaulting",
+    "No 'catch (_) {' block in lifetime_knowledge_providers.dart lacks an adjacent AppLogger call"
+   ],
+   "labels": [
+    "error-handling",
+    "observability",
+    "progress"
+   ]
+  }
+ }
+]

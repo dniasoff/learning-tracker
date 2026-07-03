@@ -1,0 +1,201 @@
+[
+ {
+  "sourceBatch": "t4-docs-canonical-p2",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Fix testing-guide.md's copy-paste test examples \u2014 they import AppDatabase/CompletionsCompanion/UserMode, all deleted in the schema-v1 rebuild",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-8",
+   "area": "docs (testing-guide.md) vs core/database, core/enums",
+   "evidence": [
+    {
+     "file": "docs/testing-guide.md",
+     "line": 112,
+     "quote": "import 'package:learning_tracker/core/database/app_database.dart';"
+    },
+    {
+     "file": "docs/testing-guide.md",
+     "line": 136,
+     "quote": "return db.completionDao.insertCompletion(\n      CompletionsCompanion.insert("
+    },
+    {
+     "file": "docs/testing-guide.md",
+     "line": 213,
+     "quote": "import 'package:learning_tracker/core/enums/user_mode.dart';"
+    },
+    {
+     "file": "docs/testing-guide.md",
+     "line": 421,
+     "quote": "// test/helpers/test_database.dart\nAppDatabase createTestDatabase() {"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/daos/completion_dao.dart",
+     "line": 56,
+     "quote": "/// Write methods ([insertCompletion], [insertCompletionsBatch]) have been\n/// removed.  New completions are written exclusively through"
+    },
+    {
+     "file": "learning_tracker/test/helpers/test_database.dart",
+     "line": 12,
+     "quote": "UserDatabase createTestDatabase() {"
+    }
+   ],
+   "sites": 5,
+   "why": "testing-guide.md is required reading (index.md step 5) and its 'How to Write a Unit Test', 'How to Write a Widget Test', 'How to Write a Story Acceptance Test', 'How to Write an Integration Test' sections, plus the 'Test Infrastructure Details' section that quotes test/helpers/test_database.dart verbatim, all use `AppDatabase`/`CompletionsCompanion.insert(...)`/`db.completionDao.insertCompletion(...)`/`UserMode` \u2014 every one of which was deleted in the schema-v1 rebuild (the DB class is now UserDatabase in core/database/user/user_database.dart; the `completions` table and CompletionDao's write methods were removed outright per the DAO's own doc comment; UserMode was replaced by ProfileMode in core/domain/value_objects/). A contributor or AI agent copy-pasting the guide's primary teaching example gets an immediate compile failure against a non-existent API surface \u2014 the exact opposite of what a 'how to write a test' doc should do. The quoted 'test/helpers/test_database.dart' snippet is also simply not what that file contains today.",
+   "recommendation": "Rewrite all four code samples and the Test Infrastructure Details snippet against the current UserDatabase/CompletionEventDao/CompletionWriter/ProfileMode APIs; also refresh the '531+ tests across 167 files' and '14 epic tags and 62 story tags' counts (actual: dart_test.yaml has 20 epic tags / 97 story tags, and ~10,353 test()/testWidgets() calls across 780 files, per test-options.md's already-accurate figure).",
+   "effort": "M",
+   "acceptance_criteria": [
+    "every code block in testing-guide.md compiles against current lib/ (spot-checked by pasting into a scratch test file)",
+    "epic/story tag counts and the test_database.dart snippet match dart_test.yaml and test/helpers/test_database.dart"
+   ],
+   "labels": [
+    "docs",
+    "testing",
+    "stale-docs"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t4-docs-canonical-p2",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Update linear-status.md \u2014 Epics 25-27 marked 'all Backlog' despite dozens of implemented, non-skipped story-acceptance tests",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-8",
+   "area": "docs (linear-status.md) vs test/story_acceptance/",
+   "evidence": [
+    {
+     "file": "docs/linear-status.md",
+     "line": 113,
+     "quote": "22 stories: 25.1\u201325.22. All Backlog. Highlights:"
+    },
+    {
+     "file": "docs/linear-status.md",
+     "line": 125,
+     "quote": "35 stories. Eight feature areas reorganized to consume the new core."
+    },
+    {
+     "file": "docs/linear-status.md",
+     "line": 138,
+     "quote": "17 stories (16 Backlog, 1 Canceled). Test pyramid, CI gates, observability, docs."
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_25_schema_core_test.dart",
+     "line": 11,
+     "quote": "@Tags(['epic_25'])"
+    }
+   ],
+   "sites": 3,
+   "why": "linear-status.md (self-dated 'last reconciled 2026-05-13', ~7 weeks stale relative to the audit date) states all of Epic 25 (22 stories), Epic 26 (35 stories) and Epic 27 (17 stories) are 'Backlog'. But test/story_acceptance/ already contains 31 distinct epic_25/26/27 story-numbered test files (e.g. epic_25_story_25_20_locale_theme_test.dart, epic_26_story_26_7_dashboard_model_provider_test.dart, epic_27_story_14_analytics_test.dart) totaling well over 150 test groups with a single `skip:` marker among them \u2014 i.e. these are live, executing acceptance suites, not scaffolded placeholders. Anyone using this doc to plan work risks re-scoping or re-implementing stories that already shipped.",
+   "recommendation": "Re-sync against status/sprint-status.yaml (the doc's own stated source of truth) and, as a cheap proxy check going forward, cross-reference `grep -L 'skip:' test/story_acceptance/epic_2[567]_*.dart` against the Backlog list before publishing a status doc.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Epic 25/26/27 story statuses in linear-status.md match sprint-status.yaml",
+    "no story shown 'Backlog' has a fully un-skipped acceptance test file in test/story_acceptance/"
+   ],
+   "labels": [
+    "docs",
+    "project-status"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t4-docs-canonical-p2",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Correct open-items.md's C1 entry \u2014 the `completions` table was dropped outright, not 'retained as an empty legacy artifact'",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-8",
+   "area": "docs (open-items.md) vs core/database/user",
+   "evidence": [
+    {
+     "file": "docs/open-items.md",
+     "line": 14,
+     "quote": "only. The `completions` physical table is retained as an empty legacy artifact (no rows\nwritten post-C1)."
+    },
+    {
+     "file": "learning_tracker/lib/core/database/user/user_database.dart",
+     "line": 57,
+     "quote": "/// - Dropped legacy tables: completions, streaks, sync_queue."
+    }
+   ],
+   "sites": 1,
+   "why": "open-items.md's C1 entry describes a state from before the Epic 24-27 rebuild (it even cites 'schema v20', a version number from the pre-rebuild numbering that was reset to v1 during the rebuild). The current schema history comment states the `completions` table (along with `streaks` and `sync_queue`) was dropped entirely, not kept empty. A reader relying on this doc to reason about migration safety or legacy-table handling gets a materially wrong picture of the schema.",
+   "recommendation": "Update the C1 entry to note the table was fully dropped in the schema-v1 rebuild rather than retained empty, and drop the now-meaningless 'schema v20' reference.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "open-items.md's C1 entry matches the current table list in user_database.dart's @DriftDatabase tables: [...]"
+   ],
+   "labels": [
+    "docs",
+    "stale-docs"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t4-docs-canonical-p2",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Resolve or delete product-rules.md's stale Q-Term item \u2014 the UserMode.parent\u2192adult rename already shipped and is DB-enforced",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-8",
+   "area": "docs (product-rules.md) vs core/database/user",
+   "evidence": [
+    {
+     "file": "docs/product-rules.md",
+     "line": 169,
+     "quote": "- **Q-Term.** Code-side `UserMode.parent` \u2192 `adult` rename \u2014 bundled with Stream C or separate cleanup pass."
+    },
+    {
+     "file": "learning_tracker/lib/core/database/user/user_database.dart",
+     "line": 213,
+     "quote": "// (a) learner_profiles \u2192 add CHECK (mode IN ('adult','child'))."
+    }
+   ],
+   "sites": 1,
+   "why": "product-rules.md's own maintenance policy states 'When a rule is changed or retired, this doc MUST be updated.' Q-Term is listed under 'Open product decisions... pending owner', but the `UserMode` enum no longer exists anywhere in lib/ (confirmed by repo-wide grep) and learner_profiles.mode has carried a DB-level CHECK constraint permitting only 'adult'|'child' since schema v26 (WS9). The decision was made and enforced; the doc still presents it as unresolved, which could cause someone to re-litigate or re-plan work that's already done. (Every other concrete code claim in this doc \u2014 CompletionSource, MarkCompletionUseCase, kPaceGraceWindowDays, ProgressTierCounterRow.showPoints, HebrewCalendarUtils.formatEnglishDate, useHebrewTermsProvider's confinement to core/labels+core/preferences+onboarding/settings screens \u2014 was verified accurate, so this is an isolated miss, not a pattern.)",
+   "recommendation": "Move Q-Term from 'Open product decisions' to a resolved/closed note (mirroring how Q-S1/Q-A/Q-W/Q-IA/Q-G are already struck through above it in the same section).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Q-Term is marked decided/closed or removed from the open list"
+   ],
+   "labels": [
+    "docs",
+    "stale-docs"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t4-docs-canonical-p2",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Remove test-options.md's reference to tool/device_e2e/night_runner.py \u2014 the file does not exist in the repo",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-8",
+   "area": "docs (test-options.md) vs tool/device_e2e",
+   "evidence": [
+    {
+     "file": "docs/test-options.md",
+     "line": 129,
+     "quote": "- `night_runner.py` \u2014 continuous soak loop; self-cleans each iteration\n    (deletes its test account/data/token)."
+    }
+   ],
+   "sites": 1,
+   "why": "test-options.md lists night_runner.py as an existing 'piece' of the on-device E2E harness alongside driver.py, journey_01_signup_profile.py and README.md \u2014 all three of which do exist. `find . -iname 'night_runner*'` across the whole repo returns nothing. The rest of this doc (layer table, CI job list, ~10,000-test count, test/e2e|sync|overflow paths) was verified accurate, so this single fabricated-sounding entry stands out and would send someone looking for a soak-test script that was never committed (or was planned and never built).",
+   "recommendation": "Either remove the night_runner.py bullet or, if it's planned work, reword it as 'planned: a continuous soak loop is not yet built' to match the doc's own honest framing elsewhere ('one journey proven; full per-screen coverage builds out journey-by-journey').",
+   "effort": "S",
+   "acceptance_criteria": [
+    "test-options.md only lists tool/device_e2e/ files that exist, or explicitly marks planned-but-unbuilt ones as such"
+   ],
+   "labels": [
+    "docs",
+    "testing",
+    "stale-docs"
+   ]
+  }
+ }
+]

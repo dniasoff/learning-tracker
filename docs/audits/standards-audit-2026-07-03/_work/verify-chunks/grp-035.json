@@ -1,0 +1,217 @@
+[
+ {
+  "sourceBatch": "t1-core-sync-root-p2",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Fix the self-comparison assertion in firestore_listener_source_test.dart:153 \u2014 expect(x, equals(x)) always passes",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "core/sync \u2014 firestore_listener_source_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/sync/firestore_listener_source_test.dart",
+     "line": 153,
+     "quote": "expect(entry.orderField, equals(entry.orderField));"
+    }
+   ],
+   "sites": 1,
+   "why": "Comparing a value to itself is always true regardless of what orderField holds. The test's own comment states the intent \u2014 verify 'every wired collection... must carry an explicit, recognised field' via the actual order field passed to listenToCollection \u2014 and the preceding expect (checking FirestoreListenerSource.orderFields[entry.collection] is not null) does real work, but this second line adds nothing. If a future change wires the wrong orderField to a collection (e.g. swaps two entries in the orderFields map), this test cannot catch it, undermining the FB-2-adjacent guarantee that every listener sorts by its intended recency field.",
+   "recommendation": "Change to expect(entry.orderField, equals(FirestoreListenerSource.orderFields[entry.collection])) so the assertion checks the actual call-site value against the expected map entry.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Line 153 compares entry.orderField against FirestoreListenerSource.orderFields[entry.collection]",
+    "Deliberately wiring the wrong orderField constant to one collection in the source makes the test fail red"
+   ],
+   "labels": [
+    "testing",
+    "sync",
+    "tautological-test"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-sync-root-p2",
+  "findingIndex": 8,
+  "finding": {
+   "title": "Use the existing useLocalDayClock seam instead of DateTime.now() in sync_orchestrator_test.dart resume-throttle tests",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6",
+   "area": "core/sync \u2014 sync_orchestrator_test.dart resume-throttle tests",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/sync/sync_orchestrator_test.dart",
+     "line": 607,
+     "quote": "final recentMs =\n          DateTime.now().toUtc().millisecondsSinceEpoch - 30 * 1000;"
+    },
+    {
+     "file": "learning_tracker/test/core/sync/sync_orchestrator_test.dart",
+     "line": 624,
+     "quote": "final oldMs =\n          DateTime.now().toUtc().millisecondsSinceEpoch - 10 * 60 * 1000;"
+    }
+   ],
+   "sites": 2,
+   "why": "SyncOrchestratorImpl itself reads the clock through the injectable DateTimeFactory.nowUtc() (backed by useLocalDayClock/resetLocalDayClock, built specifically so 'tests can swap it' per date_utils.dart), but these two resume-throttle tests compute their seeded SharedPreferences timestamp from the real system clock instead. The 30s-vs-5min and 10min-vs-5min margins are wide enough that this isn't currently flaky, but it's an unnecessary wall-clock dependency the rest of the suite's own convention exists specifically to avoid, and it silently stops being safe if the throttle window is ever tightened close to a minute.",
+   "recommendation": "Call useLocalDayClock(fixedClock) in setUp and compute recentMs/oldMs as fixed offsets from the pinned clock, matching the DateTimeFactory convention used elsewhere in the suite.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Resume-throttle tests no longer call DateTime.now()",
+    "Tests still pass with useLocalDayClock pinned to an arbitrary fixed instant"
+   ],
+   "labels": [
+    "testing",
+    "sync",
+    "hermeticity",
+    "TQ-6"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-theme-widgets",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Split app_theme.dart's duplicated _lightTheme/_darkTheme builders to bring the file under the 400-line AG-3 ceiling",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "core/theme",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/theme/app_theme.dart",
+     "line": 202,
+     "quote": "static ThemeData _lightTheme({required Color accent}) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/theme/app_theme.dart",
+     "line": 447,
+     "quote": "static ThemeData _darkTheme({required Color accent}) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/theme/app_theme.dart",
+     "line": 125,
+     "quote": "return const Color(0xFF7C3AED);  // == curriculumMussar, not referenced"
+    },
+    {
+     "file": "learning_tracker/lib/core/theme/app_theme.dart",
+     "line": 127,
+     "quote": "return const Color(0xFF0EA5A0);  // == curriculumNach, not referenced"
+    }
+   ],
+   "sites": 1,
+   "why": "At 687 lines this is the largest hand-written file in the batch (72% over the 400-line ceiling). The excess is structural duplication, not density: _lightTheme (202-441) and _darkTheme (447-686) build near-identical ButtonStyle/ChipTheme/CheckboxTheme/etc. trees, differing only in which colour tokens are plugged in (e.g. elevatedButtonTheme at :254-269 vs :499-514 are structurally identical). Any shape/radius/elevation change (e.g. card corner radius) must be hand-applied in both 240-line blocks with nothing to catch a miss \u2014 the two navigationBarTheme indicator alphas (0.12 vs 0.18) show the blocks already diverge in small ways. Separately, getCurriculumColor re-literals 0xFF7C3AED/0xFF0EA5A0 for mishnehTorah/tanach instead of referencing the already-declared curriculumMussar/curriculumNach constants two lines above \u2014 a future rebrand of either constant silently stops covering its look-alike case.",
+   "recommendation": "Extract a shared theme-shape builder parameterized by ColorScheme/accent/surface tokens so _lightTheme/_darkTheme stop hand-duplicating widget-theme trees; reference curriculumMussar/curriculumNach by name in getCurriculumColor instead of repeating their hex values.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "app_theme.dart line count \u2264400 (AG-3 repo-wide line-count audit passes for this file).",
+    "getCurriculumColor's mishnehTorah/tanach cases reference curriculumMussar/curriculumNach (or a new distinct named constant, with a comment on the intentional pairing) rather than inline hex.",
+    "flutter_test golden/widget tests for light and dark theme (if any exist) still pass after the refactor."
+   ],
+   "labels": [
+    "duplication",
+    "AG-3",
+    "core-theme",
+    "maintainability"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-theme-widgets",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Retire or theme-align text_styles.dart's AppTextStyles, which hardcodes Roboto and diverges from AppTheme's Plus Jakarta Sans",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler duplication / dead code (no direct rule ID)",
+   "area": "core/theme",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/theme/text_styles.dart",
+     "line": 18,
+     "quote": "static const String _englishFontFamily = 'Roboto';"
+    },
+    {
+     "file": "learning_tracker/lib/core/theme/app_theme.dart",
+     "line": 147,
+     "quote": "final sans = GoogleFonts.plusJakartaSansTextTheme();"
+    },
+    {
+     "file": "learning_tracker/lib/core/theme/text_styles.dart",
+     "line": 14,
+     "quote": "// NOTE: 'Noto Sans Hebrew' font files must be placed in assets/fonts/ and"
+    },
+    {
+     "file": "learning_tracker/lib/core/theme/text_styles.dart",
+     "line": 146,
+     "quote": "static TextDirection getTextDirection(String text) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/widgets/hebrew_text.dart",
+     "line": 38,
+     "quote": ").style.copyWith(fontFamily: AppTextStyles.hebrewFontFamily);"
+    }
+   ],
+   "sites": 1,
+   "why": "AppTheme.textTheme (the app's real Material typography, wired into every themed widget via Theme.of(context)) uses GoogleFonts Plus Jakarta Sans; AppTextStyles is a second, parallel static typography table hardcoding 'Roboto' with no colour/brightness awareness. It is consumed directly (bypassing Theme) by lib/features/content_browsing/presentation/screens/text_display_screen.dart \u2014 a churn-hotspot screen \u2014 at 6 call sites, meaning that screen's text visibly renders in a different typeface family than the rest of the themed app. 'Roboto' also isn't a bundled font asset (only Noto Sans Hebrew is declared in pubspec.yaml), so the family isn't even guaranteed cross-platform (no Roboto on iOS). The file's own comment claiming the Hebrew font 'must be placed in assets/fonts/... until then' is stale \u2014 pubspec.yaml:211-222 already bundles all 5 Noto Sans Hebrew weights. getTextDirection/getStyleForContent (lines 146-164) have zero callers anywhere outside their own test file.",
+   "recommendation": "Either retire AppTextStyles in favour of Theme.of(context).textTheme at its 2 call sites, or derive it from the active theme/GoogleFonts.plusJakartaSans* instead of a hardcoded 'Roboto' literal so the two systems can't drift further; delete the 2 dead helper methods or wire them to a real caller; fix the stale font-availability comment.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "text_display_screen.dart and hebrew_text.dart render with the same font family as the rest of the themed app (Plus Jakarta Sans), verified by a widget test reading the resolved TextStyle.fontFamily.",
+    "getTextDirection/getStyleForContent removed (with their now-orphaned tests) or given a real caller.",
+    "Stale asset-bundling comment corrected or removed."
+   ],
+   "labels": [
+    "typography",
+    "duplication",
+    "core-theme",
+    "dead-code"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-theme-widgets",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Delete or wire up orphaned CurriculumIndicator and TrackProgressBar widgets (zero production callers)",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Dead code (Fowler) \u2014 no direct rule ID",
+   "area": "core/widgets",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/widgets/curriculum_indicator.dart",
+     "line": 12,
+     "quote": "class CurriculumIndicator extends StatelessWidget {"
+    },
+    {
+     "file": "learning_tracker/lib/core/widgets/track_progress_bar.dart",
+     "line": 8,
+     "quote": "class TrackProgressBar extends StatelessWidget {"
+    },
+    {
+     "file": "learning_tracker/test/core/widgets/curriculum_indicator_test.dart",
+     "line": 1,
+     "quote": "// 207 lines exercising a widget with 0 production imports"
+    },
+    {
+     "file": "learning_tracker/test/core/widgets/track_progress_bar_test.dart",
+     "line": 1,
+     "quote": "// 98 lines exercising a widget with 0 production imports"
+    }
+   ],
+   "sites": 2,
+   "why": "Repo-wide grep for `CurriculumIndicator(` and `TrackProgressBar(` finds zero matches outside each widget's own definition file. Together with their dedicated test files this is ~475 lines exercising no reachable code path \u2014 CI pays for it every run, and a maintainer searching for 'curriculum badge' or 'progress bar' will find and reuse an abandoned component instead of whatever superseded it (TrackProgressBar's own docstring says 'track-type display has been removed per product rules', confirming it's a leftover from a removed feature).",
+   "recommendation": "Delete both widgets and their test files, or if a near-term feature needs them, wire them into a real screen and note the ticket in a doc comment.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Either both widget files + their test files are removed, or each has \u22651 production caller confirmed by grep.",
+    "`flutter analyze` / build stays green after removal (no orphaned imports)."
+   ],
+   "labels": [
+    "dead-code",
+    "core-widgets",
+    "hygiene"
+   ]
+  }
+ }
+]

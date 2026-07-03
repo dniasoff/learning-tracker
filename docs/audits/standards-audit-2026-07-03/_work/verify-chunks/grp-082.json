@@ -1,0 +1,208 @@
+[
+ {
+  "sourceBatch": "t1-feat-progress-p1",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Stop interpolating raw error.toString() into localized error messages across progress screens",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "EH-5 / custom_lint no_e_to_string_in_ui (currently enforcing nothing repo-wide)",
+   "area": "features/progress presentation/screens",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/screens/lifetime_knowledge_screen.dart",
+     "line": 138,
+     "quote": "message: l10n.lifetimeKnowledgeLoadError(error.toString()),"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/screens/lifetime_knowledge_screen.dart",
+     "line": 243,
+     "quote": "l10n.lifetimeKnowledgeCounterError(error.toString()),"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/screens/curriculum_progress_screen.dart",
+     "line": 208,
+     "quote": "message: l10n.curriculumProgressLoadFailed(error.toString()),"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/screens/siyumim_milestones_screen.dart",
+     "line": 68,
+     "quote": "message: l10n.failedToLoadJourney(error.toString()),"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/screens/progress_screen.dart",
+     "line": 69,
+     "quote": "Center(child: Text(l10n.errorWithMessage(error.toString()))),"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/screens/progress_screen.dart",
+     "line": 291,
+     "quote": "child: Text(l10n.errorWithMessage(error.toString())),"
+    }
+   ],
+   "sites": 6,
+   "why": "error.toString() on a Dart/Firebase/Drift exception is always in English (e.g. 'Bad state: ...', 'SqliteException: ...') and not ICU-pluralizable; interpolating it into an otherwise-Hebrew ARB string means a Hebrew-locale, RTL user who hits any of these error states sees a sentence that switches to raw untranslated English mid-string. recent_activity_screen.dart in the same directory shows the correct pattern (l10n.chartFailedToLoad with no error interpolation, 4 uses) \u2014 the other 4 screens in this same feature diverge from it.",
+   "recommendation": "Replace error.toString() interpolation with the generic localized failure string (as recent_activity_screen.dart already does) and, if diagnostic detail is genuinely needed, log error.toString() via AppLogger instead of rendering it to the user.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "None of the 4 screens' AsyncValue.error branches call .toString() on the error object inside a Text/l10n call.",
+    "Once dart run custom_lint is repaired, no_e_to_string_in_ui reports zero hits in lib/features/progress/."
+   ],
+   "labels": [
+    "i18n",
+    "error-handling"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-progress-p1",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Add a semantic label to the custom back IconButton in recent_activity_screen.dart",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AX-3 (icon-only buttons carry semantics)",
+   "area": "features/progress/presentation/screens/recent_activity_screen.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/screens/recent_activity_screen.dart",
+     "line": 106,
+     "quote": "IconButton(\n                  onPressed: () => context.maybePop(),"
+    }
+   ],
+   "sites": 1,
+   "why": "This is a hand-rolled header row, not AppBar's automatic leading back button, so Flutter supplies no implicit semantics label here. A screen-reader user (TalkBack/VoiceOver) tabbing to this control hears only 'button' with no indication it navigates back, on a screen reachable from every Progress-hub session.",
+   "recommendation": "Add tooltip: l10n.<existing back-button key> (or a new ARB key) to the IconButton so it gets both a visible tooltip and a screen-reader label.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "A semantics test (or manual VoiceOver/TalkBack pass) confirms the back control announces a localized label."
+   ],
+   "labels": [
+    "accessibility"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-progress-p1",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Split the 6 progress-feature files that exceed the 400-line AG-3 cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3 (hand-written Dart file <= 400 lines)",
+   "area": "features/progress (multiple layers)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/screens/recent_activity_screen.dart",
+     "line": 1,
+     "quote": "792 lines total (wc -l)"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/domain/services/chart_data_service.dart",
+     "line": 1,
+     "quote": "697 lines total (wc -l)"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/providers/lifetime_knowledge_providers.dart",
+     "line": 1,
+     "quote": "657 lines total (wc -l)"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/providers/items_learned_providers.dart",
+     "line": 1,
+     "quote": "620 lines total (wc -l)"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/domain/services/lifetime_tree_builder.dart",
+     "line": 1,
+     "quote": "466 lines total (wc -l)"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/screens/progress_screen.dart",
+     "line": 1,
+     "quote": "416 lines total (wc -l)"
+    }
+   ],
+   "sites": 6,
+   "why": "Large files raise the cost of every future change (more to read/hold in context before a safe edit, bigger diffs, more merge conflicts) and are the six biggest files in the batch. Two of them (chart_data_service.dart, the items_learned/lifetime_knowledge provider pair) are also where the duplication findings above live \u2014 size and duplication are compounding here, not independent problems.",
+   "recommendation": "Split along the seams already visible: chart_data_service.dart by chart type or into a shared bucketizer module (after collapsing the *Live duplicates); lifetime_knowledge_providers.dart / items_learned_providers.dart by extracting the private helpers into lifetime_tree_builder.dart per finding #1; recent_activity_screen.dart by moving chart-body/card widgets into presentation/widgets/.",
+   "effort": "L",
+   "acceptance_criteria": [
+    "An AG-3 line-count checker (once it exists per Rule 0) reports 0 hand-written files >400 lines under lib/features/progress/."
+   ],
+   "labels": [
+    "file-size",
+    "AG-3"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-progress-p1",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Replace hand-rolled ==/hashCode on PaceCalculator, LifetimeLeafProvenance and RecentActivityWindow with @freezed or a record",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "naming/placement \u2014 domain/state models are @freezed; never hand-write ==/hashCode for data classes",
+   "area": "features/progress (domain models + providers)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/progress/domain/services/pace_calculator.dart",
+     "line": 209,
+     "quote": "bool operator ==(Object other) =>"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/domain/models/lifetime_knowledge.dart",
+     "line": 67,
+     "quote": "bool operator ==(Object other) =>"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/providers/recent_activity_providers.dart",
+     "line": 46,
+     "quote": "bool operator ==(Object other) =>"
+    }
+   ],
+   "sites": 3,
+   "why": "Three separate hand-written equality implementations exist in this one feature slice alongside a fourth model file (journey_view_model.dart) that correctly uses @freezed for the same kind of value object, and alongside sibling family-key records elsewhere in this same batch (e.g. lifetime_knowledge_providers.dart's ({int profileId, CurriculumId curriculumId})) that get structural equality for free. Hand-rolled equality is exactly the boilerplate freezed exists to generate and keep in sync; PaceCalculator's == only compares 6 of its 13 fields (the derived ones are excluded) which is easy to get wrong silently the next time a field is added, since nothing forces == and hashCode to be touched together.",
+   "recommendation": "Convert PaceCalculator and LifetimeLeafProvenance to @freezed classes (both fit the private-const-factory-plus-named-computing-factory pattern already used elsewhere for derived-field value objects); convert RecentActivityWindow to a named-field record (({DateTime startDate, DateTime endDate, String? curriculumId})) to match the record-based family keys already used in this same feature.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "grep -rn 'bool operator ==' lib/features/progress/ (excluding .freezed.dart/.g.dart) returns no hits."
+   ],
+   "labels": [
+    "consistency",
+    "freezed"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-progress-p1",
+  "findingIndex": 8,
+  "finding": {
+   "title": "Localize the hardcoded 'Curriculum settings' tooltip in curriculum_progress_screen.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AX-2 (no hardcoded user-facing strings)",
+   "area": "features/progress/presentation/screens/curriculum_progress_screen.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/screens/curriculum_progress_screen.dart",
+     "line": 76,
+     "quote": "tooltip: 'Curriculum settings',"
+    }
+   ],
+   "sites": 1,
+   "why": "Every other string on this screen goes through AppLocalizations (l10n.curriculumProgressBreakdownByLevel, l10n.errorUnknownCurriculum, etc.); this one literal renders in English regardless of device locale, so a Hebrew-locale, RTL user long-pressing the settings gear sees an English tooltip in an otherwise fully-Hebrew screen.",
+   "recommendation": "Add an ARB key (EN+HE) and use l10n.<key> instead of the literal.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "make arb-parity stays green with the new key present in both app_en.arb and app_he.arb.",
+    "The tooltip: parameter on this IconButton references an l10n getter, not a string literal."
+   ],
+   "labels": [
+    "i18n",
+    "AX-2"
+   ]
+  }
+ }
+]

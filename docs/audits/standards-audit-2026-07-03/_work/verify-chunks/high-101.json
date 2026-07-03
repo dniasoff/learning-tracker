@@ -1,0 +1,49 @@
+[
+ {
+  "sourceBatch": "t1-feat-tutoring-p2",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Strip profile_id / child_profile_id from tutor_pin_service.dart and tutor_invite_use_cases.dart analytics events",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "PV-1",
+   "area": "features/tutoring/domain",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tutoring/domain/services/tutor_pin_service.dart",
+     "line": 100,
+     "quote": "parameters: {'profile_id': profileId},"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart",
+     "line": 135,
+     "quote": "parameters: {'child_profile_id': childProfileId},"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart",
+     "line": 162,
+     "quote": "parameters: {'grant_id': grant.grantId},"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart",
+     "line": 191,
+     "quote": "parameters: {'grant_id': grant.grantId},"
+    }
+   ],
+   "sites": 4,
+   "why": "PV-1 explicitly bans profile_id and per-child identifiers as analytics parameters; the digest's baseline only excuses the three already-cited lines in lib/core/analytics/analytics_service.dart. These are different sites in a different file (tutor_pin_set fires with the tutor's own profile_id; tutor_invite_sent fires with the target child's child_profile_id), discovered while tracing the domain services my batch's screens call \u2014 the same class of per-user-identifier leak the rule was written to prevent, in a children's-learning-app analytics stream that PV-3/PV-4 assume is otherwise minimized.",
+   "recommendation": "Drop profile_id/child_profile_id/grant_id from these logEvent calls, or replace with an opaque, non-correlatable value if event-level de-duplication is genuinely needed. Extend the Rule-0 checker for PV-1 from analytics_service.dart-only to a repo-wide grep over all logEvent(...) parameters: {...} call sites for the banned key list.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "tutor_pin_set and tutor_invite_sent/accepted/declined events no longer carry profile_id/child_profile_id/grant_id in parameters",
+    "a grep-based checker scans all lib/**/*.dart logEvent(...) parameter maps for banned keys (profile_id, child_profile_id, sefaria_ref, grant_id) repo-wide and fails non-zero on a hit, extending the existing analytics_service.dart-scoped check"
+   ],
+   "labels": [
+    "privacy",
+    "PV-1",
+    "analytics",
+    "P1"
+   ]
+  }
+ }
+]

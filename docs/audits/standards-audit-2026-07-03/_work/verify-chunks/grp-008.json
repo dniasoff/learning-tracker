@@ -1,0 +1,191 @@
+[
+ {
+  "sourceBatch": "t1-core-database-daos-p1",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Stop catching StateError (an Error subtype) in user_profile_dao.dart's AccountX.accountTier getter",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "EH-4",
+   "area": "core/database/daos/user_profile_dao.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/database/daos/user_profile_dao.dart",
+     "line": 37,
+     "quote": "try {\n      return UserTierX.fromDb(tier);\n    } on StateError {\n      return UserTier.localBorn;"
+    }
+   ],
+   "sites": 1,
+   "why": "`StateError` extends `Error` in dart:core, and `UserTierX.fromDb` throws it specifically for an unrecognized `tier` string \u2014 i.e. local DB corruption or a missed enum-value migration. Catching it here and silently returning `UserTier.localBorn` masks that bug: a `cloudBorn` account whose stored tier string ever drifts (bad migration, hand-edited row, future enum rename) silently behaves as local-born everywhere accountTier is read (sync gating, balance-row eligibility per 'Adults never have balance rows (Rule 3)', etc.), with nothing logged.",
+   "recommendation": "Let the StateError propagate (or catch and rethrow after an AppLogger.error call) instead of returning a silent fallback \u2014 an unrecognized tier value is a bug that should be loud, not a normal control-flow case.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "AccountX.accountTier no longer has an `on StateError` handler that returns a default value.",
+    "A test asserts that an Account row with an unrecognized `tier` string causes accountTier to throw (or to log via AppLogger and rethrow), not silently return localBorn."
+   ],
+   "labels": [
+    "EH-4",
+    "error-handling",
+    "silent-fallback"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-database-daos-p1",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Replace human-readable English StateError messages with stable codes in the DAO layer",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "EH-5",
+   "area": "core/database/daos",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/database/daos/active_curriculum_dao.dart",
+     "line": 110,
+     "quote": "throw StateError(\n        'Cannot deactivate the last active curriculum for this profile',"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/daos/learning_ledger_dao.dart",
+     "line": 30,
+     "quote": "throw StateError(\n        'INSERT OR IGNORE collided but the companion has no ulid set \u2014 '"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/daos/study_day_config_dao.dart",
+     "line": 218,
+     "quote": "'Cannot seed study day defaults: curriculum_tracks row $trackId not found',"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/daos/user_profile_dao.dart",
+     "line": 27,
+     "quote": "_ => throw StateError('Unknown tier: $value'),"
+    }
+   ],
+   "sites": 4,
+   "why": "All four throw a plain English sentence instead of a stable code/enum. EH-5 exists because this is an EN+Hebrew app \u2014 if any of these ever reaches presentation (a catch-and-display-e.toString() somewhere upstream, or a crash reporter surfaced to a bilingual support flow), the message renders untranslated English with no ARB key to localize it.",
+   "recommendation": "Introduce a small typed error (e.g. sealed DaoError with named variants, or a code enum carried on a custom Exception) for these four call sites; have callers map codes to AppLocalizations strings at the presentation boundary.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "The 4 sites throw a typed/coded error instead of a raw English StateError string.",
+    "A grep-based Rule-0 check (e.g. `grep -rn \"StateError('[A-Z]\" lib/core/database/`) is added to catch new pre-formatted messages in the DAO layer."
+   ],
+   "labels": [
+    "EH-5",
+    "i18n",
+    "error-handling"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-database-daos-p1",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Replace track_dao.dart's stringly-typed TrackState class with a real Dart enum",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "EH-6 spirit / Evans ubiquitous language",
+   "area": "core/database/daos/track_dao.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/database/daos/track_dao.dart",
+     "line": 15,
+     "quote": "class TrackState {\n  const TrackState._();\n  static const active = 'active';"
+    }
+   ],
+   "sites": 1,
+   "why": "TrackState is a 4-value closed lifecycle (active/retired/archived/deleted) central to this HOTSPOT file's whole model, modeled as bare String constants on a TextColumn with no DB-level or compiler-level check that only these 4 values ever get stored. Any code that branches on `.state` gets no exhaustiveness checking, and nothing stops a typo'd string reaching the column (mitigated today only by everyone remembering to use the TrackState.* constants rather than literals \u2014 a convention, not a guarantee).",
+   "recommendation": "Model TrackState as a real Dart `enum` (or use Drift's `.withConverter` to store it as text but expose an enum in Dart), so switches over track state are compiler-exhaustive and no non-member string can be constructed.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "TrackState is a Dart enum (or enum-backed column); all TrackState.active-style call sites in this batch keep compiling.",
+    "Any switch/when over the state value is exhaustive without a default/_ arm."
+   ],
+   "labels": [
+    "modeling",
+    "type-safety",
+    "hotspot"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-database-daos-p1",
+  "findingIndex": 8,
+  "finding": {
+   "title": "Fix test groups in completion_dao_extended_test.dart and completion_dao_extra_test.dart that reference the removed CompletionDao.insertCompletionsBatch method",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 / test hygiene",
+   "area": "test/core/database/daos",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/database/daos/completion_dao_extended_test.dart",
+     "line": 156,
+     "quote": "group('CompletionDao.insertCompletionsBatch', () {"
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/completion_dao_extra_test.dart",
+     "line": 87,
+     "quote": "group('CompletionDao.insertCompletionsBatch', () {"
+    }
+   ],
+   "sites": 2,
+   "why": "completion_dao.dart's own doc comment states: 'Write methods (insertCompletion, insertCompletionsBatch) have been removed. New completions are written exclusively through CompletionWriter.' These two group() blocks (and completion_dao_extended_test.dart's file-header doc comment) still name and describe `CompletionDao.insertCompletionsBatch` as if it exists. What they actually exercise is the test-only `seedCompletionsBatch` helper (test/helpers/drift_memory.dart, itself an unbatched loop over `completionEventDao.appendEvent`) followed by CompletionDao read methods. A future maintainer reading these group names would reasonably believe CompletionDao still exposes a batch-insert API.",
+   "recommendation": "Rename the groups/comments to describe what's actually under test (e.g. 'seeding + getCompletionsByTrack/ByProfile') or drop the stale 'insertCompletionsBatch' framing entirely.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Neither file's group()/doc-comment names a CompletionDao method that doesn't exist on the class."
+   ],
+   "labels": [
+    "stale-test",
+    "naming",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-database-daos-p1",
+  "findingIndex": 9,
+  "finding": {
+   "title": "De-duplicate near-identical CompletionDao test coverage between completion_dao_extended_test.dart and completion_dao_extra_test.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler duplication / TQ-1",
+   "area": "test/core/database/daos",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/database/daos/completion_dao_extended_test.dart",
+     "line": 317,
+     "quote": "group('CompletionDao.getCompletionsByTrackAndProfile', () {"
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/completion_dao_extra_test.dart",
+     "line": 120,
+     "quote": "group('CompletionDao.getCompletionsByTrackAndProfile', () {"
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/completion_dao_extended_test.dart",
+     "line": 361,
+     "quote": "group('CompletionDao.completionExistsByTrack', () {"
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/completion_dao_extra_test.dart",
+     "line": 230,
+     "quote": "group('CompletionDao.completionExistsByTrack', () {"
+    }
+   ],
+   "sites": 5,
+   "why": "Both files were independently written against 'the baseline test' (each file's header says so) and ended up covering the same 5 methods \u2014 insertCompletionsBatch(seed helper), getCompletionsByTrackAndProfile, getAggregateCountByTrack, completionExistsByTrack, getCompletionsByDateRangeAndTrack \u2014 with near-identical happy-path/profile-scoping/empty-list scenarios. Neither file references the other. This doubles maintenance cost (a behavior change requires updating matching assertions in two places) for zero added coverage on 5 of the two files' groups; completion_dao_review_counts_test.dart by contrast adds real net-new scenarios (track/profile/ref filter edge cases) alongside minor overlap, so it's not implicated here.",
+   "recommendation": "Merge the 5 overlapping groups into one file (extra_test.dart's cases look like a strict subset of extended_test.dart's), or add a comment in the newer file cross-referencing the older one so future authors know not to add a third copy.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "The 5 duplicated method groups exist in exactly one file, or the newer file documents what it adds beyond the older one.",
+    "Total assertion count for these 5 methods is unchanged or increased (dedup must not drop coverage)."
+   ],
+   "labels": [
+    "duplication",
+    "test-maintenance",
+    "fowler"
+   ]
+  }
+ }
+]

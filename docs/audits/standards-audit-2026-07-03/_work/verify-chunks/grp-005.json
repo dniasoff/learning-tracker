@@ -1,0 +1,178 @@
+[
+ {
+  "sourceBatch": "t1-core-auth",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Guard the force-unwrapped credential.user in FirebaseAuthGatewayImpl.createUserWithEmailAndPassword",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "EH-2",
+   "area": "core/auth",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/auth/firebase_auth_gateway_impl.dart",
+     "line": 86,
+     "quote": "return credential.user!.uid;"
+    }
+   ],
+   "sites": 1,
+   "why": "Every other credential.user access in this same file tolerates a null user (signInAndGetUser:74 and signInWithEmailLink:141 both route through _toAppUserOrNull). Here the `!` will throw a raw TypeError ('Null check operator used on a null value') instead of a typed, catchable error if Firebase ever returns a credential without a user \u2014 a TypeError carries no stable code (EH-5) and isn't a deliberately-thrown, meaningful exception, so it degrades straight to an opaque crash instead of a handleable condition, inconsistent with how the rest of the file treats the identical precondition.",
+   "recommendation": "Mirror the null-check-and-throw pattern used elsewhere in the file (or the typed exception recommended in the EH-5 finding) instead of force-unwrapping credential.user.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "No bare `!` on credential.user in this file.",
+    "A regression test exercises the null-user branch of createUserWithEmailAndPassword."
+   ],
+   "labels": [
+    "auth",
+    "defensive-coding"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-auth",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Add inline // keepAlive: justification comments to auth_providers.dart's two singleton providers",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "SM-6",
+   "area": "core/auth",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/auth/auth_providers.dart",
+     "line": 13,
+     "quote": "@Riverpod(keepAlive: true)"
+    },
+    {
+     "file": "learning_tracker/lib/core/auth/auth_providers.dart",
+     "line": 22,
+     "quote": "@Riverpod(keepAlive: true)"
+    }
+   ],
+   "sites": 2,
+   "why": "SM-6 requires every keepAlive: true to carry an inline `// keepAlive:` justification comment, specifically because the planned [Pending] audit grep keys off that literal tag beside the annotation (docs/coding-standards.md:156). Both providers here only have an ordinary doc comment above the function ('Provides the singleton ... used app-wide'), not the tagged comment the future checker looks for \u2014 when that grep ships, these two will false-positive as unjustified even though the reasoning is already documented in prose. (The same gap recurs at other keepAlive sites repo-wide, e.g. content_index.dart, registry_provider.dart, preference_providers.dart \u2014 those are outside this batch, noted here only for the orchestrator's dedup.)",
+   "recommendation": "Add a one-line `// keepAlive: <reason>` comment immediately above each @Riverpod(keepAlive: true), e.g. '// keepAlive: stateless singleton facade, cheap to keep for app lifetime'.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Both providers carry a `// keepAlive:` tagged comment.",
+    "Future SM-6 audit grep (once shipped) passes for this file."
+   ],
+   "labels": [
+    "auth",
+    "SM-6",
+    "riverpod"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-auth",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Split firebase_auth_gateway_impl_test.dart \u2014 496 lines exceeds the 400-line AG-3 ratchet",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "test/core/auth",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/auth/firebase_auth_gateway_impl_test.dart",
+     "line": 1,
+     "quote": "import 'dart:async';"
+    }
+   ],
+   "sites": 1,
+   "why": "AG-3's checker (`find lib test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400'`) explicitly scans test/ as well as lib/; this file is 496 lines, 96 over the ratchet. It is otherwise a well-structured, hermetic, mocktail-based suite with good branch coverage of the documented gateway contract \u2014 the size comes from covering ~20 gateway methods 1:1, not from disorganization.",
+   "recommendation": "Split by concern (e.g. an email/password test file, a Google-credential test file, a lifecycle/action-code test file) or extract the stubUser/mock-registration boilerplate into a shared test helper to shrink the file.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "`find learning_tracker/lib learning_tracker/test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400'` no longer lists this file or its replacements."
+   ],
+   "labels": [
+    "auth",
+    "testing",
+    "AG-3",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-content",
+  "findingIndex": 0,
+  "finding": {
+   "title": "content_grouping.dart groupItemsByNextLevel's maxBrowseDepth clamp silently reintroduces fixed bug R5-6",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Evans (invariant re-derived, not enforced once) / doc-reality drift",
+   "area": "core/content/content_grouping.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/content/content_grouping.dart",
+     "line": 26,
+     "quote": "if (maxBrowseDepth != null && currentDepth >= maxBrowseDepth) return const [];"
+    },
+    {
+     "file": "learning_tracker/lib/core/content/content_grouping.dart",
+     "line": 16,
+     "quote": "/// Pass [maxBrowseDepth] to stop at a particular depth (Browse Content caps at\n/// `CurriculumLabels.maxBrowseDepth`)."
+    },
+    {
+     "file": "learning_tracker/lib/features/content_browsing/presentation/screens/content_hierarchy_screen.dart",
+     "line": 374,
+     "quote": "// The old `>= maxBrowseDepth \u2192 return []` conflated \"don't drill further\"\n// with \"show nothing\"; this fixes R5-6."
+    }
+   ],
+   "sites": 1,
+   "why": "docs/planning/bug-hunt-round5-findings-2026-05-31.md rates R5-6 'high': the browse tree showed 'No content' instead of the terminal chapter rows when a deep-link opened at max browse depth. That bug was fixed only in content_hierarchy_screen.dart's private, hand-duplicated `_groupItemsByNextLevel` (clamp to maxBrowseDepth-1, never return empty) \u2014 the fix was never ported back to the 'canonical' shared groupItemsByNextLevel this file exports, which still has the pre-fix `return const []` guard. Repo-wide grep confirms zero current callers pass maxBrowseDepth (Browse Content uses its own private copy instead, precisely because of this bug), so it's a dead branch today \u2014 but the doc comment explicitly invites a future caller to wire it up for exactly the Browse Content use case, which would resurrect the regression with zero warning.",
+   "recommendation": "Either delete content_hierarchy_screen.dart's private duplicate and make it call this shared function (after porting the maxBrowseDepth-1 clamp fix here), or fix the clamp here to match and correct the doc comment so it doesn't claim Browse Content already caps through this parameter.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "A test at test/core/content/content_grouping_test.dart calls groupItemsByNextLevel with currentDepth == maxBrowseDepth and asserts it returns the clamped terminal-level rows, not an empty list (regression for R5-6).",
+    "content_hierarchy_screen.dart no longer maintains a second, independently-fixed copy of this grouping logic."
+   ],
+   "labels": [
+    "core/content",
+    "duplication",
+    "regression-risk",
+    "dead-code"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-content",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Convert HierarchySelection and AdjacentItems to @freezed instead of hand-rolled/missing equality",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "coding-standards.md:584 \u2014 never hand-write ==/hashCode for data classes",
+   "area": "core/content",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/content/hierarchy_selection.dart",
+     "line": 19,
+     "quote": "bool operator ==(Object other) =>\n      identical(this, other) ||"
+    },
+    {
+     "file": "learning_tracker/lib/core/content/content_index.dart",
+     "line": 9,
+     "quote": "class AdjacentItems {\n  const AdjacentItems({this.prev, this.next});"
+    }
+   ],
+   "sites": 2,
+   "why": "coding-standards.md is explicit: 'hand-rolled equality drifts from the fields and silently breaks rebuild-skipping.' HierarchySelection is stored in `Set<HierarchySelection>` in production code (bulk_mark_screen.dart:68, hierarchy_selection_panel.dart:88) \u2014 Set.add/remove/contains rely directly on ==/hashCode. All 4 fields are covered today, but the next field added to the class (a plausible edit given it already models a 4-level hierarchy with headroom) will silently break selection dedup in the bulk-mark/lifetime-marking flows unless the two overrides are manually kept in sync. AdjacentItems has no equality at all (identity-only), so two structurally-equal instances never compare equal \u2014 currently harmless since it's only null-checked, but not an @freezed value type either.",
+   "recommendation": "Annotate both as @freezed (or add copyWith by hand and a comment justifying why not, matching the project's stated carve-out pattern) so equality/hashCode/copyWith stay generated and in sync with the fields.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "HierarchySelection and AdjacentItems are @freezed classes; all existing == /hashCode assertions in hierarchy_selection_test.dart and epic_25_schema_core_test.dart still pass unchanged.",
+    "Set<HierarchySelection> usage in bulk_mark_screen.dart and hierarchy_selection_panel.dart compiles and behaves identically."
+   ],
+   "labels": [
+    "core/content",
+    "freezed",
+    "equality",
+    "hygiene"
+   ]
+  }
+ }
+]

@@ -1,0 +1,185 @@
+[
+ {
+  "sourceBatch": "t1-feat-gamification-p1",
+  "findingIndex": 13,
+  "finding": {
+   "title": "Convert RewardMilestone/RewardUnlockRecord to @freezed data classes",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Naming/placement (domain/state models are immutable @freezed classes; never hand-write ==/hashCode for data classes)",
+   "area": "features/gamification/domain/models",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/gamification/domain/models/reward_milestone.dart",
+     "line": 3,
+     "quote": "class RewardMilestone {"
+    },
+    {
+     "file": "learning_tracker/lib/features/gamification/domain/models/reward_milestone.dart",
+     "line": 107,
+     "quote": "class RewardUnlockRecord {"
+    }
+   ],
+   "sites": 2,
+   "why": "Both classes are hand-written data holders with a hand-rolled copyWith/toJson/fromJson but no == / hashCode override at all, so they fall back to identity equality -- two RewardMilestones with identical field values are not `==`. Current call sites happen to compare by `.id` field rather than object equality (so no live bug was found), but this is fragile: any future code that puts RewardMilestone in a Set, uses List.contains, or relies on Riverpod .select()-style equality skipping would silently misbehave. The sibling model in the same feature (StreakRecoveryInfo) already follows the correct @freezed convention, showing the pattern is known and used elsewhere in this exact directory.",
+   "recommendation": "Convert RewardMilestone and RewardUnlockRecord to @freezed classes (keeping the existing toJson/fromJson as named factory/method overrides if the generated ones don't match the custom snake_case JSON shape).",
+   "effort": "M",
+   "acceptance_criteria": [
+    "RewardMilestone and RewardUnlockRecord are @freezed with generated equality",
+    "Existing reward_milestone_test.dart suite passes unchanged (or updated only for the freezed toString/copyWith surface)"
+   ],
+   "labels": [
+    "freezed",
+    "naming-placement",
+    "P3"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-gamification-p1",
+  "findingIndex": 14,
+  "finding": {
+   "title": "Use ICU-parameterized l10n instead of raw 'label: value' string interpolation for chip/subtitle text",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AX-2 (no hardcoded user-facing strings; everything via AppLocalizations/ARB with ICU placeholders)",
+   "area": "features/gamification/presentation/widgets",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/gamification/presentation/widgets/manage_rewards_list.dart",
+     "line": 113,
+     "quote": "'${l10n.rewardConfigPointsThresholdLabel}: ${milestone.thresholdPoints}',"
+    },
+    {
+     "file": "learning_tracker/lib/features/gamification/presentation/widgets/points_display_widget.dart",
+     "line": 49,
+     "quote": "'${curriculumLabelText(ref, curriculum: e.key)}: '\n                        '${e.value}',"
+    }
+   ],
+   "sites": 2,
+   "why": "Both build a 'label: value' string by concatenating a localized label with a hardcoded ': ' separator and a raw number, rather than passing the value into an ICU-parameterized ARB string. The same feature already has the correct pattern for an almost identical 'reward cost' display (`l10n.pendingRedemptionsCost(redemption.pointsCost)` in parent_pending_redemptions_screen.dart, `l10n.achievementsMilestonePoints(...)` in achievement_tier_card.dart) -- these two sites are the odd ones out. Low practical impact (colon separators are largely locale-invariant) but genuinely inconsistent with the feature's own established i18n discipline.",
+   "recommendation": "Add/reuse an ICU-parameterized ARB entry (e.g. a 'labelWithValue' string) for both sites instead of raw interpolation.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Both sites use an AppLocalizations method with a placeholder instead of raw string interpolation for the label/value pair"
+   ],
+   "labels": [
+    "AX-2",
+    "i18n",
+    "P3"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-gamification-p1",
+  "findingIndex": 15,
+  "finding": {
+   "title": "Populate or delete the dead gamification.dart barrel file",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Rule 2 (barrel is the only sanctioned re-export file) / dead code",
+   "area": "features/gamification",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/gamification/gamification.dart",
+     "line": 3,
+     "quote": "// Import this barrel (features/gamification/gamification.dart) from outside"
+    },
+    {
+     "file": "learning_tracker/lib/features/gamification/gamification.dart",
+     "line": 7,
+     "quote": "library gamification;"
+    }
+   ],
+   "sites": 1,
+   "why": "This 7-line file's own doc comment instructs other features to import it as the feature's public surface, but it contains zero `export` statements, and a repo-wide grep confirms zero files import it (the only match for the literal path string is the comment inside the file itself). Meanwhile 5 other features (dashboard, learning, notifications, sync, content_browsing) reach into features/gamification/** via 10+ direct deep imports of domain/models, domain/services, streak/*, and presentation/widgets paths instead. The file is not doing the job it documents itself as doing -- either because the codebase's barrel convention moved to providers.dart (per current coding-standards.md Rule 2) and this file is a stale leftover, or because populating it was simply never finished.",
+   "recommendation": "Either delete gamification.dart as stale scaffolding, or make it a real public surface (export the symbols the 10 external deep-import sites currently reach for) and redirect those imports through it -- consistent with whichever barrel filename convention (gamification.dart vs providers.dart) the team settles on.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "gamification.dart either exports real symbols with at least one external importer, or is removed from the tree"
+   ],
+   "labels": [
+    "Rule-2",
+    "dead-code",
+    "P3"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-gamification-p2",
+  "findingIndex": 0,
+  "finding": {
+   "title": "streak_restorer.dart redefines kBulkPriorSentinelMs as a local magic number instead of importing the existing core constant",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Evans (invariant enforced in one place) / Fowler (duplicated code, magic number)",
+   "area": "features/gamification/streak",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/gamification/streak/streak_restorer.dart",
+     "line": 41,
+     "quote": "// kBulkPriorSentinelMs (DateTime.utc(2000, 1, 1)); we define it locally to\n    // avoid a core\u2192features layering violation."
+    },
+    {
+     "file": "learning_tracker/lib/features/gamification/streak/streak_restorer.dart",
+     "line": 44,
+     "quote": "const bulkPriorSentinelMs = 946684800000; // DateTime.utc(2000,1,1) ms"
+    },
+    {
+     "file": "learning_tracker/lib/core/learning/completion_constants.dart",
+     "line": 18,
+     "quote": "const int kBulkPriorSentinelMs =\n    946684800000; // DateTime.utc(2000, 1, 1).millisecondsSinceEpoch"
+    }
+   ],
+   "sites": 1,
+   "why": "The comment's stated reason is wrong: SchedulerEngine.kBulkPriorSentinelMs (the thing it says it's avoiding importing) lives in features/scheduler, not core, so importing it would be a cross-feature import (Rule 2), not a core\u2192features violation (Rule 1) \u2014 and the correct fix was available anyway: lib/core/learning/completion_constants.dart already exports this exact constant from core, which features/ may freely import, and its own doc comment explicitly says it 'MUST be excluded from... streak calculations.' The sentinel (2000-01-01 UTC ms) now has three independent definitions (core/learning/completion_constants.dart, features/scheduler/domain/services/scheduler_engine.dart, and this file) that can silently diverge if any one is edited, corrupting bulk-prior filtering in exactly one of streak restore, points history, or scheduler completion detection without any test catching the mismatch.",
+   "recommendation": "Delete the local bulkPriorSentinelMs const and import kBulkPriorSentinelMs from core/learning/completion_constants.dart (a legal features\u2192core import); fix the misleading comment.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "streak_restorer.dart imports and uses core's kBulkPriorSentinelMs; the local const is removed.",
+    "grep -rn '946684800000' lib/ returns exactly one hit (completion_constants.dart)."
+   ],
+   "labels": [
+    "duplication",
+    "layering",
+    "streak"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-gamification-p2",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Use directional layout APIs instead of EdgeInsets.only(left/right) and Positioned(right:) in gamification widgets",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AX-1",
+   "area": "features/gamification/presentation/widgets",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/gamification/presentation/widgets/tier_icon_box.dart",
+     "line": 49,
+     "quote": "Positioned(\n              right: 3,\n              bottom: 3,"
+    },
+    {
+     "file": "learning_tracker/lib/features/gamification/presentation/widgets/reward_config_header.dart",
+     "line": 29,
+     "quote": "padding: EdgeInsets.only(\n          top: topInset + 4,\n          left: 4,"
+    }
+   ],
+   "sites": 2,
+   "why": "tier_icon_box.dart's lock badge is pinned to the visual right/bottom corner with plain Positioned, which does not mirror under RTL \u2014 in Hebrew locale the badge renders on the leading (left) corner instead of the trailing corner. This is not hypothetical: the sibling file progress_summary_card.dart (same presentation/widgets/ directory) carries an explicit comment describing this exact bug ('With a plain Positioned(right:) it stayed on the visual right \u2014 the LEADING edge in Hebrew RTL \u2014 and collided with the right-aligned header text') that was fixed there with PositionedDirectional but never applied to tier_icon_box.dart. reward_config_header.dart's EdgeInsets.only(left:4, right:4) is currently symmetric so it renders identically in both directions today, but is one one-sided edit away from the same class of bug and still fails the AX-1 grep/lint intent.",
+   "recommendation": "Replace Positioned(right:, bottom:) with PositionedDirectional(end:, bottom:) in tier_icon_box.dart; replace EdgeInsets.only(left:, right:) with EdgeInsetsDirectional.only(start:, end:) in reward_config_header.dart.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep -rn 'Positioned(' lib/features/gamification/presentation/widgets/tier_icon_box.dart shows PositionedDirectional, not Positioned with right:/left:.",
+    "A widget test pumped under Locale('he')/TextDirection.rtl asserts the lock badge sits on the trailing (left-in-RTL) corner."
+   ],
+   "labels": [
+    "rtl",
+    "a11y",
+    "hebrew"
+   ]
+  }
+ }
+]

@@ -1,0 +1,4 @@
+learning_tracker/lib/core/sync/exceptions/firestore_permission_denied_exception.dart  (38 lines)
+learning_tracker/lib/core/sync/exceptions/merge_exception.dart  (26 lines)
+learning_tracker/lib/core/sync/exceptions/outbox_dead_letter_exception.dart  (28 lines)
+learning_tracker/lib/core/sync/exceptions/sync_push_exception.dart  (26 lines)

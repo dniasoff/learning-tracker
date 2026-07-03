@@ -1,0 +1,201 @@
+[
+ {
+  "sourceBatch": "t1-core-labels",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Split curriculum_label.dart (451 lines) and domain_term_labels.dart (435 lines) below the 400-line hand-written cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "lib/core/labels",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/labels/curriculum_label.dart",
+     "line": 451,
+     "quote": "451 lines total (wc -l) \u2014 hand-written, not generated"
+    },
+    {
+     "file": "learning_tracker/lib/core/labels/domain_term_labels.dart",
+     "line": 435,
+     "quote": "435 lines total (wc -l) \u2014 hand-written, not generated"
+    }
+   ],
+   "sites": 2,
+   "why": "Both files exceed the 400-line hand-written Dart cap. curriculum_label.dart's bulk is largely 8 near-identical named constructors, each null-initializing the same 10 fields (~130 lines of pure boilerplate) \u2014 a tagged union modeled as one class with nullable fields instead of a sealed hierarchy, which is also the structural reason the ancestor-Hebrew-name plumbing (see the P1 finding) is easy to miss in one branch and not another. domain_term_labels.dart's bulk is the deliberate, documented per-curriculum siyum-label catalog (lines ~346-428). Long files raise review/merge-conflict cost and make it harder to hold one rendering mode's full context while editing.",
+   "recommendation": "For curriculum_label.dart: extract the per-mode constructors/build-cases into a sealed _CurriculumLabelData hierarchy (one variant class per _Kind) to remove the repeated null-field boilerplate. For domain_term_labels.dart: split the per-curriculum siyum catalog into a sibling file (e.g. curriculum_siyum_labels.dart) or mixin.",
+   "acceptance_criteria": [
+    "Both files \u2264400 lines.",
+    "AG-3 checker (once implemented per Rule 0) passes on lib/core/labels/**."
+   ],
+   "labels": [
+    "file-size",
+    "AG-3",
+    "core-labels"
+   ],
+   "effort": "M"
+  }
+ },
+ {
+  "sourceBatch": "t1-core-labels",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Hoist the RegExp allocated on every call inside DomainTermLabels._normaliseEnglishStageName",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "PF-3 spirit (avoid per-call allocation on a list-render path); Fowler 'extract constant'",
+   "area": "lib/core/labels/domain_term_labels.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/labels/domain_term_labels.dart",
+     "line": 262,
+     "quote": "final reviewNumbered = RegExp(r'^Review (\\d+)$');"
+    }
+   ],
+   "sites": 1,
+   "why": "_normaliseEnglishStageName is invoked from resolveStoredStageName, which (per its own doc comment and the PP-5 regression test) is called once per StageBreakdownEntry.stageName in list rendering \u2014 i.e. per row, potentially on every rebuild. Compiling a new RegExp on every call is needless allocation on a path this same file's sibling curriculum_label.dart already knows to avoid: its own Hebrew-detection pattern is hoisted to a static final (curriculum_label.dart:364, `static final RegExp _hebrew = RegExp(...)`).",
+   "recommendation": "Hoist to a private `static final RegExp _reviewNumbered = RegExp(r'^Review (\\d+)$');` at class scope, mirroring curriculum_label.dart's _hebrew pattern.",
+   "acceptance_criteria": [
+    "_normaliseEnglishStageName allocates no new RegExp per call \u2014 verified by code review or a grep for `RegExp(` inside method bodies (not field initializers) under lib/core/labels/."
+   ],
+   "labels": [
+    "perf",
+    "hygiene",
+    "core-labels"
+   ],
+   "effort": "S"
+  }
+ },
+ {
+  "sourceBatch": "t1-core-nav-utils",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Delete dead core/navigation re-export shims and break the app_router\u2194guards import cycle",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "coding-standards.md:63 \"dependency direction is strictly app \u2192 features \u2192 core\"; adjacent to Rule 2's \"do not add other barrel/re-export files\"",
+   "area": "lib/core/navigation (architecture/layering)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/navigation/app_router.dart",
+     "line": 2,
+     "quote": "export 'package:learning_tracker/app/router/app_router.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/core/navigation/app_shell.dart",
+     "line": 2,
+     "quote": "export 'package:learning_tracker/app/router/app_shell.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/core/navigation/router_provider.dart",
+     "line": 2,
+     "quote": "export 'package:learning_tracker/app/router/router_provider.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/core/navigation/guards/auth_guard.dart",
+     "line": 2,
+     "quote": "export 'package:learning_tracker/app/router/guards/auth_guard.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/core/navigation/guards/pin_guard.dart",
+     "line": 3,
+     "quote": "import 'package:learning_tracker/core/navigation/app_router.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/app/router/app_router.dart",
+     "line": 8,
+     "quote": "import 'package:learning_tracker/core/navigation/guards/pin_guard.dart';"
+    }
+   ],
+   "sites": 4,
+   "why": "The W1.2 refactor (commit eb9e7fb7, message: \"Old core/navigation/ paths become re-export stubs so all 42 importers keep compiling without mass edits\") moved the real router files to lib/app/router/ but the promised cleanup never happened. Three of this batch's own guards (pin_guard.dart:3, profile_guard.dart:6, restore_guard.dart:8) still import the OLD core/navigation/app_router.dart shim to reach route classes, and lib/app/router/app_router.dart imports those same three guards (line 8 and neighbours) \u2014 producing a real import cycle app\u2192core\u2192(shim)\u2192app that spans exactly the boundary coding-standards.md:63 calls \"strict\". Dart tolerates the cycle at compile time, but it makes the documented layering diagram false and blocks ever extracting core/ as a standalone package. Two of the four shims are worse than merely redundant: app_shell.dart has zero importers anywhere in the repo (fully dead), and guards/auth_guard.dart is imported only by 3 test files (test/core/navigation/app_shell_test.dart, auth_guard_test.dart, story_acceptance/epic_01_foundation_test.dart) \u2014 production code already migrated off it, tests didn't.",
+   "recommendation": "Point pin_guard.dart/profile_guard.dart/restore_guard.dart's route-class imports at lib/app/router/app_router.dart directly (or, better, pass the needed PageRouteInfo constructors in via the guard constructor so core/ guards don't need to know about app/router at all). Delete app_shell.dart outright (dead). Delete guards/auth_guard.dart and repoint its 3 remaining test importers at lib/app/router/guards/auth_guard.dart. Leave router_provider.dart's shim only if a follow-up ticket is filed to finish its migration too.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "`grep -rn \"import 'package:learning_tracker/app/\" learning_tracker/lib/core/` returns no matches.",
+    "`grep -rln \"core/navigation/app_shell.dart\\|core/navigation/guards/auth_guard.dart\" learning_tracker/lib learning_tracker/test` returns no matches (files deleted, callers repointed).",
+    "make audit gains a core\u2192app check mirroring existing check 14/15 (core\u2192features)."
+   ],
+   "labels": [
+    "architecture",
+    "layering",
+    "dead-code"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-nav-utils",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Rename core/utils/date_utils.dart's DateUtils class off the Flutter SDK's own DateUtils name",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-4 (public top-level symbol names unique across lib/)",
+   "area": "lib/core/utils (naming)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/utils/date_utils.dart",
+     "line": 57,
+     "quote": "class DateUtils {"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/presentation/screens/goal_setup_screen.dart",
+     "line": 1,
+     "quote": "import 'package:flutter/material.dart' hide DateUtils;"
+    }
+   ],
+   "sites": 1,
+   "why": "package:flutter/material.dart exports its own `abstract final class DateUtils` (src/material/date.dart:247, re-exported at material.dart:65) with methods like isSameDay/getDaysInMonth used elsewhere in this repo (e.g. monthly_activity_sliver_calendar.dart calls Flutter's DateUtils.getDaysInMonth). This project's core/utils/date_utils.dart declares a second, unrelated `class DateUtils` with different semantics (isSameLocalDay is deliberately UTC\u2192local-day aware per the P5 streak-boundary pattern; Flutter's isSameDay is a raw field compare). At least 14 lib/ files and 25+ test files import both material.dart and this file unqualified; exactly one file (goal_setup_screen.dart:1) already needed `hide DateUtils` to compile because it calls the project's DateUtils.extractLocalDate. Any of the other ~39 files is one `DateUtils.` autocomplete away from either a hard \"ambiguous import\" compile error or \u2014 if an agent \"fixes\" it by hiding the wrong side \u2014 silently swapping in Flutter's timezone-naive comparison where the streak-safe local-day comparison was intended, a domain the whole file exists to get right.",
+   "recommendation": "Rename the project's class (e.g. LocalDayUtils) or fold its 4 static methods into DateTimeFactory in the same file, so it no longer shadows the Flutter SDK name. Remove goal_setup_screen.dart's now-unnecessary `hide DateUtils` after the rename.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "`grep -rn \"^class DateUtils\" learning_tracker/lib/` returns no matches (class renamed).",
+    "goal_setup_screen.dart's `hide DateUtils` clause is removed and the file still compiles, confirming no remaining ambiguity."
+   ],
+   "labels": [
+    "naming",
+    "ag-4",
+    "footgun"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-nav-utils",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Rename the three core/utils/*_utils.dart files off the banned _utils.dart suffix",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "naming/placement: \"No `_utils.dart` god-files.\"",
+   "area": "lib/core/utils (naming)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/utils/date_utils.dart",
+     "line": 1,
+     "quote": "/// Utilities for date handling following P5 pattern:"
+    },
+    {
+     "file": "learning_tracker/lib/core/utils/hebrew_calendar_utils.dart",
+     "line": 1,
+     "quote": "/// Hebrew calendar utilities wrapping kosher_dart library."
+    },
+    {
+     "file": "learning_tracker/lib/core/utils/hebrew_utils.dart",
+     "line": 1,
+     "quote": "/// Utilities for Hebrew text processing."
+    }
+   ],
+   "sites": 3,
+   "why": "`find lib -iname '*_utils.dart'` returns exactly these 3 files \u2014 100% of the repo's occurrences of a naming pattern the standard bans by name. None is a sprawling god-file today (72-148 lines, single-topic), but the suffix itself is the violation, and a Rule-0 grep checker for this rule would fail on exactly these 3 files with no other candidates to triage.",
+   "recommendation": "Rename to role-specific names: hebrew_calendar_utils.dart \u2192 hebrew_calendar_service.dart; hebrew_utils.dart \u2192 sefaria_text_cleaner.dart (its only real job); date_utils.dart \u2192 split per the DateUtils-collision finding (DateTimeFactory folds into core/time/, the DateUtils class becomes local_day_math.dart).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "`find learning_tracker/lib -iname '*_utils.dart'` returns no results.",
+    "make/audit gains this as a grep check per AG-3's own pattern."
+   ],
+   "labels": [
+    "naming",
+    "hygiene"
+   ]
+  }
+ }
+]

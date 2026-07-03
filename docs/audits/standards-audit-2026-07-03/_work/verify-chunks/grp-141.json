@@ -1,0 +1,221 @@
+[
+ {
+  "sourceBatch": "t1-story-epics-21-24",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Test FirebaseCrashlyticsService.setUserIdentifier directly instead of a hand-duplicated fake in epic_24_stop_the_bleeding_test.dart",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-4 / PV-2 (fake diverges from the class it stands in for)",
+   "area": "test/story_acceptance",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_24_stop_the_bleeding_test.dart",
+     "line": 377,
+     "quote": "Future<void> setUserIdentifier(int? profileId) async {"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_24_stop_the_bleeding_test.dart",
+     "line": 378,
+     "quote": "lastIdentifier = profileId == null ? '' : '$profileId';"
+    },
+    {
+     "file": "learning_tracker/lib/core/logging/crashlytics_service.dart",
+     "line": 67,
+     "quote": "Future<void> setUserIdentifier(int? profileId) =>"
+    },
+    {
+     "file": "learning_tracker/lib/core/logging/crashlytics_service.dart",
+     "line": 68,
+     "quote": "_crashlytics.setUserIdentifier(profileId == null ? '' : '$profileId');"
+    }
+   ],
+   "sites": 1,
+   "why": "FirebaseCrashlyticsService.setUserIdentifier and the test's _CapturingCrashlyticsService.setUserIdentifier independently hard-code the identical `profileId == null ? '' : '$profileId'` ternary. The AC3/AC4 'no PII fallback' tests (Story 24.4, a PV-2-relevant child-privacy contract) only exercise the fake's copy. If a future change to the real class's encoding diverges from the fake -- e.g. a prefix, or an email fallback on a null check gone wrong -- this acceptance test keeps passing green while the production Crashlytics identifier regresses into leaking PII, exactly the class of bug this story exists to prevent. The sibling file (epic_24_stop_bleeding_test.dart) already shows the alternative -- mocktail against the real class -- is the established pattern in this codebase.",
+   "recommendation": "Replace _CapturingCrashlyticsService for the identifier tests with a MockFirebaseCrashlytics (mocktail) wrapped in a real FirebaseCrashlyticsService, and verify(() => mock.setUserIdentifier('5')), matching the interaction-verification pattern already used in epic_24_stop_bleeding_test.dart.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "AC3/AC4 identifier tests exercise FirebaseCrashlyticsService.setUserIdentifier (via a mocked FirebaseCrashlytics), not a hand-duplicated encoding",
+    "Changing the ternary in FirebaseCrashlyticsService.setUserIdentifier without updating the test causes a test failure"
+   ],
+   "labels": [
+    "TQ-4",
+    "PV-2",
+    "fake-drift",
+    "child-privacy"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epics-21-24",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Move DB/temp-dir cleanup into addTearDown across epic_21_multi_account_test.dart so failed assertions don't leak resources",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6 / Nygard lens (cleanup on the failure path)",
+   "area": "test/story_acceptance",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_21_multi_account_test.dart",
+     "line": 194,
+     "quote": "await aliceDb.close();"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_21_multi_account_test.dart",
+     "line": 365,
+     "quote": "await db.close();"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_21_multi_account_test.dart",
+     "line": 475,
+     "quote": "await registry.close();"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_21_multi_account_test.dart",
+     "line": 636,
+     "quote": "await registry.close();"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_21_multi_account_test.dart",
+     "line": 637,
+     "quote": "await tempDir.delete(recursive: true);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_21_multi_account_test.dart",
+     "line": 1002,
+     "quote": "await registry.close();"
+    }
+   ],
+   "sites": 20,
+   "why": "20 of this file's ~30 tests acquire a DeviceRegistryDatabase/UserDatabase/temp Directory and release it as the very last statement of the test body instead of via addTearDown/tearDown -- the correct pattern the SAME file already uses in Stories 21.1, 21.3, and 21.4 (`tearDown(() => registry.close())` at lines 32/208/257). When an earlier expect() in one of the 20 ad-hoc tests fails, execution stops before the cleanup line runs: the temp directory and its .db file are never deleted, and the Drift database handle is never closed. On a local edit-test-rerun loop this leaks a fresh systemTemp directory on every failed run; a leaked open DB handle mid-suite risks 'database is locked'-style failures bleeding into unrelated tests later in the same run, muddying CI triage of an unrelated failure.",
+   "recommendation": "Replace every trailing `await registry.close()` / `await db.close()` / `await tempDir.delete(recursive: true)` with `addTearDown(() => ...)` registered immediately after the resource is created, mirroring the tearDown(() => registry.close()) pattern already used in this file's Stories 21.1/21.3/21.4 groups.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "No test body in this file calls .close()/.delete(recursive on a resource it created without a preceding addTearDown for that same resource",
+    "A deliberately-failing expect() inserted before the old cleanup line still results in the temp dir/DB being cleaned up (verified via addTearDown running)"
+   ],
+   "labels": [
+    "Nygard-lens",
+    "resource-leak",
+    "test-hygiene",
+    "TQ-6"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epics-21-24",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Align Story 21.12 AC3 and Story 21.10 assertions in epic_21_multi_account_test.dart with the UI-level claims their names/comments make",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (weak assertion narrower than the AC title)",
+   "area": "test/story_acceptance",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_21_multi_account_test.dart",
+     "line": 590,
+     "quote": "test('AC3: cloud-born account does not show upgrade option', () {"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_21_multi_account_test.dart",
+     "line": 600,
+     "quote": "expect(cloudState.isLocalBorn, isFalse);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_21_multi_account_test.dart",
+     "line": 508,
+     "quote": "expect(accounts.isNotEmpty, isTrue); // \u2192 picker"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_21_multi_account_test.dart",
+     "line": 513,
+     "quote": "expect(accounts.isEmpty, isTrue); // \u2192 welcome"
+    }
+   ],
+   "sites": 2,
+   "why": "Story 21.12's AC3 test name promises 'does not show upgrade option' (a UI/screen claim) but only asserts `cloudState.isLocalBorn == false`, which is a one-line freezed getter (`tier == Tier.localBorn` in auth_state.dart:77) -- it never touches whatever widget actually gates the upgrade button, so a regression in that gating logic would not be caught here despite the AC's name. Story 21.10 similarly comments '// \u2192 picker' / '// \u2192 welcome' next to plain registry-count assertions without ever exercising the routing decision. Unlike the DEC-34 group a few hundred lines below in the same file, which explicitly documents 'the UI enforcement is covered by code review of account_picker_screen.dart:_activateLocalAccountFromLocalData', neither of these tests says where -- or whether -- the claimed UI behavior is actually verified elsewhere.",
+   "recommendation": "Either rename the tests to describe what they actually check (data-layer state, not UI), add the missing UI/routing assertion, or add a DEC-34-style comment pointing to where the UI-level behavior is verified.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Story 21.12 AC3's test name matches its assertion scope, or it exercises the actual upgrade-option gating logic",
+    "Story 21.10's picker/welcome comments are backed by an assertion or a pointer comment naming where routing is verified"
+   ],
+   "labels": [
+    "TQ-8",
+    "weak-assertion"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epics-21-24",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Assert actual payload values, not just non-null, in epic_24_stop_bleeding_test.dart's 'push payload contains required fields' test",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (weak assertion -- presence, not correctness)",
+   "area": "test/story_acceptance",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_24_stop_bleeding_test.dart",
+     "line": 74,
+     "quote": "expect(capturedPayload!['state'], isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_24_stop_bleeding_test.dart",
+     "line": 75,
+     "quote": "expect(capturedPayload!['activated_at'], isNotNull);"
+    }
+   ],
+   "sites": 1,
+   "why": "The three payload-shape assertions (curriculum_id/state/activated_at) only check `!= null`, not the actual pushed values. A bug that pushed the wrong curriculum_id (e.g. always the currently-selected curriculum instead of the one being initialized) or a hardcoded wrong state string would still satisfy isNotNull and pass this test named 'push payload contains required fields'.",
+   "recommendation": "Assert exact expected values, e.g. expect(capturedPayload!['curriculum_id'], CurriculumId.mishnayos.storageKey), not just isNotNull.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "The payload test fails if TrackCodec.encode is changed to emit a wrong (but non-null) curriculum_id or state value"
+   ],
+   "labels": [
+    "TQ-8",
+    "weak-assertion"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epics-21-24",
+  "findingIndex": 8,
+  "finding": {
+   "title": "Import the shared MockContentRepository fake instead of redeclaring it in epic_24_stop_bleeding_test.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler duplication / AG-4-adjacent",
+   "area": "test/story_acceptance",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_24_stop_bleeding_test.dart",
+     "line": 27,
+     "quote": "class MockContentRepository extends Mock implements ContentRepository {}"
+    },
+    {
+     "file": "learning_tracker/test/mocks/mock_repositories.dart",
+     "line": 13,
+     "quote": "class MockContentRepository extends Mock implements ContentRepository {}"
+    }
+   ],
+   "sites": 1,
+   "why": "test/mocks/mock_repositories.dart:13 already defines the identical one-line MockContentRepository; this file re-declares it verbatim instead of importing it. Harmless today since mocktail scoping is per-file/per-library, but it's 1 of 11 files repo-wide carrying the exact same fork (checked via repo-wide grep, the other 10 are outside this batch) -- if ContentRepository's interface grows, updates to the shared fake won't reach files that forked their own copy, and a future author has no signal a shared version already exists.",
+   "recommendation": "Import MockContentRepository from test/mocks/mock_repositories.dart instead of redeclaring it; flag the other 10 repo-wide duplicates for a follow-up consolidation pass (out of this batch's scope).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "epic_24_stop_bleeding_test.dart imports MockContentRepository rather than declaring its own class of that name"
+   ],
+   "labels": [
+    "duplication",
+    "Fowler",
+    "DRY",
+    "test-mocks"
+   ]
+  }
+ }
+]

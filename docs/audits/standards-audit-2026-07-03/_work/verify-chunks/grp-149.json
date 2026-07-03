@@ -1,0 +1,199 @@
+[
+ {
+  "sourceBatch": "t1-test-cross-p6",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Dedupe firestore_wipe_install_test.dart's hand-rolled AuthRepository stub against test/mocks/mock_repositories.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "test/integration",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/integration/firestore_wipe_install_test.dart",
+     "line": 42,
+     "quote": "class _StubAuthRepository implements AuthRepository {"
+    }
+   ],
+   "sites": 1,
+   "why": "The file is 429 lines (`wc -l` confirmed), over the project's 400-line hand-written-file cap, and ~75 of those lines (42-114) are a hand-rolled `_StubAuthRepository` implementing all ~25 `AuthRepository` methods as `throw UnimplementedError()` just to supply a fixed `currentUser`. `test/mocks/mock_repositories.dart:10` already defines `class MockAuthRepository extends Mock implements AuthRepository {}`, a mocktail `Mock` that satisfies every current AND future interface method via `noSuchMethod` \u2014 needing only `when(() => mock.currentUser).thenReturn(...)`. Reusing it drops the file under the line cap and removes a hand-copied method list that must otherwise be kept in sync by hand whenever `AuthRepository` changes.",
+   "recommendation": "Replace `_StubAuthRepository` with `MockAuthRepository` from test/mocks/mock_repositories.dart, stubbing only `currentUser`.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "`wc -l learning_tracker/test/integration/firestore_wipe_install_test.dart` reports <= 400",
+    "the file imports MockAuthRepository from test/mocks/mock_repositories.dart instead of defining its own stub"
+   ],
+   "labels": [
+    "test-quality",
+    "duplication",
+    "file-length"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-test-cross-p6",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Add a Locale('he') RTL coverage variant for the Sacred-Time lock overlay test",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-3",
+   "area": "test/integration (i18n coverage)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/integration/sacred_time_overlay_scope_test.dart",
+     "line": 32,
+     "quote": "final List<Override> _ashkenaziEnglishTerms = ["
+    },
+    {
+     "file": "learning_tracker/test/integration/sacred_time_overlay_scope_test.dart",
+     "line": 30,
+     "quote": "nusach, so fix those inputs (the toggle defaults to ON, which would"
+    }
+   ],
+   "sites": 1,
+   "why": "Every test in this file pins `useHebrewTermsProvider.overrideWithValue(false)` and Ashkenazi-English via a bespoke `_pump` helper (not the [Pending] shared `pumpApp` convention, which does not yet exist at test/helpers/pump_app.dart) and never exercises Locale('he'). SacredTimeLockOverlay is an access-control surface \u2014 it is what blocks the entire post-auth app during Sacred Time \u2014 in a bilingual, Hebrew-first, RTL app; coding-standards.md's own stated rationale for TQ-3 is \"RTL-only layout and overflow bugs \u2014 which this app ships fixes for every audit wave \u2014 are invisible to LTR-only tests.\" A Hebrew-string overflow or RTL mis-layout in the one screen a family cannot get past during Shabbos/Yom Tov would ship undetected.",
+   "recommendation": "Add at least one Locale('he') pump variant (with useHebrewTermsProvider: true) asserting the overlay still renders/blocks correctly; track against the still-missing shared pumpApp helper.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "sacred_time_overlay_scope_test.dart includes a Locale('he')/RTL pump variant for at least one lock-active case"
+   ],
+   "labels": [
+    "test-quality",
+    "i18n",
+    "rtl",
+    "coverage-gap"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-test-helpers",
+  "findingIndex": 0,
+  "finding": {
+   "title": "test/helpers/golden_runner.dart and flutter_test_config.dart produce no usable golden-regression coverage \u2014 no fonts loaded, and every caller skips the pixel assertion",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-5 (goldens deterministic \u2014 fonts loaded in flutter_test_config.dart)",
+   "area": "learning_tracker/test/helpers (golden test infrastructure)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/flutter_test_config.dart",
+     "line": 13,
+     "quote": "GoogleFonts.config.allowRuntimeFetching = false;"
+    },
+    {
+     "file": "learning_tracker/test/helpers/golden_runner.dart",
+     "line": 53,
+     "quote": "matchesGoldenFile('goldens/$name.${locale.languageCode}.png'),"
+    },
+    {
+     "file": "docs/coding-standards.md",
+     "line": 472,
+     "quote": "Goldens are deterministic (fonts loaded in `flutter_test_config.dart`; pinned size/theme/locale; fixed clock; constant data)"
+    }
+   ],
+   "sites": 2,
+   "why": "flutter_test_config.dart runs before every test file but never calls FontLoader/loadAppFonts \u2014 it only disables GoogleFonts network fetching. I built a throwaway probe (`goldenTest('probe', builder: (l) => const Text('Probe'))`) and ran `flutter test ... --update-goldens`: the captured PNG was 100% blank white \u2014 no glyphs at all. A second probe (`Container(color: red, child: Text(...))`) rendered the red container at full size (proving layout/paint itself works) but the text area was a solid opaque black smear, never legible characters. For comparison, test/golden/goldens/phone_1_dashboard.png (built by the separate store_screenshots_test.dart, which does call FontLoader itself) renders crisp real glyphs in the same sandbox \u2014 proving the blankness is caused by golden_runner.dart's missing font load, not an environment limitation. Because of this (or in anticipation of it), every one of the 11 current goldenTest() call sites across test/story_acceptance/ passes skipGolden: true, so matchesGoldenFile never actually executes anywhere today. The RTL/LTR visual-regression protection this helper's own doc comment claims to provide ('UI bugs that only manifest in RTL Hebrew layouts... cost the team a release window in E18') is not happening \u2014 if anyone flips skipGolden to false today to 'baseline' goldens per the tracked follow-up (DNI-380), they will commit blank/illegible PNGs as the accepted baseline without any test failure to warn them.",
+   "recommendation": "Add explicit font loading to flutter_test_config.dart (FontLoader per family declared in pubspec's fonts: section, mirroring what store_screenshots_test.dart already does locally) before testMain() runs. Re-run the probe pattern above with skipGolden:false to confirm real glyphs render, then un-skip and baseline the goldens that are ready (per the DNI-380 tracked follow-up).",
+   "effort": "M",
+   "acceptance_criteria": [
+    "A goldenTest() call with skipGolden:false and real text content produces a PNG with legible (non-blank, non-tofu-smear) glyphs, verified by re-running the probe pattern used in this audit.",
+    "flutter_test_config.dart contains a font-loading step covering every family declared in pubspec.yaml's fonts: section.",
+    "At least one of the 11 currently-skipped call sites is un-skipped and baselined, or a tracked ticket documents why it remains skipped beyond DNI-380's original scope."
+   ],
+   "labels": [
+    "test-infra",
+    "golden-tests",
+    "tq-5",
+    "empirically-verified"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-test-helpers",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Create test/helpers/pump_app.dart \u2014 the shared widget-test harness TQ-3 requires but which does not exist",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-3 (widget tests pump via shared pumpApp helper; key screens carry a Locale('he') variant)",
+   "area": "learning_tracker/test/helpers (widget-pump infrastructure)",
+   "evidence": [
+    {
+     "file": "docs/coding-standards.md",
+     "line": 464,
+     "quote": "**Enforce:** [Pending] `test/helpers/pump_app.dart` as the reviewed convention; CI golden/widget test of a key screen under Hebrew."
+    },
+    {
+     "file": "learning_tracker/test/helpers/overflow_harness.dart",
+     "line": 122,
+     "quote": "Widget _wrap({\n  required Widget child,"
+    }
+   ],
+   "sites": 1,
+   "why": "docs/coding-standards.md names test/helpers/pump_app.dart directly as the required convention; no such file exists anywhere in the repo (find/grep both return nothing). The result: 156 test files construct their own ProviderScope+MaterialApp+localizationsDelegates wrapper inline (grep for AppLocalizations.delegate under test/), and this batch's own overflow_harness.dart carries a private _wrap() that duplicates the same MaterialApp/l10n boilerplate a shared helper would centralize. Of those 156 files, only 82 (53%) also exercise Locale('he'), despite TQ-3's explicit requirement that key screens carry the RTL variant and despite this being a repo with a documented history of RTL-only bugs ('this app ships fixes for every audit wave' per coding-standards.md's own TQ-3 rationale). Without one reviewed helper, adding a new localization delegate or fixing an RTL pumping bug means touching a long tail of ad hoc copies instead of one file, and there is no structural nudge toward adding the Hebrew variant.",
+   "recommendation": "Create test/helpers/pump_app.dart exporting a pumpApp(tester, widget, {overrides, locale}) helper mirroring the ProviderScope+MaterialApp+delegates block already duplicated in overflow_harness.dart's _wrap() and in dozens of *_test.dart files; migrate new/changed widget tests to it first, then opportunistically fold in existing hand-rolled wrappers.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "test/helpers/pump_app.dart exists and exports a pumpApp helper with ProviderScope overrides + full localizationsDelegates.",
+    "An audit grep (candidate for make audit) flags new widget test files that inline-construct MaterialApp+localizationsDelegates instead of calling pumpApp.",
+    "At least one migrated key-screen test uses pumpApp with a Locale('he') variant."
+   ],
+   "labels": [
+    "test-infra",
+    "tq-3",
+    "i18n",
+    "rtl",
+    "duplication"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-test-helpers",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Deduplicate seedProfile/seedProfileZero between test/helpers/drift_memory.dart and test/helpers/test_database.dart",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler duplication (test helper hygiene; no single named coding-standards rule ID)",
+   "area": "learning_tracker/test/helpers (DB seeding)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/helpers/drift_memory.dart",
+     "line": 50,
+     "quote": "Future<void> seedProfile(UserDatabase db) async {"
+    },
+    {
+     "file": "learning_tracker/test/helpers/test_database.dart",
+     "line": 35,
+     "quote": "Future<void> seedProfile(UserDatabase db) async {"
+    },
+    {
+     "file": "learning_tracker/test/helpers/drift_memory.dart",
+     "line": 105,
+     "quote": "Future<void> seedProfileZero(UserDatabase db) async {"
+    },
+    {
+     "file": "learning_tracker/test/helpers/test_database.dart",
+     "line": 137,
+     "quote": "Future<void> seedProfileZero(UserDatabase db) async {"
+    }
+   ],
+   "sites": 4,
+   "why": "seedProfile and seedProfileZero are byte-for-byte identical function bodies defined independently in both files (same AccountsCompanion/LearnerProfilesCompanion literals, same email/tier/displayName defaults). drift_memory.dart's own doc comment already says 'Prefer this helper over the older createTestDatabase() in test_database.dart... it is the canonical entry point' \u2014 but nobody finished the migration, so both copies live on. Because both files export the same two function names at the same signature, 26 test files that need functionality from both (grep-verified: schema_v1_smoke_test.dart, points_service_test.dart, epic_01..27 story-acceptance files, etc.) must use `show`/`hide` import combinators to dodge a compile-time ambiguous-name collision \u2014 e.g. `import '../helpers/drift_memory.dart' show seedCompletion, seedProfile; import '../helpers/test_database.dart' hide seedProfile;`. If the Accounts/LearnerProfiles schema changes, a fix applied to one copy and missed in the other would silently desync, and nothing forces the 26 dependent files' show/hide lists to stay correct as new functions are added to either file.",
+   "recommendation": "Keep drift_memory.dart as canonical per its own doc comment; delete the duplicate seedProfile/seedProfileZero bodies from test_database.dart and have it import+re-export (or simply import) the versions from drift_memory.dart; then strip the now-unnecessary show/hide combinators from the 26 dependent files.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "seedProfile and seedProfileZero are defined in exactly one file under test/helpers/; the other file imports rather than redefines them.",
+    "None of the 26 currently-affected test files need a show/hide combinator to disambiguate seedProfile/seedProfileZero.",
+    "A grep check (candidate for make audit) fails if two files under test/helpers/ define a top-level function with the same name."
+   ],
+   "labels": [
+    "test-infra",
+    "duplication",
+    "db-seeding",
+    "maintenance-cost"
+   ]
+  }
+ }
+]

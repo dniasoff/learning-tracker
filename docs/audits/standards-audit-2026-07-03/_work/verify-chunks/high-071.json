@@ -1,0 +1,38 @@
+[
+ {
+  "sourceBatch": "t1-feat-progress-p1",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Fix Makefile check 15/15 cross-feature-deep-import detector \u2014 awk comparison always matches a feature against itself",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "Rule 0 (deterministic checker) / Rule 2 (no cross-feature deep imports) / AG-11",
+   "area": "tooling (learning_tracker/Makefile `make audit` check 15/15) \u2014 found while triaging this batch's cross-feature imports against the Rule-2 baseline",
+   "evidence": [
+    {
+     "file": "learning_tracker/Makefile",
+     "line": 377,
+     "quote": "| grep -P \"features/([^/]+)/(?!\\1\\.dart)\" \\"
+    },
+    {
+     "file": "learning_tracker/Makefile",
+     "line": 378,
+     "quote": "awk -F: '{match($$1, ...a); match($$0, ...b); if(a[1] != b[1]) print}'"
+    }
+   ],
+   "sites": 1,
+   "why": "match($0, /features\\/([^\\/]+)\\//, b) scans the WHOLE grep -n line ('path:line:content'), so it always matches the importing file's own features/<name>/ segment first \u2014 the identical substring match($1,...) already captured into a[1] \u2014 because the file path precedes the import statement in that line. a[1] and b[1] are therefore always equal and the WARN branch can never fire, for any input; verified empirically by piping a real progress-to-learning cross-feature import line through the exact awk one-liner, which prints nothing instead of the intended warning. The check is warn-only so this never flipped CI either way, but it means the tool meant to enumerate the Rule-2 backlog has never actually enumerated it: lib/features/progress alone has a dozen-plus real deep cross-feature imports (chart_data_service.dart -> features/learning/domain/entities/completion_tier_filter.dart; lifetime_knowledge_providers.dart -> features/content_browsing/..., features/dashboard/..., features/tracks/...) that should appear in the WARN list and never will. 'make audit ... PASSED \u2014 all 22 greps clean' and this audit's own baseline note that 'ALL current cross-feature deep-import edges are baselined' cannot be verified against reality for Rule 2 \u2014 the source list is empty by construction, not by absence of violations.",
+   "recommendation": "Fix the awk to compare the import target's feature against the importing file's own feature \u2014 e.g. restrict the second match() to substr($0, length($1)+1) so it only scans the import-statement portion of the line \u2014 then re-run make audit and reconcile the resulting edge count against the digest's baseline claim, which today only actually covers check 14.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Feeding a synthetic cross-feature import line through check 15's grep+awk pipeline prints the WARN line; feeding a same-feature deep-import line does not.",
+    "make audit's check 15 output, run against current HEAD, lists a non-empty (or explicitly justified empty) set of real cross-feature deep-import edges."
+   ],
+   "labels": [
+    "tooling",
+    "rule-0",
+    "layering"
+   ]
+  }
+ }
+]

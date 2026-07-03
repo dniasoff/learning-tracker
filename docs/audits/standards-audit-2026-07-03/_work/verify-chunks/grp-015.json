@@ -1,0 +1,204 @@
+[
+ {
+  "sourceBatch": "t1-core-database-root-p4",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Merge duplicate Completion/CompletionEvent DataClass groups in user_database_managers_test.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler duplication / Evans ubiquitous-language drift",
+   "area": "learning_tracker/test/core/database/user_database_managers_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/database/user_database_managers_test.dart",
+     "line": 431,
+     "quote": "  group('Completion DataClass + managers', () {"
+    },
+    {
+     "file": "learning_tracker/test/core/database/user_database_managers_test.dart",
+     "line": 493,
+     "quote": "  group('CompletionEvent DataClass + managers', () {"
+    },
+    {
+     "file": "learning_tracker/test/core/database/user_database_managers_test.dart",
+     "line": 480,
+     "quote": "    test('CompletionEventsCompanion.copyWith', () {"
+    },
+    {
+     "file": "learning_tracker/test/core/database/user_database_managers_test.dart",
+     "line": 540,
+     "quote": "    test('CompletionEventsCompanion.copyWith', () {"
+    }
+   ],
+   "sites": 2,
+   "why": "'Completion DataClass + managers' (line 431-489) and 'CompletionEvent DataClass + managers' (line 493-549) both insert a CompletionEventsCompanion, fetch it back via db.managers.completionEvents, and assert toJson/fromJson/copyWith/equality/hashCode/toString/toCompanion/copyWithCompanion on the exact same generated class \u2014 under two names, one of which (\"Completion\") is the pre-rename table name that test/helpers/drift_memory.dart documents as dropped (\"NOTE (W3.20): The `completions` legacy table was dropped\"). ~60 lines of redundant assertions run on every CI pass for zero incremental coverage, and a reader cannot tell whether the split is deliberate (e.g. with/without trackId) or a leftover from the rename.",
+   "recommendation": "Delete one group (or merge into one using current completionEvents/CompletionEvent terminology); if both variants are intentionally kept to cover trackId-present vs trackId-absent, add a one-line comment saying so.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Only one group asserts the CompletionEvent DataClass round-trip, or a comment explains why two remain."
+   ],
+   "labels": [
+    "duplication",
+    "stale-naming",
+    "test-quality"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-database-root-p4",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Remove dead ProfileDao import in user_database_managers_test.dart:12",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "dead-code (applicability sweep: Everything)",
+   "area": "learning_tracker/test/core/database/user_database_managers_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/database/user_database_managers_test.dart",
+     "line": 12,
+     "quote": "import 'package:learning_tracker/core/database/daos/profile_dao.dart';"
+    }
+   ],
+   "sites": 1,
+   "why": "`ProfileDao` (a DatabaseAccessor class, not an extension) is never referenced anywhere in the 1073-line file. `unused_import` is absent from analysis_options.yaml's hand-rolled lint list (confirmed by grep), so `flutter analyze` \u2014 clean in the audit baseline \u2014 does not and will not catch this or future dead imports in this file.",
+   "recommendation": "Delete the import. Separately, consider adding `unused_import` to the explicit lint list so this class of defect gets a Rule-0 checker.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Line 12 import removed; dart analyze stays clean.",
+    "(Optional, stated separately) unused_import enabled in analysis_options.yaml so `flutter analyze`/`make audit` flags dead imports automatically going forward."
+   ],
+   "labels": [
+    "dead-code",
+    "hygiene",
+    "lint-gap"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-database-tables",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Wire tool/schema_check.dart into CI and extend its whitelist to Goals/PriorCompletionImports/PointsLedger/RewardRedemptions",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "profileId-in-PK Invariant / Rule 0 (a checker only counts if it runs)",
+   "area": "tool/schema_check.dart, .github/workflows/ci.yml, docs/coding-standards.md, core/database/tables",
+   "evidence": [
+    {
+     "file": ".github/workflows/ci.yml",
+     "line": 98,
+     "quote": "run: dart analyze --fatal-infos"
+    },
+    {
+     "file": "Makefile",
+     "line": 228,
+     "quote": "ci: analyze format schema-check test-all"
+    },
+    {
+     "file": "tool/schema_check.dart",
+     "line": 44,
+     "quote": "Completions, Goals, LearningLedger, Streaks: profile-scoped but lack a composite UNIQUE/index today."
+    },
+    {
+     "file": "tool/schema_check.dart",
+     "line": 61,
+     "quote": "'LearningLedger',"
+    },
+    {
+     "file": "docs/coding-standards.md",
+     "line": 665,
+     "quote": "No user-facing Drift table may use a single-column autoincrement primary key without also specifying `profileId`"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/tables/goals.dart",
+     "line": 10,
+     "quote": "class Goals extends Table { IntColumn get id => integer().autoIncrement()();"
+    }
+   ],
+   "sites": 4,
+   "why": "Ran `dart run tool/schema_check.dart` (passes, 13 tables) and re-ran it with an expanded --whitelist covering the rest of this batch: it FAILS on Goals, PointsLedger, RewardRedemptions and PriorCompletionImports \u2014 all real profile-scoped mutable tables with zero composite-key protection, sitting outside `_defaultWhitelist` since Story 25.6. The tool's own comment (line 44-46) says LearningLedger/StreakEvents are 'omitted' for lacking protection, but both are actually in the whitelist \u2014 the comment is stale. Separately, `.github/workflows/ci.yml` never invokes `schema-check`/`schema_check.dart` (only conditional `make audit`, analyze, and format run); the ROOT Makefile's `ci` target does include `schema-check` but nothing in CI calls root `make ci`, so the checker only ever runs if a developer remembers to type it manually. And docs/coding-standards.md describes a stricter, different rule (\"single-column autoincrement... forbidden\", enforcement = \"make audit\") than what the real tool implements (3 accepted shapes, run via `make schema-check`) \u2014 a contributor reading only the docs would misjudge which of their tables pass. This exact gap is how PointsLedger/RewardRedemptions (see companion P1 finding) shipped unprotected.",
+   "recommendation": "Add a CI step running `dart run tool/schema_check.dart` (or `make schema-check`) on every PR. Add 'PriorCompletionImports', 'PointsLedger', 'RewardRedemptions' to `_defaultWhitelist` after giving them a composite index (see companion findings); document Goals as a deliberate exemption (docstring already states multiple goals per curriculum are intentional, so no natural key applies) rather than silently omitting it. Refresh the stale comment and correct docs/coding-standards.md's profileId-in-PK section to name the real tool/command and the real 3-shape rule.",
+   "effort": "S",
+   "acceptance_criteria": [
+    ".github/workflows/ci.yml runs schema_check.dart (or make schema-check) and fails the build on non-zero exit.",
+    "`dart run tool/schema_check.dart --whitelist <all mutable profile-scoped tables>` exits 0.",
+    "docs/coding-standards.md's profileId-in-PK section names tool/schema_check.dart / make schema-check and the three accepted shapes (primaryKey / uniqueKeys / @TableIndex)."
+   ],
+   "labels": [
+    "rule-0",
+    "ci-gap",
+    "tooling",
+    "docs-drift"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-database-tables",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Rename outbox_table.dart and text_download_status.dart to match their table class names",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "File naming conventions (filename = snake_case of its class)",
+   "area": "core/database/tables",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/database/tables/outbox_table.dart",
+     "line": 11,
+     "quote": "class Outbox extends Table {"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/tables/text_download_status.dart",
+     "line": 8,
+     "quote": "class TextDownloadStatuses extends Table {"
+    }
+   ],
+   "sites": 2,
+   "why": "Every other file in this 27-file directory names itself as the exact snake_case of its table class (bookmarks.dart\u2194Bookmarks, curriculum_tracks.dart\u2194CurriculumTracks, ...). outbox_table.dart carries a redundant `_table` suffix no sibling has (class is just `Outbox`); text_download_status.dart is singular while its class `TextDownloadStatuses` is plural. Minor but real: `grep -l 'class TextDownloadStatus'` or guessing the file for `Outbox` from the class name fails.",
+   "recommendation": "Rename outbox_table.dart \u2192 outbox.dart and text_download_status.dart \u2192 text_download_statuses.dart; update imports.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "git grep for the old filenames returns nothing; flutter analyze / build_runner stay green after rename."
+   ],
+   "labels": [
+    "naming",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-database-tables",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Fix completion_events.dart docstring \u2014 natural key description omits curriculumId that the enforced index actually includes",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-8 / Evans ubiquitous-language self-consistency",
+   "area": "core/database/tables/completion_events.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/database/tables/completion_events.dart",
+     "line": 7,
+     "quote": "`(profileId, sefariaRef, stageId, trackType)`. The legacy `completions`"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/tables/completion_events.dart",
+     "line": 21,
+     "quote": "columns: {#profileId, #sefariaRef, #stageId, #trackType, #curriculumId},"
+    }
+   ],
+   "sites": 1,
+   "why": "The docstring's stated natural key (4 columns) doesn't match the @TableIndex it sits directly above (5 columns, adds curriculumId). A maintainer trusting the prose when writing a new dedup check or merger elsewhere would build the wrong key.",
+   "recommendation": "Update the docstring to list all 5 columns (or drop curriculumId from the index if it was never intended \u2014 needs a one-line confirmation from whoever added it in DNI-323).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Docstring and @TableIndex column list textually match."
+   ],
+   "labels": [
+    "docs-drift",
+    "hygiene"
+   ]
+  }
+ }
+]

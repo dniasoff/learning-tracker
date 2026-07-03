@@ -1,0 +1,49 @@
+[
+ {
+  "sourceBatch": "t1-core-database-tables",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Add UNIQUE(profileId, ulid) to PointsLedger and RewardRedemptions \u2014 sync merge can double-credit a child's points",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "DB-6 (sync-able entity integrity) / profileId-in-PK's composite-index companion requirement",
+   "area": "core/database/tables/points_balance.dart + core/database/daos/points_balance_dao.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/database/tables/points_balance.dart",
+     "line": 63,
+     "quote": "TextColumn get ulid => text().nullable()();"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/tables/points_balance.dart",
+     "line": 113,
+     "quote": "TextColumn get ulid => text().nullable()();"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/tables/learning_ledger.dart",
+     "line": 20,
+     "quote": "name: 'learning_ledger_profile_ulid', columns: {#profileId, #ulid}, unique: true,"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/daos/points_balance_dao.dart",
+     "line": 308,
+     "quote": "await (select(pointsLedger)..where((t) => t.ulid.equals(ulid))..limit(1)).getSingleOrNull();"
+    }
+   ],
+   "sites": 2,
+   "why": "PointsLedger and RewardRedemptions both carry a `ulid` column documented as \"cross-device id for append-only cloud sync\" \u2014 the exact same purpose LearningLedger's `ulid` serves, where it is protected by a real `UNIQUE(profileId, ulid)` @TableIndex. Neither PointsLedger nor RewardRedemptions has any uniqueKeys/@TableIndex at all. PointsLedgerMerger's own comment says entries are \"deduplicated on ulid via INSERT-OR-IGNORE,\" but points_balance_dao.dart's insertRemoteLedgerEntryIfAbsent actually does a manual SELECT-then-INSERT with no DB constraint backing it \u2014 a classic TOCTOU race. If two merge calls for the same ulid ever interleave (concurrent pulls, a retried tutored pull, a future refactor that parallelizes merges), a duplicate row lands; reDeriveBalanceFromLedger sums ALL ledger deltas, so the child's points balance silently becomes wrong \u2014 violating the table's own documented invariant that balance is \"the authoritative denormalised sum of all ledger entries.\"",
+   "recommendation": "Add `@TableIndex(name: 'points_ledger_profile_ulid', columns: {#profileId, #ulid}, unique: true)` to PointsLedger and an equivalent unique index to RewardRedemptions (mirroring learning_ledger.dart), ship as a schema migration, and switch insertRemoteLedgerEntryIfAbsent to rely on that constraint (insertOnConflictDoNothing) instead of a separate SELECT.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "Schema migration adds the unique index to points_ledger and reward_redemptions, with committed schema export + generated migration test (DB-4).",
+    "Regression test: calling the merge path twice concurrently (Future.wait) with the same ulid results in exactly one row and exactly one balance credit."
+   ],
+   "labels": [
+    "data-integrity",
+    "sync",
+    "gamification",
+    "race-condition"
+   ]
+  }
+ }
+]

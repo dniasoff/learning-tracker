@@ -1,0 +1,225 @@
+[
+ {
+  "sourceBatch": "t2-lints-hooks",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Add lib/features/auth/ and core/providers/firebase_providers.dart to no_firebase_outside_core's whitelist per Rule 3",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Rule 3 / AG-11",
+   "area": "custom_lints",
+   "evidence": [
+    {
+     "file": "packages/custom_lints/lib/src/rules/no_firebase_outside_core.dart",
+     "line": 44,
+     "quote": "if (path.contains('lib/core/auth/')) return true;\n    if (path.contains('lib/core/sync/')) return true;"
+    },
+    {
+     "file": "learning_tracker/lib/core/providers/firebase_providers.dart",
+     "line": 1,
+     "quote": "import 'package:firebase_storage/firebase_storage.dart';"
+    },
+    {
+     "file": "Makefile",
+     "line": 157,
+     "quote": "| grep -v '/features/auth/' || true); \\"
+    },
+    {
+     "file": "Makefile",
+     "line": 195,
+     "quote": "| grep -v '/core/auth/' \\"
+    }
+   ],
+   "sites": 2,
+   "why": "Three enforcement artifacts for the same rule disagree. docs/coding-standards.md Rule 3 and root Makefile audit check 6 (for firebase_auth) both authorize THREE directories, explicitly including `lib/features/auth/`. Root Makefile check 11 (for cloud_firestore/firebase_storage) and this custom_lint rule (for all three Firebase packages, uniformly) only authorize TWO. Concretely and currently: `lib/core/providers/firebase_providers.dart` \u2014 the exact file coding-standards.md Rule 3 names as the sanctioned Firebase-injection point, and which does `import 'package:firebase_storage/firebase_storage.dart'` directly \u2014 sits at `lib/core/providers/`, outside both `core/auth/` and `core/sync/`. This custom_lint rule would flag that canonical, standards-compliant file as a Rule-3 violation the moment custom_lint is unbricked; only the fact that custom_lint is currently broken is hiding this.",
+   "recommendation": "Add an explicit exemption for `lib/core/providers/firebase_providers.dart` (matching Makefile check 11's own extra exclusion) and decide whether `lib/features/auth/` should be whitelisted too (it doesn't exist yet, but the doc promises it will be exempt) \u2014 then make coding-standards.md Rule 3, both Makefile checks 6 and 11, and this rule agree on the same directory set.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "no_firebase_outside_core.dart's _isWhitelisted exempts core/providers/firebase_providers.dart.",
+    "no_firebase_outside_core_test.dart gains a case asserting firebase_providers.dart (or its path pattern) is allowed.",
+    "Rule 3's authorized-directory list is identical across docs/coding-standards.md, no_firebase_outside_core.dart, and Makefile checks 6 and 11."
+   ],
+   "labels": [
+    "guardrail",
+    "docs-drift",
+    "custom-lint",
+    "rule-3",
+    "false-positive"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-lints-hooks",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Wire packages/custom_lints/test/ into CI or a make target \u2014 the entire suite runs nowhere today",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Rule 0",
+   "area": "custom_lints",
+   "evidence": [
+    {
+     "file": "packages/custom_lints/pubspec.yaml",
+     "line": 15,
+     "quote": "dev_dependencies:\n  test: ^1.24.0"
+    },
+    {
+     "file": "packages/custom_lints/test/no_raw_talker_test.dart",
+     "line": 1,
+     "quote": "import 'package:test/test.dart';"
+    }
+   ],
+   "sites": 1,
+   "why": "grep across .github/workflows/ci.yml, root Makefile, and learning_tracker/Makefile for 'packages/custom_lints' or 'custom_lints' turns up nothing except the path dependency declaration in learning_tracker/pubspec.yaml \u2014 no CI job and no make target ever sets working-directory to packages/custom_lints or runs `dart test` there. Since `dart run custom_lint` is separately broken (analyzer 8-vs-9, baselined), these 7 unit-test files (1449 lines) are the ONLY thing that could catch a logic bug in any of the 9 lint rules \u2014 and they never execute automatically. This audit's own F1a/F1b/F7 findings (barrel-name mismatch, missing whitelist directories, weak filename match) are exactly the class of bug this suite exists to catch but currently cannot, because nothing runs it.",
+   "recommendation": "Add a `lint-rules-test` target to root or learning_tracker/Makefile (`cd packages/custom_lints && dart pub get && dart test`) and call it from ci.yml and from `make ci`/`make audit`.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "A committed make target runs `dart test` inside packages/custom_lints.",
+    "ci.yml invokes that target (or the equivalent working-directory step) on every PR.",
+    "Deliberately breaking one rule's whitelist logic makes CI fail via this path (manual smoke check)."
+   ],
+   "labels": [
+    "guardrail",
+    "rule-0",
+    "ci",
+    "custom-lint",
+    "dead-target"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-lints-hooks",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Add test coverage for no_e_to_string_in_ui and no_raw_logevent lint rules",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Rule 0 / TQ-8",
+   "area": "custom_lints",
+   "evidence": [
+    {
+     "file": "packages/custom_lints/lib/src/rules/no_e_to_string_in_ui.dart",
+     "line": 30,
+     "quote": "class NoEToStringInUi extends DartLintRule {"
+    },
+    {
+     "file": "packages/custom_lints/lib/src/rules/no_raw_logevent.dart",
+     "line": 31,
+     "quote": "class NoRawLogEvent extends DartLintRule {"
+    }
+   ],
+   "sites": 2,
+   "why": "Every other lint rule (7 of 9) ships a dedicated *_test.dart; `packages/custom_lints/test/` has no no_e_to_string_in_ui_test.dart or no_raw_logevent_test.dart anywhere in the repo (confirmed by directory listing and a repo-wide filename search), and neither Makefile has a backstop grep for these two invariants (raw exception-to-string in UI, raw logEvent calls) the way it does for e.g. talker imports or Firebase imports. Both rules were added together in commit bc327fef with no tests from day one. Combined with F8 (suite not CI-wired even where tests exist), these two rules have zero automated verification of any kind.",
+   "recommendation": "Add no_e_to_string_in_ui_test.dart and no_raw_logevent_test.dart mirroring the violation/allowed/whitelist groups already used by the other 7 rule test files.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "packages/custom_lints/test/no_e_to_string_in_ui_test.dart exists and covers at least one violation and one allowed case per identifier/context branch.",
+    "packages/custom_lints/test/no_raw_logevent_test.dart exists and covers the analytics_service.dart whitelist plus a violation case.",
+    "dart test in packages/custom_lints passes with both new files."
+   ],
+   "labels": [
+    "testing",
+    "coverage",
+    "custom-lint"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-lints-hooks",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Stop hand-copying private lint-rule path helpers into test files; assert through the real rule only",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-4 (lens: Feathers \u2014 fake seam)",
+   "area": "custom_lints",
+   "evidence": [
+    {
+     "file": "packages/custom_lints/test/no_color_literal_outside_theme_test.dart",
+     "line": 152,
+     "quote": "bool _invokeIsWhitelisted(String path) {\n  final normalised = path.replaceAll(r'\\', '/');"
+    },
+    {
+     "file": "packages/custom_lints/test/no_curriculum_display_name_bypass_test.dart",
+     "line": 31,
+     "quote": "bool _invokeIsWhitelisted(String path) {\n  final normalised = path.replaceAll(r'\\', '/');"
+    },
+    {
+     "file": "packages/custom_lints/test/no_feature_cross_import_test.dart",
+     "line": 28,
+     "quote": "bool _isBarrel(String importedFeature, String importedPath) {\n  return importedPath == '$importedFeature.dart';"
+    },
+    {
+     "file": "packages/custom_lints/test/no_firebase_outside_core_test.dart",
+     "line": 157,
+     "quote": "bool _invokeIsWhitelisted(String path) {\n  final normalised = path.replaceAll(r'\\', '/');"
+    },
+    {
+     "file": "packages/custom_lints/test/no_hardcoded_text_direction_test.dart",
+     "line": 201,
+     "quote": "bool _invokeIsGenerated(String path) {\n  final normalised = path.replaceAll(r'\\', '/');"
+    },
+    {
+     "file": "packages/custom_lints/test/no_raw_talker_test.dart",
+     "line": 148,
+     "quote": "bool _invokeIsWhitelisted(String path) {\n  final normalised = path.replaceAll(r'\\', '/');"
+    }
+   ],
+   "sites": 6,
+   "why": "Because each rule's `_isWhitelisted`/`_isGenerated`/`_isBarrel`/`_featureOf` helper is private and static, the test authors copy-pasted a second implementation into the test file rather than exposing a testable seam (e.g. @visibleForTesting) or relying solely on the full testAnalyzeAndRun assertions the same files already have. If a rule's real whitelist changes (as F1b's recommended fix would do), the hand-copied test function has to be remembered and updated separately, or the 'whitelist \u2014 file path checks' group keeps passing while asserting stale behavior that no longer matches the shipped rule \u2014 a false sense of unit coverage on top of the genuine end-to-end tests in the same file.",
+   "recommendation": "Delete the six _invoke*/_isBarrel/_featureOf copies and keep only the testAnalyzeAndRun-based violation/allowed groups (already present in every file and sufficient to exercise the same whitelist logic through the real code path).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "No custom_lints test file re-implements a rule's private path-matching logic; whitelist behavior is asserted only via rule.testAnalyzeAndRun.",
+    "dart test coverage of whitelist behavior is unchanged or improved after removal."
+   ],
+   "labels": [
+    "testing",
+    "duplication",
+    "custom-lint"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-lints-hooks",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Route hooks/pre-commit's format/analyze calls through committed make targets instead of inlining them",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-1",
+   "area": "hooks",
+   "evidence": [
+    {
+     "file": "hooks/pre-commit",
+     "line": 19,
+     "quote": "if ! dart format --set-exit-if-changed .; then"
+    },
+    {
+     "file": "hooks/pre-commit",
+     "line": 27,
+     "quote": "if ! dart analyze --fatal-infos; then"
+    },
+    {
+     "file": "Makefile",
+     "line": 90,
+     "quote": "@echo \"Running dart analyze...\"\n\t@cd learning_tracker && dart analyze"
+    }
+   ],
+   "sites": 1,
+   "why": "AG-1 requires build/test/lint invocations to route through committed make targets so there is one place to change flags. hooks/pre-commit hardcodes the raw `dart format`/`dart analyze` commands a fourth time (root Makefile `analyze` target, learning_tracker/Makefile `analyze` target, and CI already each define their own copy). The anti-pattern has already bitten: root Makefile's own `analyze` target omits `--fatal-infos` that learning_tracker/Makefile, CI, and this hook all include \u2014 proof that hand-duplicated invocations drift out of sync over time even within this one repo.",
+   "recommendation": "Change hooks/pre-commit to call `make -C learning_tracker format-check analyze` (or the equivalent committed target) instead of inlining the dart commands.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "hooks/pre-commit invokes a make target rather than a literal `dart format`/`dart analyze` command.",
+    "Installing and running the hook still blocks a commit with a formatting or analyzer violation."
+   ],
+   "labels": [
+    "guardrail",
+    "ag-1",
+    "hooks",
+    "duplication"
+   ]
+  }
+ }
+]

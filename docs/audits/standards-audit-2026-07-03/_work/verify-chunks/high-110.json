@@ -1,0 +1,53 @@
+[
+ {
+  "sourceBatch": "t2-firebase-rules-functions-p1",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Close the update-mutation and create-validation gaps on append-only event collections in firestore.rules",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "SR-1, SR-3",
+   "area": "firestore.rules",
+   "evidence": [
+    {
+     "file": "learning_tracker/firestore.rules",
+     "line": 38,
+     "quote": "// deny `update` and `delete`. Snapshot collections deny `delete` and gate"
+    },
+    {
+     "file": "learning_tracker/firestore.rules",
+     "line": 227,
+     "quote": "allow create, update: if isOwner(uid)"
+    },
+    {
+     "file": "learning_tracker/firestore.rules",
+     "line": 254,
+     "quote": "allow create, update: if isOwner(uid);"
+    },
+    {
+     "file": "learning_tracker/firestore.rules",
+     "line": 266,
+     "quote": "allow create, update: if isOwner(uid);"
+    },
+    {
+     "file": "learning_tracker/firestore.rules",
+     "line": 276,
+     "quote": "allow create, update: if isOwner(uid);"
+    }
+   ],
+   "sites": 4,
+   "why": "completions, streak_events, learning_ledger and points_ledger all `allow update` for the owner with no check that the update reproduces the existing document (no comparison against `resource.data`), so any client holding the owner's valid session -- a modified build, a tampered/replayed request, or a future client bug -- can overwrite an already-committed event with different field values. Three of the four (streak_events, learning_ledger, points_ledger) validate literally nothing on create either: no presence check, no `is timestamp`, no `<= request.time` bound, contradicting SR-3. Because points_ledger backs the reward-redemption economy, the append-only invariant this collection family exists to guarantee is not enforced -- a user could rewrite their own point-earning history to inflate reward-eligible balances. The file's own top-of-file comment ('deny `update` and `delete`') is simply false for the current rule bodies, which is itself a sign this drifted from the original design during the permission-denied-outage fixes documented inline at streak_events.",
+   "recommendation": "Restrict `update` on all four collections to a byte-identical replay of the existing doc (or drop `update` once outbox retries are proven to only ever hit `create`), and add `is timestamp` + presence + `<= request.time` validation on create for streak_events/learning_ledger/points_ledger, matching what completions partially does today. Fix the stale line-38 comment.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "functions/test/firestore_rules.test.mjs asserts that updating an existing completions/streak_events/learning_ledger/points_ledger doc with a changed field value is denied.",
+    "A create with a missing/non-timestamp/future created_at on streak_events, learning_ledger, or points_ledger is denied."
+   ],
+   "labels": [
+    "security",
+    "firestore-rules",
+    "P1"
+   ]
+  }
+ }
+]

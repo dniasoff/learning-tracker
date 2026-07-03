@@ -1,0 +1,8 @@
+learning_tracker/lib/core/auth/auth_gateway_user.dart  (38 lines)
+learning_tracker/lib/core/auth/auth_providers.dart  (25 lines)
+learning_tracker/lib/core/auth/firebase_auth_gateway.dart  (140 lines)
+learning_tracker/lib/core/auth/firebase_auth_gateway_impl.dart  (248 lines)
+learning_tracker/lib/core/auth/google_sign_in_gateway.dart  (54 lines)
+learning_tracker/lib/core/auth/google_sign_in_gateway_impl.dart  (55 lines)
+learning_tracker/test/core/auth/.gitkeep  (0 lines)
+learning_tracker/test/core/auth/firebase_auth_gateway_impl_test.dart  (496 lines)

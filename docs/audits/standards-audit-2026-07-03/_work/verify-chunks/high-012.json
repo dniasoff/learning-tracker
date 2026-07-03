@@ -1,0 +1,55 @@
+[
+ {
+  "sourceBatch": "t1-core-domain-learning",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Fix ScheduleSpec.weekly/.rolling to throw ArgumentError instead of assert() (silently unenforced in release builds)",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "EH-4 / documented-contract (docstring promises `Throws ArgumentError`)",
+   "area": "core/domain/value_objects (scheduling)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/domain/value_objects/schedule_spec.dart",
+     "line": 40,
+     "quote": "Throws [ArgumentError] when [daysOfWeek] is empty or contains values"
+    },
+    {
+     "file": "learning_tracker/lib/core/domain/value_objects/schedule_spec.dart",
+     "line": 123,
+     "quote": "assert(daysOfWeek.isNotEmpty, 'daysOfWeek must not be empty'),"
+    },
+    {
+     "file": "learning_tracker/lib/core/domain/value_objects/schedule_spec.dart",
+     "line": 153,
+     "quote": "assert(windowSize > 0, 'windowSize must be positive, got $windowSize');"
+    },
+    {
+     "file": "learning_tracker/lib/core/domain/value_objects/schedule_spec.dart",
+     "line": 63,
+     "quote": "'weekly' => WeeklySchedule(daysOfWeek ?? const []),"
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/stages/data/repositories/stage_definition_repository_impl.dart",
+     "line": 347,
+     "quote": "((map['days_of_week'] ?? map['days']) as List<dynamic>? ?? [])"
+    }
+   ],
+   "sites": 3,
+   "why": "WeeklySchedule and RollingSchedule enforce their invariants with Dart `assert()`, which the compiler strips out of release builds entirely (only active in debug/profile). Both factory doc comments explicitly promise 'Throws ArgumentError' \u2014 that promise is false in the exact build users run. `fromParts` (same file, line 63) feeds `daysOfWeek ?? const []` directly into `WeeklySchedule(...)` whenever the DB/JSON column is null, and the independent JSON codec path in stage_definition_repository_impl.dart:346-349 does the same for a missing `days_of_week`/`days` key, wrapped in a try/catch that only rescues the debug-mode AssertionError \u2014 in release it silently produces a `WeeklySchedule([])`. A stage with an empty day-list never matches any weekday, so its chazara review permanently stops being scheduled with no error, no log, and no user-facing signal.",
+   "recommendation": "Replace both asserts with explicit `if (...) throw ArgumentError(...)` (matching the pattern already used correctly by ScopeLevel/StageOrder/Pin/DayKind/CalendarSystem in the same directory) so the invariant holds in release builds too.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "ScheduleSpec.weekly([]) and ScheduleSpec.rolling(0)/.rolling(-1) throw ArgumentError when run under `flutter test` compiled in release/profile mode (or any assert-disabled run), not just debug.",
+    "New test/core/domain/value_objects/schedule_spec_test.dart exists and is wired into the test suite, covering empty/out-of-range daysOfWeek, non-positive windowSize, and fromParts with a null daysOfWeek column.",
+    "AG-5 mirroring restored: lib/core/domain/value_objects/schedule_spec.dart has a corresponding test file (currently missing)."
+   ],
+   "labels": [
+    "EH-4",
+    "release-mode-bug",
+    "scheduling",
+    "silent-failure"
+   ]
+  }
+ }
+]

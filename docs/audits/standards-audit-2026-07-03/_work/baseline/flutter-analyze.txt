@@ -1,0 +1,10 @@
+=== flutter analyze ===
+
+┌─────────────────────────────────────────────────────────┐
+│ A new version of Flutter is available!                  │
+│                                                         │
+│ To update to the latest version, run "flutter upgrade". │
+└─────────────────────────────────────────────────────────┘
+Analyzing learning_tracker...                                   
+No issues found! (ran in 9.2s)
+EXIT:0

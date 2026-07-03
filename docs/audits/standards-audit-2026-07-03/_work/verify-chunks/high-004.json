@@ -1,0 +1,65 @@
+[
+ {
+  "sourceBatch": "t1-core-database-daos-p1",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Scope DAO id-based get/update/delete methods to profileId \u2014 goal_dao, bookmark_dao, learning_order_dao, stage_dao, and BaseDao.getById all mutate by bare row id",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "profileId-in-PK",
+   "area": "core/database/daos",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/database/base_dao.dart",
+     "line": 43,
+     "quote": "Future<Row?> getById(int id) {\n    final query = select(table)..where((t) => idColumn(t).equals(id))"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/daos/goal_dao.dart",
+     "line": 55,
+     "quote": "Future<bool> updateGoal(GoalsCompanion entry) => update(goals).replace(entry);"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/daos/goal_dao.dart",
+     "line": 57,
+     "quote": "Future<int> deleteGoal(int id) =>\n      (delete(goals)..where((t) => t.id.equals(id))).go();"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/daos/bookmark_dao.dart",
+     "line": 44,
+     "quote": "Future<int> deleteBookmark(int id) =>\n      (delete(bookmarks)..where((t) => t.id.equals(id))).go();"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/daos/learning_order_dao.dart",
+     "line": 44,
+     "quote": "Future<int> deleteLearningOrder(int id) =>\n      (delete(learningOrder)..where((t) => t.id.equals(id))).go();"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/daos/stage_dao.dart",
+     "line": 36,
+     "quote": "Future<int> deleteStageDefinition(int id) =>\n      (delete(stageDefinitions)..where((t) => t.id.equals(id))).go();"
+    },
+    {
+     "file": "docs/coding-standards.md",
+     "line": 689,
+     "quote": "**Enforcement:** `make audit` flags any user-DB table without a `profileId` column."
+    }
+   ],
+   "sites": 5,
+   "why": "Every table these DAOs sit on (curriculum_tracks, bookmarks, goals, learning_order, stage_definitions, \u2026) declares profileId only in a secondary `uniqueKeys`/`@TableIndex`, not in Drift's actual `primaryKey` \u2014 the real PK is a bare autoincrement `id` (verified directly in lib/core/database/tables/*.dart). docs/coding-standards.md:663-665 names this an explicit invariant (\"No user-facing Drift table may use a single-column autoincrement primary key without also specifying profileId as part of a composite key override\") and claims it is enforced by `make audit`; the learning_tracker/Makefile audit target (22 numbered greps, lines 277-505) has no such check \u2014 the claim is false. Because the PK is bare id, `getById`/`update\u2026().replace()`/`delete\u2026(id)` never filter by profileId, so any caller that obtains a foreign profile's numeric id (stale provider state after a profile switch, a sync-merge bug, a crafted id) can read/overwrite/delete another profile's row. This is not theoretical: lib/features/scheduler/data/repositories/goal_repository_impl.dart's updateGoal/deleteGoal fetch `goalDao.getGoalById(goalId)` and then unconditionally mutate/delete without ever comparing `existing.profileId` to the repository's own bound profile \u2014 the DAO provides zero defense-in-depth and this caller adds none either. (Contrast: bookmark_repository_impl.setBookmark re-derives the id via a profileId-checked lookup first, so it's safe \u2014 the inconsistency across callers is exactly what a shared, enforced invariant is supposed to prevent.)",
+   "recommendation": "Add profileId as an explicit parameter to every id-based get/update/delete DAO method in this batch (or drop BaseDao.getById/replace-by-id entirely in favor of profileId-qualified variants) and filter the WHERE/replace target on it. Fix or remove the false claim at docs/coding-standards.md:689, and either wire a real Rule-0 check (a grep over lib/core/database/tables/*.dart primaryKey declarations, or a lint over DAO WHERE clauses) into `make audit`, or downgrade the doc's [E] tag to [P].",
+   "effort": "L",
+   "acceptance_criteria": [
+    "A new test (e.g. in goal_dao_test.dart / bookmark_dao_test.dart / stage_dao_test.dart) creates two profiles, inserts a row for profile A, calls the DAO's update/delete method with profile A's row id from a profile-B context, and asserts the row is unchanged / the call is rejected.",
+    "goal_repository_impl.updateGoal/deleteGoal (and any other caller found via `grep -rn 'DaoBaseDao\\|getGoalById\\|getBookmarkById\\|getLearningOrderById\\|getStageDefinitionById'`) verify existing.profileId against the caller's bound profile before mutating.",
+    "docs/coding-standards.md:689 either matches a real `make audit` check or is corrected to state the gap."
+   ],
+   "labels": [
+    "profileId-in-pk",
+    "cross-profile",
+    "data-isolation",
+    "child-privacy-adjacent"
+   ]
+  }
+ }
+]

@@ -1,0 +1,206 @@
+[
+ {
+  "sourceBatch": "t1-feat-gamification-p2",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Replace TierStyle.forTitle's hardcoded-English-string switch with a stable tier identifier",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Evans (ubiquitous language / re-derived invariant) + TQ-1 (missing unit coverage)",
+   "area": "features/gamification/presentation/widgets",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/gamification/presentation/widgets/tier_style.dart",
+     "line": 56,
+     "quote": "switch (t) {\n      case 'Bronze Star':"
+    },
+    {
+     "file": "learning_tracker/lib/features/gamification/presentation/widgets/tier_style.dart",
+     "line": 162,
+     "quote": "default:\n        return const TierStyle("
+    },
+    {
+     "file": "learning_tracker/lib/features/gamification/domain/services/reward_milestone_service.dart",
+     "line": 230,
+     "quote": "(title: 'Bronze Star', thresholdPoints: 500),"
+    }
+   ],
+   "sites": 1,
+   "why": "TierStyle.forTitle keys its visual styling entirely off the exact English milestone title string produced elsewhere (reward_milestone_service.dart's hardcoded ladder). The 7 case labels currently match, but nothing enforces that: a future rename, typo fix, or localization of a milestone title silently falls through to the generic gray `default:` style for every achievement card using that tier \u2014 no exception, no log, no test failure. grep -rln TierStyle test/ confirms there is zero test coverage anywhere in the repo pinning this mapping or the default-fallback behavior, so this class of regression would ship undetected.",
+   "recommendation": "Key TierStyle off a stable identifier (an enum or the milestone's stored id/threshold) rather than the display title string; add a unit test asserting each tier maps to its distinct style and that an unmatched key is either unreachable or explicitly logged.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "TierStyle.forTitle (or its replacement) takes a stable, non-localizable key instead of the raw title string.",
+    "New test/features/gamification/presentation/widgets/tier_style_test.dart asserts all 7 tiers plus the legend/default cases."
+   ],
+   "labels": [
+    "fragile-coupling",
+    "testing",
+    "gamification"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-gamification-p2",
+  "findingIndex": 3,
+  "finding": {
+   "title": "TierStyle's ~80 hardcoded hex colors bypass the theme system and never adapt to dark mode",
+   "severity": "P3",
+   "confidence": "SUSPECTED",
+   "rule": "no_color_literal_outside_theme (custom_lint, currently broken) + AX-4",
+   "area": "features/gamification/presentation/widgets",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/gamification/presentation/widgets/tier_style.dart",
+     "line": 58,
+     "quote": "cardBg: Color(0xFFF5E6D3),\n          borderColor: Color(0xFFE8D5C4),"
+    },
+    {
+     "file": "learning_tracker/lib/core/theme/app_theme.dart",
+     "line": 195,
+     "quote": "static ThemeData darkTheme([Color accent = brandBlueDark]) =>\n      _darkTheme(accent: accent);"
+    }
+   ],
+   "sites": 1,
+   "why": "TierStyle.forTitle takes no Brightness/ColorScheme parameter and returns fixed light-palette constants (cream/pastel card backgrounds, dark-on-light text) for all 8 tiers; the app has a real dark theme (AppTheme.darkTheme). A handful of entries do route through AppColors/AppTheme (e.g. AppColors.chartTeal, AppTheme.brandBlue) showing the theme system is reachable from this file, but the other ~90% of values are raw Color(0xFF...) literals. This may be an intentional 'badges always look the same' design choice, but nothing in the file states that, and if it is not intentional, achievement cards will look visually broken (light cards on a dark scaffold) whenever a user or parent switches to dark mode.",
+   "recommendation": "Either document that tier badges are intentionally theme-invariant, or thread Brightness/ColorScheme through TierStyle.forTitle and provide a dark variant per tier.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "Manual check (or a golden test) of the achievements screen under ThemeMode.dark confirms tier cards are legible and intentional.",
+    "If not intentional, TierStyle exposes theme-aware colors and a regression golden pins both light and dark renders."
+   ],
+   "labels": [
+    "theming",
+    "dark-mode",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-gamification-p2",
+  "findingIndex": 4,
+  "finding": {
+   "title": "RewardForm is a hand-written state class with no @freezed/== override, so Riverpod can never skip a rebuild on it",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "naming/placement \u2014 'Domain/state models are immutable @freezed classes... never hand-write ==/hashCode'",
+   "area": "features/gamification/presentation/widgets",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/gamification/presentation/widgets/reward_form.dart",
+     "line": 7,
+     "quote": "class RewardForm {\n  const RewardForm({"
+    },
+    {
+     "file": "docs/coding-standards.md",
+     "line": 584,
+     "quote": "hand-rolled equality drifts from the fields and silently breaks rebuild-skipping."
+    }
+   ],
+   "sites": 1,
+   "why": "RewardForm is held directly as RewardConfigController's Notifier state (per its own doc comment) but has no @freezed codegen and no == /hashCode override anywhere in the file, so it falls back to identity equality. Every copyWith() call \u2014 including a no-op one \u2014 produces a referentially distinct instance that Riverpod's default identity-based updateShouldNotify always treats as changed, so any widget watching this provider rebuilds on every field mutation regardless of whether the visible state actually changed. This is exactly the failure mode coding-standards.md cites as the reason for the @freezed rule.",
+   "recommendation": "Convert RewardForm to @freezed, or at minimum hand-write a field-wise == / hashCode.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "RewardForm(...) == RewardForm(...) with identical field values returns true in a new unit test.",
+    "dart analyze / build_runner clean after the freezed conversion (if chosen)."
+   ],
+   "labels": [
+    "riverpod",
+    "equality",
+    "performance"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-gamification-p2",
+  "findingIndex": 5,
+  "finding": {
+   "title": "3 gamification test files exceed the AG-3 400-line cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "test/features/gamification",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/gamification/domain/services/points_service_test.dart",
+     "line": 429,
+     "quote": "}"
+    },
+    {
+     "file": "learning_tracker/test/features/gamification/domain/services/reward_milestone_service_extended_test.dart",
+     "line": 468,
+     "quote": "}"
+    },
+    {
+     "file": "learning_tracker/test/features/gamification/domain/services/reward_milestone_service_test.dart",
+     "line": 1337,
+     "quote": "}"
+    }
+   ],
+   "sites": 3,
+   "why": "docs/coding-standards.md's own AG-3 checker (`find lib test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400'`) explicitly scans test/ too \u2014 these are not exempt. reward_milestone_service_test.dart at 1337 lines is 3.3x the cap; see the paired 'duplicate test coverage' finding for the concrete dumping-ground cost this produced in that specific file.",
+   "recommendation": "Split points_service_test.dart, reward_milestone_service_extended_test.dart, and especially reward_milestone_service_test.dart along the responsibility boundaries already implied by their group() names (CRUD, unlock evaluation, cloud sync, model round-trips).",
+   "effort": "L",
+   "acceptance_criteria": [
+    "find lib test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400' no longer lists these 3 files (or their split successors)."
+   ],
+   "labels": [
+    "file-size",
+    "AG-3",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-gamification-p2",
+  "findingIndex": 6,
+  "finding": {
+   "title": "reward_milestone_service_test.dart duplicates test coverage within itself and against reward_milestone_test.dart",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler (duplicated code) / AG-5 (scattered tests cause duplicated coverage)",
+   "area": "test/features/gamification/domain",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/gamification/domain/services/reward_milestone_service_test.dart",
+     "line": 469,
+     "quote": "group('removeMilestone', () {\n    test('removes milestone by id', () async {"
+    },
+    {
+     "file": "learning_tracker/test/features/gamification/domain/services/reward_milestone_service_test.dart",
+     "line": 496,
+     "quote": "group('RewardMilestoneService.removeMilestone', () {\n    test('removes the milestone with the matching id', () async {"
+    },
+    {
+     "file": "learning_tracker/test/features/gamification/domain/services/reward_milestone_service_test.dart",
+     "line": 920,
+     "quote": "group('stripStockTemplateMilestones', () {\n    test('returns false when no milestones exist', () async {"
+    },
+    {
+     "file": "learning_tracker/test/features/gamification/domain/services/reward_milestone_service_test.dart",
+     "line": 978,
+     "quote": "group('RewardMilestoneService.stripStockTemplateMilestones', () {\n    test('returns false when no milestones exist', () async {"
+    },
+    {
+     "file": "learning_tracker/test/features/gamification/domain/services/reward_milestone_service_test.dart",
+     "line": 96,
+     "quote": "group('RewardMilestone.fromJson / toJson', () {\n    test('round-trips all fields correctly', () {"
+    }
+   ],
+   "sites": 4,
+   "why": "This single 1337-line file re-tests the same methods twice under near-identical group names, added across separate fix waves that evidently never checked for existing coverage: removeMilestone (line 469 AND 496), stripStockTemplateMilestones (line 920 AND 978, with two more '(F2 variant)' echoes at 1024/1041 of the exact same 50/150/300-legacy-tier scenario), and mergeCloudPayload's null/empty no-op cases (1078/1083 duplicated at 1160/1165). Separately, lines 96-207 re-test RewardMilestone/RewardUnlockRecord fromJson/toJson/copyWith \u2014 coverage that already exists, more thoroughly, in the dedicated test/features/gamification/domain/models/reward_milestone_test.dart. This is the exact 'dumping ground... drives re-implementation elsewhere' failure the AG-3 rule rationale predicts, and it is not hypothetical here \u2014 it already happened four times over in this file.",
+   "recommendation": "Merge each duplicate group pair into one, keep the strongest assertions, delete the redundant ones; move the model round-trip tests out in favor of the dedicated reward_milestone_test.dart.",
+   "effort": "L",
+   "acceptance_criteria": [
+    "grep -c \"group('.*removeMilestone\" / stripStockTemplateMilestones / mergeCloudPayload in the file each return 1, not 2.",
+    "dart test test/features/gamification/domain/services/reward_milestone_service_test.dart stays green with an equal-or-lower total test count covering the same unique scenarios."
+   ],
+   "labels": [
+    "duplication",
+    "testing",
+    "AG-3"
+   ]
+  }
+ }
+]

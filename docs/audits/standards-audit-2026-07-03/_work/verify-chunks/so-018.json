@@ -1,0 +1,216 @@
+[
+ {
+  "sourceBatch": "t1-feat-tutoring-p1",
+  "chunk": "grp-123",
+  "finding": {
+   "title": "Replace hardcoded Color/Colors literals with theme tokens across tutoring screens",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "custom_lint no_color_literal_outside_theme",
+   "area": "features/tutoring/presentation/screens",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/tutor_audit_log_screen.dart",
+     "line": 454,
+     "quote": "TutorAuditAction.configChanged => Colors.blue.shade600,"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/accept_invite_screen.dart",
+     "line": 323,
+     "quote": "backgroundColor: Color(0xFFE8E0FF),"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/decline_invite_screen.dart",
+     "line": 217,
+     "quote": "backgroundColor: AppColors.statusWarningSoft,"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/decline_invite_screen.dart",
+     "line": 221,
+     "quote": "color: Color(0xFFB07A00),"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/manage_tutors_screen.dart",
+     "line": 464,
+     "quote": "? Colors.green.shade600\n        : Colors.orange.shade700;"
+    }
+   ],
+   "sites": 33,
+   "why": "~33 sites across 6 screens (tutor_audit_log_screen.dart 11, accept_invite_screen.dart 8, decline_invite_screen.dart 6, invite_tutor_screen.dart 4, manage_tutors_screen.dart 2, manage_grants_screen.dart 2) use inline Color(0xFF...)/Colors.x.shadeN instead of AppColors/theme.colorScheme, despite AppColors already existing and being used one line away in decline_invite_screen.dart (AppColors.statusWarningSoft next to a raw Color(0xFFB07A00) for the same icon). This is exactly what the repo's own (currently non-enforcing) no_color_literal_outside_theme custom lint targets, and blocks a future dark-mode/theme change from reaching these surfaces consistently.",
+   "recommendation": "Add the missing semantic tokens to AppColors/AppTheme (status colors per TutorAuditAction, success/warning circles) and replace the literals; this is likely a repo-wide pattern worth fixing via the lint once custom_lint is unbroken, not just in tutoring.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "Once custom_lint is fixed, `dart run custom_lint` reports zero no_color_literal_outside_theme hits under lib/features/tutoring/."
+   ],
+   "labels": [
+    "theming",
+    "custom-lint",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-analytics-logging",
+  "chunk": "grp-003",
+  "finding": {
+   "title": "Guard CrashlyticsService's unawaited analytics calls with catchError \u2014 unguarded rejection can re-enter the runZonedGuarded fatal-error handler",
+   "severity": "P2",
+   "confidence": "SUSPECTED",
+   "rule": "EH-2 / Nygard (I/O failure mid-flight)",
+   "area": "core/logging",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/logging/crashlytics_service.dart",
+     "line": 51,
+     "quote": "unawaited(_analytics.logCrashReported(fatal: true));"
+    },
+    {
+     "file": "learning_tracker/lib/core/logging/crashlytics_service.dart",
+     "line": 62,
+     "quote": "unawaited(_analytics.logCrashReported(fatal: fatal));"
+    },
+    {
+     "file": "learning_tracker/lib/main.dart",
+     "line": 27,
+     "quote": "_crashlytics.recordError(error, stack, fatal: true);"
+    }
+   ],
+   "sites": 2,
+   "why": "main.dart wraps the whole app in runZonedGuarded whose error callback (lines 26-31) calls _crashlytics.recordError(...) \u2014 which is FirebaseCrashlyticsService.recordError, firing `unawaited(_analytics.logCrashReported(...))` with no .catchError attached at either of the two sites cited. If the Firebase Analytics plugin call itself rejects (platform-channel failure, SDK not yet initialized, offline queue full), that unhandled Future error is delivered back into the very same Zone installed by runZonedGuarded, invoking the identical error callback again, which calls recordError again, firing another unawaited call \u2014 a self-feeding loop precisely at the moment (an active fatal-crash report) when the app's error-handling path most needs to be inert. Contrast with streak_milestone_analytics_observer.dart in the same directory tree, which does guard its own fire-and-forget analytics call with `.catchError(...)` (line 63-70) \u2014 the inconsistency shows this omission wasn't a deliberate choice. Needs runtime confirmation: inject an AnalyticsService whose logCrashReported always rejects inside a runZonedGuarded harness and observe whether recordError re-enters.",
+   "recommendation": "Add `.catchError((_, __) {})` (or route failures through AppLogger only) to both unawaited(_analytics.logCrashReported(...)) calls in crashlytics_service.dart, matching the guard pattern already used in streak_milestone_analytics_observer.dart.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Both fire-and-forget analytics calls in crashlytics_service.dart have an attached .catchError/try-catch so a rejected Future never re-enters the zone's onError",
+    "A regression test injects an AnalyticsService whose logCrashReported always throws, calls recordError once, and asserts it is not invoked a second time"
+   ],
+   "labels": [
+    "error-handling",
+    "crashlytics",
+    "P2",
+    "reliability"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-onboarding-p2",
+  "chunk": "grp-070",
+  "finding": {
+   "title": "Fix onboarding_screen_l1_test.dart's intentChooser Hebrew assertion to match the real ARB string",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-7, TQ-8",
+   "area": "onboarding tests",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/onboarding/presentation/screens/onboarding_screen_l1_test.dart",
+     "line": 314,
+     "quote": "expect(find.text('\u05de\u05d4 \u05de\u05d1\u05d9\u05d0 \u05d0\u05d5\u05ea\u05da \u05dc\u05db\u05d0\u05df?'), findsNothing);"
+    },
+    {
+     "file": "learning_tracker/lib/l10n/app_he.arb",
+     "line": 2657,
+     "quote": "\"onboardingIntentHeading\": \"\u05de\u05d4 \u05d4\u05d1\u05d9\u05d0 \u05d0\u05d5\u05ea\u05da \u05dc\u05db\u05d0\u05df?\","
+    }
+   ],
+   "sites": 1,
+   "why": "The test's Hebrew string (present-tense '\u05de\u05d1\u05d9\u05d0') does not match the real onboardingIntentHeading ARB value (past-tense '\u05d4\u05d1\u05d9\u05d0') \u2014 one word differs. Because the assertion checks findsNothing for a string that was never going to be found either way, it passes unconditionally and verifies nothing, even though the test's own docstring states the suite's purpose is guarding against English-string leaks into the Hebrew locale for this exact screen.",
+   "recommendation": "Load the real string via AppLocalizations.delegate.load(Locale('he')) \u2014 as app_intro_screen_l1_test.dart already does for its own Hebrew assertions \u2014 and assert find.text(he.onboardingIntentHeading) findsOneWidget.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Temporarily reverting onboardingIntentHeading's Hebrew ARB value to the English literal makes this test fail"
+   ],
+   "labels": [
+    "testing",
+    "i18n",
+    "onboarding"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-small-a",
+  "chunk": "grp-025",
+  "finding": {
+   "title": "Deduplicate near-identical CurriculumLabels test coverage spread across 3 test files",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ test-suite duplication / Fowler DRY",
+   "area": "learning_tracker/test/core/constants",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/constants/curriculum_defaults_extended_test.dart",
+     "line": 265,
+     "quote": "test('excludes level labels when includeLevelLabel is false', () {"
+    },
+    {
+     "file": "learning_tracker/test/core/constants/curriculum_labels_extended_test.dart",
+     "line": 187,
+     "quote": "test('excludes level labels when includeLevelLabel=false', () {"
+    },
+    {
+     "file": "learning_tracker/test/core/constants/curriculum_defaults_test.dart",
+     "line": 223,
+     "quote": "test('daily targets exist for all curricula', () {"
+    },
+    {
+     "file": "learning_tracker/test/core/constants/curriculum_defaults_extended_test.dart",
+     "line": 322,
+     "quote": "test('defaultDailyTargets covers all 9 curricula', () {"
+    }
+   ],
+   "sites": 3,
+   "why": "curriculum_defaults_extended_test.dart and curriculum_labels_extended_test.dart both independently claim in their file-header doc comments to cover 'methods not yet tested' by the other files, but in fact both re-test CurriculumLabels.container, .containerSectionHeader, .level (RangeError for 0 and out-of-range), .valueWithLabel, and .fullPath (skip-null, custom-separator, includeLevelLabel=false) with near-identical test names and assertions \u2014 e.g. the 'excludes level labels' group exists verbatim in both files. curriculum_defaults_test.dart separately duplicates the CurriculumDefaults.defaultStages/defaultDailyTargets assertions that curriculum_defaults_extended_test.dart's last group re-covers. Net effect: ~1200 lines across 4 files test one 1270-line source file, with the same behavior asserted 2-3x under different names \u2014 any future change to e.g. fullPath's separator handling requires hunting through multiple files to update every duplicate, and CI burns time re-running equivalent assertions. (curriculum_label_variant_test.dart, the 4th file, was checked and found NOT to overlap \u2014 it covers distinct nusach/transliteration behavior only.)",
+   "recommendation": "Consolidate curriculum_defaults_extended_test.dart and curriculum_labels_extended_test.dart (partition cleanly by class \u2014 LevelLabels vs CurriculumLabels vs CurriculumDefaults \u2014 or merge into curriculum_defaults_test.dart), removing the 5+ duplicate assertion groups identified.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "Merged suite passes `flutter test test/core/constants/`",
+    "No two test groups across the constants test directory assert the same production method+scenario combination",
+    "Consolidated suite's total line count is measurably smaller than the current 4-file total"
+   ],
+   "labels": [
+    "test-quality",
+    "duplication",
+    "tq"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-sync-p3",
+  "chunk": "grp-110",
+  "finding": {
+   "title": "Use FakeLocalDayClock instead of wall-clock (SystemLocalDayClock/DateTime.now()) in test/sync hermetic tests",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6 (pending: extend hermetic-test check to test/)",
+   "area": "test/sync",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/sync/stage_definition_single_path_test.dart",
+     "line": 58,
+     "quote": "clock: const SystemLocalDayClock(),"
+    },
+    {
+     "file": "learning_tracker/test/sync/stage_definition_single_path_test.dart",
+     "line": 118,
+     "quote": "clock: const SystemLocalDayClock(),"
+    },
+    {
+     "file": "learning_tracker/test/sync/tutored_listener_supervisor_test.dart",
+     "line": 191,
+     "quote": "'updated_at': DateTime.now().toIso8601String(),"
+    }
+   ],
+   "sites": 5,
+   "why": "stage_definition_single_path_test.dart wires the real system clock into OutboxSyncWriteFacade under test; its sibling study_day_config_sync_test.dart uses FakeLocalDayClock(DateTime.utc(...)) for the identical facade, showing the fixed-clock convention exists and was simply not followed here. tutored_listener_supervisor_test.dart uses DateTime.now() three times (lines 191, 313, 354) for filler payload values. Neither instance drives a flaky assertion today, but both stand as standing violations of the hermetic-test rule the moment a future edit asserts against the timestamp, and both make the test's inputs non-reproducible from a bug report.",
+   "recommendation": "Replace `const SystemLocalDayClock()` with `FakeLocalDayClock(DateTime.utc(...))` in stage_definition_single_path_test.dart; replace the three DateTime.now() payload fillers in tutored_listener_supervisor_test.dart with a fixed ISO string.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep for 'SystemLocalDayClock' and 'DateTime.now()' in stage_definition_single_path_test.dart and tutored_listener_supervisor_test.dart returns empty"
+   ],
+   "labels": [
+    "testing",
+    "determinism",
+    "hygiene"
+   ]
+  }
+ }
+]

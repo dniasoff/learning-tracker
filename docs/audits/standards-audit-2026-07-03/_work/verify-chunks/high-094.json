@@ -1,0 +1,38 @@
+[
+ {
+  "sourceBatch": "t1-feat-tracks-p3",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Localize the hardcoded 'Order' AppBar title in LearningOrderScreen",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "AX-2 (no hardcoded user-facing strings; EN/HE ARB parity)",
+   "area": "lib/features/tracks/whole_curriculum_order/presentation/screens/learning_order_screen.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tracks/whole_curriculum_order/presentation/screens/learning_order_screen.dart",
+     "line": 50,
+     "quote": "'${curriculumLabelText(ref, curriculum: widget.curriculumId)} '"
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/whole_curriculum_order/presentation/screens/learning_order_screen.dart",
+     "line": 52,
+     "quote": "'Order',"
+    }
+   ],
+   "sites": 1,
+   "why": "This @RoutePage() screen is live (wired in app_router.gr.dart) and its AppBar title concatenates a raw English 'Order' literal onto the curriculum label \u2014 in Hebrew locale a user sees the Hebrew curriculum name followed by untranslated English 'Order' instead of a fully localized title. The sibling screen for the identical concept, TrackLearningOrderScreen, does this correctly via AppLocalizations.of(context)!.trackReorderScreenTitle(...), which already has both EN ('{curriculum} \u2022 Reorder') and HE ('{curriculum} \u2022 \u05e1\u05d3\u05e8 \u05de\u05d7\u05d3\u05e9') ARB entries this screen could reuse.",
+   "recommendation": "Replace the string concatenation with AppLocalizations.of(context)!.trackReorderScreenTitle(curriculumLabelText(...)) or a dedicated new ARB key if the titles must differ.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "No raw non-ARB string literals remain in learning_order_screen.dart's AppBar title",
+    "Hebrew-locale widget test asserts the AppBar title contains no Latin-script 'Order' substring"
+   ],
+   "labels": [
+    "i18n",
+    "l10n",
+    "hebrew"
+   ]
+  }
+ }
+]

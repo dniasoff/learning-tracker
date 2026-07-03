@@ -1,0 +1,207 @@
+[
+ {
+  "sourceBatch": "t1-feat-scheduler-p2",
+  "findingIndex": 11,
+  "finding": {
+   "title": "Replace scheduler_providers.dart's duplicate _localDateOnly with the existing DateUtils.extractLocalDate",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler duplication",
+   "area": "scheduler/presentation/providers",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/scheduler/presentation/providers/scheduler_providers.dart",
+     "line": 1333,
+     "quote": "DateTime _localDateOnly(DateTime utc) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/utils/date_utils.dart",
+     "line": 63,
+     "quote": "  static DateTime extractLocalDate(DateTime utcDateTime) {"
+    }
+   ],
+   "sites": 1,
+   "why": "_localDateOnly (`final l = utc.toLocal(); return DateTime(l.year, l.month, l.day);`) is a byte-for-byte reimplementation of DateUtils.extractLocalDate, which is already imported and used dozens of times elsewhere in this exact file (e.g. line 543 `DateUtils.extractLocalDate(now)`). Two near-identical local-date helpers in the same file is exactly the kind of drift that produced the R4-1 class of bugs this feature has repeatedly had to fix \u2014 a future edit to one 'extract local date' helper (e.g. a DST or leap-second fix) won't automatically apply to the other.",
+   "recommendation": "Delete _localDateOnly and call DateUtils.extractLocalDate at its two call sites instead.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "_localDateOnly is removed from scheduler_providers.dart; its call sites use DateUtils.extractLocalDate."
+   ],
+   "labels": [
+    "duplication",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-scheduler-p2",
+  "findingIndex": 12,
+  "finding": {
+   "title": "Migrate scheduler-adjacent tests off the deprecated LearningProgramRepository.instance singleton",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "SM-7",
+   "area": "scheduler/domain/services",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/scheduler/domain/services/learning_program_service.dart",
+     "line": 69,
+     "quote": "  @Deprecated('Use learningProgramRepositoryProvider via Riverpod instead')"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/domain/services/learning_program_service.dart",
+     "line": 70,
+     "quote": "  static final instance = LearningProgramRepository._create();"
+    }
+   ],
+   "sites": 1,
+   "why": "This static singleton is exactly the 'global/static mutable singleton' SM-7 prohibits, and it has zero production (lib/) call sites \u2014 but 30+ test files across the suite (test/core/services/*, test/story_acceptance/*, test/features/tracks/*, test/features/onboarding/*, etc.) construct their fixtures via `LearningProgramRepository.instance` instead of overriding `learningProgramRepositoryProvider`. Because `test/` and `lib/` share one Dart package, Dart's default `deprecated_member_use` lint does not fire for same-package usage (only `deprecated_member_use_from_same_package` would, and it isn't enabled) \u2014 which is exactly why `flutter analyze: No issues found` coexists with 30+ live uses of a member explicitly marked for removal. The singleton can never actually be deleted while this fan-out exists, and every test using it is verifying against a construction path the app itself no longer uses.",
+   "recommendation": "Migrate test fixtures to override learningProgramRepositoryProvider via ProviderContainer overrides instead of reading the singleton directly; once the fan-out is gone, delete the singleton entirely.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "New test code does not introduce further LearningProgramRepository.instance call sites.",
+    "Existing call sites tracked for migration (e.g. a DNI ticket) with a path to eventual deletion of the singleton."
+   ],
+   "labels": [
+    "SM-7",
+    "singleton",
+    "test-quality"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-scheduler-p2",
+  "findingIndex": 13,
+  "finding": {
+   "title": "Tag pace_calculator.dart's TODOs with real DNI-#### Linear ids",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-6",
+   "area": "scheduler/domain/services",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/scheduler/domain/services/pace_calculator.dart",
+     "line": 7,
+     "quote": "// TODO(Epic-12): Wire this callback into the notification system (DNI notification story)."
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/domain/services/pace_calculator.dart",
+     "line": 25,
+     "quote": "  // TODO(Epic-12): Epic 12 notification system should pass an [onPaceBehind]"
+    }
+   ],
+   "sites": 2,
+   "why": "AG-6 requires every TODO/FIXME to carry a Linear id in `DNI-####` form so it's traceable and greppable; `Epic-12` is not that id (an epic isn't a specific tracked issue). Repo-wide only 4 TODO comments exist in lib/ at all, and none use the DNI-#### format \u2014 half of the entire repo's TODO population lives in this one file within my batch.",
+   "recommendation": "Replace `TODO(Epic-12)` with `TODO(DNI-####)` referencing the actual Linear issue for wiring the notification callback.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Both TODOs reference a real DNI-#### id.",
+    "A grep-based Rule-0 checker for `TODO(?!DNI-)` could catch future regressions (currently no such checker exists)."
+   ],
+   "labels": [
+    "AG-6",
+    "hygiene",
+    "todo"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-scheduler-p3",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Fix make audit check 15/15's awk logic \u2014 it can never detect a cross-feature deep import",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Rule 2 (no cross-feature deep imports) / Rule 0 (checker must actually detect violations)",
+   "area": "Makefile `make audit` tooling (discovered via a features/scheduler test import)",
+   "evidence": [
+    {
+     "file": "learning_tracker/Makefile",
+     "line": 378,
+     "quote": "| awk -F: '{match($$1, /features\\/([^\\/]+)\\//, a); match($$0, /features\\/([^\\/]+)\\//, b); if(a[1] != b[1]) print}' \\"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/domain/services/scheduler_engine.dart",
+     "line": 11,
+     "quote": "import 'package:learning_tracker/features/tracks/stages/domain/models/schedule_type.dart';"
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/domain/services/scheduler_engine_schedule_types_test.dart",
+     "line": 12,
+     "quote": "import 'package:learning_tracker/features/tracks/stages/domain/models/schedule_type.dart';"
+    }
+   ],
+   "sites": 1,
+   "why": "match($0, ...) scans the WHOLE grep -rn output line (`path:line:content`), so it always matches the leftmost `features/<X>/` substring \u2014 which is the FILE's own path segment \u2014 identical to what match($1, ...) already captured. b[1] therefore always equals a[1] and `if(a[1] != b[1])` can mathematically never be true. Verified with an isolated repro piping the real scheduler_engine.dart grep-rn line through the exact awk expression: both captures resolve to 'scheduler', differ=0. Consequence: check 15/15 has never printed a single violation on any `make audit` run regardless of how many real cross-feature deep imports exist in lib/features/ \u2014 it currently misses both lib/features/scheduler/domain/services/scheduler_engine.dart:11 and test/features/scheduler/domain/services/scheduler_engine_schedule_types_test.dart:12, which both import features/tracks/stages/domain/models/schedule_type.dart directly instead of via a tracks.dart barrel. `make audit`'s 'PASSED \u2014 all 22 greps clean' banner therefore gives false assurance specifically for Rule 2: an unbounded amount of cross-feature coupling could accumulate with zero signal to any developer or CI run.",
+   "recommendation": "Rewrite the awk step to derive b[1] from the import-statement text only (e.g. strip the `path:line:` prefix with a field split on the first two colons before matching, or match specifically on `package:learning_tracker/features/([^/]+)/`), and add a regression fixture (a deliberately cross-feature-importing line) that the check must catch so this can't silently regress again.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "A fixture cross-feature import line makes `make audit` check 15/15 print a WARN; a test/CI step proves the check fails closed when the fixture is present.",
+    "Re-run `make audit` after the fix and triage the resulting real violation list, starting with scheduler_engine.dart:11 and scheduler_engine_schedule_types_test.dart:12 \u2014 route through the tracks.dart barrel or add to a documented baseline."
+   ],
+   "labels": [
+    "rule-0",
+    "rule-2",
+    "layering",
+    "makefile",
+    "tooling-bug"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-scheduler-p3",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Deduplicate near-identical scheduler test files added across separate fix waves",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler duplication / TQ-7",
+   "area": "features/scheduler tests (domain/models, domain/repositories, data/repositories, domain/services)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/scheduler/domain/models/goal_entity_extended_test.dart",
+     "line": 95,
+     "quote": "group('GoalEntity.firestoreId', () {\n    test('firestoreId contains curriculumId storageKey', () {"
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/domain/models/goal_entity_extra_test.dart",
+     "line": 76,
+     "quote": "group('GoalEntity.firestoreId', () {\n    test('firestoreId contains curriculum storageKey', () {"
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/data/repositories/scheduler_content_repository_impl_test.dart",
+     "line": 56,
+     "quote": "test('filters to only leaf items', () async {"
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/domain/repositories/scheduler_content_repository_test.dart",
+     "line": 99,
+     "quote": "test('filters out non-leaf items and returns only leaves', () async {"
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/domain/services/daily_task_generator_extended_test.dart",
+     "line": 107,
+     "quote": "test('returns empty list for empty curricula list', () async {"
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/domain/services/daily_task_generator_generate_all_test.dart",
+     "line": 71,
+     "quote": "test('returns empty list for empty curricula list', () async {"
+    }
+   ],
+   "sites": 3,
+   "why": "Three independent pairs of test files pin the exact same production behavior with near/exact-duplicate assertions, evidently written by separate fix-wave passes that never checked for existing coverage: (1) goal_entity_extended_test.dart and goal_entity_extra_test.dart both re-derive DeadlineTarget/PacePeriodTarget hashCode+toString, GoalEntity.firestoreId's format, and fromFirestore's paceGranularity mapping \u2014 roughly 20 overlapping tests across two ~230-line files; (2) scheduler_content_repository_impl_test.dart and scheduler_content_repository_test.dart both carry a near-identical 'getLeafItems filters/sorts/maps' suite; (3) daily_task_generator_extended_test.dart and daily_task_generator_generate_all_test.dart both have an identically-named 'returns empty list for empty curricula list' test plus duplicate 'sorted by priority' and skippedRefs coverage. None of the three newer files' doc comments ('not covered by X') acknowledge the sibling file that duplicates them. Cost: any behavior change to GoalEntity.firestoreId's format, getLeafItems' sort key, or generateAll's empty-input handling now requires editing two files in lockstep or one silently goes stale while still looking like coverage; CI pays for the duplicate runs with zero added defect-catching power.",
+   "recommendation": "Merge each pair, keeping the union of distinct assertions and deleting the fully-subsumed tests; for the content-repository pair, keep the coarseUnitKey-only tests in domain/repositories/ and keep the getLeafItems suite solely in data/repositories/ (its correctly-mirrored home per AG-5).",
+   "effort": "M",
+   "acceptance_criteria": [
+    "No two files under test/features/scheduler/ share a >=80%-similar block of assertions against the same production symbol (spot-checked; flag as a candidate Rule-0 checker: a test-name/body similarity script).",
+    "Total test count for the three affected areas drops by roughly the duplicated fraction with no reduction in line/branch coverage (verify via `flutter test --coverage` diff before/after)."
+   ],
+   "labels": [
+    "test-quality",
+    "duplication",
+    "fowler"
+   ]
+  }
+ }
+]

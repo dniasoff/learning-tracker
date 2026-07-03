@@ -1,0 +1,212 @@
+[
+ {
+  "sourceBatch": "t2-firebase-rules-functions-p1",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Whitelist fields on tutor CRUD Cloud Functions instead of merging caller-supplied objects verbatim",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "SR-2 (functions parity)",
+   "area": "functions/tutor-writes",
+   "evidence": [
+    {
+     "file": "learning_tracker/functions/src/index.ts",
+     "line": 1137,
+     "quote": "// Admin SDK bypasses Firestore Security Rules -- the permission checks above are"
+    },
+    {
+     "file": "learning_tracker/functions/src/index.ts",
+     "line": 1347,
+     "quote": "await goalRef.set(\n    { ...goalData, synced_at: writtenAt },"
+    },
+    {
+     "file": "learning_tracker/functions/src/index.ts",
+     "line": 1454,
+     "quote": "await trackRef.set(\n    { ...trackData, synced_at: writtenAt },"
+    },
+    {
+     "file": "learning_tracker/firestore.rules",
+     "line": 326,
+     "quote": "allow create, update: if isOwner(uid)\n            && request.resource.data.keys().hasOnly(["
+    }
+   ],
+   "sites": 8,
+   "why": "tutorUpsertGoal, tutorUpsertTrack, tutorUpsertStageDefinition, tutorUpsertStudyDayConfig, tutorUpdateGamificationSettings, tutorUpsertBookmark, tutorSetProfileProgram and tutorUpsertCurriculumScope all use the Admin SDK, which bypasses firestore.rules entirely -- the code's own comment says its permission checks 'are the sole enforcement layer for these write paths', but those checks only gate who may write and which collection, not what shape. Each function spreads the caller-supplied `xData` object straight into the child's synced document after only an object-vs-array/null check -- no field whitelist (unlike the `.hasOnly()` the same collections enforce for the owner's own direct writes) and no size cap. An invited tutor -- a distinct, deliberately lower-trust principal with fine-grained permission flags precisely because they're less trusted -- can therefore write fields the owner is rules-blocked from writing directly, or inflate a doc with an oversized field. None of cf_tutor_content.test.mjs / cf_tutor_goals_tracks.test.mjs / cf_tutor_settings_profile.test.mjs exercises this; every test fixture is a small, clean object. tutorEditProfile, in the same file, shows the correct pattern (explicit per-field validation with a length cap).",
+   "recommendation": "Give each tutorUpsertX function the same field whitelist as the corresponding firestore.rules `.hasOnly()` block (or one shared `assertAllowedFields` helper), mirroring tutorEditProfile's existing validation style.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "A tutorUpsertGoal call with an extra unexpected key (or an oversized string field) in goalData is rejected with invalid-argument, proven by a new test."
+   ],
+   "labels": [
+    "security",
+    "cloud-functions",
+    "P2"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-firebase-rules-functions-p1",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Wrap tutorEditProfile's read-then-overwrite in a transaction to stop the lost-update race",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "functions correctness (Nygard: concurrent I/O)",
+   "area": "functions/tutor-writes",
+   "evidence": [
+    {
+     "file": "learning_tracker/functions/src/index.ts",
+     "line": 2000,
+     "quote": "const beforeSnap = await profilePath.get();"
+    },
+    {
+     "file": "learning_tracker/functions/src/index.ts",
+     "line": 2008,
+     "quote": "const fullDoc = beforeValue ? { ...beforeValue, ...updates } : updates;"
+    },
+    {
+     "file": "learning_tracker/functions/src/index.ts",
+     "line": 2009,
+     "quote": "await profilePath.set(fullDoc, { merge: false });"
+    }
+   ],
+   "sites": 1,
+   "why": "Every other stateful mutation needing read-then-write consistency in this file (acceptTutorInvite, revokeTutorGrant, resignTutorGrant, expirePendingInvites) wraps it in db.runTransaction. tutorEditProfile instead reads the profile doc, merges edit fields in application memory, then does a full-document `set(..., {merge:false})` with no transaction. If the owner's own device (or a second tutor) writes any other field to the same learner_profiles/{profileId} doc between the get() and the set(), that write is silently overwritten by tutorEditProfile's stale full-doc replace -- a lost-update race, undermining the very H2 fix comment that motivated reading the full doc first.",
+   "recommendation": "Wrap the read+write in db.runTransaction (txn.get + txn.set), consistent with the rest of the file, or switch to `profilePath.set(updates, {merge:true})` for the scalar fields being edited -- Firestore applies a merge write atomically server-side without a client-side read first.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "A concurrency test (a second writer updates an unrelated profile field between tutorEditProfile's get and set) shows that field survives."
+   ],
+   "labels": [
+    "cloud-functions",
+    "correctness",
+    "P2"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-firebase-rules-functions-p1",
+  "findingIndex": 8,
+  "finding": {
+   "title": "Delete tutor_active_access in onUserDeleted's parent-deletion cascade (Step 2), matching Step 3",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "functions correctness / index integrity",
+   "area": "functions/onUserDeleted",
+   "evidence": [
+    {
+     "file": "learning_tracker/functions/src/index.ts",
+     "line": 62,
+     "quote": "const parentGrantsSnap = await db\n    .collection(\"tutor_grants\")"
+    },
+    {
+     "file": "learning_tracker/functions/src/index.ts",
+     "line": 95,
+     "quote": "// V2-R3 C2: also delete the tutor_active_access lookup doc so the\n    // tutor immediately loses subcollection read access."
+    },
+    {
+     "file": "learning_tracker/functions/test/cf_triggers.test.mjs",
+     "line": 129,
+     "quote": "test('W6.23: active grant where deleted user is parent \u2192 revoked_by_parent', async () => {"
+    },
+    {
+     "file": "learning_tracker/functions/test/cf_triggers.test.mjs",
+     "line": 178,
+     "quote": "test('W6.24: tutor_active_access doc is deleted when tutor grant is resigned', async () => {"
+    }
+   ],
+   "sites": 1,
+   "why": "hasActiveTutorAccess() in firestore.rules grants a tutor read access purely by the existence of a tutor_active_access doc, so its correctness depends on every code path that ends an active grant also deleting that doc. Step 3 (tutor account deleted) does this explicitly. Step 2 (parent account deleted) revokes the same kind of active grant but never deletes the corresponding tutor_active_access doc -- it is orphaned permanently. The underlying data is already gone (Step 1's recursiveDelete), so this is low-blast-radius today, but it's a genuine, silent asymmetry the test suite confirms: the Step-2 test only asserts on grant.state, while the symmetric Step-3 test explicitly asserts the access doc is gone.",
+   "recommendation": "In Step 2's loop, also delete tutor_active_access/{buildAccessId(grant.tutor_uid, uid, grant.child_profile_id)} for each active grant, mirroring Step 3.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "cf_triggers.test.mjs gains a 'W6.23: tutor_active_access doc is deleted when parent grant is revoked' test symmetric to the existing W6.24 one, and it passes."
+   ],
+   "labels": [
+    "cloud-functions",
+    "correctness",
+    "P2"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-firebase-rules-functions-p1",
+  "findingIndex": 9,
+  "finding": {
+   "title": "Make tutor audit-log writes idempotent and failure-visible instead of best-effort auto-ID writes",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "functions error-handling (Nygard: I/O failure/retry)",
+   "area": "functions/audit-log",
+   "evidence": [
+    {
+     "file": "learning_tracker/functions/src/index.ts",
+     "line": 1218,
+     "quote": "/** Write an audit log entry for a tutor mutation (best-effort \u2014 errors are logged but not thrown). */"
+    },
+    {
+     "file": "learning_tracker/functions/src/index.ts",
+     "line": 1243,
+     "quote": "} catch (e) {\n    logger.warn(`writeAuditLog: failed for grant=${grantId} action=${action}`, e);"
+    },
+    {
+     "file": "learning_tracker/functions/src/index.ts",
+     "line": 1233,
+     "quote": ".collection(\"audit_log\")\n      .add({"
+    }
+   ],
+   "sites": 13,
+   "why": "The audit log is the parent's only visibility into what an invited tutor did to their child's data (12-month retention, W3.42), but every write to it is swallowed on failure (the primary mutation still returns success:true even if its audit entry silently failed) and keyed by Firestore auto-ID rather than a deterministic key, so a client-side retry of a timed-out-but-actually-succeeded Cloud Function call produces a duplicate entry for the same real action. A parent reviewing the trail can see gaps or phantom duplicates with no way to tell which from inside the app.",
+   "recommendation": "Derive a deterministic audit_log doc ID from (grantId, action, target, an idempotency key) so retries coalesce, and consider writing the audit entry in the same batch/transaction as the primary mutation so both succeed or fail together.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "Calling the same tutor mutation twice with the same idempotency key produces exactly one audit_log entry, proven by a new test."
+   ],
+   "labels": [
+    "cloud-functions",
+    "correctness",
+    "P2"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-firebase-rules-functions-p1",
+  "findingIndex": 10,
+  "finding": {
+   "title": "Guard inviteTutor against silently resetting an already-active tutor grant",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "functions correctness",
+   "area": "functions/inviteTutor",
+   "evidence": [
+    {
+     "file": "learning_tracker/functions/src/index.ts",
+     "line": 617,
+     "quote": "state: \"pending\","
+    },
+    {
+     "file": "learning_tracker/functions/src/index.ts",
+     "line": 627,
+     "quote": "await db.collection(\"tutor_grants\").doc(grantId).set(grantData, { merge: false });"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/domain/use_cases/tutor_invite_use_cases.dart",
+     "line": 10,
+     "quote": "//   1. Validate preconditions against the local [TutorGrant] aggregate."
+    }
+   ],
+   "sites": 1,
+   "why": "grantId is deterministic ({encodedEmail}__{parentUid}__{childProfileId}), so a second inviteTutor call for the same tutor+child pair overwrites the same doc unconditionally, even when the existing grant is currently 'active'. That silently resets state back to 'pending', issues a fresh invite_token/expires_at, and replaces permissions with the request-supplied defaults (which include can_bulk_prior_completion: true) -- while the already-active tutor_active_access index doc is untouched, so the tutor keeps live read access even though tutor_grants.state now says 'pending'. Neither the Cloud Function nor the Dart InviteTutorUseCase (whose own docstring claims it validates against the local grant aggregate, but whose implementation only validates email format) guards against this, so a parent re-sending an invite, or a duplicate form submission, can silently re-grant a permission the parent had explicitly turned off.",
+   "recommendation": "Before writing, read the existing grant (if any) and reject/short-circuit re-invites while state === 'active' (direct the caller to a permission-editing flow instead), or explicitly preserve prior permissions and keep tutor_active_access consistent with the resulting state.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "A new cf_grant_invite.test.mjs test: inviteTutor called twice for the same tutorEmail+childProfileId while the grant is 'active' does not silently reset state/permissions."
+   ],
+   "labels": [
+    "cloud-functions",
+    "correctness",
+    "P2"
+   ]
+  }
+ }
+]

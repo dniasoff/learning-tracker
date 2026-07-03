@@ -1,0 +1,235 @@
+[
+ {
+  "sourceBatch": "t1-feat-settings-p4",
+  "chunk": "grp-104",
+  "finding": {
+   "title": "Split the 3 settings test files that exceed the 400-line AG-3 limit (866/1255/573 lines)",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "features/settings (test suite)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/settings/presentation/widgets/backup_sync_section_l1_test.dart",
+     "line": 1,
+     "quote": "// L1 behaviour tests for BackupSyncSection (DNI-188)."
+    },
+    {
+     "file": "learning_tracker/test/features/settings/settings_screen_and_point_config_l1_test.dart",
+     "line": 1,
+     "quote": "// L1 widget tests for SettingsScreen + PointConfigScreen"
+    },
+    {
+     "file": "learning_tracker/test/features/settings/settings_utils_test.dart",
+     "line": 1,
+     "quote": "// Mixed unit + widget tests for:"
+    }
+   ],
+   "sites": 3,
+   "why": "`wc -l` gives 866 / 1255 / 573 lines respectively \u2014 2.2x / 3.1x / 1.4x the 400-line hand-written-Dart ceiling. Files this large are slow to review end-to-end, hide unrelated concerns behind one main(), and make it easier for a reviewer to miss that a change touched an untested branch (as in the A1/A2 gap in the same file).",
+   "recommendation": "Split each file along its existing group() boundaries \u2014 e.g. backup_sync_section_l1_test.dart into a synced/syncing/pending file and a degraded/re-auth file; settings_screen_and_point_config_l1_test.dart per the AG-5 finding above; settings_utils_test.dart into send_logs_service_test.dart plus the (currently missing) account_actions supplement.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "`find test -name '*_test.dart' | xargs wc -l | awk '$1>400{print}'` no longer lists any of these 3 paths.",
+    "A committed Rule-0 checker (e.g. a line-count script wired into `make audit`) fails CI on any hand-written .dart file over 400 lines, since no such checker exists today for AG-3."
+   ],
+   "labels": [
+    "hygiene",
+    "testing",
+    "settings",
+    "file-size"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-services",
+  "chunk": "grp-023",
+  "finding": {
+   "title": "Move test/core/services/*_test.dart to mirror their real lib/features/scheduler/domain/services/ location (AG-5)",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-5 \u2014 test/ mirrors lib/ 1:1; new source file's test at mirrored path",
+   "area": "test/core/services (stale post-refactor location)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/services/calendar_program_registry_test.dart",
+     "line": 2,
+     "quote": "import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_registry.dart';"
+    },
+    {
+     "file": "learning_tracker/test/core/services/cross_curriculum_aggregator_test.dart",
+     "line": 3,
+     "quote": "import 'package:learning_tracker/features/scheduler/domain/services/cross_curriculum_aggregator.dart';"
+    },
+    {
+     "file": "learning_tracker/test/core/services/learning_program_repository_test.dart",
+     "line": 12,
+     "quote": "import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';"
+    },
+    {
+     "file": "learning_tracker/test/core/services/learning_program_service_test.dart",
+     "line": 8,
+     "quote": "import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';"
+    },
+    {
+     "file": "learning_tracker/test/core/services/calendar_program_service_ref_extraction_test.dart",
+     "line": 1,
+     "quote": "import 'package:flutter_test/flutter_test.dart';"
+    }
+   ],
+   "sites": 5,
+   "why": "Commits 21e9c357 and f99aee14 (W2.23-W2.25, both 2026-05-20) relocated CalendarProgramRegistry, CalendarProgramService, CrossCurriculumAggregator and LearningProgramService out of lib/core/services/ into lib/features/scheduler/domain/services/, explicitly because core/services/ was 'misplaced' (f99aee14 commit message: 'core/services/ is now empty and removed' \u2014 only a .gitkeep now remains). The 5 test files were never moved. test/features/scheduler/domain/services/ already holds ~30 other test files for that exact directory (local_calendar_engine_test.dart, sefaria_ref_matcher_test.dart, pace_calculator_test.dart, etc.) but not these 5 \u2014 anyone browsing the mirrored location for coverage of these classes will conclude they're untested and may duplicate it (see the next finding, where that already happened). docs/architecture.md:442 and docs/coding-standards.md:652 still describe lib/core/services/ as the canonical home for cross-curriculum services, actively contradicting the refactor that emptied it.",
+   "recommendation": "Move all 5 files to test/features/scheduler/domain/services/. Delete lib/core/services/.gitkeep (and the directory) if the core/services/ pattern is retired for good, or update docs/architecture.md and docs/coding-standards.md in the same PR (AG-8) if it should still exist for some future cross-feature service.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "All 5 test files exist at test/features/scheduler/domain/services/ and no longer under test/core/services/",
+    "docs/architecture.md and docs/coding-standards.md placement guidance for cross-curriculum services matches the actual lib/ layout",
+    "A Rule-0 checker for AG-5 (e.g. a script diffing lib/**/*.dart source stems against test/**/*_test.dart stems) exists or is filed as a follow-up",
+    "flutter test still green after the move"
+   ],
+   "labels": [
+    "testing",
+    "AG-5",
+    "refactor-debris",
+    "docs-drift"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-sync-p3",
+  "chunk": "grp-110",
+  "finding": {
+   "title": "Trim or split the 8 test/sync files exceeding the 400-line AG-3 cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "test/sync",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/sync/tutored_mirror_wipe_test.dart",
+     "line": 1,
+     "quote": "/// T5.lifecycle regression tests \u2014 mirror wipe on revoke/resign/sign-out."
+    },
+    {
+     "file": "learning_tracker/test/sync/sync_status_emission_test.dart",
+     "line": 1,
+     "quote": "/// Acceptance test for Plan \u00a7F Phase 4 deliverable 2."
+    },
+    {
+     "file": "learning_tracker/test/sync/sync_rework_curriculum_completion_doc_id_test.dart",
+     "line": 1,
+     "quote": "/// Per-curriculum completion doc-ID and tombstone-propagation tests."
+    },
+    {
+     "file": "learning_tracker/test/sync/sync_rework_orchestrator_test.dart",
+     "line": 1,
+     "quote": "/// Wave 2 \u2014 S7: the SyncOrchestrator singleton invariant."
+    }
+   ],
+   "sites": 8,
+   "why": "wc -l over the batch shows 8 of 16 files exceed the 400-line hand-written-file cap: tutored_mirror_wipe_test.dart (858), sync_status_emission_test.dart (672), sync_rework_curriculum_completion_doc_id_test.dart (662), sync_rework_orchestrator_test.dart (642), sync_orchestrator_drain_triggers_test.dart (514), sync_rework_push_test.dart (455), study_day_config_sync_test.dart (409), sync_rework_profile_programs_pull_test.dart (405). For 3 of these the direct cause is the duplicated-fake pattern (see companion finding); the rest are large multi-scenario suites that would read and diff more easily split along their own top-level group() boundaries.",
+   "recommendation": "Apply the shared-fake fix first for the 3 fake-driven files; for the rest, split by the file's own group() boundaries (e.g. one file per T/S/P trigger in tutored_mirror_wipe_test.dart).",
+   "effort": "M",
+   "acceptance_criteria": [
+    "`find learning_tracker/test/sync -name '*_test.dart' | xargs wc -l | awk '$1>400'` returns empty or only an explicit recorded ratchet baseline"
+   ],
+   "labels": [
+    "hygiene",
+    "file-size",
+    "sync"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-gamification-p2",
+  "chunk": "grp-054",
+  "finding": {
+   "title": "3 gamification test files exceed the AG-3 400-line cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "test/features/gamification",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/gamification/domain/services/points_service_test.dart",
+     "line": 429,
+     "quote": "}"
+    },
+    {
+     "file": "learning_tracker/test/features/gamification/domain/services/reward_milestone_service_extended_test.dart",
+     "line": 468,
+     "quote": "}"
+    },
+    {
+     "file": "learning_tracker/test/features/gamification/domain/services/reward_milestone_service_test.dart",
+     "line": 1337,
+     "quote": "}"
+    }
+   ],
+   "sites": 3,
+   "why": "docs/coding-standards.md's own AG-3 checker (`find lib test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400'`) explicitly scans test/ too \u2014 these are not exempt. reward_milestone_service_test.dart at 1337 lines is 3.3x the cap; see the paired 'duplicate test coverage' finding for the concrete dumping-ground cost this produced in that specific file.",
+   "recommendation": "Split points_service_test.dart, reward_milestone_service_extended_test.dart, and especially reward_milestone_service_test.dart along the responsibility boundaries already implied by their group() names (CRUD, unlock evaluation, cloud sync, model round-trips).",
+   "effort": "L",
+   "acceptance_criteria": [
+    "find lib test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400' no longer lists these 3 files (or their split successors)."
+   ],
+   "labels": [
+    "file-size",
+    "AG-3",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-content_browsing-p2",
+  "chunk": "grp-045",
+  "finding": {
+   "title": "Move TextContent/TextSegment out of text_cache_repository.dart (data layer) into domain/entities/ so presentation and its tests stop importing the data layer",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Presentation\u2192data import ban [P]; naming/placement (domain models belong in domain/); Evans lens (bounded-context leak)",
+   "area": "layering \u2014 content_browsing data + presentation",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/content_browsing/presentation/screens/text_display_screen.dart",
+     "line": 21,
+     "quote": "import 'package:learning_tracker/features/content_browsing/data/repositories/text_cache_repository.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/features/content_browsing/data/repositories/text_cache_repository.dart",
+     "line": 10,
+     "quote": "class TextSegment {"
+    },
+    {
+     "file": "learning_tracker/test/features/content_browsing/presentation/screens/text_display_screen_l1_test.dart",
+     "line": 39,
+     "quote": "import 'package:learning_tracker/features/content_browsing/data/repositories/text_cache_repository.dart';"
+    },
+    {
+     "file": "learning_tracker/test/features/content_browsing/presentation/screens/text_display_screen_deep_l1_test.dart",
+     "line": 73,
+     "quote": "import 'package:learning_tracker/features/content_browsing/data/repositories/text_cache_repository.dart';"
+    },
+    {
+     "file": "learning_tracker/test/features/content_browsing/presentation/screens/text_display_screen_test.dart",
+     "line": 9,
+     "quote": "import 'package:learning_tracker/features/content_browsing/data/repositories/text_cache_repository.dart';"
+    }
+   ],
+   "sites": 4,
+   "why": "TextContent/TextSegment are plain immutable data holders \u2014 exactly what domain/entities/ is for (that directory exists, scaffolded with a lone .gitkeep, but was never populated) \u2014 yet they are defined at the top of text_cache_repository.dart, the DATA-layer repository implementation. That forces text_display_screen.dart (presentation, and a churn HOTSPOT at 1028 lines) to import the data layer just to type its own widget fields (_TextContentView.textContent, _NumberedSegmentColumn.segments). It then forces every test that builds fixture content \u2014 3 of this batch's files (text_display_screen_test.dart, _l1_test.dart, _deep_l1_test.dart) \u2014 to do the same, so the test suite faithfully pins the wrong layering instead of catching it. Concrete cost: a presentation test can't get a TextContent value without also pulling in TextCacheRepository's own Drift-DAO-typed constructor surface (the seam Feathers-style testability depends on is gone); a different feature that wanted to render cached text would have to import a repository class to get the model type; and this is a same-feature leak, so it isn't caught by make audit's Rule 1/2 greps (which are scoped to cross-feature imports).",
+   "recommendation": "Create lib/features/content_browsing/domain/entities/text_content.dart holding TextContent/TextSegment (mechanical move, no behavior change). Update text_cache_repository.dart and text_display_screen.dart (+ its tests) to import the new domain file instead of the repository file.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "`grep -rn \"features/content_browsing/data/\" lib/features/content_browsing/presentation/` returns no hits.",
+    "text_display_screen_l1_test.dart, _deep_l1_test.dart, and text_display_screen_test.dart import domain/entities/text_content.dart, not data/repositories/text_cache_repository.dart, and still pass."
+   ],
+   "labels": [
+    "layering",
+    "content_browsing",
+    "presentation-data-import",
+    "domain-model-placement"
+   ]
+  }
+ }
+]

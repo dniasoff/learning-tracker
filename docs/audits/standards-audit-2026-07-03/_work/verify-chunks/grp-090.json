@@ -1,0 +1,235 @@
+[
+ {
+  "sourceBatch": "t1-feat-sacred_time",
+  "findingIndex": 9,
+  "finding": {
+   "title": "Route Sacred Time's hardcoded Color() literals through core/theme tokens",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "no_color_literal_outside_theme (custom_lint, currently non-functional)",
+   "area": "presentation/theming",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/sacred_time/presentation/widgets/sacred_time_lock_overlay.dart",
+     "line": 114,
+     "quote": "background: Color(0xFF11215C),"
+    },
+    {
+     "file": "learning_tracker/lib/features/sacred_time/presentation/widgets/sacred_time_settings_card.dart",
+     "line": 87,
+     "quote": "color: Color(0xFF11389F),"
+    }
+   ],
+   "sites": 13,
+   "why": "13 raw Color()/Colors.white literals across these 2 widget files bypass core/theme/ tokens. The custom_lint rule meant to catch this (no_color_literal_outside_theme) is currently crashing repo-wide (already tracked elsewhere), so nothing flags it today. This mirrors a very widespread pre-existing pattern (406 raw Color() literals across lib/features/), so it is not unique to this feature, but each instance adds to the same cost: a future dark-mode or rebrand pass has to hunt literals feature-by-feature instead of editing one token file.",
+   "recommendation": "Extract these into named core/theme constants, or explicitly document in coding-standards.md that the lock-screen's per-window-kind palette is an intentional exception to the theme system, once custom_lint is unblocked.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "Color literals in these 2 files replaced with core/theme tokens, or the exception is documented in coding-standards.md",
+    "no_color_literal_outside_theme passes for this feature once custom_lint is repaired"
+   ],
+   "labels": [
+    "theming",
+    "hygiene",
+    "hardcoded-value"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-sacred_time",
+  "findingIndex": 10,
+  "finding": {
+   "title": "Delete the duplicate readInIsrael/writeInIsrael test group in sacred_time_preferences_test.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ / Fowler duplication",
+   "area": "tests",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/sacred_time/data/services/sacred_time_preferences_test.dart",
+     "line": 171,
+     "quote": "group('SacredTimePreferences.readInIsrael', () {"
+    },
+    {
+     "file": "learning_tracker/test/features/sacred_time/data/services/sacred_time_preferences_test.dart",
+     "line": 191,
+     "quote": "group('SacredTimePreferences.readInIsrael / writeInIsrael', () {"
+    }
+   ],
+   "sites": 1,
+   "why": "The group at line 191 tests the exact same three scenarios as the group at line 171 (default-false, true-after-write, false-after-write-false) with only the test names changed. It adds no coverage and doubles the maintenance cost of any future change to these methods' behavior.",
+   "recommendation": "Delete the second (line 191-209) group; it is fully subsumed by the first.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Only one group covers SacredTimePreferences.readInIsrael/writeInIsrael",
+    "No assertions are lost when the duplicate group is removed"
+   ],
+   "labels": [
+    "test-quality",
+    "duplication",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-scheduler-p1",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Stop keying GoalEntity.firestoreId on mutable targetPercent \u2014 every goal-percent edit orphans a Firestore document instead of updating it",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Evans invariant (aggregate identity must be stable across normal mutation); adjacent to the FB family's stable-natural-key principle",
+   "area": "features/scheduler/domain models + data repositories",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/scheduler/domain/models/goal_entity.dart",
+     "line": 160,
+     "quote": "targetPercent.toStringAsFixed(1),\n      createdAt.millisecondsSinceEpoch.toString(),"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/data/repositories/goal_repository_impl.dart",
+     "line": 136,
+     "quote": "targetPercent: drift.Value(targetPercent ?? existing.targetPercent),"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/data/repositories/goal_repository_impl.dart",
+     "line": 143,
+     "quote": "createdAt: drift.Value(existing.createdAt),"
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/data/repositories/goal_repository_impl_test.dart",
+     "line": 363,
+     "quote": "targetPercent: 50.0,"
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/data/repositories/goal_repository_impl_test.dart",
+     "line": 367,
+     "quote": "await repoWithSync.updateGoal(goalId: goal.id!, targetPercent: 75.0);"
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/domain/models/goal_entity_extended_test.dart",
+     "line": 129,
+     "quote": "test('two goals with different createdAt have different firestoreIds', () {"
+    }
+   ],
+   "sites": 2,
+   "why": "firestoreId = curriculumId + '_' + targetPercent.toStringAsFixed(1) + '_' + createdAt.millisecondsSinceEpoch. updateGoal preserves createdAt but allows targetPercent to change, so any 'adjust my goal target %' edit (a routine, expected user action) computes a DIFFERENT firestoreId and _syncGoal pushes a brand-new Firestore document instead of updating the original \u2014 the original document is never touched again and deleteGoal only ever removes the CURRENT firestoreId's doc, so the old one is orphaned forever. GoalMerger happens to key its LWW arbitration by track_id rather than firestoreId, so the local state pulled on other devices generally self-heals to the latest edit \u2014 but Firestore itself accumulates one permanent garbage document per percent-edit for the life of the account, silently inflating every future full pull of that profile's goals collection. The test suite tests firestoreId's format exhaustively (contains curriculumId / contains targetPercent / contains createdAt, in TWO separate near-duplicate files) and even exercises the exact repro (create at 50.0, update to 75.0) but never asserts the one invariant that matters: the id must stay the same across that edit.",
+   "recommendation": "Derive firestoreId only from fields that cannot change through updateGoal (drop targetPercent from the id, or key on the DB row id / trackId+curriculumId+createdAt) so an update always resolves to the same document.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "GoalEntity.firestoreId no longer includes targetPercent (or any other field updateGoal can change).",
+    "New regression test: create a goal, call updateGoal changing only targetPercent, and assert the pushed sync payload's id/firestoreId is identical to the create call's."
+   ],
+   "labels": [
+    "sync",
+    "firestore",
+    "goal",
+    "data-hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-scheduler-p1",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Add a profileId ownership check to GoalRepositoryImpl.updateGoal/deleteGoal and unify its profileId source",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "profileId-in-PK / multi-profile isolation invariant (repository as last line of defense); naming/placement (single source of truth)",
+   "area": "features/scheduler/data+domain repositories",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/scheduler/data/repositories/goal_repository_impl.dart",
+     "line": 19,
+     "quote": "int profileId = 0,"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/data/repositories/goal_repository_impl.dart",
+     "line": 74,
+     "quote": "final goals = await _database.goalDao.getGoalsByCurriculumAndProfile(\n      curriculumId.storageKey,"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/domain/repositories/goal_repository.dart",
+     "line": 16,
+     "quote": "required int profileId,"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/data/repositories/goal_repository_impl.dart",
+     "line": 92,
+     "quote": "final existing = await _database.goalDao.getGoalById(goalId);"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/data/repositories/goal_repository_impl.dart",
+     "line": 163,
+     "quote": "final existing = await _database.goalDao.getGoalById(goalId);"
+    }
+   ],
+   "sites": 3,
+   "why": "getGoals() filters by the constructor-injected _profileId field, but createGoal takes its own explicit profileId parameter that is never cross-checked against _profileId \u2014 the interface lets a caller create a goal 'for' a different profile than the repository instance represents, which would then be invisible to that same instance's getGoals(). Independently, updateGoal and deleteGoal load the existing row by bare goalId and mutate/delete it with no ownership check at all \u2014 updateGoal even copies existing.profileId straight back into the write (line-133, not separately confirmed) without ever comparing it to _profileId. None of this is proven to be hit by today's UI (all current call sites happen to pass matching profileIds), but the repository adds zero defense-in-depth on top of the DAO layer (which itself does not scope goalDao.updateGoal/deleteGoal/getGoalById by profile) \u2014 the next screen or bug that supplies a mismatched id/profileId pair silently edits or deletes another profile's goal.",
+   "recommendation": "Pick one source of truth for 'which profile owns this repository instance' and have updateGoal/deleteGoal verify existing.profileId against it before mutating, throwing a typed error on mismatch.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "createGoal derives profileId from the same single source as the rest of the class (drop the redundant parameter or validate it against _profileId).",
+    "updateGoal and deleteGoal verify existing.profileId == _profileId before mutating/deleting, throwing a typed error otherwise.",
+    "New regression test: construct two GoalRepositoryImpl instances (one per profile) sharing one DB; assert profile B's repository cannot update or delete a goalId belonging to profile A."
+   ],
+   "labels": [
+    "multi-profile-isolation",
+    "authorization",
+    "goal-repository"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-scheduler-p1",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Route SchedulerStageRepository's ScheduleType import through the tracks.dart barrel instead of deep-importing tracks/stages internals",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Rule 2 [E, warn-only] \u2014 no cross-feature deep imports, barrel only",
+   "area": "features/scheduler/domain+data repositories (cross-feature layering)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/scheduler/domain/repositories/scheduler_stage_repository.dart",
+     "line": 2,
+     "quote": "import 'package:learning_tracker/features/tracks/stages/domain/models/schedule_type.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/data/repositories/scheduler_stage_repository_impl.dart",
+     "line": 7,
+     "quote": "import 'package:learning_tracker/features/tracks/stages/domain/models/schedule_type.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/tracks.dart",
+     "line": 4,
+     "quote": "All external consumers MUST import via this barrel \u2014 deep imports into\n/// tracks/* sub-packages are forbidden (no_feature_cross_import lint)."
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/tracks.dart",
+     "line": 25,
+     "quote": "export 'stages/domain/models/schedule_type.dart';"
+    },
+    {
+     "file": "learning_tracker/Makefile",
+     "line": 378,
+     "quote": "match($$1, /features\\/([^\\/]+)\\//, a); match($$0, /features\\/([^\\/]+)\\//, b); if(a[1] != b[1]) print"
+    }
+   ],
+   "sites": 2,
+   "why": "tracks.dart is the feature's declared public surface and already exports ScheduleType for exactly this purpose, but both scheduler stage-repository files import the sub-path directly, coupling scheduler to tracks' internal file layout and defeating the barrel's entire purpose. This class of violation is not just unenforced by custom_lint (already known-broken per the audit baseline) \u2014 the make audit check meant to catch it (15/15, 'No cross-feature deep imports') is also silently broken: its awk filter compares the first 'features/X/' match in the file-path column against the first match in the whole line, which are always the same substring (grep -rn output is 'path:line:content', so $0 starts with $1), so a[1] != b[1] can never be true. Running it directly against the current tree confirms this: 1186 candidate import lines match the initial grep, 0 survive the filter. So this specific rule is currently unenforced by any mechanism, not merely warn-only.",
+   "recommendation": "Change both imports to package:learning_tracker/features/tracks/tracks.dart and flag the check-15 awk bug to whoever owns Makefile/guardrails (outside this batch) so the rule starts catching real violations again.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "scheduler_stage_repository.dart and scheduler_stage_repository_impl.dart import the tracks.dart barrel instead of stages/domain/models/schedule_type.dart directly.",
+    "(Tracked separately, out of this batch) make audit check 15's awk comparison is fixed to compare only the import text, not the grep -rn file-path prefix, so it stops silently passing on every cross-feature deep import."
+   ],
+   "labels": [
+    "layering",
+    "rule-2",
+    "cross-feature-import",
+    "guardrail-gap"
+   ]
+  }
+ }
+]

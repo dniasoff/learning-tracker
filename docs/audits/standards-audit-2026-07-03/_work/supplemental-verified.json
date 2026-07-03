@@ -1,0 +1,1407 @@
+[
+ {
+  "title": "Delete dead AppLogger.setupFlutterErrorHandlers (logger.dart:85-94) \u2014 near-duplicate of the live crashlytics_bootstrap.dart handler wiring",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler-duplication (dead code / duplicate responsibility); EH-1 context",
+  "area": "lib/core/logging + lib/app/bootstrap",
+  "evidence": [
+   {
+    "file": "learning_tracker/lib/core/logging/logger.dart",
+    "line": 85,
+    "quote": "static void setupFlutterErrorHandlers() {\n    FlutterError.onError = (FlutterErrorDetails details) {"
+   },
+   {
+    "file": "learning_tracker/lib/app/bootstrap/crashlytics_bootstrap.dart",
+    "line": 26,
+    "quote": "FlutterError.onError = (FlutterErrorDetails details) {\n    upgraded.recordFlutterFatalError(details);"
+   },
+   {
+    "file": "learning_tracker/test/core/logging/logger_test.dart",
+    "line": 54,
+    "quote": "AppLogger.setupFlutterErrorHandlers();"
+   },
+   {
+    "file": "learning_tracker/lib/app/bootstrap/bootstrap.dart",
+    "line": 40,
+    "quote": "crashlytics = bootstrapCrashlyticsHandlers(\n    crashlytics: crashlytics,"
+   }
+  ],
+  "sites": 1,
+  "why": "Repo-wide grep for `setupFlutterErrorHandlers` shows its only 3 call sites are all inside logger_test.dart; bootstrap.dart never calls it, calling bootstrapCrashlyticsHandlers() instead. Git history proves this is not an oversight but a leftover: commit 78479109 (DNI-319/Story 24.4) deleted the `AppLogger.setupFlutterErrorHandlers();` call from main.dart and replaced it inline with the Crashlytics-forwarding block that is now crashlytics_bootstrap.dart:26-34 \u2014 but never deleted the method or its dedicated test group. Both implementations assign FlutterError.onError and PlatformDispatcher.instance.onError unconditionally (no chaining), so whichever runs last wins outright. Because the dead method is public, documented, and sits in core/logging/logger.dart right next to AppLogger \u2014 exactly where a future maintainer would look to 'wire up error logging' \u2014 a single future call to `AppLogger.setupFlutterErrorHandlers()` (e.g. added to a new bootstrap path, a test harness, or a plugin init) would silently clobber the crashlytics_bootstrap.dart handlers and permanently disable recordFlutterFatalError/recordError(fatal:true) reporting to Crashlytics for the rest of the process, with no compiler error and no currently-existing test able to catch it.",
+  "recommendation": "Delete setupFlutterErrorHandlers() from logger.dart and its test group from logger_test.dart (see the paired TQ-8 finding). If a Talker-only path is still wanted for some caller, have crashlytics_bootstrap.dart's bootstrapCrashlyticsHandlers() be the single call site and inline the two-line Talker forward there \u2014 do not keep two independent implementations of the same two global handler assignments.",
+  "effort": "S",
+  "acceptance_criteria": [
+   "lib/core/logging/logger.dart no longer defines a function that assigns FlutterError.onError / PlatformDispatcher.instance.onError outside of core/logging's own internal use.",
+   "New Rule-0 grep (wired into `make audit`) asserts `FlutterError\\.onError\\s*=` and `PlatformDispatcher\\.instance\\.onError\\s*=` each appear in exactly one non-test, non-generated file under lib/, failing with file:line of any extra assignment site.",
+   "A regression test drives the real bootstrap.dart call graph (or bootstrapCrashlyticsHandlers() directly) and asserts the installed FlutterError.onError/PlatformDispatcher.instance.onError closures call both a fake CrashlyticsService and AppLogger, and that the PlatformDispatcher handler returns true."
+  ],
+  "labels": [
+   "bootstrap",
+   "dead-code",
+   "error-handling",
+   "crashlytics"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+   "status": "UPHELD",
+   "upheldVotes": 1,
+   "totalVotes": 1,
+   "refutations": [],
+   "corrections": []
+  },
+  "sourceBatch": "sup-eh1-bootstrap"
+ },
+ {
+  "title": "Replace logger_test.dart's setupFlutterErrorHandlers tests and epic_24 AC2 tests with a real test of bootstrapCrashlyticsHandlers",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "TQ-8",
+  "area": "test/core/logging + test/story_acceptance",
+  "evidence": [
+   {
+    "file": "learning_tracker/test/core/logging/logger_test.dart",
+    "line": 53,
+    "quote": "test('sets FlutterError.onError handler', () {\n      AppLogger.setupFlutterErrorHandlers();"
+   },
+   {
+    "file": "learning_tracker/test/story_acceptance/epic_24_stop_the_bleeding_test.dart",
+    "line": 256,
+    "quote": "'AC2: recordFlutterFatalError is called for Flutter errors',\n        () async {"
+   },
+   {
+    "file": "learning_tracker/test/story_acceptance/epic_24_stop_the_bleeding_test.dart",
+    "line": 262,
+    "quote": "await service.recordFlutterFatalError(details);\n          expect(service.flutterErrors, hasLength(1));"
+   },
+   {
+    "file": "learning_tracker/lib/app/bootstrap/crashlytics_bootstrap.dart",
+    "line": 11,
+    "quote": "CrashlyticsService bootstrapCrashlyticsHandlers({\n  required CrashlyticsService crashlytics,"
+   }
+  ],
+  "sites": 2,
+  "why": "Two independent test locations claim to cover Flutter/platform error-handler installation, and neither exercises the code that actually runs in production. (1) logger_test.dart's 'AppLogger.setupFlutterErrorHandlers' group (37-94) calls and asserts against a method with zero production callers (see the paired dead-twin finding). (2) epic_24_stop_the_bleeding_test.dart's AC2 tests (254-279), labelled 'FlutterError.onError forwards to Crashlytics' and 'PlatformDispatcher.instance.onError forwards to Crashlytics', never call bootstrapCrashlyticsHandlers() and never touch FlutterError.onError/PlatformDispatcher.instance.onError at all \u2014 they call `service.recordFlutterFatalError(details)` / `service.recordError(err, st, fatal: true)` directly on a `_CapturingCrashlyticsService` fake, which only proves the fake records calls. A repo-wide grep for `bootstrapCrashlyticsHandlers` confirms it is invoked from exactly one production call site (bootstrap.dart) and from zero test files. If a future edit to crashlytics_bootstrap.dart's live block regresses \u2014 e.g. drops the `return true;`, forwards to the pre-upgrade `crashlytics` instead of `upgraded`, or stops calling AppLogger.instance.handle \u2014 the full test suite stays green: neither AC2 nor the logger_test.dart group would fail, because neither exercises the closures crashlytics_bootstrap.dart actually installs. Crash reporting could silently break in production with 100% green CI.",
+  "recommendation": "Add a test (e.g. test/app/bootstrap/crashlytics_bootstrap_test.dart) that calls the real bootstrapCrashlyticsHandlers(), invokes the returned FlutterError.onError!/PlatformDispatcher.instance.onError! closures, and asserts against a fake CrashlyticsService and a fake/spy AppLogger. Delete or repoint the dead-code tests in logger_test.dart per the paired finding, and rewrite epic_24's AC2 tests to drive the installed closures instead of the fake service directly.",
+  "effort": "M",
+  "acceptance_criteria": [
+   "A test exists that calls bootstrapCrashlyticsHandlers() and then invokes the FlutterError.onError!/PlatformDispatcher.instance.onError! it installs, asserting both the CrashlyticsService and AppLogger were invoked and the PlatformDispatcher handler returns true.",
+   "epic_24_stop_the_bleeding_test.dart's AC2 tests no longer pass by calling _CapturingCrashlyticsService methods directly without going through the installed handlers.",
+   "logger_test.dart contains no test for a symbol with zero non-test callers (verified by the Rule-0 grep from the paired dead-twin finding)."
+  ],
+  "labels": [
+   "testing",
+   "bootstrap",
+   "crashlytics",
+   "false-confidence"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+   "status": "UPHELD",
+   "upheldVotes": 1,
+   "totalVotes": 1,
+   "refutations": [],
+   "corrections": [
+    "TQ-8's literal coding-standards.md text concerns red-first bug-fix regression tests, not test-authenticity/mock-only tests \u2014 a better fit is the general Testing Standards section / Feathers 'seam' lens the digest also authorizes. Doesn't change the substance."
+   ]
+  },
+  "sourceBatch": "sup-eh1-bootstrap"
+ },
+ {
+  "title": "Delete orphaned bootstrapLogger() in logger_bootstrap.dart \u2014 bootstrap.dart calls AppLogger.init() inline instead",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler-duplication (dead code)",
+  "area": "lib/app/bootstrap",
+  "evidence": [
+   {
+    "file": "learning_tracker/lib/app/bootstrap/logger_bootstrap.dart",
+    "line": 8,
+    "quote": "void bootstrapLogger() {\n  AppLogger.init();"
+   },
+   {
+    "file": "learning_tracker/lib/app/bootstrap/bootstrap.dart",
+    "line": 37,
+    "quote": "final talker = AppLogger.init();\n  final log = AppLogger(talker);"
+   }
+  ],
+  "sites": 1,
+  "why": "Repo-wide grep for `bootstrapLogger(` finds only its own definition \u2014 no caller in lib/ or test/. bootstrap.dart calls `AppLogger.init()` directly (line 37) instead of the wrapper that exists specifically to do that. Git history shows bootstrapLogger() was extracted from main.dart in commit 96751411 (W1.3) explicitly so the returned Talker could be 'wired into the TalkerRiverpodObserver' by a follow-up commit, but the very next commit that assembled bootstrap.dart (6c9c0c0b, W1.6) inlined `AppLogger.init()` again instead of calling it, and nobody has called it since. The current file's own doc comment is stale corroborating evidence: it still describes wiring 'TalkerRiverpodObserver in main.dart', but that wiring has lived in bootstrap.dart, not main.dart, since the W1.6 refactor \u2014 the doc was never revisited because the function was never exercised. Same defect shape as the setupFlutterErrorHandlers dead twin (an extracted bootstrap-phase helper silently bypassed by the orchestrator), but lower stakes here since AppLogger.init() is a 1:1 behavioral match, not a divergent implementation.",
+  "recommendation": "Delete lib/app/bootstrap/logger_bootstrap.dart. There is no behavioral difference to preserve \u2014 bootstrap.dart's inline `AppLogger.init()` is exactly what the wrapper would have done.",
+  "effort": "S",
+  "acceptance_criteria": [
+   "lib/app/bootstrap/logger_bootstrap.dart is removed (or its function is actually called from bootstrap.dart, replacing the inline AppLogger.init()).",
+   "A grep-based Rule-0 check in `make audit` flags any top-level function in lib/app/bootstrap/*.dart with zero callers outside its own file and outside test/, printing file:line."
+  ],
+  "labels": [
+   "bootstrap",
+   "dead-code",
+   "logging"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+   "status": "UPHELD",
+   "upheldVotes": 1,
+   "totalVotes": 1,
+   "refutations": [],
+   "corrections": []
+  },
+  "sourceBatch": "sup-eh1-bootstrap"
+ },
+ {
+  "title": "Thread AppLogger into database_provider.dart's SeedManager construction \u2014 bootstrapSeedDb's logger wiring is dead code and SeedManager's diagnostics are silent in production",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "Fowler-duplication (dead code) / EH-3 (diagnostic loss)",
+  "area": "lib/app/bootstrap + lib/core/providers/database_provider.dart + lib/core/database/seed_manager.dart",
+  "evidence": [
+   {
+    "file": "learning_tracker/lib/app/bootstrap/seed_bootstrap.dart",
+    "line": 14,
+    "quote": "final seedManager = SeedManager(dbDirectory: dbDirectory, logger: log);"
+   },
+   {
+    "file": "learning_tracker/lib/core/providers/database_provider.dart",
+    "line": 54,
+    "quote": "final seedManager = SeedManager(dbDirectory: docsDir.path);\n  return seedManager.ensureContentDb();"
+   },
+   {
+    "file": "learning_tracker/lib/core/database/seed_manager.dart",
+    "line": 69,
+    "quote": "final AppLogger? _logger;"
+   },
+   {
+    "file": "learning_tracker/lib/core/database/seed_manager.dart",
+    "line": 241,
+    "quote": "_logger?.error(event: 'seed_manager_extract_failed', exception: e);"
+   }
+  ],
+  "sites": 1,
+  "why": "Repo-wide grep for `bootstrapSeedDb` finds only its own definition \u2014 bootstrap.dart no longer calls it (a prior commit, 6fff5af9, deliberately removed the awaited call to fix cold-start latency, deferring seeding into contentDbPathProvider). The provider that now does the real work (database_provider.dart:51-56) re-implements the SeedManager call but constructs it with `SeedManager(dbDirectory: docsDir.path)` \u2014 no `logger:` argument. SeedManager's `_logger` field is `AppLogger?` (nullable) and every one of its ~13 internal diagnostic calls is null-safe-guarded (`_logger?.info(...)`, `_logger?.warning(...)`, `_logger?.error(...)`) at lines covering interrupted-upgrade detection, first-launch extraction, extraction failures, upgrade failures, .bak rollback, and corruption recovery. Because `_logger` is null on the only construction path that runs in a real app, every one of those calls is a silent no-op today. SeedManager's own doc explicitly anticipates 'version-driven upgrades, .bak rollback, and corruption recovery' as real scenarios, and AppLogger's own doc states its ring buffer exists precisely so 'Send Diagnostic Logs' in Settings can capture failures like this \u2014 but if content-DB extraction or corruption-recovery ever misbehaves for a real user, there will be zero trace of it anywhere the team can retrieve.",
+  "recommendation": "Pass `logger: AppLogger.instance` in database_provider.dart's `SeedManager(dbDirectory: docsDir.path)` call \u2014 keep seeding lazily deferred inside the provider (do not reintroduce an awaited bootstrapSeedDb() call in bootstrap.dart; that would regress the cold-start fix in 6fff5af9). Then delete lib/app/bootstrap/seed_bootstrap.dart, since its only remaining purpose \u2014 threading a logger into SeedManager \u2014 is met at the real call site and the function itself is unreachable.",
+  "effort": "S",
+  "acceptance_criteria": [
+   "database_provider.dart's contentDbPath provider constructs SeedManager with a non-null logger.",
+   "A regression test forces SeedManager.ensureContentDb() to throw inside contentDbPathProvider (e.g. corrupt/missing seed asset fixture) and asserts a Talker/AppLogger history entry with an event like 'seed_manager_extract_failed' is recorded \u2014 proving the logger is wired, not just constructed.",
+   "Rule-0: grep-based `make audit` check that every `SeedManager(` construction site outside test/ passes a `logger:` argument.",
+   "lib/app/bootstrap/seed_bootstrap.dart is removed once its logic is folded into the real call site."
+  ],
+  "labels": [
+   "bootstrap",
+   "dead-code",
+   "logging",
+   "seed-db",
+   "observability"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+   "status": "UPHELD",
+   "upheldVotes": 1,
+   "totalVotes": 1,
+   "refutations": [],
+   "corrections": []
+  },
+  "sourceBatch": "sup-eh1-bootstrap"
+ },
+ {
+  "title": "Log the swallowed exceptions in firebase_bootstrap.dart's two comment-only catch blocks (lines 39-41, 50-52) \u2014 invisible to the Makefile's single-line-only empty-catch grep",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "EH-3 (log-less catch) + Rule-0 checker gap",
+  "area": "lib/app/bootstrap/firebase_bootstrap.dart",
+  "evidence": [
+   {
+    "file": "learning_tracker/lib/app/bootstrap/firebase_bootstrap.dart",
+    "line": 39,
+    "quote": "} catch (_) {\n      // App Check unavailable \u2014 continue; sync may be rejected if enforced."
+   },
+   {
+    "file": "learning_tracker/lib/app/bootstrap/firebase_bootstrap.dart",
+    "line": 50,
+    "quote": "} catch (_) {\n    // Firebase init failed \u2014 app continues in local-first mode."
+   },
+   {
+    "file": "Makefile",
+    "line": 176,
+    "quote": "HITS=$$(grep -rn 'catch\\s*(_)\\s*{}' \"$$LIB/\" \\"
+   }
+  ],
+  "sites": 2,
+  "why": "Both catch blocks have a comment as their only content \u2014 no rethrow, no state conversion, no AppLogger call \u2014 so they satisfy none of EH-3's three disjuncts ('rethrows, converts, or logs'). This is not merely a Pending-tier gap: the project's own 'Enforced' check for exactly this class of bug (Makefile [9/12], NFR23, 'empty catch blocks catch (_) {}') only matches the single-line literal pattern `catch\\s*(_)\\s*{}`; running it against this file confirms zero hits despite two genuinely empty-bodied (comment-only) catches spanning multiple lines. The App Check catch (39-41) is the more consequential of the two: the surrounding comment documents a known real failure mode ('FirebearStorageCryptoHelper decryption failures... cause activate() to hang indefinitely') that the timeout specifically guards against, yet if it fires there is zero log trace \u2014 this is the same class of App-Check/permission-denied failure this team has separately had to debug via manual token inspection. The outer catch (50-52) swallows a bare (untyped) exception from Firebase.initializeApp() itself with equally zero trace, so a total Firebase-subsystem failure in the field (no sync, no crash reporting, no analytics) would leave no diagnostic breadcrumb anywhere.",
+  "recommendation": "Change both `catch (_) { /* comment */ }` blocks to `catch (e, stack) { AppLogger.instance.warning(event: '...', exception: e, stackTrace: stack); }` (AppLogger.instance is safe to call here even though AppLogger.init() hasn't run yet \u2014 crashlytics_bootstrap.dart already relies on the same lazy-singleton behavior). Separately, broaden the Makefile NFR23 grep so it is not blind to multi-line comment-only catch bodies.",
+  "effort": "S",
+  "acceptance_criteria": [
+   "Both catch blocks in firebase_bootstrap.dart (App Check activation, Firebase.initializeApp) capture the exception/stack and call AppLogger.instance.{warning|error} with a distinct event name.",
+   "Makefile check [9/12] (NFR23) is extended to also flag catch blocks whose body contains only comments/whitespace, not just literal `catch (_) {}`; re-running it against firebase_bootstrap.dart now reports the two sites instead of 0 hits.",
+   "A regression test forces FirebaseAppCheck.instance.activate (or Firebase.initializeApp) to throw and asserts an AppLogger/Talker history entry is recorded."
+  ],
+  "labels": [
+   "error-handling",
+   "logging",
+   "rule-0-gap",
+   "bootstrap",
+   "app-check"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+   "status": "UPHELD",
+   "upheldVotes": 1,
+   "totalVotes": 1,
+   "refutations": [],
+   "corrections": [
+    "The recommended fix (AppLogger.instance.warning inside the catch) runs before bootstrap()'s AppLogger.init() on the next line; init() replaces _talkerInstance, discarding pre-init history, so in release builds that logged warning would itself vanish from the ring buffer unless bootstrap()'s ordering is also fixed."
+   ]
+  },
+  "sourceBatch": "sup-eh1-bootstrap"
+ },
+ {
+  "title": "Widen PinFlowController's catch scopes and add a finally so busy never sticks true on an untyped PinService exception",
+  "severity": "P2",
+  "confidence": "SUSPECTED",
+  "rule": "SM-5",
+  "area": "features/profiles/presentation/providers/pin_flow_controller.dart",
+  "evidence": [
+   {
+    "file": "learning_tracker/lib/features/profiles/presentation/providers/pin_flow_controller.dart",
+    "line": 283,
+    "quote": "    } on ArgumentError catch (e) {"
+   },
+   {
+    "file": "learning_tracker/lib/features/profiles/presentation/providers/pin_flow_controller.dart",
+    "line": 350,
+    "quote": "        state = state.copyWith(busy: true, errorMessage: null);\n        await pinService.setProfilePin(profileId, pin);"
+   },
+   {
+    "file": "learning_tracker/lib/features/profiles/presentation/providers/pin_flow_controller.dart",
+    "line": 397,
+    "quote": "    } on PinLockoutException catch (e) {"
+   }
+  ],
+  "sites": 4,
+  "why": "PinFlowState hand-rolls AsyncValue's job via a `busy`/`errorMessage` pair instead of AsyncNotifier+AsyncValue.guard, and the hand-rolled error handling is incomplete: _handleSetup catches only ArgumentError, _handleChange's verifyCurrent and _handleVerify catch only PinLockoutException, and _handleChange's confirm step (line 350-351, the PIN-CHANGE save call) has no catch at all. appendDigit/backspace both early-return while `state.busy` is true, so any OTHER exception from PinService.setProfilePin/verifyProfilePin (a bcrypt hashing error, a DB write failure, disk full) leaves busy stuck true forever, permanently freezing the parent-PIN keypad with no error shown and no way to recover short of an app restart. This is the load-bearing PIN gate for parent/settings access.",
+  "recommendation": "Wrap each of the 4 call sites in a catch-all (or a `finally { if (state.busy) state = state.copyWith(busy: false); }`) in addition to the existing typed catches, and route the generic-exception case to `state.copyWith(busy:false, errorMessage: <generic error>)` instead of leaving busy uncleared.",
+  "effort": "S",
+  "acceptance_criteria": [
+   "Every code path through _handleSetup, _handleChange (all 3 async steps), and _handleVerify guarantees state.busy is false after the method returns, on both success and any exception type.",
+   "Regression test: a fake PinService that throws a generic StateError (not ArgumentError/PinLockoutException) from setProfilePin/verifyProfilePin in each of the 4 sites; assert state.busy == false and state.errorMessage != null afterward, and that appendDigit still accepts input.",
+   "Rule-0 checker: extend tool/ audit greps to flag a `busy: true`/`loading: true` state assignment in a Notifier method that is not followed by an unconditional reset before the method's closing brace (heuristic grep for `copyWith(busy: true` without a paired `finally`)."
+  ],
+  "labels": [
+   "sm-5",
+   "riverpod",
+   "error-handling",
+   "parent-pin",
+   "frozen-ui"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+   "status": "UPHELD",
+   "upheldVotes": 2,
+   "totalVotes": 3,
+   "refutations": [
+    "Evidence quotes are literally accurate (verified at lines 283, 324, 350-351, 397), and SM-5's grep target (try/catch assigning state in a @riverpod Notifier, hand-rolled instead of AsyncValue.guard) does match this file. But the severity narrative is dishonest: 3 of the 4 cited call sites (line 324'"
+   ],
+   "corrections": [
+    "The claim 'no way to recover short of an app restart' is false and overstates severity. parent_pin_keypad_dialog.dart's PinKeypadDialogFrame wires PopScope(canPop:false) and the X close button's onPressed to `onClose` UNCONDITIONALLY (not gated on `busy` -- only the digit/backspace/keypad-cancel buttons check `busy`). Tapping close or the back gesture calls _popResult -> router.pop, exiting the frozen screen. Re-entering the PIN flow creates a new PinFlowScreen with a fresh _mountToken, and initializeForMount() detects the token mismatch and fully resets PinFlowState (busy:false) -- no app restart needed, just close-and-retry. The underlying defect (silent failure, no error shown, current entry attempt lost) is still real and rule-violating, but it's a recoverable UX/reliability bug, not a permanent app-breaking freeze, so I'm downgrading from P1 to P2.",
+    "3 of the 4 cited call sites (pin_flow_controller.dart:324, :350-351, :397 \u2014 all inside _handleChange/_handleVerify) sit behind PinFlowChangeRoute/PinFlowVerifyRoute, which are defined in app_router.gr.dart but never invoked from any production or test code path (confirmed via repo-wide grep) \u2014 i.e. dead code, not 'the load-bearing PIN gate for parent/settings access' as claimed. The real live parent-PIN verify/change UI is a separate widget, ParentPinKeypadDialog/showParentPinChangeDialog (settings_screen.dart:661), untouched by this finding. Only the _handleSetup site (line 283), reachable via PinFlowSetupRoute for first-time/post-wipe PIN creation only (pin_guard.dart:103, settings_screen.dart:668-671 guarded by `!_hasPin`), is a genuine live-code SM-5/busy-stuck risk. Downgrade from P1 to P2 (narrow, first-run-only design debt) and confidence to SUSPECTED since 75% of the evidenced sites and the central severity justification do not hold in shipped code; the recommendation to fix all 4 sites is still reasonable hygiene but should not be sold as fixing a load-bearing gate.</evidence_correction>\n",
+    "3 of the 4 evidence sites (pin_flow_controller.dart:324, :350-351, :397, inside _handleChange and _handleVerify) are unreachable in production \u2014 PinFlowMode.change/verify are never triggered because PinFlowChangeRoute/PinFlowVerifyRoute are never pushed anywhere in lib/ (confirmed by grep and by the already-verified sibling finding in verified-findings-r3.json recommending their deletion). Only line 283 (_handleSetup, ArgumentError-only catch, reachable via PinFlowSetupRoute) is a live production site."
+   ]
+  },
+  "sourceBatch": "sup-sm5"
+ },
+ {
+  "title": "Wire RewardConfigController's async mutations to the RewardForm.loading/.error fields the screen already renders",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "SM-5",
+  "area": "features/gamification/presentation/providers/reward_config_controller.dart",
+  "evidence": [
+   {
+    "file": "learning_tracker/lib/features/gamification/presentation/widgets/reward_form.dart",
+    "line": 16,
+    "quote": "    this.loading = false,\n    this.error,"
+   },
+   {
+    "file": "learning_tracker/lib/features/gamification/presentation/providers/reward_config_controller.dart",
+    "line": 74,
+    "quote": "      loading: false,\n      error: null,"
+   },
+   {
+    "file": "learning_tracker/lib/features/gamification/presentation/providers/reward_config_controller.dart",
+    "line": 189,
+    "quote": "    await svc.upsertMilestone(\n      trackId: trackId,"
+   },
+   {
+    "file": "learning_tracker/lib/features/gamification/presentation/screens/reward_configuration_screen.dart",
+    "line": 280,
+    "quote": "    if (form.loading) {"
+   },
+   {
+    "file": "learning_tracker/lib/features/gamification/presentation/screens/reward_configuration_screen.dart",
+    "line": 287,
+    "quote": "    if (form.error != null) {"
+   }
+  ],
+  "sites": 4,
+  "why": "RewardForm carries loading/error fields and reward_configuration_screen.dart fully renders them (full-screen CircularProgressIndicator for form.loading, a dedicated error Scaffold for form.error) \u2014 but grep-confirmed, the controller's 4 async mutation methods (saveReward, toggleEnabled, deleteMilestone, milestonesForCurrentLadder) never set either field to a non-default value anywhere in the file; only bootstrap() touches them, always resetting to false/null. The screen's own try/catch only catches TutorWriteException per call site (for the tutor-permission-denied case). Any OTHER DB failure during a save/toggle/delete (constraint violation, disk error) is an unhandled Future rejection: the user taps Save, sees no spinner (loading never flips true) and no error (error never gets set) \u2014 the operation silently fails with zero feedback, while the fully-built error UI remains permanently dead code.",
+  "recommendation": "In each of the 4 mutation methods, set `state = state.copyWith(loading: true)` before the DB call and wrap it in try/catch: on success `loading:false`; on any exception (not just TutorWriteException) `state.copyWith(loading:false, error: <mapped message>)`, or migrate the class to expose `AsyncValue<RewardForm>`-style guard semantics.",
+  "effort": "S",
+  "acceptance_criteria": [
+   "saveReward/toggleEnabled/deleteMilestone/milestonesForCurrentLadder each leave state.error non-null (not an unhandled Future rejection) when the underlying DB call throws anything other than TutorWriteException.",
+   "Widget test: a fake RewardMilestoneService/DB that throws a generic exception from upsertMilestone; assert the screen renders the form.error branch instead of hanging or throwing past the test.",
+   "Rule-0 checker: a grep/lint that flags a state class with loading/error-shaped fields where the owning @riverpod class file contains zero `state.copyWith(error:` (or equivalent) assignment with a non-null literal \u2014 i.e., a 'declared-but-dead error field' detector."
+  ],
+  "labels": [
+   "sm-5",
+   "riverpod",
+   "error-handling",
+   "rewards",
+   "dead-code"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+   "status": "UPHELD",
+   "upheldVotes": 2,
+   "totalVotes": 3,
+   "refutations": [
+    "Evidence checks out (grep-verified: none of saveReward/toggleEnabled/deleteMilestone/milestonesForCurrentLadder ever set loading/error; screen catches only TutorWriteException at 3 call sites). But this duplicates an already-filed, UPHELD main-sweep finding: verified-findings-r3.json 'Delete or wire"
+   ],
+   "corrections": [
+    "No factual error in the cited evidence \u2014 form.loading/form.error are confirmed dead (only bootstrap() touches them) and the 4 async mutations are confirmed to lack try/catch beyond the screen's TutorWriteException-only wrappers. The defect is real; the problem is novelty/duplication and severity calibration relative to the already-filed twin P3 finding, not correctness of the grep evidence.",
+    "Site count should be 3 real mutation methods (saveReward, toggleEnabled, deleteMilestone), not 4 \u2014 milestonesForCurrentLadder is a read-only query consumed by a separate widget-local FutureBuilder and structurally cannot/should not be wired to form.loading/form.error without causing a UX regression (whole-form spinner over a small list refresh). The recommendation's primary fix (manual try/catch assigning state) contradicts the literal SM-5 text cited as the rule; genuine SM-5 compliance requires migrating to AsyncValue<RewardForm>, offered only as a secondary 'or' in the recommendation.",
+    "Two corrections: (1) Rule fit is weak \u2014 SM-5 mandates AsyncValue.guard and explicitly forbids \"hand-manage loading/error with a try/catch that assigns state,\" yet the finding's own primary recommended fix (wrap each method in try/catch, `state.copyWith(loading:..., error:...)`) is exactly that forbidden pattern; EH-2 (\"no raw exception reaches presentation\") fits the actual defect better than SM-5. (2) \"sites: 4\" overcounts: milestonesForCurrentLadder is a pure read consumed via independent FutureBuilder (manage_rewards_list.dart / _InlineRewardsSection), never wired to RewardForm.loading/error by design \u2014 only saveReward/toggleEnabled/deleteMilestone are genuine instances of the described root cause (3 sites, not 4). Also \"constraint violation\" is misleading \u2014 RewardMilestoneService persists via SharedPreferences, not SQL; the real failure surface is the Firestore push inside _persistAndSync."
+   ]
+  },
+  "sourceBatch": "sup-sm5"
+ },
+ {
+  "title": "Guard AuthStateNotifier._init() against I/O exceptions so auth state never hangs at AuthState.initializing() forever",
+  "severity": "P2",
+  "confidence": "SUSPECTED",
+  "rule": "SM-5",
+  "area": "features/account/presentation/providers/auth_state_provider.dart",
+  "evidence": [
+   {
+    "file": "learning_tracker/lib/features/account/presentation/providers/auth_state_provider.dart",
+    "line": 21,
+    "quote": "    _init();\n    return const AuthState.initializing();"
+   },
+   {
+    "file": "learning_tracker/lib/features/account/presentation/providers/auth_state_provider.dart",
+    "line": 32,
+    "quote": "    if (firebaseUser != null) {\n      final refreshed = await authRepo.reloadCurrentUser();"
+   },
+   {
+    "file": "learning_tracker/lib/features/account/domain/models/auth_state.dart",
+    "line": 9,
+    "quote": "  /// App has not yet resolved the initial session (splash window).\n  /// Must not hang \u2014 see 19.6 startup hardening."
+   }
+  ],
+  "sites": 1,
+  "why": "build() kicks _init() fire-and-forget and returns AuthState.initializing() immediately; _init() then awaits 4+ Firebase/DAO calls (reloadCurrentUser, findCloudBornByFirebaseUid, getUserProfileByFirebaseUid, upgradeLocalToCloud, findByTier) with zero try/catch anywhere in the method. AuthState has exactly 3 statuses (initializing/signedOut/signedIn) \u2014 there is no error state \u2014 so any exception during _init() (a DB read failure, a Firebase reload throwing) is an unhandled Future rejection that leaves sessionStatus permanently stuck at `initializing`. This directly contradicts the domain model's own doc comment: 'Must not hang \u2014 see 19.6 startup hardening.' Every screen gating on authStateProvider (router, app_shell, sign-in flows) would show a permanent splash/loading state with no retry path, recoverable only by force-killing the app. EH-1's global PlatformDispatcher.onError would log the exception, but nothing resets `state`, so the hang persists regardless of logging.",
+  "recommendation": "Wrap _init()'s body in try/catch (or convert the class to a plain function-style Future<AuthState> build via AsyncNotifier<AuthState> + AsyncValue.guard); on any caught exception, log via AppLogger and fall back to `state = const AuthState.signedOut()` rather than leaving `initializing` unresolved.",
+  "effort": "S",
+  "acceptance_criteria": [
+   "_init() cannot leave sessionStatus at initializing on any exception path \u2014 it resolves to signedIn or signedOut every time, with the failure logged via AppLogger.",
+   "Regression test: override authRepositoryProvider/userDatabaseProvider with a fake that throws from reloadCurrentUser() (and separately from the DAO) during _init(); assert authStateProvider settles to a terminal state within the test, not stuck at initializing.",
+   "Rule-0 checker: none exists yet; add a heuristic grep/custom_lint (once custom_lint is unbroken) flagging a Notifier's build() that calls an unawaited private async method with zero try/catch in that method's body."
+  ],
+  "labels": [
+   "sm-5",
+   "riverpod",
+   "error-handling",
+   "auth",
+   "startup-hang"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+   "status": "UPHELD",
+   "upheldVotes": 3,
+   "totalVotes": 3,
+   "refutations": [],
+   "corrections": [
+    "Cited rule SM-5 governs AsyncValue<T>-typed provider state (AsyncLoading/AsyncValue.guard) and explicitly bans manual try/catch state assignment; AuthStateNotifier's state is a custom AuthState (not AsyncValue), confirmed by auth_state_provider.g.dart:28 (`$NotifierProvider<AuthStateNotifier, AuthState>`). Correct citation is SM-2 (build must be pure/no side effects \u2014 build() kicks _init() fire-and-forget). The finding's primary recommendation (manual try/catch assigning state) contradicts the very SM-5 clause it invokes; only its parenthetical AsyncNotifier+AsyncValue.guard alternative is actually SM-5-compliant.",
+    "isInitializing (auth_state.dart:75) is never read by any router guard or screen except its own domain test \u2014 confirmed by grep across app/router/**, features/**/screens/**. This contradicts the finding's 'permanent splash/loading state ... recoverable only by force-killing the app' claim. Also: rule citation SM-5 is a misfit \u2014 SM-5 governs AsyncValue<T>-based AsyncNotifier mutations ('let build throw; never hand-manage loading/error with try/catch that assigns state'), but AuthStateNotifier's state is a plain custom AuthState (not AsyncValue), and the finding's own recommendation (add try/catch, manually assign state) is the literal opposite of what SM-5 mandates. EH-2 ('raw exception must never propagate into presentation... convert to a value at the data-layer boundary') is the better-fitting rule for this defect.",
+    "The claim 'every screen gating on authStateProvider ... would show a permanent splash/loading state' is false: `AuthState.isInitializing` (auth_state.dart:75) has no callers in lib/ \u2014 no widget, guard, or splash screen branches on SessionStatus.initializing. All real consumers (app_shell.dart:140,152,453; profile_providers.dart:23,79; auth_guard.dart) read isSignedIn/isCloudBorn/currentUser, which are identical for initializing and signedOut states, so a failed _init() silently degrades to signed-out-equivalent behavior rather than hanging any UI. Recommend re-filing at P2 citing SM-2 (side-effectful build) rather than SM-5, with corrected consequence: silent session-restore failure treated as signed-out, not a permanent splash/force-kill hang."
+   ]
+  },
+  "sourceBatch": "sup-sm5"
+ },
+ {
+  "title": "Migrate SignInController's hand-rolled Idle/Submitting/Error state to AsyncNotifier + AsyncValue.guard",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "SM-5",
+  "area": "features/account/presentation/notifiers/sign_in_controller.dart",
+  "evidence": [
+   {
+    "file": "learning_tracker/lib/features/account/presentation/notifiers/sign_in_controller.dart",
+    "line": 704,
+    "quote": "    state = const SignInSubmitting();"
+   },
+   {
+    "file": "learning_tracker/lib/features/account/presentation/notifiers/sign_in_controller.dart",
+    "line": 906,
+    "quote": "        // DG-GAUTH-01: signInWithGoogle() returned without throwing (no\n        // user-cancel / interrupt) but left currentUser null \u2014 a silent JWT"
+   },
+   {
+    "file": "learning_tracker/lib/features/account/presentation/notifiers/sign_in_controller.dart",
+    "line": 1013,
+    "quote": "final signInControllerProvider =\n    NotifierProvider.autoDispose<SignInController, SignInState>("
+   }
+  ],
+  "sites": 2,
+  "why": "SignInController extends plain `Notifier<SignInState>` (a hand-written sealed union: SignInIdle/SignInSubmitting/SignInError) instead of `AsyncNotifier<void>`, then hand-manages the loading/error lifecycle with ~15 manual `state = ...` assignments spread across try/catch/finally blocks in signInWithEmail and signInWithGoogle \u2014 duplicating exactly what AsyncValue.guard provides for free. This maps cleanly onto AsyncValue<void> (AsyncLoading=Submitting, AsyncData(null)=Idle, AsyncError=Error) but the team hand-rolled it instead. The class's own DG-GAUTH-01 comment documents a previously-shipped bug caused by exactly this pattern: a code path where signInWithGoogle() completed without throwing but left currentUser null previously fell through with 'zero feedback' (state silently stayed at whatever it was rather than transitioning to Error) \u2014 proof this hand-rolled machinery has already let a state-transition gap through undetected by the type system. Any new branch added to this 1017-line method carries the same risk; AsyncValue.guard would make 'forgot to set error state' structurally much harder.",
+  "recommendation": "Migrate to `class SignInController extends AsyncNotifier<void>` (or keep the SignInIdle/Submitting/Error shape but derive it FROM an underlying AsyncValue via a getter) so state transitions on the unhappy path are guaranteed by the framework rather than manually tracked across ~15 call sites.",
+  "effort": "L",
+  "acceptance_criteria": [
+   "No code path in signInWithEmail/signInWithGoogle can leave `state` at SignInSubmitting after the method's Future completes (success or failure) \u2014 verified structurally by the AsyncNotifier/AsyncValue.guard migration rather than by manual review.",
+   "Regression test: extend the existing ensureCloudEmailVerifiedForTest-style coverage with a case asserting that EVERY awaited external call, if it throws, ends in `state is SignInError`/`AsyncError` \u2014 not silently at Idle/Submitting.",
+   "Rule-0 checker: once custom_lint is unbroken, add a rule flagging hand-rolled sealed `*State` classes with Idle/Submitting/Error (or Loading/Success/Failure)-shaped variants used as Notifier state as SM-5 AsyncNotifier-migration candidates."
+  ],
+  "labels": [
+   "sm-5",
+   "riverpod",
+   "auth",
+   "sign-in",
+   "tech-debt"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+   "status": "UPHELD",
+   "upheldVotes": 1,
+   "totalVotes": 1,
+   "refutations": [],
+   "corrections": [
+    "DG-GAUTH-01 comment (L906-910) actually describes a missed postcondition check (googleUser == null after a successful call), not a case where state 'silently stayed' un-transitioned \u2014 the prior bug explicitly returned SignInIdle; AsyncValue.guard would not have structurally prevented it since no exception was thrown. Also 'this 1017-line method' is a misnomer \u2014 the FILE is 1016 lines; the largest method (signInWithEmail) is ~186 lines. Neither error changes the core verdict: the file, and both target methods, are real, live, and match SM-5's named anti-pattern."
+   ]
+  },
+  "sourceBatch": "sup-sm5"
+ },
+ {
+  "title": "Wrap the unguarded SharedPreferences/service writes in 9 plain-value Notifier mutation methods across 6 files",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "SM-5",
+  "area": "core/preferences, features/notifications, features/sacred_time, features/scheduler, features/tracks/setup, features/onboarding (presentation/providers)",
+  "evidence": [
+   {
+    "file": "learning_tracker/lib/core/preferences/preference_providers.dart",
+    "line": 120,
+    "quote": "    state = value;\n    await _writeAndPushSnapshot(ref, pref, profileId, value);"
+   },
+   {
+    "file": "learning_tracker/lib/features/notifications/presentation/providers/notification_providers.dart",
+    "line": 79,
+    "quote": "    final prefs = await SharedPreferences.getInstance();\n    await prefs.setBool("
+   },
+   {
+    "file": "learning_tracker/lib/features/sacred_time/presentation/providers/sacred_location_provider.dart",
+    "line": 89,
+    "quote": "    final prefs = await SharedPreferences.getInstance();\n    await SacredTimePreferences.writeLocation(prefs, loc);"
+   },
+   {
+    "file": "learning_tracker/lib/features/scheduler/presentation/providers/scheduler_providers.dart",
+    "line": 219,
+    "quote": "    final prefs = await SharedPreferences.getInstance();\n    await prefs.setStringList(_skippedRefsKey, state.toList());"
+   },
+   {
+    "file": "learning_tracker/lib/features/tracks/setup/presentation/controllers/add_track_controller.dart",
+    "line": 188,
+    "quote": "    };\n    _persist();"
+   },
+   {
+    "file": "learning_tracker/lib/features/tracks/setup/presentation/controllers/add_track_controller.dart",
+    "line": 69,
+    "quote": "    if (scopeJson != null) {\n      final list = jsonDecode(scopeJson) as List<dynamic>;"
+   },
+   {
+    "file": "learning_tracker/lib/features/onboarding/presentation/providers/onboarding_controller.dart",
+    "line": 69,
+    "quote": "    await current.save(ref);"
+   }
+  ],
+  "sites": 21,
+  "why": "The identical idiom repeats across 9 Notifier classes in 6 files: the class holds a plain-value (non-AsyncValue) state type, an async mutation method optimistically assigns `state` (or navigates state via copyWith), then `await`s a persistence/service call (SharedPreferences write, step.save(ref), jsonDecode of stored JSON) with NO enclosing try/catch anywhere in the call chain. Concretely: (1) preference_providers.dart's 5 `set()` methods and notification_providers.dart's 5 `toggle()`/`setTime()` methods write to SharedPreferences after already showing the new value \u2014 a write failure is an unhandled Future rejection and the change is silently lost, reverting on next launch with zero explanation to the user who believed they had already saved it; (2) sacred_location_provider.dart's detect()/setManualCity/setManualCoords/setInIsrael have the same gap, with the added wrinkle that a lost write means the in-Israel/location flag used for Sacred-Time window calculations silently reverts; (3) scheduler_providers.dart's SkippedTasks.skip/undoSkip repeat it despite the SAME file's _loadFromPrefs() correctly demonstrating the fix (full try/catch + AppLogger.error) two methods away; (4) add_track_controller.dart's _advance()/goBack() fire `_persist()` without await or unawaited(), and tryRestore() runs jsonDecode on stored JSON with no try/catch, so a corrupt or stale-schema persisted wizard state throws uncaught instead of falling back to a fresh wizard; (5) onboarding_controller.dart's init()/advance()/jumpTo() await arbitrary OnboardingStep.save/load(ref) implementations with no error channel at all, and the sole caller (learning_process_wizard_screen.dart) does not catch either, so a DB write failure inside any wizard step crashes the flow rather than showing a recoverable error.",
+  "recommendation": "Introduce a shared helper (e.g. `Future<void> guardedPersist(Ref ref, Future<void> Function() write, {required VoidCallback onFailure})`) that every listed mutation method routes its persistence call through, catching and logging via AppLogger and rolling back or surfacing the optimistic state change on failure; apply it at all 21 sites.",
+  "effort": "L",
+  "acceptance_criteria": [
+   "None of the listed methods leaves a bare unguarded `await prefs.setXxx(...)`/`await step.save/load(...)`/`_persist()` (unawaited) as the last unprotected statement of a public mutation method \u2014 every persistence call is wrapped in try/catch (or the equivalent AsyncValue.guard) that logs via AppLogger on failure.",
+   "Regression test (one representative site per file, full parity recommended): override SharedPreferences (or the relevant service/DAO) with a throwing fake for ShowNikudPref.set, ReminderEnabled.toggle, SacredLocationNotifier.setManualCity, SkippedTasks.skip, AddTrackController's _persist (via goBack()), and OnboardingController.advance(); assert the returned Future does not silently reject unobserved and that in-memory state does not diverge from persisted truth without a logged/surfaced failure.",
+   "Rule-0 checker: add a tool/audit grep flagging `Future<void>` methods on `@riverpod`/`Notifier` classes that contain an `await <prefs-or-dao-call>` not preceded by an open `try` earlier in the same method body \u2014 a cheap textual first pass ahead of a real custom_lint AST rule."
+  ],
+  "labels": [
+   "sm-5",
+   "riverpod",
+   "error-handling",
+   "preferences",
+   "systemic"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+   "status": "UPHELD",
+   "upheldVotes": 1,
+   "totalVotes": 1,
+   "refutations": [],
+   "corrections": [
+    "add_track_controller.dart's tryRestore() (cited L69) has zero call sites anywhere in lib/ or test/ (grepped repo-wide) \u2014 it is dead code, so the jsonDecode-without-try/catch cannot presently throw in production; the _persist()-unguarded claim for the same file via _advance()/goBack() (L188-189) IS reachable and stands. onboarding_controller.dart's init/advance/jumpTo (cited L69) call OnboardingStep.save/load, but all 5 production steps in wizard_steps.dart inherit the no-op default (none override save/load) \u2014 'a DB write failure inside any wizard step crashes the flow' is not yet a live scenario, only latent design debt for a future step. The other 4 files (preference_providers.dart 5 sites, notification_providers.dart 5 sites, sacred_location_provider.dart 4 sites, scheduler_providers.dart 2 sites = 16 sites) are fully confirmed live, reachable, and unguarded, which alone sustains the P2 finding. Rule tag SM-5 is a stretch: SM-5's text bans hand-rolled try/catch *replacing* AsyncValue.guard on AsyncValue-shaped state; these are plain-value Notifiers with NO try/catch at all (the opposite failure mode) \u2014 EH-2 ('a raw exception must never propagate') or a Nygard-lens I/O-failure observation is the more precise tag. Also the title's '9' doesn't reconcile with its own 'sites: 21' or the per-file method tallies (5+5+4+2+~3+3 \u2248 21-22) \u2014 internally inconsistent count, though immaterial to the underlying defect."
+   ]
+  },
+  "sourceBatch": "sup-sm5"
+ },
+ {
+  "title": "Regenerate architecture.md's Feature Dependency Graph \u2014 5 fabricated/renamed nodes, 3 missing features, 2 reversed edges",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "AG-8 (schema/sync/collection diffs update their paired doc in the same PR) \u2014 Tier-4 canonical-doc factual-drift",
+  "area": "docs/architecture.md \u2014 Feature Dependency Graph (mermaid, L237-296)",
+  "evidence": [
+   {
+    "file": "docs/architecture.md",
+    "line": 241,
+    "quote": "auth --> onboarding"
+   },
+   {
+    "file": "docs/architecture.md",
+    "line": 243,
+    "quote": "onboarding --> stages"
+   },
+   {
+    "file": "docs/architecture.md",
+    "line": 249,
+    "quote": "learning --> learning_order"
+   },
+   {
+    "file": "docs/architecture.md",
+    "line": 255,
+    "quote": "profiles --> parent_mode"
+   },
+   {
+    "file": "docs/architecture.md",
+    "line": 278,
+    "quote": "track_setup --> core"
+   },
+   {
+    "file": "docs/architecture.md",
+    "line": 247,
+    "quote": "learning --> progress"
+   },
+   {
+    "file": "docs/architecture.md",
+    "line": 252,
+    "quote": "scheduler --> dashboard"
+   },
+   {
+    "file": "learning_tracker/lib/features/account/domain/services/upgrade_to_cloud_service.dart",
+    "line": 41,
+    "quote": "class UpgradeToCloudService {"
+   },
+   {
+    "file": "learning_tracker/lib/features/tracks/setup/presentation/screens/track_management_hub_screen.dart",
+    "line": 31,
+    "quote": "class TrackManagementHubScreen extends ConsumerStatefulWidget {"
+   },
+   {
+    "file": "learning_tracker/lib/features/progress/presentation/providers/journey_providers.dart",
+    "line": 8,
+    "quote": "import 'package:learning_tracker/features/learning/presentation/providers/completion_writer_providers.dart';"
+   },
+   {
+    "file": "learning_tracker/lib/features/dashboard/presentation/screens/dashboard_screen.dart",
+    "line": 14,
+    "quote": "import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';"
+   },
+   {
+    "file": "learning_tracker/lib/features/tutoring/presentation/screens/tutor_audit_log_screen.dart",
+    "line": 23,
+    "quote": "class TutorAuditLogScreen extends ConsumerStatefulWidget {"
+   },
+   {
+    "file": "learning_tracker/lib/features/sacred_time/presentation/screens/city_picker_screen.dart",
+    "line": 14,
+    "quote": "class CityPickerScreen extends ConsumerStatefulWidget {"
+   }
+  ],
+  "sites": 10,
+  "why": "The mermaid graph (L237-285) uses 17 node identifiers; 5 don't exist under lib/features/ today. `auth` (L241, L263) was renamed to `account` \u2014 confirmed by account/domain/services/upgrade_to_cloud_service.dart:41's `UpgradeToCloudService`, which implements exactly the 'hard-tier upgrade flow' the doc still attributes to 'auth'. `stages` (L243, L251, L274), `parent_mode` (L255, L272), `track_setup` (L278), and `learning_order` (L249, L277) were folded into subdirectories of the unified `tracks/` feature (tracks/setup/, tracks/stages/, tracks/whole_curriculum_order/) \u2014 confirmed by tracks/setup/.../track_management_hub_screen.dart:31's `TrackManagementHubScreen`, which verbatim matches the doc's own 'track_setup | Track management hub' description. Three real, substantial features never appear as nodes at all: `sacred_time` (20 files), `tutoring` (34 files, e.g. tutor_audit_log_screen.dart:23 \u2014 a feature with its own cross-user tutor-access model, architecturally significant enough to warrant SR-5/FB-8 rules elsewhere in this audit's standard), and `tracks` (67 files) is only representable through its stale fragment names. Even two edges between correctly-named nodes run backwards: doc says `learning --> progress` (L247) but the only real import between these features is progress/journey_providers.dart:8 importing learning/, i.e. progress --> learning; doc says `scheduler --> dashboard` (L252) but the only real import is dashboard/dashboard_screen.dart:14 importing scheduler/, i.e. dashboard --> scheduler. A developer or AI coding agent using this graph to judge 'is it safe to change X without breaking Y' will reason from a diagram that inverts its own edges and omits a fifth of the real feature set.",
+  "recommendation": "Regenerate the graph from real data: derive nodes from `ls lib/features/` and edges from grepping every `import 'package:learning_tracker/features/...'` in lib/features/ (excluding same-feature imports), pick a legible abstraction (e.g. treat tracks/* subdirectories as one node, or show only Rule-2-relevant edges), and add a make target that fails CI if the committed mermaid diagram's node set drifts from `ls lib/features/`.",
+  "effort": "L",
+  "acceptance_criteria": [
+   "The mermaid graph's node identifiers exactly match `ls learning_tracker/lib/features/` (or a documented curated subset), with `auth` replaced by `account` and stages/parent_mode/track_setup/track_learning_order/learning_order removed or folded into a `tracks` node.",
+   "sacred_time, tutoring, and tracks appear as graph nodes with edges backed by an actual grep of cross-feature imports.",
+   "The learning<->progress and scheduler<->dashboard edges are corrected to their real direction or removed if no longer accurate.",
+   "A make/CI check derives the node set from `ls lib/features/` and fails with the diverging names if the committed graph's nodes don't match."
+  ],
+  "labels": [
+   "docs-drift",
+   "architecture",
+   "feature-dependency-graph"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+   "status": "UPHELD",
+   "upheldVotes": 1,
+   "totalVotes": 1,
+   "refutations": [],
+   "corrections": [
+    "Two issues found, neither fatal to the core claim. (1) parent_mode's real successor is profiles/ (13 files: PIN screens, parent_dashboard_providers.dart) plus dashboard/domain/services/parent_dashboard_aggregator.dart \u2014 NOT tracks/ as the finding states; parent_mode is still correctly identified as a stale node, just mis-attributed as to where it went. (2) The '2 reversed edges' claim assumes strict import-direction semantics for the graph, but the doc's own Dependency Notes describe these exact edges with data-flow language ('learning...producing completion data that...progress...consume', 'scheduler...feeds dashboard') \u2014 under that stated semantics the arrows are consistent with the real import direction (consumer imports producer), so 'reversed' is a contestable interpretation, not a clean-cut error. Core fabricated/missing-node claims stand regardless."
+   ]
+  },
+  "sourceBatch": "sup-arch-graph"
+ },
+ {
+  "title": "Rewrite architecture.md's Feature Summary table \u2014 6 of 18 rows name nonexistent features, tracks and tutoring have no row",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "AG-8 (schema/sync/collection diffs update their paired doc in the same PR) \u2014 Tier-4 canonical-doc factual-drift",
+  "area": "docs/architecture.md \u2014 Feature Summary table (L210-232) and module-count claims (L28, L192)",
+  "evidence": [
+   {
+    "file": "docs/architecture.md",
+    "line": 28,
+    "quote": "The codebase is organized into a shared core layer and 18 feature modules, each internally structured with data, domain, and presentation layers."
+   },
+   {
+    "file": "docs/architecture.md",
+    "line": 192,
+    "quote": "The application contains 18 active feature modules (zombie features `tutor_mode` and `test_tracking` removed in Epic 25/26)."
+   },
+   {
+    "file": "docs/architecture.md",
+    "line": 214,
+    "quote": "| 1 | **auth** | Firebase Auth with email/password and Google Sign-In; local-born account support (argon2id hash); hard-tier upgrade flow |"
+   },
+   {
+    "file": "docs/architecture.md",
+    "line": 219,
+    "quote": "| 6 | **learning_order** | Drag-and-drop reordering at configurable level; parent control restriction; optimistic UI |"
+   },
+   {
+    "file": "docs/architecture.md",
+    "line": 222,
+    "quote": "| 9 | **parent_mode** | PIN-protected dashboard, per-curriculum analytics, engagement metrics, reward catalog management |"
+   },
+   {
+    "file": "docs/architecture.md",
+    "line": 228,
+    "quote": "| 15 | **stages** | Stage definitions with 3 schedule types, max 10 stages, protected Learn stage, 2-pass reordering |"
+   },
+   {
+    "file": "docs/architecture.md",
+    "line": 231,
+    "quote": "| 18 | **track_setup** | Track management hub; track detail and editing screens |"
+   },
+   {
+    "file": "learning_tracker/lib/features/tracks/setup/presentation/screens/track_management_hub_screen.dart",
+    "line": 31,
+    "quote": "class TrackManagementHubScreen extends ConsumerStatefulWidget {"
+   },
+   {
+    "file": "learning_tracker/lib/features/tutoring/presentation/screens/tutor_audit_log_screen.dart",
+    "line": 23,
+    "quote": "class TutorAuditLogScreen extends ConsumerStatefulWidget {"
+   },
+   {
+    "file": "learning_tracker/lib/features/account/domain/services/upgrade_to_cloud_service.dart",
+    "line": 41,
+    "quote": "class UpgradeToCloudService {"
+   }
+  ],
+  "sites": 10,
+  "why": "architecture.md claims '18 feature modules' twice (L28, L192) and lists 18 rows (L210-232). `ls learning_tracker/lib/features/` shows 15 real directories: account, content_browsing, dashboard, gamification, learning, notifications, onboarding, profiles, progress, sacred_time, scheduler, settings, sync, tracks, tutoring. Row 1 'auth' (L214) is the pre-rename name (real dir is `account`, confirmed via upgrade_to_cloud_service.dart:41). Five more rows name directories that don't exist anywhere in lib/features/: 'learning_order' (L219), 'parent_mode' (L222), 'stages' (L228), 'track_learning_order' (L230, not separately quoted above), and 'track_setup' (L231) \u2014 all folded into subdirectories of the single `tracks/` feature, which itself never gets a row (confirmed by tracks/setup/track_management_hub_screen.dart:31 matching the doc's own track_setup description word-for-word). `tutoring` \u2014 a 34-file feature with its own cross-user tutor-access model (tutor_audit_log_screen.dart:23) \u2014 also never gets a row anywhere in the table. A contributor or onboarding AI agent reading this table to learn 'what features exist' will look for features/auth/, features/stages/, features/parent_mode/, features/track_setup/, or features/learning_order/, not find one, and either give up or recreate one \u2014 while never learning tracks and tutoring exist.",
+  "recommendation": "Regenerate the table from `ls lib/features/` (15 rows today), rename row 1 to `account`, fold the stages/parent_mode/track_setup/track_learning_order/learning_order descriptions into a single `tracks` row (or document them explicitly as tracks/ sub-namespaces), and add a `tutoring` row.",
+  "effort": "S",
+  "acceptance_criteria": [
+   "Feature Summary table has exactly one row per real lib/features/* directory (15 today), row 1 renamed auth \u2192 account, and tracks/tutoring added.",
+   "Lines 28 and 192's '18 feature modules' / '18 active feature modules' claims are updated to match the table's row count.",
+   "A grep check (`ls lib/features | wc -l` vs. the count asserted in architecture.md) is added to `make audit` or a docs-check target so this can't silently re-drift."
+  ],
+  "labels": [
+   "docs-drift",
+   "architecture",
+   "feature-summary-table"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+   "status": "UPHELD",
+   "upheldVotes": 1,
+   "totalVotes": 1,
+   "refutations": [],
+   "corrections": []
+  },
+  "sourceBatch": "sup-arch-graph"
+ },
+ {
+  "title": "Refresh architecture.md's Database Schema section \u2014 User DB shown at schema v14/21 tables/22 DAOs, actually v32/24/24",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "AG-8 (schema/sync/collection diffs update their paired doc in the same PR) \u2014 Tier-4 canonical-doc factual-drift",
+  "area": "docs/architecture.md \u2014 Core Layer database bullet (L32, L105) and Database Schema section (L510-554)",
+  "evidence": [
+   {
+    "file": "docs/architecture.md",
+    "line": 32,
+    "quote": "- **Schema v14** (User DB) \u2014 clean rebuild; all migration steps deleted; `schemaVersion` is the authoritative version number."
+   },
+   {
+    "file": "docs/architecture.md",
+    "line": 105,
+    "quote": "**User DB** (`user_acc_<id>.db`) \u2014 per-account, read-write; schema **v14**. 21 tables, 22 DAOs."
+   },
+   {
+    "file": "docs/architecture.md",
+    "line": 516,
+    "quote": "| User DB (`user_acc_<id>.db`) | **v14** | 21 | 22 |"
+   },
+   {
+    "file": "docs/architecture.md",
+    "line": 534,
+    "quote": "| User DB | Completions | 9 |"
+   },
+   {
+    "file": "docs/architecture.md",
+    "line": 542,
+    "quote": "| User DB | Streaks | 7 |"
+   },
+   {
+    "file": "docs/architecture.md",
+    "line": 544,
+    "quote": "| User DB | SyncQueue | 6 |"
+   },
+   {
+    "file": "docs/architecture.md",
+    "line": 554,
+    "quote": "_Generated by `tool/gen_arch_tables.dart`. Total: 21 User DB + 4 Content DB + 2 Registry DB = 27 tables._"
+   },
+   {
+    "file": "learning_tracker/lib/core/database/user/user_database.dart",
+    "line": 159,
+    "quote": "int get schemaVersion => 32;"
+   },
+   {
+    "file": "learning_tracker/lib/core/database/user/user_database.dart",
+    "line": 57,
+    "quote": "/// - Dropped legacy tables: completions, streaks, sync_queue."
+   },
+   {
+    "file": "learning_tracker/lib/core/database/user/user_database.dart",
+    "line": 125,
+    "quote": "RewardRedemptions,"
+   },
+   {
+    "file": "Makefile",
+    "line": 226,
+    "quote": "@dart run tool/gen_arch_tables.dart"
+   }
+  ],
+  "sites": 7,
+  "why": "Three places in architecture.md state the User DB is at 'schema v14' with '21 tables, 22 DAOs' (L32, L105, L516); user_database.dart:159 declares `schemaVersion => 32`, and its own @DriftDatabase annotation lists 24 tables (L100-125, ending RewardRedemptions) and 24 DAOs (L128-152, ending SyncKvDao) \u2014 18 schema versions and multiple tables/DAOs off. Worse, the 'Database Schema \u2014 Generated Table List' (L520-554) claims to be mechanically 'generated by tool/gen_arch_tables.dart... Run make gen-arch-tables to regenerate' (L522); I ran that exact command and it emits 24 User DB rows totalling 30 tables overall today, not the 27 committed at L554. The committed list still includes Completions (L534), Streaks (L542), and SyncQueue (L544) \u2014 three tables user_database.dart's own migration comment says were dropped in the schema-v1 rebuild (line 57: 'Dropped legacy tables: completions, streaks, sync_queue.') \u2014 while omitting 6 real current tables (SacredWindowEntries, PriorCompletionImports, SyncKv, PointsBalance, PointsLedger, RewardRedemptions). This is AG-8 failing silently and repeatedly: the doc ships its own regeneration command but nothing runs or diffs it in CI/make audit, so a contributor who trusts the 'generated' label and designs a migration or query against 'Completions'/'Streaks'/'SyncQueue' as if they still exist, or who underestimates the live schema's churn from 'v14', is working from fiction.",
+  "recommendation": "Re-run `make gen-arch-tables` and commit its live output, update the schema-version/table/DAO counts at L32, L105, and L516 to match, and wire the regeneration into `make audit`/CI (diff committed vs. live output, fail with file:line on drift) so this can't silently re-open. Note: the tool itself currently mis-renders the PointsBalance/PointsLedger/RewardRedemptions rows (a `//` comment line above `PointsBalance,` in the tables: list gets swallowed into the table name, per the tool's own 'source file not found' warnings) \u2014 that's a separate tool/ code defect outside this docs-drift finding's scope, but blocks a clean regeneration until fixed.",
+  "effort": "M",
+  "acceptance_criteria": [
+   "make gen-arch-tables' live output for User DB table/DAO counts matches architecture.md L32, L105, and L516 in the same PR that changes the schema (per AG-8).",
+   "Completions/Streaks/SyncQueue rows are removed from the L520-554 generated table list (dropped per user_database.dart:57) and SacredWindowEntries/PriorCompletionImports/SyncKv/PointsBalance/PointsLedger/RewardRedemptions are added; the L554 total is corrected.",
+   "CI or make audit runs gen-arch-tables and diffs it against the committed section, failing with file:line on drift, closing the gap that let this reach an 18-version gap undetected."
+  ],
+  "labels": [
+   "docs-drift",
+   "architecture",
+   "database-schema",
+   "ag-8"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+   "status": "UPHELD",
+   "upheldVotes": 1,
+   "totalVotes": 1,
+   "refutations": [],
+   "corrections": []
+  },
+  "sourceBatch": "sup-arch-graph"
+ },
+ {
+  "title": "Correct architecture.md's '4 guardrail lints (planned)' claim \u2014 9 lint rules are already implemented with tests",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "AG-8 (schema/sync/collection diffs update their paired doc in the same PR) \u2014 Tier-4 canonical-doc factual-drift",
+  "area": "docs/architecture.md \u2014 guardrail-lints highlight (L38) and Epic 27 Test Stories table (L590-591)",
+  "evidence": [
+   {
+    "file": "docs/architecture.md",
+    "line": 38,
+    "quote": "- **4 guardrail lints** (planned, Stories 27.10\u201327.11): `no-curriculum-display-name-bypass`, `no-feature-cross-import`, `no-firebase-outside-core`, `no-raw-talker`."
+   },
+   {
+    "file": "docs/architecture.md",
+    "line": 590,
+    "quote": "| 27.10 | Custom lints Part 1 \u2014 `no-curriculum-display-name-bypass`, `no-feature-cross-import` |"
+   },
+   {
+    "file": "docs/architecture.md",
+    "line": 591,
+    "quote": "| 27.11 | Custom lints Part 2 \u2014 `no-firebase-outside-core`, `no-raw-talker`, RTL discipline |"
+   },
+   {
+    "file": "packages/custom_lints/lib/learning_tracker_lints.dart",
+    "line": 44,
+    "quote": "NoColorLiteralOutsideTheme(),"
+   },
+   {
+    "file": "packages/custom_lints/lib/src/rules/no_hardcoded_domain_term.dart",
+    "line": 30,
+    "quote": "class NoHardcodedDomainTerm extends DartLintRule {"
+   },
+   {
+    "file": "packages/custom_lints/lib/src/rules/no_e_to_string_in_ui.dart",
+    "line": 30,
+    "quote": "class NoEToStringInUi extends DartLintRule {"
+   }
+  ],
+  "sites": 3,
+  "why": "architecture.md:38 says '4 guardrail lints (planned, Stories 27.10\u201327.11)' naming only no-curriculum-display-name-bypass/no-feature-cross-import/no-firebase-outside-core/no-raw-talker, and the Epic 27 Test Stories table repeats the same 4-name split as future work (L590-591). All 4 named rules are already implemented, registered, and tested \u2014 plus 5 more the doc never mentions. packages/custom_lints/lib/learning_tracker_lints.dart:44-52 registers 9 rules (NoColorLiteralOutsideTheme, NoCurriculumDisplayNameBypass, NoEToStringInUi, NoFeatureCrossImport, NoFirebaseOutsideCore, NoHardcodedDomainTerm, NoHardcodedTextDirection, NoRawLogEvent, NoRawTalker), each with its own source file under packages/custom_lints/lib/src/rules/ (e.g. no_hardcoded_domain_term.dart:30, no_e_to_string_in_ui.dart:30 \u2014 neither named in the doc's list of 4) and 7 dedicated test files under packages/custom_lints/test/. (Separately, and already tracked elsewhere in this audit: a custom_lint_core/analyzer version skew currently makes all 9 rules enforce nothing at runtime \u2014 that brokenness is not this finding.) A contributor picking up 'Stories 27.10-27.11' off this doc would either re-implement 9 already-built rules from scratch, or, believing only 4 were ever scoped, never notice the 5 unscoped extras silently enforcing nothing alongside the other 4.",
+  "recommendation": "Update L38 and the L590-591 story-table rows to state the true count (9) and status (implemented, currently non-enforcing pending the separately-tracked custom_lint_core/analyzer fix), listing all 9 rule names.",
+  "effort": "S",
+  "acceptance_criteria": [
+   "L38 and the L590-591 story-table rows list all 9 implemented rule names (not 4) and state they're implemented-but-non-enforcing (linked to the tracked custom_lint_core/analyzer breakage), not 'planned'.",
+   "A grep check (`ls packages/custom_lints/lib/src/rules/*.dart | wc -l` vs. the count asserted in architecture.md) is added to `make audit` or a docs-check target."
+  ],
+  "labels": [
+   "docs-drift",
+   "architecture",
+   "custom-lint",
+   "tooling-status"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+   "status": "UPHELD",
+   "upheldVotes": 1,
+   "totalVotes": 1,
+   "refutations": [],
+   "corrections": []
+  },
+  "sourceBatch": "sup-arch-graph"
+ },
+ {
+  "title": "Rebuild TrackLearningOrderScreen's masechtos ReorderableListView with a lazy builder, not shrinkWrap+children",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "PF-2",
+  "area": "tracks/track_order \u2014 TrackLearningOrderScreen (masechtos reorder section)",
+  "evidence": [
+   {
+    "file": "learning_tracker/lib/features/tracks/track_order/presentation/screens/track_learning_order_screen.dart",
+    "line": 121,
+    "quote": "ReorderableListView(\n                      shrinkWrap: true,"
+   },
+   {
+    "file": "learning_tracker/lib/features/tracks/track_order/presentation/screens/track_learning_order_screen.dart",
+    "line": 126,
+    "quote": "for (var i = 0; i < _localMasechtos!.length; i++)\n                          DraggableOrderItem("
+   },
+   {
+    "file": "learning_tracker/lib/core/constants/curriculum_defaults.dart",
+    "line": 1168,
+    "quote": "static bool hasReorderableLevel2(CurriculumId id) =>\n      id != CurriculumId.chumash && id != CurriculumId.tanach;"
+   }
+  ],
+  "sites": 1,
+  "why": "Track Detail's 'Reorder Learning Order' tile (track_detail_screen.dart:642-658, one tap: `onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (_) => TrackLearningOrderScreen(...)))`) opens a screen whose masechtos section renders one DraggableOrderItem (a ListTile wrapped in ReorderableDragStartListener, itself a ConsumerWidget with its own label-provider watch) per distinct level-2 hierarchy value of the track's curriculum, via the plain (non-.builder) ReorderableListView constructor with shrinkWrap:true nested inside a SingleChildScrollView. hasReorderableLevel2 enables this section for every curriculum except Chumash/Tanach. I counted distinct level-2 values directly from the bundled assets/content/hierarchy/*.json: Mishna Berurah=697 (Simanim), Mishneh Torah=85, Mussar=59, Mishnayos=63, Yerushalmi=39, Bavli=37. Any user with one of these active tracks \u2014 the majority of the app's curricula \u2014 who taps 'Reorder Learning Order' forces the screen to synchronously build and lay out every one of those rows in one frame: shrinkWrap:true requires the sliver to size itself before the outer SingleChildScrollView can lay out, so simply swapping to `.builder` without also removing shrinkWrap would not fix it. This is the most severe PF-2 site found in this pass: worst-case count (697) is the highest found, per-item cost is heavier than a bare ListTile, and it is reached by an ordinary, one-tap, documented user action on ordinary curricula (not an edge case).",
+  "recommendation": "Replace `ReorderableListView(children:...)` with `ReorderableListView.builder(itemCount: _localMasechtos!.length, itemBuilder: ...)`, and remove the shrinkWrap:true + SingleChildScrollView nesting \u2014 host the sedarim and masechtos sections in a single CustomScrollView with SliverReorderableList sections (or SliverList for read-only rows) instead, so the shrinkWrap-forced full eager layout is eliminated along with the eager builder.",
+  "effort": "M",
+  "acceptance_criteria": [
+   "Rule-0: PF-2 checker (grep/custom_lint) flags `ReorderableListView(` (non-.builder) combined with `shrinkWrap: true` anywhere under lib/features/**.",
+   "Regression test: pump TrackLearningOrderScreen for a Mishna Berurah track backed by a 700-item trackMasechtosOrderProvider fixture; assert via find.byType(DraggableOrderItem) that only a viewport's worth of rows are realized (not all 700), and that tester.pumpAndSettle completes within a bounded frame budget instead of timing out."
+  ],
+  "labels": [
+   "performance",
+   "PF-2",
+   "tracks",
+   "reorder"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+   "status": "UPHELD",
+   "upheldVotes": 3,
+   "totalVotes": 3,
+   "refutations": [],
+   "corrections": []
+  },
+  "sourceBatch": "sup-pf2"
+ },
+ {
+  "title": "Lazy-load GroupedDailyView's per-curriculum task list instead of List.generate-ing every DailyTaskCard",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "PF-2",
+  "area": "scheduler/presentation \u2014 GroupedDailyView (Scheduler screen, grouped-view toggle)",
+  "evidence": [
+   {
+    "file": "learning_tracker/lib/features/scheduler/presentation/widgets/grouped_daily_view.dart",
+    "line": 39,
+    "quote": "children: curricula.map((curriculum) {"
+   },
+   {
+    "file": "learning_tracker/lib/features/scheduler/presentation/widgets/grouped_daily_view.dart",
+    "line": 45,
+    "quote": "initiallyExpanded: true,"
+   },
+   {
+    "file": "learning_tracker/lib/features/scheduler/presentation/widgets/grouped_daily_view.dart",
+    "line": 51,
+    "quote": "children: List.generate(tasks.length, (i) {\n            final task = tasks[i];"
+   }
+  ],
+  "sites": 1,
+  "why": "SchedulerScreen's grouped view (one tap on the view-toggle button next to the task count) renders every task for every curriculum synchronously: GroupedDailyView maps curricula (bounded, <=9) into always-expanded ExpansionTiles, and inside each tile calls `List.generate(tasks.length, ...)` to build one DailyTaskCard per task with zero windowing, inside a non-builder `ListView(children:...)`. The daily-task backlog is explicitly unbounded by design \u2014 a lapsed user (the app's own core scenario: a child who stops opening the app for weeks) accumulates overdue new-learning/chazara items across every active track. The Learn tab already anticipates exactly this by hard-capping its own preview to `tasks.take(5)` (learning_screen.dart:346) and linking its 'View all' button straight into this screen (SchedulerRoute). Opening the grouped view after a multi-week gap forces dozens of DailyTaskCard widgets (icons, badges, InkWell, Riverpod watches) to build on the main isolate in a single frame \u2014 visible jank or a frozen scroll, worst on the older/budget Android devices this app targets for children. The file's own sibling `_TaskList` in scheduler_screen.dart:210 (the default, non-grouped view of the SAME data) already solves the identical problem correctly with `ListView.builder(itemCount: tasks.length, ...)`, so this is a local inconsistency/regression, not an unknown gap.",
+  "recommendation": "Rebuild GroupedDailyView on a CustomScrollView: one SliverToBoxAdapter per curriculum for the expand/collapse header, followed by a SliverList(delegate: SliverChildBuilderDelegate(...)) (or a lazily-built ListView per expanded section) so only on-screen DailyTaskCards are realized \u2014 mirroring the SliverList/SliverChildBuilderDelegate pattern gamification_screen.dart already uses for its own (also unbounded) achievements list.",
+  "effort": "M",
+  "acceptance_criteria": [
+   "Rule-0: PF-2 checker flags `List.generate(` / `.map(...).toList()` feeding a `children:` list under lib/features/**/presentation/** where the source count is a ref.watch'd/provider-derived collection, excluding verified-bounded enums (e.g. CurriculumId.values).",
+   "Regression test: pump SchedulerScreen with a fixture of ~200 synthetic overdue DailyTasks spread across 3 curricula, switch to grouped view, and assert via find.byType(DailyTaskCard) that only the initial viewport's worth of cards are realized (matching the count already asserted for the compliant _TaskList path) rather than all ~200."
+  ],
+  "labels": [
+   "performance",
+   "PF-2",
+   "scheduler"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+   "status": "UPHELD",
+   "upheldVotes": 3,
+   "totalVotes": 3,
+   "refutations": [],
+   "corrections": [
+    "None needed \u2014 all cited file:line quotes match the source exactly.",
+    "Severity corrected from P1 to P2; all cited evidence (grouped_daily_view.dart lines, sibling _TaskList pattern, learning_screen.dart:346 take(5), product-rules.md Rule 9) verified accurate. No duplicate/baseline conflict found.",
+    "Strengthens the finding: the claim 'daily-task backlog is explicitly unbounded by design' understates the mechanism \u2014 only the chazara/review sub-path is capped (kMaxOverdueChazarahPerDay=20 in scheduler_engine.dart); the overdue/today projection path that dominates allDailyTasksProvider (scheduler_providers.dart _buildProjectionTasks, ~lines 691/890) has no cap whatsoever, making the worst case larger than the original finding implied."
+   ]
+  },
+  "sourceBatch": "sup-pf2"
+ },
+ {
+  "title": "Route ScopeSelectionScreen's per-value checkbox list through a lazy builder before wiring the screen into navigation",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "PF-2",
+  "area": "settings/presentation \u2014 ScopeSelectionScreen (currently unreachable/dead code)",
+  "evidence": [
+   {
+    "file": "learning_tracker/lib/features/settings/presentation/screens/scope_selection_screen.dart",
+    "line": 201,
+    "quote": "return ListView("
+   },
+   {
+    "file": "learning_tracker/lib/features/settings/presentation/screens/scope_selection_screen.dart",
+    "line": 309,
+    "quote": "final values = _getDistinctValuesAtLevel(allItems, _selectedLevel!);\n    return values.map((value) {"
+   },
+   {
+    "file": "learning_tracker/lib/features/settings/presentation/screens/scope_selection_screen.dart",
+    "line": 241,
+    "quote": "for (var level = 1; level < _maxLevels; level++)"
+   }
+  ],
+  "sites": 1,
+  "why": "`_buildLevelValueTiles` builds one CheckboxListTile per distinct raw value at the user-chosen hierarchy level via `.map(...).toList()` inside a bare `ListView(children:...)` \u2014 every value realized synchronously, no windowing. I verified against the bundled content assets: for CurriculumId.mishnaBerurah, the deepest level the screen offers (level 2/'Siman' \u2014 level 3/'Seif' is excluded as the leaf) has 697 distinct values; Bavli's 'Daf' level (level 3, also offered) has 176; several other curricula land in the 30-90 range. Picking one of these levels would build 176-697 CheckboxListTiles in a single frame. HOWEVER: ScopeSelectionScreen carries no `@RoutePage()` annotation, is not registered in app_router.dart, and a repo-wide grep of lib/ finds zero `ScopeSelectionScreen(`/`ScopeSelectionRoute` call sites outside its own file \u2014 it is currently dead code in production, reachable only from its own dedicated widget-test suite (test/features/settings/presentation/screens/scope_lifetime_l1_test.dart, ~900 lines). Its doc comment ('Push this screen from Settings or Onboarding') and the extensive, actively-maintained tests indicate finished-but-unwired feature code rather than abandoned code, so the defect is real and will hit real users the moment the missing navigation entry point is added \u2014 this is why it is filed now rather than ignored as dead code.",
+  "recommendation": "Delegate value selection to the already-lazy `HierarchyBrowser` (core/content/hierarchy_browser.dart, backed by ListView.builder) that `LifetimeCurriculumMarkingScreen` in this same file already reuses for the equivalent curriculum-hierarchy-picking problem, instead of hand-rolling `_buildLevelValueTiles`. If a bespoke checkbox list must be kept, swap the `.map().toList()` + `ListView(children:...)` for `ListView.builder(itemCount: values.length, itemBuilder: (_, i) => ...)`.",
+  "effort": "M",
+  "acceptance_criteria": [
+   "Rule-0/AG-6 companion: before this screen is wired into app_router.dart, a check confirms every non-generated screen file has at least one route/Navigator.push call site (flagging orphaned screens), and the PF-2 checker (once it exists) additionally flags the eager ListView( here.",
+   "Regression test: widget-test ScopeSelectionScreen(curriculumId: CurriculumId.mishnaBerurah), toggle off 'Track entire curriculum', select the 'Siman' level, and assert (a) tester.pumpAndSettle completes without timing out and (b) find.byType(CheckboxListTile) count at rest is bounded to roughly a screenful, not all 697 values."
+  ],
+  "labels": [
+   "performance",
+   "PF-2",
+   "dead-code",
+   "settings"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+   "status": "UPHELD",
+   "upheldVotes": 1,
+   "totalVotes": 1,
+   "refutations": [],
+   "corrections": [
+    "Recommendation says LifetimeCurriculumMarkingScreen is 'in this same file' and 'already reuses' HierarchyBrowser \u2014 it's actually in lifetime_marking_screen.dart (a different file) and reuses HierarchyBrowser only indirectly via HierarchySelectionPanel. Also states scope_lifetime_l1_test.dart is '~900 lines'; actual is 1499. Neither affects the core defect or reachability claim."
+   ]
+  },
+  "sourceBatch": "sup-pf2"
+ },
+ {
+  "title": "Lazy-load the tutor-grants roster in ManageGrantsScreen and Settings' embedded pending-invites section",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "PF-2",
+  "area": "tutoring/manage_grants_screen.dart + settings/settings_screen.dart (_PendingInvitesSection)",
+  "evidence": [
+   {
+    "file": "learning_tracker/lib/features/tutoring/presentation/screens/manage_grants_screen.dart",
+    "line": 83,
+    "quote": "return ListView("
+   },
+   {
+    "file": "learning_tracker/lib/features/tutoring/presentation/screens/manage_grants_screen.dart",
+    "line": 91,
+    "quote": "for (final grant in activeGrants)\n                    _GrantRow(grant: grant, canResign: true),"
+   },
+   {
+    "file": "learning_tracker/lib/features/settings/presentation/screens/settings_screen.dart",
+    "line": 730,
+    "quote": "for (final grant in pendingGrants) ...[\n          _TutorGrantTile(grant: grant, isPending: true),"
+   }
+  ],
+  "sites": 2,
+  "why": "Both screens map `incomingTutorGrantsProvider`/`pendingTutorInvitesProvider` (a tutor's full roster of children/parents who granted them access) into rows via a `for` loop feeding a non-lazy ListView/Column, in two independent places, and no cap on roster size exists anywhere in the codebase (grepped for maxTutor/tutorLimit/kMaxTutors and product-rules.md \u2014 none found). A dedicated tutor (e.g. a rebbi/melamed tracking many talmidim across seasons \u2014 the tutoring feature's own stated use case) accumulates one grant per student relationship over time with no visible archiving path; both the dedicated Manage Grants hub and the every-visit Settings screen's embedded pending-invites card rebuild every row on every open/rebuild. This is lower-urgency than the curriculum-hierarchy findings above (realistic roster sizes are more plausibly in the tens than the hundreds), but it is a genuine, duplicated PF-2 pattern on two commonly-visited screens \u2014 Settings in particular re-renders the full roster inline on its own top-level ListView every time any grant's state changes.",
+  "recommendation": "Swap the `for`-loop expansion in ManageGrantsScreen (which already scrolls independently) for ListView.builder/ListView.separated. For Settings' embedded _PendingInvitesSection (which must stay non-scrolling inside the outer settings ListView), cap the inline preview (e.g. first 3-5 grants + a 'View all' link into Manage Grants) instead of rendering the full roster inline.",
+  "effort": "S",
+  "acceptance_criteria": [
+   "Rule-0: PF-2 checker flags `for (final ... in ...)`/`.map(...)` expansions feeding ListView(/Column( children under lib/features/** where the source is a ref.watch'd stream/future provider rather than a literal bounded enum.",
+   "Regression test: seed 50 tutor grants in the fixture repo; pump ManageGrantsScreen and SettingsScreen and assert both build within a bounded frame budget, and (post-fix) that off-screen _GrantRow/_TutorGrantTile widgets are not realized via find.byType counts."
+  ],
+  "labels": [
+   "performance",
+   "PF-2",
+   "tutoring",
+   "settings"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+   "status": "UPHELD",
+   "upheldVotes": 1,
+   "totalVotes": 1,
+   "refutations": [],
+   "corrections": [
+    "A third analogous site exists (manage_tutors_screen.dart:261-278, parent-side per-child tutor list) not counted in 'sites: 2' \u2014 an undercount, not an overclaim, so it doesn't weaken the finding."
+   ]
+  },
+  "sourceBatch": "sup-pf2"
+ },
+ {
+  "title": "account_lifecycle_service.dart removeCloudFromDevice() must verify the outbox is drained before deleting the local DB file",
+  "severity": "P0",
+  "confidence": "CONFIRMED",
+  "rule": "AU-3",
+  "area": "features/account/domain/services (offline-account / cloud-account lifecycle)",
+  "evidence": [
+   {
+    "file": "learning_tracker/lib/features/account/domain/services/account_lifecycle_service.dart",
+    "line": 32,
+    "quote": "/// Firestore data and Firebase Auth are NOT touched \u2014 user can\n  /// sign back in on any device and recover everything."
+   },
+   {
+    "file": "learning_tracker/lib/features/account/domain/services/account_lifecycle_service.dart",
+    "line": 59,
+    "quote": "_deleteDbFile(account.dbFileName);\n    await _registry.removeAccount(accountId);"
+   },
+   {
+    "file": "learning_tracker/lib/features/account/presentation/screens/account_picker_screen.dart",
+    "line": 829,
+    "quote": "await service.removeCloudFromDevice(account.accountId);"
+   },
+   {
+    "file": "learning_tracker/lib/l10n/app_en.arb",
+    "line": 1100,
+    "quote": "\"accountRemoveFromDeviceBody\": \"Your cloud data is safe \u2014 you can sign back in anytime.\","
+   }
+  ],
+  "sites": 2,
+  "why": "The outbox (tier-gated to cloud-born accounts, features/sync/presentation/providers/sync_providers.dart) queues Firestore writes locally until drained; those rows are the only copy of a mutation until push succeeds. removeCloudFromDevice() is reachable mid-session via swipe-to-dismiss in the Account Picker with zero connectivity check and zero OutboxDao.depth() check, then unconditionally deletes the account's entire local Drift file (which holds the outbox table) and the registry row. A child completing offline study sessions, then swiping 'Remove from device' while those completions are still queued, permanently loses that specific progress even though the confirmation dialog explicitly promises 'Your cloud data is safe \u2014 you can sign back in anytime,' and the method's own doc comment claims the same. This is exactly the credential-less/offline-account data-loss territory the standard calls out, just triggered by an explicit destructive action rather than a bare signOut().",
+  "recommendation": "Before _deleteDbFile in removeCloudFromDevice, sum OutboxDao.depth(profileId) across every profile under the account (the outbox is per-profile, the account can have multiple learner profiles) and block or force a bounded drain-and-wait when depth > 0, surfacing a clear 'N changes not backed up yet' warning instead of silently proceeding. Stop promising unconditional safety in the ARB copy until this is true.",
+  "effort": "M",
+  "acceptance_criteria": [
+   "Regression test: seed a cloud-born account with \u22651 undrained outbox row on any of its profiles, call AccountLifecycleService.removeCloudFromDevice, and assert it refuses/blocks rather than deleting the DB file.",
+   "Regression test: with outbox depth 0 for every profile under the account, removeCloudFromDevice still succeeds (no happy-path regression).",
+   "account_picker_screen.dart's swipe-to-remove flow surfaces the pending-outbox count (or blocks) before invoking removeCloudFromDevice for a cloud tile."
+  ],
+  "labels": [
+   "auth",
+   "AU-3",
+   "data-loss",
+   "outbox",
+   "offline-account"
+  ],
+  "originalSeverity": "P0",
+  "verify": {
+   "status": "UPHELD",
+   "upheldVotes": 3,
+   "totalVotes": 3,
+   "refutations": [],
+   "corrections": [
+    "Rule AU-3's exact text ('Never signOut() an anonymous (unlinked) user that still has unsynced outbox entries') does not literally cover this case: the account here is cloud-born/linked (account.accountTier.isCloud, has firebaseUid), and the destructive action is _deleteDbFile, not signOut(). The finding borrows AU-3's spirit (unsynced-outbox + unrecoverable action = permanent loss) rather than violating its letter. Recommend re-tagging as a new/adjacent rule (e.g. 'never delete a local DB file containing undrained outbox rows') rather than AU-3 proper \u2014 but this is a citation-precision issue, not grounds to reject the underlying, independently-verified data-loss finding.",
+    "Rule fidelity issue, not a fabrication: AU-3's literal text is scoped to signOut() on an anonymous (unlinked) user ('an anonymous session cannot be signed back into'). The account here is cloud-born/linked (account.accountTier.isCloud, has firebaseUid) -- it CAN sign back in, so this isn't literally an AU-3 violation. The finding stretches AU-3 by analogy to the broader 'don't destroy unsynced local data' theme rather than the rule's actual anonymous-user scope. The underlying defect is real, severe, reachable, and novel (not in the baselined AU-1/2/3 anonymous-conversion gaps or the 10 known-gap list), so it should stand as a P0 data-loss finding -- but it should be re-labeled as a general data-loss/offline-first violation (DB-6-adjacent or a new rule) rather than a strict AU-3 citation, since AU-3's stated rationale does not apply to this already-linked account tier.",
+    "The rule citation is imprecise. AU-3 (\"never signOut() an anonymous user with unsynced outbox entries\") targets anonymous/unlinked sessions that can never be recovered. removeCloudFromDevice() requires accountTier.isCloud (real Firebase credentials, sign-back-in genuinely works) \u2014 the opposite population from AU-3's anonymous-account concern, and the fix isn't \"block signOut,\" it's \"block/drain before deleting the local DB file.\" This is a real, distinct data-loss defect (undrained outbox rows destroyed by unconditional local-file deletion) that deserves its own rule tag rather than AU-3, but the underlying P0 data-loss claim, reachability, and evidence all survive scrutiny."
+   ]
+  },
+  "sourceBatch": "sup-au-family"
+ },
+ {
+  "title": "AuthStateNotifier._init() must guard reloadCurrentUser() so an offline cold start cannot hang the session state forever",
+  "severity": "P1",
+  "confidence": "CONFIRMED",
+  "rule": "AU-4",
+  "area": "features/account/presentation/providers (session startup)",
+  "evidence": [
+   {
+    "file": "learning_tracker/lib/features/account/presentation/providers/auth_state_provider.dart",
+    "line": 32,
+    "quote": "if (firebaseUser != null) {\n      final refreshed = await authRepo.reloadCurrentUser();"
+   },
+   {
+    "file": "learning_tracker/lib/features/account/domain/models/auth_state.dart",
+    "line": 9,
+    "quote": "/// App has not yet resolved the initial session (splash window).\n  /// Must not hang \u2014 see 19.6 startup hardening."
+   }
+  ],
+  "sites": 1,
+  "why": "FirebaseAuthGatewayImpl.reloadCurrentUser() calls User.reload(), a network round-trip that throws FirebaseAuthException(network-request-failed) when offline \u2014 an entirely ordinary cold-start condition for an offline-first app (this exact file set otherwise engineers carefully around it, e.g. sign_in_controller.dart wraps every Firestore/Firebase call in try/catch and timeouts). Nothing in AuthStateNotifier._init() catches this; the exception escapes the fire-and-forget call from build(), so `state` never advances past AuthState.initializing(). AuthGuard never touches Firebase and lets onboarded users straight through to the app shell, which reads authStateProvider downstream \u2014 so a returning cloud-born user opening the app with no connectivity can be stuck on an unresolved session state indefinitely, directly violating the SessionStatus.initializing doc comment's own 'must not hang' contract (a lesson the codebase already learned once for the router guard per the '19.6 startup hardening' reference, but that didn't carry over to this newer Notifier-based path).",
+  "recommendation": "Wrap the Firebase-touching logic in _init() (at minimum the reloadCurrentUser() call) in try/catch; on failure, fall back to trusting the cached bare currentUser or the local-born row rather than leaving state unset, mirroring the defensive timeout/try-catch pattern already used elsewhere in sign_in_controller.dart.",
+  "effort": "S",
+  "acceptance_criteria": [
+   "Regression test: mock AuthRepository.reloadCurrentUser() to throw (simulating an offline reload()), build AuthStateNotifier, and assert state resolves to a terminal SessionStatus within a bounded time instead of remaining initializing indefinitely.",
+   "On-device check: cold-start the app in airplane mode with a previously-active cloud-born session and confirm no indefinite splash/loading hang."
+  ],
+  "labels": [
+   "auth",
+   "AU-4",
+   "availability",
+   "offline-first"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+   "status": "UPHELD",
+   "upheldVotes": 3,
+   "totalVotes": 3,
+   "refutations": [],
+   "corrections": [
+    "The cited rule AU-4 is misapplied. AU-4's actual text/Why (\"Gate startup/session routing on authStateChanges()/idTokenChanges() streams, never a bare currentUser read... currentUser can be null before auth finishes initializing (startup race)\") addresses a different defect: using authRepo.currentUser (a bare synchronous read, which _init() also does at line 31) instead of subscribing to the auth-state stream. It says nothing about catching exceptions from reload()/network calls. The defect this finding actually demonstrates \u2014 an unhandled exception escaping an unguarded async call and permanently stalling state \u2014 is better characterized as an EH-2 violation (raw exception not converted to a value at the data boundary) or filed as a standalone violation of the in-code 'must not hang' invariant, not AU-4. Severity P1 is still justified independently via the digest's 'violated named invariant' clause, and the recommendation (wrap in try/catch, fall back gracefully) is sound regardless of the rule mislabel \u2014 but the ticket's rule tag should be corrected before filing.",
+    "AuthGuard (learning_tracker/lib/app/router/guards/auth_guard.dart) never reads authStateProvider/Firebase \u2014 it only checks SharedPreferences onboarding flags and a local DeviceRegistryDatabase, so it does not gate on session state and there is no confirmed navigation/splash hang. SessionStatus.isInitializing is unused in all production code (grep confirms only its own definition and one unit test reference), so nothing currently blocks/waits on it. The actual confirmed consequence is silent downstream misbehavior in currentAccountIdProvider (falls back to profileId 1), autoSelectedProfileId (returns null), RestoreGuard.hasCloudAccount, and app_shell's offline-banner/upgrade-nudge logic \u2014 not an indefinite UI hang. Rule citation AU-4 is a loose fit; EH-2/EH-3 (uncaught exception not converted to a value at the boundary) better describes the mechanism, though the bare `authRepo.currentUser` read at line 31 is a genuine literal AU-4 violation worth folding in."
+   ]
+  },
+  "sourceBatch": "sup-au-family"
+ },
+ {
+  "title": "Handle account-exists-with-different-credential and credential-already-in-use for the Google sign-in / link-provider paths",
+  "severity": "P2",
+  "confidence": "SUSPECTED",
+  "rule": "AU-2",
+  "area": "features/account (Google credential collision handling)",
+  "evidence": [
+   {
+    "file": "learning_tracker/lib/features/account/data/repositories/auth_repository_impl.dart",
+    "line": 47,
+    "quote": "final result = await _google.authenticate();\n    await _auth.signInWithGoogleIdToken(idToken: result.idToken);"
+   },
+   {
+    "file": "learning_tracker/lib/features/account/presentation/notifiers/sign_in_controller.dart",
+    "line": 114,
+    "quote": "default:\n        return l10n.authErrSignInGeneric;"
+   },
+   {
+    "file": "learning_tracker/lib/features/account/onboarding/presentation/screens/signup_screen.dart",
+    "line": 488,
+    "quote": "default:\n        return l10n.signUpErrGeneric;"
+   }
+  ],
+  "sites": 3,
+  "why": "A repo-wide grep for 'account-exists-with-different-credential' and 'credential-already-in-use' returns zero hits anywhere in lib/. A user who already has a password-based Firebase account under an email and taps 'Sign in with Google' (or 'Link Google' in Settings) using the same address will hit one of these two Firebase codes; neither auth_repository_impl.dart's Google methods nor either screen's _mapAuthError switch has a case for them, so both fall to the generic default branch ('Sign-in failed' / 'Google sign-in failed') with zero guidance to use the existing password and no merge option \u2014 unlike the parallel email-already-in-use case in upgrade_to_cloud_service.dart, which has a complete EmailCollisionException-driven merge flow (executeUploadLocalIntoCloud / executeKeepCloudDiscardLocal). AU-2 explicitly names both codes as requiring an explicit merge flow.",
+  "recommendation": "Add both codes to both _mapAuthError switches with an actionable message ('this email already has a password \u2014 sign in that way'), and extend the merge machinery upgrade_to_cloud_service.dart already has for the password path to cover the Google-credential collision (e.g. capture the pending OAuth credential, prompt for the existing password, then link).",
+  "effort": "M",
+  "acceptance_criteria": [
+   "Regression test: stub the auth gateway to throw account-exists-with-different-credential from signInWithGoogle(), assert SignInController/SignupScreen surface a specific actionable message (not the generic fallback).",
+   "Regression test: same for credential-already-in-use thrown from linkGoogleProvider()."
+  ],
+  "labels": [
+   "auth",
+   "AU-2",
+   "merge-flow",
+   "google-sign-in"
+  ],
+  "originalSeverity": "P1",
+  "verify": {
+   "status": "UPHELD",
+   "upheldVotes": 2,
+   "totalVotes": 3,
+   "refutations": [
+    "AU-2's text/\"why\" scope it to the linkWithCredential/offline-merge flow (protecting anonymous users' data during AU-1 conversion), sourced from Firebase's account-linking docs. All 3 cited evidence sites (auth_repository_impl.dart:47 signInWithGoogle, sign_in_controller.dart:114, signup_screen.dart:"
+   ],
+   "corrections": [
+    "Drop credential-already-in-use and the \"'Link Google' in Settings\" claim \u2014 linkGoogleProvider() has no UI caller (dead code), and that code is genuinely uninstrumented but currently unreachable, so it carries no user-visible severity today. The real, reachable gap is narrower: account-exists-with-different-credential falls to the generic default branch in sign_in_controller.dart:114 and signup_screen.dart:488 for a user whose email already has a password account and taps \"Sign in with Google\" \u2014 poor UX, but no data-loss risk (not an offline/anonymous conversion), so AU-2's \"never drop offline data\" rationale doesn't transfer; this is closer to a message-quality/EH-5-adjacent gap than a violated AU-2 invariant.",
+    "The actual 'on link' code path AU-2 targets (linkGoogleProvider/linkWithGoogleIdToken) has zero call sites in lib/ outside the repository/service layer \u2014 no Settings screen wires it to a button, so the 'Link Google in Settings' scenario is unreachable in the shipped app. The 3 evidence lines are all plain signInWithCredential sign-in/sign-up paths, and 'credential-already-in-use' cannot occur there since that code is link-exclusive.",
+    "The finding's why-section claims a user can hit this via 'Link Google in Settings' \u2014 no such UI exists; linkGoogleProvider()/linkWithGoogleIdToken (auth_repository_impl.dart:133-136, account_management_service.dart:155-157) have no callers anywhere under lib/features/settings/presentation or lib/features/account/presentation (grep confirms only test callers), so that path is dead code, not a live site. The 3 cited evidence lines themselves are accurate and reachable (verified via signInWithGoogle at sign_in_controller.dart:849-970 and _signUpWithGoogle at signup_screen.dart:329-465, both funnelling unmatched Firebase codes into the default branch)."
+   ]
+  },
+  "sourceBatch": "sup-au-family"
+ },
+ {
+  "title": "Local-born-account Google-collision detector can never match now that offline accounts use synthetic emails",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "AU-2",
+  "area": "features/account (offline-to-cloud collision detection)",
+  "evidence": [
+   {
+    "file": "learning_tracker/lib/features/account/presentation/notifiers/sign_in_controller.dart",
+    "line": 940,
+    "quote": "final localMatch = await registry.findByEmail(googleUser.email ?? '');\n      if (localMatch != null && localMatch.accountTier.isLocal) {"
+   },
+   {
+    "file": "learning_tracker/lib/features/account/onboarding/presentation/screens/signup_screen.dart",
+    "line": 118,
+    "quote": "final syntheticEmail =\n        'offline_${id.replaceAll('-', '').substring(0, 12)}@offline.local';"
+   }
+  ],
+  "sites": 2,
+  "why": "Per the confirmed credential-less offline-account redesign, a local-born account is now keyed on a synthetic 'offline_xxx@offline.local' address, never a real user email (signup_screen.dart _createOfflineAccount). Both SignInController.signInWithGoogle() and SignupScreen._signUpWithGoogle() try to detect 'this device already has local-born data under this email' by calling registry.findByEmail(googleUser.email) \u2014 a real Gmail address can never equal the synthetic offline placeholder, so this collision branch (whose own comment says it exists to 'route to collision/upgrade flow instead of silently merging') is now permanently unreachable for any account created under the current model. A user with real local progress who later signs up/in with Google on the same device gets silently routed into a brand-new, empty cloud account with no merge prompt, leaving their offline progress orphaned in a separate account with no guided path to combine them.",
+  "recommendation": "Detect an existing local-born account on-device independent of email matching (e.g. check registry.getAllAccounts() for any untouched local-born entry whenever a new Google/cloud identity is being registered) and route into the upgrade/merge flow instead of relying on a field offline accounts no longer populate meaningfully.",
+  "effort": "M",
+  "acceptance_criteria": [
+   "Regression test: seed a local-born registry account with the current synthetic-email shape, drive signInWithGoogle()/_signUpWithGoogle() with a real Gmail identity, and assert the user is offered the offline-to-cloud merge/upgrade path rather than silently landing in a second, empty cloud account."
+  ],
+  "labels": [
+   "auth",
+   "AU-2",
+   "offline-account",
+   "dead-code"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+   "status": "UPHELD",
+   "upheldVotes": 1,
+   "totalVotes": 1,
+   "refutations": [],
+   "corrections": [
+    "Rule tag AU-2 is a loose fit: AU-2's text is specifically about handling FirebaseAuth link()'s credential-already-in-use/account-exists-with-different-credential error codes, but this code path never calls linkWithCredential \u2014 it's a proactive on-device registry lookup before any Firebase call. The defect and consequence are still real; only the rule citation is imprecise."
+   ]
+  },
+  "sourceBatch": "sup-au-family"
+ },
+ {
+  "title": "Add a getIdToken(forceRefresh) primitive so a synced write hitting permission-denied/unauthenticated can recover",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "AU-5",
+  "area": "core/auth (token-refresh primitive)",
+  "evidence": [
+   {
+    "file": "learning_tracker/lib/core/auth/firebase_auth_gateway_impl.dart",
+    "line": 47,
+    "quote": "if (user == null) return null;\n    await user.reload();"
+   },
+   {
+    "file": "learning_tracker/lib/features/account/data/repositories/auth_repository_impl.dart",
+    "line": 9,
+    "quote": "/// Delegates to the auth gateways in `lib/core/auth/`. Per layering rule 3,\n/// this file MUST NOT import the firebase_auth SDK"
+   }
+  ],
+  "sites": 2,
+  "why": "AU-5 requires exactly one getIdToken(true) forced refresh plus a single retry when a synced write fails with permission-denied/unauthenticated. A repo-wide grep for 'getIdToken' returns zero hits in lib/. Neither FirebaseAuthGateway/FirebaseAuthGatewayImpl nor AuthRepository/AuthRepositoryImpl \u2014 the only classes layering Rule 3 permits to touch FirebaseAuth for this feature \u2014 expose any way to force-refresh the cached ID token; the closest method, reloadCurrentUser()/User.reload(), only refreshes profile fields (displayName, emailVerified), not the JWT/claims. A stale token (e.g. after a custom-claims change) therefore has no dedicated recovery path; a failing synced write can only retry against the same stale token via the outbox's generic exponential backoff until it dead-letters, and the only user-facing fix is a full sign-out/sign-in.",
+  "recommendation": "Add Future<String?> getIdToken({bool forceRefresh = false}) to FirebaseAuthGateway/AuthRepository as a thin pass-through to User.getIdToken, and wire the outbox/push-pipeline's permission-denied handler to call it once with forceRefresh: true plus a single retry before falling through to the existing backoff.",
+  "effort": "M",
+  "acceptance_criteria": [
+   "FirebaseAuthGateway/AuthRepository gain a getIdToken(forceRefresh: true) method with a unit test against the fake/mock gateway.",
+   "Outbox/push-pipeline regression test: inject permission-denied on first attempt, assert exactly one getIdToken(true) call plus one retry occurs before falling back to normal backoff."
+  ],
+  "labels": [
+   "auth",
+   "AU-5",
+   "sync",
+   "resilience"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+   "status": "UPHELD",
+   "upheldVotes": 1,
+   "totalVotes": 1,
+   "refutations": [],
+   "corrections": []
+  },
+  "sourceBatch": "sup-au-family"
+ },
+ {
+  "title": "Wire AuthStateNotifier to authStateChanges() instead of leaving a shadowed, unused stream-based authStateProvider",
+  "severity": "P2",
+  "confidence": "CONFIRMED",
+  "rule": "AU-4",
+  "area": "features/account/presentation/providers (session state architecture)",
+  "evidence": [
+   {
+    "file": "learning_tracker/lib/features/account/presentation/screens/account_picker_screen.dart",
+    "line": 19,
+    "quote": "import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'\n    hide authStateProvider;"
+   },
+   {
+    "file": "learning_tracker/lib/features/account/presentation/screens/account_picker_screen.dart",
+    "line": 274,
+    "quote": "final fbUser = ref.read(authRepositoryProvider).currentUser;"
+   }
+  ],
+  "sites": 2,
+  "why": "auth_providers.dart defines a genuinely stream-backed authStateProvider (Stream<AppUser?> authState(ref) => ref.watch(authRepositoryProvider).onAuthStateChanged()) \u2014 exactly the AU-4-compliant primitive. But the provider that actually drives session routing everywhere (AuthGuard, AppShell, this screen) is the differently-implemented, identically-named authStateProvider generated from AuthStateNotifier, which never watches or listens to that stream \u2014 forcing every screen needing both to hide/alias one of them (see the 'hide authStateProvider' import here and the 'as auth_state' alias in sign_in_controller.dart/signup_screen.dart). If Firebase invalidates a session server-side (disabled account, revoked refresh token, forced sign-out elsewhere) while the app is running, nothing re-derives AuthStateNotifier's state from that change \u2014 the app keeps believing the user is signed in until an unrelated explicit action happens to call reload/signOut. account_picker_screen.dart:274 shows the same non-reactive pattern at tile-badge granularity: hasValidSession is a one-shot ref.read(...).currentUser snapshot, not derived from the stream.",
+  "recommendation": "Either delete the dead stream-based authState/authStateProvider if genuinely unused, or have AuthStateNotifier subscribe to it in build() so live Firebase-side session changes propagate into routing state, removing the need for every consumer to route around the name collision.",
+  "effort": "L",
+  "acceptance_criteria": [
+   "authStateProvider resolves to exactly one declaration reachable without hide/as workarounds across the codebase.",
+   "Regression test: emit a value on the mocked authStateChanges() stream after AuthStateNotifier has already resolved to signedIn, and assert the notifier's state updates without requiring an explicit signOut()/mutation call."
+  ],
+  "labels": [
+   "auth",
+   "AU-4",
+   "dead-code",
+   "riverpod"
+  ],
+  "originalSeverity": "P2",
+  "verify": {
+   "status": "UPHELD",
+   "upheldVotes": 1,
+   "totalVotes": 1,
+   "refutations": [],
+   "corrections": [
+    "Minor: AuthGuard (app/router/guards/auth_guard.dart) does not itself read authStateProvider \u2014 its own comment says session status is 'owned by AuthStateNotifier, read downstream by individual screens'; AuthGuard only gates first-launch via SharedPreferences. The 'session routing everywhere (AuthGuard, AppShell...)' phrasing overstates AuthGuard's role, but AppShell and the cited screens confirm the core claim."
+   ]
+  },
+  "sourceBatch": "sup-au-family"
+ },
+ {
+  "title": "Reconcile AccountManagementService.signOut()'s documented 'soft sign-out' with its always-hard-sign-out callers",
+  "severity": "P3",
+  "confidence": "CONFIRMED",
+  "rule": "AU-4",
+  "area": "features/account/domain/services (sign-out semantics)",
+  "evidence": [
+   {
+    "file": "learning_tracker/lib/features/account/domain/services/account_management_service.dart",
+    "line": 29,
+    "quote": "/// Soft sign-out \u2014 clears the in-app session so the user sees the\n  /// account picker on next launch, but leaves Firebase's cached"
+   },
+   {
+    "file": "learning_tracker/lib/features/settings/presentation/utils/account_actions.dart",
+    "line": 188,
+    "quote": "// Hard sign-out: clear Firebase session so the user must re-authenticate\n    // on next launch rather than being silently resumed via cached token."
+   }
+  ],
+  "sites": 2,
+  "why": "AccountManagementService.signOut()'s doc comment claims it deliberately keeps the Firebase token cached specifically so Epic 21.9 AC2 (tap an account tile \u2192 dashboard in <200ms) keeps working. Its only two callers (showSignOutConfirmation, showDeleteLocalAccountFlow, both in account_actions.dart) immediately follow it with a genuinely hard authRepositoryProvider.signOut()/authStateProvider.notifier.signOut(), so the fast-resume behavior the comment describes is unreachable from Settings > Sign Out today. This is a stale/misleading comment rather than a functional bug (the actual hard sign-out is arguably the safer choice for an explicit Sign Out action), but it risks a future edit assuming the token survives this call, and no sign-out path anywhere in this batch tells the user whether unsynced changes are pending before ending the session.",
+  "recommendation": "Update the doc comment to reflect that Settings > Sign Out is always hard, and note where (if anywhere) the soft path is actually exercised \u2014 or restore the soft path for the scenario it was designed for.",
+  "effort": "S",
+  "acceptance_criteria": [
+   "Doc comment on AccountManagementService.signOut() matches an actual, tested call path, or the soft/hard distinction is removed from the comment."
+  ],
+  "labels": [
+   "auth",
+   "AU-4",
+   "hygiene",
+   "doc-drift"
+  ],
+  "originalSeverity": "P3",
+  "verify": {
+   "status": "UPHELD",
+   "upheldVotes": 1,
+   "totalVotes": 1,
+   "refutations": [],
+   "corrections": [
+    "AU-4 tag is a loose fit \u2014 this is a stale-comment/doc-accuracy issue, not stream-vs-bare-currentUser session routing; no AU-1..5 rule precisely covers 'keep doc comments in sync with behavior.' Doesn't undermine the finding's accuracy or appropriately-minimal severity."
+   ]
+  },
+  "sourceBatch": "sup-au-family"
+ }
+]

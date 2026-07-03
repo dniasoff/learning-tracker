@@ -1,0 +1,227 @@
+[
+ {
+  "sourceBatch": "t1-test-cross-p3",
+  "findingIndex": 2,
+  "finding": {
+   "title": "profiles_tutoring_p2_test.dart E2E-721 rename sub-test silently no-ops via bare `return` instead of failing when its UI selector isn't found",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-7 (weakened assertion needs // weaken-ok: reason)",
+   "area": "learning_tracker/test/e2e/journeys/profiles_tutoring_p2_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/e2e/journeys/profiles_tutoring_p2_test.dart",
+     "line": 503,
+     "quote": "if (!hasEditName && !hasRename) {"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/profiles_tutoring_p2_test.dart",
+     "line": 507,
+     "quote": "return;"
+    }
+   ],
+   "sites": 1,
+   "why": "If the ProfilePickerScreen long-press affordance is ever renamed, removed, or regressed so neither 'Edit name' nor 'Rename' text renders, execution hits this early return and the test PASSES without ever reaching lines 519-547 \u2014 the actual point of the test ('DuplicateProfileNameException -> snackbar shown; name unchanged in Drift'). No `// weaken-ok:` marker documents this bail-out per the project's own convention for intentional assertion-weakening, so a future reviewer has no signal this branch quietly exists.",
+   "recommendation": "Fail loudly (`fail('rename affordance not found \u2014 check ProfilePickerScreen long-press menu')`) instead of returning silently, or resolve the ambiguity once via a stable Key/tooltip on the rename action so the ambivalent selector isn't needed at all.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "The test fails (not silently passes) when neither the 'Edit name' nor 'Rename' affordance is found.",
+    "A temporary regression check (rename the button label in source) confirms the test now fails instead of passing green."
+   ],
+   "labels": [
+    "e2e",
+    "tq-7",
+    "weakened-assertion"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-test-cross-p3",
+  "findingIndex": 3,
+  "finding": {
+   "title": "progress_p1_test.dart E2E-806 claims to verify the documented R-PG7 cross-profile access-control gap but never passes a differing profileId",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (assertions weaker than what the source can do wrong / tautological test)",
+   "area": "learning_tracker/test/e2e/journeys/progress_p1_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/e2e/journeys/progress_p1_test.dart",
+     "line": 378,
+     "quote": "// profileId here (the tutor sub-test below checks the profileId path"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/progress_p1_test.dart",
+     "line": 380,
+     "quote": "path: '/journey',"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/progress_p1_test.dart",
+     "line": 411,
+     "quote": "h.expectNotOnScreen('Permission denied');"
+    }
+   ],
+   "sites": 1,
+   "why": "The group's own docstring (progress_p1_test.dart:21-22) and R-PG7 registry entry (docs/planning/e2e-test-suite-plan.md:811) both say this journey should 'assert any auth user can load [another profile's data]', but the single test in the group navigates to '/journey' with no profileId query param at all \u2014 it loads the caller's own default profile. The comment references 'the tutor sub-test below' that does not exist anywhere in this file. As written the test provides zero signal on R-PG7 in either direction: if the access-control gap is ever fixed, this test won't notice; if it worsens, this test won't notice either.",
+   "recommendation": "Add the missing sub-test: seed two profiles, request SiyumimMilestonesRoute/journey data for the NON-active profile's id, and assert the returned milestones belong to that other profile \u2014 or correct the docstring/comment to stop claiming this scenario is covered here.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "A test in this file seeds >=2 profiles and requests journey data via an explicit profileId different from the active profile's.",
+    "The assertion checks profile-specific content (not just absence of an error banner) to prove the cross-profile read actually happened."
+   ],
+   "labels": [
+    "e2e",
+    "tq-8",
+    "security-adjacent",
+    "tautological-test"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-test-cross-p3",
+  "findingIndex": 4,
+  "finding": {
+   "title": "progress_p1_test.dart E2E-812 permanently skipped on a false claim that the harness 'hardcodes Locale(en)' and cannot inject Hebrew",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-3/TQ-7",
+   "area": "learning_tracker/test/e2e/journeys/progress_p1_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/e2e/journeys/progress_p1_test.dart",
+     "line": 11,
+     "quote": "///            (harness hardcodes Locale('en'); he locale requires device)"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/progress_p1_test.dart",
+     "line": 582,
+     "quote": "// device/harness: Harness hardcodes Locale(\"en\"); Hebrew-RTL locale"
+    },
+    {
+     "file": "learning_tracker/test/e2e/harness/e2e_harness.dart",
+     "line": 307,
+     "quote": "Locale locale = const Locale('en'),"
+    }
+   ],
+   "sites": 2,
+   "why": "E2EHarness.pumpApp takes an overridable `locale` parameter (default only, not hardcoded), and this batch's own overflow_sweep_p2_test.dart already calls it with `locale: const Locale('he')` successfully in headless tests (e.g. lines 499-507, 588-596). The E2E-812 comment's premise is therefore false, and because it asserts the scenario is impossible headlessly, nobody will ever revisit the one-line fix \u2014 the whole 'Hebrew locale across all progress screens' journey stays permanently disabled for no real reason.",
+   "recommendation": "Either implement E2E-812 using the existing `locale: const Locale('he')` parameter (as overflow_sweep_p2_test.dart already does), or delete it as redundant with the equivalent he-locale overflow coverage overflow_sweep_p2_test.dart already provides for ProgressScreen/RecentActivity/LifetimeKnowledge (tests 15/19/20, which default to both locales) and correct the docstring.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "The comment no longer claims Locale('he') injection is impossible headlessly.",
+    "E2E-812 either runs and passes under Locale('he'), or is removed with a comment pointing at the overlapping overflow-sweep coverage that supersedes it."
+   ],
+   "labels": [
+    "e2e",
+    "hebrew-rtl",
+    "false-claim",
+    "stale-comment"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-test-cross-p3",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Split or trim 7 of 8 E2E journey test files exceeding the 400-line hand-written cap (AG-3)",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "learning_tracker/test/e2e/journeys/",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/e2e/journeys/overflow_sweep_p2_test.dart",
+     "line": 1,
+     "quote": "/// E2E overflow-guard sweep \u2014 all 48 @RoutePage screens, en + he locales."
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/profiles_p0_test.dart",
+     "line": 1,
+     "quote": "/// E2E Wave 1 P0 journeys \u2014 Profiles + Child Mode area."
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/profiles_p1_test.dart",
+     "line": 1,
+     "quote": "/// E2E Wave 2 P1 journeys \u2014 Profiles + Child Mode area."
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/profiles_tutoring_p2_test.dart",
+     "line": 1,
+     "quote": "/// E2E Wave 3 P2 journeys \u2014 Profiles + Tutoring edge cases."
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/progress_p0_test.dart",
+     "line": 1,
+     "quote": "/// E2E Wave 1 P0 journeys \u2014 Progress area."
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/progress_p1_test.dart",
+     "line": 1,
+     "quote": "/// E2E Wave 2 P1 journeys \u2014 Progress area."
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/scheduler_p0_test.dart",
+     "line": 1,
+     "quote": "/// E2E Wave 1 P0 journeys \u2014 Scheduler area."
+    }
+   ],
+   "sites": 7,
+   "why": "wc -l confirms: overflow_sweep_p2_test.dart 1576, profiles_p1_test.dart 918, progress_p1_test.dart 861, progress_p0_test.dart 729, scheduler_p0_test.dart 676, profiles_p0_test.dart 672, profiles_tutoring_p2_test.dart 551 lines \u2014 up to 4x the 400-line ratchet point. The digest's own AG-3 rationale (oversized files exceed per-file agent read budgets, become dumping grounds, drive re-implementation elsewhere) is independently demonstrated by the duplication finding above: the copy-paste-per-file pattern is the predicted failure mode.",
+   "recommendation": "Split each file by journey-group into smaller per-journey files, or extract shared setup/override boilerplate (see duplication finding) to shrink the remainder under 400 lines; introduce the AG-3 checker warn-only and ratchet down.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "`find learning_tracker/test learning_tracker/lib -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400'` no longer lists these 7 files, or a tracked ratchet baseline explicitly carries them with a follow-up ticket."
+   ],
+   "labels": [
+    "ag-3",
+    "file-size",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-test-cross-p3",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Assert real toggle/selection state (not just tapped-label presence) in progress_p0_test.dart and scheduler_p0_test.dart chip/segment tests",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-7/TQ-8 (assertion weaker than the failure mode under test)",
+   "area": "learning_tracker/test/e2e/journeys/progress_p0_test.dart, learning_tracker/test/e2e/journeys/scheduler_p0_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/e2e/journeys/progress_p0_test.dart",
+     "line": 399,
+     "quote": "// The chip label is still visible (toggle rendered without crash)."
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/progress_p0_test.dart",
+     "line": 591,
+     "quote": "// Toggle label still visible (no crash, state updated)."
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/scheduler_p0_test.dart",
+     "line": 441,
+     "quote": "// After selecting Dafim, the pace input label should reference \"Dafim\"."
+    },
+    {
+     "file": "learning_tracker/learning_tracker/lib/features/progress/presentation/screens/recent_activity_screen.dart",
+     "line": 777,
+     "quote": "return FilterChip("
+    }
+   ],
+   "sites": 4,
+   "why": "Each cited test taps a chip/segment whose label was already visible before the tap (e.g. 'Last 30 Days', 'Track learning only', 'Dafim' are all rendered pre-tap as available options), then re-asserts the SAME label is present post-tap. RecentActivityScreen's chip is a real FilterChip with a `selected` bool the test never reads. A regression that wires onSelected to a no-op \u2014 tap does nothing \u2014 would leave identical text on screen and pass all 4 tests; one test's own comment even claims 'state updated' while checking only visibility, not state.",
+   "recommendation": "Assert the actual post-tap state, e.g. `tester.widget<FilterChip>(find.widgetWithText(FilterChip, 'Last 30 Days')).selected == true`, or another concrete tap-dependent effect (chart data range, provider value), instead of re-checking the tapped label's mere presence.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Each of the 4 tests asserts a concrete, tap-dependent state change (selected flag, updated derived value, or provider read) rather than only the continued presence of the tapped label."
+   ],
+   "labels": [
+    "e2e",
+    "weak-assertion",
+    "tq-7"
+   ]
+  }
+ }
+]

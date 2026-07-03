@@ -1,0 +1,207 @@
+[
+ {
+  "sourceBatch": "t2-app-tool-p1",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Fix curate_curricula/README.md status table: 13 of 14 curricula are marked TODO though main.py already implements them",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-8 (docs bind to code changes)",
+   "area": "tool/curate_curricula",
+   "evidence": [
+    {
+     "file": "learning_tracker/tool/curate_curricula/README.md",
+     "line": 52,
+     "quote": "| `yerushalmi` | Seder / Masechta / Halacha / \u2026 | TODO |"
+    },
+    {
+     "file": "learning_tracker/tool/curate_curricula/README.md",
+     "line": 58,
+     "quote": "| **`mishneh_torah`** | Sefer / Hilchot / Perek / Halacha | NEW \u2014 TODO |"
+    },
+    {
+     "file": "learning_tracker/tool/curate_curricula/main.py",
+     "line": 631,
+     "quote": "\"yerushalmi\": _strategy_grouped(\n        \"yerushalmi\","
+    },
+    {
+     "file": "learning_tracker/tool/curate_curricula/main.py",
+     "line": 630,
+     "quote": "\"mishneh_torah\": _strategy_mishneh_torah,"
+    }
+   ],
+   "sites": 1,
+   "why": "README.md's Status column marks yerushalmi, mishnayos, chumash, nach, mishna_berurah, mussar, mishneh_torah, shulchan_arukh, arukh_hashulchan, kitzur_shulchan_aruch, chofetz_chaim and sefer_hamitzvot as TODO/'NEW \u2014 TODO', but main.py's STRATEGIES dict (lines 592-674) already has a complete, working strategy function for every one of them, plus shemirat_halashon which isn't in the table at all. A contributor or agent trusting this table would either re-implement already-finished strategies or believe the curation tool only covers Bavli.",
+   "recommendation": "Update the Status column to reflect main.py's STRATEGIES dict (mark implemented curricula done), add the missing shemirat_halashon row, and replace 'TODO' with the tool's actual remaining work (e.g. --diff review / spot-checking against Sefaria taxonomy).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "README.md Status column matches every key present in main.py's STRATEGIES dict",
+    "shemirat_halashon appears in the table",
+    "No curriculum with a working strategy function is labeled TODO"
+   ],
+   "labels": [
+    "docs-drift",
+    "tier2-tooling"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-app-tool-p1",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Split or externalize tool/lib/sequences/halakhah_yomit_seq.dart \u2014 1619-line hand-written Dart file violates the AG-3 400-line cap 4x over",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "tool/lib/sequences",
+   "evidence": [
+    {
+     "file": "learning_tracker/tool/lib/sequences/halakhah_yomit_seq.dart",
+     "line": 1,
+     "quote": "/// Halakhah Yomit \u2014 1613 entries per cycle."
+    },
+    {
+     "file": "learning_tracker/tool/lib/sequences/halakhah_yomit_seq.dart",
+     "line": 5,
+     "quote": "const halakhahYomitSequence = <String>["
+    }
+   ],
+   "sites": 1,
+   "why": "The file is 1619 lines of hand-typed string literals with no generated-file marker (not .g.dart/.freezed.dart), so AG-3's exemption doesn't apply; it is the single largest AG-3 violator in this batch by a wide margin (next largest tool/ file is 310 lines). The eventual `find lib test tool -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400'` checker described in coding-standards.md would flag it immediately.",
+   "recommendation": "Move the literal sequence to a tool/data/*.json asset loaded at seed-build time (the pattern already used for hebcal/sefaria calendar caches), or add an explicit '// GENERATED from Sefaria-Data \u2014 regenerate with <script>' header plus a regeneration script so it reads as generated output.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "File is <=400 lines or carries a recognized generated-file marker/extension",
+    "tool/seed_content_db.dart's halakhahYomitSequence lookup still resolves the same values after the change"
+   ],
+   "labels": [
+    "file-size",
+    "AG-3",
+    "tier2-tooling"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-app-tool-p1",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Extract the Sefaria TOC category-walk loop shared by curate_curricula/main.py (2x) and audit_seed.py (1x) instead of copy-pasting it",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler-DuplicatedCode",
+   "area": "tool/curate_curricula, tool/",
+   "evidence": [
+    {
+     "file": "learning_tracker/tool/curate_curricula/main.py",
+     "line": 133,
+     "quote": "def _toc_subtree(path: str):\n    \"\"\"Walk Sefaria TOC categories by '/' delimited path, return the node.\"\"\""
+    },
+    {
+     "file": "learning_tracker/tool/curate_curricula/main.py",
+     "line": 504,
+     "quote": "def _toc_books(category_path: str, main_subcats: list[str] | None = None):"
+    },
+    {
+     "file": "learning_tracker/tool/audit_seed.py",
+     "line": 195,
+     "quote": "def _books_in_category(path: str, main_subcats=None) -> list[str]:"
+    }
+   ],
+   "sites": 3,
+   "why": "The same ~10-line 'split path on / and descend library.get_toc() matching category nodes' loop (identical toc/parts/node/contents/match variable names) is copy-pasted three times \u2014 twice inside main.py itself (_toc_subtree and _toc_books duplicate each other) and once more in audit_seed.py. A change to how Sefaria's TOC node shape is walked (e.g. a new category key) has to be found and patched in three places, and nothing keeps them in sync if only one gets fixed.",
+   "recommendation": "Extract a shared `_walk_toc_path(path) -> node | None` helper (e.g. a small tool/sefaria_toc_utils.py importable by both scripts) and have _toc_subtree, _toc_books, and _books_in_category call it.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Only one implementation of the TOC-path-walk loop exists across tool/curate_curricula/main.py and tool/audit_seed.py",
+    "Sample category path (e.g. Talmud/Bavli/Seder Zeraim) resolves identically before/after the refactor"
+   ],
+   "labels": [
+    "duplication",
+    "fowler",
+    "tier2-tooling"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-app-tool-p1",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Hoist duplicated seder-Hebrew-name and Torah-title static tables from sibling *_fetcher.dart classes into SefariaFetcherBase",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler-DuplicatedCode",
+   "area": "tool/lib/sefaria",
+   "evidence": [
+    {
+     "file": "learning_tracker/tool/lib/sefaria/bavli_fetcher.dart",
+     "line": 152,
+     "quote": "static String _sederHebrewName(String english) {"
+    },
+    {
+     "file": "learning_tracker/tool/lib/sefaria/mishna_fetcher.dart",
+     "line": 119,
+     "quote": "static String _sederHebrewName(String sederName) {"
+    },
+    {
+     "file": "learning_tracker/tool/lib/sefaria/chumash_fetcher.dart",
+     "line": 133,
+     "quote": "static const _torahTitles = ["
+    },
+    {
+     "file": "learning_tracker/tool/lib/sefaria/nach_fetcher.dart",
+     "line": 97,
+     "quote": "static const _torahTitles = ["
+    }
+   ],
+   "sites": 4,
+   "why": "bavli_fetcher.dart and mishna_fetcher.dart each carry their own byte-identical 6-entry seder-name Hebrew map; chumash_fetcher.dart and nach_fetcher.dart each carry their own identical 5-book Torah-title list. All four subclasses extend SefariaFetcherBase, which is the natural single home for this static reference data, but it exposes neither \u2014 so a spelling fix or a new entry has to be applied in two files with nothing enforcing they stay in sync.",
+   "recommendation": "Add a shared `torahTitles` list and a `sederHebrewName(String)` lookup to SefariaFetcherBase (or a small shared sefaria_reference_data.dart) and have the four fetchers reference it instead of their private copies.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Only one definition each of the seder-name map and the Torah-title list exists under tool/lib/sefaria/",
+    "bavli/mishna/chumash/nach fetcher output is unchanged after switching to the shared constant"
+   ],
+   "labels": [
+    "duplication",
+    "fowler",
+    "tier2-tooling"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-app-tool-p1",
+  "findingIndex": 4,
+  "finding": {
+   "title": "make audit's Rule 3/4 Firebase/Talker-confinement greps scan lib/ only, so tool/lib/dio_client.dart's raw Talker import is invisible to every gate",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Rule-4 / Rule-0 (checker coverage)",
+   "area": "tool/lib",
+   "evidence": [
+    {
+     "file": "learning_tracker/tool/lib/dio_client.dart",
+     "line": 2,
+     "quote": "import 'package:talker/talker.dart';"
+    },
+    {
+     "file": "learning_tracker/Makefile",
+     "line": 303,
+     "quote": "if grep -rn \"import 'package:talker/talker\\.dart'\" lib/ --include=\"*.dart\" \\"
+    }
+   ],
+   "sites": 1,
+   "why": "Rule 4 says raw Talker import is confined to core/logging/; tool/lib/dio_client.dart imports it directly to build a Talker-backed Dio logger. tool/lib/ is part of the same Dart package (it imports package:learning_tracker/core/... elsewhere in this batch), but the audit's Rule 1-4 checks are hardcoded `grep ... lib/ --include=\"*.dart\"` and custom_lint (the other enforcement path) is currently crashing entirely per the baseline \u2014 so nothing today, and nothing that will resume working once custom_lint is fixed unless its scope is also checked, would ever catch a Firebase- or Talker-misuse regression introduced under tool/.",
+   "recommendation": "Either extend the Rule 3/4 audit greps to also scan tool/lib/ (carving out this file with a stated justification \u2014 it's a dev-only CLI logger with no PII/Crashlytics surface), or add an explicit documented exemption for tool/ in coding-standards.md so the gap is a decision instead of a blind spot.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "coding-standards.md states whether tool/ is in scope for Rules 3/4",
+    "If in scope, make audit checks 2 and 4 cover tool/lib/ and dio_client.dart either routes through AppLogger or is added to a justified, named exemption"
+   ],
+   "labels": [
+    "checker-gap",
+    "rule0",
+    "tier2-tooling"
+   ]
+  }
+ }
+]

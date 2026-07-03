@@ -1,0 +1,45 @@
+[
+ {
+  "sourceBatch": "t1-core-database-root-p1",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Add a schema-version floor guard for UserDatabase \u2014 onUpgrade has no path below v25",
+   "severity": "P0",
+   "confidence": "CONFIRMED",
+   "rule": "DB-4",
+   "area": "learning_tracker/lib/core/database",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/database/user/user_database.dart",
+     "line": 159,
+     "quote": "int get schemaVersion => 32;"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/user/user_database.dart",
+     "line": 190,
+     "quote": "onUpgrade: (Migrator m, int from, int to) async {\n        if (from < 25) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/providers/database_provider.dart",
+     "line": 37,
+     "quote": "final database = UserDatabase(driftDatabase(name: dbName));"
+    }
+   ],
+   "sites": 2,
+   "why": "git log -p on user_database.dart shows onUpgrade previously handled `if (from < 3)` through `if (from < 23)`; commit 9612d7a0 deleted that whole range and its own diff changes the docstring from '...schemaVersion bumped to 12; all old migration steps deleted' to describing a second 'W3.19 rebuild' wipe-install boundary. Today onUpgrade only starts at `from < 25`. database_provider.dart opens UserDatabase directly via driftDatabase(name: dbName) with no version-floor check at all \u2014 unlike ContentDatabase, which SeedManager guards with an explicit version comparison plus atomic replace before Drift ever touches it. Any real device whose local user_database.db is still at a schemaVersion below 25 will, on next launch, run onUpgrade(from=<old>, to=32): none of the intervening table-rename/profileId/FK changes apply, but Drift still stamps PRAGMA user_version=32 afterward \u2014 the on-disk schema stays frozen at its old shape while every DAO assumes v32's shape, so the first query throws 'no such column'/'no such table', or silently misreads a same-named-but-differently-typed column. coding-standards.md states as a current fact (2026-07-02) that 'the user DB is at schemaVersion 32 with real on-device data and no server backup', which is exactly the population this gap would hit. What would confirm real-world exposure: crash telemetry for 'no such column'/'no such table' immediately post-update, or checking whether any distributed build ever shipped schemaVersion 2-24 to non-dev devices before the WS7/v25 bump.",
+   "recommendation": "Add a pre-open guard (mirroring SeedManager's pattern) that reads PRAGMA user_version via raw sqlite3 before handing the file to Drift; if it's below the lowest version this onUpgrade body actually handles, run a documented recovery path (backup + fresh onCreate) instead of letting Drift silently half-upgrade. Longer term, adopt DB-4's drift_schemas/ + migrateAndValidate tests so a future 'delete old migration steps' edit fails CI instead of shipping silently.",
+   "effort": "L",
+   "acceptance_criteria": [
+    "A regression test opens a DB stamped with a low PRAGMA user_version (e.g. 2) and asserts the app either migrates it correctly through to 32 or safely detects-and-recovers \u2014 it must never end up with user_version=32 stamped over pre-v25 table shape.",
+    "database_provider.dart (or a new guard module) checks on-disk PRAGMA user_version against a documented MIN_SUPPORTED_SCHEMA_VERSION before opening via Drift.",
+    "DB-4's drift_schemas/ export + generated migration tests land so a future deletion of an `if (from < N)` block fails CI."
+   ],
+   "labels": [
+    "DB-4",
+    "migration",
+    "data-corruption",
+    "hotspot"
+   ]
+  }
+ }
+]

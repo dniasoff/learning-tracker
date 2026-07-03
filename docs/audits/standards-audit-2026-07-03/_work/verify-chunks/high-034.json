@@ -1,0 +1,45 @@
+[
+ {
+  "sourceBatch": "t1-core-sync-root-p2",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Add a real >500-item chunk-boundary test for pushCompletionsBatch \u2014 the existing H3 partial-commit 'regression test' never calls it",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "FB-5",
+   "area": "core/sync \u2014 firestore_gateway_impl_test.dart groups 5 & 15",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/sync/firestore_gateway_impl_test.dart",
+     "line": 954,
+     "quote": "items: List.generate(\n            10,"
+    },
+    {
+     "file": "learning_tracker/test/core/sync/firestore_gateway_impl_test.dart",
+     "line": 1978,
+     "quote": "final ex = SyncPushException(\n        committed: ['key1', 'key2'],"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/firestore_gateway_impl.dart",
+     "line": 273,
+     "quote": "// committed rows are never re-pushed or dead-lettered (H3)."
+    }
+   ],
+   "sites": 2,
+   "why": "pushCompletionsBatch chunks at _writeBatchLimit=500 and, per the documented H3 fix, must report only the entityKeys of chunks that actually committed when a later chunk throws, so OutboxProcessor deletes exactly the landed rows and retries the rest. Group 5's largest test pushes only 10 items \u2014 never crosses a chunk boundary \u2014 and group 15's 'SyncPushException partial-commit reporting' test just constructs a SyncPushException object directly and checks its own constructor round-trips fields; it never calls pushCompletionsBatch at all. A regression in the chunk loop (e.g. moving pushed.addAll before batch.commit(), or an off-by-one in the start/end clamp) would re-push or silently drop already-committed outbox rows and this suite would not notice.",
+   "recommendation": "Add a test that pushes >500 items where a wrapped/stubbed Firestore batch throws on the second chunk, and assert pushCompletionsBatch throws SyncPushException with committed containing exactly chunk 1's entityKeys and none of chunk 2's.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "New test drives >500 items through the real pushCompletionsBatch code path (not a hand-constructed exception) with an injected failure on chunk 2 and asserts SyncPushException.committed equals exactly chunk 1's keys",
+    "Test fails red if the chunk loop's addAll/commit ordering is swapped"
+   ],
+   "labels": [
+    "testing",
+    "sync",
+    "tautological-test",
+    "FB-5",
+    "outbox"
+   ]
+  }
+ }
+]

@@ -1,0 +1,266 @@
+[
+ {
+  "sourceBatch": "t1-test-cross-p4",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Make E2E-516/E2E-922/E2E-416 actually pump Locale('he') instead of asserting a false harness limitation",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-3",
+   "area": "test/e2e/journeys (Scheduler, Settings, Tracks)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/e2e/journeys/scheduler_p1_test.dart",
+     "line": 940,
+     "quote": "// Note: the harness boots with locale=en by default. For this smoke\n// test we assert the screen renders without crash \u2014 proper RTL layout"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/settings_p1_test.dart",
+     "line": 895,
+     "quote": "// The harness hardcodes locale: const Locale('en') in _buildMaterialApp.\n// There is no headless way to override the device locale for the full"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/settings_p1_test.dart",
+     "line": 913,
+     "quote": "skip: true, // device/harness: locale hardcoded to \"en\" in harness\n(tester) async {},"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/tracks_p1_test.dart",
+     "line": 632,
+     "quote": "// as an absence-of-crash check \u2014 the date still renders (in English), which\n// is the documented bug; the correct-behavior assertion is kept below."
+    },
+    {
+     "file": "learning_tracker/test/e2e/harness/e2e_harness.dart",
+     "line": 652,
+     "quote": "// Locale is injectable (defaults to en) so Hebrew-RTL journeys can pump\n// the app under Locale('he') and assert RTL + Hebrew l10n strings."
+    },
+    {
+     "file": "docs/planning/e2e-test-suite-plan.md",
+     "line": 271,
+     "quote": "| E2E-922 | Hebrew locale \u2014 Settings renders in Hebrew RTL, Hebrew Terms tile hidden | P1 | ad | he | SettingsScreen in he locale; tiles render right-to-left; Hebrew Terms tile hidden (already in Hebrew) | he locale |"
+    }
+   ],
+   "sites": 3,
+   "why": "The E2E catalog tags E2E-516, E2E-922 and E2E-416 dims=he \u2014 required to run under the Hebrew locale. All three instead pump under the default en locale (only toggling the unrelated useHebrewTermsProvider vocabulary preference), and two carry comments claiming the harness 'hardcodes' or cannot override locale. That claim has been false since commit 9c9655ed (2026-06-22, 'harness \u2014 injectable locale in pumpApp (enables Hebrew-RTL journeys)'); sibling file hebrew_rtl_p1_test.dart proves it works today for 11 adjacent journeys, including Settings (E2E-1506) and Scheduler (E2E-1504). Concretely, E2E-922's own catalogued behavior \u2014 the Hebrew Terms/Pronunciation tile auto-hiding when the app locale is already 'he' \u2014 has zero implementation anywhere in the suite (E2E-1506 only checks generic tile RTL layout, not this branch), so a regression in that gating condition inside settings_screen.dart (a churn hotspot) would ship undetected. E2E-416 likewise claims 'the correct-behavior assertion is kept below' for risk R-TR5 (Hebrew-calendar date formatting) but no such assertion exists anywhere in the test body.",
+   "recommendation": "Pass locale: const Locale('he') in h.pumpApp(...) for E2E-516 and E2E-416 (mirroring hebrew_rtl_p1_test.dart) and assert Directionality.of(tester.element(find.byType(<Screen>))) == TextDirection.rtl plus the catalog's stated key assertions. Un-skip E2E-922 and implement the Hebrew-Terms-tile-hidden assertion under Locale('he') \u2014 the one piece of behavior no other test covers. Delete the false 'harness hardcodes locale' comments, and consider consolidating with hebrew_rtl_p1_test.dart to avoid two near-duplicate RTL smoke tests per screen.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "E2E-516 (scheduler_p1_test.dart) and E2E-416 (tracks_p1_test.dart) call pumpApp with locale: const Locale('he') and assert RTL Directionality.",
+    "E2E-922 (settings_p1_test.dart) is no longer skip:true and asserts the Hebrew Terms/Pronunciation tile is absent under Locale('he').",
+    "A grep-based checker cross-referencing docs/planning/e2e-test-suite-plan.md rows tagged dims=he against Locale('he') usage in the matching *_test.dart file returns zero mismatches (Rule-0 checker candidate)."
+   ],
+   "labels": [
+    "testing",
+    "i18n-rtl",
+    "coverage-gap",
+    "hebrew-locale"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-test-cross-p4",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Split or formally exempt the 7 oversized (>400-line) E2E journey test files in this batch from AG-3",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "test/e2e/journeys",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/e2e/journeys/scheduler_p1_test.dart",
+     "line": 1,
+     "quote": "/// E2E Wave 2 P1 journeys \u2014 Scheduler area."
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/settings_p0_test.dart",
+     "line": 1,
+     "quote": "/// E2E Wave 1 P0 journeys \u2014 Settings area."
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/settings_p1_test.dart",
+     "line": 1,
+     "quote": "/// E2E Wave 2 P1 journeys \u2014 Settings area."
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/sync_p1_test.dart",
+     "line": 1,
+     "quote": "/// E2E Wave 2 P1 journeys \u2014 Sync / Offline area."
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/tracks_p0_test.dart",
+     "line": 1,
+     "quote": "/// E2E Wave 1 P0 journeys \u2014 Tracks area."
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/tracks_p1_test.dart",
+     "line": 1,
+     "quote": "/// E2E Wave 2 P1 journeys \u2014 Tracks area."
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/tutoring_p0_test.dart",
+     "line": 1,
+     "quote": "/// E2E Wave 1 P0 journeys \u2014 Tutoring area."
+    }
+   ],
+   "sites": 7,
+   "why": "AG-3 caps hand-written Dart files at 400 lines; all 7 files in this batch exceed it (scheduler_p1_test.dart 1066, settings_p1_test.dart 1011, tutoring_p0_test.dart 972, sync_p1_test.dart 828, settings_p0_test.dart 762, tracks_p1_test.dart 675, tracks_p0_test.dart 560 lines), and no checker currently enforces the cap for test/ (grep of Makefile and tool/*.sh found none). This is a directory-wide pattern \u2014 32 of the 34 files in test/e2e/journeys/ exceed 400 lines \u2014 so it will likely recur across sibling batches covering the same directory; reporting per-batch as instructed. Large single-file journey suites make it harder to isolate one failing scenario, widen merge-conflict surface across concurrent story work, and add noise to churn-based hotspot analysis (this audit's own method).",
+   "recommendation": "Either split each file along its existing group('E2E-NNN \u2014 ...') boundaries into one file per journey or small journey cluster (mechanical, low-risk since each group is already self-contained), or formally amend coding-standards.md AG-3 with a stated, reviewed exemption for grouped multi-journey E2E suites and encode that exemption in a Rule-0 checker's allowlist so any NEW oversized file (test or lib) still fails the gate.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "A checker (e.g. wired into make audit) running find learning_tracker/{lib,test} -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400' reports zero violators or only explicitly allowlisted ones.",
+    "Any accepted exemption for test/e2e/journeys/** is written into coding-standards.md AG-3 with a one-line rationale, not left implicit."
+   ],
+   "labels": [
+    "hygiene",
+    "file-size",
+    "AG-3"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-test-cross-p4",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Flip scheduler_p1_test.dart's R-SC1/R-SC2 assertions to match the project's own confirm-bug-to-skip contract",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "test/e2e/journeys/scheduler_p1_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/e2e/journeys/scheduler_p1_test.dart",
+     "line": 334,
+     "quote": "// he locale \u2014 confirmed bug. The test asserts the picker opens and shows\n// the English strings (existing behaviour), marking R-SC1 as a known gap."
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/scheduler_p1_test.dart",
+     "line": 409,
+     "quote": "// R-SC1 \u2014 the title is hardcoded English even in he locale.\nh.expectOnScreen('Select Hebrew date');"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/scheduler_p1_test.dart",
+     "line": 931,
+     "quote": "//   \"N chazara tasks\") \u2014 these render in English even in he locale.\n//   Confirmed gap; document but keep test passing."
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/hebrew_rtl_p1_test.dart",
+     "line": 30,
+     "quote": "/// CONFIRMED BUGS (kept as correct assertions, marked skip per the contract):"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/hebrew_rtl_p1_test.dart",
+     "line": 559,
+     "quote": "// confirm-bug\u2192skip contract the test is kept (correct assertion) but"
+    }
+   ],
+   "sites": 2,
+   "why": "scheduler_p1_test.dart documents two confirmed UI bugs (R-SC1: HebrewDatePicker's 4 hardcoded English strings; R-SC2: 3 hardcoded English summary templates) and asserts the CURRENT WRONG English strings as the expected, passing value \u2014 the test is green today and stays green whether or not the bug is ever fixed. This is the inverse of the convention the codebase documents and practices for the identical situation elsewhere: hebrew_rtl_p1_test.dart's header states confirmed bugs are 'kept as correct assertions, marked skip per the contract' (e.g. R-OB7), so that test is red-and-skipped until the fix lands, then self-activates \u2014 a true red-first regression test. Under scheduler_p1_test.dart's current pattern, the day someone localizes HebrewDatePicker's strings this test will start FAILING (a confusing false regression) instead of self-resolving, and until then nothing in CI or skip counts signals R-SC1/R-SC2 are open defects rather than intended behavior.",
+   "recommendation": "Rewrite the two assertions to expect the correct (localized/Hebrew) strings and mark each testWidgets skip: 'BUG R-SC1: ...' / skip: 'BUG R-SC2: ...', following the exact pattern already used for R-OB7 in hebrew_rtl_p1_test.dart, so both tests self-activate the moment HebrewDatePicker/_summaryForSection are localized.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "E2E-508's HebrewDatePicker assertions expect Hebrew strings (not 'Select Hebrew date'/'Hebrew year') and the test carries skip: 'BUG R-SC1: ...'.",
+    "E2E-516's section-summary assertion no longer accepts the hardcoded English template and carries skip: 'BUG R-SC2: ...' (or the affected assertion is split into its own skipped test).",
+    "No deterministic Rule-0 checker applies (assertion polarity is a judgment call); enforce via code review against the hebrew_rtl_p1_test.dart precedent."
+   ],
+   "labels": [
+    "testing",
+    "regression-signal",
+    "i18n"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-test-cross-p5",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Rebuild store_screenshots_test.dart's Progress/Scheduler/Achievements goldens from real screens instead of in-file mockup widgets",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-1",
+   "area": "test/golden",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/golden/store_screenshots_test.dart",
+     "line": 377,
+     "quote": "testWidgets('Screenshot 3: Progress Overview', (tester) async {"
+    },
+    {
+     "file": "learning_tracker/test/golden/store_screenshots_test.dart",
+     "line": 540,
+     "quote": "testWidgets('Screenshot 4: Scheduler', (tester) async {"
+    },
+    {
+     "file": "learning_tracker/test/golden/store_screenshots_test.dart",
+     "line": 695,
+     "quote": "testWidgets('Screenshot 5: Achievements / Gamification', (tester) async {"
+    },
+    {
+     "file": "learning_tracker/test/golden/store_screenshots_test.dart",
+     "line": 895,
+     "quote": "class _StatCard extends StatelessWidget {"
+    }
+   ],
+   "sites": 3,
+   "why": "Screenshots 3-5 build their entire UI from private classes defined at the bottom of this same test file (_StatCard, _WeeklyChart, _CurriculumProgress, _MilestoneItem, _TaskItem, _SummaryRow, _AchievementTile) with hand-picked constants ('2,847', '47 days left', a fixed achievement list) \u2014 the file imports no widget from lib/features/progress, lib/features/scheduler's screen, or any real achievements screen. matchesGoldenFile for these 3 tests therefore only confirms the test file's own copy-pasted mockup still matches its own previous mockup; a real regression or redesign in ProgressScreen/SchedulerScreen/the achievements screen cannot make these tests fail, which is the textbook tautological-test pattern the audit is hunting for, while the file still counts toward AG-3's line cap and the suite's golden/coverage budget as if it were regression coverage.",
+   "recommendation": "Either move this file out of test/ and label it as a marketing-asset generator (e.g. tool/screenshots/), or rebuild Screenshots 3-5 by pumping the actual ProgressScreen/SchedulerScreen/achievements widgets with seeded providers so a real UI regression trips the golden.",
+   "effort": "L",
+   "acceptance_criteria": [
+    "Screenshots 3-5 either import and render the production screen/widget under test, or the file is relocated with a doc comment disclaiming it as non-regression marketing collateral"
+   ],
+   "labels": [
+    "TQ-1",
+    "TQ-8",
+    "golden",
+    "tautological"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-test-cross-p5",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Replace wall-clock DateTime.now() reads with the injectable clock seam in bulk_prior_completion_b6_b8_test.dart and store_screenshots_test.dart",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6",
+   "area": "test/integration,test/golden",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/integration/bulk_prior_completion_b6_b8_test.dart",
+     "line": 493,
+     "quote": "final before = DateTime.now().toUtc();"
+    },
+    {
+     "file": "learning_tracker/test/integration/bulk_prior_completion_b6_b8_test.dart",
+     "line": 499,
+     "quote": "final after = DateTime.now().toUtc();"
+    },
+    {
+     "file": "learning_tracker/test/integration/bulk_prior_completion_b6_b8_test.dart",
+     "line": 1224,
+     "quote": "updatedAt: DateTime.now(),"
+    },
+    {
+     "file": "learning_tracker/test/golden/store_screenshots_test.dart",
+     "line": 108,
+     "quote": "final now = DateTime.now();"
+    }
+   ],
+   "sites": 4,
+   "why": "expungePriorCompletions writes purgedAt via DateTimeFactory.nowUtc() (lib/.../bulk_prior_completion_service.dart:337), which resolves through the same injectable core/time/local_day_clock.dart seam FakeLocalDayClock/useLocalDayClock already provide elsewhere in this suite. Instead of pinning that clock, the test reads real wall time before/after and asserts purgedAt falls in a 1-second-padded window (lines 514-521) \u2014 a real (if narrow) flake surface under slow/loaded CI, and strictly weaker than an exact-timestamp assertion the existing seam would allow. TQ-5's own Enforce line calls for exactly 'audit grep for DateTime.now(/Random( in files calling matchesGoldenFile' \u2014 store_screenshots_test.dart:108 is precisely that pattern (harmless today only because the CurriculumSummary.lastCompletionAt field it feeds is never rendered by CurriculumSummaryCard).",
+   "recommendation": "Inject a fixed DateTime via useLocalDayClock(FakeLocalDayClock(...)) (with resetLocalDayClock() in tearDown) and assert purgedAt equals that fixed instant exactly; replace the two decorative DateTime.now() call sites with fixed constants.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep -rn 'DateTime.now(' test/ finds no call sites in files under core/time's clock-seam contract that could instead use DateTimeFactory/useLocalDayClock",
+    "the B8 AC1 purgedAt assertion checks an exact fixed timestamp rather than a before/after window"
+   ],
+   "labels": [
+    "TQ-6",
+    "wall-clock",
+    "flaky",
+    "golden"
+   ]
+  }
+ }
+]

@@ -1,0 +1,55 @@
+[
+ {
+  "sourceBatch": "t1-feat-tracks-extras",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Stop testing the stale copy of AddTrackFlowScreen._getSmartDefault in add_track_result_test.dart \u2014 it asserts pre-fix buggy behavior",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (regression-test integrity) / Feathers testability seam",
+   "area": "test",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/track_setup/domain/entities/add_track_result_test.dart",
+     "line": 173,
+     "quote": "if (state.scopeSelections != null && state.scopeSelections!.isNotEmpty) {\n    return state.scopeSelections!.last.value;"
+    },
+    {
+     "file": "learning_tracker/test/features/track_setup/domain/entities/add_track_result_test.dart",
+     "line": 131,
+     "quote": "final defaultName = _getSmartDefault(state);\n      expect(defaultName, '\u05e1\u05d3\u05e8 \u05d6\u05e8\u05e2\u05d9\u05dd');"
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/screens/add_track_flow_screen.dart",
+     "line": 678,
+     "quote": "final c = _state.curriculumId;\n      if (c != null) return curriculumLabelText(ref, curriculum: c);"
+    },
+    {
+     "file": "learning_tracker/test/features/track_setup/domain/entities/add_track_result_test.dart",
+     "line": 180,
+     "quote": "bool _hasProgramsForCurriculum(CurriculumId curriculum) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/controllers/add_track_flow_state.dart",
+     "line": 151,
+     "quote": "static bool hasProgramsForCurriculum(CurriculumId id) {"
+    }
+   ],
+   "sites": 2,
+   "why": "Commit 1fead3de (\"fix: resolve 14 defects from run-7 on-device E2E audit\", the wave immediately preceding this one) fixed a real user-visible bug: the track-setup wizard's smart default name showed the last-selected scope value (e.g. 'Seder Zeraim') instead of the curriculum label, so the post-creation snackbar didn't match the Track Management hub card title. The fix rewrote the real `_getSmartDefault()` to always call `curriculumLabelText(ref, curriculum: c)`. add_track_result_test.dart never imports that method \u2014 a private test-local copy (comment: 'Extracted logic from AddTrackFlow for unit testing') still implements the PRE-fix logic (`return state.scopeSelections!.last.value;`), and the test 'uses scope value when scope narrowed' asserts exactly the behavior the fix removed, still expecting '\u05e1\u05d3\u05e8 \u05d6\u05e8\u05e2\u05d9\u05dd'. If this bug is ever reintroduced by a refactor, this suite stays green \u2014 the only 'smart default' test in the repo exercises dead code, not the shipped method. A second copy, `_hasProgramsForCurriculum`, duplicates the currently-correct `AddTrackFlowStateX.hasProgramsForCurriculum` and will silently drift the next time a curriculum gains/loses a seeded program.",
+   "recommendation": "Delete the private `_getSmartDefault`/`_hasProgramsForCurriculum` reimplementations and the 'Smart track name defaults' group. Either extract the real logic into a small ref-free pure function shared by add_track_flow_screen.dart and the test, or move this coverage into a widget/controller test that exercises the real method. Have `_hasProgramsForCurriculum` call `AddTrackFlowStateX.hasProgramsForCurriculum` directly instead of re-typing the curriculum list.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "add_track_result_test.dart contains no private reimplementation of AddTrackFlowScreen logic; it calls the real production symbol.",
+    "A test asserts that with scopeSelections set and no program, the smart default equals the curriculum label (current fixed behavior), not the last scope value \u2014 a red-first regression test for the F-05/F-21/run7 fix.",
+    "git grep for a private '_getSmartDefault' outside add_track_flow_screen.dart (or its extracted helper) and this test returns nothing."
+   ],
+   "labels": [
+    "test-quality",
+    "stale-test",
+    "regression-risk",
+    "tracks"
+   ]
+  }
+ }
+]

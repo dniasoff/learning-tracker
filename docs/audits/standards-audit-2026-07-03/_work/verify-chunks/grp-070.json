@@ -1,0 +1,182 @@
+[
+ {
+  "sourceBatch": "t1-feat-onboarding-p2",
+  "findingIndex": 10,
+  "finding": {
+   "title": "Extract repeated MaterialApp/ProviderScope pump boilerplate in bulk_mark_screen_test.dart and empty_login_ws2_test.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-3",
+   "area": "onboarding tests",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/onboarding/presentation/screens/bulk_mark_screen_test.dart",
+     "line": 42,
+     "quote": "ProviderScope("
+    },
+    {
+     "file": "learning_tracker/test/features/onboarding/presentation/screens/empty_login_ws2_test.dart",
+     "line": 104,
+     "quote": "child: MaterialApp("
+    }
+   ],
+   "sites": 2,
+   "why": "No shared pumpApp test helper exists anywhere in the repo (a grep of test/helpers/ finds none), so TQ-3 has nothing to point tests at yet. bulk_mark_screen_test.dart hand-rolls the identical ProviderScope+MaterialApp+localizationsDelegates block 5 times in one file. empty_login_ws2_test.dart duplicates it 2 more times even though the same file already defines a _wrapWithProviders helper that isn't reused for those 2 tests. Every AppLocalizations delegate or supported-locale change has to be hand-edited at each duplicate site.",
+   "recommendation": "Add a shared test/helpers/pump_app.dart with a pumpApp(tester, child, {overrides, locale}) helper; migrate bulk_mark_screen_test.dart's 5 sites onto it and repoint empty_login_ws2_test.dart's 2 stray sites onto the file's own _wrapWithProviders.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "bulk_mark_screen_test.dart contains a single MaterialApp construction (via a helper), not 5",
+    "empty_login_ws2_test.dart's 2 profile-creation tests use _wrapWithProviders like the rest of the file"
+   ],
+   "labels": [
+    "testing",
+    "duplication",
+    "onboarding"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-onboarding-p2",
+  "findingIndex": 11,
+  "finding": {
+   "title": "Fix onboarding_screen_l1_test.dart's intentChooser Hebrew assertion to match the real ARB string",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-7, TQ-8",
+   "area": "onboarding tests",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/onboarding/presentation/screens/onboarding_screen_l1_test.dart",
+     "line": 314,
+     "quote": "expect(find.text('\u05de\u05d4 \u05de\u05d1\u05d9\u05d0 \u05d0\u05d5\u05ea\u05da \u05dc\u05db\u05d0\u05df?'), findsNothing);"
+    },
+    {
+     "file": "learning_tracker/lib/l10n/app_he.arb",
+     "line": 2657,
+     "quote": "\"onboardingIntentHeading\": \"\u05de\u05d4 \u05d4\u05d1\u05d9\u05d0 \u05d0\u05d5\u05ea\u05da \u05dc\u05db\u05d0\u05df?\","
+    }
+   ],
+   "sites": 1,
+   "why": "The test's Hebrew string (present-tense '\u05de\u05d1\u05d9\u05d0') does not match the real onboardingIntentHeading ARB value (past-tense '\u05d4\u05d1\u05d9\u05d0') \u2014 one word differs. Because the assertion checks findsNothing for a string that was never going to be found either way, it passes unconditionally and verifies nothing, even though the test's own docstring states the suite's purpose is guarding against English-string leaks into the Hebrew locale for this exact screen.",
+   "recommendation": "Load the real string via AppLocalizations.delegate.load(Locale('he')) \u2014 as app_intro_screen_l1_test.dart already does for its own Hebrew assertions \u2014 and assert find.text(he.onboardingIntentHeading) findsOneWidget.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Temporarily reverting onboardingIntentHeading's Hebrew ARB value to the English literal makes this test fail"
+   ],
+   "labels": [
+    "testing",
+    "i18n",
+    "onboarding"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-onboarding-p2",
+  "findingIndex": 12,
+  "finding": {
+   "title": "Type the catch clause in CurriculumImportService._activateOne so Error subtypes aren't swallowed as activation failures",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "EH-4",
+   "area": "onboarding/domain/services",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/onboarding/domain/services/curriculum_import_service.dart",
+     "line": 66,
+     "quote": "} catch (e) {"
+    }
+   ],
+   "sites": 1,
+   "why": "A bare `catch (e)` also catches Error subtypes (StateError, TypeError, a failed assertion). A genuine programming bug during activation is silently reported to the onboarding UI as an ordinary 'this curriculum failed to activate' result instead of surfacing as a crash, masking the real defect behind a plausible-looking user-facing failure. (This bare-catch pattern recurs ~54 times repo-wide; only this batch's site is counted here.)",
+   "recommendation": "Narrow to `on Exception catch (e)` (or the specific exception types _activationService.activate can throw) and let Error subtypes propagate.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "A test that makes the mocked activationService throw a StateError confirms it propagates out of _activateOne/importSingle instead of becoming a CurriculumImportResult(success: false)"
+   ],
+   "labels": [
+    "error-handling",
+    "onboarding"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-onboarding-p2",
+  "findingIndex": 13,
+  "finding": {
+   "title": "Extract the hardcoded '\u05dc\u05d9\u05de\u05d5\u05d3' stage-name sentinel to a shared constant",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Evans ubiquitous language, Fowler duplication",
+   "area": "onboarding/domain/services",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/onboarding/domain/services/learning_process_wizard_service.dart",
+     "line": 170,
+     "quote": "stageName: '\u05dc\u05d9\u05de\u05d5\u05d3',"
+    },
+    {
+     "file": "learning_tracker/lib/features/onboarding/domain/services/learning_process_wizard_service.dart",
+     "line": 216,
+     "quote": "stageName: '\u05dc\u05d9\u05de\u05d5\u05d3',"
+    },
+    {
+     "file": "learning_tracker/lib/core/constants/curriculum_defaults.dart",
+     "line": 14,
+     "quote": "stageName: '\u05dc\u05d9\u05de\u05d5\u05d3',"
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/stages/data/repositories/stage_definition_repository_impl.dart",
+     "line": 23,
+     "quote": "(stageOrder: 1, stageName: '\u05dc\u05d9\u05de\u05d5\u05d3', delayDays: 0),"
+    }
+   ],
+   "sites": 2,
+   "why": "DomainTermLabels.resolveStoredStageName documents this literal as the canonical sentinel matched via HebrewTerms.stageNameMap to resolve the correct localized stage name at render time \u2014 it is load-bearing, not decorative. It's independently hand-typed in 3 separate files (2 sites in this batch's paired lib file) with no shared constant tying them together; a typo in one copy would silently break resolveStoredStageName's lookup for stages created by that one code path only, and nothing would catch it since the value is a plain string, not a shared symbol.",
+   "recommendation": "Add a single `const kLimudStageName = '\u05dc\u05d9\u05de\u05d5\u05d3';` (near HebrewTerms.stageNameMap or in core/constants) and reference it from all 3 write sites instead of retyping the literal.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep -rn \"stageName: '\u05dc\u05d9\u05de\u05d5\u05d3'\" lib/ returns only the shared constant's own definition, not literal duplicates at the 3 call sites"
+   ],
+   "labels": [
+    "duplication",
+    "onboarding",
+    "i18n"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-onboarding-p2",
+  "findingIndex": 14,
+  "finding": {
+   "title": "Confirm whether Positioned(left:/right:) illustration badges in intro pages need PositionedDirectional for RTL",
+   "severity": "P3",
+   "confidence": "SUSPECTED",
+   "rule": "AX-1 (spirit)",
+   "area": "onboarding/presentation/widgets",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/widgets/intro_mishna_page.dart",
+     "line": 32,
+     "quote": "left: 0,"
+    },
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/widgets/intro_rewards_page.dart",
+     "line": 66,
+     "quote": "right: 32,"
+    }
+   ],
+   "sites": 6,
+   "why": "AX-1's RTL rule is written against EdgeInsets.only(left/right) and Alignment.centerLeft/Right, but Positioned(left:/right:) has the identical non-mirroring failure mode under RTL that PositionedDirectional(start:/end:) avoids. app_intro_screen_l1_test.dart's RTL smoke test only checks the screen mounts without throwing, not badge placement, so a mirroring regression on these floating badges in Hebrew locale would not be caught. This may be an intentional 'decorative collage doesn't need to mirror' choice rather than a bug \u2014 needs a visual check to confirm either way.",
+   "recommendation": "Take a Locale('he') screenshot of AppIntroScreen pages 2-3 (reusing the app_intro_rewards_cta_overlap_test.dart rig) and confirm badge placement reads correctly; switch to PositionedDirectional(start:/end:) if not.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "A golden or screenshot test of pages 2-3 in Locale('he') exists and has been reviewed for correct badge placement"
+   ],
+   "labels": [
+    "rtl",
+    "onboarding",
+    "accessibility"
+   ]
+  }
+ }
+]

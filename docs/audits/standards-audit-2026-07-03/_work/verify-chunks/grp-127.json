@@ -1,0 +1,248 @@
+[
+ {
+  "sourceBatch": "t1-feat-tutoring-p3",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Add a Hebrew/RTL locale variant to invite_tutor_screen_l1_test.dart and manage_grants_screen_l1_test.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-3",
+   "area": "test/features/tutoring",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/tutoring/invite_tutor_screen_l1_test.dart",
+     "line": 100,
+     "quote": "locale: const Locale('en'), // _buildApp has no locale parameter"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/manage_grants_screen_l1_test.dart",
+     "line": 172,
+     "quote": "locale: Locale('en'), // buildSubject has no locale parameter"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/tutor_audit_log_screen_l1_test.dart",
+     "line": 611,
+     "quote": "'leading FilterChip is fully on-screen in RTL (Hebrew) \u2014 not clipped at edge'"
+    }
+   ],
+   "sites": 2,
+   "why": "Two sibling l1 tests in this exact batch (manage_tutors_screen_l1_test.dart, tutor_audit_log_screen_l1_test.dart) each carry a Locale('he') case \u2014 and the audit-log one exists specifically because an earlier RTL clipping bug was found (comment: 'not clipped at edge'), proving this class of bug is real for this feature. invite_tutor_screen_l1_test.dart and manage_grants_screen_l1_test.dart hardcode Locale('en') with no way to parameterize it, so a directional-layout regression on either screen would ship with green tests.",
+   "recommendation": "Parameterize _buildApp/buildSubject with a Locale argument and add one Locale('he') testWidgets case per screen asserting key rows/buttons render without overflow, matching tutor_audit_log_screen_l1_test.dart's pattern.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "invite_tutor_screen_l1_test.dart has a Locale('he') case asserting the form/Send button render without RenderFlex overflow",
+    "manage_grants_screen_l1_test.dart has the same for the active/pending grant rows"
+   ],
+   "labels": [
+    "testing",
+    "tutoring",
+    "rtl",
+    "i18n"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tutoring-p3",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Split the 7 tutoring test files that exceed the AG-3 400-line cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "test/features/tutoring",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/tutoring/manage_tutors_screen_l1_test.dart",
+     "line": 1,
+     "quote": "// L1 widget tests for ManageTutorsScreen (W6.11) \u2014 1619 lines total"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/s1_tutored_write_router_test.dart",
+     "line": 1,
+     "quote": "// S1 \u2014 TutoredWriteRouter unit tests \u2014 1003 lines total"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/invite_tutor_screen_l1_test.dart",
+     "line": 1,
+     "quote": "// L1 widget test \u2014 InviteTutorScreen \u2014 827 lines total"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/tutor_audit_log_screen_l1_test.dart",
+     "line": 1,
+     "quote": "// L1 widget test \u2014 TutorAuditLogScreen \u2014 656 lines total"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/manage_grants_screen_l1_test.dart",
+     "line": 1,
+     "quote": "// L1 widget test for ManageGrantsScreen (W6.12) \u2014 537 lines total"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/s2_entity_parity_test.dart",
+     "line": 1,
+     "quote": "// S2 \u2014 Serialization parity tests (Task B). \u2014 523 lines total"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/t3_readonly_surfaces_gating_test.dart",
+     "line": 1,
+     "quote": "// T3 \u2014 Read-only surfaces + gating ... \u2014 428 lines total"
+    }
+   ],
+   "sites": 7,
+   "why": "AG-3 caps hand-written Dart files at 400 lines (generated exempt); none of these are generated. No checker for this rule exists anywhere in the repo (grepped Makefiles/tool/ for a 400-line check \u2014 zero hits), so it is currently unenforced. manage_tutors_screen_l1_test.dart at 1619 lines is 4x the cap and runs ~10 distinct concerns (loading/error/empty/active-grants/pending-grants/section-headers/per-child-loading/RTL/stale-refresh/multi-child-routing) in one flat void main() with no nested group()s for most of the file \u2014 a genuine navigation and merge-conflict cost.",
+   "recommendation": "Split each file by concern into multiple files in the same directory, or at minimum wrap sections in named group()s; add a Rule-0 line-count check to make audit so new files don't silently cross the cap.",
+   "effort": "L",
+   "acceptance_criteria": [
+    "A checker (make audit or a new script) greps lib/ and test/ for hand-written files >400 lines and fails with a file:line-count list",
+    "The 7 listed files are each \u2264400 lines or split into cohesive sub-400-line files"
+   ],
+   "labels": [
+    "hygiene",
+    "tutoring",
+    "ag-3",
+    "file-size"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tutoring-p3",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Verify the W7.11 tutor_live_mark_blocked analytics event fires in mark_live_completion_invariant_test.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "test/features/tutoring",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/tutoring/mark_live_completion_invariant_test.dart",
+     "line": 37,
+     "quote": "final useCase = MarkLiveCompletionUseCase<void>(session: _tutorSession());"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/domain/use_cases/mark_live_completion_use_case.dart",
+     "line": 62,
+     "quote": "await _analytics?.logEvent(LogEvents.tutor.liveMarkBlocked);"
+    }
+   ],
+   "sites": 1,
+   "why": "The forbidden-write branch deliberately fires an analytics event (W7.11) so tutor-boundary violations are visible in dashboards. The test never passes an AnalyticsService, so _analytics stays null and the `_analytics?.logEvent(...)` call is always a silent no-op \u2014 the test cannot distinguish 'analytics fired correctly' from 'analytics wiring is broken.' Repo-wide grep confirms liveMarkBlocked/tutor_live_mark_blocked is referenced nowhere under test/, so this dashboard signal has zero regression coverage.",
+   "recommendation": "Add a case that injects a hand-written fake or mocktail mock AnalyticsService and asserts logEvent(LogEvents.tutor.liveMarkBlocked) fires exactly once on the tutor-forbidden path and never on the owner/child-self path.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "A test in mark_live_completion_invariant_test.dart injects an AnalyticsService fake and verifies logEvent(LogEvents.tutor.liveMarkBlocked) fires on the tutor-forbidden path"
+   ],
+   "labels": [
+    "testing",
+    "tutoring",
+    "analytics",
+    "observability"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tutoring-p3",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Fix stale 'PENDING (1)' test description in manage_tutors_screen_l1_test.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "hygiene",
+   "area": "test/features/tutoring",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/tutoring/manage_tutors_screen_l1_test.dart",
+     "line": 959,
+     "quote": "'shows \"PENDING (1)\" section header when there is one pending grant',"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/manage_tutors_screen_l1_test.dart",
+     "line": 977,
+     "quote": "expect(find.text('Pending (1)'), findsOneWidget);"
+    }
+   ],
+   "sites": 1,
+   "why": "The test name and its own inline comment ('PENDING (1)') don't match the actual asserted string 'Pending (1)' \u2014 a leftover from the sibling GA-8 title-case fix mentioned two tests earlier. The assertion is correct and passes; only the description/comment is stale, which could mislead a reader about current UI copy.",
+   "recommendation": "Update the test description and comment to 'Pending (1)' to match the assertion.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Test name and comment at manage_tutors_screen_l1_test.dart:959-977 read 'Pending (1)', matching the asserted string"
+   ],
+   "labels": [
+    "hygiene",
+    "tutoring"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tutoring-p4",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Replace source-grep assertions with real widget/behavior tests in tutoring WS3.3*/V3C suite",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "test/features/tutoring",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/tutoring/v3c_ui_gating_exception_catching_test.dart",
+     "line": 72,
+     "quote": "pointConfigSrc,\n        contains('enabled: _hasPendingEdits && !_saving && canEdit'),"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/ws3_3a_manage_tutors_entry_test.dart",
+     "line": 38,
+     "quote": "parentSettingsSrc,\n        contains('ManageTutorsRoute'),"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/ws3_3b_tutor_invitations_surface_test.dart",
+     "line": 37,
+     "quote": "sectionSrc,\n        contains('activeGrants.isEmpty && pendingGrants.isEmpty'),"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/ws3_3c_talmid_access_pin_test.dart",
+     "line": 53,
+     "quote": "sectionSrc,\n          contains('TutorPinEntryGate'),"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/ws3_3d_tutor_permissions_surface_test.dart",
+     "line": 43,
+     "quote": "activeTutoredSrc,\n          contains('activeTutorPermissionsProvider'),"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/ws3_3e_dual_role_fix_test.dart",
+     "line": 58,
+     "quote": "methodBody,\n          isNot(contains('incomingTutorGrantsProvider')),"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/ws3_3f_manage_remove_tutors_test.dart",
+     "line": 35,
+     "quote": "manageTutorsSrc,\n          contains('InviteTutorRoute'),"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/ws3_3g_notification_gateway_test.dart",
+     "line": 56,
+     "quote": "manageTutorsProvidersSrc,\n        contains('tutorNotificationGatewayProvider'),"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/ws3_3h_corrections_test.dart",
+     "line": 93,
+     "quote": "parentSettingsSrc,\n        contains('canBulkMark'),"
+    }
+   ],
+   "sites": 9,
+   "why": "All ~65 test() cases across these 9 files import only dart:io + package:test/test.dart, read a lib/ source file with File(...).readAsStringSync(), and assert `contains('<literal>')` \u2014 none pump a widget or execute the code they claim to verify. point_config_screen.dart's tutor canEditPoints gate (R1 M1) has ZERO other test anywhere in the repo (verified: no hits in test/features/gamification/ besides this file) \u2014 it is the sole safety net for a permission boundary that stops a restricted tutor from editing a child's point configuration. If a future refactor breaks the real `enabled:` wiring while the literal substring survives anywhere else in the ~800-line file (a stale comment, an unreachable branch), all matching tests still pass and the regression ships silently. Conversely, any harmless rename/reformat of the watched code breaks these tests for no behavioral reason. Contrast with test/features/gamification/presentation/screens/reward_configuration_screen_l1_test.dart:615-641, which covers the identical canEditRewards gate with a real testWidgets case that pumps the screen and checks the rendered permission-denied snackbar \u2014 proving the correct pattern already exists next door.",
+   "recommendation": "Convert point_config_screen.dart's canEditPoints assertions (v3c file) to a real testWidgets test mirroring reward_configuration_screen_l1_test.dart:615-641. For the remaining files, promote to real widget/unit tests where the code is reachable from a pumped widget tree; where truly infeasible (e.g. firestore.rules, which has no auth-context mock available), keep the documented-rationale approach already used in w3_41_tutor_security_rules_test.dart's header as the template other files should copy.",
+   "acceptance_criteria": [
+    "point_config_screen.dart's R1 M1 gate has a testWidgets test pumping the real screen with canEditPoints=false that asserts the save affordance is disabled and/or the permission-denied snackbar renders.",
+    "A Rule-0 audit grep flags new *_test.dart files under test/ whose only imports are dart:io + package:test/test.dart with no flutter_test/testWidgets usage, outside a documented structural-check exception (as w3_41_tutor_security_rules_test.dart's header documents for itself)."
+   ],
+   "effort": "L",
+   "labels": [
+    "test-quality",
+    "tutoring",
+    "TQ-8",
+    "security-boundary"
+   ]
+  }
+ }
+]

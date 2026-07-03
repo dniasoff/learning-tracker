@@ -1,0 +1,226 @@
+[
+ {
+  "sourceBatch": "t1-feat-scheduler-p4",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Split the scheduler test files that exceed the AG-3 400-line hand-written-file cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3 [P] \u2014 hand-written Dart files (lib AND test) stay under 400 lines",
+   "area": "learning_tracker/test/features/scheduler",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/scheduler/presentation/providers/scheduler_providers_test.dart",
+     "line": 1,
+     "quote": "/// Unit tests for scheduler_providers.dart"
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/domain/services/sefaria_ref_matcher_test.dart",
+     "line": 1,
+     "quote": "/// Unit tests for the SefariaRefMatcher domain service."
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/presentation/providers/scheduler_all_daily_tasks_test.dart",
+     "line": 1,
+     "quote": "/// Logic tests \u2014 allDailyTasksProvider body."
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/presentation/providers/scheduler_providers_branches_test.dart",
+     "line": 1,
+     "quote": "/// Logic tests \u2014 scheduler_providers.dart branches NOT covered by"
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/presentation/screens/scheduler_screen_l1_test.dart",
+     "line": 5,
+     "quote": "/// L1 widget-behaviour tests for [SchedulerScreen]."
+    }
+   ],
+   "sites": 5,
+   "why": "coding-standards.md's own AG-3 rationale is 'oversized files exceed per-file agent read budgets ... become dumping grounds' \u2014 confirmed by this audit, which needed multiple full-file reads north of 950-1100 lines to review two of these (scheduler_providers_test.dart at 1092 lines, sefaria_ref_matcher_test.dart at 1010, scheduler_all_daily_tasks_test.dart at 957, scheduler_providers_branches_test.dart at 684, scheduler_screen_l1_test.dart at 677; verified via wc -l). All five are internally well-organized (clear group()/comment-banner sections), so splitting is low-risk.",
+   "recommendation": "Split each file along its existing group()/comment-banner boundaries (e.g. scheduler_providers_test.dart's 10 unrelated groups \u2014 SchedulerTaskSectionNotifier, SchedulerGroupedView, clockProvider, SkippedTasks, previouslySkippedRefsProvider, paceStatusProvider x2, overdueCountForCurriculumProvider, allDailyTasksProvider, firstTaskInTrackForCategoryProvider, 2 enums \u2014 map cleanly onto 3-4 files by provider), keeping each under 400 lines. Wire coding-standards.md's own specified checker (find lib test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400') into make audit as warn-only first.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "The AG-3 checker command from coding-standards.md returns none of these 5 paths.",
+    "make audit gains the AG-3 line-count check (warn-only per the doc's own enforcement note)."
+   ],
+   "labels": [
+    "hygiene",
+    "ag-3",
+    "scheduler",
+    "test-structure"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-scheduler-p4",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Delete scheduler_screen_test.dart \u2014 its scenarios duplicate scheduler_screen_l1_test.dart",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler duplication lens / AG-5 mirrored-test-path ambiguity",
+   "area": "learning_tracker/test/features/scheduler/presentation/screens",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/scheduler/presentation/screens/scheduler_screen_test.dart",
+     "line": 58,
+     "quote": "expect(find.text('All caught up! Great work!'), findsOneWidget);"
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/presentation/screens/scheduler_screen_l1_test.dart",
+     "line": 164,
+     "quote": "expect(find.text('All caught up! Great work!'), findsOneWidget);"
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/presentation/screens/scheduler_screen_test.dart",
+     "line": 90,
+     "quote": "expect(find.text('3 tasks today'), findsOneWidget);"
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/presentation/screens/scheduler_screen_l1_test.dart",
+     "line": 325,
+     "quote": "expect(find.text('3 tasks today'), findsOneWidget);"
+    }
+   ],
+   "sites": 1,
+   "why": "8 of scheduler_screen_test.dart's 9 tests (empty state, task-card rendering, summary count, singular count, loading indicator, error+retry, swipe-dismiss snackbar) assert the identical hardcoded English strings against the identical widget (SchedulerScreen) as tests already present in scheduler_screen_l1_test.dart (@Tags(['scheduler','l1'])), which is a strict superset: it additionally covers section filters, no-track-type-label checks, an he-locale smoke test, an R6-6 raw-exception-leak regression, and \u2014 unlike the older file, which only checks an InkWell exists \u2014 actually drives the view-toggle into GroupedDailyView and back. Every future copy change to the shared strings (e.g. an ARB wording tweak) must land in both files or one silently goes stale, and both files pay CI time re-testing the same states.",
+   "recommendation": "Delete scheduler_screen_test.dart after folding its one non-duplicated assertion (DailyTaskCard renders the correct per-curriculum ref label text, e.g. 'Mishnah Berakhot 1.1' / 'Bavli Berakhot 2a') into scheduler_screen_l1_test.dart's flat-list test if that content check isn't covered elsewhere.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Only one *_test.dart file exercises SchedulerScreen top-to-bottom, or the two files have non-overlapping, clearly-named scopes.",
+    "Diff review confirms no asserted behavior is lost after removal."
+   ],
+   "labels": [
+    "testing",
+    "duplication",
+    "scheduler",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-scheduler-p4",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Fix the sefaria_ref_matcher_test.dart sortOrder test that cannot verify its own claim",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (assertion must match what the source can actually do wrong)",
+   "area": "learning_tracker/test/features/scheduler/domain/services/sefaria_ref_matcher_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/scheduler/domain/services/sefaria_ref_matcher_test.dart",
+     "line": 568,
+     "quote": "test('sorts result by sortOrder ascending', () {"
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/domain/services/sefaria_ref_matcher_test.dart",
+     "line": 580,
+     "quote": "// Sets don't preserve insertion order, but the function sorts before"
+    }
+   ],
+   "sites": 1,
+   "why": "leafChildrenForContainer returns Set<String>, so any internal sort is erased before the caller sees it; the test's own comment admits this and falls back to containsAll (membership only, no order check), so the test cannot fail if the production sort() call were deleted entirely \u2014 its name promises an ordering guarantee the assertion never checks.",
+   "recommendation": "Rename the test to describe what it actually checks (all three leaves present), or \u2014 if callers genuinely depend on order (resolveIndexedUnitRefs re-sorts independently, suggesting they don't) \u2014 change the return type to an ordered List and assert order for real.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Test name matches its assertion, or the assertion is strengthened to check real order via a List-returning API."
+   ],
+   "labels": [
+    "testing",
+    "hygiene",
+    "scheduler"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-scheduler-p5",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Relocate test/scheduler/*.dart into the mirrored test/features/ tree (AG-5) \u2014 no lib/scheduler/ exists to mirror",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-5 (test/ mirrors lib/ 1:1)",
+   "area": "test placement (scheduler + notifications)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/scheduler/overdue_projection_test.dart",
+     "line": 1,
+     "quote": "/// Overdue projection characterisation tests \u2014 invariants O1, O2, O3, O7."
+    },
+    {
+     "file": "learning_tracker/test/scheduler/overdue_durability_test.dart",
+     "line": 1,
+     "quote": "/// Overdue durability invariants \u2014 O4, O5, O6."
+    },
+    {
+     "file": "learning_tracker/test/scheduler/overdue_notifications_test.dart",
+     "line": 1,
+     "quote": "/// Overdue notifications invariant \u2014 O8."
+    }
+   ],
+   "sites": 3,
+   "why": "test/scheduler/ matches none of the documented test/ subdirectories (story_acceptance/, core/, features/, integration/, helpers/, fixtures/, mocks/) and there is no lib/scheduler/ to mirror (only lib/features/scheduler/). This audit had to specifically search outside test/features/scheduler/ to find 2,087 lines of real, high-quality regression coverage for domain/projection/* and notification_providers.dart's reminderSyncEffect \u2014 the exact discoverability failure AG-5 exists to prevent; a future agent adding an overdue-projection test would very plausibly duplicate coverage at the correct path instead of finding these.",
+   "recommendation": "git mv overdue_projection_test.dart and overdue_durability_test.dart to test/features/scheduler/domain/projection/; git mv overdue_notifications_test.dart to test/features/notifications/presentation/providers/ (it tests notification_providers.dart, not scheduler code); fix relative helper imports (../helpers/drift_memory.dart path depth).",
+   "acceptance_criteria": [
+    "test/scheduler/ directory no longer exists.",
+    "The 3 files resolve at mirrored paths under test/features/{scheduler,notifications}/...",
+    "make ci is green after the move (imports adjusted)."
+   ],
+   "labels": [
+    "AG-5",
+    "test-placement",
+    "scheduler",
+    "notifications"
+   ],
+   "effort": "S"
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-scheduler-p5",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Delete unused features/scheduler/presentation/widgets/pace_indicator.dart \u2014 dead code, duplicate class name, hardcoded English",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-4 (duplicate top-level symbol names) / AG-6 (dead code)",
+   "area": "features/scheduler/presentation/widgets",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/scheduler/presentation/widgets/pace_indicator.dart",
+     "line": 9,
+     "quote": "class PaceIndicator extends StatelessWidget {"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/widgets/pace_indicator.dart",
+     "line": 16,
+     "quote": "const PaceIndicator({super.key, required this.pace, this.subtitleCaption});"
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/presentation/widgets/pace_indicator_test.dart",
+     "line": 5,
+     "quote": "import 'package:learning_tracker/features/scheduler/presentation/widgets/pace_indicator.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/presentation/widgets/pace_indicator.dart",
+     "line": 83,
+     "quote": "\"At current pace, you'll finish by $formatted\","
+    }
+   ],
+   "sites": 1,
+   "why": "grep -rln \"PaceIndicator(\" lib/ and grep -rln \"features/scheduler/presentation/widgets/pace_indicator.dart\" lib/ both return zero hits outside the file's own definition \u2014 this PaceIndicator/ProjectedCompletionText pair is never built into any screen (curriculum_progress_screen.dart uses the DIFFERENT features/progress PaceIndicator instead). 91 lines of widget tests exist purely to exercise unreachable code, and the duplicate class name across two features is exactly the AG-4 hazard the standards name: a future agent asked to fix 'the pace indicator' can edit this file, believe the fix shipped, and see nothing change because it never renders.",
+   "recommendation": "Delete lib/features/scheduler/presentation/widgets/pace_indicator.dart and test/features/scheduler/presentation/widgets/pace_indicator_test.dart. If the scheduler screen is meant to show a pace indicator, wire this widget into scheduler_screen.dart and route its strings through the existing paceAhead/paceBehind/paceOnPace ARB keys (already used by features/progress's PaceIndicator), and rename to avoid the AG-4 clash.",
+   "acceptance_criteria": [
+    "grep -rl \"features/scheduler/presentation/widgets/pace_indicator.dart\" lib/ test/ returns nothing (removed) or exactly one real screen caller (wired).",
+    "grep -rn \"^class PaceIndicator\" lib/ returns exactly one match repo-wide."
+   ],
+   "labels": [
+    "dead-code",
+    "AG-4",
+    "AG-6",
+    "scheduler"
+   ],
+   "effort": "S"
+  }
+ }
+]

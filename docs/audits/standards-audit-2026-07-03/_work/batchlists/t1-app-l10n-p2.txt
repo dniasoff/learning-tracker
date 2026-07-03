@@ -1,0 +1,12 @@
+learning_tracker/lib/l10n/app_he.arb  (2740 lines)
+learning_tracker/lib/main.dart  (35 lines)   HOTSPOT
+learning_tracker/test/app/locale_wiring_test.dart  (95 lines)
+learning_tracker/test/app/restore/device_restore_phase_l10n_test.dart  (311 lines)
+learning_tracker/test/app/restore/device_restore_screen_l1_test.dart  (810 lines)
+learning_tracker/test/app/restore/device_restore_screen_overflow_test.dart  (161 lines)
+learning_tracker/test/app/restore/restore_no_double_read_test.dart  (286 lines)
+learning_tracker/test/app/restore/sy2_device_restore_idle_blank_test.dart  (255 lines)
+learning_tracker/test/app/router/app_shell_an6_test.dart  (121 lines)
+learning_tracker/test/app/router/persistent_switcher_scaffold_an8_test.dart  (122 lines)
+learning_tracker/test/l10n/account_picker_subtitle_copy_test.dart  (79 lines)
+learning_tracker/test/l10n/app_localizations_coverage_test.dart  (1482 lines)

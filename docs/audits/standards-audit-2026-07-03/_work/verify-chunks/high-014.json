@@ -1,0 +1,60 @@
+[
+ {
+  "sourceBatch": "t1-core-providers-prefs",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Align readUseHebrewCalendar's stale '?? false' default with HebrewDatePreference.defaultValue=true",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "Evans/DRY (invariant re-derived in two places) \u2014 no single rule ID; data-consistency correctness bug",
+   "area": "core/preferences",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/preferences/profile_scoped_preference_keys.dart",
+     "line": 51,
+     "quote": "return prefs.getBool(legacyUseHebrewCalendarKey) ?? false;"
+    },
+    {
+     "file": "learning_tracker/lib/core/preferences/profile_scoped_preference_keys.dart",
+     "line": 53,
+     "quote": "return false;"
+    },
+    {
+     "file": "learning_tracker/lib/core/preferences/hebrew_date_preference.dart",
+     "line": 12,
+     "quote": "bool get defaultValue => true;"
+    },
+    {
+     "file": "learning_tracker/lib/core/preferences/hebrew_date_preference.dart",
+     "line": 26,
+     "quote": "return defaultValue;"
+    },
+    {
+     "file": "learning_tracker/lib/core/preferences/profile_scoped_preference_keys.dart",
+     "line": 91,
+     "quote": "// (\u00a79 of hebrew-terms.md). The old `?? false` was stale."
+    },
+    {
+     "file": "learning_tracker/lib/features/sync/data/outbox_sync_write_facade.dart",
+     "line": 222,
+     "quote": "'use_hebrew_calendar': ProfileScopedPreferenceKeys.readUseHebrewCalendar("
+    }
+   ],
+   "sites": 2,
+   "why": "outbox_sync_write_facade.dart:222 calls readUseHebrewCalendar() inside pushUiPreferencesSnapshot(), which _writeAndPushSnapshot() (preference_providers.dart) fires after every write to ANY sibling UI preference. A profile that never touches the calendar toggle but changes any other preference (font size, nikud, hebrew-terms script) pushes use_hebrew_calendar:false to the cloud snapshot, even though the local UI/HebrewDatePreference default is true \u2014 so a second device or a restore silently shows the Gregorian calendar instead of the Hebrew one the first device is displaying. This exact bug shape (a stale '?? false' default) was already found and fixed once for the sibling hebrewTermsScript field two methods below (comment: 'The old ?? false was stale') but the identical fix was never applied to readUseHebrewCalendar, and HebrewDatePreference.readFromPrefs duplicates rather than delegates to this helper (unlike TextDisplayPreference, which correctly delegates to readFontSizeIndex), so the two defaults can drift independently.",
+   "recommendation": "Change profile_scoped_preference_keys.dart:51/53 to default true, matching HebrewDatePreference.defaultValue. Better: delete the duplicated read logic in HebrewDatePreference.readFromPrefs and have it call ProfileScopedPreferenceKeys.readUseHebrewCalendar directly (the pattern TextDisplayPreference already uses), so there is exactly one place to get the default right.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "ProfileScopedPreferenceKeys.readUseHebrewCalendar(prefs, anyUnsetProfileId) returns true, matching HebrewDatePreference().defaultValue.",
+    "New regression test (test/core/preferences/hebrew_date_preference_test.dart, per AG-5) asserts HebrewDatePreference().read(profileId) and ProfileScopedPreferenceKeys.readUseHebrewCalendar(prefs, profileId) agree for a never-written profile.",
+    "pushUiPreferencesSnapshot()'s use_hebrew_calendar field for a fresh profile that only changed an unrelated preference equals what the UI displays."
+   ],
+   "labels": [
+    "preferences",
+    "sync",
+    "correctness",
+    "P1"
+   ]
+  }
+ }
+]

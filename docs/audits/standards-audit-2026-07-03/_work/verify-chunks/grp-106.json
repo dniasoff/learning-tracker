@@ -1,0 +1,248 @@
+[
+ {
+  "sourceBatch": "t1-feat-sync-p1",
+  "findingIndex": 5,
+  "finding": {
+   "title": "LocalDataUploadService.pushAllLocalData enqueues every entity kind via a per-row awaited loop instead of a batched outbox write",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "DB-3",
+   "area": "features/sync data",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/sync/data/local_data_upload_service.dart",
+     "line": 84,
+     "quote": "for (final p in ownProfiles) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/sync/data/local_data_upload_service.dart",
+     "line": 135,
+     "quote": "for (final b in bookmarks) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/sync/data/local_data_upload_service.dart",
+     "line": 162,
+     "quote": "for (final g in goals) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/sync/data/local_data_upload_service.dart",
+     "line": 196,
+     "quote": "for (final p in profilePrograms) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/sync/data/local_data_upload_service.dart",
+     "line": 229,
+     "quote": "for (final e in streakEvents) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/sync/data/local_data_upload_service.dart",
+     "line": 258,
+     "quote": "for (final e in ledgerEntries) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/sync/data/local_data_upload_service.dart",
+     "line": 287,
+     "quote": "for (final t in tracks) {"
+    }
+   ],
+   "sites": 7,
+   "why": "pushAllLocalData is explicitly a one-time bulk operation ('Called once after a local-born account is upgraded to cloud... so the user's offline learning history is immediately available') yet writes to the single Drift outbox table one row at a time across 7 loops, each await-ing OutboxSyncWriteFacade._enqueue -> OutboxDao.insertOutboxRow individually. Per outbox_sync_write_facade.dart:289-292, each insert also fires its own unawaited network drain-kick. A learner with a full year of history could have hundreds of completions/streak events/ledger entries; the one-time account-conversion flow does hundreds of sequential single-row DB writes plus hundreds of concurrent drain-kick Futures where a handful of batch inserts would do, extending how long this migration keeps the DB busy and widening the exposure window for the SM-4 race described in the companion finding.",
+   "recommendation": "Batch each entity kind's outbox rows via db.batch()/insertAll (build the list of OutboxCompanions first, one transaction per kind) instead of looping individually-awaited _enqueue calls; fire at most one drain-kick per pushAllLocalData call rather than one per row.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "DB-3 Rule-0 checker (audit grep for awaited per-row insert loops against the same table) reports zero hits in local_data_upload_service.dart.",
+    "Test asserting pushAllLocalData with N seeded rows of a given kind performs O(1) outbox-table statements via a batch/insertAll spy, not O(N)."
+   ],
+   "labels": [
+    "DB-3",
+    "performance",
+    "sync",
+    "drift"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-sync-p1",
+  "findingIndex": 6,
+  "finding": {
+   "title": "SyncStatus.error and RestoreStatus.error carry a free-text message instead of a stable code, inviting raw/untranslated text downstream",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "EH-5",
+   "area": "features/sync domain models",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/sync/domain/models/sync_status.dart",
+     "line": 41,
+     "quote": "required String message,"
+    },
+    {
+     "file": "learning_tracker/lib/features/sync/domain/models/restore_status.dart",
+     "line": 26,
+     "quote": "const factory RestoreStatus.error({required String message}) ="
+    },
+    {
+     "file": "learning_tracker/lib/features/sync/presentation/providers/sync_providers.dart",
+     "line": 60,
+     "quote": "message: error.toString(),"
+    }
+   ],
+   "sites": 2,
+   "why": "EH-5 requires domain/data errors to carry stable codes/enums, never pre-formatted human messages, because this is an EN+Hebrew app where presentation must resolve text via AppLocalizations. Both status models instead expose a raw String message, and sync_providers.dart populates SyncStatus.error.message straight from error.toString() -- an unbounded, unlocalized, potentially technical string. This is not hypothetical: features/settings/presentation/widgets/backup_sync_section.dart already had to add an explicit guard (its own comment: 'never pass a raw exception string into the user-facing subtitle') to avoid rendering SyncStatusError.message directly, and lib/app/restore/device_restore_service.dart embeds RestoreStatus.error's message straight into a rethrown Exception's text. Any future consumer that pattern-matches .message without knowing about that workaround ships raw/English text to Hebrew-locale users.",
+   "recommendation": "Replace the free-text message field on both SyncStatus.error and RestoreStatus.error with a stable enum/code (e.g. SyncErrorCode) plus optional non-user-facing debug detail, and have presentation resolve the code via AppLocalizations, per EH-5.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "EH-5 Rule-0 checker (grep for `required String message` on sealed status/result types, or raw error.toString() flowing into a domain model) passes.",
+    "backup_sync_section.dart's existing raw-string guard becomes structurally unnecessary because the type no longer exposes text to short-circuit around."
+   ],
+   "labels": [
+    "EH-5",
+    "i18n",
+    "error-handling",
+    "sync"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-sync-p1",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Four hand-written sync files exceed the 400-line AG-3 ceiling",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "features/sync (data + test)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/sync/data/outbox_sync_write_facade.dart",
+     "line": 446,
+     "quote": "446 lines, hand-written (no .g.dart/.freezed.dart)"
+    },
+    {
+     "file": "learning_tracker/test/features/sync/data/local_data_upload_service_test.dart",
+     "line": 1184,
+     "quote": "1184 lines, hand-written"
+    },
+    {
+     "file": "learning_tracker/test/features/sync/domain/profile_scoped_preference_keys_test.dart",
+     "line": 555,
+     "quote": "555 lines, hand-written"
+    },
+    {
+     "file": "learning_tracker/test/features/sync/presentation/sync_status_indicator_l1_test.dart",
+     "line": 419,
+     "quote": "419 lines, hand-written"
+    }
+   ],
+   "sites": 4,
+   "why": "AG-3 caps hand-written Dart files at 400 lines because oversized files exceed per-file agent read budgets and become dumping grounds; its own Enforce line scans both lib and test. All four here are plain hand-written files. The two largest test files are partly inflated by legitimate breadth (11 entity kinds covered end-to-end) and partly by the redundant duplicate test groups documented in the companion finding for profile_scoped_preference_keys_test.dart -- trimming that duplication alone would bring it close to the line.",
+   "recommendation": "Split outbox_sync_write_facade.dart along its already-commented sections (core SyncWriteFacade methods vs. W2.32 LocalDataUploadService-only helpers vs. WS9 PointsSyncSink methods); split the two oversized test files by group (e.g. one file per entity-kind for local_data_upload_service_test.dart).",
+   "effort": "M",
+   "acceptance_criteria": [
+    "AG-3 Rule-0 checker (`find lib test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400'`) reports none of these four files."
+   ],
+   "labels": [
+    "AG-3",
+    "file-size",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-sync-p1",
+  "findingIndex": 8,
+  "finding": {
+   "title": "Six leftover migration re-export shims in features/sync/ are unused by production code and violate Rule 2's 'only providers.dart barrel' clause",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Rule-2",
+   "area": "features/sync (all layers)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/sync/domain/merge_rules.dart",
+     "line": 2,
+     "quote": "export 'package:learning_tracker/core/sync/merge/merge_rules.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/features/sync/domain/profile_scoped_preference_keys.dart",
+     "line": 2,
+     "quote": "export 'package:learning_tracker/core/preferences/profile_scoped_preference_keys.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/features/sync/domain/services/device_restore_service.dart",
+     "line": 2,
+     "quote": "export 'package:learning_tracker/app/restore/device_restore_service.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/features/sync/presentation/providers/restore_providers.dart",
+     "line": 2,
+     "quote": "export 'package:learning_tracker/app/restore/restore_providers.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/features/sync/presentation/screens/device_restore_screen.dart",
+     "line": 2,
+     "quote": "export 'package:learning_tracker/app/restore/device_restore_screen.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/features/sync/sync.dart",
+     "line": 8,
+     "quote": "library sync;"
+    }
+   ],
+   "sites": 6,
+   "why": "Rule 2 states the providers.dart barrel is 'the only sanctioned re-export file. Do not add other barrel/re-export files.' These six are bare `export '...';` shims (or, for sync.dart, an empty library-only file with zero exports) left over from moves labelled W1.4/W1.7/W1.8 in their own comments. Grepping every .dart file in the repo: restore_providers.dart, device_restore_screen.dart, and sync.dart have zero importers anywhere, even in tests. merge_rules.dart, profile_scoped_preference_keys.dart, and device_restore_service.dart are imported only by test files, never by lib/ production code, which already uses the canonical core/app paths directly. sync.dart's comment additionally claims 'the legacy sync stack is being deleted in Wave 2... After deletion, sync infrastructure lives in lib/core/sync/', which is stale -- OutboxSyncWriteFacade and LocalDataUploadService are the live, current replacement and were never meant to be deleted. A developer trusting this comment or grepping 'where is merge_rules defined' gets actively misleading signal.",
+   "recommendation": "Delete all six files; repoint the test files that still import the deprecated paths (merge_rules_test.dart, profile_scoped_preference_keys_test.dart, device_restore_service's story-acceptance tests) at their canonical locations, moving them to the AG-5-mirrored test path in the process.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep confirms zero remaining files under lib/features/sync/ that are bare export re-directs to core/ or app/.",
+    "merge_rules_test.dart and profile_scoped_preference_keys_test.dart import from lib/core/sync/merge/merge_rules.dart and lib/core/preferences/profile_scoped_preference_keys.dart respectively, at the AG-5-mirrored test path."
+   ],
+   "labels": [
+    "Rule-2",
+    "dead-code",
+    "AG-5",
+    "migration-debris"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-sync-p1",
+  "findingIndex": 9,
+  "finding": {
+   "title": "SyncStatusIndicator hardcodes English UI strings and is never referenced by any production screen",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AX-2",
+   "area": "features/sync presentation widgets",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/sync/presentation/widgets/sync_status_indicator.dart",
+     "line": 28,
+     "quote": "'Local only',"
+    },
+    {
+     "file": "learning_tracker/lib/features/sync/presentation/widgets/sync_status_indicator.dart",
+     "line": 60,
+     "quote": "? 'Sync paused \u2014 $pendingChanges queued'"
+    },
+    {
+     "file": "learning_tracker/test/features/sync/presentation/sync_status_indicator_l1_test.dart",
+     "line": 411,
+     "quote": "// All user-facing strings in SyncStatusIndicator are hardcoded English inside"
+    }
+   ],
+   "sites": 1,
+   "why": "Every label ('Local only', 'Synced', 'Syncing', '$n pending', '$n queued', 'Offline', 'Sync error', 'Sync paused'...) is a raw English literal rendered via Tooltip/Text, not routed through AppLocalizations -- a direct AX-2 violation in an EN+Hebrew app. The widget's own test file documents this exact list in a 'Hardcoded string audit' comment as 'a flag for future i18n work.' Grepping lib/, SyncStatusIndicator is referenced by nothing in production -- only by its own test -- so today the violation has zero user reach, but it is a landmine: whoever wires this widget into a real screen (a natural fit for settings/dashboard, its whole purpose) ships untranslated text with no warning beyond a comment nobody reads at the call site.",
+   "recommendation": "Either delete SyncStatusIndicator (its job is already covered by backup_sync_section.dart's localized cloud-status card) or localize it via AppLocalizations before it is ever wired up; do not leave it in this half-finished state.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "AX-2 literal-string checker (once the [P] literal-detection lint lands) reports zero hits in this file, or the file no longer exists."
+   ],
+   "labels": [
+    "AX-2",
+    "i18n",
+    "dead-code"
+   ]
+  }
+ }
+]

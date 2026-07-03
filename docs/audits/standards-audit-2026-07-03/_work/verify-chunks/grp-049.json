@@ -1,0 +1,219 @@
+[
+ {
+  "sourceBatch": "t1-feat-dashboard-p2",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Delete or wire up dead widgets DashboardTaskItem and PointsSummaryWidget",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler dead code; TQ-8 (stale acceptance-test confidence)",
+   "area": "lib/features/dashboard/presentation/widgets",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/dashboard/presentation/widgets/dashboard_task_item.dart",
+     "line": 10,
+     "quote": "class DashboardTaskItem extends ConsumerWidget {"
+    },
+    {
+     "file": "learning_tracker/lib/features/dashboard/presentation/widgets/dashboard_task_item.dart",
+     "line": 34,
+     "quote": "onTap: () {}, // Navigate to learning screen"
+    },
+    {
+     "file": "learning_tracker/lib/features/dashboard/presentation/widgets/points_summary_widget.dart",
+     "line": 7,
+     "quote": "class PointsSummaryWidget extends StatelessWidget {"
+    }
+   ],
+   "sites": 2,
+   "why": "DashboardTaskItem (168 lines) has zero references anywhere in lib/ or test/ \u2014 grep for the class name repo-wide only matches its own declaration. It was last touched by an l10n refactor (commit dba4118f) that kept dead code 'clean' without anyone noticing it is unreachable, and its onTap is a no-op stub with a stale 'Navigate to learning screen' comment. PointsSummaryWidget was superseded by DashboardLevelPointsCard (wired into dashboard_body.dart:407 after the Epic 20 redesign) but is kept alive only by test/golden/store_screenshots_test.dart:199 and test/story_acceptance/epic_07_dashboard_test.dart:551, both giving false confidence that 'points summary' is exercised in the shipping app when it is not. A future contributor grepping for 'the task item widget' or 'the points widget' finds two candidates and can easily edit or extend the dead one.",
+   "recommendation": "Delete both widgets and their now-pointless test/golden references, or \u2014 if DashboardTaskItem's per-task quick-complete affordance is still wanted on the dashboard \u2014 wire it in and file the onTap navigation as a tracked story instead of leaving a silent stub.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep -rn 'DashboardTaskItem' lib/ and grep -rn 'PointsSummaryWidget' lib/ each return either a real call site (if revived) or nothing but the class declaration removed (if deleted)",
+    "if deleted, the now-orphaned references in test/golden/store_screenshots_test.dart and test/story_acceptance/epic_07_dashboard_test.dart are removed in the same change"
+   ],
+   "labels": [
+    "dead-code",
+    "dashboard",
+    "maintainability"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-dashboard-p2",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Route PointsSummaryWidget's 'pts'/'Current Balance' strings through AppLocalizations",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AX-2",
+   "area": "lib/features/dashboard/presentation/widgets/points_summary_widget.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/dashboard/presentation/widgets/points_summary_widget.dart",
+     "line": 39,
+     "quote": "'$totalPoints pts',"
+    },
+    {
+     "file": "learning_tracker/lib/features/dashboard/presentation/widgets/points_summary_widget.dart",
+     "line": 45,
+     "quote": "'Current Balance',"
+    }
+   ],
+   "sites": 2,
+   "why": "This is a bilingual EN/HE app where AX-2 requires every user-facing string through AppLocalizations/ARB (1421-key EN/HE parity enforced by make arb-parity). These two literals never got that treatment. The widget is currently dead (see the companion dead-code finding) so today's blast radius is zero, but the moment anyone reconnects it, Hebrew-locale users see raw untranslated English with no ARB-parity check able to catch it, since arb-parity only validates keys that exist \u2014 it cannot detect a literal that was never turned into one.",
+   "recommendation": "Route both strings through AppLocalizations (reuse the existing pointsAbbrev key used by DashboardLevelPointsCard, and add a currentBalance key) before this widget is ever reconnected, or delete it per the companion finding.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "no bare string literal remains in points_summary_widget.dart's build() \u2014 l10n replaces both Text('...') literals",
+    "make arb-parity stays green"
+   ],
+   "labels": [
+    "i18n",
+    "hardcoded-string",
+    "dashboard"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-dashboard-p2",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Use AppLocalizations.localizationsDelegates and add a Locale('he') variant across dashboard widget tests",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-3",
+   "area": "test/features/dashboard/presentation/{screens,widgets}",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/dashboard/presentation/screens/dashboard_screen_test.dart",
+     "line": 59,
+     "quote": "GlobalCupertinoLocalizations.delegate,"
+    },
+    {
+     "file": "learning_tracker/test/features/dashboard/presentation/widgets/dashboard_tier_row_test.dart",
+     "line": 200,
+     "quote": "GlobalCupertinoLocalizations.delegate,"
+    },
+    {
+     "file": "learning_tracker/test/features/dashboard/presentation/widgets/dashboard_body_streak_nav_test.dart",
+     "line": 146,
+     "quote": "GlobalCupertinoLocalizations.delegate,"
+    },
+    {
+     "file": "learning_tracker/test/features/dashboard/presentation/widgets/dashboard_body_stats_resolve_test.dart",
+     "line": 173,
+     "quote": "GlobalCupertinoLocalizations.delegate,"
+    },
+    {
+     "file": "learning_tracker/test/features/dashboard/presentation/widgets/dashboard_level_points_card_gating_test.dart",
+     "line": 25,
+     "quote": "GlobalCupertinoLocalizations.delegate,"
+    },
+    {
+     "file": "learning_tracker/test/features/dashboard/presentation/widgets/dashboard_level_points_card_skeleton_pp15_test.dart",
+     "line": 52,
+     "quote": "GlobalCupertinoLocalizations.delegate,"
+    },
+    {
+     "file": "learning_tracker/test/features/dashboard/presentation/widgets/active_tracks_carousel_rtl_test.dart",
+     "line": 68,
+     "quote": "GlobalCupertinoLocalizations.delegate,"
+    },
+    {
+     "file": "learning_tracker/test/features/dashboard/presentation/widgets/active_track_card_layout_test.dart",
+     "line": 85,
+     "quote": "localizationsDelegates: AppLocalizations.localizationsDelegates,"
+    }
+   ],
+   "sites": 7,
+   "why": "No shared pumpApp helper exists anywhere in test/helpers/ (TQ-3 is [P]ending, not yet built). Seven files in this batch hand-spell the same 4-item l10n delegate list (11 total call sites) instead of the 1-line AppLocalizations.localizationsDelegates shortcut that this same batch's active_track_card_layout_test.dart already uses correctly \u2014 adding a 5th delegate later means editing 7 files instead of 1. More concretely: DashboardScreen is the app's home/hotspot screen in a bilingual RTL-first app (AX-1, the dedicated Hebrew-terms system, and this batch's own active_tracks_carousel_rtl_test.dart all attest to how seriously RTL is taken here), yet none of dashboard_screen_test.dart's three pumpWidget sites ever set locale: Locale('he') \u2014 a Hebrew-layout regression on the dashboard's own scaffold would ship undetected by its own test file.",
+   "recommendation": "Switch the 7 files to AppLocalizations.localizationsDelegates; add a Locale('he') pump variant to dashboard_screen_test.dart's core render test, reusing the pattern already proven in active_tracks_carousel_rtl_test.dart.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "grep -c 'GlobalCupertinoLocalizations.delegate' across the 7 files drops to 0",
+    "dashboard_screen_test.dart gains a testWidgets case that pumps with locale: Locale('he') and asserts no exception/overflow"
+   ],
+   "labels": [
+    "test-quality",
+    "i18n",
+    "rtl",
+    "duplication",
+    "dashboard"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-dashboard-p2",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Replace DateTime.now() with a fixed clock in dashboard_providers_test's streak fixture",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6",
+   "area": "test/features/dashboard/presentation/providers/dashboard_providers_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/dashboard/presentation/providers/dashboard_providers_test.dart",
+     "line": 662,
+     "quote": "final today = DateTime.now().toUtc();"
+    }
+   ],
+   "sites": 1,
+   "why": "The seeded streak event's dayUtc is derived from this real-clock read, then the test asserts dashboardStreakProvider.currentStreak >= 1 for 'today'. If the process clock crosses UTC midnight between this read and the provider's own internal 'now' computation \u2014 a real, if rare, window on a loaded CI runner \u2014 the seeded event lands on 'yesterday' relative to the provider and the test fails intermittently with no code change: the classic wall-clock flake TQ-6 exists to prevent. Every other test in this 1325-line file already uses a fixed DateTime.utc(...) constant.",
+   "recommendation": "Use a fixed DateTime.utc(2026, 5, 20) (or similar) instead of DateTime.now().",
+   "effort": "S",
+   "acceptance_criteria": [
+    "dashboard_providers_test.dart contains zero calls to DateTime.now()"
+   ],
+   "labels": [
+    "test-quality",
+    "flaky-test",
+    "hermeticity"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-dashboard-p2",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Split dashboard_providers_test.dart, dashboard_tier_row_test.dart and dashboard_completion_percentage_test.dart under the 400-line AG-3 cap",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "test/features/dashboard/presentation/{providers,widgets}",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/dashboard/presentation/providers/dashboard_providers_test.dart",
+     "line": 1,
+     "quote": "/// Logic tests for dashboard_providers.dart."
+    },
+    {
+     "file": "learning_tracker/test/features/dashboard/presentation/widgets/dashboard_tier_row_test.dart",
+     "line": 1,
+     "quote": "/// Widget tests for the Dashboard refinement (Task #14 / Phase D):"
+    },
+    {
+     "file": "learning_tracker/test/features/dashboard/presentation/providers/dashboard_completion_percentage_test.dart",
+     "line": 1,
+     "quote": "/// Integration tests for [dashboardTrackCompletionPercentageProvider] and"
+    }
+   ],
+   "sites": 3,
+   "why": "AG-3's documented rationale ('oversized files exceed per-file agent read budgets') and its stated checker (find lib test -name '*.dart' ... | xargs wc -l | awk '$1>400') both explicitly cover test/, not just lib/ \u2014 these three files are 1325, 793 and 759 lines, 1.9x-3.3x the cap. Auditing dashboard_providers_test.dart in this review required 4 separate chunked reads to see the whole file, exactly the cost AG-3 exists to avoid. The codebase already demonstrates the right fix: dashboard_pace_status_test.dart, dashboard_user_mode_test.dart and dashboard_child_next_reward_test.dart are already split out of what would otherwise be part of dashboard_providers_test.dart's surface, but roughly 15 other provider groups in that file never got the same treatment.",
+   "recommendation": "Split dashboard_providers_test.dart along its existing group() boundaries into per-provider files, continuing the pattern already used for pace/user-mode/next-reward; split dashboard_tier_row_test.dart's top-level groups and dashboard_completion_percentage_test.dart's two provider groups similarly.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "find lib test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400' no longer lists these three paths",
+    "all pre-split assertions still pass post-split with none weakened or removed (TQ-7)"
+   ],
+   "labels": [
+    "ag-3",
+    "test-quality",
+    "maintainability",
+    "dashboard"
+   ]
+  }
+ }
+]

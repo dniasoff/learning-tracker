@@ -1,0 +1,46 @@
+[
+ {
+  "sourceBatch": "t2-build-ci-guardrails",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Wire the profileId-in-PK schema-check invariant into the CI-invoked Makefile",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "profileId-in-PK [E] / Rule 0",
+   "area": "Makefile / CI guardrails",
+   "evidence": [
+    {
+     "file": "Makefile",
+     "line": 99,
+     "quote": "@dart run tool/schema_check.dart"
+    },
+    {
+     "file": "Makefile",
+     "line": 228,
+     "quote": "ci: analyze format schema-check test-all"
+    },
+    {
+     "file": "learning_tracker/Makefile",
+     "line": 218,
+     "quote": "ci: analyze validate-calendar test ## Run full CI pipeline (analyze + seed validation + all tests)"
+    }
+   ],
+   "sites": 3,
+   "why": "tool/schema_check.dart (DNI-327) enforces the profileId-in-PK invariant that prevents a multi-profile data leak on shared devices \u2014 the digest's own rules table marks this rule [E]nforced. But it is wired ONLY into the root Makefile's `ci`/`schema-check` targets. CI (.github/workflows/ci.yml) only ever runs `make ci`/`make audit` with `working-directory: learning_tracker`, which resolves to learning_tracker/Makefile's `ci: analyze validate-calendar test` \u2014 a target with no schema-check step and no learning_tracker/tool/schema_check.dart to call even if it wanted to. No doc (CONTRIBUTING.md, learning_tracker/README.md, learning_tracker/CLAUDE.md) tells a contributor to run the root Makefile. Net effect: a new Drift user-data table that omits profileId from its composite key today would pass CI cleanly, and would only be caught if someone manually ran `make schema-check` from the repo root \u2014 something nothing in the documented workflow ever asks for.",
+   "recommendation": "Move tool/schema_check.dart's invocation (or a copy of it) into learning_tracker/Makefile's `ci`/`audit` target and add a dedicated CI step/job that runs it, matching how test-rules/arb-parity are wired. Retire the root Makefile's copy once the inner one is authoritative.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "learning_tracker/Makefile's `ci` or `audit` target invokes the profileId-in-PK schema checker and fails the build on a violation.",
+    ".github/workflows/ci.yml has a step/job that runs the schema checker on every PR.",
+    "A regression test (e.g. a table intentionally missing profileId in a fixture) proves the checker fires and the CI step goes red."
+   ],
+   "labels": [
+    "rule-0",
+    "guardrails",
+    "makefile",
+    "ci",
+    "data-model"
+   ]
+  }
+ }
+]

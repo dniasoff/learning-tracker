@@ -1,0 +1,203 @@
+[
+ {
+  "sourceBatch": "t1-story-epic-25",
+  "chunk": "grp-129",
+  "finding": {
+   "title": "Consolidate the ad hoc MaterialApp test-wrap helpers in story_21 and story_25_9 into a shared pumpApp",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-3",
+   "area": "test/story_acceptance",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_25_story_21_multi_account_threading_test.dart",
+     "line": 219,
+     "quote": "Widget wrap({required AuthState authState, required Widget child}) =>"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_25_story_25_9_test.dart",
+     "line": 20,
+     "quote": "Widget _wrap(\n  Widget child, {"
+    }
+   ],
+   "sites": 2,
+   "why": "No shared, reviewed pumpApp helper exists yet (TQ-3 is still [Pending] repo-wide); each file hand-rolls its own MaterialApp wrapper and the two disagree on localization wiring \u2014 story_21's wrap() sets localizationsDelegates/supportedLocales but story_25_9's _wrap() sets neither. It only works today because the CurriculumLabel widgets under test in story_25_9 don't call AppLocalizations.of(context); the first future test added to that harness that does will throw MissingLocalizationsDelegate with no forcing function that would have caught it earlier.",
+   "recommendation": "Add test/helpers/pump_app.dart with one canonical ProviderScope + MaterialApp(localizationsDelegates:, supportedLocales:) wrapper taking overrides + child, and migrate both local helpers onto it.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "test/helpers/pump_app.dart exists and both files call it instead of their local wrap/_wrap",
+    "a widget added to epic_25_story_25_9_test.dart that calls AppLocalizations.of(context) resolves without a missing-delegate error"
+   ],
+   "labels": [
+    "TQ-3",
+    "test-infra",
+    "duplication"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-auth",
+  "chunk": "grp-005",
+  "finding": {
+   "title": "Split firebase_auth_gateway_impl_test.dart \u2014 496 lines exceeds the 400-line AG-3 ratchet",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "test/core/auth",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/auth/firebase_auth_gateway_impl_test.dart",
+     "line": 1,
+     "quote": "import 'dart:async';"
+    }
+   ],
+   "sites": 1,
+   "why": "AG-3's checker (`find lib test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400'`) explicitly scans test/ as well as lib/; this file is 496 lines, 96 over the ratchet. It is otherwise a well-structured, hermetic, mocktail-based suite with good branch coverage of the documented gateway contract \u2014 the size comes from covering ~20 gateway methods 1:1, not from disorganization.",
+   "recommendation": "Split by concern (e.g. an email/password test file, a Google-credential test file, a lifecycle/action-code test file) or extract the stubUser/mock-registration boilerplate into a shared test helper to shrink the file.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "`find learning_tracker/lib learning_tracker/test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400'` no longer lists this file or its replacements."
+   ],
+   "labels": [
+    "auth",
+    "testing",
+    "AG-3",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-auth",
+  "chunk": "grp-004",
+  "finding": {
+   "title": "Extract the duplicated provider-ID mapping in FirebaseAuthGatewayImpl into one helper",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "lens:Fowler-duplication",
+   "area": "core/auth",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/auth/firebase_auth_gateway_impl.dart",
+     "line": 27,
+     "quote": "providers: user.providerData.map((i) => i.providerId).toList(),"
+    },
+    {
+     "file": "learning_tracker/lib/core/auth/firebase_auth_gateway_impl.dart",
+     "line": 243,
+     "quote": "return _firebaseAuth.currentUser?.providerData\n            .map((info) => info.providerId)"
+    }
+   ],
+   "sites": 2,
+   "why": "The same providerData -> providerId-list projection is written twice with different lambda parameter names \u2014 once in _toAppUser (used by currentUser/authStateChanges/reload/sign-in results) and again, independently, in getLinkedProviders (which re-derives from _firebaseAuth.currentUser instead of reusing the mapper). A future change (filtering a synthetic provider id, normalizing case) has to be remembered in two places, and the two are already one accidental edit away from disagreeing about what 'linked providers' means for the same user.",
+   "recommendation": "Extract `List<String> _providerIds(Iterable<UserInfo> data) => data.map((i) => i.providerId).toList();` and call it from both _toAppUser and getLinkedProviders.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Single private helper used by both call sites.",
+    "Existing 'propagates linked-provider IDs' and 'returns provider IDs from the current user' tests stay green."
+   ],
+   "labels": [
+    "auth",
+    "duplication"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-sync-p1",
+  "chunk": "grp-106",
+  "finding": {
+   "title": "LocalDataUploadService.pushAllLocalData enqueues every entity kind via a per-row awaited loop instead of a batched outbox write",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "DB-3",
+   "area": "features/sync data",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/sync/data/local_data_upload_service.dart",
+     "line": 84,
+     "quote": "for (final p in ownProfiles) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/sync/data/local_data_upload_service.dart",
+     "line": 135,
+     "quote": "for (final b in bookmarks) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/sync/data/local_data_upload_service.dart",
+     "line": 162,
+     "quote": "for (final g in goals) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/sync/data/local_data_upload_service.dart",
+     "line": 196,
+     "quote": "for (final p in profilePrograms) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/sync/data/local_data_upload_service.dart",
+     "line": 229,
+     "quote": "for (final e in streakEvents) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/sync/data/local_data_upload_service.dart",
+     "line": 258,
+     "quote": "for (final e in ledgerEntries) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/sync/data/local_data_upload_service.dart",
+     "line": 287,
+     "quote": "for (final t in tracks) {"
+    }
+   ],
+   "sites": 7,
+   "why": "pushAllLocalData is explicitly a one-time bulk operation ('Called once after a local-born account is upgraded to cloud... so the user's offline learning history is immediately available') yet writes to the single Drift outbox table one row at a time across 7 loops, each await-ing OutboxSyncWriteFacade._enqueue -> OutboxDao.insertOutboxRow individually. Per outbox_sync_write_facade.dart:289-292, each insert also fires its own unawaited network drain-kick. A learner with a full year of history could have hundreds of completions/streak events/ledger entries; the one-time account-conversion flow does hundreds of sequential single-row DB writes plus hundreds of concurrent drain-kick Futures where a handful of batch inserts would do, extending how long this migration keeps the DB busy and widening the exposure window for the SM-4 race described in the companion finding.",
+   "recommendation": "Batch each entity kind's outbox rows via db.batch()/insertAll (build the list of OutboxCompanions first, one transaction per kind) instead of looping individually-awaited _enqueue calls; fire at most one drain-kick per pushAllLocalData call rather than one per row.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "DB-3 Rule-0 checker (audit grep for awaited per-row insert loops against the same table) reports zero hits in local_data_upload_service.dart.",
+    "Test asserting pushAllLocalData with N seeded rows of a given kind performs O(1) outbox-table statements via a batch/insertAll spy, not O(N)."
+   ],
+   "labels": [
+    "DB-3",
+    "performance",
+    "sync",
+    "drift"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-settings-p4",
+  "chunk": "grp-104",
+  "finding": {
+   "title": "Add the showDeleteLocalAccountFlow tests settings_utils_test.dart's docstring claims already exist",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "features/settings (test suite) \u2014 presentation/utils",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/settings/settings_utils_test.dart",
+     "line": 19,
+     "quote": "//   A1. showDeleteLocalAccountFlow: non-localBorn auth state \u2192 exits immediately / //   A2. showDeleteLocalAccountFlow: localBorn \u2192 delete dialog shown"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/presentation/utils/account_actions.dart",
+     "line": 506,
+     "quote": "final authState = ref.read(authStateProvider); / if (!authState.isLocalBorn) return;"
+    }
+   ],
+   "sites": 1,
+   "why": "Running the file (`flutter test settings_utils_test.dart`) shows exactly 11 tests (S1-S11); A1/A2 don't exist. `grep -rn showDeleteLocalAccountFlow test/` across the whole repo returns zero hits outside this docstring, and account_actions_test.dart (which the comment says 'does not cover' this) also has none. showDeleteLocalAccountFlow is the irreversible local-account-deletion path (closes the Drift handle, deletes the account DB file, clears the device-registry row and session) called from 3 lib sites including the HOTSPOT account_actions.dart; it ships with zero regression coverage while a comment implies it's covered.",
+   "recommendation": "Write A1 (non-localBorn auth state returns without showing any dialog) and A2 (localBorn auth state shows the delete-confirmation dialog and, once confirmed, drives the delete-local-account path) using the same DB/registry fakes account_management_service_test.dart already has, or delete the stale docstring lines if coverage is intentionally deferred and track it as a real ticket instead.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "test/features/settings/settings_utils_test.dart (or a relocated file, see AG-5 finding) contains passing A1 and A2 tests exercising showDeleteLocalAccountFlow directly.",
+    "grep -rn 'showDeleteLocalAccountFlow' test/ matches at least one real test body, not just a comment."
+   ],
+   "labels": [
+    "testing",
+    "settings",
+    "coverage-gap",
+    "account-deletion"
+   ]
+  }
+ }
+]

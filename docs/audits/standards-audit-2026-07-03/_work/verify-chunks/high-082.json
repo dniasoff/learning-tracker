@@ -1,0 +1,50 @@
+[
+ {
+  "sourceBatch": "t1-feat-settings-p3",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Localize BackupSyncSection's identity-mismatch subtitle instead of rendering sync_orchestrator's raw English reason string",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "EH-5 / AX-2 (untested by TQ-8 red-first regression, ST-4 area)",
+   "area": "features/settings + core/sync (backup-sync status card)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/settings/presentation/widgets/backup_sync_section.dart",
+     "line": 150,
+     "quote": "? '$reason ($pendingChanges queued)'\n            : reason,"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/presentation/widgets/backup_sync_section.dart",
+     "line": 161,
+     "quote": "final isStuckOutbox = reason.contains('row(s) stuck');"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+     "line": 1242,
+     "quote": "? 'Signed in as ${identity.signedInEmail ?? 'a different account'}'\n                  ' \u2014 sign in as $activeEmail to back up this account.'"
+    },
+    {
+     "file": "learning_tracker/test/features/settings/presentation/widgets/backup_sync_error_l10n_test.dart",
+     "line": 74,
+     "quote": "syncIdentityStatusProvider.overrideWithValue(\n        const SyncIdentityStatus.matched(),"
+    }
+   ],
+   "sites": 1,
+   "why": "sync_orchestrator.dart builds the identity-mismatch degraded reason as a hand-formatted English sentence and backup_sync_section.dart's _buildDegradedCard renders that `reason` verbatim as the card subtitle (only the button label goes through AppLocalizations) whenever identity.isMismatch is true \u2014 this bypasses the ST-4 fix entirely, which only strips raw English for the non-mismatch 'stuck outbox' branch via a separate `reason.contains('row(s) stuck')` string-sniff. A Hebrew-locale user who hits an identity mismatch (e.g. after switching Google accounts on a shared device \u2014 a real, reachable state, not a hypothetical) sees the English sentence 'Signed in as x@... \u2014 sign in as y@... to back up this account.' embedded in an otherwise-Hebrew card: exactly the class of bug this test file's other 4 assertions (L1-L4) exist to catch. backup_sync_error_l10n_test.dart's _buildHarness hardcodes `SyncIdentityStatus.matched()` in every one of its 4 tests, so this branch is never exercised and the leak ships invisibly under a fully green suite.",
+   "recommendation": "Add localized ARB entries (EN+HE) for the identity-mismatch subtitle (e.g. parameterized on signedInEmail/activeEmail) and have _buildDegradedCard's isMismatch branch build its subtitle from AppLocalizations, never from the raw `reason` value; keep `reason` as a log-only/debug field. Add an L5 test in backup_sync_error_l10n_test.dart that overrides syncIdentityStatusProvider to a mismatch state and asserts no raw English sentence fragment (e.g. 'Signed in as') renders under Locale('he'), mirroring the existing L1/L3 negative assertions.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "backup_sync_section.dart's identity-mismatch branch subtitle is built entirely from AppLocalizations getters, never from the raw sync_orchestrator reason string.",
+    "A new test overrides syncIdentityStatusProvider to SyncIdentityStatus.mismatch(...) and, under Locale('he'), asserts absence of the raw English reason text and presence of the localized Hebrew fallback \u2014 this test fails on the current code and passes after the fix (red-first, TQ-8)."
+   ],
+   "labels": [
+    "P1",
+    "i18n",
+    "EH-5",
+    "sync",
+    "coverage-gap"
+   ]
+  }
+ }
+]

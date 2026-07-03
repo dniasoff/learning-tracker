@@ -1,0 +1,190 @@
+[
+ {
+  "sourceBatch": "t1-core-sync-exceptions",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Deduplicate the copy-pasted cause-suffix toString() snippet across 3 sync exception classes",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler duplication (digest lens pass) \u2014 Extract Method / Pull Up Field",
+   "area": "core/sync/exceptions",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/sync/exceptions/firestore_permission_denied_exception.dart",
+     "line": 37,
+     "quote": "'${cause != null ? ' caused by: $cause' : ''}';"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/exceptions/merge_exception.dart",
+     "line": 25,
+     "quote": "'${cause != null ? ' caused by: $cause' : ''}';"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/exceptions/outbox_dead_letter_exception.dart",
+     "line": 27,
+     "quote": "'${cause != null ? ' caused by: $cause' : ''}';"
+    }
+   ],
+   "sites": 3,
+   "why": "The identical ternary-interpolation snippet is hand-copied into 3 of the 4 exception classes in this directory (SyncPushException uses a 4th, differently-shaped cause format). Each also hand-declares its own nullable cause field because their respective category bases (PermissionException, InternalException) don't carry one \u2014 only NetworkException does, per app_exception.dart's hierarchy. If cause-formatting ever needs to change \u2014 e.g. to redact a PII-bearing FirebaseException payload before it reaches AppLogger/Crashlytics, a real concern given this app's child-privacy posture \u2014 a maintainer has to remember to update 3+ near-identical copies instead of one, and any future 5th leaf exception is likely to copy the same snippet again.",
+   "recommendation": "Extract a shared `causeSuffix` getter (or mixin) that formats cause consistently, or lift a cause field plus a shared toString helper onto AppException itself so leaf exceptions compose it instead of reimplementing the ternary.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "no more than one definition of the `cause != null ? ... : ''` formatting logic remains under lib/core/sync/exceptions/ and lib/core/exceptions/"
+   ],
+   "labels": [
+    "duplication",
+    "hygiene",
+    "sync"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-sync-exceptions",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Defensively copy SyncPushException.committed so the partial-commit invariant can't be violated by a future caller",
+   "severity": "P3",
+   "confidence": "SUSPECTED",
+   "rule": "Evans lens \u2014 invariant enforced in one place, not by caller convention",
+   "area": "core/sync/exceptions",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/sync/exceptions/sync_push_exception.dart",
+     "line": 21,
+     "quote": "final List<String> committed;"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/firestore_gateway_impl.dart",
+     "line": 278,
+     "quote": "committed: List.unmodifiable(pushed),"
+    }
+   ],
+   "sites": 1,
+   "why": "SyncPushException.committed exists specifically so OutboxProcessor can tell which outbox rows genuinely landed before a batch failed, so committed rows are 'never re-pushed or dead-lettered' (per this file's own docstring, H3). That invariant currently holds only because the single production call site remembers to wrap the list in List.unmodifiable(pushed) before throwing \u2014 the exception class itself accepts any List<String>, including a live mutable reference, with no internal defensive copy. A future call site (or a test double standing in for one) that passes a growable list it keeps appending to after constructing the exception would silently corrupt the partial-commit accounting this type exists to protect, with no compiler or runtime signal that anything went wrong.",
+   "recommendation": "Copy defensively inside the constructor (e.g. an initializer that wraps committed in List.unmodifiable(committed)) so the guarantee doesn't depend on every future caller remembering to do it themselves.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "a new unit test constructs SyncPushException with a growable list, mutates the original list after construction, and asserts .committed is unaffected"
+   ],
+   "labels": [
+    "defensive-programming",
+    "sync",
+    "data-integrity"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-sync-merge",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Move DriftMergeStore's raw learner_profiles/curriculum_tracks/accounts/stage_definitions writes into DAOs under core/database",
+   "severity": "P2",
+   "confidence": "SUSPECTED",
+   "rule": "DB-1 (Drift mutations only under **/data/** or core/database/; DAO-only writes)",
+   "area": "core/sync/merge",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/sync/merge/drift_merge_store.dart",
+     "line": 339,
+     "quote": "await (_db.update(\n        _db.learnerProfiles,"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/merge/drift_merge_store.dart",
+     "line": 404,
+     "quote": "return _db.into(_db.accounts).insert(seed);"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/merge/drift_merge_store.dart",
+     "line": 483,
+     "quote": "await (_db.update(\n        _db.curriculumTracks,"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/merge/drift_merge_store.dart",
+     "line": 663,
+     "quote": "await (_db.update(\n        _db.stageDefinitions,"
+    }
+   ],
+   "sites": 6,
+   "why": "drift_merge_store.dart's own class doc claims 'Dispatches each MergeStore operation to the appropriate DAO... the DAO is responsible for the final SQLite write', but for learner_profiles, accounts, curriculum_tracks (both insert+update branches) and the stage_definitions update branch it writes the tables directly instead of routing through ProfileDao/TrackDao/StageDao \u2014 and the file lives in core/sync/merge/, not core/database/ or a feature **/data/** layer. DB-1's own rationale is single-source-of-truth: any non-sync code path that also writes these same tables (e.g. profile-edit or track-activation screens) now has a second, divergent write path that can silently apply different validation/defaults than the sync path's inline logic.",
+   "recommendation": "Add/extend DAO methods (e.g. ProfileDao.upsertFromRemote, TrackDao.upsertFromRemote) so drift_merge_store.dart calls a DAO for every entity kind, matching what it already does for bookmark/profile_program/learning_order/stage insert.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "DB-1 audit grep for direct `_db.into(`/`_db.update(` calls returns zero hits inside lib/core/sync/merge/.",
+    "drift_merge_store_test.dart's existing assertions pass unchanged (behavior-preserving refactor)."
+   ],
+   "labels": [
+    "sync",
+    "architecture",
+    "DB-1"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-sync-merge",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Type the bare catch clauses in the merge layer so they stop swallowing Error subtypes",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "EH-4 (typed `on X catch`; never catch Error subtypes)",
+   "area": "core/sync/merge",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/sync/merge/learner_profile_merger.dart",
+     "line": 74,
+     "quote": "} catch (e, stackTrace) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/merge/drift_merge_store.dart",
+     "line": 701,
+     "quote": "} catch (_) {"
+    }
+   ],
+   "sites": 2,
+   "why": "Neither catch has an `on <Type>` clause, so both trap Error subtypes (TypeError, RangeError, AssertionError) alongside genuine Exceptions. Per EH-4's stated rationale, that masks real programming bugs introduced by a future edit to these exact files: instead of crashing loudly with a stack trace in dev/QA, a regression degrades silently to a 'sync_learner_profile_merge_row_failed' warning log (site 1) or a silently-emptied schedule days-of-week list inside _encodeSchedule (site 2).",
+   "recommendation": "Narrow both to `on Exception catch` (or the specific expected types, e.g. FormatException/SqliteException) and let genuine Error subtypes propagate and crash loudly.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "avoid_catches_without_on_clauses + avoid_catching_errors lints (EH-4's stated Pending checkers in coding-standards.md) pass for these two files.",
+    "Existing mergers_test.dart / learning_ledger_merger_test.dart suites still pass after narrowing."
+   ],
+   "labels": [
+    "sync",
+    "error-handling",
+    "EH-4"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-sync-merge",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Fix LearningLedgerMerger's fallback ULID generator to avoid a permanent same-millisecond collision loss",
+   "severity": "P2",
+   "confidence": "SUSPECTED",
+   "rule": "Nygard: silent, non-self-healing data loss on a manufactured natural-key collision",
+   "area": "core/sync/merge",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/sync/merge/learning_ledger_merger.dart",
+     "line": 112,
+     "quote": "String _makeUlid(DateTime ts) =>\n      '${ts.millisecondsSinceEpoch.toRadixString(36).padLeft(10, '0').toUpperCase()}0000000000000000';"
+    }
+   ],
+   "sites": 1,
+   "why": "This fallback (only used when a pulled row has no `ulid` \u2014 'legacy data' pre-migration docs, per the file's own comment) is deterministic with zero entropy: two ledger rows completed in the same millisecond with no ulid produce the IDENTICAL synthetic id. LearningLedgerDao dedups on ulid via INSERT OR IGNORE, so the second row is silently dropped \u2014 permanently, since a retry regenerates the same colliding id every time (unlike the rest of this merge layer's failures, which self-heal on the next pull because the underlying condition changes). A bulk-mark flow (bulk_mark_screen.dart is a named churn hotspot) writing several legacy-shaped completions together is a plausible trigger.",
+   "recommendation": "Add entropy to the fallback id (e.g. an index-within-batch or random suffix instead of a constant zero-padded tail), or skip rows with no ulid and no way to disambiguate instead of manufacturing a collidable one.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Unit test: merge two distinct legacy (no-ulid) rows sharing the same completed_at millisecond \u2014 assert both are inserted, not deduplicated into one."
+   ],
+   "labels": [
+    "sync",
+    "merge",
+    "data-loss",
+    "hygiene"
+   ]
+  }
+ }
+]

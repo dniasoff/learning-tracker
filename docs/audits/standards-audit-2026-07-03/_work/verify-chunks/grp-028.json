@@ -1,0 +1,212 @@
+[
+ {
+  "sourceBatch": "t1-core-sync-codec",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Log the malformed-days_of_week fallback in StageDefinitionCodec.decode instead of silently defaulting to []",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "EH-3 (log-less catch)",
+   "area": "core/sync/codec",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/sync/codec/stage_definition_codec.dart",
+     "line": 85,
+     "quote": "} catch (_) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/codec/stage_definition_codec.dart",
+     "line": 86,
+     "quote": "days = const [];"
+    }
+   ],
+   "sites": 1,
+   "why": "This legacy-quartet fallback (pre-`schedule`-column documents) swallows any jsonDecode/cast failure on days_of_week and silently substitutes an empty day list, changing a family's stage-due schedule with no AppLogger trail. Nobody could diagnose why a days_of_week schedule stopped firing for a given track.",
+   "recommendation": "Log via AppLogger (including the raw malformed value, at debug/warn level) before falling back to const [].",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Test feeds a malformed days_of_week string into decode() and asserts an AppLogger call occurs alongside the [] fallback."
+   ],
+   "labels": [
+    "logging",
+    "sync",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-sync-codec",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Update BookmarkCodec's dual-key comment \u2014 it describes the pre-Phase-B bug as still live",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-8-adjacent comment/code truth",
+   "area": "core/sync/codec",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/sync/codec/bookmark_codec.dart",
+     "line": 39,
+     "quote": "// Dual-key: live writers (BookmarkEntity.toFirestore et al.) persist the ref"
+    },
+    {
+     "file": "learning_tracker/lib/features/learning/domain/entities/bookmark.dart",
+     "line": 34,
+     "quote": "/// Phase B: routes through [BookmarkCodec.encode] so the write shape is"
+    }
+   ],
+   "sites": 1,
+   "why": "bookmark.dart's own comment confirms Phase B already made BookmarkEntity.toFirestore route through this exact codec, which writes sefaria_ref, not content_item_id. bookmark_codec.dart's comment still describes 'live writers... persist the ref under content_item_id' in the present tense, as if that writer still exists today. A future maintainer reading only this file would wrongly conclude content_item_id is still being actively written and might be reluctant to ever retire the read-side fallback, or misdiagnose which key is canonical.",
+   "recommendation": "Reword to past tense: 'Pre-Phase-B documents may still carry content_item_id; decode() accepts both for backward-compatible reads.'",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Comment reworded to past tense; no behavior change."
+   ],
+   "labels": [
+    "docs",
+    "hygiene",
+    "sync"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-sync-codec",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Add `_codec.dart` to coding-standards.md's File Naming Conventions table \u2014 15 files use it, no documented suffix fits",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Naming/placement convention gap, AG-8-adjacent",
+   "area": "docs/coding-standards.md + core/sync/codec",
+   "evidence": [
+    {
+     "file": "docs/coding-standards.md",
+     "line": 560,
+     "quote": "All Dart files use **snake_case**. The file suffix encodes its architectural role:"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/codec/track_codec.dart",
+     "line": 1,
+     "quote": "/// Codec for Firestore `curriculum_tracks/{id}` documents."
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/codec/entity_codec.dart",
+     "line": 1,
+     "quote": "/// Abstract base for per-entity Firestore \u2194 Dart codecs."
+    }
+   ],
+   "sites": 1,
+   "why": "The suffix table (coding-standards.md lines 560-577) lists `_dto` ('Firestore / JSON boundary') and `_mapper` ('Converts between layers') as the two closest documented roles, but every file in core/sync/codec/ (15 files, ~1370 lines, entirely consistent) combines both responsibilities under `_codec` \u2014 a suffix absent from the table. The convention is clearly deliberate and repo-wide, not a one-off typo, so the table is what's stale, not the code.",
+   "recommendation": "Add a `_codec.dart` row to the table (role: combined Firestore wire-format encode/decode for one entity \u2014 a merged DTO+mapper) rather than proposing a 15-file rename with no behavioral benefit.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "coding-standards.md's File Naming Conventions table includes a `_codec.dart` row."
+   ],
+   "labels": [
+    "docs",
+    "naming",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-sync-exceptions",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Wire or delete dead MergeException and OutboxDeadLetterException \u2014 neither is ever thrown in lib/",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Dead-code/lens-pass sweep (digest 'Everything' applicability) + Evans ubiquitous-language (doc must match reality); AG-6-adjacent speculative generality",
+   "area": "core/sync/exceptions",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/sync/exceptions/merge_exception.dart",
+     "line": 7,
+     "quote": "Callers that catch [MergeException] should record the event via crisis"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/exceptions/merge_exception.dart",
+     "line": 12,
+     "quote": "class MergeException extends InternalException {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/exceptions/outbox_dead_letter_exception.dart",
+     "line": 7,
+     "quote": "thrown the item should be moved to a dead-letter queue and crisis telemetry"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/outbox/outbox_processor.dart",
+     "line": 272,
+     "quote": "return false; // dead-lettered"
+    }
+   ],
+   "sites": 2,
+   "why": "Both classes' own doc comments assert they are 'Thrown when...' a specific failure occurs and that catching them triggers crisis telemetry / user-facing recovery. Exhaustive grep of lib/ for 'MergeException(' and 'OutboxDeadLetterException(' matches only their own constructor declarations \u2014 zero throw sites exist anywhere in production code (MergeException's only other reference in the whole repo is a widget test that hand-constructs it to exercise AppErrorView's generic category). The behaviors the docs promise ARE implemented \u2014 drift_merge_store.dart/profile_program_merger.dart fire merge_row_skipped and outbox_processor.dart fires outbox_dead_lettered (confirmed at outbox_processor.dart:262-272) \u2014 but entirely through inline AppLogger/analytics calls that never construct these types. A developer investigating 'why doesn't a merge failure surface a recoverable error to the user' will find MergeException, read its contract, and either burn time hunting for a throw site that doesn't exist or wrongly conclude the safety net is live when it isn't.",
+   "recommendation": "Either thread these into their designed throw sites (a genuinely-unrecoverable branch in drift_merge_store.dart/profile_program_merger.dart for MergeException; the max-attempts branch in outbox_processor.dart for OutboxDeadLetterException) so `is MergeException` / `is OutboxDeadLetterException` becomes meaningful to callers, or delete both classes, drop the stale W7.2 backlog line in docs/planning/tech-debt-remediation-plan.md:531, and fix the docstrings so they stop describing a control-flow path that doesn't exist.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "grep -rn \"throw MergeException\" learning_tracker/lib returns >=1 hit, or merge_exception.dart is removed and learning_screen_test.dart:80 is updated to use a type that is actually thrown in production",
+    "grep -rn \"throw OutboxDeadLetterException\" learning_tracker/lib returns >=1 hit, or the class is removed",
+    "if wired: a new test at test/core/sync/exceptions/ (mirrors lib/core/sync/exceptions/ per AG-5) exercises the real throw site"
+   ],
+   "labels": [
+    "dead-code",
+    "sync",
+    "documentation-drift"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-sync-exceptions",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Extend FirestorePermissionDeniedException conversion beyond the 2 read call sites it currently covers",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Nygard lens (mandatory for this area) \u2014 permission-denied at every I/O point; EH-2 typed-exception boundary",
+   "area": "core/sync/exceptions (firestore_permission_denied_exception.dart) + its callers in firestore_gateway_impl.dart/outbox_dao.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/sync/exceptions/firestore_permission_denied_exception.dart",
+     "line": 3,
+     "quote": "Thrown when a Firestore operation returns PERMISSION_DENIED."
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/firestore_gateway_impl.dart",
+     "line": 1206,
+     "quote": "throw FirestorePermissionDeniedException("
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/firestore_gateway_impl.dart",
+     "line": 527,
+     "quote": "operation: 'read',"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/firestore_gateway_impl.dart",
+     "line": 277,
+     "quote": "throw SyncPushException("
+    },
+    {
+     "file": "learning_tracker/lib/core/database/daos/outbox_dao.dart",
+     "line": 149,
+     "quote": "(t.lastError.like('%permission-denied%') |"
+    }
+   ],
+   "sites": 1,
+   "why": "_guardPermission (firestore_gateway_impl.dart:1197-1215) is the ONLY code in the app that ever throws FirestorePermissionDeniedException, and it wraps exactly 2 of this gateway's ~30 Firestore I/O methods \u2014 fetchPage (524) and fetchChildPage (1051), both reads, both with operation hardcoded to 'read'. None of the ~23 push* (write) methods route through it: pushStreak/pushSettings/pushTrack (288-337) issue raw .set() calls with no try/catch at all, and pushCompletionsBatch (246-285) wraps any commit failure \u2014 including permission-denied \u2014 as a generic SyncPushException instead. Traced end to end: OutboxProcessor absorbs every push failure internally (never rethrows to any AsyncValue/UI, so this is not a UI-facing bug), but the dedicated permission_denied analytics event in sync_orchestrator.dart (gated on `e is FirestorePermissionDeniedException`) therefore fires only from the pull path and never from an outbox push. The write path's only detector of this failure class is outbox_dao.dart's reviveIdentityDeadLetters, which pattern-matches raw persisted error text (`lastError.like('%permission-denied%')`) instead of a structured type \u2014 a duplicated, Firestore-SDK-wording-dependent re-derivation of the exact fact this exception exists to represent. This repo's own docs (on-device-preflight-cheatsheet.md, bug-hunt-findings-2026-05-31.md) call permission-denied on writes 'a known recurring failure mode in this project,' yet the typed signal for it covers roughly 1 in 15 of the gateway's I/O surface.",
+   "recommendation": "Route every push*/fetch* method in firestore_gateway_impl.dart through _guardPermission (or an equivalent shared wrapper) with an accurate operation value (read/write/delete) instead of only the 2 fetch methods, so FirestorePermissionDeniedException becomes the single source of truth for 'this failure was permission-denied' on both read and write paths. Then simplify outbox_dao.dart's reviveIdentityDeadLetters to check a structured signal instead of a LIKE-pattern on free text.",
+   "effort": "L",
+   "acceptance_criteria": [
+    "count of _guardPermission( call sites in firestore_gateway_impl.dart increases beyond the current 2 to cover write (push*) methods",
+    "a new test asserts a push method (e.g. pushCompletionsBatch) surfaces FirestorePermissionDeniedException \u2014 not a generic SyncPushException/raw FirebaseException \u2014 when the underlying commit fails with code permission-denied",
+    "a test shows sync_orchestrator's permission_denied analytics event firing from a simulated outbox push failure, not only from pullOnLaunch"
+   ],
+   "labels": [
+    "sync",
+    "observability",
+    "nygard-lens",
+    "permission-denied"
+   ]
+  }
+ }
+]

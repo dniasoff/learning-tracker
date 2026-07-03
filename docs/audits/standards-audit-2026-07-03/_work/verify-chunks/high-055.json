@@ -1,0 +1,50 @@
+[
+ {
+  "sourceBatch": "t1-feat-learning_order",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Localize the hardcoded English 'Order' app-bar suffix in LearningOrderScreen",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "AX-2",
+   "area": "lib/features/tracks/whole_curriculum_order/presentation/screens/learning_order_screen.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tracks/whole_curriculum_order/presentation/screens/learning_order_screen.dart",
+     "line": 51,
+     "quote": "'${curriculumLabelText(ref, curriculum: widget.curriculumId)} '\n              'Order',"
+    },
+    {
+     "file": "learning_tracker/lib/l10n/app_en.arb",
+     "line": 2934,
+     "quote": "\"trackReorderScreenTitle\": \"{curriculum} \u2022 Reorder\","
+    },
+    {
+     "file": "learning_tracker/test/features/learning_order/presentation/screens/learning_order_screen_test.dart",
+     "line": 31,
+     "quote": "expect(find.byType(Scaffold), findsOneWidget);"
+    },
+    {
+     "file": "learning_tracker/test/features/learning_order/presentation/screens/learning_order_screen_reset_test.dart",
+     "line": 126,
+     "quote": "// The UI must show the default order \u2014 deterministically.\n      expect(_renderedOrder(tester), const ['Default_A', 'Default_B']);"
+    }
+   ],
+   "sites": 1,
+   "why": "learning_order_screen.dart:49-53 builds the AppBar title as a raw string concatenation ending in the literal 'Order' \u2014 never routed through AppLocalizations \u2014 even though every other user-facing string in the same file (resetToDefaultOrder tooltip, noItemsToOrder, controlledByParent) correctly uses AppLocalizations. The sibling per-track reorder screen already does this right: app_en.arb/app_he.arb define trackReorderScreenTitle ('{curriculum} \u2022 Reorder', translated), but no equivalent key exists for this whole-curriculum screen. Every Hebrew-locale user who opens this screen sees an app-bar title reading '<curriculum name> Order' with 'Order' rendered in English inside an otherwise-Hebrew UI. Neither widget test in this batch can catch it: learning_order_screen_test.dart asserts only Scaffold presence, and learning_order_screen_reset_test.dart asserts only the reordered list's contents \u2014 neither checks the app-bar text, and neither pumps a Locale('he') variant (TQ-3), so the defect has zero test surface.",
+   "recommendation": "Add an ARB key (EN+HE) for this screen's title mirroring trackReorderScreenTitle's shape, e.g. learningOrderScreenTitle: '{curriculum} Order' (EN) with a proper Hebrew ICU translation, and use AppLocalizations.of(context)!.learningOrderScreenTitle(curriculumLabelText(...)) instead of the raw string concatenation. Extend one of this batch's widget tests to pump under Locale('he') and assert the app-bar text does not contain the literal ASCII substring 'Order' (or assert the exact localized string).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "learning_order_screen.dart's AppBar title comes entirely from AppLocalizations \u2014 no raw string literal concatenated onto the curriculum label.",
+    "New ARB key present in both app_en.arb and app_he.arb; make arb-parity still reports full EN/HE parity.",
+    "A widget test pumps LearningOrderScreen under Locale('he') and asserts the rendered title is the localized string (or explicitly asserts it does not contain 'Order')."
+   ],
+   "labels": [
+    "AX-2",
+    "i18n",
+    "hebrew",
+    "hardcoded-string"
+   ]
+  }
+ }
+]

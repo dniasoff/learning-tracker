@@ -1,0 +1,196 @@
+[
+ {
+  "sourceBatch": "t1-story-epic-26",
+  "findingIndex": 9,
+  "finding": {
+   "title": "Fix stale AC5 doc comment in epic_26_story_26_20 \u2014 still claims hebrewTerms/hebrewDate default to false",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "doc-drift",
+   "area": "test/story_acceptance",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_26_story_26_20_preference_tiles_test.dart",
+     "line": 10,
+     "quote": "/// AC5: hebrewTerms defaults to false, useHebrewDate defaults to false"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_26_story_26_20_preference_tiles_test.dart",
+     "line": 194,
+     "quote": "'Story 26.20 AC5 \u2014 hebrewTerms and useHebrewDate default to true (issue-7a)',"
+    }
+   ],
+   "sites": 1,
+   "why": "The file-level doc comment (written for the original story) still says defaults are false; the group title 184 lines below it, and the tests themselves \u2014 which correctly assert isTrue and match the live `defaultValue => true` getters in hebrew_terms_preference.dart / hebrew_date_preference.dart \u2014 were updated for fix(issue-7a) but the banner wasn't. A reader who only skims the file header gets the wrong answer.",
+   "recommendation": "Update lines 10-11 to state defaults are true, referencing fix(issue-7a).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "the file header's AC5 line matches the group title and the actual defaultValue getters"
+   ],
+   "labels": [
+    "hygiene",
+    "doc-drift",
+    "epic-26"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epic-26",
+  "findingIndex": 10,
+  "finding": {
+   "title": "Add a failure-path test for LearningOrderRepositoryImpl.saveOrder's transaction \u2014 only the happy path is covered",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "test/story_acceptance",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_26_story_15_composite_strategy_test.dart",
+     "line": 214,
+     "quote": "'saveOrder writes all items atomically \u2014 all rows present after call',"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_26_story_15_composite_strategy_test.dart",
+     "line": 260,
+     "quote": "contains('_database.transaction('),"
+    }
+   ],
+   "sites": 1,
+   "why": "AC3's group ('saveOrder is wrapped in a DB transaction') has exactly two tests: a happy-path write of 3 items (asserts all 3 rows exist afterward) and a source-grep for the literal substring '_database.transaction('. Neither exercises the actual point of a transaction \u2014 that a failure partway through rolls back the earlier writes instead of leaving a partial row set. A regression that replaces the transaction with a loop of independently-awaited inserts would only be caught if it also broke the happy path; the substring grep would even pass if the transaction call became dead/misapplied code.",
+   "recommendation": "Add a test that forces one write in the middle of saveOrder's upsert list to fail (e.g. a mocked ContentRepository throwing, or a constraint violation), then asserts zero rows were written \u2014 matching the rollback-verification pattern AC4 already uses ('saveOrder with isChildRestricted=true writes no DB rows').",
+   "effort": "S",
+   "acceptance_criteria": [
+    "a test exists asserting that a mid-write failure inside saveOrder leaves the learning_order table unchanged (no partial commit)"
+   ],
+   "labels": [
+    "testing",
+    "coverage-gap",
+    "epic-26"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epics-01-08",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Make Epic-2 'table removed from schema' tests actually inspect the schema instead of schemaVersion",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "test/story_acceptance/epic_02_content_test.dart (Story 2.5)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_02_content_test.dart",
+     "line": 755,
+     "quote": "test('content_items table is not in Drift schema', () async {"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_02_content_test.dart",
+     "line": 762,
+     "quote": "expect(db.schemaVersion, greaterThanOrEqualTo(1));"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_02_content_test.dart",
+     "line": 768,
+     "quote": "'curriculum_hierarchy_config table removed from Drift schema',"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_02_content_test.dart",
+     "line": 775,
+     "quote": "expect(db.schemaVersion, greaterThanOrEqualTo(1));"
+    }
+   ],
+   "sites": 2,
+   "why": "Both tests are titled to assert a specific table is absent from the live Drift schema, but the body only checks schemaVersion >= 1 \u2014 true at every schema version that has ever existed, including hypothetical ones where the tables were never removed. If either table were accidentally reintroduced (e.g. a bad migration merge), neither test would notice.",
+   "recommendation": "Query the live schema (e.g. `SELECT name FROM sqlite_master WHERE type='table'` via db.customSelect, or Drift's `allTables`) and assert the two table names are absent.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Test queries the live schema for the named table and fails if it is present",
+    "Reintroducing either table via a migration makes the corresponding test fail red"
+   ],
+   "labels": [
+    "test-quality",
+    "weak-assertion"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epics-01-08",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Rewrite Epic-7 dashboard tests whose bodies don't exercise the behavior their titles claim",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "test/story_acceptance/epic_07_dashboard_test.dart (Story 7.1)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_07_dashboard_test.dart",
+     "line": 207,
+     "quote": "test('points summary is excluded from state when userMode is adult', () {"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_07_dashboard_test.dart",
+     "line": 213,
+     "quote": "expect(userMode == ProfileMode.child, isFalse);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_07_dashboard_test.dart",
+     "line": 350,
+     "quote": "test('pull-to-refresh triggers provider invalidation pattern', () {"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_07_dashboard_test.dart",
+     "line": 351,
+     "quote": "// This tests the invalidation pattern \u2014 in the real app, ref.invalidate()"
+    }
+   ],
+   "sites": 2,
+   "why": "'points summary is excluded from state when userMode is adult' never touches the dashboard provider or screen that decides whether to render PointsSummaryWidget for a given mode \u2014 it only checks ProfileMode.adult != ProfileMode.child, true by enum definition regardless of any dashboard logic. 'pull-to-refresh triggers provider invalidation pattern' never calls ref.invalidate() or touches any Riverpod provider \u2014 it calls the pure CrossCurriculumAggregator.aggregate() function twice with different literal inputs, which trivially returns different output. If the dashboard's actual mode-gating logic or its pull-to-refresh/ref.invalidate() wiring regresses, neither test detects it, despite both titles claiming to cover exactly that.",
+   "recommendation": "Either move these under a widget/provider test that pumps the real dashboard screen or provider and drives the claimed interaction (mode gating via ConsumerWidget + ProviderScope, or ref.invalidate() via the actual pull-to-refresh callback), or rename the tests to describe what they actually verify (enum comparison, aggregator purity) so the suite stops overstating its coverage.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Test titled around dashboard/provider behavior drives that behavior directly, or is renamed to match what it verifies"
+   ],
+   "labels": [
+    "test-quality",
+    "misleading-title"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epics-01-08",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Test breadcrumb trimming through the real _trimSederFromBreadcrumb, not a hand-copied mirror",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (Feathers seam)",
+   "area": "test/story_acceptance/epic_07_dashboard_test.dart (Issue-8b regression)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_07_dashboard_test.dart",
+     "line": 1192,
+     "quote": "/// Mirror of the private `_trimSederFromBreadcrumb` function in\n    /// `active_track_card.dart`. Kept here as a pure-logic unit test..."
+    },
+    {
+     "file": "learning_tracker/lib/features/dashboard/presentation/widgets/active_track_card.dart",
+     "line": 38,
+     "quote": "String _trimSederFromBreadcrumb(String breadcrumb) {"
+    }
+   ],
+   "sites": 1,
+   "why": "The 5-case 'Issue-8b' group tests a hand-typed copy of active_track_card.dart's private _trimSederFromBreadcrumb, not the function itself (it can't import a private symbol). The copy currently matches production, but nothing enforces that going forward \u2014 a future edit to the real function (separator change, RTL handling) can silently diverge from the tested copy while the suite stays green.",
+   "recommendation": "Extract the pure trim logic to a small `@visibleForTesting` top-level function (or a tiny core/utils file) that both active_track_card.dart and the test import \u2014 no widget pump needed since it is pure string logic, per Feathers' 'find the seam'.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Test imports and calls the same symbol active_track_card.dart uses for breadcrumb trimming, with no duplicated algorithm in the test file"
+   ],
+   "labels": [
+    "test-quality",
+    "seam",
+    "duplication"
+   ]
+  }
+ }
+]

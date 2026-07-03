@@ -1,0 +1,175 @@
+[
+ {
+  "sourceBatch": "t1-feat-tracks-p3",
+  "findingIndex": 8,
+  "finding": {
+   "title": "Delete dead LearningOrderPreferences singleton (superseded by ProfileScopedPreferenceKeys)",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "dead code + SM-7 (no global/static mutable singletons)",
+   "area": "lib/features/tracks/whole_curriculum_order/data/preferences/learning_order_preferences.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tracks/whole_curriculum_order/data/preferences/learning_order_preferences.dart",
+     "line": 7,
+     "quote": "static final LearningOrderPreferences instance = LearningOrderPreferences._();"
+    }
+   ],
+   "sites": 1,
+   "why": "This 34-line hand-rolled singleton duplicates the parent-controls-ordering flag that parentControlsOrderingProvider now reads from ProfileScopedPreferenceKeys (learning_order_providers.dart:70-77), a profile-scoped replacement. LearningOrderPreferences is not profile-scoped (one global bool for every profile on the device) and has zero references anywhere in lib/ or test/; if it were wired back in by mistake it would reintroduce both the SM-7 singleton anti-pattern and a cross-profile setting bug.",
+   "recommendation": "Delete the file now that ProfileScopedPreferenceKeys is the live implementation.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "File removed; no dangling references in lib/ or test/"
+   ],
+   "labels": [
+    "dead-code",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tracks-p3",
+  "findingIndex": 9,
+  "finding": {
+   "title": "De-duplicate the Hebrew-script detection regex in TrackLearningOrderScreen",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler duplication",
+   "area": "lib/features/tracks/track_order/presentation/screens/track_learning_order_screen.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tracks/track_order/presentation/screens/track_learning_order_screen.dart",
+     "line": 161,
+     "quote": "static final RegExp _hebrewScript = RegExp('[\u0590-\u05ff]');"
+    }
+   ],
+   "sites": 1,
+   "why": "The adjacent comment admits this is a copy of CurriculumLabel's private _hebrew regex (core/labels/curriculum_label.dart:364); the same literal also appears in core/theme/text_styles.dart and core/enums/curriculum_id.dart, for four independent copies repo-wide of one RTL-detection regex. A future Unicode-range fix (e.g. extending to Hebrew presentation forms) has to be found and applied in all four places; missing one silently reintroduces a mis-directioned label in only that spot.",
+   "recommendation": "Expose CurriculumLabel's Hebrew-detection as a small public helper in core/labels and call it here instead of a private copy.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Only one canonical Hebrew-script RegExp definition remains in core/labels; this screen calls it"
+   ],
+   "labels": [
+    "duplication",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tracks-p3",
+  "findingIndex": 10,
+  "finding": {
+   "title": "Extract the repeated reorder-amnesty confirm-dialog preamble in the tracks reorder screens",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler duplication (Extract Method)",
+   "area": "lib/features/tracks/track_order/presentation/screens/track_learning_order_screen.dart; lib/features/tracks/whole_curriculum_order/presentation/screens/learning_order_screen.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tracks/track_order/presentation/screens/track_learning_order_screen.dart",
+     "line": 166,
+     "quote": "final overdueCount = await ref.read("
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/track_order/presentation/screens/track_learning_order_screen.dart",
+     "line": 193,
+     "quote": "final overdueCount = await ref.read("
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/whole_curriculum_order/presentation/screens/learning_order_screen.dart",
+     "line": 126,
+     "quote": "final overdueCount = await ref.read("
+    }
+   ],
+   "sites": 3,
+   "why": "The same ~10-line block (fetch overdueCount, bail if unmounted, show ReorderConfirmDialog.showIfNeeded, bail if declined/unmounted) is copy-pasted 3 times across 2 files. A future change to the amnesty-guard contract has to be found and edited in 3 places; missing one leaves that screen silently skipping the guard.",
+   "recommendation": "Extract a shared helper (mixin or top-level function taking WidgetRef/BuildContext/CurriculumId) used by all three call sites.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Single shared implementation; all three call sites delegate to it"
+   ],
+   "labels": [
+    "duplication",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tracks-p3",
+  "findingIndex": 11,
+  "finding": {
+   "title": "Delete or fix the redundant weak step-count assertion in add_track_flow_screen_l1_test.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 / TQ-7 (weakened assertion; redundant test)",
+   "area": "test/features/tracks/setup/presentation/screens/add_track_flow_screen_l1_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/tracks/setup/presentation/screens/add_track_flow_screen_l1_test.dart",
+     "line": 360,
+     "quote": "'self-paced Chumash step count is >= 5 (includes all self-paced steps)',"
+    },
+    {
+     "file": "learning_tracker/test/features/tracks/setup/presentation/screens/add_track_flow_screen_l1_test.dart",
+     "line": 378,
+     "quote": "expect(total, greaterThanOrEqualTo(4));"
+    }
+   ],
+   "sites": 1,
+   "why": "The test name claims '>= 5', the inline comment says the real count is '6', but the assertion only requires '>= 4' \u2014 three different numbers for one check. The very next test ('self-paced Chumash shows exactly 6 total steps', line 383) already asserts the precise, correct invariant (== 6), making this one both weaker than its own documentation and fully redundant.",
+   "recommendation": "Delete this test (superseded by the exact-6 test immediately below it), or tighten its assertion to match its name/comment.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Only the exact-count assertion remains for this scenario"
+   ],
+   "labels": [
+    "test-quality",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tracks-p4",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Make the TS-10 and TS-2 SelfPacedGoalStep regression tests pump the widget instead of only checking constructor storage",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "features/tracks/setup/presentation/steps (step_goal.dart tests)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/tracks/setup/presentation/steps/goal_step_ts10_state_preserve_test.dart",
+     "line": 22,
+     "quote": "test('SelfPacedGoalStep constructor accepts initialGoal', () {\n      // If this test compiles, the parameter exists."
+    },
+    {
+     "file": "learning_tracker/test/features/tracks/setup/presentation/steps/self_paced_goal_step_scope_test.dart",
+     "line": 24,
+     "quote": "test('SelfPacedGoalStep constructor accepts scopeSelections', () {\n      // If this test compiles the parameter exists."
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/steps/step_goal.dart",
+     "line": 77,
+     "quote": "if (prev != null &&\n        prev.goalType == 'deadline' && prev.targetDate != null) {"
+    }
+   ],
+   "sites": 2,
+   "why": "Both files' docstrings describe real, previously-shipped user-visible bugs (TS-10: Back+Forward through the wizard silently discarded the user's deadline choice; TS-2: the goal step showed the full-curriculum item count instead of the wizard-selected scope). Neither test ever calls tester.pumpWidget \u2014 they only construct the widget object and assert the constructor stored the field verbatim, which Dart's own field assignment guarantees trivially. A future refactor that keeps the field but breaks the `initState`/`build` logic that actually consumes it (step_goal.dart:76-88 for TS-10, :351-359 for TS-2) would leave both tests green while silently reintroducing the exact bugs they claim to guard. Confirmed via repo-wide grep: no other test file in the tree pumps SelfPacedGoalStep with a non-null initialGoal or scopeSelections and asserts on the rendered/emitted result.",
+   "recommendation": "Rewrite both as widget tests: for TS-10, pump SelfPacedGoalStep with initialGoal set to a deadline-type GoalEntity and assert the deadline card renders active (not blurred) and/or that tapping Continue immediately emits goalType=='deadline' with the restored targetDate. For TS-2, pump with non-empty scopeSelections and content items outside the selection, and assert the rendered item-count/estimate reflects only the selected scope, not the full set.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "goal_step_ts10_state_preserve_test.dart pumps the widget with a deadline initialGoal and asserts observable deadline-mode state (not just constructor storage) \u2014 fails if initState stops reading widget.initialGoal",
+    "self_paced_goal_step_scope_test.dart pumps the widget with scopeSelections + a mixed content fixture and asserts the rendered/emitted count is scoped, not the full-curriculum total \u2014 fails if the scoping logic regresses"
+   ],
+   "labels": [
+    "tests",
+    "tautological-test",
+    "tracks-setup",
+    "regression-test-quality"
+   ]
+  }
+ }
+]

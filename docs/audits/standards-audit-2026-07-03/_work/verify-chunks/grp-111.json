@@ -1,0 +1,202 @@
+[
+ {
+  "sourceBatch": "t1-feat-sync-p4",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Extract a shared no-op FirestoreGateway/PushPipeline fake \u2014 hand-duplicated stubs push tutored_pull_isolation_test.dart to 767 lines",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "core/sync \u2014 tests",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/sync/tutored_pull_isolation_test.dart",
+     "line": 48,
+     "quote": "class _ChildDataGateway implements FirestoreGateway {"
+    },
+    {
+     "file": "learning_tracker/test/sync/tutored_pull_isolation_test.dart",
+     "line": 336,
+     "quote": "class _NoPushPipeline implements PushPipeline {"
+    },
+    {
+     "file": "learning_tracker/test/sync/write_tee_status_update_test.dart",
+     "line": 34,
+     "quote": "class _EmptyGateway implements FirestoreGateway {"
+    },
+    {
+     "file": "learning_tracker/test/sync/write_tee_status_update_test.dart",
+     "line": 85,
+     "quote": "dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/firestore_gateway.dart",
+     "line": 40,
+     "quote": "Future<void> pushCompletion({"
+    }
+   ],
+   "sites": 2,
+   "why": "FirestoreGateway is a single 408-line, 30+-method interface (push/fetch/listen for every entity kind); PushPipeline is similarly broad. tutored_pull_isolation_test.dart spends lines 48-333 (_ChildDataGateway, 286 lines) and 336-456 (_NoPushPipeline, 121 lines) \u2014 over 400 of its 767 lines, more than half the file \u2014 hand-stubbing methods the tests never call, most just throwing StateError. That alone breaches the 400-line AG-3 cap by nearly 2x. write_tee_status_update_test.dart hits the identical wall from the other direction: _EmptyGateway (line 34) implements only 7 of the ~30 methods and falls back to a bare `super.noSuchMethod` (line 85) to dodge the rest \u2014 a different workaround for the same fat-interface pain. Per a repo-wide grep (context only, files outside this batch), the same `implements FirestoreGateway` duplication recurs in 20+ other test/sync files, so a shared fake pays off well beyond this batch.",
+   "recommendation": "Add a shared no-op base (e.g. test/helpers/fakes/no_op_firestore_gateway.dart, no_op_push_pipeline.dart) whose every method either no-ops or throws a consistent 'not stubbed' error, and have tutored_pull_isolation_test.dart / write_tee_status_update_test.dart extend it and override only the handful of methods each test actually exercises. Consider splitting FirestoreGateway by concern (push/fetch/listen, own-data/child-data) as a longer-term ISP fix.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "find lib test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400' no longer lists tutored_pull_isolation_test.dart.",
+    "A shared no-op FirestoreGateway/PushPipeline fake exists under test/helpers/ and both files in this finding use it instead of hand-stubbing the full interface."
+   ],
+   "labels": [
+    "tests",
+    "duplication",
+    "AG-3",
+    "ISP"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-sync-p4",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Replace the two raw DateTime.now() calls in tutored_pull_isolation_test.dart with DateTimeFactory.nowUtc()",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6",
+   "area": "core/sync tutoring \u2014 tests",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/sync/tutored_pull_isolation_test.dart",
+     "line": 662,
+     "quote": "now: DateTime.now(),"
+    },
+    {
+     "file": "learning_tracker/test/sync/tutored_pull_isolation_test.dart",
+     "line": 701,
+     "quote": "clock: FakeLocalDayClock(DateTime.now()),"
+    }
+   ],
+   "sites": 2,
+   "why": "This file otherwise sources every timestamp through DateTimeFactory.nowUtc() (9 other call sites, e.g. lines 470-482, 673) \u2014 the project's clock abstraction. Lines 662 and 701 call DateTime.now() directly instead. Harmless for the two specific assertions today (neither test reads the seeded timestamp back), but it breaks the file's own hermeticity convention, and line 701 seeds a FakeLocalDayClock \u2014 a deterministic double \u2014 with a non-deterministic wall-clock value, defeating the point of injecting a fake clock. It's copy-paste bait for a future edit that does assert on the seeded time, which would then be flaky under slow CI or clock skew.",
+   "recommendation": "Replace both call sites with DateTimeFactory.nowUtc(), matching every other timestamp in the file.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep -n 'DateTime.now()' learning_tracker/test/sync/tutored_pull_isolation_test.dart returns no matches."
+   ],
+   "labels": [
+    "tests",
+    "TQ-6",
+    "determinism"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-sync-p4",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Set driftRuntimeOptions.dontWarnAboutMultipleDatabases in two_device_sync_test.dart's setUp, matching every other multi-device test",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6",
+   "area": "core/sync \u2014 tests",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/sync/two_device_sync_test.dart",
+     "line": 30,
+     "quote": "deviceB = inMemoryDb();"
+    },
+    {
+     "file": "learning_tracker/test/integration/two_device_sync_test.dart",
+     "line": 113,
+     "quote": "driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;"
+    }
+   ],
+   "sites": 1,
+   "why": "Empirically reproduced by running `flutter test` on this batch: every test in this file prints Drift's 'created the database class UserDatabase multiple times... race conditions will occur and might corrupt the database' warning plus a full stack trace, because setUp creates deviceA and deviceB (two UserDatabase instances) without setting driftRuntimeOptions.dontWarnAboutMultipleDatabases. The warning is a false positive here (deviceA/deviceB use separate NativeDatabase.memory() instances, not a shared QueryExecutor), and the project already has an established, 20-file-strong convention of setting this flag for exactly this pattern \u2014 including its own sibling, test/integration/two_device_sync_test.dart:113. This file is the one multi-database test in the codebase (found via grep) that skips it, so it pollutes every CI run with a scary-looking but inapplicable corruption warning that could bury a real one.",
+   "recommendation": "Add `driftRuntimeOptions.dontWarnAboutMultipleDatabases = true;` to this file's setUp, matching test/integration/two_device_sync_test.dart:113.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "flutter test learning_tracker/test/sync/two_device_sync_test.dart no longer prints the 'created the database class UserDatabase multiple times' warning."
+   ],
+   "labels": [
+    "tests",
+    "hygiene",
+    "drift",
+    "log-noise"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-sync-p4",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Use the OutboxEntityKind.track constant instead of the 'track' string literal in two_device_sync_test.dart:109",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "naming (magic literal vs. named constant)",
+   "area": "core/sync \u2014 tests",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/sync/two_device_sync_test.dart",
+     "line": 109,
+     "quote": "final outboxRows = await deviceA.outboxDao.getPendingByKind('track', 1);"
+    },
+    {
+     "file": "learning_tracker/test/sync/two_device_sync_test.dart",
+     "line": 70,
+     "quote": "OutboxEntityKind.completion,"
+    }
+   ],
+   "sites": 1,
+   "why": "The file already imports outbox_processor.dart and uses the named OutboxEntityKind.completion constant at line 70, but line 109 hardcodes 'track' instead of the already-available OutboxEntityKind.track. The value happens to match today, but the constant exists precisely so a future rename of the underlying string doesn't silently desync a call site like this one.",
+   "recommendation": "Change 'track' to OutboxEntityKind.track at line 109.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "learning_tracker/test/sync/two_device_sync_test.dart:109 reads OutboxEntityKind.track instead of the string literal 'track'."
+   ],
+   "labels": [
+    "tests",
+    "hygiene",
+    "naming"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tracks-extras",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Write real coverage for ProgramSelectionStep \u2014 program_selection_step_test.dart never imports or renders the widget it's mirrored to",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-5 (mirrored-path coverage) / TQ-8",
+   "area": "test",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/track_setup/presentation/widgets/program_selection_step_test.dart",
+     "line": 1,
+     "quote": "import 'package:flutter_test/flutter_test.dart';\nimport 'package:learning_tracker/core/enums/curriculum_id.dart';"
+    },
+    {
+     "file": "learning_tracker/test/features/track_setup/presentation/widgets/program_selection_step_test.dart",
+     "line": 23,
+     "quote": "for (final c in withPrograms) {\n        expect(c, isNotNull, reason: '$c should have programs');"
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/widgets/program_selection_step.dart",
+     "line": 13,
+     "quote": "/// TS-1 fix: the row must NOT display the program's own name \u2014 that was\n/// the pre-fix bug ('Starts: $name')."
+    }
+   ],
+   "sites": 1,
+   "why": "ProgramSelectionStep (368 lines, ConsumerStatefulWidget) is only ever instantiated in add_track_flow_screen.dart \u2014 grep for 'ProgramSelectionStep(' across the entire test/ tree returns nothing. Its test file, sitting at the exact AG-5-mirrored path, tests neither the widget's build, its documented previously-buggy helper `programStartsLabel` (comment references a 'TS-1 fix... pre-fix bug'), nor the `_didAutoSkip` post-frame callback that silently advances the wizard when a curriculum has no programs. Its three tests instead assert `expect(c, isNotNull)` on hand-typed CurriculumId literals \u2014 always true for a non-nullable const, this assertion cannot fail regardless of whether programs actually exist \u2014 plus generic AddTrackState.copyWith mechanics unrelated to this widget. A regression in program-card rendering, the auto-skip side effect, or the TS-1 label bug reappearing would ship with a fully green suite.",
+   "recommendation": "Add a widget test that pumps ProgramSelectionStep inside a ProviderScope with learningProgramRepositoryProvider overridden to a fake, covering: renders program cards, tapping selects and calls onSelected, auto-skips (calls onSelected(null,null,null)) when no programs exist, and programStartsLabel returns the calendar badge only for calendar programs (TS-1 regression). Move or delete the unrelated AddTrackState/curriculum-list assertions to a file that actually owns that logic.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "program_selection_step_test.dart imports and pumps ProgramSelectionStep at least once.",
+    "A red-first test exists for the TS-1 regression (program row must not show 'Starts: $name').",
+    "The auto-skip path (empty programs list) is exercised and asserted."
+   ],
+   "labels": [
+    "test-quality",
+    "coverage-gap",
+    "tracks"
+   ]
+  }
+ }
+]

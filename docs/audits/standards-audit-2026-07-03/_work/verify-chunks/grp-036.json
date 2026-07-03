@@ -1,0 +1,226 @@
+[
+ {
+  "sourceBatch": "t1-core-theme-widgets",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Replace raw Color(0xFF...) literals in core/widgets with AppColors/AppTheme constants (stat_card.dart duplicates AppColors.blueNavy verbatim)",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "no_color_literal_outside_theme (custom_lint, currently broken per baseline)",
+   "area": "core/widgets",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/widgets/stat_card.dart",
+     "line": 89,
+     "quote": "shadowColor: const Color(0xFF03174C).withValues(alpha: 0.08),"
+    },
+    {
+     "file": "learning_tracker/lib/core/theme/app_colors.dart",
+     "line": 80,
+     "quote": "static const Color blueNavy = Color(0xFF03174C);"
+    },
+    {
+     "file": "learning_tracker/lib/core/widgets/stat_card.dart",
+     "line": 104,
+     "quote": "color: const Color(0xFF03174C).withValues(alpha: 0.08),"
+    },
+    {
+     "file": "learning_tracker/lib/core/widgets/preference_list_tile.dart",
+     "line": 79,
+     "quote": "color: const Color(0xFF929BAA),"
+    },
+    {
+     "file": "learning_tracker/lib/core/widgets/preference_segmented_tile.dart",
+     "line": 90,
+     "quote": "color: const Color(0xFF929BAA),"
+    },
+    {
+     "file": "learning_tracker/lib/core/widgets/preference_segmented_tile.dart",
+     "line": 82,
+     "quote": "color: const Color(0xFF1D2432),"
+    },
+    {
+     "file": "learning_tracker/lib/core/widgets/preference_segmented_tile.dart",
+     "line": 117,
+     "quote": "side: const BorderSide(color: Color(0xFFD7DEEA)),"
+    },
+    {
+     "file": "learning_tracker/lib/core/widgets/app_dialog.dart",
+     "line": 290,
+     "quote": ": const Color(0xFFF0F1F5),"
+    }
+   ],
+   "sites": 10,
+   "why": "This is exactly what the no_color_literal_outside_theme custom_lint rule exists to catch, but custom_lint is currently broken (analyzer version mismatch, baselined separately) so nothing flags it today. stat_card.dart:89,104 duplicate AppColors.blueNavy's exact hex (0xFF03174C) as an inline literal instead of referencing it; preference_list_tile.dart:79 and preference_segmented_tile.dart:90 independently hardcode the identical 0xFF929BAA. The concrete cost: a rebrand of AppColors.blueNavy or of the settings-tile subtitle grey silently misses these inline copies, producing a visibly inconsistent surface next time the palette shifts.",
+   "recommendation": "Promote the duplicated literals (0xFF03174C, 0xFF929BAA) to named AppColors constants and reference them from both files; name or fold the remaining one-off literals in stat_card.dart/preference_segmented_tile.dart/app_dialog.dart.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep for `Color(0xFF` in lib/core/widgets/ returns no matches for the 3 currently-duplicated values (0xFF03174C, 0xFF929BAA) once fixed.",
+    "Once custom_lint_core/analyzer versions are reconciled (tracked separately), no_color_literal_outside_theme passes clean on these files."
+   ],
+   "labels": [
+    "theming",
+    "duplication",
+    "custom-lint",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-theme-widgets",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Strengthen PinEntryWidget's error-styling test to assert the border color, not just decoration non-null",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "test/core/widgets",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/widgets/pin_entry_widget_test.dart",
+     "line": 224,
+     "quote": "expect(firstField.decoration, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/lib/core/widgets/pin_entry_widget.dart",
+     "line": 266,
+     "quote": "final borderColor = widget.hasError"
+    }
+   ],
+   "sites": 1,
+   "why": "The test 'should have error styling when error message is present' (pin_entry_widget_test.dart:206-225) only asserts `firstField.decoration != null`, which is unconditionally true \u2014 the widget always sets a decoration whether or not hasError is true (its own comment admits 'which we can't easily test'). But it can: pin_entry_widget.dart:266-268 picks the border colour from `theme.colorScheme.error` vs `.outline` based on hasError, and that colour is directly readable off `decoration.enabledBorder` without pixel-level rendering. If that branch were deleted or inverted, this test would keep passing \u2014 a real regression in the parent-PIN wrong-attempt affordance would ship with green CI.",
+   "recommendation": "Rewrite the assertion to read `(firstField.decoration!.enabledBorder as OutlineInputBorder).borderSide.color` and compare it against `theme.colorScheme.error` in the error case and `.outline` in a matching non-error case.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Test fails red when pin_entry_widget.dart's hasError ternary at line 266-268 is temporarily reverted to always return theme.colorScheme.outline, proving it actually exercises the branch."
+   ],
+   "labels": [
+    "test-quality",
+    "TQ-8",
+    "core-widgets"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-account-p1",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Split the four hand-written account-feature files that exceed the 400-line AG-3 cap",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "features/account presentation (file size / large-class)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/account/presentation/notifiers/sign_in_controller.dart",
+     "line": 1016,
+     "quote": "(file length, wc -l)"
+    },
+    {
+     "file": "learning_tracker/lib/features/account/onboarding/presentation/screens/signup_screen.dart",
+     "line": 985,
+     "quote": "(file length, wc -l)"
+    },
+    {
+     "file": "learning_tracker/lib/features/account/presentation/screens/account_picker_screen.dart",
+     "line": 842,
+     "quote": "(file length, wc -l)"
+    },
+    {
+     "file": "learning_tracker/lib/features/account/presentation/screens/sign_in_screen.dart",
+     "line": 446,
+     "quote": "(file length, wc -l)"
+    }
+   ],
+   "sites": 4,
+   "why": "All four are hand-written (no .g.dart/.freezed.dart) and 1.1x-2.5x over the 400-line cap. signup_screen.dart is the sharpest case: unlike sign-in, which has a dedicated, unit-testable SignInController Notifier, ALL of sign-up's business orchestration (cloud/local/Google branching, Firebase error-code mapping, offline fallback dialog) lives directly in _SignupScreenState's async methods \u2014 test/features/account/onboarding/presentation/screens/*_test.dart are all widget-pump tests; there is no unit-level test of the sign-up decision logic itself, because there is nothing to unit-test it against.",
+   "recommendation": "Extract a SignupController Notifier mirroring SignInController's shape out of signup_screen.dart. Split account_picker_screen.dart's _AccountTile/_DashedOutlineButton/_DashedRRectPainter into separate widget files. Split sign_in_controller.dart's offline-restore and post-sign-in-navigation helpers into focused collaborator classes.",
+   "effort": "L",
+   "acceptance_criteria": [
+    "A Rule-0 line-count checker (grep/script over hand-written lib/**/*.dart excluding *.g.dart/*.freezed.dart, failing at >400 lines) is wired into make audit",
+    "signup_screen.dart's sign-up decision logic gains a unit test that does not require pumping the widget tree"
+   ],
+   "labels": [
+    "ag-3",
+    "large-class",
+    "testability"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-account-p1",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Extract the duplicated, inconsistently-patched _extractFirebaseCode helper into one shared function",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler duplication / EH-2",
+   "area": "features/account error-code parsing",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/account/presentation/notifiers/sign_in_controller.dart",
+     "line": 134,
+     "quote": "final match = RegExp(r'\\[(?:[a-z_]+/)?([a-z-]+)\\]').firstMatch(str);"
+    },
+    {
+     "file": "learning_tracker/lib/features/account/data/services/magic_link_service.dart",
+     "line": 238,
+     "quote": "final match = RegExp(r'\\[([a-z-]+)\\]').firstMatch(str);"
+    },
+    {
+     "file": "learning_tracker/lib/features/account/domain/services/upgrade_to_cloud_service.dart",
+     "line": 374,
+     "quote": "final match = RegExp(r'\\[([a-z-]+)\\]').firstMatch(str);"
+    },
+    {
+     "file": "learning_tracker/lib/features/account/onboarding/presentation/screens/signup_screen.dart",
+     "line": 473,
+     "quote": "final match = RegExp(r'\\[([a-z/-]+)\\]').firstMatch(e.toString());"
+    }
+   ],
+   "sites": 4,
+   "why": "The same '_extractFirebaseCode' helper is copy-pasted across 4 files in this batch (plus a 5th in features/settings/presentation/screens/upgrade_to_cloud_screen.dart, outside it) and the copies have drifted: sign_in_controller.dart's own comment documents that the original pattern `\\[([a-z-]+)\\]` fails to match Firebase's real `[plugin/code]` format (e.g. `[firebase_auth/wrong-password]`), silently degrading every mapped error to the generic 'Sign-in failed' message \u2014 and fixed it locally. magic_link_service.dart and upgrade_to_cloud_service.dart still carry that exact stale pattern, so an email-already-in-use or wrong-password condition surfacing through either of those paths still silently falls through to a generic error today.",
+   "recommendation": "Extract one shared helper (e.g. core/auth/firebase_error_code.dart, consistent with Rule 3's core/auth placement for Firebase-adjacent parsing) using sign_in_controller.dart's fixed pattern, and delete the other 4 copies (in and out of this batch).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "A unit test on the shared helper asserts it extracts the code from both '[code]' and '[plugin/code]' shapes",
+    "AG-4 duplicate-symbol grep no longer finds multiple _extractFirebaseCode definitions"
+   ],
+   "labels": [
+    "duplication",
+    "eh-2",
+    "bugfix-drift"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-account-p1",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Cache the account list Future instead of constructing it fresh inside AccountPickerScreen.build()",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "PF-3",
+   "area": "features/account/presentation/screens/account_picker_screen.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/account/presentation/screens/account_picker_screen.dart",
+     "line": 59,
+     "quote": "child: FutureBuilder<List<DeviceAccount>>(\n          future: registry.getAllAccounts(),"
+    }
+   ],
+   "sites": 1,
+   "why": "registry.getAllAccounts() is called directly inside `Widget build()`, which returns a brand-new Future object on every rebuild. FutureBuilder tracks futures by identity, so any unrelated rebuild of this ConsumerWidget (a ref.watch(accountDbFileNameProvider) change from switching accounts, a locale/theme change, or any ancestor rebuild) restarts the FutureBuilder into ConnectionState.waiting \u2014 flashing the loading spinner over the already-rendered account list and re-querying the device registry \u2014 the textbook 'Future-in-build' Flutter anti-pattern.",
+   "recommendation": "Hoist the fetch behind a FutureProvider/AsyncNotifier (e.g. deviceAccountsProvider watched via ref.watch), or convert to ConsumerStatefulWidget and cache the Future in State so its identity is stable across rebuilds.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "A widget test triggers an unrelated provider rebuild while AccountPickerScreen is mounted and asserts the list does not revert to the loading spinner and getAllAccounts() is not invoked a second time"
+   ],
+   "labels": [
+    "pf-3",
+    "performance",
+    "futurebuilder"
+   ]
+  }
+ }
+]

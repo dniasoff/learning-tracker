@@ -1,0 +1,192 @@
+[
+ {
+  "sourceBatch": "t1-feat-tutoring-p2",
+  "findingIndex": 9,
+  "finding": {
+   "title": "Replace tautological isNotNull(Type)/constructor-tearoff compile-checks with real interface/constructor assertions",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "test/features/tutoring",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/tutoring/firestore_audit_log_read_repository_test.dart",
+     "line": 24,
+     "quote": "expect(TutorAuditLogReadRepository, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/firestore_tutor_grant_repository_test.dart",
+     "line": 26,
+     "quote": "expect(FirestoreTutorGrantRepository, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/data/repositories/firestore_tutor_grant_repository_test.dart",
+     "line": 230,
+     "quote": "expect(FirestoreTutorGrantRepository.new, isNotNull);"
+    }
+   ],
+   "sites": 3,
+   "why": "expect(SomeType, isNotNull) and expect(SomeClass.new, isNotNull) can never fail \u2014 a bare Type literal and a constructor tear-off are non-null by construction regardless of what the class implements or does. The docstrings explicitly claim these verify 'that FirestoreTutorGrantRepository satisfies the TutorGrantRepository interface' and that 'the class is constructible without error' \u2014 neither claim is actually checked: an accidental removal of `implements TutorGrantRepository`, or a constructor that throws on null functions, would leave these tests green.",
+   "recommendation": "Replace with real assertions, e.g. `TutorGrantRepository Function({FirebaseFunctions? functions}) ctor = FirestoreTutorGrantRepository.new;` (fails to compile if the interface isn't satisfied) or actually instantiate and check `is`/`isA<>`.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "each of the 3 tests either performs a real assignability check (typed constructor-tearoff assignment) or instantiates the class and asserts isA<Interface>()",
+    "temporarily removing the `implements`/`extends` clause from the target class locally makes the corresponding test fail"
+   ],
+   "labels": [
+    "TQ-8",
+    "tautological-test",
+    "P2"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tutoring-p2",
+  "findingIndex": 10,
+  "finding": {
+   "title": "Make ga5_resignation_childname_test.dart exercise the real manage_grants/decline_invite call sites it claims to guard",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "test/features/tutoring",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/tutoring/ga5_resignation_childname_test.dart",
+     "line": 45,
+     "quote": "String _brokenChildNameArg(TutorGrant grant) => grant.childProfileId;"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/ga5_resignation_childname_test.dart",
+     "line": 129,
+     "quote": "'manage_grants notification call passes childDisplayLabel not childProfileId',"
+    }
+   ],
+   "sites": 1,
+   "why": "This file only imports tutor_grant_aggregate.dart \u2014 it never imports or pumps manage_grants_screen.dart or decline_invite_screen.dart. Tests named 'manage_grants notification call passes childDisplayLabel not childProfileId' and 'broken call site passes raw id \u2014 this is the bug' actually just call hand-written local proxy functions (_brokenChildNameArg/_fixedChildNameArg) that are trivially defined to return grant.childProfileId or grant.childDisplayLabel respectively \u2014 they always pass regardless of what the real screens do. The real bug was fixed correctly (verified: manage_grants_screen.dart:260 and decline_invite_screen.dart:130 both now pass childDisplayLabel), but if a future refactor of either screen's notification call reintroduces the raw-id bug, this regression suite \u2014 despite its name and its docstring framing 'this is the bug'/'this is the fix' \u2014 would not catch it.",
+   "recommendation": "Either widget-pump the real screens and assert on the captured notification args (as the other test files in this batch do via mocktail captureAny), or rename/rescope the tests to be honest that they only pin the domain-model contract, not the call sites.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "at least one test in this file pumps the real manage_grants_screen.dart or decline_invite_screen.dart and verifies (via mocktail capture) that notifyParentOfResignation/notifyParentOfDecline receives childDisplayLabel",
+    "reverting the fix in manage_grants_screen.dart or decline_invite_screen.dart locally makes this suite fail"
+   ],
+   "labels": [
+    "TQ-8",
+    "regression-test-gap",
+    "P2"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tutoring-p2",
+  "findingIndex": 11,
+  "finding": {
+   "title": "Delete or merge the misplaced, redundant firestore_tutor_grant_repository_test.dart at test/features/tutoring/",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-5 / TQ-8 / Fowler-duplication",
+   "area": "test/features/tutoring",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/tutoring/firestore_tutor_grant_repository_test.dart",
+     "line": 34,
+     "quote": "const result = TutorGrantFailure(message: message, code: code);"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/data/repositories/firestore_tutor_grant_repository_test.dart",
+     "line": 912,
+     "quote": "test('FirebaseFunctionsException \u2192 TutorGrantFailure with code', () async {"
+    }
+   ],
+   "sites": 1,
+   "why": "Two files share the exact basename firestore_tutor_grant_repository_test.dart: the AG-5-correct mirrored one at data/repositories/ (1307 lines, exercises the repository through a real FirebaseFunctionsPlatform fake) and this misplaced one directly under test/features/tutoring/ (173 lines, NOT at the mirrored path for lib/features/tutoring/data/repositories/firestore_tutor_grant_repository.dart). Its own docstring admits the 'exception mapping' tests only 'mirror the repo logic' \u2014 concretely, they construct a TutorGrantFailure with the same message/code values they then assert against, never calling the repository at all, so they verify nothing about the actual catch/map logic. The mirrored comprehensive file has the equivalent test done correctly (drives a thrown FirebaseFunctionsException through repo.inviteTutor and asserts the mapped result). A maintainer trusting this file's name would believe exception-mapping is covered twice; it's covered once, correctly, in the other file.",
+   "recommendation": "Delete the misplaced file after migrating any uniquely-valuable assertions (e.g. the toFirestore() key-enumeration checks for the inviteTutor CF payload) into the mirrored file or a tutor_permissions_test.dart model test.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "only one firestore_tutor_grant_repository_test.dart exists in the repo, at the AG-5-mirrored path",
+    "any non-redundant coverage (TutorPermissions.toFirestore() key enumeration) is preserved somewhere before deletion"
+   ],
+   "labels": [
+    "AG-5",
+    "TQ-8",
+    "duplication",
+    "P2"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tutoring-p2",
+  "findingIndex": 12,
+  "finding": {
+   "title": "Strengthen the malformed-grant-entry assertion in firestore_tutor_grant_repository_test.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "test/features/tutoring/data/repositories",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/tutoring/data/repositories/firestore_tutor_grant_repository_test.dart",
+     "line": 386,
+     "quote": "expect(grants.length, lessThanOrEqualTo(2));"
+    }
+   ],
+   "sites": 1,
+   "why": "The test's own comment says the intended behavior is 'the valid entry may survive; the malformed one is dropped' (i.e. exactly 1 result), but `lessThanOrEqualTo(2)` also passes if both entries survive intact, or if both are dropped (0 results) \u2014 none of which is the claimed correct behavior. A future regression that stops filtering malformed entries (or that also drops the valid one) would not be caught.",
+   "recommendation": "Assert exactly: `expect(grants, hasLength(1)); expect(grants.single.grantId, 'valid');`",
+   "effort": "S",
+   "acceptance_criteria": [
+    "the test asserts the malformed entry is dropped AND the valid entry specifically survives, not just a length bound"
+   ],
+   "labels": [
+    "TQ-8",
+    "weak-assertion",
+    "P3"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tutoring-p2",
+  "findingIndex": 13,
+  "finding": {
+   "title": "Add semantics to PIN numpad icon-only controls and remove the fixed-height digit-key wrapper",
+   "severity": "P3",
+   "confidence": "SUSPECTED",
+   "rule": "AX-3 / AX-4",
+   "area": "features/tutoring/presentation/screens",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_entry_gate.dart",
+     "line": 189,
+     "quote": "icon: const Icon(Icons.close_rounded),\n          onPressed: widget.onCancel,"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_entry_gate.dart",
+     "line": 404,
+     "quote": "Icons.backspace_outlined,\n                  color: Theme.of(context).colorScheme.error,"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_entry_gate.dart",
+     "line": 432,
+     "quote": "child: SizedBox(height: 52, child: Center(child: child)),"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_setup_screen.dart",
+     "line": 372,
+     "quote": "Icons.backspace_outlined,\n            color: Theme.of(context).colorScheme.error,"
+    }
+   ],
+   "sites": 5,
+   "why": "The AppBar close IconButton and the numpad's backspace key are icon-only with no tooltip/Semantics label, so a screen-reader user cannot identify either control (the digit keys are fine \u2014 their Text child is auto-exposed). Separately, _TutorPinKey wraps its child (a 24sp digit Text at default scale) in a fixed SizedBox(height: 52); no global TextScaler clamp exists in this app (verified via grep), so at large accessibility text-scale settings the digit glyph can exceed the fixed box and clip or overflow visually.",
+   "recommendation": "Add `tooltip:` to the close IconButton and wrap the backspace Icon in Semantics(label: ...) or give it a tooltip; remove the fixed height on _TutorPinKey (let it size to content with padding, or clamp textScale for the digit only).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "the close button and backspace key have non-empty semantic labels verifiable via a Semantics-tree widget test",
+    "a widget test at textScale 2.0+ confirms no RenderFlex overflow/clip on the numpad (would confirm the AX-4 half of this finding at runtime)"
+   ],
+   "labels": [
+    "AX-3",
+    "AX-4",
+    "P3"
+   ]
+  }
+ }
+]

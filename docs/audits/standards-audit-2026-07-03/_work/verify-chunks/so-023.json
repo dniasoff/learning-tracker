@@ -1,0 +1,173 @@
+[
+ {
+  "sourceBatch": "t1-feat-account-p2",
+  "chunk": "grp-039",
+  "finding": {
+   "title": "Remove the fixed height:32 on OfflineTopBanner's Container so large text-scale doesn't clip it",
+   "severity": "P2",
+   "confidence": "SUSPECTED",
+   "rule": "AX-4 (no fixed heights on text wrappers)",
+   "area": "features/account/presentation/widgets",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/account/presentation/widgets/offline_top_banner.dart",
+     "line": 30,
+     "quote": "width: double.infinity,\n                height: 32,"
+    }
+   ],
+   "sites": 1,
+   "why": "The banner's Container is given a tight height:32 which forces the same tight cross-axis height onto the Row wrapping the cloud-off Icon and the offline-message Text. The app sets no textScaler clamp anywhere (grep-confirmed repo-wide), so under a standard OS large-text accessibility setting the Text needs more than 32 logical pixels; because Container does not clip by default, the text would paint outside the 32px band, visually overlapping the AppBar/content around it rather than wrapping or growing the banner.",
+   "recommendation": "Let the banner size to its child's intrinsic height (drop the fixed height, or express it as a minHeight), and add a widget test that pumps OfflineTopBanner under a scaled MediaQuery (TextScaler.linear(1.6)+) and asserts no overflow/clip.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "a widget/golden test pumps OfflineTopBanner at textScaler >= 1.6x and asserts the rendered content fits within its layout bounds",
+    "the banner Container no longer hard-codes height:32"
+   ],
+   "labels": [
+    "accessibility",
+    "ax-4"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-database-daos-p3",
+  "chunk": "grp-010",
+  "finding": {
+   "title": "Split track_dao_test.dart, track_dao_extended_test.dart, and track_scoped_dao_test.dart under the 400-line AG-3 cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "test/core/database/daos",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/database/daos/track_dao_extended_test.dart",
+     "line": 1,
+     "quote": "/// Extended [TrackDao] tests covering paths not hit by track_dao_test.dart."
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/track_dao_test.dart",
+     "line": 1,
+     "quote": "import 'package:drift/drift.dart' hide isNotNull, isNull;"
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/track_scoped_dao_test.dart",
+     "line": 1,
+     "quote": "/// Tests for track-scoped DAO methods added in Story 20.2."
+    }
+   ],
+   "sites": 3,
+   "why": "track_dao_extended_test.dart is 411 lines, track_dao_test.dart is 412 lines, and track_scoped_dao_test.dart is 465 lines \u2014 all hand-written, none generated, all over the AG-3 400-line cap. The directory already has a working pattern for staying under the cap (splitting into _extra/_delete/_deactivate/_last_curriculum_guard files); these three just grew past it without a further split.",
+   "recommendation": "Split each file's largest groups into a new sibling file (e.g. track_dao_test.dart's 'R6-11: purgeHistory curriculumId isolation' group, or track_scoped_dao_test.dart's PointConfigDao/LearningLedgerDao groups) following the existing _extra/_extended naming convention already used in this directory.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "All three files are \u2264400 lines after splitting.",
+    "A Rule-0 line-count checker for AG-3 is added to make audit (e.g. `find lib test -name '*.dart' ! -name '*.g.dart' -exec wc -l {} +` gated at 400) since none currently exists."
+   ],
+   "labels": [
+    "hygiene",
+    "file-size"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-dashboard-p1",
+  "chunk": "grp-048",
+  "finding": {
+   "title": "Remove the discarded initialSyncComplete watch in DashboardBody.build (unnecessary rebuild)",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "PF-1 / Fowler dead-code",
+   "area": "learning_tracker/lib/features/dashboard/presentation/widgets/dashboard_body.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/dashboard/presentation/widgets/dashboard_body.dart",
+     "line": 149,
+     "quote": "final initialSyncComplete =\n        ref.watch(initialSyncCompleteProvider).asData?.value ?? false;"
+    },
+    {
+     "file": "learning_tracker/lib/features/dashboard/presentation/widgets/dashboard_body.dart",
+     "line": 217,
+     "quote": "// ignore: unused_local_variable \u2014 retained for historical documentation.\n    final _ = initialSyncComplete;"
+    }
+   ],
+   "sites": 1,
+   "why": "The value is watched, then explicitly discarded into `_`, and the discard is only possible because the team suppressed the unused_local_variable lint. DashboardBody is a ConsumerWidget rebuilt on every dashboard change; it still re-subscribes to and rebuilds on every emission of initialSyncCompleteProvider purely to throw the value away \u2014 'retained for historical documentation' belongs in a plain code comment, not a live ref.watch with a lint bypass.",
+   "recommendation": "Delete lines 149-150 and 217-218; if the history needs preserving, say so in a plain comment instead of a watched-and-discarded variable.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep -n initialSyncComplete on dashboard_body.dart returns nothing (or a real conditional use), and the ignore: unused_local_variable comment is gone."
+   ],
+   "labels": [
+    "dead-code",
+    "performance",
+    "dashboard"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-learning-p3",
+  "chunk": "grp-062",
+  "finding": {
+   "title": "Split learning_screen_l1_test.dart (1021 lines) \u2014 exceeds AG-3's 400-line hand-written-file cap by 2.5x",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "test/features/learning/presentation/screens",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/learning/presentation/screens/learning_screen_l1_test.dart",
+     "line": 1,
+     "quote": "// L1 widget-behaviour tests for LearningScreen"
+    }
+   ],
+   "sites": 1,
+   "why": "1021 lines (wc -l confirmed) against AG-3's 400-line cap for hand-written Dart files \u2014 no test exemption is stated for AG-3 (only AG-5's mirroring rule exempts story_acceptance). The file's own header comment already documents 19 numbered logical groups (loading/error/empty-state/data-state/daily-tasks/icons/RTL/R6-4 regression/E4 regression), a ready-made split boundary.",
+   "recommendation": "Split along the file's own documented section numbers, e.g. learning_screen_state_test.dart (loading/error/empty/data), learning_screen_daily_tasks_test.dart (daily-tasks + icons), learning_screen_regressions_test.dart (R6-4, E4, Hebrew smoke), each sharing _buildScreen via a small test-only library part or helper file.",
+   "effort": "L",
+   "acceptance_criteria": [
+    "No hand-written file under test/features/learning/presentation/screens/ exceeds 400 lines",
+    "Total test count and assertions are preserved across the split (no `weaken-ok` markers needed since nothing is removed, only relocated)"
+   ],
+   "labels": [
+    "AG-3",
+    "file-size",
+    "hotspot"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-content_browsing-p2",
+  "chunk": "grp-046",
+  "finding": {
+   "title": "Fix the tautological 'Gematriya correctness' test in text_display_screen_deep_l1_test.dart to call the real Gematriya.forNumber",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (tautological test \u2014 asserts what a local copy returns, not the production code)",
+   "area": "test-quality \u2014 content_browsing/presentation/screens",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/content_browsing/presentation/screens/text_display_screen_deep_l1_test.dart",
+     "line": 769,
+     "quote": "expect(_gematriya(15), equals('\u05d8\u05d5'));"
+    },
+    {
+     "file": "learning_tracker/test/features/content_browsing/presentation/screens/text_display_screen_deep_l1_test.dart",
+     "line": 805,
+     "quote": "// avoid importing a lib/ class that could pull in unwanted transitive deps."
+    }
+   ],
+   "sites": 1,
+   "why": "The test name promises to verify Gematriya.forNumber's halachically-significant 15/16 substitution (\u05d8\u05d5/\u05d8\u05d6 instead of spelling the divine name), but it never calls Gematriya.forNumber \u2014 it calls a private `_gematriya()` helper in the same test file that hand-copies the lookup table as a literal Dart map. The stated reason ('avoid importing a lib/ class that could pull in unwanted transitive deps') does not hold: lib/core/utils/gematriya.dart is a zero-import, private-constructor pure-static class, and 20+ other tests in this very file already import lib/ classes freely (TutorPermissions, ResolvedSession, MarkLiveCompletionUseCase). If Gematriya.forNumber were changed or broken, this test would keep passing because it only checks the copied table against itself. Real protection for the underlying rule does exist elsewhere \u2014 test/core/utils/gematriya_test.dart and gematriya_ts6_test.dart call the real class, and this same file's C1/C2 tests exercise Gematriya.forNumber indirectly through widget rendering \u2014 so the concrete risk today is low, but this specific 'Direct assertion for completeness' test contributes zero verification while reading as if it does.",
+   "recommendation": "Delete the local _gematriya helper and its hardcoded table; import package:learning_tracker/core/utils/gematriya.dart and call Gematriya.forNumber directly in the assertions.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Test calls Gematriya.forNumber(15)/(16) etc. directly; temporarily corrupting Gematriya's 15/16 special-case in lib/ makes this specific test fail."
+   ],
+   "labels": [
+    "test-quality",
+    "tautological-test",
+    "content_browsing"
+   ]
+  }
+ }
+]

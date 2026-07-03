@@ -1,0 +1,419 @@
+[
+ {
+  "sourceBatch": "t1-core-database-daos-p1",
+  "findingIndex": 10,
+  "finding": {
+   "title": "Replace DateTime.now() with fixed timestamps in bookmark_dao_test.dart for full hermeticity",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6",
+   "area": "test/core/database/daos/bookmark_dao_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/database/daos/bookmark_dao_test.dart",
+     "line": 37,
+     "quote": "final now = DateTime.now();"
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/bookmark_dao_test.dart",
+     "line": 56,
+     "quote": "final now = DateTime.now();"
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/bookmark_dao_test.dart",
+     "line": 83,
+     "quote": "final now = DateTime.now();"
+    }
+   ],
+   "sites": 5,
+   "why": "5 occurrences (lines 37, 56, 83, 110, 129) use wall-clock DateTime.now() for insert timestamps. None is asserted against an exact value, so this isn't flaky today, but it violates TQ-6's hermetic-test requirement and is inconsistent with the sibling bookmark_dao_extra_test.dart, which uses fixed DateTime.utc(...) throughout in the same directory.",
+   "recommendation": "Replace `DateTime.now()` with a fixed `DateTime.utc(...)` constant, matching bookmark_dao_extra_test.dart's convention.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "No DateTime.now() call remains in bookmark_dao_test.dart."
+   ],
+   "labels": [
+    "TQ-6",
+    "hermetic-tests",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-database-daos-p2",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Replace inline CurriculumTracksCompanion.insert() boilerplate with the existing seedTrack() helper across DAO tests",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler-duplication (lens pass); TQ hermetic-fixture hygiene",
+   "area": "test/core/database/daos \u2014 shared fixtures",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/database/daos/completion_dao_test.dart",
+     "line": 20,
+     "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/curriculum_scope_dao_extra_test.dart",
+     "line": 29,
+     "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/curriculum_scope_dao_extra_test.dart",
+     "line": 73,
+     "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/curriculum_scope_dao_test.dart",
+     "line": 22,
+     "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/curriculum_scope_dao_test.dart",
+     "line": 211,
+     "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/daily_plan_dao_test.dart",
+     "line": 16,
+     "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/daily_plan_dao_test.dart",
+     "line": 150,
+     "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/daily_plan_dao_test.dart",
+     "line": 205,
+     "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/goal_dao_extended_test.dart",
+     "line": 49,
+     "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/goal_dao_extra_test.dart",
+     "line": 48,
+     "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/goal_dao_extra_test.dart",
+     "line": 106,
+     "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/goal_dao_extra_test.dart",
+     "line": 154,
+     "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/goal_dao_extra_test.dart",
+     "line": 194,
+     "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/goal_dao_test.dart",
+     "line": 17,
+     "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/learning_ledger_dao_extended_test.dart",
+     "line": 23,
+     "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/learning_ledger_dao_extended_test.dart",
+     "line": 33,
+     "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/learning_ledger_dao_extra_test.dart",
+     "line": 127,
+     "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/learning_ledger_dao_extra_test.dart",
+     "line": 186,
+     "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/learning_ledger_dao_extra_test.dart",
+     "line": 219,
+     "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/learning_ledger_dao_test.dart",
+     "line": 29,
+     "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/point_config_dao_test.dart",
+     "line": 34,
+     "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/point_config_dao_test.dart",
+     "line": 259,
+     "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/point_config_dao_test.dart",
+     "line": 269,
+     "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/stage_dao_extended_test.dart",
+     "line": 31,
+     "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/stage_dao_extended_test.dart",
+     "line": 139,
+     "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/stage_dao_extended_test.dart",
+     "line": 170,
+     "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/stage_dao_extended_test.dart",
+     "line": 251,
+     "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/stage_dao_extra_test.dart",
+     "line": 20,
+     "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/stage_dao_extra_test.dart",
+     "line": 92,
+     "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/stage_dao_extra_test.dart",
+     "line": 125,
+     "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/stage_dao_test.dart",
+     "line": 17,
+     "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/stage_dao_test.dart",
+     "line": 113,
+     "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/stage_dao_test.dart",
+     "line": 156,
+     "quote": "CurriculumTracksCompanion.insert("
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/study_day_config_dao_test.dart",
+     "line": 17,
+     "quote": "CurriculumTracksCompanion.insert("
+    }
+   ],
+   "sites": 34,
+   "why": "test/helpers/drift_memory.dart already defines seedTrack() with a docstring stating it 'replaces the old pattern of constructing CurriculumTracksCompanion.insert inline in each test' \u2014 yet only 1 of 15 files in this batch that seed a track uses it; the other 34 sites hand-roll the companion. curriculum_tracks' shape has already changed 3 times (W3.22, W3.25, W3.28 per in-file comments removing trackType, renaming isActive/deletedAt to state/stateChangedAt), and each change required manually revisiting every inline call site. Call sites routed through seedTrack() get such fixes for free from one place; the other 34 do not, so the next schema change repeats the same N-site shotgun-surgery risk (a site missed during a mass edit silently keeps stale field values rather than failing loudly).",
+   "recommendation": "Replace `db.into(db.curriculumTracks).insert(CurriculumTracksCompanion.insert(...))` with `seedTrack(db, profileId: ..., curriculumId: ..., activatedAt: ...)` at all 34 listed sites, following the pattern completion_dao_tier_filter_test.dart already uses correctly. Mechanical, no behavior change expected.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "All 34 listed call sites replaced with seedTrack(...); test suite still green",
+    "No remaining `CurriculumTracksCompanion.insert(` under test/core/database/daos/**, except inside test/helpers/drift_memory.dart itself",
+    "Optional Rule-0 checker: add a warn-only grep to make audit for `CurriculumTracksCompanion.insert(` under test/core/database/daos/**/*.dart excluding drift_memory.dart"
+   ],
+   "labels": [
+    "testing",
+    "duplication",
+    "drift",
+    "maintainability"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-database-daos-p2",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Replace fixed-millisecond delay polling with emitsInOrder stream matchers in points_balance_dao_test.dart watchBalance tests",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6",
+   "area": "test/core/database/daos/points_balance_dao_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/database/daos/points_balance_dao_test.dart",
+     "line": 90,
+     "quote": "await Future<void>.delayed(const Duration(milliseconds: 20));"
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/points_balance_dao_test.dart",
+     "line": 100,
+     "quote": "await Future<void>.delayed(const Duration(milliseconds: 50));"
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/points_balance_dao_test.dart",
+     "line": 113,
+     "quote": "await Future<void>.delayed(const Duration(milliseconds: 50));"
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/points_balance_dao_test.dart",
+     "line": 140,
+     "quote": "await Future<void>.delayed(const Duration(milliseconds: 20));"
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/points_balance_dao_test.dart",
+     "line": 146,
+     "quote": "await Future<void>.delayed(const Duration(milliseconds: 50));"
+    }
+   ],
+   "sites": 5,
+   "why": "The two watchBalance tests collect stream emissions into a list via `.listen(emissions.add)` then assert on `emissions.last` after fixed 20ms/50ms sleeps. Under CI contention (parallel shards, a throttled runner) the reactive Drift query stream may not have emitted the post-write value before the sleep expires, producing an intermittent failure on `expect(emissions.last, 50)` that has nothing to do with a real regression \u2014 the classic flaky-test pattern that gets 'fixed' by rerunning rather than investigated. profile_dao_test.dart in this same batch (watchProfilesByAccount test) shows the deterministic alternative already in use elsewhere: `expect(stream, emitsInOrder([...]))`, which waits for the actual emission instead of racing a clock.",
+   "recommendation": "Rewrite both watchBalance tests to assert via `expect(db.pointsBalanceDao.watchBalance(1), emitsInOrder([0, 50, ...]))` (or expectLater) registered before the mutating calls, matching the pattern already used by profile_dao_test.dart's watchProfilesByAccount test, instead of manually collecting emissions behind a fixed sleep.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Both watchBalance tests in points_balance_dao_test.dart use emitsInOrder/expectLater with no fixed-millisecond Future.delayed used purely to wait for a stream emission",
+    "Tests pass repeatedly under both default and constrained (--concurrency=1, or CI-like throttled) runs",
+    "Rule-0 checker: grep test/**/*_test.dart for `Future<void>.delayed(const Duration(milliseconds` occurring in the same test body as a preceding `.listen(` call"
+   ],
+   "labels": [
+    "testing",
+    "flaky-test",
+    "hermeticity"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-database-daos-p2",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Replace raw DateTime.now() with DateTimeFactory.nowUtc() in DAO test fixture setup",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6",
+   "area": "test/core/database/daos \u2014 fixture setup",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/database/daos/completion_dao_test.dart",
+     "line": 23,
+     "quote": "stateChangedAt: DateTime.now(),"
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/completion_event_dao_test.dart",
+     "line": 12,
+     "quote": "final now = DateTime.now();"
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/curriculum_scope_dao_test.dart",
+     "line": 25,
+     "quote": "stateChangedAt: DateTime.now(),"
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/curriculum_scope_dao_test.dart",
+     "line": 214,
+     "quote": "stateChangedAt: DateTime.now(),"
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/goal_dao_test.dart",
+     "line": 20,
+     "quote": "stateChangedAt: DateTime.now(),"
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/learning_ledger_dao_test.dart",
+     "line": 13,
+     "quote": "final now = DateTime.now();"
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/point_config_dao_test.dart",
+     "line": 27,
+     "quote": "createdAt: DateTime.now(),"
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/point_config_dao_test.dart",
+     "line": 262,
+     "quote": "stateChangedAt: DateTime.now(),"
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/profile_dao_test.dart",
+     "line": 23,
+     "quote": "createdAt: DateTime.now(),"
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/profile_dao_test.dart",
+     "line": 117,
+     "quote": "updatedAt: Value(DateTime.now()),"
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/stage_dao_test.dart",
+     "line": 20,
+     "quote": "stateChangedAt: DateTime.now(),"
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/stage_dao_test.dart",
+     "line": 116,
+     "quote": "stateChangedAt: DateTime.now(),"
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/stage_dao_test.dart",
+     "line": 159,
+     "quote": "stateChangedAt: DateTime.now(),"
+    }
+   ],
+   "sites": 30,
+   "why": "TQ-6 requires hermetic tests with no wall-clock reliance. This exact suite's own shared helpers (seedProfile/seedTrack in test/helpers/drift_memory.dart) already route every timestamp through the injectable DateTimeFactory.nowUtc() specifically so the clock can eventually be pinned \u2014 but 30 sites across 8 files in this batch bypass it and call DateTime.now() directly for FK-filler timestamp columns. Today the values are unasserted so this is inert, but every raw call site is a future flake waiting to happen the first time a test asserts against 'inserted recently' or a snapshot equality, and none of these 30 sites are routed through any override point.",
+   "recommendation": "Replace `DateTime.now()` with `DateTimeFactory.nowUtc()` (already available via the existing import chain, or add `import 'package:learning_tracker/core/utils/date_utils.dart';`) or a fixed literal `DateTime.utc(...)` at all 30 sites across the 8 listed files.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "All 30 listed DateTime.now() call sites replaced with DateTimeFactory.nowUtc() or a fixed literal",
+    "Rule-0 checker: grep test/core/database/daos/**/*.dart for `DateTime.now()`; expect 0 hits"
+   ],
+   "labels": [
+    "testing",
+    "hermeticity",
+    "wall-clock"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-database-daos-p2",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Fix misleading 'debitRedemption' test title in points_balance_dao_test.dart that never calls a method by that name",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "test/core/database/daos/points_balance_dao_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/database/daos/points_balance_dao_test.dart",
+     "line": 56,
+     "quote": "test('debitRedemption returns false when balance is insufficient', () async {"
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/points_balance_dao_test.dart",
+     "line": 63,
+     "quote": "// Use parentAdjust as a proxy since debitRedemption needs a redemptionId."
+    }
+   ],
+   "sites": 1,
+   "why": "points_balance_dao.dart has no method named debitRedemption (grep-confirmed against lib/core/database/daos/points_balance_dao.dart: only getBalance/creditCompletion/parentAdjust/createRedemption/fulfilRedemption/declineRedemption exist). The test's own comment admits it substitutes parentAdjust 'as a proxy' \u2014 the body actually just re-verifies parentAdjust's clamp-at-zero behavior, already covered 3 tests earlier by 'parentAdjust deducts points (clamped at 0)'. A developer searching for debitRedemption/insufficient-balance coverage will find this test, believe it verifies that path, and waste time chasing a nonexistent API; the real insufficient-balance-on-redemption case is separately and correctly covered by the 'createRedemption returns null when balance is insufficient' test later in the same file.",
+   "recommendation": "Rename the test to describe what it verifies ('parentAdjust clamps balance at 0 for a large negative delta') or delete it as a duplicate of the adjacent parentAdjust clamp test.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Test renamed to match its actual body, or removed as a duplicate of the parentAdjust clamp test",
+    "No reference to a non-existent debitRedemption method remains in the file"
+   ],
+   "labels": [
+    "testing",
+    "misleading-test",
+    "hygiene"
+   ]
+  }
+ }
+]

@@ -1,0 +1,184 @@
+[
+ {
+  "sourceBatch": "t2-platform-config-p1",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Commit gradle-wrapper.jar instead of excluding it in android/.gitignore",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Tier-2 area note (correctness) \u2014 Gradle wrapper convention",
+   "area": "learning_tracker/android/.gitignore",
+   "evidence": [
+    {
+     "file": "learning_tracker/android/.gitignore",
+     "line": 1,
+     "quote": "gradle-wrapper.jar"
+    }
+   ],
+   "sites": 1,
+   "why": "git ls-files learning_tracker/android/gradle/wrapper/ shows only gradle-wrapper.properties tracked \u2014 the bootstrap jar is untracked in every fresh checkout, contrary to standard Flutter/Gradle convention of committing it. Flutter Tool happens to self-heal this (GradleUtils.injectGradleWrapperIfNeeded in flutter/packages/flutter_tools/lib/src/android/gradle_utils.dart:256 copies its own bundled copy in before every flutter build/run), which is why day-to-day flutter build apk keeps working \u2014 but anything that shells to android/gradlew directly without Flutter Tool mediating first (e.g. Android Studio's Gradle sync on a brand-new clone, or a raw cd android && ./gradlew tasks) fails with ClassNotFoundException: org.gradle.wrapper.GradleWrapperMain.",
+   "recommendation": "Remove gradle-wrapper.jar from android/.gitignore and commit the jar (or regenerate via `gradle wrapper` and commit), matching the vanilla flutter create template.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "git ls-files learning_tracker/android/gradle/wrapper/ lists both gradle-wrapper.jar and gradle-wrapper.properties.",
+    "cd learning_tracker/android && ./gradlew --version succeeds on a fresh clone with no prior flutter invocation."
+   ],
+   "labels": [
+    "android",
+    "gradle",
+    "gitignore",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-platform-config-p1",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Pin distributionSha256Sum in android/gradle/wrapper/gradle-wrapper.properties",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Tier-2 area note (security/supply-chain)",
+   "area": "learning_tracker/android/gradle/wrapper/gradle-wrapper.properties",
+   "evidence": [
+    {
+     "file": "learning_tracker/android/gradle/wrapper/gradle-wrapper.properties",
+     "line": 5,
+     "quote": "distributionUrl=https\\://services.gradle.org/distributions/gradle-8.14-all.zip"
+    }
+   ],
+   "sites": 1,
+   "why": "The wrapper properties file has no distributionSha256Sum key. Without it, gradlew's bootstrap download of the Gradle distribution has no integrity check beyond TLS \u2014 a compromised mirror/CDN or a MITM on a misconfigured proxy could substitute a malicious Gradle distribution that every subsequent local build and CI run would silently execute.",
+   "recommendation": "Run `./gradlew wrapper --gradle-version 8.14 --distribution-type all` (or add distributionSha256Sum manually from Gradle's published checksums page) so the wrapper verifies the download and fails closed on mismatch.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "gradle-wrapper.properties contains a distributionSha256Sum line matching the official checksum for gradle-8.14-all.zip.",
+    "A deliberately-wrong checksum causes ./gradlew to fail the download instead of proceeding."
+   ],
+   "labels": [
+    "android",
+    "gradle",
+    "supply-chain"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-platform-config-p1",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Fix invalid ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS value in Debug/Release Xcode configs (project.pbxproj)",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Tier-2 area note (drift between duplicated configs)",
+   "area": "learning_tracker/ios/Runner.xcodeproj/project.pbxproj",
+   "evidence": [
+    {
+     "file": "learning_tracker/ios/Runner.xcodeproj/project.pbxproj",
+     "line": 314,
+     "quote": "ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;"
+    },
+    {
+     "file": "learning_tracker/ios/Runner.xcodeproj/project.pbxproj",
+     "line": 434,
+     "quote": "ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = AppIcon;"
+    },
+    {
+     "file": "learning_tracker/ios/Runner.xcodeproj/project.pbxproj",
+     "line": 491,
+     "quote": "ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = AppIcon;"
+    }
+   ],
+   "sites": 2,
+   "why": "This is a Boolean Xcode build setting; 'AppIcon' is not a valid YES/NO value \u2014 it reads as a copy-paste bleed from the neighboring ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon setting a few lines away. Debug and Release (the two configurations used for every local dev run and every shipped build) diverge from Profile, which has the correct YES. Currently inert since nothing in this small app consumes generated Swift asset symbols, but it produces an Xcode build warning today and will silently break (compiles only in Profile) the moment someone adds Swift code that references a generated asset symbol.",
+   "recommendation": "Set ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS to the same valid YES/NO value across Debug, Release, and Profile.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "All three XCBuildConfiguration blocks for ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS use the same valid YES/NO value.",
+    "xcodebuild -showBuildSettings (or an xcodeproj lint script) shows no divergence between Debug/Release/Profile for this key."
+   ],
+   "labels": [
+    "ios",
+    "xcode",
+    "config-drift"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-platform-config-p1",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Remove or wire up the unused heritage_navy color resource in android colors.xml",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Everything sweep \u2014 dead code",
+   "area": "learning_tracker/android/app/src/main/res/values/colors.xml",
+   "evidence": [
+    {
+     "file": "learning_tracker/android/app/src/main/res/values/colors.xml",
+     "line": 3,
+     "quote": "<color name=\"heritage_navy\">#FF0038A8</color>"
+    },
+    {
+     "file": "learning_tracker/lib/app/router/app_shell.dart",
+     "line": 367,
+     "quote": "color: selected ? const Color(0xFF0038A8) : Colors.transparent,"
+    }
+   ],
+   "sites": 1,
+   "why": "No `@color/heritage_navy` reference exists anywhere under learning_tracker/android/ (checked all res/*.xml and Kotlin sources) \u2014 the resource is dead. The same navy (0xFF0038A8) is the app's real brand color, hand-duplicated as raw Color(0x..0038A8) literals across several Dart theme widgets instead. The Android resource is a third, disconnected copy nothing reads; if the brand color ever changes, it silently goes stale with no build warning and no consumer to notice or break.",
+   "recommendation": "Delete the unused resource, or if it's meant to back a native notification-icon tint or similar, wire it up and reference it from the relevant native/Dart code (or leave a comment documenting why a native-only copy must exist).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep -rn \"heritage_navy\" learning_tracker/android/ returns either zero results (removed) or at least one real consumer (wired up)."
+   ],
+   "labels": [
+    "android",
+    "dead-code",
+    "resources"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-platform-config-p2",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Drop dead UIBackgroundModes (fetch, remote-notification) from ios/Runner/Info.plist \u2014 no backing implementation exists",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Tier-2 config correctness / dead-target directive (no numbered coding-standards.md rule; general dead-code + AG posture)",
+   "area": "ios-platform-config",
+   "evidence": [
+    {
+     "file": "learning_tracker/ios/Runner/Info.plist",
+     "line": 56,
+     "quote": "<string>fetch</string>\n\t\t\t\t\t\t<string>remote-notification</string>"
+    },
+    {
+     "file": "learning_tracker/ios/Runner/AppDelegate.swift",
+     "line": 7,
+     "quote": "_ application: UIApplication,\n    didFinishLaunchingWithOptions launchOptions:"
+    },
+    {
+     "file": "learning_tracker/lib/features/notifications/domain/services/notification_gateway.dart",
+     "line": 184,
+     "quote": "await _plugin.zonedSchedule("
+    }
+   ],
+   "sites": 1,
+   "why": "Info.plist declares both `fetch` and `remote-notification` background modes, but AppDelegate.swift (6-18) implements no `application(_:performFetchWithCompletionHandler:)` or `application(_:didReceiveRemoteNotification:fetchCompletionHandler:)` override and never calls `registerForRemoteNotifications()`; pubspec.yaml has no `firebase_messaging` dependency; every reminder in NotificationGateway is scheduled locally via `zonedSchedule`. The keys were added wholesale in the initial iOS scaffold (b9d3a8b0) and never exercised. Concrete cost: Apple App Review Guideline 2.5.4 explicitly targets apps that declare background modes without a corresponding implementation (submission friction/rejection risk), and the stale declaration will mislead whoever next builds real push notifications into thinking server-side delivery already exists.",
+   "recommendation": "Remove the `UIBackgroundModes` key (and its two entries) from Info.plist since notification delivery is 100% local today. If server push is genuinely planned, land the capability declaration in the same change as the `firebase_messaging` dependency, the AppDelegate handler(s), and `registerForRemoteNotifications()` \u2014 not ahead of the implementation.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Info.plist has no UIBackgroundModes key, or each remaining mode has a matching handler in AppDelegate.swift referenced by a Linear ticket.",
+    "grep -A2 'UIBackgroundModes' learning_tracker/ios/Runner/Info.plist returns nothing (or only modes with matching AppDelegate.swift handlers) \u2014 usable as a Rule-0 grep checker."
+   ],
+   "labels": [
+    "ios",
+    "config",
+    "dead-code",
+    "tier2",
+    "AG"
+   ]
+  }
+ }
+]

@@ -1,0 +1,205 @@
+[
+ {
+  "sourceBatch": "t1-feat-settings-p2",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Log the swallowed deleteAccountData Cloud Function failure in AccountManagementService._deleteFirestoreUserData (EH-3 log-less catch)",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "EH-3 (log-less catch, Pending)",
+   "area": "features/account domain service, tested from this batch's settings test tree",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/account/domain/services/account_management_service.dart",
+     "line": 182,
+     "quote": "} catch (e) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/account/domain/services/account_management_service.dart",
+     "line": 183,
+     "quote": "// Log but don't rethrow \u2014 auth deletion + local cleanup still proceed."
+    }
+   ],
+   "sites": 1,
+   "why": "The comment claims 'Log but don't rethrow' but there is no AppLogger call anywhere in the catch body -- it is functionally empty. The Makefile's 'no empty catch blocks' grep (check 9/15) only matches a literal single-line `catch(...) {}`, so this multi-line, commented-but-logless catch is invisible to that checker (EH-3's 'log-less' half is explicitly Pending, not enforced). If the deleteAccountData Cloud Function fails during account deletion -- network error, quota, not-yet-deployed, permission-denied -- nothing is recorded anywhere (no Crashlytics, no Talker/AppLogger), so there is zero telemetry on failures of the primary Firestore-deletion path for a 'delete my account and my data' request. Verified account_management_service_test.dart has no test that stubs this call to throw and asserts on logging. The onUserDeleted Cloud Function trigger is a documented safety net that reduces the risk of the data actually surviving, but it does not restore visibility into how often the primary path fails.",
+   "recommendation": "Add an AppLogger.error(...) call (uid only, no other PII) inside the catch block; add a test that stubs a throwing httpsCallable and asserts the log call fired.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Catch block calls AppLogger.error with the uid and exception.",
+    "A red-first regression test in account_management_service_test.dart asserts logging occurs when the Cloud Function throws."
+   ],
+   "labels": [
+    "eh-3",
+    "observability",
+    "privacy"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-settings-p2",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Extract one shared DataExportImportService test-fixture builder instead of 5 independently-drifting copies of the export/import schema",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler duplication (lens pass) / test maintainability",
+   "area": "test/features/settings/domain/services",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/settings/domain/services/data_export_import_service_test.dart",
+     "line": 10,
+     "quote": "String buildValidJson({"
+    },
+    {
+     "file": "learning_tracker/test/features/settings/domain/services/data_export_roundtrip_test.dart",
+     "line": 172,
+     "quote": "String buildImportJson({"
+    },
+    {
+     "file": "learning_tracker/test/features/settings/domain/services/data_export_extended_test.dart",
+     "line": 225,
+     "quote": "String payload({required List<Map<String, dynamic>> scopes}) => jsonEncode({"
+    },
+    {
+     "file": "learning_tracker/test/features/settings/domain/services/data_import_service_test.dart",
+     "line": 174,
+     "quote": "Map<String, dynamic> buildPayload(String displayName) => {"
+    },
+    {
+     "file": "learning_tracker/test/features/settings/domain/services/data_export_import_service_import_test.dart",
+     "line": 20,
+     "quote": "Map<String, dynamic> minimalPayload() => {"
+    }
+   ],
+   "sites": 5,
+   "why": "Five files independently hand-roll the same ~20-key export/import JSON schema (data_export_extended_test.dart alone re-defines it inline 5 separate times within one file). They have already drifted: data_export_import_service_test.dart's buildValidJson still emits a legacy 'activeCurricula' key that its own comment at line 199 says was 'removed from schema v9', while the other four builders omit it entirely. When _requiredSections or a table's columns change, each of these files needs an independent manual update; missing one produces either a spuriously-failing test or a stale fixture that silently stops representing a real export.",
+   "recommendation": "Extract one shared fixture (e.g. test/helpers/data_export_fixtures.dart) exposing composable per-entity builders -- closest existing model is data_export_import_service_import_test.dart's minimalPayload() + per-entity map functions -- and have all 5 files consume it.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "A single shared fixture backs all DataExportImportService import/export payload construction in this test group.",
+    "A grep for a second independent 'formatVersion': 'schemaV1' full-schema literal outside the shared fixture returns nothing."
+   ],
+   "labels": [
+    "test-quality",
+    "duplication",
+    "fowler"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-settings-p2",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Cover DataExportImportService._resolveScheduleJson's weekly/rolling/new-schema branches (3 of 4 paths untested)",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (assertions weaker than what the source can do wrong)",
+   "area": "features/settings domain service, tested across 7 files in this batch",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart",
+     "line": 921,
+     "quote": "case 'weekly':"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/domain/services/data_export_import_service.dart",
+     "line": 928,
+     "quote": "case 'rolling':"
+    }
+   ],
+   "sites": 1,
+   "why": "_resolveScheduleJson exists specifically to keep old backup files importable across the W3.27 schema migration -- exactly the scenario a real user hits restoring a pre-migration backup. A repo-wide grep across all 7 domain/services test files in this batch for 'scheduleType', a literal 'schedule' key, 'rollingWindowSize', and 'daysOfWeek' returns zero hits: every stage-definition test fixture omits both the old quartet and the new field, so every test silently exercises only the `default: delay` fallback branch. A bug in the weekly/rolling legacy-parsing logic (e.g. the `jsonDecode(days) as List` cast, or a rolling-window field-name mismatch) would silently produce a wrong-but-plausible study schedule on restore, and nothing in this test suite would catch it.",
+   "recommendation": "Add tests importing legacy-quartet payloads with scheduleType: 'weekly' (including a JSON-string-encoded daysOfWeek and a native-List one) and 'rolling', plus one with the new 'schedule' field pre-populated, asserting the resulting stage_definitions.schedule column.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "3 new tests exist covering the weekly, rolling, and new-schedule-field branches.",
+    "Each new test fails when _resolveScheduleJson's corresponding branch is deliberately broken (red-first check)."
+   ],
+   "labels": [
+    "test-gap",
+    "back-compat",
+    "tq-8"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-settings-p2",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Add a Hebrew/RTL locale test variant for the Lifetime Marking screens (TQ-3)",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-3",
+   "area": "test/features/settings/presentation/screens",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/settings/presentation/screens/lifetime_marking_screen_test.dart",
+     "line": 35,
+     "quote": "child: const MaterialApp("
+    },
+    {
+     "file": "learning_tracker/test/features/settings/presentation/screens/lifetime_marking_toggle_level_test.dart",
+     "line": 110,
+     "quote": "child: MaterialApp("
+    },
+    {
+     "file": "learning_tracker/test/features/settings/presentation/screens/pp3_pp10_lifetime_marking_test.dart",
+     "line": 73,
+     "quote": "child: MaterialApp("
+    }
+   ],
+   "sites": 3,
+   "why": "The settings feature's own convention -- established in this same batch by curriculum_settings_screen_l1_test.dart and curriculum_settings_and_change_password_l1_test.dart, both of which pump a Locale('he') variant and assert Directionality.rtl -- is that key screens get an RTL smoke test (TQ-3). None of the 3 files that pump LifetimeMarkingScreen/LifetimeCurriculumMarkingScreen (a 986-line screen with hierarchical drill-down navigation) ever set `locale:` on their MaterialApp, so Hebrew string rendering and RTL layout for this screen are completely unverified by the automated suite despite being explicitly load-bearing elsewhere in this same feature.",
+   "recommendation": "Add a Locale('he') smoke-render test (renders without crash, Directionality.rtl) to lifetime_marking_screen_test.dart at minimum, matching the pattern already used in curriculum_settings_screen_l1_test.dart.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "At least one Locale('he') test exists for LifetimeMarkingScreen and asserts Directionality.rtl."
+   ],
+   "labels": [
+    "tq-3",
+    "i18n",
+    "rtl"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-settings-p2",
+  "findingIndex": 8,
+  "finding": {
+   "title": "Remove UserProfileHeaderCard's redundant _user field and de-duplicate/select-narrow the active-profile lookup",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler duplication / PF-1 narrow reads",
+   "area": "features/settings/presentation/widgets",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/settings/presentation/widgets/user_profile_header_card.dart",
+     "line": 54,
+     "quote": "AppUser? _user;"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/presentation/widgets/user_profile_header_card.dart",
+     "line": 112,
+     "quote": "final activeProfileId = ref.watch(activeProfileIdProvider);"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/presentation/widgets/user_profile_header_card.dart",
+     "line": 346,
+     "quote": "final activeProfileId = ref.watch(activeProfileIdProvider);"
+    }
+   ],
+   "sites": 3,
+   "why": "_UserProfileHeaderCardState is a ConsumerStatefulWidget solely to hold _user, which initState/didUpdateWidget always sets to exactly widget.user -- functionally identical to reading widget.user directly, which would let this be a plain ConsumerWidget. Separately, the 3-line 'resolve active profile from the profile-list stream' expression (ref.watch(activeProfileIdProvider) + ref.watch(profileListStreamProvider) + .where(...).firstOrNull) is copy-pasted verbatim between this build method (lines 112-119) and _LocalBornProfileRow.build (lines 346-350), and neither uses `.select()` to narrow the read to just the active profile -- both widgets rebuild on any change to the full profile list, not just the active one.",
+   "recommendation": "Delete _user/initState/didUpdateWidget and convert to ConsumerWidget; extract the active-profile lookup into one shared helper/derived provider (ideally using .select) used by both build methods.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "user_profile_header_card_l1_test.dart passes unchanged after the refactor."
+   ],
+   "labels": [
+    "fowler",
+    "duplication",
+    "pf-1"
+   ]
+  }
+ }
+]

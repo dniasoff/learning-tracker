@@ -1,0 +1,214 @@
+[
+ {
+  "sourceBatch": "t1-feat-tracks-p4",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Reuse trackDeletionAllowed() in TrackDetailScreen._showDeleteDialog instead of re-deriving the TRK-HUB-04 guard inline",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Evans (invariant re-derived, not enforced in one place) / Fowler-duplication",
+   "area": "features/tracks/setup/presentation/screens (track_detail_screen.dart vs track_management_hub_screen.dart)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/screens/track_detail_screen.dart",
+     "line": 896,
+     "quote": "if (activeCurricula.length <= 1) {\n      if (!mounted) return;"
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/screens/track_detail_screen.dart",
+     "line": 960,
+     "quote": "if (activeCount.length <= 1) {\n      if (!mounted) return;"
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/screens/track_management_hub_screen.dart",
+     "line": 246,
+     "quote": "final canDelete = trackDeletionAllowed(\n      activeCurriculumCount: activeCurricula.length,"
+    },
+    {
+     "file": "learning_tracker/test/features/tracks/setup/presentation/screens/track_hub_ts16_test.dart",
+     "line": 21,
+     "quote": "final allowed = trackDeletionAllowed(activeCurriculumCount: 1);"
+    }
+   ],
+   "sites": 2,
+   "why": "track_management_hub_screen.dart defines the pure, unit-tested trackDeletionAllowed() specifically to centralize the 'never delete the profile's last active curriculum' rule (TS-16/TRK-HUB-04) and calls it from its own delete dialog. track_detail_screen.dart's delete dialog implements an equivalent-but-separate `<= 1` check inline, twice (once as a pre-check, once again before the wipe path) \u2014 it never calls the tested helper. track_hub_ts16_test.dart (in this batch) reads as though it validates 'the' Archive/Delete dialog's guard, but it only protects the hub screen's call site; TrackDetailScreen's independent re-implementation could silently diverge (e.g. someone changes the hub's threshold to `< 1` for a policy change, updates trackDeletionAllowed and its test, and never notices track_detail_screen.dart's two untouched inline copies now disagree) without any test catching the drift.",
+   "recommendation": "Replace both inline `activeCurricula.length <= 1` / `activeCount.length <= 1` checks in track_detail_screen.dart with calls to trackDeletionAllowed(activeCurriculumCount: ...). Add a TrackDetailScreen-level widget test asserting the same last-curriculum boundary track_hub_ts16_test.dart already covers for the hub screen.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "track_detail_screen.dart's two inline `<= 1` checks are replaced with trackDeletionAllowed(...)",
+    "A widget test on TrackDetailScreen's delete flow (sole active curriculum) asserts the last-curriculum explanation shows and Archive/Wipe are withheld, independent of track_management_hub_screen coverage"
+   ],
+   "labels": [
+    "duplication",
+    "invariant",
+    "tracks-setup",
+    "TRK-HUB-04"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tracks-p4",
+  "findingIndex": 3,
+  "finding": {
+   "title": "De-duplicate the TrackDetailScreen dual-progress and bulk-prior-tile assertions shared by track_detail_screen_test.dart and edit_track_and_detail_l1_test.dart",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler-duplication / TQ-1",
+   "area": "features/tracks/setup/presentation/screens (test suite for TrackDetailScreen)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/tracks/setup/presentation/screens/track_detail_screen_test.dart",
+     "line": 214,
+     "quote": "expect(find.text('Track progress: 0%'), findsOneWidget);\n      expect(find.text('Lifetime: 0%'), findsOneWidget);"
+    },
+    {
+     "file": "learning_tracker/test/features/tracks/setup/presentation/screens/edit_track_and_detail_l1_test.dart",
+     "line": 1337,
+     "quote": "expect(find.text('Track progress: 0%'), findsOneWidget);\n      expect(find.text('Lifetime: 0%'), findsOneWidget);"
+    },
+    {
+     "file": "learning_tracker/test/features/tracks/setup/presentation/screens/track_detail_screen_test.dart",
+     "line": 521,
+     "quote": "expect(\n        bulkTile.shape,\n        isA<RoundedRectangleBorder>(),"
+    },
+    {
+     "file": "learning_tracker/test/features/tracks/setup/presentation/screens/edit_track_and_detail_l1_test.dart",
+     "line": 1582,
+     "quote": "expect(bulkTile.shape, isA<RoundedRectangleBorder>());"
+    }
+   ],
+   "sites": 2,
+   "why": "Two independent files pin the identical TrackDetailScreen behaviors \u2014 the zero-valued dual-progress labels and the bulk-prior tile's outlined/tileColor styling \u2014 with near line-for-line matching assertions. This is dead weight, not extra protection: any copy or styling change must be updated in two places using two different fixture-building helpers (_overridesFor vs _buildDetailApp), and it contributes ~200 of edit_track_and_detail_l1_test.dart's 1733 lines to content that already has a dedicated, purpose-built home. It also obscures which file is the canonical owner of TrackDetailScreen coverage going forward.",
+   "recommendation": "Keep track_detail_screen_test.dart (the Task #16-scoped file) as the sole owner of dual-progress/bulk-prior-tile assertions; delete the duplicate groups from edit_track_and_detail_l1_test.dart, retaining only scenarios unique to the combined edit+detail flow (B-EDIT-NAME title propagation across navigation, min-1-curriculum delete gating, chazara header wiring).",
+   "effort": "M",
+   "acceptance_criteria": [
+    "Only one test file asserts 'Track progress: 0%'/'Lifetime: 0%' and the bulk-prior tile's shape/tileColor properties",
+    "make test-story/epic runs for tracks/setup still pass after consolidation with no coverage loss for the removed duplicate assertions"
+   ],
+   "labels": [
+    "duplication",
+    "tracks-setup",
+    "test-maintenance"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tracks-p4",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Register StartingPositionCalendarMode with the shared expectNoOverflowAcrossDevices harness instead of the ad hoc single-viewport check",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler-reuse / TQ-1",
+   "area": "features/tracks/setup/presentation/steps (starting_position_calendar_overflow_test.dart)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/helpers/overflow_harness.dart",
+     "line": 24,
+     "quote": "// To add a new dialog/screen to the guard, add a `testWidgets` case in\n// `test/overflow/overflow_guard_test.dart` that calls this helper"
+    },
+    {
+     "file": "learning_tracker/test/features/tracks/setup/presentation/steps/starting_position_calendar_overflow_test.dart",
+     "line": 132,
+     "quote": "find.descendant(\n            of: find.byType(StartingPositionCalendarMode),\n            matching: find.byType(SingleChildScrollView),"
+    }
+   ],
+   "sites": 1,
+   "why": "The repo already built and documented expectNoOverflowAcrossDevices specifically for this class of regression (RenderFlex overflow at extreme device/text-scale corners), with an explicit extension point at test/overflow/overflow_guard_test.dart. StartingPositionCalendarMode \u2014 the exact widget that shipped a 'BOTTOM OVERFLOWED BY 59 PIXELS' bug \u2014 was never added there (grepped test/overflow/overflow_guard_test.dart for 'StartingPositionCalendarMode'/'Starting': no match). Instead this batch's test hand-rolls a single fixed corner (375\u00d7500 @ 2.0x text scale) and asserts on implementation details (a SingleChildScrollView exists; no Spacer exists) rather than the systematic multi-corner check the rest of the codebase relies on. A future edit that reintroduces overflow at a different corner (e.g. the narrow 280\u00d7653 or 1.3x scale the shared matrix covers) would ship undetected by this file, and the general-purpose guard would never learn about this widget either.",
+   "recommendation": "Add a testWidgets case for StartingPositionCalendarMode to test/overflow/overflow_guard_test.dart using expectNoOverflowAcrossDevices with the required provider overrides; keep or retire the structural (SingleChildScrollView/Spacer) assertions as a secondary, narrower regression check if desired.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "test/overflow/overflow_guard_test.dart includes a case pumping StartingPositionCalendarMode through expectNoOverflowAcrossDevices across the default device/text-scale matrix"
+   ],
+   "labels": [
+    "reuse",
+    "overflow",
+    "tracks-setup",
+    "test-infrastructure"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tracks-p4",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Tighten the granularity and pace-floor assertions in step_chazara_goal_l1_test.dart and edit_track_and_detail_l1_test.dart to match what their own titles/comments claim",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "features/tracks/setup/presentation/steps+screens",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/tracks/setup/presentation/steps/step_chazara_goal_l1_test.dart",
+     "line": 779,
+     "quote": "goal.rawLearningUnit,\n          isNotNull,"
+    },
+    {
+     "file": "learning_tracker/test/features/tracks/setup/presentation/screens/edit_track_and_detail_l1_test.dart",
+     "line": 791,
+     "quote": "// Just verifying the value \"1\" is visible (loading completed).\n        expect(find.text('1'), findsWidgets);"
+    }
+   ],
+   "sites": 2,
+   "why": "The chazara-goal test titled 'selecting coarse (perek) emits paceGranularity=perek' taps the 'Perakim' segment then only asserts goal.rawLearningUnit isNotNull \u2014 but _paceGranularity is set to a non-null default in initState() before any tap, so the assertion passes identically whether or not the tap actually changed anything. The edit-track test titled 'pace increment button is disabled when paceValue is 1 (minimum)' never inspects the stepper button's onPressed at all (its own comment admits 'Just verifying the value \"1\" is visible') \u2014 floor enforcement for EditTrackScreen's pace stepper is untested anywhere in the tree (grepped for 'remove_rounded'/'onPressed.*isNull' in the sibling edit_track_screen_l1_test.dart: no match).",
+   "recommendation": "Assert goal.rawLearningUnit equals the coarse key's storage value ('perek') rather than isNotNull. In the edit-track test, find the decrement IconButton (ancestor of Icons.remove_rounded) and assert its onPressed is null at paceValue==1, then non-null after an increment.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Granularity test asserts goal.rawLearningUnit == the expected coarse key, not just non-null",
+    "Pace-floor test asserts tester.widget<IconButton>(...).onPressed is null at value 1 and non-null after incrementing"
+   ],
+   "labels": [
+    "tests",
+    "weak-assertion",
+    "tracks-setup"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tracks-p4",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Split the four tracks/setup test files over the 400-line AG-3 cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "features/tracks/setup (test suite)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/tracks/setup/presentation/screens/edit_track_and_detail_l1_test.dart",
+     "line": 1,
+     "quote": "// L1 widget tests \u2014 EditTrackScreen + TrackDetailScreen"
+    },
+    {
+     "file": "learning_tracker/test/features/tracks/setup/presentation/screens/track_detail_screen_test.dart",
+     "line": 1,
+     "quote": "/// Regression tests for the Track Detail screen (W5-B / Task #16)."
+    },
+    {
+     "file": "learning_tracker/test/features/tracks/setup/presentation/steps/step_chazara_goal_l1_test.dart",
+     "line": 1,
+     "quote": "// L1 widget tests \u2014 ChazaraReadOnlyStep + SelfPacedGoalStep (uncovered branches)"
+    },
+    {
+     "file": "learning_tracker/test/features/tracks/setup/presentation/steps/step_scope_l1_test.dart",
+     "line": 1,
+     "quote": "// L1 widget-behaviour tests \u2014 ScopeStepContent + ScopeTopLevelView + ScopeHierarchyView"
+    }
+   ],
+   "sites": 4,
+   "why": "edit_track_and_detail_l1_test.dart is 1733 lines (4.3x the cap), step_chazara_goal_l1_test.dart is 1015, step_scope_l1_test.dart is 986, and track_detail_screen_test.dart is 578 \u2014 all hand-written, none generated. AG-3 applies repo-wide to hand-written Dart including tests; no Rule-0 checker currently enforces it (grepped tool/ and both Makefiles: no 400-line check exists). Large files raise review cost and, for edit_track_and_detail_l1_test.dart specifically, compound with Finding 4's duplication (splitting by screen would naturally surface and remove the overlap).",
+   "recommendation": "Split each file along its own documented section boundaries (e.g. edit_track_and_detail_l1_test.dart already separates into 'EditTrackScreen' and 'TrackDetailScreen' halves via its own comments \u2014 split along that line, reconciling with Finding 4). Add a tool/ script or make target that fails when a hand-written lib/ or test/ .dart file exceeds 400 lines.",
+   "effort": "L",
+   "acceptance_criteria": [
+    "The four listed files are each \u2264400 lines or split into cohesive \u2264400-line files along existing section boundaries",
+    "A checker (script or make target) greps hand-written .dart files for line count >400 and exits non-zero with file:line, excluding generated (*.g.dart, *.freezed.dart) globs"
+   ],
+   "labels": [
+    "file-size",
+    "AG-3",
+    "tracks-setup",
+    "hygiene"
+   ]
+  }
+ }
+]

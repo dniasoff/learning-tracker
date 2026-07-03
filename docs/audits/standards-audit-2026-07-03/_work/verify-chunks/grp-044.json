@@ -1,0 +1,210 @@
+[
+ {
+  "sourceBatch": "t1-feat-content_browsing-p1",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Inject analyticsServiceProvider into MarkLiveCompletionUseCase so tutor_live_mark_blocked actually fires",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "EH-2/PV-5 adjacent (use-case telemetry)",
+   "area": "features/content_browsing/presentation/screens",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/content_browsing/presentation/screens/text_display_screen.dart",
+     "line": 669,
+     "quote": "final markLiveUseCase = MarkLiveCompletionUseCase<MarkCompletionResult>("
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/domain/use_cases/mark_live_completion_use_case.dart",
+     "line": 62,
+     "quote": "await _analytics?.logEvent(LogEvents.tutor.liveMarkBlocked);"
+    }
+   ],
+   "sites": 1,
+   "why": "grep -rn 'MarkLiveCompletionUseCase<' across lib/ shows text_display_screen.dart:669 is the ONLY production construction site in the app, and it omits the optional `analytics:` argument, so `_analytics` stays null and the null-aware `_analytics?.logEvent(...)` silently no-ops. The use case's own comment says this telemetry exists so 'tutor boundary violations are visible in dashboards' (W7.11) \u2014 the permission guard itself still works (exception thrown, dialog shown), but that dashboard signal never fires anywhere in production, so ops has zero visibility into how often the tutor write-boundary is hit.",
+   "recommendation": "Pass analytics: ref.read(analyticsServiceProvider) at the construction site \u2014 the provider already exists and is used the same way by sibling tutoring providers (tutor_grant_providers.dart).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "a widget/unit test overrides analyticsServiceProvider with a fake, drives a tutor-session mark-complete attempt, and asserts logEvent(LogEvents.tutor.liveMarkBlocked) was called exactly once"
+   ],
+   "labels": [
+    "observability",
+    "analytics",
+    "tutoring",
+    "bug"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-content_browsing-p1",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Rewrite tests that don't actually exercise the repository/provider they claim to test",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "test/features/content_browsing",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/content_browsing/data/repositories/content_repository_impl_test.dart",
+     "line": 46,
+     "quote": "skip: 'Bundled JSON removed \u2014 content now fetched from cloud storage',"
+    },
+    {
+     "file": "learning_tracker/test/features/content_browsing/data/repositories/content_repository_impl_test.dart",
+     "line": 228,
+     "quote": "final filtered = testItems.where((item) => item.level1 == 'Seder Zeraim').toList();"
+    },
+    {
+     "file": "learning_tracker/test/features/content_browsing/data/repositories/content_repository_impl_test.dart",
+     "line": 280,
+     "quote": "if (query.isEmpty) { expect(<ContentItem>[], isEmpty); }"
+    },
+    {
+     "file": "learning_tracker/test/features/content_browsing/content_tile_search_providers_test.dart",
+     "line": 938,
+     "quote": "final container = ProviderContainer(\n          overrides: [contentRepositoryProvider.overrideWithValue(repo)],\n        );"
+    }
+   ],
+   "sites": 2,
+   "why": "content_repository_impl_test.dart's 'in-memory operations' group re-implements ContentRepositoryImpl's filter/search logic with local .where() calls instead of calling filterByLevel/search/getContentByRef \u2014 a regression in the real nikud-stripping cache or level-matching would not be caught here. Its 'empty search returns empty list' test is a pure tautology that doesn't reference the repository at all. Its entire 'JSON parsing contract' group is skipped with a now-false premise (ContentRepositoryImpl.getContentForCurriculum still loads rootBundle.loadString('assets/content/hierarchy/$key.json'), and 14 such files exist) and even unskipped would fail immediately since its own File('assets/content/$filename') omits the 'hierarchy/' path segment. Separately, content_tile_search_providers_test.dart's 'P2. empty query' test allocates a ProviderContainer and disposes it but never calls container.read(...) \u2014 its assertion only exercises the hand-written fake repository directly, not contentSearchProvider as the test name claims. The sibling file content_repository_impl_logic_test.dart (also in this batch) shows the correct pattern \u2014 a fake subclass that only stubs asset loading and calls the real repository methods \u2014 so real coverage exists elsewhere, but these weaker duplicates sit alongside it giving false confidence.",
+   "recommendation": "Delete the 'in-memory operations' and skipped 'JSON parsing contract' groups from content_repository_impl_test.dart (superseded by content_repository_impl_logic_test.dart); add one small always-on smoke test that loads and parses every assets/content/hierarchy/*.json file; fix the P2 test to call container.read(contentSearchProvider(...).future) with an empty query.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "mutating ContentRepositoryImpl.search's nikud-stripping or filterByLevel's level-matching logic causes a red test in this suite after the rewrite",
+    "dart test shows 0 permanently-skipped groups in content_repository_impl_test.dart, or the skip reason is corrected and carries a Linear id"
+   ],
+   "labels": [
+    "test-quality",
+    "tq-8",
+    "false-confidence"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-content_browsing-p1",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Split hand-written content_browsing files that exceed the 400-line cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "features/content_browsing",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/content_browsing/presentation/screens/content_hierarchy_screen.dart",
+     "line": 1,
+     "quote": "603 lines total (wc -l) \u2014 exceeds AG-3's 400-line cap"
+    },
+    {
+     "file": "learning_tracker/lib/features/content_browsing/presentation/screens/text_display_screen.dart",
+     "line": 1,
+     "quote": "1028 lines total (wc -l) \u2014 exceeds AG-3's 400-line cap"
+    },
+    {
+     "file": "learning_tracker/test/features/content_browsing/content_tile_search_providers_test.dart",
+     "line": 1,
+     "quote": "1268 lines total (wc -l) \u2014 exceeds AG-3's 400-line cap, and mixes 3 lib files' coverage"
+    }
+   ],
+   "sites": 3,
+   "why": "Both screens embed substantial non-UI logic directly in ConsumerStatefulWidget State classes (hierarchy drill-down + breadcrumb Hebrew-name resolution in content_hierarchy_screen.dart; completion-marking orchestration incl. tutor-guard/achievement-celebration/next-task routing in text_display_screen.dart) that cannot be unit-tested without pumping a full widget tree \u2014 Feathers' seam question ('can this be tested without booting the widget tree?') is currently 'no'. content_tile_search_providers_test.dart additionally violates AG-5 mirroring: it doesn't correspond to any single lib/ file and duplicates coverage already present in the separately-mirrored content_item_tile_test.dart / content_search_screen_test.dart (outside this batch).",
+   "recommendation": "Extract _groupItemsByNextLevel/_hebrewNamesForNavStack/_isChapterLevelRef and the _handleComplete orchestration into plain Dart classes or notifiers under domain/ that can be unit-tested directly; split content_tile_search_providers_test.dart along its own documented T/S/P sections into 3 mirrored files.",
+   "effort": "L",
+   "acceptance_criteria": [
+    "a Rule-0 line-count check added to make audit fails on any hand-written lib/**/*.dart or test/**/*.dart file over 400 lines",
+    "all 3 files are below the threshold or added to an explicit, dated exceptions list"
+   ],
+   "labels": [
+    "file-size",
+    "ag-3",
+    "maintainability"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-content_browsing-p1",
+  "findingIndex": 8,
+  "finding": {
+   "title": "Type the catch clauses in content_browsing instead of bare catch(e)",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "EH-4",
+   "area": "features/content_browsing",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/content_browsing/presentation/screens/content_search_screen.dart",
+     "line": 43,
+     "quote": "} catch (_) {\n      return null;"
+    },
+    {
+     "file": "learning_tracker/lib/features/content_browsing/data/repositories/content_repository_impl.dart",
+     "line": 87,
+     "quote": "} catch (e) {\n      throw ContentLoadException("
+    },
+    {
+     "file": "learning_tracker/lib/features/content_browsing/presentation/screens/text_display_screen.dart",
+     "line": 755,
+     "quote": "} catch (e, st) {\n      AppLogger.instance.error("
+    },
+    {
+     "file": "learning_tracker/lib/features/content_browsing/data/services/cloud_content_service.dart",
+     "line": 317,
+     "quote": "} catch (_) {\n      // Not gzipped, return as-is\n      return data;"
+    }
+   ],
+   "sites": 6,
+   "why": "None of these restrict the caught type, so each also catches Error subtypes (a TypeError from a bad cast, a StateError from a logic bug) and handles them as an ordinary recoverable failure. The sharpest case is cloud_content_service.dart:317 (currently dead per the separate dead-code finding, but worth fixing if kept): if gzip.decode throws for a reason other than 'not gzipped' (e.g. a truncated download), the function returns the still-compressed bytes as valid data, turning a clear decompression failure into a confusing downstream JSON-parse error. text_display_screen.dart:755's bare catch(e, st) around _handleComplete will show 'Could not save' for a genuine programming bug exactly the same way it shows it for an expected write failure.",
+   "recommendation": "Narrow each to on FormatException/on Exception catch as appropriate; for the gzip fallback specifically, check the gzip magic number (0x1f 0x8b) instead of try/catch.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "a grep-based Rule-0 check for '} catch (' without a preceding 'on ' returns zero hits in these 4 files (or dart run custom_lint once its analyzer-9.0 incompatibility, already baselined, is fixed)"
+   ],
+   "labels": [
+    "eh-4",
+    "error-handling",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-content_browsing-p1",
+  "findingIndex": 9,
+  "finding": {
+   "title": "Add keepAlive justification comments to live content_browsing providers",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "SM-6",
+   "area": "features/content_browsing/presentation/providers",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/content_browsing/presentation/providers/content_providers.dart",
+     "line": 35,
+     "quote": "@Riverpod(keepAlive: true)\nFuture<Map<String, String>> curriculumHeNames("
+    },
+    {
+     "file": "learning_tracker/lib/features/content_browsing/presentation/providers/text_display_providers.dart",
+     "line": 35,
+     "quote": "@Riverpod(keepAlive: true)\nclass FontSizeNotifier extends _$FontSizeNotifier {"
+    },
+    {
+     "file": "learning_tracker/lib/features/content_browsing/presentation/providers/text_display_providers.dart",
+     "line": 46,
+     "quote": "@Riverpod(keepAlive: true)\nclass ShowNikud extends _$ShowNikud {"
+    }
+   ],
+   "sites": 3,
+   "why": "SM-6 requires an inline justification beside every keepAlive: true so a reviewer can tell a deliberate cache-lifetime decision from a copy-pasted default. None of these three explain why losing the cached value on last-listener-disappear would be wrong \u2014 contrast with contentRepositoryProvider 3 lines above curriculumHeNames in the same file, which does explain it ('rebuilding this provider would discard cached data').",
+   "recommendation": "Add a one-line '// keepAlive: <reason>' per the pattern already used in sync_orchestrator_providers.dart, e.g. for FontSizeNotifier/ShowNikud: 'font-size/nikud toggles must survive navigating away from the reader and back.'",
+   "effort": "S",
+   "acceptance_criteria": [
+    "the [Pending] audit grep requiring a justification comment beside keepAlive: true (coding-standards.md SM-6) finds a comment within 2 lines of each @Riverpod(keepAlive: true) in this feature"
+   ],
+   "labels": [
+    "sm-6",
+    "riverpod",
+    "documentation"
+   ]
+  }
+ }
+]

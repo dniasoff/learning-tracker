@@ -1,0 +1,215 @@
+[
+ {
+  "sourceBatch": "t2-app-tool-p1",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Delete or wire up tool/curate_curricula/sefaria_settings.py \u2014 a vestigial placeholder never referenced by the documented workflow",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-6-adjacent (dead code)",
+   "area": "tool/curate_curricula",
+   "evidence": [
+    {
+     "file": "learning_tracker/tool/curate_curricula/sefaria_settings.py",
+     "line": 6,
+     "quote": "PYTHONPATH=.:/home/daniel/repos/learning-tracker/learning_tracker/tool/curate_curricula \\"
+    },
+    {
+     "file": "learning_tracker/tool/curate_curricula/sefaria_settings.py",
+     "line": 10,
+     "quote": "# (placeholder \u2014 actual settings live in Sefaria-Project's sefaria/local_settings.py)"
+    }
+   ],
+   "sites": 1,
+   "why": "The file documents its own invocation via a PYTHONPATH trick that nothing else in the repo uses; README.md's actual Setup section instead has the developer hand-write a real sefaria/local_settings.py inside the external Sefaria-Project checkout. Repo-wide grep for 'sefaria_settings' finds zero importers or references. Even if it were picked up, its body is only a comment, so it does nothing \u2014 it's dead weight with instructions that contradict the real workflow.",
+   "recommendation": "Delete the file. If it's meant to become the real settings module, give it actual content and wire the PYTHONPATH invocation into README.md's Setup steps.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "File is removed, or actively imported/referenced by the documented curate_curricula workflow in README.md"
+   ],
+   "labels": [
+    "dead-code",
+    "tier2-tooling"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-app-tool-p1",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Fix stale password_hasher.dart path printed by tool/argon2id_benchmark.dart \u2014 file moved from features/auth to features/account",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-8-adjacent (stale reference)",
+   "area": "tool/",
+   "evidence": [
+    {
+     "file": "learning_tracker/tool/argon2id_benchmark.dart",
+     "line": 154,
+     "quote": "stdout.writeln('    lib/features/auth/domain/services/password_hasher.dart');"
+    },
+    {
+     "file": "learning_tracker/lib/features/account/domain/services/password_hasher.dart",
+     "line": 28,
+     "quote": "static const production = Argon2idParams("
+    }
+   ],
+   "sites": 1,
+   "why": "The benchmark tool prints instructions telling whoever runs it to 'Update Argon2idParams.production in lib/features/auth/domain/services/password_hasher.dart', but Argon2idParams and PasswordHasher actually live under lib/features/account/ \u2014 the feature was evidently renamed/relocated after this script was written and the printed path was never updated. Anyone following the tool's own output would open a path that doesn't exist.",
+   "recommendation": "Update the stdout.writeln call to print lib/features/account/domain/services/password_hasher.dart.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "argon2id_benchmark.dart's printed path matches the real location of Argon2idParams.production"
+   ],
+   "labels": [
+    "stale-doc",
+    "tier2-tooling"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-app-tool-p1",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Define a retention policy for completed-round device-test workflow.js scripts instead of letting run2/run3 accumulate in tool/ indefinitely",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-1/AG-11-adjacent (repo hygiene)",
+   "area": "tool/",
+   "evidence": [
+    {
+     "file": "learning_tracker/tool/run2_test_sweep.workflow.js",
+     "line": 2,
+     "quote": "name: 'run2-on-device-sweep',"
+    },
+    {
+     "file": "learning_tracker/tool/run2_tutoring_gamification.workflow.js",
+     "line": 2,
+     "quote": "name: 'run2-tutoring-gamification',"
+    },
+    {
+     "file": "learning_tracker/tool/run2_tutoring_retest.workflow.js",
+     "line": 2,
+     "quote": "name: 'run2-tutoring-retest',"
+    },
+    {
+     "file": "learning_tracker/tool/run3_cycle3_single.workflow.js",
+     "line": 2,
+     "quote": "name: 'run3-cycle3-single-account',"
+    },
+    {
+     "file": "learning_tracker/tool/run3_test_cycle.workflow.js",
+     "line": 2,
+     "quote": "name: 'run3-test-cycle',"
+    },
+    {
+     "file": "learning_tracker/tool/run3_tutor_extensive.workflow.js",
+     "line": 2,
+     "quote": "name: 'run3-tutor-extensive',"
+    }
+   ],
+   "sites": 6,
+   "why": "Each script hardcodes one specific device IP, throwaway test-account PINs, and references specific numbered fixes ('FIX#7', 'FIX#9') from one already-completed testing round (run2, run3). git history shows later rounds (run-6, run-7, per the repo's recent commit log) left no equivalent *.workflow.js files behind, so retention is inconsistent \u2014 a reader can't tell whether run2/run3 are kept deliberately as re-runnable regression scripts or are simply uncleaned leftovers, and there is no tool/README documenting either answer.",
+   "recommendation": "Document a retention rule for run-N workflow scripts (e.g. archive completed rounds under docs/audits/ next to the bug-log report they produced, or delete once their fixes have landed and been verified), and apply it to run2/run3.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "tool/ (or a new tool/README) states the retention rule for *.workflow.js device-test scripts",
+    "run2/run3 scripts are archived, removed, or explicitly kept per that stated rule"
+   ],
+   "labels": [
+    "repo-hygiene",
+    "tier2-tooling"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-app-tool-p2",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Delete or archive the dead Story-15.13 content-upload pipeline (tool/seed_content.dart, tool/seed_text_content.dart, tool/upload_to_firebase.{js,sh})",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "dead-code / Tier-2 dead-target",
+   "area": "tool/ content-seed pipeline (orphaned Story-15.13 branch)",
+   "evidence": [
+    {
+     "file": "learning_tracker/tool/seed_content.dart",
+     "line": 35,
+     "quote": "final outputDir = Directory('build/seeded_content');"
+    },
+    {
+     "file": "learning_tracker/tool/seed_text_content.dart",
+     "line": 49,
+     "quote": "final outputDir = Directory('build/text_content');"
+    },
+    {
+     "file": "learning_tracker/tool/upload_to_firebase.js",
+     "line": 18,
+     "quote": "const SEEDED_DIR = 'build/seeded_content';"
+    },
+    {
+     "file": "learning_tracker/tool/upload_to_firebase.sh",
+     "line": 24,
+     "quote": "ASSETS_DIR=\"build/seeded_content\""
+    }
+   ],
+   "sites": 4,
+   "why": "None of these 4 files appear anywhere in the Makefile (grep confirms only seed_content_db.dart and validate_seed_coverage.dart are wired in); docs/linear-status.md:167 shows the feature they serve, 'DNI-121 | 15.13: Cloud Content Storage & Multilingual Fetch', as Canceled; and the in-app consumer of the Firebase Storage path they write to (CloudContentServiceProvider in lib/features/content_browsing/presentation/providers/cloud_content_providers.dart) has zero callers outside its own generated .g.dart file. The bucket name they target ('torah-study-tracker.firebasestorage.app') matches the real production bucket in lib/firebase_options.dart:53, so anyone who trusts the still-present usage comments and re-runs this chain writes real, unused data into the production Storage bucket that ST-1 already flags as having no committed security rules. upload_to_firebase.js and upload_to_firebase.sh have also already drifted from each other while unmaintained: the .sh version supports --dry-run/--curriculum=X, the .js version has no argument parsing at all and always uploads everything for real.",
+   "recommendation": "Delete tool/seed_content.dart, tool/seed_text_content.dart, tool/upload_to_firebase.js, tool/upload_to_firebase.sh (or move them to a tool/_archive/ with a header banner citing DNI-121/Canceled if the team wants to keep them as reference). Update docs/explainers/content-database.md's 'Where the code lives' list and docs/api-contracts.md:92, which both still cite these files as active pipeline components.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "tool/seed_content.dart, tool/seed_text_content.dart, tool/upload_to_firebase.js, tool/upload_to_firebase.sh no longer exist at HEAD, or each carries a header stating they are retired (Story DNI-121, Canceled) and naming any current replacement",
+    "docs/explainers/content-database.md and docs/api-contracts.md:92 no longer list these files as active build-pipeline components",
+    "grep -rL 'DNI-121\\|retired' over any files kept returns empty"
+   ],
+   "labels": [
+    "dead-code",
+    "tool",
+    "hygiene",
+    "AG-6"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-app-tool-p2",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Mark tool/text_extract/ as retired in-repo and fix extract_books.py's footnote-stripping regression before any reuse",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "dead-code + text-cleaning correctness (BUG-5 invariant)",
+   "area": "tool/text_extract (superseded Sefaria-Project extraction path)",
+   "evidence": [
+    {
+     "file": "learning_tracker/tool/text_extract/README.md",
+     "line": 3,
+     "quote": "Builds `tool/data/daily_content_cache.json` \u2014 a pre-resolved bilingual"
+    },
+    {
+     "file": "learning_tracker/tool/text_extract/extract_books.py",
+     "line": 119,
+     "quote": "s = _HTML.sub(\"\", s)"
+    },
+    {
+     "file": "learning_tracker/tool/text_extract/main.py",
+     "line": 46,
+     "quote": "_FOOTNOTE = re.compile(r\" ?\\(\u2026\\)|<i class=\\\"footnote\\\".*?</i>\", re.S)"
+    }
+   ],
+   "sites": 3,
+   "why": "docs/seed-build.md:6,123 explicitly states the daily-content resolvers were 'ported from the retired tool/text_extract/main.py', and the live pipeline (make seed \u2192 tool/seed/build_text_cache.dart, tool/seed/build_daily_content.dart) never invokes anything under tool/text_extract/. Yet the directory's own README still reads as a live runbook (present-tense 'Builds\u2026', full venv setup, a 'Failure modes' section) with no pointer to the replacement or the fact it's retired. Worse, extract_books.py's _clean() (which shares the exact same directory/README/venv and produces tool/data/curriculum_books.json \u2014 the very file build_text_cache.dart now treats as a static committed input) only strips HTML *tags* via a bare `<[^>]+>` regex; it does not remove footnote *bodies* the way its own sibling main.py's `_FOOTNOTE` regex does, or the way the runtime's HebrewUtils.cleanSefariaText does (documented as the 'BUG-5' fix in sefaria_mongo.dart:19 and seed_content_db.dart:583-591). A contributor trusting the README who re-runs extract_books.py to add a book would regenerate curriculum_books.json/book_text_cache.json with Sefaria footnote text merged back into the main body \u2014 reintroducing exactly the corruption the rest of the codebase guards against three times over.",
+   "recommendation": "Add a retirement banner to tool/text_extract/README.md pointing at tool/seed/build_text_cache.dart and build_daily_content.dart as the current replacement. If the directory is kept for reference/history rather than deleted, fix extract_books.py's _clean() to strip footnote bodies the same way main.py's _FOOTNOTE regex does, so it can't silently corrupt data if someone runs it anyway.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "tool/text_extract/README.md states the retirement and names the current replacement tools, or the directory is removed entirely",
+    "A test asserts extract_books.py's _clean() removes an `<i class=\"footnote\">\u2026</i>` span wholesale (matching main.py's _FOOTNOTE behavior) \u2014 red before the fix, green after, or the file is deleted"
+   ],
+   "labels": [
+    "dead-code",
+    "data-quality",
+    "tool",
+    "regression-risk"
+   ]
+  }
+ }
+]

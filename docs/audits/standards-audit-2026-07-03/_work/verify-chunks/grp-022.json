@@ -1,0 +1,183 @@
+[
+ {
+  "sourceBatch": "t1-core-network",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Split or table-drive fetcher_test.dart \u2014 831 hand-written lines, over 2x the 400-line cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3 (hand-written Dart files \u2264400 lines)",
+   "area": "test/core/network/sefaria (file size)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/network/sefaria/fetcher_test.dart",
+     "line": 69,
+     "quote": "group('MishnaFetcher', () {"
+    },
+    {
+     "file": "learning_tracker/test/core/network/sefaria/fetcher_test.dart",
+     "line": 185,
+     "quote": "group('BavliFetcher', () {"
+    },
+    {
+     "file": "learning_tracker/test/core/network/sefaria/fetcher_test.dart",
+     "line": 251,
+     "quote": "group('YerushalmiFetcher', () {"
+    }
+   ],
+   "sites": 1,
+   "why": "The file is 831 lines, matching the digest's own P3 example of an oversized file. Most of the length comes from 7 near-identical per-curriculum test groups (curriculumId / fetchAllContent shape / isLeaf / hierarchyConfig assertions repeated per fetcher), so a change to the shared assertion shape must be hand-replicated 7 times today. The AG-3 checker (find lib test -name '*.dart' ... | xargs wc -l | awk '$1>400') would flag this the moment it is introduced as a gate.",
+   "recommendation": "Parameterize the 7 per-curriculum groups into a data-driven loop over a small fixture-driven table, or split into one file per curriculum family under test/core/network/sefaria/.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "Resulting file(s) are each \u2264400 lines",
+    "AG-3 line-count checker no longer lists this path"
+   ],
+   "labels": [
+    "file-size",
+    "duplication",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-network",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Make the 'All fetchers cover all 7 curricula' test verify against CurriculumId.values instead of a hand-maintained map",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (assertion weaker than what the source can actually do wrong)",
+   "area": "test/core/network/sefaria (test quality)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/network/sefaria/fetcher_test.dart",
+     "line": 787,
+     "quote": "// All 7 curricula with dedicated fetchers.\n      expect(fetchers.length, 7);"
+    },
+    {
+     "file": "learning_tracker/lib/core/enums/curriculum_id.dart",
+     "line": 23,
+     "quote": "mishnehTorah('mishneh_torah'),"
+    },
+    {
+     "file": "learning_tracker/lib/features/content_browsing/domain/strategies/composite_curriculum_strategy.dart",
+     "line": 55,
+     "quote": "static final Map<String, CompositeCurriculumStrategy> _registry = {"
+    }
+   ],
+   "sites": 1,
+   "why": "The test's title claims 'each CurriculumId has a corresponding fetcher' but it only checks internal self-consistency of a hardcoded 7-entry map \u2014 it never iterates CurriculumId.values. CurriculumId actually has 9 values; only 'tanach' is registered in CompositeCurriculumStrategy._registry as fetcher-exempt (composite of chumash+nach). 'mishnehTorah' is neither composite nor present in the fetcher map nor backed by any class in tool/lib/sefaria/, yet the test passes regardless \u2014 a curriculum can silently lack fetcher coverage forever without this 'coverage' test ever turning red. (Whether mishneh_torah.json is actually correct today is not established here \u2014 the defect is that this test cannot detect the gap either way.)",
+   "recommendation": "Rewrite the test to iterate CurriculumId.values, skip ids where CompositeCurriculumStrategy.isComposite(id.storageKey) is true, and assert every remaining id has a fetcher entry.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Test fails today (before any fetcher is added) if run against the corrected assertion, proving it actually detects the mishnehTorah gap",
+    "Test passes once mishnehTorah is either registered composite or given a real fetcher"
+   ],
+   "labels": [
+    "test-quality",
+    "false-coverage"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-network",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Cancel or document the leaked DNS-lookup Future in ConnectivityGateway.isOnline on timeout",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Nygard lens \u2014 what happens when I/O fails halfway",
+   "area": "core/network (resource handling)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/network/connectivity_gateway.dart",
+     "line": 14,
+     "quote": "final result = await InternetAddress.lookup(\n        'dns.google',\n      ).timeout(const Duration(seconds: 2));"
+    }
+   ],
+   "sites": 1,
+   "why": "Future.timeout() races a Timer against the lookup but cannot cancel the underlying OS-level DNS resolution \u2014 dart:io gives no cancellable primitive for InternetAddress.lookup. Under packet loss or a captive portal (exactly when this check matters most), the original lookup keeps running past the 2s timeout with no way to observe or cancel it; repeated calls (e.g. retrying a failed offline-account conversion in account_actions.dart) can accumulate abandoned lookups.",
+   "recommendation": "Either document the accepted tradeoff inline (dart:io has no cancellable DNS API) with a bounded-impact justification, or switch to a primitive that supports cancellation (e.g. a raw socket connect with explicit close on timeout).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Either an inline comment documents the accepted leak and its bound, or a test demonstrates no more than one lookup stays in flight after repeated rapid isOnline calls under a simulated timeout"
+   ],
+   "labels": [
+    "resource-leak",
+    "nygard-lens"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-network",
+  "findingIndex": 8,
+  "finding": {
+   "title": "Use `is TalkerDioLogger` instead of a runtimeType.toString() string match in dio_client_test.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Feathers/hygiene \u2014 type-safe test assertions",
+   "area": "test/core/network (test quality)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/network/dio_client_test.dart",
+     "line": 51,
+     "quote": "dio.interceptors.any(\n          (i) => i.runtimeType.toString() == 'TalkerDioLogger',"
+    }
+   ],
+   "sites": 1,
+   "why": "Comparing runtimeType.toString() to a string literal bypasses the type system: a rename or a subclass would silently break or falsely pass this check with a confusing failure message, where `is TalkerDioLogger` (talker_dio_logger is already a transitive dependency of tool/lib/dio_client.dart) is both safer and clearer.",
+   "recommendation": "Import package:talker_dio_logger/talker_dio_logger.dart and replace the check with `dio.interceptors.any((i) => i is TalkerDioLogger)`.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Test uses an `is` type check, no runtimeType.toString() comparison remains, test still passes"
+   ],
+   "labels": [
+    "test-quality",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-providers-prefs",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Delete or rewrite generated_providers_coverage_test.dart (757 lines) \u2014 every test only exercises riverpod_generator boilerplate",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (tautological tests) + AG-3 (400-line hand-written file cap)",
+   "area": "test/core/providers (test quality)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/providers/generated_providers_coverage_test.dart",
+     "line": 9,
+     "quote": "/// No ProviderContainer needed \u2014 we only call methods on provider objects."
+    },
+    {
+     "file": "learning_tracker/test/core/providers/generated_providers_coverage_test.dart",
+     "line": 65,
+     "quote": "expect(p1, equals(p2));\n      expect(p1 == p3, isFalse);"
+    },
+    {
+     "file": "learning_tracker/test/core/providers/generated_providers_coverage_test.dart",
+     "line": 69,
+     "quote": "expect(p1.debugGetCreateSourceHash(), isNotEmpty);"
+    }
+   ],
+   "sites": 1,
+   "why": "Every one of this file's ~60 tests calls only toString()/==/hashCode/overrideWithValue()/debugGetCreateSourceHash() on provider objects across ~25 imported provider files \u2014 methods riverpod_generator emits mechanically and guarantees correct by construction (the file's own header brags 'No ProviderContainer needed'). None of the 757 lines read an actual computed provider value or exercise application logic, so the suite cannot catch a real regression; it exists purely to move a coverage percentage, and must be hand-edited every time any of those ~25 files' provider signatures change (pure maintenance tax for zero protection). At 757 lines it also breaches AG-3's 400-line cap for hand-written files.",
+   "recommendation": "Delete the file \u2014 riverpod_generator's own test suite already guarantees .g.dart correctness for toString/==/hashCode/overrideWithValue. If a coverage-percentage floor is the actual goal, exclude generated files from the coverage calculation instead of hand-writing padding tests, and reinvest the budget in ProviderContainer-based behavioral tests for the providers that currently have none (see the companion core/preferences test-coverage finding).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "File is removed, or every remaining test reads a real computed value via ProviderContainer and would fail on an actual logic regression.",
+    "AG-3's checker (find lib test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400') no longer lists this file."
+   ],
+   "labels": [
+    "testing",
+    "AG-3",
+    "coverage-padding",
+    "P2"
+   ]
+  }
+ }
+]

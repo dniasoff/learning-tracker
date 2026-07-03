@@ -1,0 +1,213 @@
+[
+ {
+  "sourceBatch": "t1-feat-onboarding-p2",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Split the 6 hand-written onboarding files that exceed the 400-line AG-3 cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "onboarding (widgets + tests)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/widgets/intro_rewards_page.dart",
+     "line": 1,
+     "quote": "import 'package:flutter/material.dart';"
+    },
+    {
+     "file": "learning_tracker/test/features/onboarding/domain/services/bulk_prior_completion_service_test.dart",
+     "line": 1,
+     "quote": "import 'package:drift/native.dart';"
+    },
+    {
+     "file": "learning_tracker/test/features/onboarding/domain/services/learning_process_wizard_service_test.dart",
+     "line": 1,
+     "quote": "/// Tests for [LearningProcessWizardService]."
+    },
+    {
+     "file": "learning_tracker/test/features/onboarding/presentation/screens/app_intro_screen_l1_test.dart",
+     "line": 1,
+     "quote": "// L1 behaviour tests for AppIntroScreen."
+    },
+    {
+     "file": "learning_tracker/test/features/onboarding/presentation/screens/onboarding_screen_l1_test.dart",
+     "line": 1,
+     "quote": "// L1 widget tests for OnboardingScreen phase router."
+    },
+    {
+     "file": "learning_tracker/test/features/onboarding/presentation/screens/onboarding_bulk_l1_test.dart",
+     "line": 1,
+     "quote": "// L1 widget tests \u2014 OnboardingScreen phase flow + BulkMarkScreen sentinel-date"
+    }
+   ],
+   "sites": 6,
+   "why": "Exact line counts: intro_rewards_page.dart 418, bulk_prior_completion_service_test.dart 578, learning_process_wizard_service_test.dart 619, app_intro_screen_l1_test.dart 472, onboarding_screen_l1_test.dart 841, onboarding_bulk_l1_test.dart 1262. Per AG-3's own rationale, content past the read-budget threshold becomes invisible to the next agent \u2014 exactly how onboarding_screen_test.dart and half of learning_process_wizard_service_test.dart's groups (finding 7) came to duplicate coverage that already existed elsewhere in the same directory.",
+   "recommendation": "Split intro_rewards_page.dart by widget (hero illustration / feature cards / child-mode tag / scholar card are already 4 independent classes). Split the 3 largest test files by group/screen, matching the split already done between onboarding_screen_l1_test.dart and onboarding_bulk_l1_test.dart.",
+   "effort": "L",
+   "acceptance_criteria": [
+    "`find lib test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400'` (AG-3's own specified checker) no longer lists these 6 files"
+   ],
+   "labels": [
+    "hygiene",
+    "file-size",
+    "onboarding"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-onboarding-p2",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Consolidate duplicate onboarding test coverage instead of maintaining parallel suites",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-1, Fowler duplication",
+   "area": "onboarding tests",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/onboarding/presentation/screens/onboarding_screen_test.dart",
+     "line": 62,
+     "quote": "testWidgets('starts at combined new profile phase', (tester) async {"
+    },
+    {
+     "file": "learning_tracker/test/features/onboarding/presentation/screens/onboarding_bulk_l1_test.dart",
+     "line": 268,
+     "quote": "testWidgets('starts at profileCreation: name field + mode pills visible', ("
+    },
+    {
+     "file": "learning_tracker/test/features/onboarding/domain/services/learning_process_wizard_service_test.dart",
+     "line": 57,
+     "quote": "group('getPresetsForCurriculum', () {"
+    },
+    {
+     "file": "learning_tracker/test/features/onboarding/domain/services/learning_process_wizard_service_test.dart",
+     "line": 76,
+     "quote": "group('LearningProcessWizardService.getPresetsForCurriculum', () {"
+    }
+   ],
+   "sites": 3,
+   "why": "onboarding_screen_test.dart's testWidgets + childAwareText tests are near-line-for-line duplicates of onboarding_bulk_l1_test.dart's 'profileCreation phase' and 'childAwareText helper' groups (same button text, same disabled-state check, same ACTIVE-badge tap, same substitution cases) \u2014 it reads like the pre-L1 file the L1 rewrite was meant to replace but never deleted. learning_process_wizard_service_test.dart runs the same scenario (e.g. noReview creates one \u05dc\u05d9\u05de\u05d5\u05d3 stage) through two differently-named group blocks repeatedly, several pairs marked '(F2 variant)' \u2014 roughly half of its 31 tests are redundant with the other half. Every future behavior change to these services must be updated in 2 places or the suites silently diverge.",
+   "recommendation": "Delete onboarding_screen_test.dart (fully superseded) or trim it to whatever the L1 suite doesn't cover. In learning_process_wizard_service_test.dart, merge each '(F2 variant)'/second-group pair into the first, keeping the more specific assertions from each.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "Total test count in the 2 files drops by the number of confirmed-duplicate cases with no coverage regression on the 2 lib files under test"
+   ],
+   "labels": [
+    "testing",
+    "duplication",
+    "onboarding"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-onboarding-p2",
+  "findingIndex": 7,
+  "finding": {
+   "title": "BulkPriorCompletionService.execute()'s profileId branch bypasses DI and its bookmark write is never asserted",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "SM-7, TQ-8",
+   "area": "onboarding/domain/services",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/onboarding/domain/services/bulk_prior_completion_service.dart",
+     "line": 282,
+     "quote": "? BookmarkRepositoryImpl("
+    },
+    {
+     "file": "learning_tracker/test/features/onboarding/domain/services/bulk_prior_completion_service_test.dart",
+     "line": 234,
+     "quote": "final result = await service.execute("
+    },
+    {
+     "file": "learning_tracker/test/features/onboarding/domain/services/bulk_prior_completion_siyum_detection_test.dart",
+     "line": 333,
+     "quote": "profileId: profileId,"
+    }
+   ],
+   "sites": 2,
+   "why": "When execute() runs with a non-null profileId \u2014 the live path add_track_flow_screen.dart uses when a parent adds a track for a specific child \u2014 the service `new`s up a BookmarkRepositoryImpl directly instead of using the injected _bookmarkRepository, so no test double can intercept it (no seam). bulk_prior_completion_service_test.dart's execute() tests never pass profileId, so that branch never runs there at all. bulk_prior_completion_siyum_detection_test.dart does pass profileId (lines 333, 372) so the branch does run against a real in-memory DB, but neither test reads back the bookmarks table afterward \u2014 the branch's correctness (right profileId, right track resolved) is completely unverified. A bug here would silently point a child's bookmark at the wrong profile/track with no test failure.",
+   "recommendation": "Parameterize bookmarkRepositoryProvider as a .family(profileId) (or inject a BookmarkRepository factory into BulkPriorCompletionService) so the profileId path goes through the same injectable seam as the rest of the class; add an assertion in bulk_prior_completion_siyum_detection_test.dart that reads back the bookmark row for the target profile and checks it points at the expected sefariaRef.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "A test calls execute(profileId: X) and then asserts (via a real or fake repository read) that the bookmark was written under profile X",
+    "bulk_prior_completion_service.dart contains no direct `BookmarkRepositoryImpl(` construction outside a provider"
+   ],
+   "labels": [
+    "di",
+    "testing",
+    "onboarding"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-onboarding-p2",
+  "findingIndex": 8,
+  "finding": {
+   "title": "Extract onboarding intro-page Color(0x...) literals into core/theme constants",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "no_color_literal_outside_theme",
+   "area": "onboarding/presentation/widgets",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/widgets/intro_mishna_page.dart",
+     "line": 6,
+     "quote": "const _kNavy = Color(0xFF1A36A5);"
+    },
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/widgets/intro_page_indicator.dart",
+     "line": 18,
+     "quote": "static const _kNavy = Color(0xFF1A36A5);"
+    },
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/widgets/intro_rewards_page.dart",
+     "line": 9,
+     "quote": "const _kNavy = Color(0xFF1A36A5);"
+    }
+   ],
+   "sites": 3,
+   "why": "The same navy (0xFF1A36A5) is hand-typed as a private constant independently in all 3 files (19 raw Color literals total: 6+2+11), instead of one shared source. A future rebrand or dark-mode pass for the intro carousel requires finding and updating every hex literal by hand, with no compile-time link tying the copies together if one drifts out of sync. This is exactly the pattern the (currently non-functional) no_color_literal_outside_theme custom lint targets.",
+   "recommendation": "Add the ~8 distinct hex values used across the 3 files to AppColors/AppTheme (or an onboarding-scoped palette class in core/theme/) and import it instead of redefining per file.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "Once custom_lint is fixed, dart run custom_lint reports zero no_color_literal_outside_theme violations under lib/features/onboarding/presentation/widgets/"
+   ],
+   "labels": [
+    "theming",
+    "duplication",
+    "onboarding"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-onboarding-p2",
+  "findingIndex": 9,
+  "finding": {
+   "title": "Localize the hardcoded '\u2026yos' decorative chip text in IntroMishnaIllustration",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AX-2",
+   "area": "onboarding/presentation/widgets",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/widgets/intro_mishna_page.dart",
+     "line": 71,
+     "quote": "'\u2026yos',"
+    }
+   ],
+   "sites": 1,
+   "why": "The sibling chip on the same illustration correctly resolves via AppLocalizations (introMishnaReviewChip: 'Review\u2026' EN / '\u05d7\u05d6\u05e8\u05d4\u2026' HE), but this second floating chip is a literal, unlocalized Latin-script fragment rendered unconditionally regardless of locale. In Hebrew locale a user sees a stray Latin '\u2026yos' fragment floating over an otherwise fully-Hebrew first-run screen. No test in app_intro_screen_l1_test.dart's dedicated l10n-leak regression group \u2014 whose stated purpose is guarding this exact screen against exactly this class of bug \u2014 catches it, because that group checks a different text element on the same page.",
+   "recommendation": "Add an ARB key for the fragment with a real Hebrew value (or drop it for HE if the design intent doesn't survive translation), and extend app_intro_screen_l1_test.dart's Hebrew l10n group to assert on it.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "make arb-parity and flutter analyze stay clean after adding the key",
+    "app_intro_screen_l1_test.dart's 'l10n \u2014 Hebrew locale renders Hebrew, not English literals' group gains an assertion that the English fragment does not appear in Locale('he')"
+   ],
+   "labels": [
+    "i18n",
+    "onboarding"
+   ]
+  }
+ }
+]

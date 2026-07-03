@@ -1,0 +1,187 @@
+[
+ {
+  "sourceBatch": "t1-feat-sync-p1",
+  "findingIndex": 10,
+  "finding": {
+   "title": "streak_reducer_test.dart tests gamification streak logic but is filed under the sync feature's test tree with no lib/ counterpart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-5",
+   "area": "test tree placement",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/sync/domain/reducers/streak_reducer_test.dart",
+     "line": 2,
+     "quote": "import 'package:learning_tracker/features/gamification/streak/streak_event.dart';"
+    },
+    {
+     "file": "learning_tracker/test/features/sync/domain/reducers/streak_reducer_test.dart",
+     "line": 3,
+     "quote": "import 'package:learning_tracker/features/gamification/streak/streak_reducer.dart';"
+    }
+   ],
+   "sites": 1,
+   "why": "The file under test, lib/features/gamification/streak/streak_reducer.dart, has no lib/features/sync/domain/reducers/ counterpart -- that directory does not exist on the lib/ side at all. AG-5 requires test/ to mirror lib/ 1:1; the correctly mirrored path is test/features/gamification/streak/streak_reducer_test.dart, alongside the existing streak_service*_test.dart files there. As filed, a developer looking for gamification streak-reducer coverage under test/features/gamification/ would conclude there is none, when 163 lines of solid coverage (including a real clock-skew/local-day-bucketing regression case) actually exist, just misfiled under an unrelated feature.",
+   "recommendation": "Move the file to test/features/gamification/streak/streak_reducer_test.dart; no content changes needed, the test itself is sound.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "AG-5 mirroring audit (test/ dirs with no lib/ counterpart, excluding story_acceptance) no longer lists test/features/sync/domain/reducers/."
+   ],
+   "labels": [
+    "AG-5",
+    "test-placement",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-sync-p1",
+  "findingIndex": 11,
+  "finding": {
+   "title": "profile_scoped_preference_keys_test.dart tests each read* method twice under two differently-named, near-identical groups",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "test-quality",
+   "area": "features/sync test",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/sync/domain/profile_scoped_preference_keys_test.dart",
+     "line": 132,
+     "quote": "group('ProfileScopedPreferenceKeys.readAppLocale', () {"
+    },
+    {
+     "file": "learning_tracker/test/features/sync/domain/profile_scoped_preference_keys_test.dart",
+     "line": 159,
+     "quote": "group('readAppLocale', () {"
+    }
+   ],
+   "sites": 7,
+   "why": "For each of 7 read* methods (readAppLocale, readUseHebrewCalendar, readFontSizeIndex, readShowNikud, readLearningOrderParentControls, readHebrewTermsScript, readTransliterationVariant) the file has a 'ProfileScopedPreferenceKeys.readX' group immediately followed by a bare 'readX' group asserting the same scenarios (scoped value present, legacy-key fallback for profile 0, default when unset) via slightly different setup mechanics (setMockInitialValues vs. prefs.setString). None of the second groups add coverage the first doesn't already have -- this roughly doubles the file's length for no additional protection and doubles the edits needed whenever a read* method's fallback logic changes.",
+   "recommendation": "Delete one of each duplicate group pair (keep whichever naming convention the rest of the suite uses); should shrink the file well under the AG-3 400-line threshold from the companion finding.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "File line count drops materially (each read* method has exactly one group) and dart test still exercises scoped/legacy/default paths for all 7 methods."
+   ],
+   "labels": [
+    "test-quality",
+    "duplication",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-sync-p1",
+  "findingIndex": 12,
+  "finding": {
+   "title": "Three test files exercise or scaffold a fully-deleted sync subsystem (OfflineQueue, SyncEngine, FirestoreDataSource) instead of being deleted",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "dead-code",
+   "area": "features/sync test",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/sync/data/offline_queue_test.dart",
+     "line": 13,
+     "quote": "skip: 'Retired W2.35 \u2014 OfflineQueue deleted; see OutboxProcessor tests',"
+    },
+    {
+     "file": "learning_tracker/test/features/sync/data/offline_queue_enqueue_test.dart",
+     "line": 12,
+     "quote": "skip: 'Retired W2.35 \u2014 OfflineQueue deleted; see OutboxProcessor tests',"
+    },
+    {
+     "file": "learning_tracker/test/features/sync/data/sync_engine_test.dart.skip",
+     "line": 9,
+     "quote": "import 'package:learning_tracker/features/sync/data/sync_engine.dart';"
+    }
+   ],
+   "sites": 3,
+   "why": "lib/features/sync/data/sync_engine.dart, firestore_data_source.dart, and offline_queue.dart do not exist anywhere in lib/ -- all three classes these tests target were deleted in W2.35. offline_queue_test.dart and offline_queue_enqueue_test.dart are permanently-skipped single-placeholder-test shells (`test('placeholder', () {})`); sync_engine_test.dart.skip is 629 lines renamed with a non-.dart extension specifically so dart test/flutter analyze never touch it (last modified in an old cleanup commit, 2777f26b). None add value: they compile-check nothing, run nothing, and the two skip-tagged files' own comments say where the real coverage now lives (outbox_processor_test.dart).",
+   "recommendation": "Delete all three files outright -- git history preserves them if ever needed; a permanently-skipped or extension-renamed test file is worse than no file since it still shows up in directory listings and audit tooling as if it were live test surface (as happened in this very audit batch).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep confirms no remaining test files under test/ importing lib paths that don't exist in lib/ (sync_engine.dart, firestore_data_source.dart, offline_queue.dart)."
+   ],
+   "labels": [
+    "dead-code",
+    "hygiene",
+    "test-debris"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-sync-p1",
+  "findingIndex": 13,
+  "finding": {
+   "title": "Repositories/services constructed inline instead of injected via a provider at three sync-path call sites",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "SM-7",
+   "area": "features/sync data",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/sync/data/local_data_upload_service.dart",
+     "line": 106,
+     "quote": "final analytics = ParentAnalyticsRepositoryImpl(_database);"
+    },
+    {
+     "file": "learning_tracker/lib/features/sync/data/outbox_sync_write_facade.dart",
+     "line": 141,
+     "quote": "final rewardService = RewardMilestoneService("
+    },
+    {
+     "file": "learning_tracker/lib/features/sync/data/reward_settings_merge_delegate.dart",
+     "line": 35,
+     "quote": "final service = RewardMilestoneService(db, profileId: profileId);"
+    }
+   ],
+   "sites": 3,
+   "why": "SM-7 requires repositories/services/DAOs to be constructed only inside their @riverpod provider or a test override, so they stay swappable in tests without also having to fake the DB the constructor pulls in. All three sites construct a repository/service directly inside a plain method body, given only the already-available UserDatabase. A unit test of pushAllLocalData, buildGamificationSnapshot, or the reward-merge delegate cannot substitute a fake ParentAnalyticsRepositoryImpl/RewardMilestoneService without also faking the whole Drift database those classes read. This is a repo-wide pattern (23 similar sites exist outside this batch too, e.g. lib/core/navigation/guards/restore_guard.dart), not unique to these three, so the cost here is real but modest.",
+   "recommendation": "Where these services need independent test substitution, accept them as constructor parameters (defaulting to the real implementation) instead of instantiating inline; lower priority given the pattern is pervasive repo-wide and each site is already exercisable via a real in-memory DB, as this batch's own tests demonstrate.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "SM-7 Rule-0 checker (audit grep for direct Repository/Service/Dao construction outside provider/test files) either passes for these three sites or the finding is explicitly filed as backlog alongside the wider repo-wide pattern."
+   ],
+   "labels": [
+    "SM-7",
+    "testability",
+    "sync"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-sync-p1",
+  "findingIndex": 14,
+  "finding": {
+   "title": "local_data_upload_service_test.dart's 'existing completion is re-enqueued' test asserts nothing and contradicts its own name",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "features/sync test",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/sync/data/local_data_upload_service_test.dart",
+     "line": 213,
+     "quote": "test('existing completion is re-enqueued via CompletionWriter', () async {"
+    },
+    {
+     "file": "learning_tracker/test/features/sync/data/local_data_upload_service_test.dart",
+     "line": 234,
+     "quote": "// CompletionWriter.commitBatch will see the existing event and return"
+    }
+   ],
+   "sites": 1,
+   "why": "The test's name claims the completion 'is re-enqueued,' but its own trailing comment says the opposite ('The service only enqueues NEW completions' / no new outbox row) -- and the test body contains zero expect(...) calls, relying entirely on 'did not throw' to pass. The next test in the same group ('multiple completions each get an outbox row...') does assert completionRows is empty for the real idempotent-no-reenqueue behavior, so coverage exists elsewhere -- but under this specific test's name, nothing is verified, so a regression matching exactly what the name suggests it tests would not be caught here.",
+   "recommendation": "Either delete this test (its scenario is already covered by the next one) or rename it to match what it actually checks and add the missing expect(completionRows, isEmpty) assertion.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "No test in the file has an empty assertion set combined with a name asserting the opposite of its own comment."
+   ],
+   "labels": [
+    "test-quality",
+    "TQ-8",
+    "hygiene"
+   ]
+  }
+ }
+]

@@ -1,0 +1,254 @@
+[
+ {
+  "sourceBatch": "t1-feat-tracks-extras",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Delete or merge stage_definition_repository_impl_26_26_test.dart \u2014 it duplicates the mirrored test file and smuggles ScheduleSpec coverage that belongs elsewhere",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-5 / Fowler duplication",
+   "area": "test",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/stages/data/repositories/stage_definition_repository_impl_26_26_test.dart",
+     "line": 501,
+     "quote": "'deleteStage throws ProtectedStageException for stageOrder==1',"
+    },
+    {
+     "file": "learning_tracker/test/features/stages/data/repositories/stage_definition_repository_impl_test.dart",
+     "line": 176,
+     "quote": "'deleteStage throws ProtectedStageException for Learn stage',"
+    },
+    {
+     "file": "learning_tracker/test/features/stages/data/repositories/stage_definition_repository_impl_26_26_test.dart",
+     "line": 583,
+     "quote": "group('ScheduleSpec.fromParts \u2014 reconstruction', () {"
+    }
+   ],
+   "sites": 1,
+   "why": "AG-5 requires a new source file's test at the mirrored path, nowhere else. The mirrored path for stage_definition_repository_impl.dart is stage_definition_repository_impl_test.dart, which already exists (415 lines, comprehensive). Story 26.26/DNI-369 instead appended a second, story-numbered file with byte-identical scenarios \u2014 the ProtectedStageException-on-delete test exists verbatim in both files \u2014 plus a whole group (ScheduleSpec.fromParts \u2014 reconstruction, lines 583-623) testing core/domain/value_objects/schedule_spec.dart, a core value object with no dedicated test file anywhere in the repo. Anyone reading stage_definition_repository_impl_test.dart assumes it's the complete suite and misses the reorderStages/cross-profile-isolation coverage; anyone who later deletes the '_26_26' file as 'the duplicate one' silently drops the only ScheduleSpec.fromParts coverage that exists.",
+   "recommendation": "Merge the unique scenarios (ScheduleSpec-typed addStage, reorderStages atomicity, cross-profile resetToDefaults isolation R6-12) into stage_definition_repository_impl_test.dart; delete the byte-identical duplicates; move the ScheduleSpec.fromParts group to a new test/core/domain/value_objects/schedule_spec_test.dart.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "Exactly one test file exists for stage_definition_repository_impl.dart.",
+    "ScheduleSpec.fromParts has dedicated coverage at test/core/domain/value_objects/schedule_spec_test.dart.",
+    "find test -regex '.*_[0-9]+_[0-9]+_test\\.dart' (excluding story_acceptance/epic_NN) returns nothing."
+   ],
+   "labels": [
+    "test-quality",
+    "duplication",
+    "AG-5",
+    "stages"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tracks-extras",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Consolidate the '(F1 extra)'/'(F2 variant)' duplicate groups in track_learning_order_repository_impl_test.dart",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3 / Fowler duplication",
+   "area": "test",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/track_learning_order/data/repositories/track_learning_order_repository_impl_test.dart",
+     "line": 197,
+     "quote": "group('getSedarimOrder \u2014 default (no user order saved)', () {"
+    },
+    {
+     "file": "learning_tracker/test/features/track_learning_order/data/repositories/track_learning_order_repository_impl_test.dart",
+     "line": 564,
+     "quote": "'TrackLearningOrderRepositoryImpl.getSedarimOrder (mishna hierarchy)',"
+    },
+    {
+     "file": "learning_tracker/test/features/track_learning_order/data/repositories/track_learning_order_repository_impl_test.dart",
+     "line": 298,
+     "quote": "group('getMasechtosOrder \u2014 default ordering', () {"
+    },
+    {
+     "file": "learning_tracker/test/features/track_learning_order/data/repositories/track_learning_order_repository_impl_test.dart",
+     "line": 599,
+     "quote": "'TrackLearningOrderRepositoryImpl.getMasechtosOrder (mishna hierarchy)',"
+    },
+    {
+     "file": "learning_tracker/test/features/track_learning_order/data/repositories/track_learning_order_repository_impl_test.dart",
+     "line": 364,
+     "quote": "group('saveSedarimOrder', () {"
+    },
+    {
+     "file": "learning_tracker/test/features/track_learning_order/data/repositories/track_learning_order_repository_impl_test.dart",
+     "line": 635,
+     "quote": "group('TrackLearningOrderRepositoryImpl.saveSedarimOrder (F1 extra)', () {"
+    },
+    {
+     "file": "learning_tracker/test/features/track_learning_order/data/repositories/track_learning_order_repository_impl_test.dart",
+     "line": 428,
+     "quote": "group('saveMasechtosOrder', () {"
+    },
+    {
+     "file": "learning_tracker/test/features/track_learning_order/data/repositories/track_learning_order_repository_impl_test.dart",
+     "line": 651,
+     "quote": "group('TrackLearningOrderRepositoryImpl.saveMasechtosOrder (F1 extra)', () {"
+    },
+    {
+     "file": "learning_tracker/test/features/track_learning_order/data/repositories/track_learning_order_repository_impl_test.dart",
+     "line": 479,
+     "quote": "group('resetToDefault', () {"
+    },
+    {
+     "file": "learning_tracker/test/features/track_learning_order/data/repositories/track_learning_order_repository_impl_test.dart",
+     "line": 664,
+     "quote": "group('TrackLearningOrderRepositoryImpl.resetToDefault (F1 extra)', () {"
+    }
+   ],
+   "sites": 5,
+   "why": "Git log shows coverage-floor commits ('test(coverage-f1): add repository tests to raise coverage floor', 'test(coverage-f2)...') appended five near-duplicate groups that re-exercise getSedarimOrder, getMasechtosOrder, saveSedarimOrder, saveMasechtosOrder, and resetToDefault against a second fixture (_mishnaItems()) instead of extending the existing groups or adding genuinely new edge cases. The result is a 675-line file (AG-3 cap is 400) where the same repository method is asserted correct 2-3 times under cosmetically different group names, so a future behavior change to any of these methods requires updating 2-3 near-identical assertions instead of one.",
+   "recommendation": "Fold the '(F1 extra)'/'(F2 variant)' groups into their same-behavior originals, keeping only assertions that exercise a genuinely new path (the multi-level _mishnaItems() hierarchy is a legitimately different fixture \u2014 keep one representative test per method against it, not a full repeat of every scenario).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "No group names in this file contain '(F1 extra)' or '(F2 variant)'.",
+    "File is at or under 400 lines, or the remaining excess is a genuinely distinct scenario, not a repeat."
+   ],
+   "labels": [
+    "test-quality",
+    "duplication",
+    "AG-3",
+    "track-learning-order"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tracks-extras",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Split test files exceeding the AG-3 400-line cap: stage_definition_repository_impl_26_26_test.dart (874), track_learning_order_repository_impl_test.dart (675), stage_definition_repository_impl_test.dart (415)",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "test",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/stages/data/repositories/stage_definition_repository_impl_26_26_test.dart",
+     "line": 874,
+     "quote": "}"
+    },
+    {
+     "file": "learning_tracker/test/features/track_learning_order/data/repositories/track_learning_order_repository_impl_test.dart",
+     "line": 675,
+     "quote": "}"
+    },
+    {
+     "file": "learning_tracker/test/features/stages/data/repositories/stage_definition_repository_impl_test.dart",
+     "line": 415,
+     "quote": "}"
+    }
+   ],
+   "sites": 3,
+   "why": "AG-3's own audit check ('find lib test -name *.dart ... | xargs wc -l | awk $1>400') explicitly scans test/, not just lib/. Content past line ~400 falls outside typical per-file agent read budgets, which is exactly how the 26_26 file's duplicate/misplaced content (see companion finding) went unnoticed for a whole story wave.",
+   "recommendation": "Applying the two duplication findings above resolves two of these three files; trim stage_definition_repository_impl_test.dart by at least 15 lines or record it as a dated ratchet-list entry.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "find lib test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' -exec wc -l {} + shows none of these three files over 400 lines, or they are added to an explicit dated ratchet-list."
+   ],
+   "labels": [
+    "hygiene",
+    "AG-3",
+    "file-size"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tracks-extras",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Add a Locale('he') RTL variant and a shared pump helper for curriculum_picker_step_test.dart and track_label_step_test.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-3",
+   "area": "test",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/track_setup/presentation/widgets/curriculum_picker_step_test.dart",
+     "line": 22,
+     "quote": "supportedLocales: AppLocalizations.supportedLocales,"
+    },
+    {
+     "file": "learning_tracker/test/features/track_setup/presentation/widgets/track_label_step_test.dart",
+     "line": 13,
+     "quote": "localizationsDelegates: AppLocalizations.localizationsDelegates,\n        supportedLocales: AppLocalizations.supportedLocales,"
+    }
+   ],
+   "sites": 2,
+   "why": "This app is Hebrew-primary/RTL (AX-1); 102 other test files in the suite already pump a Locale('he') variant for key screens (many under an _l1_test.dart convention), but these two onboarding/track-setup wizard steps \u2014 which render Hebrew curriculum and track-name text on a first-run, high-visibility flow \u2014 only ever run under the implicit default (English/LTR) locale. Neither uses a shared pump helper either; both hand-roll their own MaterialApp + delegate list (one of 165 files repo-wide doing this), so an RTL layout regression in the Add-Track wizard has no test to catch it, and localization-delegate drift has to be fixed file-by-file.",
+   "recommendation": "Add a Locale('he') pumpWidget variant for both steps asserting no overflow/errors under RTL, and adopt (or create, if genuinely absent) a shared pumpApp-style helper instead of the locally-defined wrapWithL10n/buildWidget.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Each file has at least one testWidgets case that sets locale: Locale('he') and asserts the widget renders without overflow/errors."
+   ],
+   "labels": [
+    "test-quality",
+    "i18n",
+    "rtl",
+    "tracks"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tracks-extras",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Replace DateTime.now() with a fixed clock in stage_definition_repository_impl_26_26_test.dart seed helpers",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6",
+   "area": "test",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/stages/data/repositories/stage_definition_repository_impl_26_26_test.dart",
+     "line": 54,
+     "quote": "stateChangedAt: DateTime.now(),\n          activatedAt: DateTime.now(),"
+    },
+    {
+     "file": "learning_tracker/test/features/stages/data/repositories/stage_definition_repository_impl_26_26_test.dart",
+     "line": 661,
+     "quote": "stateChangedAt: DateTime.now(),\n              activatedAt: DateTime.now(),"
+    },
+    {
+     "file": "learning_tracker/test/features/stages/data/repositories/stage_definition_repository_impl_26_26_test.dart",
+     "line": 671,
+     "quote": "stateChangedAt: DateTime.now(),\n              activatedAt: DateTime.now(),"
+    },
+    {
+     "file": "learning_tracker/test/features/stages/data/repositories/stage_definition_repository_impl_26_26_test.dart",
+     "line": 790,
+     "quote": "stateChangedAt: DateTime.now(),\n                activatedAt: DateTime.now(),"
+    },
+    {
+     "file": "learning_tracker/test/features/stages/data/repositories/stage_definition_repository_impl_26_26_test.dart",
+     "line": 803,
+     "quote": "stateChangedAt: DateTime.now(),\n                activatedAt: DateTime.now(),"
+    },
+    {
+     "file": "learning_tracker/test/features/stages/data/repositories/stage_definition_repository_impl_26_26_test.dart",
+     "line": 114,
+     "quote": "updatedAt: DateTime.utc(2026, 1, 1),"
+    }
+   ],
+   "sites": 10,
+   "why": "TQ-6 requires hermetic tests with a fixed clock. Ten DateTime.now() calls (5 curriculumTracks inserts x 2 columns) seed stateChangedAt/activatedAt in this file, while the same file's own _makeRow helper (line 114) correctly uses a fixed DateTime.utc(2026, 1, 1) \u2014 an inconsistent pattern within one file. No current assertion reads these two columns back, so today this is latent rather than flaky, but it is one accidental expect(row.stateChangedAt, ...) away from an intermittent CI failure, and it breaks the deterministic-clock convention the rest of the file follows.",
+   "recommendation": "Replace the DateTime.now() call sites with the same fixed DateTime.utc(2026, 1, 1) (or a named constant) already used elsewhere in the file.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep -n 'DateTime.now()' on this file returns nothing."
+   ],
+   "labels": [
+    "hygiene",
+    "determinism",
+    "TQ-6",
+    "stages"
+   ]
+  }
+ }
+]

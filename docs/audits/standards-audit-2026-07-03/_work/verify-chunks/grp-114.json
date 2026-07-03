@@ -1,0 +1,214 @@
+[
+ {
+  "sourceBatch": "t1-feat-tracks-p1",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Split the 4 hand-written tracks/setup files over the 400-line AG-3 cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3 (hand-written Dart files <= 400 lines)",
+   "area": "features/tracks/setup",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/domain/services/track_creation_service.dart",
+     "line": 37,
+     "quote": "class TrackCreationService {"
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/screens/add_track_flow_screen.dart",
+     "line": 78,
+     "quote": "class AddTrackFlow extends ConsumerStatefulWidget {"
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/screens/edit_track_screen.dart",
+     "line": 51,
+     "quote": "class EditTrackScreen extends ConsumerStatefulWidget {"
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/screens/track_detail_screen.dart",
+     "line": 120,
+     "quote": "class TrackDetailScreen extends ConsumerStatefulWidget {"
+    }
+   ],
+   "sites": 4,
+   "why": "track_creation_service.dart is 438 lines, add_track_flow_screen.dart is 989, edit_track_screen.dart is 1011, track_detail_screen.dart is 994 \u2014 all over the stated 400-line cap for hand-written files. Each mixes multiple responsibilities (persistence + state machine + widget tree + business rules) in one file; two of them (add_track_flow_screen.dart, track_detail_screen.dart) are named HOTSPOTs in this audit's own churn list, meaning every fix wave touches an already-oversized file.",
+   "recommendation": "Extract step-builders/dialogs into separate widget files per screen; extract track_creation_service.dart's post-commit cloud-push block into its own class.",
+   "effort": "L",
+   "acceptance_criteria": [
+    "`find lib -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400'` no longer lists these 4 files"
+   ],
+   "labels": [
+    "file-size",
+    "ag-3",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tracks-p1",
+  "findingIndex": 8,
+  "finding": {
+   "title": "Convert hand-written Provider/StreamProvider/FutureProvider.family declarations in tracks/setup to @riverpod codegen",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "SM-1 (no hand-written provider constructors)",
+   "area": "features/tracks/setup/presentation",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/providers/add_track_providers.dart",
+     "line": 12,
+     "quote": "final trackCreationServiceProvider = Provider<TrackCreationService>((ref) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/providers/track_edit_providers.dart",
+     "line": 6,
+     "quote": "final trackEditServiceProvider = Provider<TrackEditService>((ref) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/providers/track_management_providers.dart",
+     "line": 9,
+     "quote": "final activeTracksProvider = StreamProvider<List<CurriculumTrack>>((ref) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/providers/track_management_providers.dart",
+     "line": 36,
+     "quote": "final trackCustomNameProvider = FutureProvider.autoDispose.family<String?, int>("
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/screens/track_detail_screen.dart",
+     "line": 54,
+     "quote": "final _trackGoalProvider = FutureProvider.autoDispose.family<Goal?, int>("
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/screens/track_detail_screen.dart",
+     "line": 66,
+     "quote": ".family<PaceCalculator, CurriculumTrack>((ref, track) async {"
+    }
+   ],
+   "sites": 6,
+   "why": "SM-1 is a Pending rule and this hand-written-constructor style is a pervasive, pre-existing repo-wide pattern (not unique to this batch), so today's cost is convention drift rather than a runtime defect; reported per the digest instruction that Pending-rule violations are novel findings and count NEW additions.",
+   "recommendation": "Migrate these 6 providers to @riverpod functions/classes opportunistically when the surrounding file is next touched.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "The 6 listed providers are declared with @riverpod codegen instead of raw Provider/StreamProvider/FutureProvider constructors"
+   ],
+   "labels": [
+    "riverpod",
+    "sm-1",
+    "codegen-migration"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tracks-p1",
+  "findingIndex": 9,
+  "finding": {
+   "title": "Route track_management_hub_screen's error text and edit_track_screen's validation sentinel through AppLocalizations",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AX-2 (no hardcoded user-facing strings) / EH-5 (no pre-formatted human messages) / custom lint no_e_to_string_in_ui",
+   "area": "features/tracks/setup/presentation",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/screens/track_management_hub_screen.dart",
+     "line": 119,
+     "quote": "error: (e, _) => Center(child: Text('Error: $e')),"
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/screens/edit_track_screen.dart",
+     "line": 43,
+     "quote": "name.trim().isEmpty ? 'Track name cannot be empty.' : null;"
+    }
+   ],
+   "sites": 2,
+   "why": "Text('Error: $e') renders a raw, untranslated exception string directly to Hebrew-locale users if activeTracksProvider's stream ever errors \u2014 exactly the shape the (currently non-functional) no_e_to_string_in_ui custom lint targets. validateTrackName's hardcoded return string is never actually displayed today (the only call site null-checks it and shows l10n.trackEditNameRequired instead), but returning a natural-language string from a validator invites a future direct-display bug.",
+   "recommendation": "Replace the error branch with a localized generic error string; change validateTrackName's signature to return bool (or a stable enum) instead of a message string.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "No raw Text('Error: $e')-style interpolation remains in tracks/setup presentation code",
+    "validateTrackName no longer returns a natural-language string"
+   ],
+   "labels": [
+    "i18n",
+    "ax-2",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tracks-p1",
+  "findingIndex": 10,
+  "finding": {
+   "title": "Move curriculum_activation_service_test.dart to mirror its lib path under features/tracks",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-5 (test/ mirrors lib/ 1:1)",
+   "area": "features/tracks/domain/services",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tracks/domain/services/curriculum_activation_service.dart",
+     "line": 16,
+     "quote": "class CurriculumActivationService {"
+    },
+    {
+     "file": "learning_tracker/test/features/settings/domain/services/curriculum_activation_service_test.dart",
+     "line": 68,
+     "quote": "late CurriculumActivationService service;"
+    }
+   ],
+   "sites": 1,
+   "why": "The service now lives under features/tracks/domain/services/ (git log shows the move happened in commit 43b6de92, 'delete duplicate feature trees ... + settings service duplicates'), but its only test suite still sits at the pre-move features/settings/domain/services/ path. A contributor searching test/features/tracks/ for this live, actively-used service's coverage will wrongly conclude it is untested.",
+   "recommendation": "git mv the test file to test/features/tracks/domain/services/curriculum_activation_service_test.dart.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Test file path mirrors the lib path 1:1 per AG-5"
+   ],
+   "labels": [
+    "ag-5",
+    "test-mirroring",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tracks-p1",
+  "findingIndex": 11,
+  "finding": {
+   "title": "Replace EdgeInsets.only(left:/right:) with EdgeInsetsDirectional in track_management_hub_screen",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AX-1 (EdgeInsetsDirectional only, RTL app)",
+   "area": "features/tracks/setup/presentation/screens/track_management_hub_screen.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/screens/track_management_hub_screen.dart",
+     "line": 126,
+     "quote": "padding: const EdgeInsets.only("
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/screens/track_management_hub_screen.dart",
+     "line": 127,
+     "quote": "left: 16,"
+    },
+    {
+     "file": "Makefile",
+     "line": 184,
+     "quote": "HITS=$$(grep -rn 'EdgeInsets\\.only([^)]*\\(left\\|right\\):' \"$$LIB/\" \\"
+    }
+   ],
+   "sites": 1,
+   "why": "Banned API for an RTL (Hebrew) app. Today left and right are both 16 so the symmetric padding happens to render identically either direction, but it's a copy-pasteable bad example, and it is invisible to the repo's one AX-1 grep (root Makefile line 184) because that grep matches only within a single line and this call is dart-format-wrapped across 5 lines \u2014 any genuinely asymmetric EdgeInsets.only(left:, right:) formatted the same way would ship completely undetected.",
+   "recommendation": "Switch to EdgeInsetsDirectional.only(start:, end:, top:, bottom:); fix the root Makefile's AX-1 grep to scan a joined/multi-line window instead of single lines.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "No EdgeInsets.only(left:/right:) remains in track_management_hub_screen.dart",
+    "The root Makefile's AX-1 grep catches a multi-line-formatted EdgeInsets.only(left:...) test fixture"
+   ],
+   "labels": [
+    "ax-1",
+    "rtl",
+    "checker-gap"
+   ]
+  }
+ }
+]

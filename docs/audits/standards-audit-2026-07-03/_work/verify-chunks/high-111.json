@@ -1,0 +1,58 @@
+[
+ {
+  "sourceBatch": "t2-firebase-rules-functions-p1",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Refresh docs/firestore-collection-layout.md to match the current firestore.rules and firestore.indexes.json",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "AG-8",
+   "area": "docs/firestore-collection-layout",
+   "evidence": [
+    {
+     "file": "docs/firestore-collection-layout.md",
+     "line": 152,
+     "quote": "`learning_tracker/firestore.indexes.json` declares **no composite indexes**."
+    },
+    {
+     "file": "learning_tracker/firestore.indexes.json",
+     "line": 4,
+     "quote": "\"collectionGroup\": \"tutor_grants\","
+    },
+    {
+     "file": "docs/firestore-collection-layout.md",
+     "line": 115,
+     "quote": "2. **Top-level compatibility blocks** for `accounts`, `learner_profiles`,"
+    },
+    {
+     "file": "docs/firestore-collection-layout.md",
+     "line": 81,
+     "quote": "| `streak` | `data` (single doc) | Current streak snapshot | `pushStreak` |"
+    },
+    {
+     "file": "learning_tracker/firestore.rules",
+     "line": 245,
+     "quote": "match /streak_events/{streakEventId} {"
+    },
+    {
+     "file": "docs/firestore-collection-layout.md",
+     "line": 86,
+     "quote": "| `notification_settings` | `preferences` (single doc) | Notification preferences | `pushNotificationSettings` |"
+    }
+   ],
+   "sites": 6,
+   "why": "The doc's header claims 'Status: current -- reconciled ... 2026-05-18 (Wave 2)', but firestore.rules has since gone through W3.32-W3.43 and the V2-R3 tutor-access rework, none of which are reflected: it says the indexes file declares zero composite indexes when it declares six; it describes a 3-part rules structure (default-deny, top-level compat blocks, live nested) when the compat blocks (accounts/completion_events/track_configs/etc.) no longer exist in the file at all; it documents a `streak` snapshot singleton that was replaced by `streak_events` (W3.37); it lists notification_settings/gamification_settings/ui_preferences as three separate collections when they were unified into `preferences/{scope}` (W3.33); and it never mentions tutor_grants/tutor_active_access/audit_log -- the highest-risk, cross-user part of the whole schema -- at all. A developer or AI agent trusting this 'canonical' doc would reason from a materially wrong model of the app's Firestore security surface.",
+   "recommendation": "Regenerate the collection tables and 'Security rules' section from the current firestore.rules/firestore.indexes.json, and add the tutor_grants/tutor_active_access/audit_log subsystem.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "The doc's index-count claim, collection tables, and rules-structure description all match a fresh read of firestore.rules/firestore.indexes.json.",
+    "The doc documents tutor_grants, tutor_active_access, and audit_log."
+   ],
+   "labels": [
+    "docs",
+    "firestore-rules",
+    "P1"
+   ]
+  }
+ }
+]

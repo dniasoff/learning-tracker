@@ -1,0 +1,77 @@
+[
+ {
+  "sourceBatch": "t1-feat-learning_order",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Filter LearningOrderDao.getLearningOrderByCurriculum/deleteAllForCurriculum by profileId to stop cross-sibling data leak and silent deletion",
+   "severity": "P0",
+   "confidence": "CONFIRMED",
+   "rule": "profileId-in-PK (Naming/placement/invariants) + TQ-8 (test pins wrong behavior)",
+   "area": "lib/core/database/daos/learning_order_dao.dart \u2014 consumed by features/tracks/whole_curriculum_order, features/learning, features/scheduler",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/database/daos/learning_order_dao.dart",
+     "line": 34,
+     "quote": "..where((t) => t.curriculumId.equals(curriculumId))"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/daos/learning_order_dao.dart",
+     "line": 110,
+     "quote": ")..where((t) => t.curriculumId.equals(curriculumId))).go();"
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/whole_curriculum_order/data/repositories/learning_order_repository_impl.dart",
+     "line": 17,
+     "quote": "int profileId = 0,"
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/whole_curriculum_order/data/repositories/learning_order_repository_impl.dart",
+     "line": 57,
+     "quote": "final rows = await _database.learningOrderDao.getLearningOrderByCurriculum("
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/whole_curriculum_order/data/repositories/learning_order_repository_impl.dart",
+     "line": 163,
+     "quote": "await _database.learningOrderDao.deleteAllForCurriculum("
+    },
+    {
+     "file": "learning_tracker/lib/features/learning/data/repositories/bookmark_repository_impl.dart",
+     "line": 234,
+     "quote": "final customOrder = await _database.learningOrderDao\n        .getLearningOrderByCurriculum(curriculumId.storageKey);"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/data/repositories/scheduler_learning_order_repository_impl.dart",
+     "line": 16,
+     "quote": "final rows = await _learningOrderDao.getLearningOrderByCurriculum("
+    },
+    {
+     "file": "learning_tracker/test/features/learning_order/data/repositories/learning_order_repository_impl_test.dart",
+     "line": 103,
+     "quote": "profileId: 1,\n            curriculumId: 'mishnayos',"
+    },
+    {
+     "file": "learning_tracker/test/features/learning_order/data/repositories/learning_order_repository_impl_test.dart",
+     "line": 184,
+     "quote": ".getLearningOrderByCurriculum('mishnayos');\n        expect(rows, isEmpty);"
+    }
+   ],
+   "sites": 6,
+   "why": "docs/architecture.md:105 confirms UserDatabase is per-ACCOUNT (user_acc_<id>.db), holding ALL sibling profiles' rows in the same tables \u2014 profileId is the only thing separating Child A's data from Child B's. LearningOrderDao.getLearningOrderByCurriculum() and .deleteAllForCurriculum() query only by curriculumId with no profileId predicate, even though the table's own uniqueKeys and every write path (upsertLearningOrder) correctly key on (profileId, curriculumId, sefariaRef). I wrote and ran a throwaway probe test (deleted after, not committed): seeded profile 1 with a custom Mishnayos row, then exercised profile 0's LearningOrderRepositoryImpl \u2014 profile 0's getOrder() returned profile 1's row (cross-sibling read leak) and profile 0's resetToDefault() then deleted profile 1's row (cross-sibling silent data loss), both runtime-confirmed. This fires whenever two children under one account share a curriculum \u2014 a mainstream scenario for a family Torah-study app (e.g. two kids both on Mishnah Yomi). The same unscoped call also feeds BookmarkRepositoryImpl._getNextItemId (bookmark 'next item' can jump per a sibling's order) and SchedulerLearningOrderRepositoryImpl.getOrder (the scheduler can sequence a child's next task using a sibling's custom order). Worse: this batch's own learning_order_repository_impl_test.dart doesn't just fail to catch this \u2014 its 'custom order' test and its 'resetToDefault' test both seed fixture rows under profileId:1 while exercising a repo instance defaulted to profileId:0, and both pass today only because the DAO ignores profileId; a correct fix would turn these two tests red until their fixtures are corrected.",
+   "recommendation": "Add a required profileId parameter to LearningOrderDao.getLearningOrderByCurriculum and .deleteAllForCurriculum, AND-ing t.profileId.equals(profileId) into the where clause. Thread the caller's profileId through LearningOrderRepositoryImpl.getOrder/resetToDefault, both BookmarkRepositoryImpl._getNextItemId call sites, and SchedulerLearningOrderRepositoryImpl.getOrder. Update the ~10 existing DAO-level tests (learning_order_dao_test.dart, learning_order_dao_extra_test.dart, learning_order_dao_extended_test.dart, drift_merge_store_test.dart, reorder_amnesty_test.dart, learning_order_roundtrip_test.dart, epic_02/epic_05/epic_26 acceptance tests) that call these methods without a profileId, and fix this batch's own fixtures to seed the same profileId the repository-under-test uses.",
+   "effort": "L",
+   "acceptance_criteria": [
+    "LearningOrderDao.getLearningOrderByCurriculum(curriculumId, {required int profileId}) and .deleteAllForCurriculum(curriculumId, {required int profileId}) filter on t.profileId.equals(profileId).",
+    "LearningOrderRepositoryImpl, BookmarkRepositoryImpl, and SchedulerLearningOrderRepositoryImpl pass the active profileId at every call site listed in evidence.",
+    "New regression test seeds profileId 0 and profileId 1 with distinct rows for the same curriculumId; asserts getOrder(profileId 0) excludes profileId-1 rows and resetToDefault(profileId 0) leaves profileId-1 rows intact.",
+    "learning_order_repository_impl_test.dart's 'custom order' and 'resetToDefault' tests seed fixtures under the same profileId (0) the LearningOrderRepositoryImpl instance under test uses, not a mismatched profileId (1)."
+   ],
+   "labels": [
+    "P0",
+    "multi-profile",
+    "data-loss",
+    "DAO",
+    "test-masks-bug"
+   ]
+  }
+ }
+]

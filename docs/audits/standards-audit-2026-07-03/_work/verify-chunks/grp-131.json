@@ -1,0 +1,249 @@
+[
+ {
+  "sourceBatch": "t1-story-epic-26",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Remove 14 tautological expect(<Symbol>, isNotNull) compile-time-check tests across 4 epic-26 story files",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "test/story_acceptance",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_26_story_26_16_stat_card_test.dart",
+     "line": 62,
+     "quote": "expect(StatCard, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_26_story_26_20_preference_tiles_test.dart",
+     "line": 52,
+     "quote": "expect(PreferenceListTile, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_26_story_26_20_preference_tiles_test.dart",
+     "line": 84,
+     "quote": "expect(PreferenceSegmentedTile, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_26_story_26_7_dashboard_model_provider_test.dart",
+     "line": 46,
+     "quote": "expect(dashboardModelProvider, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_26_story_26_7_dashboard_model_provider_test.dart",
+     "line": 52,
+     "quote": "expect(DashboardModel, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_26_story_26_7_dashboard_model_provider_test.dart",
+     "line": 56,
+     "quote": "expect(DashboardHeaderModel, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_26_story_26_7_dashboard_model_provider_test.dart",
+     "line": 60,
+     "quote": "expect(DashboardTasksModel, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_26_story_26_7_dashboard_model_provider_test.dart",
+     "line": 64,
+     "quote": "expect(DashboardTracksModel, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_26_story_26_7_dashboard_model_provider_test.dart",
+     "line": 68,
+     "quote": "expect(DashboardLifetimeModel, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_26_story_26_7_dashboard_model_provider_test.dart",
+     "line": 101,
+     "quote": "expect(onTrackChanged, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_26_story_26_6_track_card_test.dart",
+     "line": 28,
+     "quote": "expect(firstTaskInTrackForCategoryProvider, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_26_story_26_6_track_card_test.dart",
+     "line": 66,
+     "quote": "expect(TrackTaskCategory.review, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_26_story_26_6_track_card_test.dart",
+     "line": 70,
+     "quote": "expect(TrackTaskCategory.dueToday, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_26_story_26_6_track_card_test.dart",
+     "line": 74,
+     "quote": "expect(TrackTaskCategory.overdue, isNotNull);"
+    }
+   ],
+   "sites": 14,
+   "why": "Each asserts isNotNull on a bare top-level class reference, a resolved provider identifier, or a non-nullable enum constant. None of these can ever be null if the file compiles \u2014 the import at the top of the same file already fails the build otherwise. The tests add zero information beyond 'this file compiles', which flutter analyze and every sibling test in the same group already guarantee; dashboard_model_provider_test.dart's AC1 group is 6 of 7 tests in this exact shape.",
+   "recommendation": "Delete these 14 tests, or replace each with the structural/behavioral check its AC actually promises \u2014 e.g. TrackTaskCategory's 'has exactly 3 values' test (already present alongside 3 of these) is the real assertion; the 3 existence checks beside it add nothing.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "no expect(<Identifier>, isNotNull) remains where <Identifier> is a class/type literal, top-level provider, or enum constant in the epic_26 story files",
+    "each affected group's test count decreases without decreasing branch coverage of the corresponding lib/ file"
+   ],
+   "labels": [
+    "testing",
+    "tautological",
+    "epic-26"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epic-26",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Fix epic_26_story_26_31 AC4's add_track_flow.dart check \u2014 dead branch references the deleted track_setup/ directory",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "test/story_acceptance",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_26_story_26_31_rtl_audit_test.dart",
+     "line": 233,
+     "quote": "'${root.path}/lib/features/tracks/setup/presentation/screens/add_track_flow.dart',"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_26_story_26_31_rtl_audit_test.dart",
+     "line": 242,
+     "quote": "'track_setup/presentation/screens/add_track_flow.dart',"
+    }
+   ],
+   "sites": 1,
+   "why": "The candidates list checks lib/features/tracks/setup/presentation/screens/add_track_flow.dart (the real, current directory, confirmed via find lib/features -iname add_track_flow*.dart). But if that existence check ever passes, line 242 calls readFeatureFile('track_setup/presentation/screens/add_track_flow.dart') \u2014 'track_setup' without the 'tracks/' prefix, the old directory that commit e365a4c8 ('delete duplicate features/track_setup/ tree \u2014 canonical: features/tracks/setup/') removed. readFeatureFile would then throw StateError('File not found: track_setup/...') for a reason unrelated to RTL migration. Today add_track_flow.dart stays deleted so `if (!exists) return;` always fires first and this bug is unreachable \u2014 but the test also never verifies its own claim that 'add_track_flow_screen.dart already uses AlignmentDirectional' (asserted only in a comment); AC1-AC3's repo-wide regex sweep already covers add_track_flow_screen.dart, so this test currently contributes nothing and would misfire with an unrelated error if the guard condition ever changed.",
+   "recommendation": "Delete this test (AC1-3's regex sweep already covers add_track_flow_screen.dart across all of lib/features/), or fix line 242 to 'tracks/setup/presentation/screens/add_track_flow.dart' and point it at add_track_flow_screen.dart instead of the long-deleted add_track_flow.dart.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "epic_26_story_26_31_rtl_audit_test.dart contains no path string referencing the deleted track_setup/ directory"
+   ],
+   "labels": [
+    "testing",
+    "stale-path",
+    "epic-26"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epic-26",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Add a Locale('he') behavioral variant to StatCard's interactive widget tests (epic_26_story_26_16)",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-3",
+   "area": "test/story_acceptance",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_26_story_26_16_stat_card_test.dart",
+     "line": 77,
+     "quote": "locale: const Locale('en'),"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_26_story_26_16_stat_card_test.dart",
+     "line": 101,
+     "quote": "locale: const Locale('en'),"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_26_story_26_16_stat_card_test.dart",
+     "line": 127,
+     "quote": "locale: const Locale('en'),"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_26_story_26_16_stat_card_test.dart",
+     "line": 152,
+     "quote": "locale: const Locale('en'),"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_26_story_26_16_stat_card_test.dart",
+     "line": 177,
+     "quote": "locale: const Locale('en'),"
+    }
+   ],
+   "sites": 5,
+   "why": "StatCard is a core/widgets/ primitive explicitly built for a bilingual RTL app (its own AC6 wants 'golden tests in 3 visual variants, en + he each'), but all 5 interactive testWidgets (text rendering, tap handling) hardcode Locale('en'); only the 3 golden-smoke tests touch 'he', and those skip the actual matchesGoldenFile compare via skipGolden: true. A regression that breaks hit-testing or layout specifically under RTL mirroring (e.g. the tap target shifting when Directionality flips) would not be caught anywhere in this file.",
+   "recommendation": "Parameterize the 5 testWidgets over both locales, or add an 'he' counterpart for at least the tap-behavior test.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "at least one StatCard testWidgets test in this file pumps with Locale('he') and asserts tap/render behavior, not just a skipped golden compare"
+   ],
+   "labels": [
+    "testing",
+    "i18n",
+    "rtl",
+    "epic-26"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epic-26",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Split or exempt epic_26_story_23_data_export_round_trip_test.dart \u2014 742 lines, 1.85x the AG-3 400-line cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "test/story_acceptance",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_26_story_23_data_export_round_trip_test.dart",
+     "line": 742,
+     "quote": "(file length: 742 lines, hand-written, not generated)"
+    }
+   ],
+   "sites": 1,
+   "why": "AG-3's checker (find lib test -name '*.dart' ... | xargs wc -l | awk '$1>400', coding-standards.md:513) explicitly scans test/ as well as lib/. This is the largest hand-written file in the batch by a wide margin (next largest is 384 lines), driven mainly by one ~320-line round-trip test (lines ~232-576) and a ~140-line tombstone test (~605-740), each inlining full multi-profile fixture setup rather than using a shared seeding helper.",
+   "recommendation": "Extract the repeated multi-table seed/wipe sequences into test/helpers functions (also fixes the duplicate-delete finding below) and/or split export-shape tests from round-trip/tombstone tests into a second file.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "find learning_tracker/lib learning_tracker/test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400' no longer lists this file, or it is added to an explicit documented AG-3 exemption list"
+   ],
+   "labels": [
+    "hygiene",
+    "file-size",
+    "epic-26"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epic-26",
+  "findingIndex": 8,
+  "finding": {
+   "title": "Dedupe the copy-pasted DB-wipe block in epic_26_story_23 \u2014 duplicate per-table delete calls in both tests",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler duplicated code",
+   "area": "test/story_acceptance",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_26_story_23_data_export_round_trip_test.dart",
+     "line": 451,
+     "quote": "await db.delete(db.streakEvents).go();\n          await db.delete(db.streakEvents).go();"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_26_story_23_data_export_round_trip_test.dart",
+     "line": 691,
+     "quote": "await db.delete(db.completionEvents).go();\n          await db.delete(db.completionEvents).go();"
+    }
+   ],
+   "sites": 2,
+   "why": "Both the multi-profile round-trip test and the C3-tombstone test wipe the database with the same ~17-statement manual delete sequence, each accidentally issuing the delete for two tables twice (streakEvents+completionEvents in the first block, completionEvents+streakEvents in the second) \u2014 harmless no-ops against an already-empty table, but evidence the block was copy-pasted rather than shared, so a future added/renamed table now needs updating in two independently-drifting copies.",
+   "recommendation": "Extract a `_wipeAllUserTables(db)` test helper (one db.transaction, one delete per table) and call it from both tests.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "the two wipe blocks collapse to one shared helper with no duplicate per-table delete call"
+   ],
+   "labels": [
+    "testing",
+    "duplication",
+    "epic-26"
+   ]
+  }
+ }
+]

@@ -1,0 +1,215 @@
+[
+ {
+  "sourceBatch": "t1-story-epics-01-08",
+  "chunk": "grp-133",
+  "finding": {
+   "title": "Inject a fake clock instead of comparing against real DateTime.now() in completion/restore timing assertions",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6",
+   "area": "test/story_acceptance",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_03_learning_cycle_test.dart",
+     "line": 118,
+     "quote": "DateTime.now().difference(completion.completedAt).abs().inSeconds,\n          lessThan(5),"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/regression_invariants_test.dart",
+     "line": 251,
+     "quote": "restored.activatedAt.isAfter(\n              beforeRestore.subtract(const Duration(seconds: 5)),"
+    }
+   ],
+   "sites": 2,
+   "why": "Both assertions pin correctness to a 5-second window measured against the real wall clock at assertion time, rather than the FakeLocalDayClock/DateTimeFactory override the codebase already provides and uses correctly elsewhere (e.g. epic_08_gamification_test.dart Story 8.2). On a slow or contended CI runner, a stall of more than 5 seconds between the write and the assertion \u2014 plausible for a cold Drift/sqlite3 open \u2014 flakes the test for a reason unrelated to the code under test.",
+   "recommendation": "Install a FakeLocalDayClock (or equivalent) before the write and assert equality/near-equality against the fake's fixed instant, matching the pattern already used in epic_08_gamification_test.dart Story 8.2.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Both assertions compare against a fixed/fake clock value, not a DateTime.now()/DateTimeFactory.nowUtc() call made at assertion time"
+   ],
+   "labels": [
+    "test-quality",
+    "hermetic",
+    "flake-risk"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-gamification-p2",
+  "chunk": "grp-053",
+  "finding": {
+   "title": "Use directional layout APIs instead of EdgeInsets.only(left/right) and Positioned(right:) in gamification widgets",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AX-1",
+   "area": "features/gamification/presentation/widgets",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/gamification/presentation/widgets/tier_icon_box.dart",
+     "line": 49,
+     "quote": "Positioned(\n              right: 3,\n              bottom: 3,"
+    },
+    {
+     "file": "learning_tracker/lib/features/gamification/presentation/widgets/reward_config_header.dart",
+     "line": 29,
+     "quote": "padding: EdgeInsets.only(\n          top: topInset + 4,\n          left: 4,"
+    }
+   ],
+   "sites": 2,
+   "why": "tier_icon_box.dart's lock badge is pinned to the visual right/bottom corner with plain Positioned, which does not mirror under RTL \u2014 in Hebrew locale the badge renders on the leading (left) corner instead of the trailing corner. This is not hypothetical: the sibling file progress_summary_card.dart (same presentation/widgets/ directory) carries an explicit comment describing this exact bug ('With a plain Positioned(right:) it stayed on the visual right \u2014 the LEADING edge in Hebrew RTL \u2014 and collided with the right-aligned header text') that was fixed there with PositionedDirectional but never applied to tier_icon_box.dart. reward_config_header.dart's EdgeInsets.only(left:4, right:4) is currently symmetric so it renders identically in both directions today, but is one one-sided edit away from the same class of bug and still fails the AX-1 grep/lint intent.",
+   "recommendation": "Replace Positioned(right:, bottom:) with PositionedDirectional(end:, bottom:) in tier_icon_box.dart; replace EdgeInsets.only(left:, right:) with EdgeInsetsDirectional.only(start:, end:) in reward_config_header.dart.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep -rn 'Positioned(' lib/features/gamification/presentation/widgets/tier_icon_box.dart shows PositionedDirectional, not Positioned with right:/left:.",
+    "A widget test pumped under Locale('he')/TextDirection.rtl asserts the lock badge sits on the trailing (left-in-RTL) corner."
+   ],
+   "labels": [
+    "rtl",
+    "a11y",
+    "hebrew"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-scheduler-p3",
+  "chunk": "grp-094",
+  "finding": {
+   "title": "Deduplicate near-identical scheduler test files added across separate fix waves",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler duplication / TQ-7",
+   "area": "features/scheduler tests (domain/models, domain/repositories, data/repositories, domain/services)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/scheduler/domain/models/goal_entity_extended_test.dart",
+     "line": 95,
+     "quote": "group('GoalEntity.firestoreId', () {\n    test('firestoreId contains curriculumId storageKey', () {"
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/domain/models/goal_entity_extra_test.dart",
+     "line": 76,
+     "quote": "group('GoalEntity.firestoreId', () {\n    test('firestoreId contains curriculum storageKey', () {"
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/data/repositories/scheduler_content_repository_impl_test.dart",
+     "line": 56,
+     "quote": "test('filters to only leaf items', () async {"
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/domain/repositories/scheduler_content_repository_test.dart",
+     "line": 99,
+     "quote": "test('filters out non-leaf items and returns only leaves', () async {"
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/domain/services/daily_task_generator_extended_test.dart",
+     "line": 107,
+     "quote": "test('returns empty list for empty curricula list', () async {"
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/domain/services/daily_task_generator_generate_all_test.dart",
+     "line": 71,
+     "quote": "test('returns empty list for empty curricula list', () async {"
+    }
+   ],
+   "sites": 3,
+   "why": "Three independent pairs of test files pin the exact same production behavior with near/exact-duplicate assertions, evidently written by separate fix-wave passes that never checked for existing coverage: (1) goal_entity_extended_test.dart and goal_entity_extra_test.dart both re-derive DeadlineTarget/PacePeriodTarget hashCode+toString, GoalEntity.firestoreId's format, and fromFirestore's paceGranularity mapping \u2014 roughly 20 overlapping tests across two ~230-line files; (2) scheduler_content_repository_impl_test.dart and scheduler_content_repository_test.dart both carry a near-identical 'getLeafItems filters/sorts/maps' suite; (3) daily_task_generator_extended_test.dart and daily_task_generator_generate_all_test.dart both have an identically-named 'returns empty list for empty curricula list' test plus duplicate 'sorted by priority' and skippedRefs coverage. None of the three newer files' doc comments ('not covered by X') acknowledge the sibling file that duplicates them. Cost: any behavior change to GoalEntity.firestoreId's format, getLeafItems' sort key, or generateAll's empty-input handling now requires editing two files in lockstep or one silently goes stale while still looking like coverage; CI pays for the duplicate runs with zero added defect-catching power.",
+   "recommendation": "Merge each pair, keeping the union of distinct assertions and deleting the fully-subsumed tests; for the content-repository pair, keep the coarseUnitKey-only tests in domain/repositories/ and keep the getLeafItems suite solely in data/repositories/ (its correctly-mirrored home per AG-5).",
+   "effort": "M",
+   "acceptance_criteria": [
+    "No two files under test/features/scheduler/ share a >=80%-similar block of assertions against the same production symbol (spot-checked; flag as a candidate Rule-0 checker: a test-name/body similarity script).",
+    "Total test count for the three affected areas drops by roughly the duplicated fraction with no reduction in line/branch coverage (verify via `flutter test --coverage` diff before/after)."
+   ],
+   "labels": [
+    "test-quality",
+    "duplication",
+    "fowler"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-onboarding-p2",
+  "chunk": "grp-070",
+  "finding": {
+   "title": "Confirm whether Positioned(left:/right:) illustration badges in intro pages need PositionedDirectional for RTL",
+   "severity": "P3",
+   "confidence": "SUSPECTED",
+   "rule": "AX-1 (spirit)",
+   "area": "onboarding/presentation/widgets",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/widgets/intro_mishna_page.dart",
+     "line": 32,
+     "quote": "left: 0,"
+    },
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/widgets/intro_rewards_page.dart",
+     "line": 66,
+     "quote": "right: 32,"
+    }
+   ],
+   "sites": 6,
+   "why": "AX-1's RTL rule is written against EdgeInsets.only(left/right) and Alignment.centerLeft/Right, but Positioned(left:/right:) has the identical non-mirroring failure mode under RTL that PositionedDirectional(start:/end:) avoids. app_intro_screen_l1_test.dart's RTL smoke test only checks the screen mounts without throwing, not badge placement, so a mirroring regression on these floating badges in Hebrew locale would not be caught. This may be an intentional 'decorative collage doesn't need to mirror' choice rather than a bug \u2014 needs a visual check to confirm either way.",
+   "recommendation": "Take a Locale('he') screenshot of AppIntroScreen pages 2-3 (reusing the app_intro_rewards_cta_overlap_test.dart rig) and confirm badge placement reads correctly; switch to PositionedDirectional(start:/end:) if not.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "A golden or screenshot test of pages 2-3 in Locale('he') exists and has been reviewed for correct badge placement"
+   ],
+   "labels": [
+    "rtl",
+    "onboarding",
+    "accessibility"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-profiles-p3",
+  "chunk": "grp-080",
+  "finding": {
+   "title": "Close or auto-close inMemoryDb() in profiles _buildApp test helpers \u2014 3 files leak native Drift handles whenever db: is omitted",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6",
+   "area": "test/features/profiles/presentation/screens/{parent_settings_screen_l1_test,parent_track_management_screen_l1_test,ts14_parent_track_management_copy_test}.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/helpers/drift_memory.dart",
+     "line": 40,
+     "quote": "/// Callers MUST `await db.close()` in `tearDown` to free the native\n/// resources."
+    },
+    {
+     "file": "learning_tracker/test/features/profiles/presentation/screens/parent_settings_screen_l1_test.dart",
+     "line": 114,
+     "quote": "final resolvedDb = db ?? inMemoryDb();"
+    },
+    {
+     "file": "learning_tracker/test/features/profiles/presentation/screens/parent_track_management_screen_l1_test.dart",
+     "line": 129,
+     "quote": "final database = db ?? inMemoryDb();"
+    },
+    {
+     "file": "learning_tracker/test/features/profiles/presentation/screens/parent_track_management_screen_l1_test.dart",
+     "line": 167,
+     "quote": "final database = inMemoryDb();"
+    },
+    {
+     "file": "learning_tracker/test/features/profiles/presentation/screens/ts14_parent_track_management_copy_test.dart",
+     "line": 71,
+     "quote": "final database = db ?? inMemoryDb();"
+    }
+   ],
+   "sites": 3,
+   "why": "drift_memory.dart's own contract says callers MUST close inMemoryDb(). In these 3 files, _buildApp (and _buildAppLoading/_buildAppError, which have no db: parameter at all) construct one via `db ?? inMemoryDb()` whenever the optional db: is omitted, and the large majority of testWidgets in parent_settings_screen_l1_test.dart and parent_track_management_screen_l1_test.dart (~30 of ~40 across the two files) do omit it, so each test run leaks a native sqlite3 in-memory connection nothing ever closes \u2014 the caller has no reference to the db, so it can't be closed even in a teardown. At the scale of this test suite (dozens of files following the same pattern), this is a plausible contributor to CI slowness or file-descriptor/memory pressure.",
+   "recommendation": "Make db a required parameter (as ts3_parent_track_archive_test.dart already does correctly, forcing every call site to own+close it), or have _buildApp itself call addTearDown(() => resolvedDb.close()) so omitting db: is automatically safe.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Every _buildApp/_buildAppLoading/_buildAppError variant in these 3 files either requires db: or internally registers addTearDown to close the database it created."
+   ],
+   "labels": [
+    "resource-leak",
+    "test-quality",
+    "drift",
+    "profiles"
+   ]
+  }
+ }
+]

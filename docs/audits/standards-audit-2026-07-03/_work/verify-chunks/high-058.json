@@ -1,0 +1,111 @@
+[
+ {
+  "sourceBatch": "t1-feat-onboarding-p1",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Replace raw English string literals with AppLocalizations across onboarding screens, steps, and validators",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "AX-2 / EH-5",
+   "area": "features/onboarding/presentation, domain/validators",
+   "sites": 47,
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/screens/bulk_mark_screen.dart",
+     "line": 351,
+     "quote": "'You must leave at least some content unmarked to continue learning.',"
+    },
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/screens/bulk_mark_screen.dart",
+     "line": 539,
+     "quote": "'${_selections.length} selection(s)',"
+    },
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/screens/onboarding_screen.dart",
+     "line": 323,
+     "quote": "_ScreenPhase.parentPinSetup => const AppBarTitle(text: 'Set Parent PIN'),"
+    },
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/screens/onboarding_screen.dart",
+     "line": 330,
+     "quote": "_ScreenPhase.done => const AppBarTitle(text: 'All Set!'),"
+    },
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/steps/onboarding_handoff_step.dart",
+     "line": 45,
+     "quote": "\"$name's learning is all set up\","
+    },
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/steps/onboarding_handoff_step.dart",
+     "line": 59,
+     "quote": "'You can set up rewards later in Parent Mode',"
+    },
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/steps/onboarding_parent_pin_step.dart",
+     "line": 55,
+     "quote": "_pinError = 'PINs do not match';"
+    },
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/steps/onboarding_parent_pin_step.dart",
+     "line": 93,
+     "quote": "'Set a 4-digit PIN to access parent controls for $childName. '"
+    },
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/steps/onboarding_add_another_prompt_step.dart",
+     "line": 50,
+     "quote": "'You have $trackCount track${trackCount == 1 ? '' : 's'} set up.',"
+    },
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/steps/onboarding_profile_creation_step.dart",
+     "line": 90,
+     "quote": "? 'A profile with this name already exists'"
+    },
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/steps/wizard_steps.dart",
+     "line": 92,
+     "quote": "return 'How do you review?';"
+    },
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/steps/wizard_steps.dart",
+     "line": 127,
+     "quote": "title: 'Follow a program',"
+    },
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/steps/wizard_steps.dart",
+     "line": 478,
+     "quote": "1: 'Mon', 2: 'Tue', 3: 'Wed', 4: 'Thu', 5: 'Fri', 6: shabbos, 7: 'Sun',"
+    },
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/steps/wizard_steps.dart",
+     "line": 505,
+     "quote": "'Review your schedule',"
+    },
+    {
+     "file": "learning_tracker/lib/features/onboarding/domain/validators/auth_validators.dart",
+     "line": 10,
+     "quote": "return 'Email is required';"
+    },
+    {
+     "file": "learning_tracker/lib/features/onboarding/domain/validators/auth_validators.dart",
+     "line": 25,
+     "quote": "return 'Password must be at least 6 characters';"
+    }
+   ],
+   "why": "Hebrew-locale users (this app's RTL-supported primary non-English audience) hit untranslated English text through nearly every screen of the core onboarding flow: all 6 onboarding_screen.dart AppBar titles, the entire Parent-PIN setup screen (6 strings, file has no AppLocalizations import at all), 4 of 5 strings on the child hand-off screen, both add-another-track strings, 5 strings in the bulk-mark confirmation/search/done flow, ~19 strings across the learning-process wizard (wizard_steps.dart) including a literal mixed-language bug where Mon/Tue/Wed/Thu/Fri/Sun render in English but Shabbos correctly renders via terms.shabbos in the same label, the duplicated profile-name-exists error, and 3 signup/sign-in form validators whose return values render directly as TextFormField errorText. test/features/onboarding/presentation/steps/wizard_steps_l1_test.dart pins several of these literal strings directly (find.text('Follow a program'), find.text('How do you review?')), so the existing test suite locks in the bug instead of catching it.",
+   "recommendation": "Extract every literal into ARB keys mirroring the correct usages already present in the same files (e.g. l10n.startLearning), add ICU plurals for count-driven strings (trackCount, delayDays, _selections.length), replace the hardcoded day-abbreviation maps with a helper backed by AppLocalizations/DateFormat.EEEE so all 7 days localize uniformly, and update wizard_steps_l1_test.dart/related tests to assert on localized output instead of literal English text.",
+   "effort": "L",
+   "acceptance_criteria": [
+    "make arb-parity stays green after new keys are added",
+    "a Rule-0 grep/lint added under lib/features/onboarding/presentation/** fails when a raw string literal (not an AppLocalizations getter) is passed to Text()/errorText/hintText/label \u2014 the AX-2 [P] literals checker this backlog needs",
+    "wizard_steps_l1_test.dart assertions changed from find.text('Follow a program') to locale-driven lookups so a regression re-breaks the test",
+    "manual/e2e pass with Locale('he') through onboarding shows no Latin-script UI copy and no mixed-language day labels"
+   ],
+   "labels": [
+    "i18n",
+    "AX-2",
+    "onboarding",
+    "hebrew"
+   ]
+  }
+ }
+]

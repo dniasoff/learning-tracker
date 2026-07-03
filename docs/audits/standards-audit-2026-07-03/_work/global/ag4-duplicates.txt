@@ -1,0 +1,21 @@
+CurriculumSummary
+    lib/features/dashboard/domain/services/parent_dashboard_aggregator.dart
+    lib/features/scheduler/domain/services/cross_curriculum_aggregator.dart
+PaceCalculator
+    lib/features/progress/domain/services/pace_calculator.dart
+    lib/features/scheduler/domain/services/pace_calculator.dart
+PaceIndicator
+    lib/features/progress/presentation/widgets/pace_indicator.dart
+    lib/features/scheduler/presentation/widgets/pace_indicator.dart
+PaceStatus
+    lib/features/progress/domain/services/pace_calculator.dart
+    lib/features/scheduler/domain/models/pace_status.dart
+PinFlowMode
+    lib/features/profiles/domain/services/pin_flow_machine.dart
+    lib/features/profiles/presentation/providers/pin_flow_controller.dart
+PinFlowStep
+    lib/features/profiles/domain/services/pin_flow_machine.dart
+    lib/features/profiles/presentation/providers/pin_flow_controller.dart
+StudyDayPattern
+    lib/core/domain/value_objects/study_day_pattern.dart
+    lib/features/scheduler/domain/projection/overdue_types.dart

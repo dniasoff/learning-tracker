@@ -1,0 +1,6 @@
+learning_tracker/test/features/profiles/presentation/widgets/profile_edit_delete_actions_test.dart  (863 lines)
+learning_tracker/test/features/profiles/presentation/widgets/profile_switcher_bar_badge_test.dart  (242 lines)
+learning_tracker/test/features/profiles/presentation/widgets/profile_switcher_sheet_overflow_test.dart  (140 lines)
+learning_tracker/test/features/profiles/presentation/ws4_mode_boundaries_test.dart  (193 lines)
+learning_tracker/test/features/profiles/profile_picker_and_tutored_l1_test.dart  (652 lines)
+learning_tracker/test/features/profiles/profile_picker_deep_l1_test.dart  (1010 lines)

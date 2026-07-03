@@ -1,0 +1,183 @@
+[
+ {
+  "sourceBatch": "t4-docs-triage-p2",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Flag docs/planning/sync-architecture-plan.md Part A as stale \u2014 its outbox-drain headline finding is now false",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-8",
+   "area": "docs/planning",
+   "evidence": [
+    {
+     "file": "docs/planning/sync-architecture-plan.md",
+     "line": 105,
+     "quote": "grep for `\\.drain(` in `lib/` returns zero matches outside `outbox_processor.dart` itself ... The outbox is a write-only sink in production."
+    }
+   ],
+   "sites": 1,
+   "why": "Running the same grep today finds production callers at lib/core/sync/sync_orchestrator.dart:384 and lib/core/sync/providers/sync_orchestrator_providers.dart:200, consistent with the doc's own Phase-0 'Stop the bleeding' rollout item having shipped. The doc reads as a present-tense 'Current-state audit' with no date-of-validity caveat and is unlinked from docs/index.md, so a future contributor or AI agent (this repo runs many 'paste this prompt into a fresh session' orchestration flows) finding it via search could conclude a CRITICAL data-loss bug is still open in the most sync-sensitive subsystem in the app and misdirect effort.",
+   "recommendation": "Add a 'Part A verified current as of <date>' note, or append a resolved/open marker per ranked finding \u2014 mirroring the remediation-status table pattern already used well in tracks-and-completion-bug-report.md.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "The doc states the date through which Part A's grep-based claims were last verified, or each of the 15 ranked findings carries a resolved/open marker."
+   ],
+   "labels": [
+    "docs",
+    "sync",
+    "drift"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t4-docs-triage-p2",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Fix docs/qa/legacy/00-testing-methodology.md \u00a79 document index \u2014 none of the listed filenames exist",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-8",
+   "area": "docs/qa/legacy",
+   "evidence": [
+    {
+     "file": "docs/qa/legacy/00-testing-methodology.md",
+     "line": 404,
+     "quote": "| 01 | `01-auth.md` | Authentication | Cloud-born and local-born signup/signin"
+    },
+    {
+     "file": "docs/qa/legacy/00-testing-methodology.md",
+     "line": 417,
+     "quote": "| 14 | `14-tutor-mode.md` | Tutor Mode | Tutor read-only access"
+    }
+   ],
+   "sites": 1,
+   "why": "The actual files in the same directory are 01-product-overview.md, 02-auth-and-accounts.md, 03-onboarding.md ... 13-settings.md, 14-sync-and-offline.md \u2014 a different naming scheme, order, and count than the table's 18 rows (01-auth.md through 18-settings.md). \u00a79's own instruction ('open 01-auth.md and begin') sends a tester to a file that exists nowhere in the repo.",
+   "recommendation": "Regenerate \u00a79's table from the real docs/qa/legacy/ directory listing.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Every filename in \u00a79's table exists at docs/qa/legacy/<name> and the row order matches the numeric prefix."
+   ],
+   "labels": [
+    "docs",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t4-docs-triage-p2",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Fix dead link to archived ux-design-specification.md in docs/planning/ux-patterns-quick-reference.md",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-8",
+   "area": "docs/planning",
+   "evidence": [
+    {
+     "file": "docs/planning/ux-patterns-quick-reference.md",
+     "line": 6,
+     "quote": "linked to `ux-design-specification.md` which has been archived under [`docs/_archive/superseded/`]"
+    },
+    {
+     "file": "docs/planning/ux-patterns-quick-reference.md",
+     "line": 508,
+     "quote": "Check [UX Design Specification](ux-design-specification.md) for full rationale and mockups."
+    }
+   ],
+   "sites": 1,
+   "why": "The file's own banner (line 6) says the target was archived, yet its footer (line 508) still links the pre-archive relative path. docs/planning/ux-design-specification.md does not exist; only docs/_archive/superseded/ux-design-specification-2026-02-11.md does. The doc's own closing call-to-action 404s.",
+   "recommendation": "Point the footer link at ../_archive/superseded/ux-design-specification-2026-02-11.md or remove it.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "The link at the bottom of ux-patterns-quick-reference.md resolves to an existing file."
+   ],
+   "labels": [
+    "docs",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t4-docs-triage-p2",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Strip leaked `</content>`/`</invoke>` tool-call artifacts from committed planning docs",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-8",
+   "area": "docs/planning",
+   "evidence": [
+    {
+     "file": "docs/planning/test-coverage-matrix.md",
+     "line": 224,
+     "quote": "</content>"
+    },
+    {
+     "file": "docs/planning/test-fix-bug-log.md",
+     "line": 841,
+     "quote": "</content>"
+    }
+   ],
+   "sites": 2,
+   "why": "Both files end with literal leftover XML-ish tags from whatever agent tool call authored them (an unstripped Write/Edit tool-call content boundary), not markdown content \u2014 verified via direct `tail`/`grep` on disk, independent of any tool rendering. Harmless to rendering but signals the authoring pipeline occasionally commits raw tool-call framing into tracked docs.",
+   "recommendation": "Delete the trailing artifact lines; add a pre-commit/`make audit` grep for `^</(content|invoke)>$` under docs/ to catch this class of leak before commit (Rule 0 style).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep -rn '</content>\\|</invoke>' docs/ returns no matches.",
+    "A committed check greps docs/ for stray tool-tag artifacts."
+   ],
+   "labels": [
+    "docs",
+    "hygiene",
+    "tooling"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t4-docs-triage-p3",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Fix wrong bundled seed-asset filename (seed.db.gz) in docs/qa/legacy/14-sync-and-offline.md",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Tier-4 triage AREA NOTE \u2014 factual-drift check against reality for a presents-as-current doc",
+   "area": "docs/qa/legacy",
+   "evidence": [
+    {
+     "file": "docs/qa/legacy/14-sync-and-offline.md",
+     "line": 19,
+     "quote": "6. Content DB seed file (`seed.db.gz`) is available in the APK assets"
+    },
+    {
+     "file": "docs/qa/legacy/14-sync-and-offline.md",
+     "line": 690,
+     "quote": "**Preconditions:** Fresh install of the app. The APK contains `seed.db.gz` in assets."
+    },
+    {
+     "file": "learning_tracker/lib/core/database/seed_manager.dart",
+     "line": 73,
+     "quote": "static const String _seedAssetPath = 'assets/db/content.db.gz';"
+    },
+    {
+     "file": "docs/qa/legacy/seed-content-db-build-guide.md",
+     "line": 218,
+     "quote": "unzip -l build/app/outputs/flutter-apk/app-release.apk | grep content.db"
+    }
+   ],
+   "sites": 2,
+   "why": "A tester following SYNC-29 to verify the seed DB ships in the APK would run `unzip -l app-release.apk | grep seed.db.gz`, find nothing (the real bundled asset is content.db.gz \u2014 seed.db.gz is only a local build-only intermediate per tool/seed_content_db.dart), and could file a false 'seed file missing from APK' bug, burning triage time on a doc typo instead of a real defect.",
+   "recommendation": "Replace both `seed.db.gz` mentions with `content.db.gz`, or add a one-line caveat that seed.db.gz is the pre-bundle build intermediate, never the shipped asset name \u2014 matching the correct usage already in the sibling seed-content-db-build-guide.md.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Both occurrences of `seed.db.gz` in docs/qa/legacy/14-sync-and-offline.md (Prerequisites list and SYNC-29) read `content.db.gz` or are annotated as the build-only intermediate name.",
+    "grep -c 'seed.db.gz' docs/qa/legacy/14-sync-and-offline.md returns 0, or only appears inside an explicit build-intermediate caveat."
+   ],
+   "labels": [
+    "docs",
+    "tier4-triage",
+    "factual-drift",
+    "P3"
+   ]
+  }
+ }
+]

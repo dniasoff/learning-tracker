@@ -1,0 +1,194 @@
+[
+ {
+  "sourceBatch": "t1-story-epics-17-20",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Split epic_18_track_overhaul_test.dart and epic_19_offline_first_test.dart under the 400-line AG-3 cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "test/story_acceptance",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_18_track_overhaul_test.dart",
+     "line": 689,
+     "quote": "(file length: 689 lines, hand-written, not generated)"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_19_offline_first_test.dart",
+     "line": 624,
+     "quote": "(file length: 624 lines, hand-written, not generated)"
+    }
+   ],
+   "sites": 2,
+   "why": "Files past 400 lines exceed per-file agent read budgets and become dumping grounds for unrelated stories, per AG-3's own stated rationale. This is systemic to the 'one file per epic' convention documented in learning_tracker/CLAUDE.md, which has no split policy even though the repo already practices ad hoc splitting elsewhere (epic_18_story_18x_track_restore_test.dart exists precisely as an epic_18 overflow file, and other epics run past 3000 lines).",
+   "recommendation": "Formalize the overflow-file pattern already used for epic_18 (split by story range with an _storyNNx_ suffix) as the documented convention in learning_tracker/CLAUDE.md, or add a story_acceptance-specific exemption to AG-3 the way AG-5 already exempts this directory from mirroring.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "find learning_tracker/test -name '*_test.dart' | xargs wc -l | awk '$1>400' either excludes these two files after a split, or story_acceptance carries a documented/checked AG-3 exemption"
+   ],
+   "labels": [
+    "hygiene",
+    "file-size",
+    "AG-3"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epics-17-20",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Delete the superseded Story 19.5 AuthState test now that Story 20.5 fully re-covers it",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler-duplication",
+   "area": "test/story_acceptance",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_19_offline_first_test.dart",
+     "line": 575,
+     "quote": "group('Story 19.5 \u2014 superseded by Epic 20 v2 unified AuthState', () {"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_20_hard_tier_auth_test.dart",
+     "line": 143,
+     "quote": "group('Story 20.5 \u2014 AuthState', () {"
+    }
+   ],
+   "sites": 1,
+   "why": "The group's own name says the story is superseded, yet the test (asserting AuthState.signedOut/signedIn shape with tier: cloudBorn) was left in place instead of being removed when epic_20_hard_tier_auth_test.dart's Story 20.5 group added equivalent (localBorn-variant) coverage of the same AuthState contract. Both files must now be kept in sync by hand whenever AuthState's shape changes.",
+   "recommendation": "Delete the Story 19.5 group from epic_19_offline_first_test.dart; Story 20.5 in epic_20_hard_tier_auth_test.dart is the current owner of this contract.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "epic_19_offline_first_test.dart no longer contains a 'Story 19.5' group",
+    "The epic_20 story-acceptance run still passes, confirming Story 20.5 covers the same assertions"
+   ],
+   "labels": [
+    "hygiene",
+    "duplication",
+    "stale-test"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epics-17-20",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Remove the unused mocktail import and registerFallbackValue call from epic_18_track_overhaul_test.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "dead-code",
+   "area": "test/story_acceptance",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_18_track_overhaul_test.dart",
+     "line": 24,
+     "quote": "import 'package:mocktail/mocktail.dart';"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_18_track_overhaul_test.dart",
+     "line": 46,
+     "quote": "registerFallbackValue(CurriculumId.mishnayos);"
+    }
+   ],
+   "sites": 1,
+   "why": "No Mock/when/verify call appears anywhere else in the 689-line file \u2014 every collaborator is a real Drift DB or real service. The fallback-value registration is vestigial (likely copy-pasted from a mocked-test template) and misleads a reader into thinking mocking happens in this file.",
+   "recommendation": "Delete the mocktail import and the setUpAll/registerFallbackValue block.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "mocktail is no longer imported in epic_18_track_overhaul_test.dart",
+    "dart analyze reports no regression"
+   ],
+   "labels": [
+    "hygiene",
+    "dead-code"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epics-17-20",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Log the empty catch(_) blocks swallowing temp-dir cleanup failures in epic_19_offline_first_test.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "EH-3",
+   "area": "test/story_acceptance",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_19_offline_first_test.dart",
+     "line": 274,
+     "quote": "} catch (_) {}"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_19_offline_first_test.dart",
+     "line": 324,
+     "quote": "} catch (_) {}"
+    }
+   ],
+   "sites": 2,
+   "why": "EH-3 bans empty and log-less catches repo-wide. If Directory.delete(recursive: true) fails here \u2014 e.g. a held SQLite file handle on the just-closed content/read-only DB \u2014 the failure is silently discarded, leaving stray temp dirs with no breadcrumb that cleanup ever failed, exactly the swallowed-exception debugging dead-end EH-3 exists to prevent.",
+   "recommendation": "At minimum print/log the caught error instead of a bare catch (_) {} in both addTearDown blocks.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep -n 'catch (_) {}' learning_tracker/test/story_acceptance/epic_19_offline_first_test.dart returns no match, or each site logs the caught error"
+   ],
+   "labels": [
+    "hygiene",
+    "error-handling",
+    "EH-3"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epics-17-20",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Deduplicate seedProfile/seedProfileZero between test/helpers/drift_memory.dart and test/helpers/test_database.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-4-adjacent (Fowler-duplication)",
+   "area": "test/helpers (imported by story_acceptance)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_18_story_18x_track_restore_test.dart",
+     "line": 13,
+     "quote": "import '../helpers/drift_memory.dart' show seedProfile;"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_20_hard_tier_auth_test.dart",
+     "line": 14,
+     "quote": "import '../helpers/drift_memory.dart' show seedProfile;"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_18_track_overhaul_test.dart",
+     "line": 27,
+     "quote": "import '../helpers/test_database.dart' show seedProfile;"
+    },
+    {
+     "file": "learning_tracker/test/helpers/drift_memory.dart",
+     "line": 50,
+     "quote": "Future<void> seedProfile(UserDatabase db) async {"
+    },
+    {
+     "file": "learning_tracker/test/helpers/test_database.dart",
+     "line": 35,
+     "quote": "Future<void> seedProfile(UserDatabase db) async {"
+    }
+   ],
+   "sites": 3,
+   "why": "Two files under test/helpers/ define an identically-named seedProfile(UserDatabase) \u2014 and seedProfileZero \u2014 with near-identical bodies (same fixture email, tier, displayName). Three of my four batch files import it interchangeably from either helper. If either copy is fixed or extended (e.g. a new required column) without the other, tests silently diverge on what 'a seeded profile' means depending on which import a test author happened to copy \u2014 the same 'divergent parallel copies' failure AG-4 targets for lib/, reproduced in test/helpers/.",
+   "recommendation": "Keep one implementation (drift_memory.dart looks like the more focused, Drift-specific home) and have test_database.dart re-export or delegate to it; repoint all story_acceptance imports at the single source.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Only one definition of seedProfile and one of seedProfileZero exist under learning_tracker/test/helpers/",
+    "grep -rn 'Future<void> seedProfile(' learning_tracker/test/helpers/ returns exactly one match per function name"
+   ],
+   "labels": [
+    "hygiene",
+    "duplication",
+    "test-helpers"
+   ]
+  }
+ }
+]

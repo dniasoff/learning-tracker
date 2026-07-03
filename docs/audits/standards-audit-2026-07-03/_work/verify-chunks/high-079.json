@@ -1,0 +1,55 @@
+[
+ {
+  "sourceBatch": "t1-feat-scheduler-p5",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Route hebrew_date_picker.dart's dialog title/labels through AppLocalizations \u2014 hardcoded English leaks into Hebrew locale",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "AX-2 (no hardcoded user-facing strings)",
+   "area": "features/scheduler/presentation/widgets (live dialog, used by goal_setup_screen.dart and tracks/setup/step_goal.dart)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/scheduler/presentation/widgets/hebrew_date_picker.dart",
+     "line": 150,
+     "quote": "'Select Hebrew date',"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/presentation/widgets/hebrew_date_picker.dart",
+     "line": 176,
+     "quote": "'Hebrew year',"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/presentation/widgets/hebrew_date_picker.dart",
+     "line": 246,
+     "quote": "decoration: _fieldDecoration('Month'),"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/presentation/widgets/hebrew_date_picker.dart",
+     "line": 321,
+     "quote": "'English: ${HebrewCalendarUtils.formatEnglishDate(gregorian, ...)}',"
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/widgets/hebrew_date_picker_test.dart",
+     "line": 33,
+     "quote": "expect(find.text('Select Hebrew date'), findsOneWidget);"
+    }
+   ],
+   "sites": 5,
+   "why": "A Hebrew-locale user opening Add Track / Goal Setup > pick a Hebrew deadline sees a dialog titled in raw English ('Select Hebrew date'), with 'Hebrew year', 'Month', 'Day' field labels and an 'English:' confirmation prefix all in English, while the Cancel/Select-date buttons on the same dialog ARE correctly localized (AppLocalizations.actionCancel/schedulerSelectDate) \u2014 a jarring mixed-language dialog in an app whose entire premise is EN/HE parity. The test file's own assertions (line 33, 46) require these exact English literals and never pump a Locale('he') variant, so the test suite actively pins the bug as correct output rather than catching it.",
+   "recommendation": "Add ARB keys (title, 'Hebrew year' label, month/day field labels, 'English:' prefix) and route all 5 literals through AppLocalizations.of(context)!; add a Locale('he') testWidgets case to hebrew_date_picker_test.dart asserting the Hebrew strings render, mirroring the RTL-smoke pattern already used in study_day_config_screen_l1_test.dart.",
+   "acceptance_criteria": [
+    "No literal 'Select Hebrew date', 'Hebrew year', 'Month', 'Day', or 'English:' string remains in hebrew_date_picker.dart (grep returns zero).",
+    "make arb-parity still passes with the new keys present in both app_en.arb and app_he.arb.",
+    "hebrew_date_picker_test.dart gains a Locale('he') case asserting the Hebrew-ARB strings render for title/year-label/month/day."
+   ],
+   "labels": [
+    "i18n",
+    "AX-2",
+    "scheduler",
+    "test-quality"
+   ],
+   "effort": "S"
+  }
+ }
+]

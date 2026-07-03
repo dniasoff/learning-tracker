@@ -1,0 +1,141 @@
+[
+  {
+    "title": "Repair the broken custom_lint toolchain so the nine custom lints enforce again",
+    "severity": "P1",
+    "confidence": "CONFIRMED",
+    "rule": "Rule 0 / AG-11",
+    "area": "guardrails",
+    "evidence": [
+      {"file": "learning_tracker/pubspec.yaml", "line": 1, "quote": "custom_lint 0.8.1 vs analyzer 9.0.0 — `dart run custom_lint` exits 255 with compile errors in custom_lint_core (Element2 isn't a type)"}
+    ],
+    "sites": 1,
+    "why": "All nine custom lint rules (layering, Firebase confinement, raw Talker, RTL geometry, color literals, e.toString-in-UI, raw logEvent) currently enforce NOTHING: the tool crashes before analysis locally, and CI runs it warn-only. docs/coding-standards.md line 766 tells developers 'local make audit + dart run custom_lint are the real gate — run them', which is impossible for the lint half; only the audit greps remain as a hard gate, and they cover fewer rules.",
+    "recommendation": "Upgrade custom_lint/custom_lint_core to an analyzer-9-compatible release (or pin analyzer ^8 in the workspace) so `dart run custom_lint` runs clean; then correct the doc's claim or flip CI custom_lint to hard-fail. First mechanical step: `dart pub upgrade custom_lint --major-versions` in packages/custom_lints and learning_tracker, run the tool, fix API breakage in the 9 rules.",
+    "effort": "M",
+    "acceptance_criteria": [
+      "`cd learning_tracker && dart run custom_lint` exits 0 and reports per-file diagnostics",
+      "CI custom_lint step hard-fails on violations (warn-only removed) or the standards doc states the real status"
+    ],
+    "labels": ["guardrails", "tooling", "rule-0"],
+    "origin": "orchestrator-baseline"
+  },
+  {
+    "title": "Regenerate and commit stale codegen for curriculum_label_providers and 2 other .g.dart files; add the AG-7 freshness gate",
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "rule": "AG-7",
+    "area": "core/labels",
+    "evidence": [
+      {"file": "learning_tracker/lib/core/labels/curriculum_label_providers.g.dart", "line": 204, "quote": "regen adds 22 lines of doc-comment (Hebrew ancestor-name lookup docs) — committed file predates its source's doc change"},
+      {"file": "learning_tracker/lib/features/gamification/presentation/providers/reward_config_controller.g.dart", "line": 1, "quote": "2-line drift on regeneration"},
+      {"file": "learning_tracker/lib/features/scheduler/presentation/providers/scheduler_providers.g.dart", "line": 1, "quote": "2-line drift on regeneration"}
+    ],
+    "sites": 3,
+    "why": "Committed generated code no longer matches its sources: `dart run build_runner build` on a clean tree at 4018a91c dirties 3 files. Every future agent build produces unexplained diffs, and the doc-claimed 'CI regenerates before analyze' means CI analyzes code that differs from what is committed. The pending `git diff --exit-code` freshness gate (AG-7) would have caught this at commit time.",
+    "recommendation": "Run build_runner + gen-l10n, commit the 3 regenerated files, and add the AG-7 freshness gate to CI (`git diff --exit-code` after regeneration).",
+    "effort": "S",
+    "acceptance_criteria": [
+      "build_runner + gen-l10n on a clean tree leaves `git status` clean",
+      "CI fails on non-empty git diff after codegen (freshness gate landed)"
+    ],
+    "labels": ["codegen", "ci", "hygiene"],
+    "origin": "orchestrator-baseline"
+  },
+  {
+    "title": "Archive the stale 993-line root coding-standards.md superseded by docs/coding-standards.md",
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "rule": "AG-8 / AG-2",
+    "area": "docs",
+    "evidence": [
+      {"file": "coding-standards.md", "line": 3, "quote": "**Status:** CAST-IRON RULES - Violations block PRs"},
+      {"file": "coding-standards.md", "line": 26, "quote": "// REQUIRED - Always UTC\nfinal now = DateTime.now().toUtc();"}
+    ],
+    "sites": 1,
+    "why": "Two documents claim to be the coding-standards authority. The root one (993 lines, older) actively contradicts the canonical docs/coding-standards.md — e.g. it REQUIRES `DateTime.now().toUtc()` while audit check 6 bans `DateTime.now()` outside core/time entirely. An agent that greps for coding-standards can land on the wrong file and follow dead rules; a doc that lies is worse than no doc.",
+    "recommendation": "Move root coding-standards.md to docs/_archive/ (or delete it) and leave nothing at the root but a pointer; sweep other root-level docs for the same staleness.",
+    "effort": "S",
+    "acceptance_criteria": [
+      "root coding-standards.md gone or replaced by a one-line pointer to docs/coding-standards.md",
+      "doc-lint/audit grep asserting only one file named coding-standards.md exists outside _archive"
+    ],
+    "labels": ["docs", "hygiene", "drift"],
+    "origin": "orchestrator-baseline"
+  },
+  {
+    "title": "Remove committed build artifacts (build/) and the accidental 'clear' file from git",
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "rule": "hygiene / AG-6-adjacent",
+    "area": "repo-root",
+    "evidence": [
+      {"file": "build/calendar_build.log", "line": 1, "quote": "tracked build log"},
+      {"file": "build/seed.db", "line": 1, "quote": "tracked EMPTY database file (+ seed.db.xz binary)"},
+      {"file": "clear", "line": 1, "quote": "Unicode text with terminal escape sequences — accidentally committed command output"}
+    ],
+    "sites": 4,
+    "why": "Build outputs and a stray terminal-dump are version-controlled at the repo root. They confuse agents scanning the manifest ('is build/seed.db the canonical seed?'), bloat the repo (binary .xz), and signal that .gitignore doesn't cover the root build/ directory.",
+    "recommendation": "git rm build/ and clear; add root build/ (and *.log at root) to .gitignore; verify tool scripts regenerate seed artifacts under an ignored path.",
+    "effort": "S",
+    "acceptance_criteria": [
+      "git ls-files shows no build/ entries and no 'clear' file",
+      ".gitignore covers root build/"
+    ],
+    "labels": ["hygiene"],
+    "origin": "orchestrator-baseline"
+  },
+  {
+    "title": "Archive legacy _bmad-output/ reports per the CLAUDE.md output-path policy",
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "rule": "AG-8 / repo hygiene",
+    "area": "repo-root",
+    "evidence": [
+      {"file": "_bmad-output/refactor-task-tracker.md", "line": 1, "quote": "30 legacy refactor-wave outputs still live in _bmad-output/"}
+    ],
+    "sites": 30,
+    "why": "Root CLAUDE.md states BMAD outputs now write into docs/, not _bmad-output/. The 30 files there are point-in-time wave logs that predate the policy; leaving them at a top-level path agents scan invites them to be read as current guidance.",
+    "recommendation": "Move _bmad-output/** into docs/_archive/ (they are historical logs) and delete the directory.",
+    "effort": "S",
+    "acceptance_criteria": ["_bmad-output/ no longer exists in git; files live under docs/_archive/ with a README pointer"],
+    "labels": ["hygiene", "docs"],
+    "origin": "orchestrator-baseline"
+  },
+  {
+    "title": "De-duplicate 7 public type names defined in two files each (AG-4)",
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "rule": "AG-4",
+    "area": "cross-cutting",
+    "evidence": [
+      {"file": "learning_tracker/lib", "line": 1, "quote": "CurriculumSummary, PaceCalculator, PaceIndicator, PaceStatus, PinFlowMode, PinFlowStep, StudyDayPattern each defined in 2 lib/ files (script scan; pairs in appendix)"}
+    ],
+    "sites": 7,
+    "why": "Agents locate code by grep; a duplicated public name sends them to the wrong definition and breeds divergent parallel copies — this repo's documented accretion failure. PaceCalculator/PaceStatus duplicated across features is exactly how two pace algorithms drift apart silently.",
+    "recommendation": "For each pair: keep one canonical definition (core/ or the owning feature), rename or delete the other, and land the AG-4 duplicate-symbol audit script so the count ratchets to zero.",
+    "effort": "M",
+    "acceptance_criteria": [
+      "AG-4 audit script lands in make audit and reports zero duplicate public top-level type names",
+      "each of the 7 names resolves to exactly one lib/ definition"
+    ],
+    "labels": ["architecture", "agent-workflow"],
+    "origin": "orchestrator-baseline"
+  },
+  {
+    "title": "Add Linear IDs to the 8 untracked TODO/FIXME comments (AG-6)",
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "rule": "AG-6",
+    "area": "cross-cutting",
+    "evidence": [
+      {"file": "learning_tracker/lib", "line": 1, "quote": "8 TODO/FIXME comments without a DNI-#### id (grep scan; list in appendix)"}
+    ],
+    "sites": 8,
+    "why": "Untracked TODOs are parked half-finished work that no ticket owns; they persist as cross-wave noise until someone re-discovers them the hard way.",
+    "recommendation": "File or link a DNI ticket for each of the 8 and generalize audit check 10 into the AG-6 grep (TODO/FIXME without DNI- fails).",
+    "effort": "S",
+    "acceptance_criteria": ["audit grep for untracked TODO/FIXME returns zero", "each TODO carries DNI-####"],
+    "labels": ["hygiene", "agent-workflow"],
+    "origin": "orchestrator-baseline"
+  }
+]

@@ -1,0 +1,231 @@
+[
+ {
+  "sourceBatch": "t1-feat-tutoring-p2",
+  "findingIndex": 14,
+  "finding": {
+   "title": "Convert TutorPinResult switches in gate/setup screens from statements to switch expressions per EH-6",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "EH-6",
+   "area": "features/tutoring/presentation/screens",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_entry_gate.dart",
+     "line": 98,
+     "quote": "switch (result) {\n        case TutorPinSuccess():"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_setup_screen.dart",
+     "line": 125,
+     "quote": "switch (result) {\n        case TutorPinSuccess():"
+    }
+   ],
+   "sites": 2,
+   "why": "coding-standards.md EH-6 states closed variant sets must be modeled as sealed + 'switch over it with switch expressions; never add a default:/_ arm.' Both files use switch STATEMENTS (case Pattern: followed by statement blocks) over the sealed TutorPinResult, not the mandated expression form (contrast with tutor_pin_reset_screen.dart's `child: switch (_step) { ... => ..., }`, which does it correctly). Functionally harmless today \u2014 Dart's exhaustiveness checker covers statement-form switches too \u2014 but it's a textual violation of an explicitly documented, partially-enforced standard, and inconsistent with the sibling file in the same feature.",
+   "recommendation": "Rewrite both switches as switch expressions (`TutorPinSuccess() => widget.onPinVerified(), ...`), matching tutor_pin_reset_screen.dart's style.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "both switches use the `Pattern => ...,` expression form with no default/_ arm",
+    "flutter analyze remains clean and existing gate/setup widget tests pass unchanged"
+   ],
+   "labels": [
+    "EH-6",
+    "style",
+    "P3"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tutoring-p3",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Replace source-text-grep assertions with real widget tests in t3_readonly_surfaces_gating_test.dart and r3_shell_revocation_exit_test.dart",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "test/features/tutoring",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/tutoring/t3_readonly_surfaces_gating_test.dart",
+     "line": 59,
+     "quote": "contains('TutorModeIndicatorBar extends ConsumerWidget'),"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/t3_readonly_surfaces_gating_test.dart",
+     "line": 72,
+     "quote": "contains('activeTutoredProfileSelectionProvider.notifier'),"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/t3_readonly_surfaces_gating_test.dart",
+     "line": 124,
+     "quote": "contains('TutorModeIndicatorBar'), // TUT-04 persistent-scaffold check"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/t3_readonly_surfaces_gating_test.dart",
+     "line": 156,
+     "quote": "contains('isTutorElevated'),"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/t3_readonly_surfaces_gating_test.dart",
+     "line": 197,
+     "quote": "contains('!isTutoredSession && !isChildProfile'),"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/t3_readonly_surfaces_gating_test.dart",
+     "line": 248,
+     "quote": "guardIdx = settingsSrc.lastIndexOf('if (!isTutoredSession)', headerIdx);"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/t3_readonly_surfaces_gating_test.dart",
+     "line": 307,
+     "quote": "contains('canEditStages'), // Add Track CTA gating"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/t3_readonly_surfaces_gating_test.dart",
+     "line": 334,
+     "quote": "isNot(contains('isChildMode: isChildMode || isTutoredSession')),"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/t3_readonly_surfaces_gating_test.dart",
+     "line": 374,
+     "quote": "contains('isTutor'), // live-mark button gating"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/r3_shell_revocation_exit_test.dart",
+     "line": 246,
+     "quote": "shellSrc, contains('incomingTutorGrantsProvider'),"
+    }
+   ],
+   "sites": 24,
+   "why": "These tests call File(...).readAsStringSync() and assert expect(src, contains('token')) against the raw source text of 5 other-feature screens (app_shell.dart, settings_screen.dart, learning_screen.dart, dashboard_body.dart, text_display_screen.dart). A string search passes whenever the token appears anywhere in the file \u2014 in a comment, on an inverted condition, or on unreachable code. Concretely: if a future edit flips the Add Track CTA gate to `!canEditStages`, moves the `if (!isTutoredSession)` guard so UserProfileHeaderCard (the tutor's own sign-out/delete-account surface) renders during a tutored session again (this already shipped once, per the file's own 'BUG 2' comment), or removes the MarkLiveCompletionUseCase call from the live-mark button's onPressed while leaving the string 'MarkLiveCompletionUseCase' in an unrelated comment, every one of these 24 test blocks (23 in t3 across AC1-AC5 plus TUT-04, 1 block/3 assertions in r3's self-labelled 'Structural tests (source-level)' group) keeps passing. Repo-wide grep confirms no other test file references isTutorElevated/isTutoredSession for these screens, so this is the SOLE regression coverage for tutor-mode UI gating outside the tutoring feature. r3's other 3 tests in the same file are genuine provider-level regression tests and are not affected by this finding.",
+   "recommendation": "Convert each assertion to a widget test that pumps the real screen with canEditStages/isTutoredSession toggled via provider overrides and asserts the CTA/surface is actually present or absent in the render tree \u2014 the pattern r3's own first 3 tests and every other l1 test in this batch already use correctly. Delete r3's redundant structural block once covered, or replace it with a widget-level assertion.",
+   "effort": "L",
+   "acceptance_criteria": [
+    "Each AC1-AC5 group in t3_readonly_surfaces_gating_test.dart is a testWidgets pumping the real screen and asserting on Finder/rendered output, not File.readAsStringSync() text",
+    "A regression test fails if the `if (!isTutoredSession)` guard is removed from UserProfileHeaderCard in settings_screen.dart (BUG 2 class)",
+    "A regression test fails if learning_screen.dart's Add Track CTA gate is inverted to `!canEditStages`"
+   ],
+   "labels": [
+    "testing",
+    "tutoring",
+    "tq-8",
+    "tautological-test"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tutoring-p3",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Add TutoredWriteRouter coverage for the 4 always-pass-through methods in s1_tutored_write_router_test.dart",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "test/features/tutoring",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/tutoring/s1_tutored_write_router_test.dart",
+     "line": 1,
+     "quote": "// S1 \u2014 TutoredWriteRouter unit tests ... AC1..AC4 (no mention of pushSettings/pushLearningOrder/pushUiPreferencesSnapshot/deleteLearnerProfile)"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/data/routers/tutored_write_router.dart",
+     "line": 30,
+     "quote": "//   deleteLearnerProfile (talmid's profile deletion is not a tutor right)."
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/data/routers/tutored_write_router.dart",
+     "line": 344,
+     "quote": "Future<void> deleteLearnerProfile(int profileId) => _delegate.deleteLearnerProfile(profileId);"
+    }
+   ],
+   "sites": 4,
+   "why": "The router's own comment says deleteLearnerProfile is deliberately excluded from tutor routing because talmid profile deletion is not a tutor right \u2014 a documented access-control decision. This 1003-line test file (tagged 'keystone') exhaustively covers the other 10 intercepted entity kinds across tutored/non-tutored/CF-failure branches, but grep confirms zero calls to pushSettings, pushLearningOrder, pushUiPreferencesSnapshot, or deleteLearnerProfile anywhere in the file (or anywhere else in test/features/tutoring). If a future edit accidentally applied the `if (sel == null) return _delegate.X(...)` interception pattern to deleteLearnerProfile with the condition backwards, a tutor could trigger deletion of the talmid's profile via a CF call and nothing in this suite would fail.",
+   "recommendation": "Add an 'always pass-through' group mirroring the existing tutored/non-tutored pattern: call each of the 4 methods via _tutored(record, delegate) and assert record.wasCalled is false and the matching delegate counter incremented.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "s1_tutored_write_router_test.dart asserts deleteLearnerProfile in tutored mode never invokes the CF invoker and always reaches the delegate",
+    "Same coverage added for pushSettings, pushLearningOrder, pushUiPreferencesSnapshot"
+   ],
+   "labels": [
+    "testing",
+    "tutoring",
+    "coverage-gap"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tutoring-p3",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Verify TutoredMirrorWipeService fires on tutor resign/revoke in manage_grants_screen_l1_test.dart and manage_tutors_screen_l1_test.dart",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "test/features/tutoring",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/tutoring/manage_grants_screen_l1_test.dart",
+     "line": 369,
+     "quote": "testWidgets('confirming resignation calls ResignTutorGrantUseCase', ( ... verify(() => mockResignUseCase.call(...)).called(1);"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/manage_grants_screen.dart",
+     "line": 234,
+     "quote": "buildTutoredMirrorWipeServiceFromWidget(ref: ref, onWipe: (_) => ref.read(activeTutoredProfileSelectionProvider.notifier).exit(),"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/manage_tutors_screen_l1_test.dart",
+     "line": 667,
+     "quote": "testWidgets('confirming Revoke calls revokeTutorGrantUseCase with the grant', ( ... only verifies mockRevoke.call, no mirror/session assertion"
+    }
+   ],
+   "sites": 2,
+   "why": "Both the tutor-side resign flow and the parent-side revoke flow fire-and-forget (unawaited) a local Drift mirror wipe plus an active-session exit() callback as an explicit fix (comment tag R4-M3) after the grant use case succeeds. This is the same class of stale-local-data bug this codebase already shipped once and wrote a dedicated regression test for elsewhere (iter10_outgoing_grants_stale_cache_test.dart, DG-TUT-STALE-01) \u2014 yet repo-wide grep for wipeMirrorForGrant/buildTutoredMirrorWipeServiceFromWidget in test/features/tutoring returns zero matches. Neither test file verifies the Drift mirror row is actually removed, or that activeTutoredProfileSelectionProvider clears when the resigned/revoked grant is the active tutored session. A regression that silently drops the unawaited(...) call, or breaks the onWipe wiring, ships undetected.",
+   "recommendation": "Seed an in-memory Drift mirror row for the grant (reusing the inMemoryDb()/_seedActiveMirror pattern from r3_shell_revocation_exit_test.dart), confirm resign/revoke, then assert the mirror row is gone; add a case where the wiped grant is the active tutored selection and assert the provider clears.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "manage_grants_screen_l1_test.dart asserts the Drift tutored-mirror row for a resigned grant is deleted after confirming resignation",
+    "manage_tutors_screen_l1_test.dart asserts the same for a revoked grant",
+    "Both cover the case where the wiped grant is the active tutored session and assert activeTutoredProfileSelectionProvider becomes null"
+   ],
+   "labels": [
+    "testing",
+    "tutoring",
+    "sync",
+    "coverage-gap"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tutoring-p3",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Remove or implement the dead 'hardcoded string audit' test in invite_tutor_screen_l1_test.dart",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "test/features/tutoring",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/tutoring/invite_tutor_screen_l1_test.dart",
+     "line": 819,
+     "quote": "final src = Uri.file('lib/.../invite_tutor_screen.dart').toString(); ... expect(src, isNotEmpty);"
+    }
+   ],
+   "sites": 1,
+   "why": "Uri.file(path).toString() never reads the filesystem \u2014 it only stringifies the path \u2014 so expect(src, isNotEmpty) is true for any non-empty path string regardless of what invite_tutor_screen.dart actually contains. The test's own comment admits it 'passes trivially.' A test named 'screen source contains no hardcoded English UI strings' that passes in CI creates false confidence that AX-2 is enforced for this file when it is not enforced at all \u2014 this is exactly the gap custom_lint's no_hardcoded_domain_term rule would otherwise catch if custom_lint were not currently broken (baselined separately).",
+   "recommendation": "Delete the test (the finding is already documented in the file's header comment) or make it real: read actual file contents via File(...).readAsStringSync() and assert against a regex for quoted English text outside l10n. calls.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "The test either asserts on real file contents via File(...).readAsStringSync() or is removed",
+    "No test in the file can pass independent of the file it claims to check"
+   ],
+   "labels": [
+    "testing",
+    "tutoring",
+    "tautological-test"
+   ]
+  }
+ }
+]

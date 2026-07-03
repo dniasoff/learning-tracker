@@ -1,0 +1,181 @@
+[
+ {
+  "sourceBatch": "t1-feat-progress-p3",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Replace DateTime.now() with a fixed date in curriculum_progress_service_test.dart track seeding",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6",
+   "area": "test/features/progress/domain/services",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/progress/domain/services/curriculum_progress_service_test.dart",
+     "line": 30,
+     "quote": "stateChangedAt: DateTime.now(),"
+    },
+    {
+     "file": "learning_tracker/test/features/progress/domain/services/curriculum_progress_service_test.dart",
+     "line": 31,
+     "quote": "activatedAt: DateTime.now(),"
+    }
+   ],
+   "sites": 1,
+   "why": "TQ-6 bans wall-clock reads in tests. These two fields are never asserted on, so the file is not currently flaky, but the pattern is copy-pasted into the non-batch sibling test/features/progress/data/repositories/progress_repository_test.dart (15 further DateTime.now() occurrences), normalizing non-determinism that will bite the day someone adds a time-based assertion against this seed.",
+   "recommendation": "Replace both DateTime.now() calls with a fixed literal, e.g. DateTime.utc(2026, 1, 1), matching every other file in this batch.",
+   "acceptance_criteria": [
+    "grep 'DateTime.now()' on the file returns no matches."
+   ],
+   "effort": "S",
+   "labels": [
+    "hygiene",
+    "TQ-6",
+    "wall-clock"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-progress-p4",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Rewrite track_dual_progress_reactivity_test.dart so it stops overriding the provider it claims to guard",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (tautological regression test)",
+   "area": "test/features/progress/presentation/providers",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/progress/presentation/providers/track_dual_progress_reactivity_test.dart",
+     "line": 23,
+     "quote": "trackDualProgressMetricsProvider(1).overrideWith((ref) async {"
+    },
+    {
+     "file": "learning_tracker/test/features/progress/presentation/providers/track_dual_progress_reactivity_test.dart",
+     "line": 68,
+     "quote": "trackDualProgressMetricsProvider(99).overrideWith((ref) async {"
+    }
+   ],
+   "sites": 2,
+   "why": "Both tests replace trackDualProgressMetricsProvider's own body with a stub that independently calls ref.watch<int>(completionCommittedProvider) itself (lines 27, 69). A Riverpod .overrideWith fully replaces the provider's create function, so the real body in lifetime_knowledge_providers.dart:357 is never invoked by either test. Deleting that real ref.watch<int>(completionCommittedProvider) line today \u2014 silently breaking the dashboard/progress-hub's live refresh after a completion \u2014 would not fail either test in this file, despite the file's own docstring calling itself 'Regression test for Fix 3'. Contrast with the correctly-built sibling recent_activity_reactivity_test.dart, which drives the real production provider body over a real in-memory DB with no override of the provider under test.",
+   "recommendation": "Rewrite using the recent_activity_reactivity_test.dart pattern: real in-memory DB, unmodified trackDualProgressMetricsProvider, seed a completion, tick completionCommittedProvider, assert the provider's actual output changes.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Test constructs trackDualProgressMetricsProvider without overriding that same provider family",
+    "Test goes red when ref.watch<int>(completionCommittedProvider) is deleted from lifetime_knowledge_providers.dart:357"
+   ],
+   "labels": [
+    "testing",
+    "riverpod",
+    "progress"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-progress-p4",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Log the two silent catch blocks in lifetime_knowledge_providers.dart via AppLogger",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "EH-3 (log-less catch)",
+   "area": "lib/features/progress/presentation/providers",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/providers/lifetime_knowledge_providers.dart",
+     "line": 436,
+     "quote": "} catch (_) {\n            overdueCount = 0;"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/providers/lifetime_knowledge_providers.dart",
+     "line": 654,
+     "quote": "} catch (_) {\n    return null;"
+    }
+   ],
+   "sites": 2,
+   "why": "Both catches swallow every exception with no AppLogger call. If programCalendarPositionProvider throws (line 430-431), overdueCount/todayDueCount silently become 0 \u2014 a falsely reassuring 'nothing overdue' on the dashboard per-track row \u2014 with zero breadcrumb to diagnose it. If getScopedContent throws inside _safeLoadLeavesForTrack (line 648), the track just vanishes from trackDualProgressMetricsProvider's output with no trace. The same file already fixes this exact anti-pattern under the F20 label for _safeLoadLeaves/_safeHeLabelLookup (lines ~570-609, which log via AppLogger.warning with event/fields/exception/stackTrace) \u2014 these two catches were never brought in line with that established, documented convention.",
+   "recommendation": "Log both catches via AppLogger.warning(event:, exception:, stackTrace:) before falling back, matching the F20 pattern used elsewhere in the same file.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Both catch blocks call AppLogger before returning/defaulting",
+    "No 'catch (_) {' block in lifetime_knowledge_providers.dart lacks an adjacent AppLogger call"
+   ],
+   "labels": [
+    "error-handling",
+    "observability",
+    "progress"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-progress-p4",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Remove or wire up the dead MonthlyActivitySliverCalendar spike before its placeholder class collides with the real Drift companion",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "dead code / AG-4 (future duplicate top-level name)",
+   "area": "lib/features/progress/presentation/widgets",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/widgets/monthly_activity_sliver_calendar.dart",
+     "line": 13,
+     "quote": "class MonthlyActivityRollup {"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/tables/monthly_activity_rollups.dart",
+     "line": 16,
+     "quote": "@DataClassName('MonthlyActivityRollup')"
+    }
+   ],
+   "sites": 2,
+   "why": "grep across lib/ and test/ shows MonthlyActivitySliverCalendar is imported nowhere except its own file and its own 171-line test (monthly_activity_sliver_calendar_test.dart) \u2014 404 + 171 = 575 lines maintained since commit 2b2eeb54 (2026-05-20) for zero product value; the widget's own doc comment admits 'not wired into any screen yet'. Worse, its hand-rolled `class MonthlyActivityRollup` is explicitly a stand-in 'until build_runner generates the companion' \u2014 but the real monthly_activity_rollups Drift table (already committed, not yet added to UserDatabase's table list) declares @DataClassName('MonthlyActivityRollup'), the identical name. The day someone finishes wiring that table into UserDatabase and runs build_runner, this hand-written class and the generated one collide.",
+   "recommendation": "Either finish wiring MonthlyActivityRollups into UserDatabase now and switch the widget onto the generated class, or delete the spike widget, its table, and its test until the feature is scheduled.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "MonthlyActivitySliverCalendar is either reachable from a real screen route or removed along with its test and orphaned table",
+    "No hand-written class reuses a name reserved by a table's @DataClassName annotation"
+   ],
+   "labels": [
+    "dead-code",
+    "progress",
+    "tech-debt"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-progress-p4",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Batch trackDualProgressMetricsProvider's per-track sequential DB reads (N+1 left un-fixed by sibling F13)",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "DB-5 / Fowler N+1",
+   "area": "lib/features/progress/presentation/providers",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/providers/lifetime_knowledge_providers.dart",
+     "line": 370,
+     "quote": "for (final track in tracks) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/providers/lifetime_knowledge_providers.dart",
+     "line": 618,
+     "quote": "var scopes = await db.curriculumScopeDao.getScopesByTrack(trackId);"
+    }
+   ],
+   "sites": 1,
+   "why": "Each loop iteration awaits _safeLoadLeavesForTrack (itself up to 4 sequential DAO calls: getScopesByTrack, getScopes x1-2, getActiveTracksForProfile, lines 618-648), then completionPercent (397), getCompletionsByTrackAndProfile (406), getEntriesByTrack (408), getProgramForProfileAndCurriculum (421), and conditionally programCalendarPositionProvider (430-431) \u2014 up to 9 sequential DB round-trips per track, none parallelized via Future.wait. A profile with 5 active tracks does ~40-45 sequential awaits to render the Progress-hub/Dashboard per-track section, and this provider re-runs on every completionCommittedProvider tick (line 357, i.e. after every single completion mark). The very same file already fixed this exact N+1 shape for the sibling lifetimeDataProvider under the F13 label (completionsByProfileForLifetimeProvider / priorImportsByProfileProvider, lines 78-138) but the batching was never extended here. Actual latency impact is unmeasured (SUSPECTED) \u2014 the un-batched pattern itself is CONFIRMED by static reading.",
+   "recommendation": "Batch the per-track queries the way F13 batched lifetimeDataProvider's \u2014 one profile-wide query per DAO partitioned in memory by trackId \u2014 or parallelize the independent per-track work with Future.wait.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "trackDualProgressMetricsProvider issues O(1) queries per DAO (or explicitly parallelizes per-track work), not O(tracks) sequential awaits",
+    "A ProviderObserver-based test mirroring lifetime_knowledge_screen_test.dart's F13 test asserts each batched provider builds once across N tracks"
+   ],
+   "labels": [
+    "performance",
+    "progress",
+    "riverpod"
+   ]
+  }
+ }
+]

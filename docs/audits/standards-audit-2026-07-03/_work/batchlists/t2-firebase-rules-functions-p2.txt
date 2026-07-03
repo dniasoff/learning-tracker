@@ -1,0 +1,6 @@
+learning_tracker/functions/test/firestore_rules.test.mjs  (887 lines)
+learning_tracker/functions/test/fixtures/write_payloads.json  (101 lines)
+learning_tracker/functions/tsconfig.json  (14 lines)
+test/firestore-rules/.gitignore  (1 lines)
+test/firestore-rules/firestore.rules.test.js  (791 lines)
+test/firestore-rules/package.json  (25 lines)

@@ -1,0 +1,221 @@
+[
+ {
+  "sourceBatch": "t1-feat-notifications-p2",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Rename the 'shows three Switch widgets' test in notifications_screen_l1_test.dart to match its findsNWidgets(4) assertion",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "hygiene (stale test naming)",
+   "area": "features/notifications/presentation/screens (tests, naming)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/notifications/presentation/screens/notifications_screen_l1_test.dart",
+     "line": 185,
+     "quote": "testWidgets('shows three Switch widgets (reminder, streak alert, reward)', ("
+    },
+    {
+     "file": "learning_tracker/test/features/notifications/presentation/screens/notifications_screen_l1_test.dart",
+     "line": 192,
+     "quote": "expect(switches, findsNWidgets(4));"
+    }
+   ],
+   "sites": 1,
+   "why": "The test's own inline comment (line 190) admits the count is 4 (\"Three per-preference switches plus one in DeviceNotificationToggle\"), a leftover from before the device-level toggle (layer 1 / DEC-27) was added. Anyone reading the test name without the assertion gets the wrong mental model of the screen, and a future edit that trims the count back to 3 would pass the misleadingly-named test while silently dropping the device toggle.",
+   "recommendation": "Rename to something like \"shows four Switch widgets (reminder, streak alert, reward, device toggle)\".",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Test title reflects the literal 4 in findsNWidgets(4); assertion unchanged."
+   ],
+   "labels": [
+    "testing",
+    "naming",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-notifications-p2",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Deduplicate the MockNotificationGateway class shared verbatim by notifications_screen_test.dart and ws5_two_layers_test.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-4 candidate + Fowler duplication",
+   "area": "features/notifications (tests, duplication)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/notifications/presentation/screens/notifications_screen_test.dart",
+     "line": 15,
+     "quote": "class MockNotificationGateway extends Mock implements NotificationGateway {}"
+    },
+    {
+     "file": "learning_tracker/test/features/notifications/ws5_two_layers_test.dart",
+     "line": 24,
+     "quote": "class MockNotificationGateway extends Mock implements NotificationGateway {}"
+    }
+   ],
+   "sites": 2,
+   "why": "Two files under the same feature independently declare an identical top-level `MockNotificationGateway` class. Harmless today, but the digest's dedup pass will flag it as a duplicate top-level symbol, and if the two copies ever drift (e.g. one gets extra default stubs), the same name means different behavior depending on which file's test you're reading.",
+   "recommendation": "Move the class into a small shared test-support file under test/features/notifications/ (e.g. support/mock_notification_gateway.dart) and import it from both.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Only one MockNotificationGateway declaration exists; both test files import it.",
+    "(Rule-0, Pending) AG-4 duplicate-symbol audit no longer lists MockNotificationGateway as duplicated."
+   ],
+   "labels": [
+    "testing",
+    "duplication",
+    "AG-4"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-notifications-p2",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Register needs_flutter/notifications/notifications_screen_l1 tags in dart_test.yaml to silence unknown-tag warnings",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "hygiene (test config drift)",
+   "area": "features/notifications (tests, config)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/notifications/presentation/screens/notifications_screen_test.dart",
+     "line": 1,
+     "quote": "@Tags(['needs_flutter'])"
+    },
+    {
+     "file": "learning_tracker/test/features/notifications/ws5_two_layers_test.dart",
+     "line": 9,
+     "quote": "@Tags(['needs_flutter'])"
+    },
+    {
+     "file": "learning_tracker/test/features/notifications/presentation/screens/notifications_screen_l1_test.dart",
+     "line": 29,
+     "quote": "@Tags(['notifications', 'notifications_screen_l1'])"
+    }
+   ],
+   "sites": 3,
+   "why": "learning_tracker/dart_test.yaml's `tags:` block enumerates ~60 epic/story/misc tags but not `needs_flutter`, `notifications`, or `notifications_screen_l1`. Running any of these 3 files (verified for 2 of them) prints \"Warning: A tag was used that wasn't specified in dart_test.yaml\" on every invocation. It's non-fatal today, but a growing pile of unregistered-tag warnings trains developers/agents to ignore the warning stream, which is exactly where a genuine typo'd or newly-broken tag filter would also hide.",
+   "recommendation": "Add `needs_flutter:`, `notifications:`, and `notifications_screen_l1:` to dart_test.yaml's tags: block (and any other in-use-but-unregistered tags found elsewhere in the suite).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "dart_test.yaml lists needs_flutter, notifications, and notifications_screen_l1.",
+    "`flutter test test/features/notifications/` runs with no \"A tag was used that wasn't specified in dart_test.yaml\" warning."
+   ],
+   "labels": [
+    "testing",
+    "config",
+    "dart_test.yaml"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-notifications-p2",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Replace ws5_per_profile_test.dart's tautological payload-format assertions with real NotificationGateway verification",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (tautological test)",
+   "area": "features/notifications (tests, tautology)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/notifications/ws5_per_profile_test.dart",
+     "line": 71,
+     "quote": "const payload = '$dailyReminderPayload:$profileId';\n      expect(payload, equals('daily_reminder:42'));"
+    },
+    {
+     "file": "learning_tracker/test/features/notifications/ws5_per_profile_test.dart",
+     "line": 74,
+     "quote": "const parts = ['daily_reminder', '42'];\n      expect(parts.length, equals(2));"
+    },
+    {
+     "file": "learning_tracker/test/features/notifications/ws5_per_profile_test.dart",
+     "line": 80,
+     "quote": "const payloadA = '$dailyReminderPayload:1';\n      const payloadB = '$dailyReminderPayload:2';"
+    }
+   ],
+   "sites": 3,
+   "why": "None of the 3 tests in the 'notification payload format' group ever construct a NotificationGateway or call scheduleDailyReminderForProfile/scheduleStreakAlertForProfile (confirmed: no NotificationGateway( appears anywhere in this file). Two of the three just re-interpolate the same '$dailyReminderPayload:$profileId' formula the source uses and compare it to a literal, or hand-write a `parts` list and assert facts about the literal they just wrote three lines earlier -- these can never fail regardless of what NotificationGateway actually does, so despite the docstring's claim to verify \"per-profile payload format\", they add file weight without adding protection. The real protection already exists properly (mocked zonedSchedule + captureAny) in the sibling notification_gateway_test.dart:320-416 outside this batch, which is why this is hygiene/redundancy (P3) rather than a live coverage gap.",
+   "recommendation": "Either delete these two redundant tests (coverage already exists in notification_gateway_test.dart) or rewrite them to construct a NotificationGateway with a mocked FlutterLocalNotificationsPlugin and assert on the captured `payload:` argument from scheduleDailyReminderForProfile, matching this file's own '(good)' ID-allocation tests which do call the real functions.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "Remaining payload-format tests in this file (if kept) invoke NotificationGateway rather than re-deriving the expected string independently.",
+    "Red-first check: temporarily change the separator/format in notification_gateway.dart's per-profile payload construction and confirm whichever tests remain go red."
+   ],
+   "labels": [
+    "testing",
+    "TQ-8",
+    "tautological"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-notifications-p2",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Stop relying on find.byKey(...).last for time-row lookups in notifications_screen_l1_test.dart and notifications_screen_test.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "hygiene (fragile widget finder / Feathers seam)",
+   "area": "features/notifications/presentation/screens (tests, finder robustness)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/notifications/presentation/screens/notifications_screen_test.dart",
+     "line": 86,
+     "quote": "await tester.tap(find.byKey(const Key('reminder_time')).last);"
+    },
+    {
+     "file": "learning_tracker/test/features/notifications/presentation/screens/notifications_screen_l1_test.dart",
+     "line": 232,
+     "quote": "find.byKey(const Key('reminder_time')).last,"
+    },
+    {
+     "file": "learning_tracker/test/features/notifications/presentation/screens/notifications_screen_l1_test.dart",
+     "line": 267,
+     "quote": "find.byKey(const Key('reminder_time')).last,"
+    },
+    {
+     "file": "learning_tracker/test/features/notifications/presentation/screens/notifications_screen_l1_test.dart",
+     "line": 426,
+     "quote": "await tester.tap(find.byKey(const Key('reminder_time')).last);"
+    },
+    {
+     "file": "learning_tracker/test/features/notifications/presentation/screens/notifications_screen_l1_test.dart",
+     "line": 446,
+     "quote": "find.byKey(const Key('reminder_time')).last,"
+    },
+    {
+     "file": "learning_tracker/test/features/notifications/presentation/screens/notifications_screen_l1_test.dart",
+     "line": 494,
+     "quote": "find.byKey(const Key('streak_alert_time')).last,"
+    },
+    {
+     "file": "learning_tracker/test/features/notifications/presentation/screens/notifications_screen_l1_test.dart",
+     "line": 509,
+     "quote": "find.byKey(const Key('streak_alert_time')).last,"
+    },
+    {
+     "file": "learning_tracker/test/features/notifications/presentation/screens/notifications_screen_l1_test.dart",
+     "line": 614,
+     "quote": "await tester.tap(find.byKey(const Key('streak_alert_time')).last);"
+    }
+   ],
+   "sites": 8,
+   "why": "_SettingsTimeRow (learning_tracker/lib/features/notifications/presentation/screens/notifications_screen.dart:306, `return ListTile(key: key, ...)`) forwards its own key onto the inner ListTile it builds, so Key('reminder_time')/Key('streak_alert_time') each match 2 elements in the tree. All 8 sites paper over that with `.last`, trusting find.byKey's traversal order to put the ListTile after its wrapper -- an implementation detail, not a documented Flutter API contract -- while the very same file already uses a robust, order-independent alternative for the Switch rows (e.g. l1_test.dart:218-220, `find.descendant(of: reminderRow, matching: find.byType(Switch))`). If the match order ever flipped, `.last` would silently resolve to the wrapper widget and the ensuing `tester.widget<ListTile>(...)` cast would throw, breaking otherwise-unrelated tests with a confusing error.",
+   "recommendation": "Match the ListTile the same way the Switch rows already do -- e.g. `find.widgetWithText(ListTile, l10n.notifReminderTime)` or, on the production side, stop forwarding `key` to the inner ListTile in _SettingsTimeRow and instead expose a distinct key for it -- so the finder resolves to exactly one widget without depending on registration order.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Time-row assertions no longer call `.last` on a byKey finder with 2 matches.",
+    "The 8 call sites are updated or, if `.last` is kept, each carries a comment justifying why the order is guaranteed."
+   ],
+   "labels": [
+    "testing",
+    "widget-finder",
+    "fragility"
+   ]
+  }
+ }
+]

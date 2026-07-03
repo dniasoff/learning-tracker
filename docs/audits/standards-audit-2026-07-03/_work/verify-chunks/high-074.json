@@ -1,0 +1,43 @@
+[
+ {
+  "sourceBatch": "t1-feat-sacred_time",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Guard ref.mounted after await in SacredLocationNotifier/InIsraelNotifier mutator methods",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "SM-4",
+   "area": "state-management/providers",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/sacred_time/presentation/providers/sacred_location_provider.dart",
+     "line": 41,
+     "quote": "final result = await ref.read(locationServiceProvider).detectCurrent();"
+    },
+    {
+     "file": "learning_tracker/lib/features/sacred_time/presentation/providers/sacred_location_provider.dart",
+     "line": 54,
+     "quote": "state = result.location;\n        ref.invalidate(inIsraelProvider);"
+    },
+    {
+     "file": "learning_tracker/lib/features/sacred_time/presentation/providers/sacred_location_provider.dart",
+     "line": 153,
+     "quote": "await ref.read(syncWriteFacadeProvider)?.pushUiPreferencesSnapshot();"
+    }
+   ],
+   "sites": 4,
+   "why": "detect() awaits a GPS fix with a 15-second timeout then unconditionally writes state/invalidates ref on success; setManualCity, setManualCoords and InIsraelNotifier.setInIsrael likewise touch state/ref after an await with no ref.mounted check. This file's own _load() methods DO guard (comment: 'an account switch rebuilds it. Never write state on a disposed notifier'), and the paired test file carries a regression test titled 'was a race' proving the team already hit a real race in this exact provider once. If the notifier is disposed while one of these four unguarded methods is mid-await (profile/account switch during a slow GPS fetch is the obvious trigger), Riverpod 3 throws UnmountedRefException, which nothing in the call chain catches (the caller's try/finally in sacred_time_settings_card.dart has no catch clause).",
+   "recommendation": "Add `if (!ref.mounted) return;` immediately after every await in detect(), setManualCity(), setManualCoords(), setInIsrael(), and _pushSnapshot() before the next ref/state touch, mirroring the guard already used in _load().",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Every async Notifier method in sacred_location_provider.dart checks ref.mounted after each await before touching ref/state",
+    "A new test disposes/invalidates the ProviderContainer while detect()/setManualCity() is mid-await (e.g. a Completer-backed fake LocationService) and asserts no UnmountedRefException propagates"
+   ],
+   "labels": [
+    "riverpod",
+    "race-condition",
+    "crash-risk"
+   ]
+  }
+ }
+]

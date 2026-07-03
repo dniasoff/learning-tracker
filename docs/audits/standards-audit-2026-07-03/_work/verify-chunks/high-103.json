@@ -1,0 +1,34 @@
+[
+ {
+  "sourceBatch": "orchestrator",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Repair the broken custom_lint toolchain so the nine custom lints enforce again",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "Rule 0 / AG-11",
+   "area": "guardrails",
+   "evidence": [
+    {
+     "file": "learning_tracker/pubspec.yaml",
+     "line": 1,
+     "quote": "custom_lint 0.8.1 vs analyzer 9.0.0 \u2014 `dart run custom_lint` exits 255 with compile errors in custom_lint_core (Element2 isn't a type)"
+    }
+   ],
+   "sites": 1,
+   "why": "All nine custom lint rules (layering, Firebase confinement, raw Talker, RTL geometry, color literals, e.toString-in-UI, raw logEvent) currently enforce NOTHING: the tool crashes before analysis locally, and CI runs it warn-only. docs/coding-standards.md line 766 tells developers 'local make audit + dart run custom_lint are the real gate \u2014 run them', which is impossible for the lint half; only the audit greps remain as a hard gate, and they cover fewer rules.",
+   "recommendation": "Upgrade custom_lint/custom_lint_core to an analyzer-9-compatible release (or pin analyzer ^8 in the workspace) so `dart run custom_lint` runs clean; then correct the doc's claim or flip CI custom_lint to hard-fail. First mechanical step: `dart pub upgrade custom_lint --major-versions` in packages/custom_lints and learning_tracker, run the tool, fix API breakage in the 9 rules.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "`cd learning_tracker && dart run custom_lint` exits 0 and reports per-file diagnostics",
+    "CI custom_lint step hard-fails on violations (warn-only removed) or the standards doc states the real status"
+   ],
+   "labels": [
+    "guardrails",
+    "tooling",
+    "rule-0"
+   ],
+   "origin": "orchestrator-baseline"
+  }
+ }
+]

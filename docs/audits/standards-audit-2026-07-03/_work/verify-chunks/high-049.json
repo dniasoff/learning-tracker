@@ -1,0 +1,45 @@
+[
+ {
+  "sourceBatch": "t1-feat-gamification-p1",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Add ref.mounted/context.mounted guards after awaits in RewardConfigController and the pending-redemptions fulfil/decline handlers",
+   "severity": "P1",
+   "confidence": "SUSPECTED",
+   "rule": "SM-4 (after any await in a Notifier method/async callback, check ref.mounted before touching ref/state)",
+   "area": "features/gamification/presentation/providers, features/gamification/presentation/screens",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/gamification/presentation/providers/reward_config_controller.dart",
+     "line": 179,
+     "quote": "final currentMilestones = state.usesGlobalLadder\n        ? await svc.getGlobalMilestones()"
+    },
+    {
+     "file": "learning_tracker/lib/features/gamification/presentation/providers/reward_config_controller.dart",
+     "line": 137,
+     "quote": "await ref.read(syncWriteFacadeProvider)?.pushGamificationSettingsSnapshot();\n    ref.invalidate(achievementsOverviewProvider);"
+    },
+    {
+     "file": "learning_tracker/lib/features/gamification/presentation/screens/parent_pending_redemptions_screen.dart",
+     "line": 145,
+     "quote": "await db.pointsBalanceDao.fulfilRedemption(redemption.id);\n    ref.invalidate(pendingRedemptionsProvider);"
+    }
+   ],
+   "sites": 6,
+   "why": "RewardConfigController is an autoDispose Notifier (confirmed via reward_config_controller.g.dart: isAutoDispose: true) whose saveReward/toggleEnabled/deleteMilestone/_persistAndSync methods each await one or more DB/network calls and then read `state` or call `ref.invalidate`/`ref.read` afterward -- with zero ref.mounted checks anywhere in the file (grep confirms). If the user saves/toggles/deletes and the screen is popped (e.g. the success dialog's own navigation, or a fast back-gesture) before the await resolves, Riverpod 3 throws when a disposed Ref is touched. The same shape recurs in parent_pending_redemptions_screen.dart's _fulfil/_decline: `ref.invalidate` runs BEFORE the `context.mounted` check that appears one statement later in the same function -- the check exists, it's just ordered too late. By contrast, every other async flow in this exact feature (child_redemption_screen.dart, achievement_unlock_celebration.dart, reward_configuration_screen.dart) consistently checks mounted immediately after every await, so this is a real, demonstrated-known-pattern that these two files skip. No test in reward_config_controller_test.dart exercises container/widget disposal mid-await (grep for 'Unmounted'/dispose-mid-call found nothing).",
+   "recommendation": "Add `if (!ref.mounted) return;` immediately after every await in RewardConfigController's mutation methods before touching state/ref again; in parent_pending_redemptions_screen.dart move `ref.invalidate(...)` after the `context.mounted` check, not before it.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "Every await in RewardConfigController's saveReward/toggleEnabled/deleteMilestone/_persistAndSync is followed by a ref.mounted check before further ref/state use",
+    "parent_pending_redemptions_screen.dart's _fulfil/_decline check context.mounted before ref.invalidate, not after",
+    "A widget/provider test disposes the container or pops the screen mid-await and asserts no uncaught disposed-ref exception"
+   ],
+   "labels": [
+    "SM-4",
+    "riverpod",
+    "crash-risk",
+    "lifecycle"
+   ]
+  }
+ }
+]

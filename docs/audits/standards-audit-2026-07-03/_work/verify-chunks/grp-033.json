@@ -1,0 +1,307 @@
+[
+ {
+  "sourceBatch": "t1-core-sync-providers",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Deduplicate the Ref/WidgetRef builder pairs in tutored_pull_providers.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler: duplicated code (Extract Method)",
+   "area": "learning_tracker/lib/core/sync/providers/tutored_pull_providers.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/sync/providers/tutored_pull_providers.dart",
+     "line": 42,
+     "quote": "TutoredPullService buildTutoredPullService({\n  required Ref ref,"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/providers/tutored_pull_providers.dart",
+     "line": 60,
+     "quote": "TutoredPullService buildTutoredPullServiceFromWidget({\n  required WidgetRef ref,"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/providers/tutored_pull_providers.dart",
+     "line": 109,
+     "quote": "TutoredMirrorWipeService buildTutoredMirrorWipeService({\n  required Ref ref,"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/providers/tutored_pull_providers.dart",
+     "line": 118,
+     "quote": "TutoredMirrorWipeService buildTutoredMirrorWipeServiceFromWidget({\n  required WidgetRef ref,"
+    }
+   ],
+   "sites": 2,
+   "why": "buildTutoredPullService/buildTutoredPullServiceFromWidget (lines 42-56 / 60-74) have byte-for-byte identical bodies, differing only in the Ref-vs-WidgetRef parameter type; buildTutoredMirrorWipeService/buildTutoredMirrorWipeServiceFromWidget (lines 109-115 / 118-124) repeat the same pattern. Every future change to either pair's construction logic has to be made twice and kept in sync by hand.",
+   "recommendation": "Since both already delegate to a shared _build() helper, extract just the duplicated ref.read(...) argument computation into one place \u2014 e.g. have the WidgetRef variant call the Ref variant's logic through a small shared private function, or accept the already-resolved values directly.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "The four functions no longer contain duplicated argument-computation bodies; a single shared implementation is called from both Ref and WidgetRef entry points."
+   ],
+   "labels": [
+    "duplication",
+    "hygiene",
+    "riverpod"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-sync-providers",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Add test/core/sync/providers/ unit tests mirroring lib/core/sync/providers/",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-5",
+   "area": "learning_tracker/lib/core/sync/providers/",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/sync/providers/sync_orchestrator_providers.dart",
+     "line": 1,
+     "quote": "import 'dart:async';"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/providers/outbox_providers.dart",
+     "line": 1,
+     "quote": "import 'package:flutter_riverpod/flutter_riverpod.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/providers/merge_router_provider.dart",
+     "line": 1,
+     "quote": "import 'package:flutter_riverpod/flutter_riverpod.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/providers/tutored_pull_providers.dart",
+     "line": 1,
+     "quote": "// tutored_pull_providers.dart \u2014 T1.gateway + T1.trigger + D3/D5 (Riverpod layer)"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/providers/sync_status_providers.dart",
+     "line": 1,
+     "quote": "import 'package:flutter_riverpod/flutter_riverpod.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/providers/resolve_profile_id_provider.dart",
+     "line": 1,
+     "quote": "import 'package:flutter_riverpod/flutter_riverpod.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/providers/firestore_instance_provider.dart",
+     "line": 1,
+     "quote": "import 'package:cloud_firestore/cloud_firestore.dart';"
+    }
+   ],
+   "sites": 7,
+   "why": "No test/core/sync/providers/ directory exists at all \u2014 none of the 7 files in this composition-root directory has a mirrored unit test. Coverage is indirect, via e2e journeys and widget tests (test/e2e/journeys/sync_p1_test.dart etc.) that override these providers rather than testing their wiring contracts directly. That indirection is exactly why the P1 profileId-staleness defect (finding above) went unnoticed: a scenario like 'switch active profile, then assert the outbox row's profileId column' is a natural unit-level assertion for this directory but an unlikely incidental catch for a broader e2e journey.",
+   "recommendation": "Add test/core/sync/providers/*_test.dart files mirroring each lib file, focused on the composition-root contracts these files are responsible for (which dependencies are captured live vs. by snapshot, null-on-tier-gate behavior, keepAlive singleton identity across rebuilds).",
+   "effort": "L",
+   "acceptance_criteria": [
+    "Each file under lib/core/sync/providers/ has a corresponding test file under test/core/sync/providers/.",
+    "The new sync_orchestrator_providers_test.dart includes the profile-switch outbox-tagging regression test from the P1 finding above."
+   ],
+   "labels": [
+    "testing",
+    "AG-5",
+    "coverage-gap"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-sync-root-p1",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Close the TutoredListenerSource channel gap and de-duplicate the two hand-maintained channelToKind switches",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler duplication / parity-with-pull-set",
+   "area": "core/sync (tutored)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/sync/tutored_listener_source.dart",
+     "line": 11,
+     "quote": "// The channel set mirrors the pull set in PullPipeline.pullForTutoredProfile\n// (same collections, same order-field conventions) so listeners and the initial"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/pull_pipeline.dart",
+     "line": 276,
+     "quote": "('learning_order', EntityKind.learningOrder),"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/tutored_listener_source.dart",
+     "line": 67,
+     "quote": "'goals': coll('goals'),\n      'learning_ledger': coll('learning_ledger'),"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+     "line": 1406,
+     "quote": "static String? _channelToKind(String channel) => switch (channel) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/tutored_listener_supervisor.dart",
+     "line": 115,
+     "quote": "static String? _channelToKind(String channel) => switch (channel) {"
+    }
+   ],
+   "sites": 3,
+   "why": "TutoredListenerSource's own doc comment claims its channel set 'mirrors the pull set in PullPipeline.pullForTutoredProfile' -- but PullPipeline's tutored collection list includes `learning_order` (pull_pipeline.dart:276) while TutoredListenerSource.openChannels()'s returned map does not. This is not hypothetical: it is a confirmed, present gap -- a child's learning-order changes reach a tutored mirror only on the next explicit pull/refresh, never in real time, unlike every other Phase 2 collection. The proximate cause is structural: sync_orchestrator.dart and tutored_listener_supervisor.dart each hand-maintain their own channel-name-to-EntityKind switch with no shared source of truth, so adding a collection to one wiring point (the pull list) and forgetting another (the tutored channel map) compiles cleanly and fails silently -- exactly the class of 'real-time gap' bug this codebase's own Phase 2 comments describe having fixed before for the own-profile path.",
+   "recommendation": "Add the missing 'learning_order' channel + EntityKind.learningOrder case to the tutored wiring; longer term, extract one shared channel -> (orderField, EntityKind) registry consumed by both firestore_listener_source.dart/sync_orchestrator.dart and tutored_listener_source.dart/tutored_listener_supervisor.dart so a new collection is wired in one place.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "Test asserting TutoredListenerSource.openChannels().keys and PullPipeline.pullForTutoredProfile's collection set are identical -- fails today on learning_order, passes after the fix.",
+    "TutoredListenerSupervisor._channelToKind gains a 'learning_order' => EntityKind.learningOrder case."
+   ],
+   "labels": [
+    "duplication",
+    "sync",
+    "tutored",
+    "maintainability"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-sync-root-p1",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Type the catch/catchError clauses across sync_orchestrator.dart, pull_pipeline.dart and tutored_listener_supervisor.dart (EH-4)",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "EH-4",
+   "area": "core/sync",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+     "line": 389,
+     "quote": "} catch (e, st) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+     "line": 503,
+     "quote": "} catch (e, st) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+     "line": 529,
+     "quote": "} catch (e, st) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+     "line": 543,
+     "quote": "} catch (e, st) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+     "line": 621,
+     "quote": "} catch (e, st) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+     "line": 931,
+     "quote": "} catch (e, stackTrace) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+     "line": 1074,
+     "quote": "} catch (e, st) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+     "line": 1141,
+     "quote": "} catch (e, st) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+     "line": 1178,
+     "quote": "} catch (e, st) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+     "line": 1289,
+     "quote": "supervisor.restart().catchError((Object e, StackTrace stackTrace) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+     "line": 1315,
+     "quote": "} catch (e, stackTrace) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+     "line": 1375,
+     "quote": ".catchError((Object e, StackTrace st) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/sync_orchestrator.dart",
+     "line": 1456,
+     "quote": "} catch (e, st) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/pull_pipeline.dart",
+     "line": 299,
+     "quote": "} catch (e, stackTrace) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/pull_pipeline.dart",
+     "line": 327,
+     "quote": "} catch (e, stackTrace) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/tutored_listener_supervisor.dart",
+     "line": 158,
+     "quote": ".catchError((Object err, StackTrace st) {"
+    },
+    {
+     "file": "docs/coding-standards.md",
+     "line": 189,
+     "quote": "[Pending] enable `avoid_catches_without_on_clauses` + `avoid_catching_errors`"
+    }
+   ],
+   "sites": 16,
+   "why": "All 16 sites catch without an `on <Type>` clause, so each also catches Error subtypes (TypeError, StateError, RangeError, NoSuchMethodError) as if they were the transient I/O failures the surrounding code is designed to shrug off. Every one of these swallows-and-logs (the pull_pipeline.dart and tutored_listener_supervisor.dart sites don't rethrow at all; most of the sync_orchestrator.dart sites log a warning and return/fall through). Concrete cost: if a future change introduces a null-dereference or bad cast inside a merger reached from the 60s periodic drain, a recovery-pull trigger, or a listener dispatch, it gets caught here, logged once per occurrence as an ordinary 'drain failed'/'listener error' warning, and never crashes or reaches Crashlytics as a fatal -- masking a real regression indefinitely instead of surfacing it. (Two other sites -- sync_orchestrator.dart:768 and :939 -- were deliberately excluded from this list: :768 delegates to a typed `_isLocalDatabaseError` classifier before deciding to swallow, and :939 rethrows after converting to a status; both already behave like the fix this finding asks for elsewhere.)",
+   "recommendation": "Narrow each listed catch to `on Exception catch` (Exception still covers FirebaseException/TimeoutException/SocketException etc.) so Error subtypes propagate to the zone's uncaught-error handler instead of being absorbed; use sync_orchestrator.dart:768's classifier-based pattern as the template for guards that need to stay broad on purpose.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "Enable avoid_catches_without_on_clauses + avoid_catching_errors once dart run custom_lint is unblocked; all 16 sites pass.",
+    "A test that injects a StateError into a merger/dispatch call reached from one of these paths shows the error propagating (not silently logged-and-continued)."
+   ],
+   "labels": [
+    "EH-4",
+    "error-handling",
+    "sync"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-sync-root-p1",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Fix TutoredPullService.pull()'s misleading on-Exception comment / uncaught upsert failure",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "EH-2 / documentation drift",
+   "area": "core/sync (tutored)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/sync/tutored_pull_service.dart",
+     "line": 83,
+     "quote": "final localId = await _profileDao.upsertTutoredProfile("
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/tutored_pull_service.dart",
+     "line": 118,
+     "quote": "// A failure outside the per-collection guards (e.g. the synthetic-profile\n      // upsert) \u2014 surface as a soft error; do NOT wipe (not a revocation)."
+    }
+   ],
+   "sites": 1,
+   "why": "upsertTutoredProfile is awaited on line 83, before the try block opens on line 97. The `on Exception` catch's own comment (line 118) says it covers failures like 'the synthetic-profile upsert' -- but that call already ran to completion (or threw) before the try even starts, so a real upsert failure (DB busy, unique-constraint violation on grantId, disk I/O) is not caught by this method at all; it propagates straight out of pull(), unlike every other failure path here, which returns TutoredPullResult.error. A maintainer trusting the comment would wrongly assume upsert failures degrade softly like the rest of this method.",
+   "recommendation": "Either move the upsertTutoredProfile call inside the try (returning TutoredPullResult.error on failure, consistent with the rest of the method), or correct the comment to state plainly that upsert failures propagate uncaught to the caller.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "A test that makes profileDao.upsertTutoredProfile throw asserts pull() either returns TutoredPullResult.error or the method's doc explicitly says it throws."
+   ],
+   "labels": [
+    "doc-drift",
+    "EH-2",
+    "sync",
+    "tutored"
+   ]
+  }
+ }
+]

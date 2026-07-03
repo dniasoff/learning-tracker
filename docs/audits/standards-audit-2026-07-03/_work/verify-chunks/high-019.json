@@ -1,0 +1,39 @@
+[
+ {
+  "sourceBatch": "t1-core-sync-codec",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Route LearningLedgerCodec.encode's completedAt through FirestoreCodec.encodeDateTime instead of raw toIso8601String()",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "Evans consistency (single documented UTC-safe conversion path) / data-integrity",
+   "area": "core/sync/codec",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/sync/codec/learning_ledger_codec.dart",
+     "line": 67,
+     "quote": "'completed_at': model.completedAt.toIso8601String(),"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/codec/firestore_codec.dart",
+     "line": 59,
+     "quote": "static String? encodeDateTime(DateTime? dt) => dt?.toUtc().toIso8601String();"
+    }
+   ],
+   "sites": 1,
+   "why": "Every other DateTime field in all 14 sibling codecs \u2014 and every other field in this very file (see decode() at line 84-86) \u2014 is pushed via FirestoreCodec.encodeDateTime, which forces `.toUtc()` before serializing so the wire string always carries a 'Z' suffix. This one call skips it. entry.completedAt is read back from Drift's `dateTime()` column which, per the pinned drift-2.31.0 source (lib/src/runtime/types/mapping.dart:174, default storeDateTimesAsText=false, not overridden anywhere in this repo), decodes via `DateTime.fromMillisecondsSinceEpoch(unixSeconds*1000)` with no isUtc:true \u2014 producing a **local**, non-UTC-flagged DateTime even though the original value came from DateTimeFactory.nowUtc(). `.toIso8601String()` on a non-UTC DateTime omits the 'Z'/offset entirely. When a different device (a parent or tutor on a different device/timezone \u2014 an explicitly supported flow in this app, see tutor_grant_codec.dart in this same batch) pulls the row, FirestoreCodec.parseDateTime's `DateTime.tryParse(raw)?.toUtc()` (used by learning_ledger_merger.dart) reinterprets the offset-naive string using the READING device's local offset rather than the writer's, shifting completedAt by the delta between the two devices' UTC offsets \u2014 potentially moving a ledger entry onto the wrong calendar day on the syncing device.",
+   "recommendation": "Change line 67 to `'completed_at': FirestoreCodec.encodeDateTime(model.completedAt),` to match every sibling codec.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Regression test: encode a LearningLedgerRow with a non-UTC-flagged completedAt (isUtc:false, simulating the Drift round-trip) and assert the resulting 'completed_at' string ends in 'Z' and represents the correct UTC instant.",
+    "learning_ledger_roundtrip_test.dart extended so decode(encode(x)) is timezone-independent (passes under a non-UTC ambient TZ)."
+   ],
+   "labels": [
+    "sync",
+    "codec",
+    "timezone",
+    "data-integrity"
+   ]
+  }
+ }
+]

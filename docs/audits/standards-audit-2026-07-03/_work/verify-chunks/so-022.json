@@ -1,0 +1,201 @@
+[
+ {
+  "sourceBatch": "t1-feat-progress-p1",
+  "chunk": "grp-082",
+  "finding": {
+   "title": "Localize the hardcoded 'Curriculum settings' tooltip in curriculum_progress_screen.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AX-2 (no hardcoded user-facing strings)",
+   "area": "features/progress/presentation/screens/curriculum_progress_screen.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/screens/curriculum_progress_screen.dart",
+     "line": 76,
+     "quote": "tooltip: 'Curriculum settings',"
+    }
+   ],
+   "sites": 1,
+   "why": "Every other string on this screen goes through AppLocalizations (l10n.curriculumProgressBreakdownByLevel, l10n.errorUnknownCurriculum, etc.); this one literal renders in English regardless of device locale, so a Hebrew-locale, RTL user long-pressing the settings gear sees an English tooltip in an otherwise fully-Hebrew screen.",
+   "recommendation": "Add an ARB key (EN+HE) and use l10n.<key> instead of the literal.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "make arb-parity stays green with the new key present in both app_en.arb and app_he.arb.",
+    "The tooltip: parameter on this IconButton references an l10n getter, not a string literal."
+   ],
+   "labels": [
+    "i18n",
+    "AX-2"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-parent_mode",
+  "chunk": "grp-072",
+  "finding": {
+   "title": "Relocate test/features/parent_mode/** to mirror lib/features/profiles and lib/features/dashboard (AG-5 orphan test tree)",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-5",
+   "area": "test/features/parent_mode/**",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/parent_mode/pin_service_test.dart",
+     "line": 7,
+     "quote": "import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';"
+    },
+    {
+     "file": "learning_tracker/test/features/parent_mode/domain/services/parent_dashboard_aggregator_test.dart",
+     "line": 4,
+     "quote": "import 'package:learning_tracker/features/dashboard/domain/services/parent_dashboard_aggregator.dart';"
+    },
+    {
+     "file": "learning_tracker/test/features/parent_mode/presentation/providers/pin_flow_controller_test.dart",
+     "line": 12,
+     "quote": "import 'package:learning_tracker/features/profiles/presentation/providers/pin_flow_controller.dart';"
+    }
+   ],
+   "sites": 9,
+   "why": "lib/features/parent_mode/ does not exist and never has \u2014 the PIN service, PIN flow controller/screen, and parent dashboard aggregator were built directly under features/profiles and features/dashboard. All 9 non-duplicate test files here import from those real locations but live under a phantom 'parent_mode' test-feature directory. A contributor fixing PinService greps test/features/profiles/ for existing coverage, finds nothing, and re-adds it from scratch \u2014 this is the demonstrated direct cause of the pin_service and parent_dashboard_aggregator test-duplication findings below.",
+   "recommendation": "git mv pin_service_test.dart, pin_service_extended_test.dart, pin_service_profile_test.dart, presentation/providers/pin_flow_controller_test.dart, presentation/screens/pin_setup_screen_test.dart (renamed to pin_flow_screen_test.dart) into test/features/profiles/...; move domain/services/parent_dashboard_aggregator_*.dart into test/features/dashboard/domain/services/. Remove the now-empty parent_mode directory and its .gitkeep.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "find learning_tracker/test/features/parent_mode -type f returns nothing.",
+    "Every relocated test file's import path matches its new test-tree path 1:1 with the lib/ file it targets (AG-5).",
+    "git history/blame preserved via git mv for each relocated file."
+   ],
+   "labels": [
+    "AG-5",
+    "test-hygiene",
+    "parent_mode"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-database-daos-p3",
+  "chunk": "grp-010",
+  "finding": {
+   "title": "Fix track_dao_extended_test.dart's deactivateTrack group \u2014 neither test calls deactivateTrack",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "test/core/database/daos",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/database/daos/track_dao_extended_test.dart",
+     "line": 76,
+     "quote": "test('deactivates an existing active non-personal track', () async {"
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/track_dao_extended_test.dart",
+     "line": 93,
+     "quote": "test('deactivateTrack with non-existent track is a no-op', () async {\n      await expectLater(() async {"
+    }
+   ],
+   "sites": 2,
+   "why": "Line 76's test is titled 'deactivates an existing active non-personal track' but its body only inserts a track and asserts getActiveTracks is non-empty \u2014 trackDao.deactivateTrack is never invoked. Line 93's test wraps a literally empty async closure (`() async {}()`) in `expectLater(..., completes)`, which is trivially true regardless of any DAO behavior \u2014 it doesn't call the DAO at all. Both give false confidence that deactivateTrack's non-existent-track and active-track paths are covered in this file; a future regression in deactivateTrack that this specific file's name implies it guards would not be caught here (coverage happens to survive today only because track_dao_test.dart, track_dao_delete_test.dart, and track_dao_deactivate_test.dart independently, correctly test the same scenarios).",
+   "recommendation": "Either make both tests call db.trackDao.deactivateTrack(...) and assert on the resulting row state, or delete the group outright \u2014 track_dao_deactivate_test.dart:29-37 already covers the non-existent-track case correctly and track_dao_test.dart/track_dao_delete_test.dart already cover the activate-then-deactivate case.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Every test in track_dao_extended_test.dart's deactivateTrack group either calls the method it names or is removed.",
+    "`dart test test/core/database/daos/track_dao_extended_test.dart` still passes after the fix."
+   ],
+   "labels": [
+    "test-quality",
+    "vacuous-test"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tutoring-p1",
+  "chunk": "grp-121",
+  "finding": {
+   "title": "Delete or wire up the dead TutorAuditLogWriter path (tutor_audit_log_writer.dart / audit_log_providers.dart)",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler dead code / AG-6 (untracked TODO)",
+   "area": "features/tutoring/domain/services + presentation/providers",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/providers/audit_log_providers.dart",
+     "line": 56,
+     "quote": "(_) => _StubAuditLogWriteRepository(),"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/providers/audit_log_providers.dart",
+     "line": 63,
+     "quote": "// TODO(data-layer): Replace with Firestore write."
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/domain/services/tutor_audit_log_writer.dart",
+     "line": 198,
+     "quote": "'${now.millisecondsSinceEpoch.toRadixString(16).padLeft(16, '0')}'"
+    }
+   ],
+   "sites": 2,
+   "why": "A repo-wide grep confirms `TutorAuditLogWriter` is constructed nowhere in lib/ \u2014 its 228 lines and the `TutorAuditLogRepository` interface it depends on are unreachable. Its own provider (`tutorAuditLogWriteRepositoryProvider`) resolves to `_StubAuditLogWriteRepository`, a permanent no-op with an ID-less TODO. The class's doc-comment claims 'every tutor write path... calls through this writer' and that entryId format is 'timestamp + 10 random hex chars (26 chars total)', but the actual `_log()` implementation has no random suffix at all \u2014 two same-millisecond calls for the same action type would collide on entryId, and per the interface's own idempotency contract ('duplicate writes with the same ULID are silently ignored') the second entry would be silently dropped if this code were ever revived as-is. Cross-checked functions/src/index.ts: the real audit trail is written server-side by each tutor*CF via `writeAuditLog(...)`, so there is no current production gap \u2014 this is confusing, misdocumented dead weight, not a live data-loss bug.",
+   "recommendation": "Delete TutorAuditLogWriter, TutorAuditLogRepository, and the stub/provider if the server-side CF audit writes are now the sole source of truth; if a client-side path is still intended, wire a real Firestore-backed implementation and fix the entryId generator to match its documented ULID claim, with a DNI-#### ticket on the TODO either way.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep -rn 'TutorAuditLogWriter' lib/ returns nothing, or returns a live call site plus a non-stub repository.",
+    "No bare `TODO(...)` without a DNI-#### id remains in audit_log_providers.dart (AG-6 grep clean)."
+   ],
+   "labels": [
+    "dead-code",
+    "AG-6",
+    "audit-log"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-account-p1",
+  "chunk": "grp-037",
+  "finding": {
+   "title": "Log the comment-only catch blocks that structurally evade the single-line empty-catch grep",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "EH-3",
+   "area": "features/account error handling (log-less catches)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/account/domain/services/account_management_service.dart",
+     "line": 182,
+     "quote": "} catch (e) {\n      // Log but don't rethrow \u2014 auth deletion + local cleanup still proceed."
+    },
+    {
+     "file": "learning_tracker/lib/features/account/domain/services/account_lifecycle_service.dart",
+     "line": 54,
+     "quote": "} catch (_) {\n      // Auth not initialized (tests, or Firebase init failed at"
+    },
+    {
+     "file": "learning_tracker/lib/features/account/presentation/notifiers/sign_in_controller.dart",
+     "line": 614,
+     "quote": "} catch (_) {\n        // Network unavailable or CF error \u2014 fall through to the default path."
+    },
+    {
+     "file": "learning_tracker/lib/features/account/presentation/screens/account_picker_screen.dart",
+     "line": 550,
+     "quote": "} catch (_) {\n        // Silent attempt failed (never shows UI) \u2192 fall through to interactive."
+    },
+    {
+     "file": "learning_tracker/lib/features/account/presentation/screens/account_picker_screen.dart",
+     "line": 588,
+     "quote": "} catch (_) {\n        // Sign-out best-effort; ignore."
+    }
+   ],
+   "sites": 5,
+   "why": "make audit check 9/15 only matches a literal single-line `catch (_) {}`; each of these 5 blocks contains ONLY a comment across 2-3 lines and no AppLogger call, no rethrow, and no state-producing action, so they are functionally empty and log-less but invisible to the enforced grep. account_management_service.dart's is on the GDPR-style account-deletion path where a comment literally claims 'Log but don't rethrow' yet no logging call exists. The codebase's own convention for the identical 'best-effort cleanup, may throw PlatformException' shape IS to log (see the ~6 AppLogger.warning(event: '..._sign_out_failed', ...) sites already in sign_in_controller.dart), making these omissions an inconsistency, not a deliberate style choice \u2014 any of these silent failures is currently undebuggable from production logs.",
+   "recommendation": "Add `AppLogger.instance.warning(event: '<descriptive_event>', exception: e)` (or `.handle`) to each; consider extending the Makefile's empty-catch grep to strip `//`-comment lines before matching `{\\s*}` so this class of gap is caught going forward.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Each of the 5 catch blocks logs via AppLogger",
+    "The empty-catch Rule-0 checker is extended to strip comment-only bodies before matching, or a new checker targets this pattern specifically"
+   ],
+   "labels": [
+    "eh-3",
+    "logging",
+    "silent-failure"
+   ]
+  }
+ }
+]

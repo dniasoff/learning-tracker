@@ -1,0 +1,43 @@
+[
+ {
+  "sourceBatch": "t1-core-database-root-p1",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Wrap DeviceRegistryDatabase.removeAccount's delete + state-clear in a transaction()",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "DB-2",
+   "area": "learning_tracker/lib/core/database/registry",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/database/registry/device_registry_database.dart",
+     "line": 111,
+     "quote": "final deleted = await (delete(\n      deviceAccounts,"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/registry/device_registry_database.dart",
+     "line": 114,
+     "quote": "if (await getLastActiveAccountId() == accountId) {\n      await setLastActiveAccountId(null);"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/registry/device_registry_database.dart",
+     "line": 185,
+     "quote": "for (var i = 1; i < group.length; i++) {\n        removed += await removeAccount(group[i].accountId);"
+    }
+   ],
+   "sites": 2,
+   "why": "removeAccount's own docstring says it clears lastActiveAccountId 'so the next launch does NOT silently auto-activate an arbitrary fallback account against a dangling pointer (D10)' \u2014 but the delete and the pointer-clear are two separately-awaited statements with no db.transaction() around them. If the process dies between them (routine on Android when a backgrounded app is reclaimed, and account removal is exactly the kind of action a user triggers then backgrounds), the delete commits but the clear never runs, leaving deviceState.lastActiveAccountId pointing at a row that no longer exists \u2014 the exact D10 state device_registry_test.dart's 'removeAccount clears it when removing the ACTIVE account (D10)' test checks for, just reached through a crash path the in-memory test can't simulate. dedupeByEmail compounds this by calling removeAccount N times in an unwrapped loop, so a mid-run crash also leaves a partially-merged duplicate-account state. Every other multi-write DAO in this codebase (stage_dao.dart, curriculum_scope_dao.dart, user_profile_dao.dart, track_dao.dart, points_balance_dao.dart) wraps its writes in transaction() \u2014 this file is the outlier.",
+   "recommendation": "Wrap removeAccount's body in `await transaction(() async { ... })`; wrap dedupeByEmail's per-group removal loop in one enclosing transaction (or a single batched delete) so a crash mid-merge can't leave a partially-deduped state.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "removeAccount and dedupeByEmail are wrapped in transaction()/batch(); a new test forces an exception between the delete and the state-clear and asserts neither write applied.",
+    "DB-2's Pending checker (audit grep for \u22652 awaited writes with no enclosing transaction() in a DAO method body) returns zero for this file."
+   ],
+   "labels": [
+    "DB-2",
+    "transactions",
+    "D10"
+   ]
+  }
+ }
+]

@@ -1,0 +1,249 @@
+[
+ {
+  "sourceBatch": "t1-test-cross-p1",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Extract the E2E journey files' byte-identical duplicated override helpers into one shared module",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler-duplication",
+   "area": "test/e2e/journeys (8 of this batch's files)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/e2e/journeys/dashboard_p0_test.dart",
+     "line": 41,
+     "quote": "CurriculumTrack _stubTrack({\n  required int id,"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/dashboard_p1_test.dart",
+     "line": 51,
+     "quote": "CurriculumTrack _stubTrack({\n  required int id,"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/gamification_p0_test.dart",
+     "line": 181,
+     "quote": "Future<void> _navigateTo(E2EHarness h, PageRouteInfo route) async {\n  unawaited(h.router.push(route));"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/gamification_p1_test.dart",
+     "line": 184,
+     "quote": "Future<void> _navigateTo(E2EHarness h, PageRouteInfo route) async {\n  unawaited(h.router.push(route));"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/auth_p1_test.dart",
+     "line": 80,
+     "quote": "Override _sacredWindowNullOverride() =>\n    currentSacredWindowProvider.overrideWithValue(null);"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/auth_sync_infra_p2_test.dart",
+     "line": 122,
+     "quote": "Override _sacredWindowNullOverride() =>\n    currentSacredWindowProvider.overrideWithValue(null);"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/guards_p1_test.dart",
+     "line": 108,
+     "quote": "Override _sacredWindowNullOverride() =>\n    currentSacredWindowProvider.overrideWithValue(null);"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/guards_sync_p0_test.dart",
+     "line": 88,
+     "quote": "Override _sacredWindowNullOverride() =>\n    currentSacredWindowProvider.overrideWithValue(null);"
+    }
+   ],
+   "sites": 8,
+   "why": "`_sacredWindowNullOverride`, `_stubTrack`, `_navigateTo` (plus `_incomingGrantsEmpty(Override)`, `_pendingInvitesEmpty(Override)`, `_connectivityOnline(Override)`, `_dashboardActiveTracksOverrides`, `_activeTracksOneShotOverride`, `_pendingRedemptionsOneShotOverride`) are diff-verified byte-identical private top-level functions copy-pasted across 8 of this batch's 10 files, instead of living once in e2e_harness.dart \u2014 which already has exactly this precedent (`dashboardSilenceOverrides` is a shared harness getter). Copy-paste has already drifted: the identical one-line connectivity-online body is named `_connectivityOnlineOverride` in two files and `_connectivityOnline` in a third; `_incomingGrantsEmptyOverride` vs `_incomingGrantsEmpty`. If any underlying provider signature changes, all 8 files need the same hand-fix \u2014 shotgun surgery, and the naming drift shows nobody is doing that consistently today.",
+   "recommendation": "Move the duplicated helpers onto E2EHarness (matching the existing dashboardSilenceOverrides pattern) or into a new test/e2e/harness/e2e_common_overrides.dart, and have all 8 files import rather than redefine them.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "One canonical definition each for the sacred-window/tutor-grant/connectivity/track-stub/navigate-to helpers, imported by the 8 affected files instead of redefined",
+    "No byte-identical private top-level function bodies remain duplicated across test/e2e/journeys/*.dart for these symbols"
+   ],
+   "labels": [
+    "Fowler",
+    "duplication",
+    "test-infra",
+    "shotgun-surgery"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-test-cross-p1",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Add the tutor point-permission assertion gamification_p1_test.dart E2E-608 Part 2 claims but never checks",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "test/e2e/journeys/gamification_p1_test.dart (E2E-608, PointConfigScreen tutor gating)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/e2e/journeys/gamification_p1_test.dart",
+     "line": 474,
+     "quote": "'shows the permission-denied SnackBar on tap, and the point config '\n          'increment button is disabled', (tester) async {"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/gamification_p1_test.dart",
+     "line": 558,
+     "quote": "// The screen may show \"no active curricula\" but the Save button\n        // and increment/decrement buttons are all disabled. Just assert"
+    }
+   ],
+   "sites": 1,
+   "why": "The test's own name promises to verify 'the point config increment button is disabled' for a tutor with canEditPoints=false. Part 2 of the body navigates to PointConfigScreen and asserts only the screen title ('Point Settings') \u2014 no widget query checks the `+` control's disabled state and nothing is tapped-then-verified-inert. I traced the production wiring: point_config_screen.dart:241 computes `canEdit = tutorPerms == null || tutorPerms.canEditPoints`, gates `onIncrement` at line 332 and the save bar at line 346, and `tutorPerms` comes from `activeTutorPermissionsProvider`, which derives from `activeTutoredProfileSelectionProvider` \u2014 the exact provider this test overrides with canEditPoints:false. So today's code is correct, but a future regression that flips that gate would sail through this test green despite its title's explicit claim.",
+   "recommendation": "After navigating to PointConfigScreen in Part 2, assert the increment control's onPressed/onIncrement is null (or tap it and confirm no pending-edit / Save-bar-enabled state appears), matching the rigor Part 1 already applies to the Save Reward permission-denied check.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "E2E-608 Part 2 contains an explicit expect() on the increment control's disabled state, not just a screen-title check",
+    "Hard-coding point_config_screen.dart's canEdit to always-true makes this test fail"
+   ],
+   "labels": [
+    "TQ-8",
+    "weak-assertion",
+    "tutor-permissions",
+    "gamification"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-test-cross-p1",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Split or ratchet-baseline the 9 test/e2e batch files that exceed AG-3's 400-line cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "test/e2e (harness + 8 of 9 journey files)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/e2e/harness/e2e_harness.dart",
+     "line": 1,
+     "quote": "/// Full-app E2E harness for headless \"flutter test\" runs."
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/auth_p1_test.dart",
+     "line": 1,
+     "quote": "/// E2E Wave 2 P1 journeys \u2014 Auth / Account area (Area 12)."
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/auth_sync_infra_p2_test.dart",
+     "line": 1,
+     "quote": "/// E2E Wave 3 P2 journeys \u2014 Auth / Sync / Infra-Crosscutting (combined)."
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/dashboard_p0_test.dart",
+     "line": 1,
+     "quote": "/// E2E Wave 1 P0 journeys \u2014 Dashboard area."
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/dashboard_p1_test.dart",
+     "line": 1,
+     "quote": "/// E2E Wave 2 P1 journeys \u2014 Dashboard area."
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/gamification_p0_test.dart",
+     "line": 1,
+     "quote": "/// E2E Wave 1 P0 journeys \u2014 Gamification area."
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/gamification_p1_test.dart",
+     "line": 1,
+     "quote": "/// E2E Wave 2 P1 journeys \u2014 Gamification area."
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/guards_p1_test.dart",
+     "line": 1,
+     "quote": "/// E2E Wave 2 P1 journeys \u2014 Navigation / Guards area."
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/guards_sync_p0_test.dart",
+     "line": 1,
+     "quote": "/// E2E Wave 1 P0 journeys \u2014 Guards / Navigation + Sync / Offline area."
+    }
+   ],
+   "sites": 9,
+   "why": "coding-standards.md's own AG-3 checker command is `find lib test -name '*.dart' ...` \u2014 test files are explicitly in scope, not just lib/. 9 of this batch's 10 files exceed the 400-line cap (wc -l verified): e2e_harness.dart 664, auth_p1_test.dart 605, auth_sync_infra_p2_test.dart 601, dashboard_p0_test.dart 582, dashboard_p1_test.dart 673, gamification_p0_test.dart 499, gamification_p1_test.dart 933 (more than double the cap), guards_p1_test.dart 496, guards_sync_p0_test.dart 560. This is the rule's own stated rationale playing out concretely: Finding C (a missing assertion) sits at line ~560 of the 933-line gamification_p1_test.dart, well past where a quick read naturally stops.",
+   "recommendation": "Split each file along its existing `// \u2500\u2500 E2E-NNNN \u2500\u2500` section markers (already a natural per-journey boundary), or if the wave/area grouping is intentional, wire AG-3's checker into `make audit` in warn-only/ratchet mode as the standards doc itself prescribes so the count is tracked rather than growing silently.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "AG-3 checker (`find lib test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400'`) wired into make audit, warn-only per the doc's [Pending] note",
+    "Either the 9 files are split under 400 lines each, or explicitly added to a ratchet-baseline list"
+   ],
+   "labels": [
+    "AG-3",
+    "hygiene",
+    "file-size"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-test-cross-p1",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Narrow the swallow-all catch in gamification_p1_test.dart's _loadMilestones test helper",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "EH-3",
+   "area": "test/e2e/journeys/gamification_p1_test.dart (_loadMilestones helper, used by E2E-605/606/607/613)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/e2e/journeys/gamification_p1_test.dart",
+     "line": 136,
+     "quote": "  } catch (_) {\n    return const [];"
+    }
+   ],
+   "sites": 1,
+   "why": "_loadMilestones backs the final assertion of 4 tests (E2E-605/606/607/613) that all compare SharedPreferences-persisted reward milestones against expected titles. A bare `catch (_) { return const []; }` around the JSON decode+map turns ANY exception \u2014 a genuine RewardMilestone.fromJson schema-mismatch bug, JSON corruption, a typo in the config key \u2014 into a silently-returned empty list. A real production regression here would surface only as a confusing 'expected isNotEmpty, got []' failure, with the actual exception and stack trace discarded, instead of pointing at the real defect.",
+   "recommendation": "Let the exception propagate (test helpers should fail loudly), or catch only the specific expected type (e.g. FormatException from jsonDecode) and rethrow anything else.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "_loadMilestones no longer has a bare `catch (_)`; either no catch, or a narrowly-typed catch that rethrows for unexpected exceptions"
+   ],
+   "labels": [
+    "EH-3",
+    "test-helper",
+    "swallowed-exception"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-test-cross-p2",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Un-skip hebrew_rtl_p1_test.dart E2E-1510 \u2014 R-OB7 onboarding hardcoded-English bug is already fixed",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-7 / TQ-8 (stale test)",
+   "area": "test/e2e/journeys/hebrew_rtl_p1_test.dart + features/onboarding",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/e2e/journeys/hebrew_rtl_p1_test.dart",
+     "line": 548,
+     "quote": "'BUG R-OB7: onboarding profile-mode card text is hardcoded English '"
+    },
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/steps/onboarding_profile_creation_step.dart",
+     "line": 356,
+     "quote": "title: AppLocalizations.of(context)!.childModeCardTitle,"
+    },
+    {
+     "file": "learning_tracker/lib/l10n/app_he.arb",
+     "line": 640,
+     "quote": "\"childModeCardTitle\": \"\u05de\u05e6\u05d1 \u05d9\u05dc\u05d3\u05d9\u05dd\","
+    }
+   ],
+   "sites": 1,
+   "why": "The file's docstring (lines 30-33) and the E2E-1510 group's skip reason claim OnboardingProfileCreationStep hardcodes English mode-card copy ('Child Mode'/'Adult Mode'/'Fun & Rewards'/'Deep & Scholarly'/'ACTIVE'/'What should we call you?'). Every one of those UI strings in the current source routes through AppLocalizations (childModeCardTitle, adultModeCardTitle, childModeCardSubtitleFunRewards, onboardingNamePrompt, pointSettingsActiveBadge, ...), and app_he.arb carries real Hebrew translations, not English placeholders \u2014 the bug is fixed. The docstring's cited copy ('Deep & Scholarly') doesn't even match the current EN string ('Focused'), showing the annotation predates a later copy change too. Because the test stays skipped, nobody is regression-testing RTL/i18n correctness for the onboarding profile step, and anyone reading the skip reason is told a bug exists that doesn't \u2014 the exact opposite of the file's own 'confirm-bug\u2192skip contract' (contrast with E2E-1511 in the same file, which correctly marks R-IC3 FIXED once the underlying bug was resolved).",
+   "recommendation": "Remove the skip parameter from the E2E-1510 group, run the test to confirm it passes under he locale, and update/delete the stale R-OB7 docstring block (mirroring how R-IC3 is marked FIXED elsewhere in the same file); also close R-OB7 in docs/planning/e2e-test-suite-plan.md's risk register.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "test/e2e/journeys/hebrew_rtl_p1_test.dart E2E-1510 group runs unskipped and passes.",
+    "R-OB7 row in docs/planning/e2e-test-suite-plan.md marked fixed or removed."
+   ],
+   "labels": [
+    "stale-test",
+    "i18n",
+    "onboarding",
+    "TQ-7"
+   ]
+  }
+ }
+]

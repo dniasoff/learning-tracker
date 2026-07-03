@@ -1,0 +1,59 @@
+=== make audit ===
+=== audit: enforcement greps ===
+1/15 — No Firebase imports outside core/auth or core/sync
+2/15 — No FirebaseFirestore/FirebaseStorage outside core/sync or core/auth
+3/15 — No FirebaseAuth.instance.signOut outside core/auth
+4/15 — No raw talker import outside core/logging
+5/15 — No debugPrint or bare print() in production code
+6/15 — No DateTime.now() outside core/time
+7/15 — No useHebrewTermsProvider read outside core/labels, core/preferences, or settings/onboarding screens
+8/15 — No displayNameEn/He() outside core/labels (excluding generated files)
+9/15 — No empty catch blocks
+10/15 — No banned TODO/FIXME/XXX markers
+11/15 — No .withDefault(const Constant(0)) in database tables
+12/15 — No currentAccountId hard-coded to 1
+13/15 — No raw HebrewTerms. calls in lib/features/ (B11-7)
+14/15 — No features/ imports inside lib/core/ (W1.12) [warn-only: pre-existing violations pending Wave-2 fix]
+  WARN: the following lib/core/ files import from lib/features/ — fix in Wave 2:
+lib/core/database/daos/completion_dao.dart:10:import 'package:learning_tracker/features/learning/domain/entities/completion_tier_filter.dart';
+lib/core/preferences/preference_providers.dart:12:import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+lib/core/preferences/preference_providers.dart:13:import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart'
+lib/core/labels/curriculum_label_providers.dart:6:import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
+lib/core/labels/curriculum_level_name.dart:6:import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
+lib/core/labels/curriculum_label.dart:9:import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_registry.dart';
+lib/core/labels/curriculum_label.dart:10:import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_service.dart';
+lib/core/labels/curriculum_label.dart:11:import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';
+lib/core/analytics/streak_milestone_analytics_observer.dart:17:import 'package:learning_tracker/features/gamification/streak/streak_state_provider.dart';
+lib/core/analytics/streak_milestone_analytics_observer.dart:18:import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+lib/core/providers/calendar_providers.dart:3:import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_service.dart';
+lib/core/providers/calendar_providers.dart:4:import 'package:learning_tracker/features/scheduler/domain/services/local_calendar_engine.dart';
+lib/core/navigation/guards/pin_guard.dart:5:import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
+lib/core/content/content_index.dart:3:import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
+lib/core/content/content_tree.dart:4:import 'package:learning_tracker/features/content_browsing/presentation/providers/content_providers.dart';
+lib/core/sync/firestore_gateway_impl.dart:8:import 'package:learning_tracker/features/account/domain/repositories/auth_repository.dart';
+lib/core/sync/sync_orchestrator.dart:23:import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
+lib/core/sync/merge/streak_event_merger.dart:23:import 'package:learning_tracker/features/gamification/streak/streak_event.dart';
+lib/core/sync/merge/streak_event_merger.dart:24:import 'package:learning_tracker/features/gamification/streak/streak_event_log.dart';
+lib/core/sync/merge/notification_settings_merger.dart:4:import 'package:learning_tracker/features/notifications/domain/repositories/notification_preferences_repository.dart';
+lib/core/sync/providers/merge_router_provider.dart:26:import 'package:learning_tracker/features/sync/data/reward_settings_merge_delegate.dart';
+lib/core/sync/providers/resolve_profile_id_provider.dart:2:import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+lib/core/sync/providers/outbox_providers.dart:10:import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
+lib/core/sync/providers/outbox_providers.dart:12:import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
+lib/core/sync/providers/tutored_pull_providers.dart:27:import 'package:learning_tracker/features/account/presentation/providers/auth_providers.dart'
+lib/core/sync/providers/tutored_pull_providers.dart:29:import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart'
+lib/core/sync/providers/sync_status_providers.dart:5:import 'package:learning_tracker/features/sync/domain/models/sync_status.dart';
+lib/core/sync/providers/sync_orchestrator_providers.dart:17:import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
+lib/core/sync/providers/sync_orchestrator_providers.dart:18:import 'package:learning_tracker/features/account/presentation/providers/connectivity_providers.dart';
+lib/core/sync/providers/sync_orchestrator_providers.dart:19:import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
+lib/core/sync/providers/sync_orchestrator_providers.dart:20:import 'package:learning_tracker/features/sync/data/local_data_upload_service.dart';
+lib/core/sync/providers/sync_orchestrator_providers.dart:21:import 'package:learning_tracker/features/sync/data/outbox_sync_write_facade.dart';
+15/15 — No cross-feature deep imports (must use barrel) (W1.13) [warn-only: pre-existing violations pending Wave-2 fix]
+16/17 — No raw profile.mode string comparisons (use ProfileMode enum) (W5.10)
+17/17 — No raw account.tier string comparisons (use AccountTier/UserTier enum) (W5.11)
+18/18 — No direct FirestoreGateway.push* outside lib/core/sync/ (Plan §F Phase 5 deliverable 8 — no-direct-gateway-push)
+19/20 — No hardcoded Torah domain-term literals in presentation strings (Hebrew-terms consistency)
+20/22 — No raw curriculumId/storageKey rendered in Text() (render via CurriculumLabel / rendered*ForRef)
+21/22 — No nusach-specific domain-term ARB getter used directly in lib/features/ presentation (classC)
+22/22 — Every lib/core/labels/ file touching displayNameEn/He must be variant-aware (classA)
+=== audit PASSED — all 22 greps clean ===
+EXIT:0

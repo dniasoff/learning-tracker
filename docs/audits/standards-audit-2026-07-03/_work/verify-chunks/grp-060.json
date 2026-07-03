@@ -1,0 +1,188 @@
+[
+ {
+  "sourceBatch": "t1-feat-learning-p1",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Wrap LearningLedgerRepositoryImpl's ledger insert and outbox enqueue in one transaction",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "DB-2",
+   "area": "learning/data/repositories",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/learning/data/repositories/learning_ledger_repository_impl.dart",
+     "line": 104,
+     "quote": "final id = await _database.learningLedgerDao.insertEntry("
+    },
+    {
+     "file": "learning_tracker/lib/features/learning/data/repositories/learning_ledger_repository_impl.dart",
+     "line": 127,
+     "quote": "await _syncLedgerEntry(entry);"
+    },
+    {
+     "file": "learning_tracker/lib/features/learning/data/repositories/learning_ledger_repository_impl.dart",
+     "line": 205,
+     "quote": "await facade.enqueueLedgerEntry(_ledgerDataToSyncMap(entry));"
+    }
+   ],
+   "sites": 2,
+   "why": "recordCompletion inserts the learning_ledger row (line 104) and then enqueues its outbox row (line 127) as two separate, unwrapped statements; recordCompletionsBatch commits all N ledger rows inside one _database.transaction() (closes at line 195) but then loops the outbox enqueue afterward, outside that transaction, one row at a time. A process death or crash between these steps leaves a ledger entry (e.g. a manual siyum mark from the Lifetime Marking screen) permanently local-only \u2014 nothing re-derives a missing outbox row from an existing ledger row, so it never reaches Firestore or a second device. The sibling CompletionWriter (completion_writer.dart) explicitly wraps its analogous completion_events + outbox insert in one Drift transaction for exactly this reason (its docs call this 'Both rows commit or both roll back' \u2014 the FR15/RC1 fix); LearningLedgerRepositoryImpl doesn't follow the same discipline for the same class of append-only sync-critical data.",
+   "recommendation": "Move the outbox enqueue for recordCompletion inside the same transaction as the ledger insert (or into one atomic Drift batch, as CompletionWriter does); for recordCompletionsBatch, move the per-item enqueueLedgerEntry calls inside the existing transaction block instead of running them afterward in a separate loop.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "Both recordCompletion and recordCompletionsBatch write the ledger row(s) and their outbox row(s) inside one transaction; a regression test that fails mid-batch (e.g. a Fake outbox facade that throws after N/2 calls) asserts no ledger row survives without a matching outbox row."
+   ],
+   "labels": [
+    "db-2",
+    "sync",
+    "nygard",
+    "data-integrity"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-learning-p1",
+  "findingIndex": 8,
+  "finding": {
+   "title": "Rename track_repository_test.dart and bookmark_entity_test.dart to mirror their source file names",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-5",
+   "area": "test/features/learning",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/learning/data/repositories/track_repository_test.dart",
+     "line": 14,
+     "quote": "repository = TrackRepositoryImpl(database: database);"
+    },
+    {
+     "file": "learning_tracker/test/features/learning/domain/entities/bookmark_entity_test.dart",
+     "line": 5,
+     "quote": "import 'package:learning_tracker/features/learning/domain/entities/bookmark.dart';"
+    }
+   ],
+   "sites": 2,
+   "why": "AG-5 requires test/ to mirror lib/ 1:1 by file name. track_repository_test.dart actually tests TrackRepositoryImpl (data/repositories/track_repository_impl.dart) but is named after the sibling domain interface file (track_repository.dart), so the mirrored-path convention can't be used to find it. bookmark_entity_test.dart similarly is named after the exported class (BookmarkEntity) rather than its source file (bookmark.dart).",
+   "recommendation": "Rename to track_repository_impl_test.dart and bookmark_test.dart respectively (git mv, no content change needed).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Each source file in this batch has exactly one test file at the exact mirrored path/name; a future AG-5 checker would find both without a name-based exception list."
+   ],
+   "labels": [
+    "ag-5",
+    "test-naming",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-learning-p1",
+  "findingIndex": 9,
+  "finding": {
+   "title": "Convert CompletionRequest/BulkCompletionRequest to @freezed to match sibling CompletionCommand",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "naming-placement",
+   "area": "learning/domain/entities",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/learning/domain/entities/completion_request.dart",
+     "line": 4,
+     "quote": "class CompletionRequest {\n  final String curriculumId;"
+    },
+    {
+     "file": "learning_tracker/lib/features/learning/domain/entities/completion_command.dart",
+     "line": 28,
+     "quote": "@freezed\nabstract class CompletionCommand with _$CompletionCommand {"
+    }
+   ],
+   "sites": 1,
+   "why": "The coding-standards naming/placement rules call for domain/state models to be immutable @freezed classes. CompletionCommand in the same domain/entities directory follows this; CompletionRequest and BulkCompletionRequest (same file) are hand-written plain classes with no == /hashCode override, so two structurally-identical requests are not equal \u2014 currently harmless since nothing compares them, but a latent trap for a future caller (e.g. a family-provider argument or a dedup check) that assumes value equality.",
+   "recommendation": "Convert both classes to @freezed, or leave a one-line comment explaining why they're deliberately plain (e.g. if freezed's codegen overhead isn't worth it for a request DTO that's never compared or family-keyed).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "CompletionRequest/BulkCompletionRequest are @freezed like CompletionCommand, or carry an explicit rationale comment for the exception."
+   ],
+   "labels": [
+    "naming-placement",
+    "freezed",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-learning-p2",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Wire up or delete the dead CompletionAnimation / CompletionFeedbackController widgets",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Dead code (Fowler / digest 'Everything' sweep) -- feature never reaches its documented purpose",
+   "area": "lib/features/learning/presentation/widgets/completion_animation.dart, completion_feedback_controller.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/learning/presentation/widgets/completion_animation.dart",
+     "line": 6,
+     "quote": "/// Animation widget shown when a completion is successfully marked.\n/// In child mode: celebratory checkmark burst with confetti particles."
+    },
+    {
+     "file": "learning_tracker/lib/features/learning/presentation/widgets/completion_feedback_controller.dart",
+     "line": 40,
+     "quote": "class CompletionFeedbackController extends ChangeNotifier {"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_08_gamification_test.dart",
+     "line": 257,
+     "quote": "controller = CompletionFeedbackController();"
+    }
+   ],
+   "sites": 2,
+   "why": "grep across all of lib/ turns up zero references to CompletionAnimation or CompletionFeedbackController outside their own definition files; the only place CompletionFeedbackController is constructed anywhere in the repo is the epic_08 story-acceptance test, which exercises the class in isolation, never through a real screen. No screen calls .start(), so the 'checkmark burst + confetti + points popup + streak bump' sequence the docstring promises never renders for any user, yet the epic_08 'Story 8.4 -- Completion Feedback & Animations' suite passes and reads as if the feature shipped and is covered.",
+   "recommendation": "Either wire CompletionFeedbackController.start() into the real mark-completion flow (text_display_screen/bulk_mark_screen) and mount CompletionAnimation there, or delete both widget files plus the epic_08 Story 8.4 controller-only test groups and track the feature as not-yet-shipped.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "grep -rn 'CompletionAnimation(\\|CompletionFeedbackController(' lib/features shows a call site inside a real screen, OR the two widget files and their epic_08 groups are removed together"
+   ],
+   "labels": [
+    "dead-code",
+    "gamification",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-learning-p2",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Mirror the daily-task-card chevron icon for RTL (Icons.chevron_right_rounded needs matchTextDirection)",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AX-3 (directional glyphs mirror in RTL) -- the IL-7 breadcrumb-chevron defect class",
+   "area": "lib/features/learning/presentation/screens/learning_screen.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/learning/presentation/screens/learning_screen.dart",
+     "line": 509,
+     "quote": "const Icon(\n                Icons.chevron_right_rounded,"
+    },
+    {
+     "file": "learning_tracker/lib/features/learning/presentation/screens/learning_screen.dart",
+     "line": 615,
+     "quote": "const Icon(\n                Icons.chevron_right_rounded,"
+    }
+   ],
+   "sites": 2,
+   "why": "Icon.matchTextDirection defaults to false and Flutter never auto-mirrors an arbitrary Material glyph; grep -rn matchTextDirection lib returns zero hits anywhere in the app. In the Hebrew (RTL) locale, the Row ambient Directionality already moves these 'go to detail' chevrons to the visual left edge of the daily-task card and curriculum-browse card, but the glyph itself keeps pointing right -- so the arrow points back into the card instead of toward the forward-navigation direction, exactly the defect the standards doc names IL-7 to prevent recurrence.",
+   "recommendation": "Add matchTextDirection: true to both Icon(Icons.chevron_right_rounded, ...) call sites (or swap to a locale-aware chevron keyed off Directionality.of(context)).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "A widget test pumps _LearnTaskCard/_CurriculumBrowseCard at Locale('he') and asserts the chevron Icon has matchTextDirection: true or is rendered horizontally mirrored"
+   ],
+   "labels": [
+    "accessibility",
+    "i18n",
+    "rtl"
+   ]
+  }
+ }
+]

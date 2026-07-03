@@ -1,0 +1,111 @@
+[
+ {
+  "title": "Add a schema-version floor guard for UserDatabase \u2014 onUpgrade has no path below v25",
+  "rule": "DB-4",
+  "sourceBatch": "t1-core-database-root-p1",
+  "severity": "P0",
+  "refutations": [
+   "Code quotes are accurate (schemaVersion=32, onUpgrade only handles from<25, database_provider.dart opens UserDatabase with no floor guard), and the git-archaeology on 9612d7a0 is correct. But the P0 \"real device data corruption\" claim rests on a premise the finding never checked: docs/linear-status.",
+   "The evidence quotes check out (schemaVersion=32, onUpgrade starts at from&lt;25, no floor guard in database_provider.dart), but the P0 \"data-corruption\" claim rests entirely on \"any real device...still at schemaVersion below 25\" being reachable. docs/product-rules.md:183 states plainly: \"Pre-launch "
+  ]
+ },
+ {
+  "title": "Move core/database test files onto their AG-5-mirrored lib/ paths",
+  "rule": "AG-5",
+  "sourceBatch": "t1-core-database-root-p1",
+  "severity": "P3",
+  "refutations": [
+   "All 3 'quotes' are fabricated: none exist at the cited lines \u2014 actual line 1 in each file is an unrelated import/doc-comment, verified by direct read. The underlying AG-5 gap (no test/core/database/content|user dirs; device_registry split not named device_registry_database_test.dart) is independentl"
+  ]
+ },
+ {
+  "title": "Fix copy-pasted stageDefinitionsRefs tests so completionEventsRefs is actually covered in user_database_managers_refs_test.dart",
+  "rule": "TQ-8",
+  "sourceBatch": "t1-core-database-root-p4",
+  "severity": "P2",
+  "refutations": [
+   "False premise: $$CurriculumTracksTableReferences (user_database.g.dart:15472-16403) has exactly 7 ref getters, no completions member \u2014 verified by reading the full class. The 'completionEventsRefs' grep hit belongs to a different class, $$LearnerProfilesTableReferences (13851-15472), keyed by profil"
+  ]
+ },
+ {
+  "title": "Add test coverage for ProgramStartingPosition.toLegacyGrammar",
+  "rule": "TQ-1 / AG-5 spirit",
+  "sourceBatch": "t1-core-domain-learning",
+  "severity": "P3",
+  "refutations": [
+   "Central risk claim is false: CI already covers toLegacyGrammar. step_starting_position_l1_test.dart:891-899 asserts exact 'offset:7' sign encoding; provision_track_use_case_test.dart:381-458 round-trips N=5 and asserts exact 'offset:1' via the real production path. Also misattributes the caller: pro"
+  ]
+ },
+ {
+  "title": "Rename the three core/utils/*_utils.dart files off the banned _utils.dart suffix",
+  "rule": "naming/placement: \"No `_utils.dart` god-files.\"",
+  "sourceBatch": "t1-core-nav-utils",
+  "severity": "P3",
+  "refutations": [
+   "Rule misread. coding-standards.md:582 bans literally naming a file 'utils.dart' (unfocused god-file) and gives 'hebrew_calendar_utils.dart' as the CORRECT compliant example \u2014 one of the three files this finding wants renamed. The File Placement Guide (line 655) explicitly directs all new utility fil"
+  ]
+ },
+ {
+  "title": "Delete streak_service_extended_test.dart \u2014 fully superseded by streak_service_recovery_test.dart",
+  "rule": "Fowler (duplicated code)",
+  "sourceBatch": "t1-feat-gamification-p2",
+  "severity": "P2",
+  "refutations": [
+   "Refuted: streak_service_extended_test.dart:63 asserts `maxStreak >= currentStreak` on POPULATED data; recovery_test.dart's equivalent getStreak test (lines 108-114) only checks currentStreak==12, never maxStreak. The core claim 'extended_test.dart contributes nothing recovery_test.dart lacks' is fac"
+  ]
+ },
+ {
+  "title": "Convert CompletionRequest/BulkCompletionRequest to @freezed to match sibling CompletionCommand",
+  "rule": "naming-placement",
+  "sourceBatch": "t1-feat-learning-p1",
+  "severity": "P3",
+  "refutations": [
+   "Facts check out (plain final-field classes, no ==/hashCode, unused for equality anywhere) but 'match sibling CompletionCommand' is backwards: BookmarkEntity and MarkCompletionResult, the actual other files in domain/entities/, are also plain non-freezed classes \u2014 CompletionCommand is the directory's"
+  ]
+ },
+ {
+  "title": "Expand pin_setup_screen_test.dart beyond a single render smoke test and rename to match PinFlowScreen",
+  "rule": "TQ-3",
+  "sourceBatch": "t1-feat-parent_mode",
+  "severity": "P2",
+  "refutations": [
+   "Central premise is false, killing the finding as stated."
+  ]
+ },
+ {
+  "title": "Set driftRuntimeOptions.dontWarnAboutMultipleDatabases in two_device_sync_test.dart's setUp, matching every other multi-device test",
+  "rule": "TQ-6",
+  "sourceBatch": "t1-feat-sync-p4",
+  "severity": "P3",
+  "refutations": [
+   "Quotes and warning are real (reproduced via flutter test). But the 'one file in the codebase that skips it' claim is false: running flutter test on data_export_roundtrip_test.dart fires the identical warning, also missing the flag. Finding also concedes the warning is a false positive (no shared Que"
+  ]
+ },
+ {
+  "title": "Write real coverage for ProgramSelectionStep \u2014 program_selection_step_test.dart never imports or renders the widget it's mirrored to",
+  "rule": "AG-5 (mirrored-path coverage) / TQ-8",
+  "sourceBatch": "t1-feat-tracks-extras",
+  "severity": "P2",
+  "refutations": [
+   "Refuted by a sibling file the finding missed: test/features/tracks/setup/presentation/widgets/program_selection_step_test.dart (the TRUE AG-5 path \u2014 'track_setup' has no lib/ counterpart, it's a pre-flagged unmirrored dir) already red-first-tests programStartsLabel against the exact TS-1 regression "
+  ]
+ },
+ {
+  "title": "Convert hand-written Provider/StreamProvider/FutureProvider.family declarations in tracks/setup to @riverpod codegen",
+  "rule": "SM-1 (no hand-written provider constructors)",
+  "sourceBatch": "t1-feat-tracks-p1",
+  "severity": "P3",
+  "refutations": [
+   "All 6 evidence lines git-blame to May 13\u2013Jun 11 2026, weeks before this audit \u2014 pre-existing, not new/changed. Repo-wide count of non-codegen Provider/Stream/FutureProvider ctors (~109) closely matches the standards doc's '~121 legacy usages' SM-1 baseline, explicitly listed as known gap #8 ('do NOT"
+  ]
+ },
+ {
+  "title": "Replace source-grep assertions with real widget/behavior tests in tutoring WS3.3*/V3C suite",
+  "rule": "TQ-8",
+  "sourceBatch": "t1-feat-tutoring-p4",
+  "severity": "P2",
+  "refutations": [
+   "Central claim disproven: test/features/settings/settings_screen_and_point_config_l1_test.dart:1148-1206 already pumps the real PointConfigScreen with tutorPerms.readOnly(), taps Save, and asserts the permission-denied snackbar plus disabled button opacity \u2014 contradicts 'ZERO other test'/'sole safety"
+  ]
+ }
+]

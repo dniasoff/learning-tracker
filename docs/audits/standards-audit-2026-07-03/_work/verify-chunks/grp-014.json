@@ -1,0 +1,248 @@
+[
+ {
+  "sourceBatch": "t1-core-database-root-p3",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Split or delete the 5 oversized hand-written files in test/core/database/user_database_managers_*_test.dart (AG-3, 1.2x-6.1x the 400-line cap)",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "test/core/database",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/database/user_database_managers_computed_fields2_test.dart",
+     "line": 1308,
+     "quote": "} // EOF \u2014 1308 lines total (3.3x the 400-line cap)"
+    },
+    {
+     "file": "learning_tracker/test/core/database/user_database_managers_computed_fields_test.dart",
+     "line": 916,
+     "quote": "} // EOF \u2014 916 lines total (2.3x the cap)"
+    },
+    {
+     "file": "learning_tracker/test/core/database/user_database_managers_create_update_test.dart",
+     "line": 804,
+     "quote": "} // EOF \u2014 804 lines total (2.0x the cap)"
+    },
+    {
+     "file": "learning_tracker/test/core/database/user_database_managers_crossref_filter_test.dart",
+     "line": 477,
+     "quote": "} // EOF \u2014 477 lines total (1.2x the cap)"
+    },
+    {
+     "file": "learning_tracker/test/core/database/user_database_managers_orderby_test.dart",
+     "line": 2435,
+     "quote": "} // EOF \u2014 2435 lines total (6.1x the cap, largest file in this batch)"
+    }
+   ],
+   "sites": 5,
+   "why": "coding-standards.md:511-513 caps hand-written Dart files (tests included \u2014 the documented enforcement command is `find lib test -name '*.dart' ...`) at 400 lines because content past a file's length exceeds per-file agent read budgets and the file becomes a dumping ground. All 5 files in this batch violate it; orderby_test.dart at 2435 lines required 3 separate Read calls just to review once in this audit.",
+   "recommendation": "Resolved automatically if Finding 1's recommendation (delete the dead-weight Manager-API suite) is taken. Otherwise split each file by table/concern to stay under 400 lines.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "`find lib test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400'` no longer lists any of these 5 files.",
+    "The Rule-0 checker described at coding-standards.md:513 exists and runs in `make audit` (currently [Pending] per the standards doc)."
+   ],
+   "labels": [
+    "hygiene",
+    "ag-3",
+    "file-size"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-database-root-p3",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Rename the 2 duplicate-named test pairs inside crossref_filter_test.dart's 'Companion.toColumns with id present' group",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "naming hygiene / Fowler duplication (copy-paste without rename)",
+   "area": "test/core/database/user_database_managers_crossref_filter_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/database/user_database_managers_crossref_filter_test.dart",
+     "line": 287,
+     "quote": "test('CompletionEventsCompanion id present in toColumns', () {"
+    },
+    {
+     "file": "learning_tracker/test/core/database/user_database_managers_crossref_filter_test.dart",
+     "line": 302,
+     "quote": "test('CompletionEventsCompanion id present in toColumns', () {"
+    },
+    {
+     "file": "learning_tracker/test/core/database/user_database_managers_crossref_filter_test.dart",
+     "line": 365,
+     "quote": "test('StreakEventsCompanion id present in toColumns', () {"
+    },
+    {
+     "file": "learning_tracker/test/core/database/user_database_managers_crossref_filter_test.dart",
+     "line": 371,
+     "quote": "test('StreakEventsCompanion id present in toColumns', () {"
+    }
+   ],
+   "sites": 4,
+   "why": "Both pairs sit in the same group() with identical printed names but different fixtures (the second CompletionEventsCompanion test drops trackId; the second StreakEventsCompanion test adds eventType/dayUtc). Confirmed live in this session's `flutter test` run of this file: the output lines '+13'/'+14' and '+18'/'+19' print the exact same fully-qualified name twice, so `dart test -n '<name>'` can't select just one, CI failure reports can't disambiguate which fixture broke, and a future reader can't tell from the test list that two different cases exist.",
+   "recommendation": "Rename the second test in each pair to state what varies, e.g. 'CompletionEventsCompanion id present in toColumns (no trackId)' and 'StreakEventsCompanion id present in toColumns (with eventType/dayUtc)'.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "No two test('...') description strings are identical within the same group() in this file."
+   ],
+   "labels": [
+    "hygiene",
+    "naming",
+    "copy-paste"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-database-root-p4",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Split test/core/database/user_database_managers_test.dart and user_database_managers_refs_test.dart \u2014 both exceed the 400-line AG-3 cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "test/core/database/ (both batch files)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/database/user_database_managers_refs_test.dart",
+     "line": 1,
+     "quote": "/// Coverage for References getter classes and prefetchHooksCallback paths"
+    },
+    {
+     "file": "learning_tracker/test/core/database/user_database_managers_test.dart",
+     "line": 1,
+     "quote": "/// Tests that exercise the Drift TableManager API (`db.managers.*`) for all"
+    }
+   ],
+   "sites": 2,
+   "why": "user_database_managers_refs_test.dart is 676 lines (69% over cap) and user_database_managers_test.dart is 1073 lines (168% over cap), both hand-written (not generated). Both are built almost entirely from a repeated 4-8 line copy-paste block per table/getter; a reviewer must scroll the whole file to find the one block that changed in a PR diff, and the copy-paste-without-updating pattern is exactly what caused the completionEventsRefs coverage gap documented in a companion finding.",
+   "recommendation": "Split each file along its existing group() boundaries into per-table-group files (as the directory already does for _create_update, _computed_fields, _orderby variants), or replace the copy-pasted per-table blocks with a small table-driven helper/loop that iterates a list of (name, getter) pairs so one file covers many tables without the line-count blowup.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "Both files (and any files split out of them) are \u2264400 lines.",
+    "A line-count checker (extend make audit or add a tool/ script) greps hand-written .dart files, prints file:line-count for any >400, and exits non-zero \u2014 giving AG-3 a Rule-0 checker."
+   ],
+   "labels": [
+    "AG-3",
+    "test-quality",
+    "file-size"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-database-root-p4",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Replace vacuous isNotNull/isNotEmpty assertions in user_database_managers_refs_test.dart with relationship-verifying checks",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "learning_tracker/test/core/database/user_database_managers_refs_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/database/user_database_managers_refs_test.dart",
+     "line": 211,
+     "quote": "      final manager = refs.curriculumScopesRefs;\n      expect(manager, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/core/database/user_database_managers_refs_test.dart",
+     "line": 253,
+     "quote": "      final manager = refs.bookmarksRefs;\n      expect(manager, isNotNull);"
+    },
+    {
+     "file": "learning_tracker/test/core/database/user_database_managers_refs_test.dart",
+     "line": 290,
+     "quote": "      final rows = await db.managers.curriculumTracks.withFields([field]).get();\n      expect(rows, isNotEmpty);"
+    },
+    {
+     "file": "learning_tracker/test/core/database/user_database_managers_refs_test.dart",
+     "line": 375,
+     "quote": "          .withReferences((p) => p(curriculumScopesRefs: true))\n          .get();"
+    },
+    {
+     "file": "learning_tracker/test/core/database/user_database_managers_refs_test.dart",
+     "line": 441,
+     "quote": "          .get();\n      expect(rows, isNotEmpty);"
+    },
+    {
+     "file": "learning_tracker/test/core/database/user_database_managers_refs_test.dart",
+     "line": 456,
+     "quote": "      final rows = await db.managers.curriculumScopes.withReferences().get();\n      expect(rows, isNotEmpty);"
+    },
+    {
+     "file": "learning_tracker/test/core/database/user_database_managers_refs_test.dart",
+     "line": 573,
+     "quote": "          .get();\n      expect(rows, isNotEmpty);"
+    }
+   ],
+   "sites": 41,
+   "why": "41 of the file's 42 tests (every test except 'filter by displayName' at line 175-183) assert only isNotNull on a getter whose return type is non-nullable ($$XTableProcessedTableManager, confirmed by grepping user_database.g.dart \u2014 never `?`), or isNotEmpty on rows that come from the base table regardless of the specific ref/prefetch-flag/computedField under test. Verified line 23 (`import 'package:drift/drift.dart' hide isNotNull, isNull;`) confirms these are flutter_test's boolean matchers, not SQL builders. Concretely: deleting `curriculumScopesRefs: true` from the prefetch call at line 374, or breaking the FK the getter filters on in user_database.dart, would not fail any of these tests \u2014 the isNotNull can only fail via an exception (impossible given the type), and isNotEmpty is satisfied by the parent row alone. The file's own header claims this suite 'covers' the References/prefetch classes; it cannot detect a broken relationship or prefetch join.",
+   "recommendation": "Rewrite assertions to depend on the specific thing under test: e.g. call `.get()` on the returned manager and assert the rows' FK column equals the parent id used in setUp, or assert a real row count/field value through the prefetched cache, or compare a flag-on vs flag-off query to show the flag changed behavior.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "Each affected test fails if the specific relationship/prefetch flag it names is broken or removed (verify by temporarily deleting one `xxxRefs: true` flag or its underlying FK reference and confirming exactly the corresponding test \u2014 not an unrelated one \u2014 turns red).",
+    "No automated checker exists for this class of test-rigor defect; acceptance is code-review confirmation the assertion depends on the parameter under test."
+   ],
+   "labels": [
+    "TQ-8",
+    "test-quality",
+    "drift",
+    "false-coverage"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-database-root-p4",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Fix copy-pasted stageDefinitionsRefs tests so completionEventsRefs is actually covered in user_database_managers_refs_test.dart",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "learning_tracker/test/core/database/user_database_managers_refs_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/database/user_database_managers_refs_test.dart",
+     "line": 7,
+     "quote": "///     completionsRefs, learningLedgerRefs, bookmarksRefs, goalsRefs"
+    },
+    {
+     "file": "learning_tracker/test/core/database/user_database_managers_refs_test.dart",
+     "line": 236,
+     "quote": "    test('stageDefinitionsRefs getter returns manager', () async {"
+    },
+    {
+     "file": "learning_tracker/test/core/database/user_database_managers_refs_test.dart",
+     "line": 318,
+     "quote": "    test('computedField via stageDefinitionsRefs annotation', () async {"
+    },
+    {
+     "file": "learning_tracker/test/core/database/user_database_managers_refs_test.dart",
+     "line": 400,
+     "quote": "    test('withReferences stageDefinitionsRefs prefetch', () async {"
+    },
+    {
+     "file": "learning_tracker/test/core/database/user_database_managers_refs_test.dart",
+     "line": 428,
+     "quote": "    test('withReferences all refs prefetch at once', () async {"
+    }
+   ],
+   "sites": 4,
+   "why": "In three separate groups (refs getters, computedField, prefetch hooks) the test meant to cover the 5th ref getter is a byte-for-byte duplicate of the 4th ('stageDefinitionsRefs getter returns manager' appears verbatim at lines 215 AND 236; same at 294/318 and 379/400), and the 'withReferences all refs prefetch at once' test (line 428-442) sets curriculumScopesRefs/stageDefinitionsRefs/pointConfigsRefs/studyDayConfigsRefs/learningLedgerRefs/bookmarksRefs/goalsRefs but omits completionEventsRefs. Grepping user_database.g.dart confirms the real generated member is `completionEventsRefs` (not the docstring's 'completionsRefs' at line 7, which doesn't exist). Net effect: the curriculumTracks\u2192completionEvents reference/prefetch/computedField join in the 24k-line generated file has zero coverage from a suite whose sole stated purpose is to cover it, and the header's own list of what's covered is factually wrong.",
+   "recommendation": "Replace the duplicated test bodies at lines 236, 318 and 400 with genuine completionEventsRefs coverage; add `completionEventsRefs: true` to the 'all refs prefetch at once' call; fix the line-7 docstring to say `completionEventsRefs`.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "All 8 documented ref getters (including completionEventsRefs) have a genuinely distinct test in each of the 3 groups, verifiable by temporarily breaking the completionEvents FK/alias wiring in user_database.dart and confirming the new test \u2014 and only that one \u2014 fails.",
+    "Header doc-comment member list matches the actual generated symbol names."
+   ],
+   "labels": [
+    "TQ-8",
+    "copy-paste",
+    "coverage-gap",
+    "drift"
+   ]
+  }
+ }
+]

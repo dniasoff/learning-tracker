@@ -1,0 +1,59 @@
+[
+ {
+  "sourceBatch": "t4-docs-canonical-p2",
+  "findingIndex": 0,
+  "finding": {
+   "title": "privacy-policy.md falsely claims no analytics/crash-report collection while release builds ship FirebaseAnalyticsService + unconditional Crashlytics",
+   "severity": "P0",
+   "confidence": "CONFIRMED",
+   "rule": "PV-1, PV-3 (doc-accuracy)",
+   "area": "docs (privacy-policy.md) vs core/analytics, app/bootstrap",
+   "evidence": [
+    {
+     "file": "docs/privacy-policy.md",
+     "line": 30,
+     "quote": "- Analytics events or usage telemetry"
+    },
+    {
+     "file": "docs/privacy-policy.md",
+     "line": 31,
+     "quote": "- Crash reports"
+    },
+    {
+     "file": "learning_tracker/lib/core/analytics/analytics_provider.dart",
+     "line": 29,
+     "quote": "return FirebaseAnalyticsService();"
+    },
+    {
+     "file": "learning_tracker/lib/core/analytics/analytics_service.dart",
+     "line": 56,
+     "quote": "parameters: {'sefaria_ref': sefariaRef.value, 'track_type': trackType},"
+    },
+    {
+     "file": "learning_tracker/lib/app/bootstrap/firebase_bootstrap.dart",
+     "line": 45,
+     "quote": "await fbCrashlytics.setCrashlyticsCollectionEnabled(true);"
+    },
+    {
+     "file": "learning_tracker/lib/core/logging/crashlytics_service.dart",
+     "line": 68,
+     "quote": "_crashlytics.setUserIdentifier(profileId == null ? '' : '$profileId');"
+    }
+   ],
+   "sites": 2,
+   "why": "The App Store/Play Store-facing privacy policy tells a parent installing this children's app that it does not collect 'Analytics events or usage telemetry' or 'Crash reports.' In reality, release/profile builds wire analyticsServiceProvider to a real FirebaseAnalyticsService (analytics_provider.dart:22-29) that sends named events with a content identifier (sefaria_ref) and per-child identifiers (profile_id, at analytics_service.dart:56,82,87 \u2014 already a baselined PV-1 code gap), and firebase_bootstrap.dart unconditionally enables Crashlytics collection and forwards the numeric profileId as the Crashlytics user identifier. This is not merely stale prose \u2014 it is a live, false representation to end users (and, given the app's stated child userbase, a child-privacy-adjacent misrepresentation) about what data leaves the device. Anyone who reads and relies on this policy \u2014 including a parent deciding whether to let a child use the app \u2014 is being told something the shipped binary does not do.",
+   "recommendation": "Rewrite the 'Data We Do NOT Collect' section to remove the false 'Analytics events'/'Crash reports' bullets, add Firebase Analytics and Firebase Crashlytics to the 'Third-Party Services' table with their actual purpose (event/crash telemetry) and a link to Google's privacy policy, and state what parameters are sent. This is independent of (and does not replace) actually fixing the underlying PV-1/PV-3 code gaps (consent-gating, dropping content/profile identifiers from event params) already tracked in coding-standards.md \u2014 but until those land, the policy must describe reality, not the target state.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "privacy-policy.md's collection list and third-party table match what analyticsServiceProvider/FirebaseCrashlyticsService actually send in a release build",
+    "a lightweight CI/doc-review check (or a checklist item in the PV-1/PV-3 remediation ticket) requires updating this doc in the same PR that changes analytics/crashlytics consent behavior"
+   ],
+   "labels": [
+    "docs",
+    "privacy",
+    "compliance",
+    "child-safety"
+   ]
+  }
+ }
+]

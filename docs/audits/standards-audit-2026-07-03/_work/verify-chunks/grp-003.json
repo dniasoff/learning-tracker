@@ -1,0 +1,199 @@
+[
+ {
+  "sourceBatch": "t1-app-l10n-p3",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Broaden no_hardcoded_percent_in_chart_subtitle_test.dart regex to catch unsigned fabricated percentages",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (assertion weaker than the class of defect the source can actually reproduce)",
+   "area": "learning_tracker/test/l10n/no_hardcoded_percent_in_chart_subtitle_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/l10n/no_hardcoded_percent_in_chart_subtitle_test.dart",
+     "line": 15,
+     "quote": "final _hardcodedPercentPattern = RegExp(r'[+-]\\d+%');"
+    }
+   ],
+   "sites": 1,
+   "why": "The original defect (per the file's own docstring) was 'a static placeholder ... never computed at runtime' \u2014 the fix removed the number entirely. But the regression test only rejects the signed digit-percent shape ('+12%'/'-5%'). A future contributor could reintroduce the same never-computed-at-runtime fabrication as 'chartCumulativeProgressSubtitle: 12% higher than last week' (no sign) or as a non-percent fake stat ('12 more completions than last week'), and this test would pass, giving false confidence that the fix is intact.",
+   "recommendation": "Widen the guard \u2014 at minimum drop the sign requirement (match \\d+%), or better, assert the subtitle contains no digits at all, matching the intent that it is now static prose rather than a statistic.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Injecting an unsigned literal like '12%' into chartCumulativeProgressSubtitle in either ARB fails this test"
+   ],
+   "labels": [
+    "tests",
+    "l10n",
+    "regression-test-quality"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-analytics-logging",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Type streak_milestone_analytics_observer.dart's two catch blocks to Exception \u2014 bare Object catches swallow Error subtypes as warnings",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "EH-4",
+   "area": "core/analytics",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/analytics/streak_milestone_analytics_observer.dart",
+     "line": 74,
+     "quote": "} catch (e, st) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/analytics/streak_milestone_analytics_observer.dart",
+     "line": 83,
+     "quote": "} catch (e, st) {"
+    }
+   ],
+   "sites": 2,
+   "why": "Neither catch has an `on X` clause, so both also catch Dart Error subtypes (NoSuchMethodError, TypeError, RangeError, StateError) that signal genuine programming bugs, not recoverable runtime conditions \u2014 exactly what EH-4 says never to catch. A bug in StreakStateProvider or an unexpected state shape gets downgraded to a single logger.warning(...) call (not even error/critical) and the loop or stream quietly continues or ends \u2014 no crash, no Crashlytics report, nothing but a line in a 2000-entry ring buffer nobody reviews outside 'Send Diagnostic Logs'. This provider runs unconditionally in the app shell every session (per its own doc comment), so a regression here has zero blast-radius signal to catch it.",
+   "recommendation": "Narrow both catches to `on Exception catch (e, st)` (or the specific exception types StreakStateProvider/AnalyticsService can throw) and let Error subtypes propagate to the zone's onError handler like the rest of the app.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Both catch clauses in streak_milestone_analytics_observer.dart use `on Exception catch` (or a named typed exception), not bare `catch (e, st)`",
+    "streak_milestone_analytics_observer_test.dart's existing R6-3 tests still pass unchanged (they throw plain Exception, not Error)"
+   ],
+   "labels": [
+    "error-handling",
+    "P2",
+    "analytics"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-analytics-logging",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Guard CrashlyticsService's unawaited analytics calls with catchError \u2014 unguarded rejection can re-enter the runZonedGuarded fatal-error handler",
+   "severity": "P2",
+   "confidence": "SUSPECTED",
+   "rule": "EH-2 / Nygard (I/O failure mid-flight)",
+   "area": "core/logging",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/logging/crashlytics_service.dart",
+     "line": 51,
+     "quote": "unawaited(_analytics.logCrashReported(fatal: true));"
+    },
+    {
+     "file": "learning_tracker/lib/core/logging/crashlytics_service.dart",
+     "line": 62,
+     "quote": "unawaited(_analytics.logCrashReported(fatal: fatal));"
+    },
+    {
+     "file": "learning_tracker/lib/main.dart",
+     "line": 27,
+     "quote": "_crashlytics.recordError(error, stack, fatal: true);"
+    }
+   ],
+   "sites": 2,
+   "why": "main.dart wraps the whole app in runZonedGuarded whose error callback (lines 26-31) calls _crashlytics.recordError(...) \u2014 which is FirebaseCrashlyticsService.recordError, firing `unawaited(_analytics.logCrashReported(...))` with no .catchError attached at either of the two sites cited. If the Firebase Analytics plugin call itself rejects (platform-channel failure, SDK not yet initialized, offline queue full), that unhandled Future error is delivered back into the very same Zone installed by runZonedGuarded, invoking the identical error callback again, which calls recordError again, firing another unawaited call \u2014 a self-feeding loop precisely at the moment (an active fatal-crash report) when the app's error-handling path most needs to be inert. Contrast with streak_milestone_analytics_observer.dart in the same directory tree, which does guard its own fire-and-forget analytics call with `.catchError(...)` (line 63-70) \u2014 the inconsistency shows this omission wasn't a deliberate choice. Needs runtime confirmation: inject an AnalyticsService whose logCrashReported always rejects inside a runZonedGuarded harness and observe whether recordError re-enters.",
+   "recommendation": "Add `.catchError((_, __) {})` (or route failures through AppLogger only) to both unawaited(_analytics.logCrashReported(...)) calls in crashlytics_service.dart, matching the guard pattern already used in streak_milestone_analytics_observer.dart.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Both fire-and-forget analytics calls in crashlytics_service.dart have an attached .catchError/try-catch so a rejected Future never re-enters the zone's onError",
+    "A regression test injects an AnalyticsService whose logCrashReported always throws, calls recordError once, and asserts it is not invoked a second time"
+   ],
+   "labels": [
+    "error-handling",
+    "crashlytics",
+    "P2",
+    "reliability"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-analytics-logging",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Inject an overridable clock into streakMilestoneAnalyticsObserverProvider instead of hardcoding SystemLocalDayClock",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6 / Feathers testability lens",
+   "area": "core/analytics",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/analytics/streak_milestone_analytics_observer.dart",
+     "line": 47,
+     "quote": "clock: const SystemLocalDayClock(),"
+    },
+    {
+     "file": "learning_tracker/test/core/analytics/streak_milestone_analytics_observer_test.dart",
+     "line": 129,
+     "quote": "final todayUtc = DateTime.now().toUtc();"
+    },
+    {
+     "file": "learning_tracker/test/core/analytics/streak_milestone_analytics_observer_test.dart",
+     "line": 168,
+     "quote": "while (DateTime.now().isBefore(deadline) &&"
+    }
+   ],
+   "sites": 1,
+   "why": "The observer instantiates `const SystemLocalDayClock()` directly rather than watching an injectable clock \u2014 the codebase already has this seam elsewhere (e.g. outbox_providers.dart reads `ref.watch(localDayClockProvider)`). Because the observer can't be handed a fixed clock in tests, the happy-path test has to anchor seeded data to real `DateTime.now()` and then poll every 20ms for up to 5 real seconds waiting for the milestone to fire, instead of asserting deterministically against a fixed instant. The test's own comment documents this was already a source of past flakiness ('silently breaks the moment the calendar advances', 'failed in isolation') \u2014 the current polling approach is less likely to fail, not deterministic, and burns up to 5 real seconds per run.",
+   "recommendation": "Thread a LocalDayClock through the provider (watch a clock provider, mirroring outbox_providers.dart) so tests can override with a fixed clock and assert the milestone fires on an exact expected tick without polling.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "streak_milestone_analytics_observer_test.dart's happy-path test uses a fixed/injected clock instead of DateTime.now(), with no wall-clock polling loop",
+    "Test runtime for that test drops from a up-to-5s poll to near-instant"
+   ],
+   "labels": [
+    "testability",
+    "P2",
+    "flaky-test",
+    "analytics"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-analytics-logging",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Remove or explicitly justify AppLogger.setupFlutterErrorHandlers \u2014 dead code duplicating crashlytics_bootstrap.dart's live handlers",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "dead-code (Everything sweep) / Fowler duplication",
+   "area": "core/logging",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/logging/logger.dart",
+     "line": 85,
+     "quote": "static void setupFlutterErrorHandlers() {"
+    },
+    {
+     "file": "learning_tracker/lib/app/bootstrap/crashlytics_bootstrap.dart",
+     "line": 26,
+     "quote": "FlutterError.onError = (FlutterErrorDetails details) {"
+    },
+    {
+     "file": "learning_tracker/lib/app/bootstrap/bootstrap.dart",
+     "line": 40,
+     "quote": "crashlytics = bootstrapCrashlyticsHandlers("
+    },
+    {
+     "file": "learning_tracker/test/core/logging/logger_test.dart",
+     "line": 54,
+     "quote": "AppLogger.setupFlutterErrorHandlers();"
+    }
+   ],
+   "sites": 1,
+   "why": "Grepping every .dart file in the repo shows AppLogger.setupFlutterErrorHandlers is referenced nowhere except its own definition and its 3 unit tests in logger_test.dart. Production's bootstrap chain (bootstrap.dart:40) installs FlutterError.onError/PlatformDispatcher.onError exclusively via bootstrapCrashlyticsHandlers in app/bootstrap/crashlytics_bootstrap.dart \u2014 a completely independent implementation of the same responsibility that also forwards to Crashlytics (setupFlutterErrorHandlers only forwards to Talker). A maintainer reading logger_test.dart's 3 green tests would reasonably believe this is the production error-handling path; if some future refactor swaps main.dart's wiring back to this method for 'simplicity', fatal-crash reporting silently stops reaching Crashlytics while Talker logs keep looking healthy, and the existing green test suite would not catch it since it only ever exercises the unused copy.",
+   "recommendation": "Delete AppLogger.setupFlutterErrorHandlers and its 3 tests, or \u2014 if it's meant as a documented fallback for contexts without Crashlytics wired \u2014 rename it and add a comment cross-referencing crashlytics_bootstrap.dart so the duplication is intentional and visible rather than accidental drift.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep -rn 'setupFlutterErrorHandlers' lib/ returns only its own definition, or a caller with a comment explaining the split from crashlytics_bootstrap.dart",
+    "No test exercises a code path unreachable from main.dart's actual bootstrap chain"
+   ],
+   "labels": [
+    "dead-code",
+    "hygiene",
+    "P2",
+    "logging"
+   ]
+  }
+ }
+]

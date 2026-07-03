@@ -1,0 +1,219 @@
+[
+ {
+  "sourceBatch": "t1-feat-account-p1",
+  "chunk": "grp-038",
+  "finding": {
+   "title": "Make AppUser/AuthState/AuthUser @freezed instead of hand-rolled classes without value equality",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "naming/placement (\"domain/state models are immutable @freezed classes\")",
+   "area": "features/account/domain/models",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/account/domain/models/app_user.dart",
+     "line": 6,
+     "quote": "class AppUser {\n  const AppUser({"
+    },
+    {
+     "file": "learning_tracker/lib/features/account/domain/models/auth_state.dart",
+     "line": 49,
+     "quote": "class AuthState {\n  const AuthState({"
+    }
+   ],
+   "sites": 2,
+   "why": "AppUser, AuthState and AuthUser are plain hand-written classes (immutable, but no @freezed, no custom ==/hashCode), so two instances with identical field values compare unequal by reference identity \u2014 AuthState is literally the `state` type of a keepAlive Riverpod Notifier. Current consumers avoid the fallout by exclusively `.select()`-ing down to primitive sub-fields (e.g. `s.currentUser?.firebaseUid`, a String, in manage_tutors_providers.dart/app_shell.dart/persistent_switcher_scaffold.dart) rather than comparing whole AuthState values, so no concrete rebuild-storm is demonstrated today \u2014 but it is a landmine for the next `ref.watch(authStateProvider)` call that doesn't remember to add a `.select()`.",
+   "recommendation": "Convert to @freezed (or at minimum implement value ==/hashCode) \u2014 low-risk given the classes are small and already immutable.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "AuthState(...) == AuthState(...) is true for equal field values (documents the fix via a unit test)",
+    "build_runner regenerates cleanly with no call-site breakage"
+   ],
+   "labels": [
+    "freezed",
+    "naming",
+    "equality"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-profiles-p2",
+  "chunk": "grp-078",
+  "finding": {
+   "title": "Extract a shared pumpApp test helper \u2014 profiles feature hand-rolls the 4-delegate MaterialApp wrapper 13 times",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-3",
+   "area": "test/features/profiles/**",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/profiles/pin_flow_and_setup_dialog_l1_test.dart",
+     "line": 151,
+     "quote": "localizationsDelegates: const ["
+    },
+    {
+     "file": "learning_tracker/test/features/profiles/presentation/an2_switcher_pin_guard_test.dart",
+     "line": 76,
+     "quote": "localizationsDelegates: const ["
+    },
+    {
+     "file": "learning_tracker/test/features/profiles/presentation/profile_switcher_sheet_test.dart",
+     "line": 83,
+     "quote": "localizationsDelegates: const ["
+    },
+    {
+     "file": "learning_tracker/test/features/profiles/presentation/screens/manage_learners_screen_l1_test.dart",
+     "line": 148,
+     "quote": "localizationsDelegates: const ["
+    }
+   ],
+   "sites": 13,
+   "why": "TQ-3 calls for widget tests to pump via a shared pumpApp helper; test/helpers/ has no such file (verified contents: drift_memory.dart, firestore_fake.dart, golden_runner.dart, migration_test_helper.dart, overflow_harness.dart, test_database.dart). Each of the 4 widget-test files in this batch hand-rolls the identical MaterialApp+localizationsDelegates+supportedLocales block (6 separate occurrences inside pin_flow_and_setup_dialog_l1_test.dart alone; 13 total in this batch), and the same block appears in 146 test files repo-wide (grepped for GlobalCupertinoLocalizations.delegate). Any future change to the delegate list, theme, or a required test-only ancestor widget requires hand-editing every copy; a missed copy silently diverges from the rest.",
+   "recommendation": "Add test/helpers/pump_app.dart exposing a pumpApp({child, overrides, locale}) helper and migrate these call sites onto it, starting with this batch's 4 files.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "test/helpers/pump_app.dart exists and is used by at least the 4 files in this batch",
+    "A tracked grep count of GlobalCupertinoLocalizations.delegate outside test/helpers/ decreases as files migrate"
+   ],
+   "labels": [
+    "testing",
+    "tq-3",
+    "duplication"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-database-root-p2",
+  "chunk": "grp-013",
+  "finding": {
+   "title": "Add profileId to TrackLearningOrder \u2014 the one user_database table with a bare autoincrement PK, and make audit's claimed profileId check doesn't exist",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "profileId-in-PK [E] / Rule 0",
+   "area": "lib/core/database/tables/track_learning_order.dart (evidenced via test/core/database)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/database/user_database_companion_coverage_test.dart",
+     "line": 887,
+     "quote": "final insertable = TrackLearningOrderCompanion.custom(\n        trackId: const Variable(1),"
+    },
+    {
+     "file": "learning_tracker/test/core/database/user_database_dataclass_extended_test.dart",
+     "line": 838,
+     "quote": "TrackLearningOrderCompanion.insert(\n              trackId: trackId,"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/tables/track_learning_order.dart",
+     "line": 4,
+     "quote": "IntColumn get id => integer().autoIncrement()();"
+    },
+    {
+     "file": "learning_tracker/docs/coding-standards.md",
+     "line": 689,
+     "quote": "**Enforcement:** `make audit` flags any user-DB table without a `profileId` column."
+    }
+   ],
+   "sites": 1,
+   "why": "Both test files in this batch construct TrackLearningOrderCompanion.insert()/.custom() with only trackId/sefariaRef/sortOrder \u2014 never profileId \u2014 because lib/core/database/tables/track_learning_order.dart has no profileId column at all (confirmed by direct read: bare autoIncrement `id`, only trackId + sefariaRef + sortOrder, uniqueKeys is {trackId, sefariaRef}). Every sibling user-data table in the batch's test evidence (bookmarks, goals, daily_plans, learning_order, streak_events, completion_events, stage_definitions, ...) carries an explicit profileId. Isolation for this table depends entirely on trackId never being confused across profiles; a caching or profile-switch bug elsewhere that reuses a stale trackId would silently read/write another profile's (e.g. a sibling child's) custom text ordering with no schema-level guard to catch it. This gap is currently invisible: `grep -n profileId learning_tracker/Makefile` returns zero matches, so none of the 22 `make audit` checks actually implements the check the standards doc says exists \u2014 the rule is marked [E] (Enforced) but enforces nothing for this table.",
+   "recommendation": "Add a profileId IntColumn (FK to learner_profiles, cascade delete) to TrackLearningOrder, fold it into the uniqueKeys constraint with trackId/sefariaRef, ship it as a schemaVersion bump per DB-4 discipline (migration step + schema export + migration test), and update the DAO. Separately, write the actual `make audit` grep the doc already claims exists so this class of gap is caught mechanically going forward.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "lib/core/database/tables/track_learning_order.dart has a profileId column referencing learner_profiles, with a migration step and committed schema export at the new schemaVersion.",
+    "A `make audit` check greps every table in lib/core/database/tables/*.dart used by UserDatabase and fails if profileId is absent (unless the table is on a documented content-table exemption list), closing the doc/reality gap at docs/coding-standards.md:689."
+   ],
+   "labels": [
+    "DB",
+    "profileId-in-PK",
+    "schema",
+    "enforcement-gap"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-database-daos-p2",
+  "chunk": "grp-010",
+  "finding": {
+   "title": "Rewrite completion_dao_test.dart null-scope test \u2014 the null-check operator throws before the DAO method is ever called",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "test/core/database/daos/completion_dao_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/database/daos/completion_dao_test.dart",
+     "line": 233,
+     "quote": "test('getAllCompletions throws AssertionError in debug when scope is null '"
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/completion_dao_test.dart",
+     "line": 243,
+     "quote": "scope: nullableScope!,"
+    }
+   ],
+   "sites": 1,
+   "why": "Dart evaluates argument expressions before invoking the function, so `scope: nullableScope!` throws TypeError the instant the null-check operator runs \u2014 internalGetAllCompletionsCrossProfile (and any internal _assertCrossProfileScope guard inside it) is never entered. The test's own docstring claims it 'verifies the assert fires in debug mode,' but it actually only verifies core Dart null-safety semantics, unrelated to any code in completion_dao.dart. If the DAO's internal scope guard were deleted entirely, this test would still pass unchanged, so it provides zero regression coverage for the behavior it claims to protect.",
+   "recommendation": "Delete this test (Dart's null-safety already makes a null CrossProfileScope unreachable through the typed public API, so there is nothing left to regress) or rewrite it to genuinely exercise the DAO's internal guard via a testable seam.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Test either removed with a comment explaining the language-level reason, or rewritten so it demonstrably enters completion_dao.dart code before throwing",
+    "No remaining test claims to verify an internal assert that it cannot actually reach"
+   ],
+   "labels": [
+    "testing",
+    "tautological-test",
+    "coverage-gap"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tracks-p5",
+  "chunk": "grp-120",
+  "finding": {
+   "title": "Close every inMemoryDb() Drift database opened by tracks/setup and track_order widget tests",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6 (hermetic tests / no shared/leaked state) \u2014 violates drift_memory.dart's own documented contract",
+   "area": "test/features/tracks/** and test/track_order/** widget tests",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/helpers/drift_memory.dart",
+     "line": 40,
+     "quote": "/// Callers MUST `await db.close()` in `tearDown` to free the native\n/// resources."
+    },
+    {
+     "file": "learning_tracker/test/features/tracks/setup/presentation/steps/step_starting_position_l1_test.dart",
+     "line": 222,
+     "quote": "final db = inMemoryDb();"
+    },
+    {
+     "file": "learning_tracker/test/features/tracks/track_management_body_and_order_l1_test.dart",
+     "line": 158,
+     "quote": "final database = db ?? inMemoryDb();"
+    },
+    {
+     "file": "learning_tracker/test/features/tracks/setup/track_management_hub_screen_l1_test.dart",
+     "line": 120,
+     "quote": "final database = db ?? inMemoryDb();"
+    },
+    {
+     "file": "learning_tracker/test/features/tracks/track_order/presentation/track_learning_order_reset_test.dart",
+     "line": 103,
+     "quote": "userDatabaseProvider.overrideWith((ref) => inMemoryDb()),"
+    }
+   ],
+   "sites": 4,
+   "why": "drift_memory.dart's own doc comment says callers MUST close every inMemoryDb() in tearDown to free native FFI/sqlite3 resources. step_starting_position_l1_test.dart creates 6 in-memory DBs (lines 222, 234, 251, 1017, 1075, 1127) and closes none. track_management_body_and_order_l1_test.dart creates 8 and closes only 3 (the other 5 \u2014 lines 158, 204, 304, 461, 929 \u2014 leak once per test invocation that hits them, i.e. ~13+ leaked native handles across that file's test run). track_management_hub_screen_l1_test.dart's shared default at line 120 leaks once per test that doesn't pass an explicit db (~10 tests). track_learning_order_reset_test.dart's single DB is never closed. Across a full CI run this accumulates open native sqlite3 handles per test file, risking slow teardown/fd pressure and contradicts the helper's explicit contract.",
+   "recommendation": "Add `addTearDown(() => database.close())` (or an explicit `await db.close()`) immediately after every inMemoryDb() call site listed, including the shared `db ?? inMemoryDb()` defaults in _buildBodyApp/_buildApp/_buildStartingPositionApp-style helpers.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Every inMemoryDb() call in the 4 listed files is paired with a db.close() (or addTearDown close) reachable on both pass and fail paths",
+    "A Rule-0 grep/lint (e.g. compare inMemoryDb() count vs close()/addTearDown-close count per test file) fails CI when the counts diverge"
+   ],
+   "labels": [
+    "testing",
+    "TQ-6",
+    "resource-leak",
+    "hygiene"
+   ]
+  }
+ }
+]

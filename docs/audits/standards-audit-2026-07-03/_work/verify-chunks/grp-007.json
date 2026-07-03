@@ -1,0 +1,206 @@
+[
+ {
+  "sourceBatch": "t1-core-content",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Correct or remove program_ref_resolver.dart's false production-integration doc claims",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Evans (ubiquitous language / doc-reality drift) + Fowler (speculative generality)",
+   "area": "core/content/program_ref_resolver.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/content/program_ref_resolver.dart",
+     "line": 6,
+     "quote": "/// calendar service. Production wires this to the local calendar engine\n/// (DNI-330)."
+    },
+    {
+     "file": "learning_tracker/lib/core/content/program_ref_resolver.dart",
+     "line": 17,
+     "quote": "/// Dashboard, scheduler, and reader all consume this same resolver so they\n/// agree on which `ContentItem` a calendar entry points to (FR16)."
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/presentation/providers/scheduler_providers.dart",
+     "line": 108,
+     "quote": "final item = index.lookup(t.contentItemSefariaRef);"
+    }
+   ],
+   "sites": 1,
+   "why": "Two present-tense claims in this class's doc comment don't match the codebase. (1) 'Production wires this to the local calendar engine (DNI-330)' \u2014 docs/planning/epics.md:782 records DNI-330 as Story 25.9, 'core/labels/ rebuild \u2014 three new modes, ContentIndex consumer, static API deleted', unrelated to calendar-engine wiring. (2) 'Dashboard, scheduler, and reader all consume this same resolver' \u2014 scheduler_providers.dart:108 calls index.lookup() directly, bypassing ProgramRefResolver's whitespace/transliteration normalization entirely. Repo-wide grep for ProgramRefResolver(/ProgramRefSource confirms zero call sites outside this file and one story-acceptance test \u2014 the class is fully built, fully unit-tested, and has never been wired into any consumer. Whether the ad-hoc direct lookups in scheduler/dashboard/reader ever actually disagree (a live FR16 violation) is unverified \u2014 the calendar rows may be pre-canonicalized at seed time, which would make runtime resolution unnecessary in practice; that needs runtime/data confirmation, not just this static read.",
+   "recommendation": "Either wire the named consumers (starting with scheduler_providers.dart:108) through ProgramRefResolver.resolve() so the FR16 claim is true, or rewrite the doc comment to state plainly that it isn't wired yet and cite the real tracking ticket (not DNI-330).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "program_ref_resolver.dart's doc comment cites an accurate ticket for production wiring, or states it is not yet wired.",
+    "If FR16 sharing is the intended design, at least scheduler_providers.dart's calendar-derived ref lookups route through ProgramRefResolver instead of a raw index.lookup()."
+   ],
+   "labels": [
+    "core/content",
+    "dead-code",
+    "doc-drift"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-content",
+  "findingIndex": 8,
+  "finding": {
+   "title": "Fix ContentTree.parent()'s off-by-one when a leaf precedes its container in source order",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Correctness bug (Fowler duplicated-but-inconsistent logic between pass 1 and pass 2)",
+   "area": "core/content/content_tree.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/content/content_tree.dart",
+     "line": 138,
+     "quote": "final levels = item.isLeaf ? _ancestorLevels(item) : _levelsOf(item);"
+    },
+    {
+     "file": "learning_tracker/lib/core/content/content_tree.dart",
+     "line": 142,
+     "quote": "final parentLevels = levels.sublist(0, levels.length - 1);"
+    }
+   ],
+   "sites": 1,
+   "why": "Empirically verified: constructed a 4-level Bavli fixture where the leaf item ('Berakhot 2a:1') appears before its own container ('Berakhot 2a') in the input list, called ContentTree.fromCurricula(...).parent('Berakhot 2a:1'), and got 'Berakhot 2' (the grandparent/daf-level container) instead of the correct immediate parent 'Berakhot 2a'. Root cause: for a leaf, `_ancestorLevels(item)` already returns the PARENT container's own key (that's its documented purpose, and pass 1 at lines 110-121 uses it directly with no further truncation). Pass 2 treats `levels` uniformly as if it were the item's own key and applies a second `.sublist(0, length - 1)` 'walk up one level' step \u2014 which, for leaves, walks up an extra level past the true parent. Pass 1 resolves leaves correctly when their container is registered first; pass 2's fallback only fires \u2014 with the wrong answer \u2014 when a leaf is encountered before its container. ContentTree.parent() currently has zero callers in lib/ (content_hierarchy_screen.dart uses only .children()/.containerFor()), so this is not live-user-visible today, but it is a public, documented, keepAlive-cached API on the exact class whose stated purpose is 'O(1) parent/child/adjacent traversal' \u2014 the first feature that calls .parent() for breadcrumb 'up' navigation inherits a silently-wrong result whenever source ordering isn't strictly parent-before-child.",
+   "recommendation": "In pass 2's leaf branch, use `ancestorLevels` (the value already returned by _ancestorLevels) directly as the parent container key, the same way pass 1 does \u2014 do not apply an additional sublist(0, length-1) truncation for leaves.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "A regression test at test/core/content/content_tree_test.dart builds a curriculum with a leaf listed before its own container and asserts ContentTree.parent(leafRef) returns the immediate parent, not the grandparent.",
+    "Existing epic_25_schema_core_test.dart ContentTree assertions continue to pass."
+   ],
+   "labels": [
+    "core/content",
+    "correctness-bug",
+    "confirmed-by-repro"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-content",
+  "findingIndex": 9,
+  "finding": {
+   "title": "Remove or wire up HierarchyBrowserState's unused currentPath/canGoBack public getters",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler \u2014 dead/unused public interface (YAGNI)",
+   "area": "core/content/hierarchy_browser.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/content/hierarchy_browser.dart",
+     "line": 100,
+     "quote": "List<String> get currentPath => List.unmodifiable(_path);"
+    },
+    {
+     "file": "learning_tracker/lib/core/content/hierarchy_browser.dart",
+     "line": 103,
+     "quote": "bool get canGoBack => _path.isNotEmpty;"
+    }
+   ],
+   "sites": 1,
+   "why": "Both are documented as 'Public API for external callers' reachable via the widget's GlobalKey, but the sole caller (HierarchySelectionPanel) never accesses `_browserKey.currentState?.currentPath` or `.canGoBack` \u2014 only `.navigateBack()` and `.clearNavigation()` are ever invoked through the key. The caller instead maintains its own parallel `_navigationStack`/`canGoBack` state fed via the onNavigationChanged callback, duplicating the same information HierarchyBrowserState already tracks internally.",
+   "recommendation": "Delete the two unused getters (and their doc-comment mention) unless a near-term caller is planned; if HierarchySelectionPanel's parallel navigation-stack tracking is meant to be temporary, replace it with these getters instead of keeping both.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "No lib/ reference to HierarchyBrowserState.currentPath or .canGoBack exists, or a real caller uses them in place of a duplicate local navigation stack."
+   ],
+   "labels": [
+    "core/content",
+    "dead-code",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-database-daos-p1",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Replace awaited per-row insert/update loops with Drift batch() in curriculum_scope_dao, stage_dao, and track_dao.purgeHistory",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "DB-3",
+   "area": "core/database/daos",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/database/daos/curriculum_scope_dao.dart",
+     "line": 63,
+     "quote": "for (final value in scopeValues) {\n        await into(curriculumScopes).insert("
+    },
+    {
+     "file": "learning_tracker/lib/core/database/daos/stage_dao.dart",
+     "line": 89,
+     "quote": "for (final stage in stages) {\n        await insertStageDefinition(stage);"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/daos/stage_dao.dart",
+     "line": 128,
+     "quote": "for (final stage in stages) {\n        await insertStageDefinition(stage);"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/daos/track_dao.dart",
+     "line": 417,
+     "quote": "for (final c in completionsForTrack) {\n        await (db.update(db.completionEvents)..where("
+    }
+   ],
+   "sites": 4,
+   "why": "These four loops are all already inside a db.transaction() (so DB-2 is satisfied \u2014 no partial-write risk), but each issues N sequential awaited statements where Drift's batch() would send one. track_dao.purgeHistory is the worst case: on 'delete and wipe history' for a track with hundreds of completions, it round-trips once per row to stamp purgedAt instead of one batched UPDATE. The three sites from the companion DB-2 finding (point_config_dao.seedDefaults, study_day_config_dao.seedDefaults, track_learning_order_dao.upsertOrder) share the identical pattern and compound this once they're wrapped in a transaction.",
+   "recommendation": "Convert each loop to `batch((b) { for (...) { b.insert(...)/b.update(...); } })`, which Drift supports for both inserts and per-row updates with distinct WHERE clauses inside one batch call.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "curriculum_scope_dao.setScopes, stage_dao.replaceStagesForTrack/replaceStagesForCurriculum, and track_dao.purgeHistory's tombstone step use batch() instead of a per-row await loop.",
+    "Existing tests for these methods pass unchanged (behavior-preserving refactor)."
+   ],
+   "labels": [
+    "DB-3",
+    "batch",
+    "performance"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-database-daos-p1",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Split completion_dao.dart, points_balance_dao.dart, track_dao.dart, and completion_dao_extended_test.dart under the 400-line AG-3 cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "core/database/daos",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/database/daos/completion_dao.dart",
+     "line": 1,
+     "quote": "(881 lines total, hand-written)"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/daos/points_balance_dao.dart",
+     "line": 1,
+     "quote": "(617 lines total, hand-written)"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/daos/track_dao.dart",
+     "line": 1,
+     "quote": "(546 lines total, hand-written)"
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/completion_dao_extended_test.dart",
+     "line": 1,
+     "quote": "(533 lines total, hand-written)"
+    }
+   ],
+   "sites": 4,
+   "why": "All four are more than 2x the 400-line hand-written-file cap. completion_dao.dart mixes cross-profile-scope-guarded reads, raw-SQL tier filtering, and grouped aggregates in one file; points_balance_dao.dart mixes balance/ledger/redemption CRUD with sync-outbox plumbing; track_dao.dart mixes lifecycle CRUD with two different multi-table transactional delete flows. Long files raise the odds that the next edit misses a nearby invariant (e.g. the DB-3 loop found in track_dao.dart's purgeHistory, buried 400 lines in).",
+   "recommendation": "Split by responsibility, e.g. completion_dao.dart into a read/aggregate DAO plus a cross-profile-guarded companion; points_balance_dao.dart into balance+ledger vs redemption vs sync-enqueue helpers; track_dao.dart into lifecycle CRUD vs the two delete/purge transactional flows.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "Each resulting file is \u2264400 lines.",
+    "A Rule-0 line-count check (e.g. `find lib -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400'`) is added to `make audit` and passes."
+   ],
+   "labels": [
+    "AG-3",
+    "file-size",
+    "hygiene"
+   ]
+  }
+ }
+]

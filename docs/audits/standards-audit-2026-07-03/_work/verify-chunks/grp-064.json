@@ -1,0 +1,189 @@
+[
+ {
+  "sourceBatch": "t1-feat-notifications-p1",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Use a clock-skew-safe timestamp, not client clock, for notification_settings updated_at LWW field",
+   "severity": "P2",
+   "confidence": "SUSPECTED",
+   "rule": "FB-2 (pattern)",
+   "area": "features/notifications/presentation/providers",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/notifications/presentation/providers/notification_providers.dart",
+     "line": 341,
+     "quote": "final updatedAtMs = DateTimeFactory.nowUtc().millisecondsSinceEpoch;"
+    },
+    {
+     "file": "learning_tracker/lib/features/notifications/presentation/providers/notification_providers.dart",
+     "line": 366,
+     "quote": "'updated_at': DateTime.fromMillisecondsSinceEpoch(\n      updatedAtMs,"
+    }
+   ],
+   "sites": 1,
+   "why": "This client-computed timestamp becomes the payload's updated_at field pushed via enqueueNotificationSettings; core/sync/merge/notification_settings_merger.dart (outside this batch) parses remote['updated_at'] to arbitrate LWW. If two devices' clocks disagree, the device with the faster/wrong clock can push a stale settings change that looks 'newer' and wins over a genuinely newer change made on a correctly-clocked device, silently reverting the user's real edit with no error surfaced anywhere. Confirming the full blast radius requires reading the outbox-drain write path (outside this batch) to see whether it overwrites this field with FieldValue.serverTimestamp() before commit.",
+   "recommendation": "Confirm whether the write path already substitutes a server timestamp before commit; if not, do so, or route the push side through the same clock-skew arbitration MergeStore.remoteIsNewer already implements for the pull side.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "A sync test with an artificially-skewed local clock demonstrates the genuinely later settings write wins regardless of which device has the faster clock."
+   ],
+   "labels": [
+    "sync",
+    "fb-2",
+    "notifications",
+    "clock-skew"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-notifications-p1",
+  "findingIndex": 8,
+  "finding": {
+   "title": "Test the real _persistNotificationSettingsToCloud signature logic, not a hand-copied reimplementation",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "test/features/notifications/presentation/providers",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/notifications/presentation/providers/notification_providers_deep_test.dart",
+     "line": 486,
+     "quote": "const signature =\n          'r:$enabled:$hour:$minute|'"
+    },
+    {
+     "file": "learning_tracker/test/features/notifications/presentation/providers/notification_providers_deep_test.dart",
+     "line": 495,
+     "quote": "String sig(int h) => 'r:true:$h:0|s:true:21:0|w:true';"
+    }
+   ],
+   "sites": 4,
+   "why": "_persistNotificationSettingsToCloud's M2 no-op-skip logic (skip pushing when the settings signature hasn't changed, to avoid bumping updated_at and clobbering a newer remote under LWW -- the exact mechanism the client-clock finding depends on) is a private function, so G1-G4 reimplement its string format by hand in the test file instead of exercising it. If a future edit to the real signature-building code drops a field or changes the separator, breaking the no-op-skip contract, G1-G4 keep passing because they never call the real function.",
+   "recommendation": "Extract the signature-building into an internal @visibleForTesting function the tests can call directly, or drive it end-to-end via notificationSettingsCloudSyncEffectProvider with a fake outbox facade asserting enqueue is/isn't called across setting changes.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "A mutation check confirms G1-G4 (or their replacement) fail when a field is removed from the real signature-building code in notification_providers.dart."
+   ],
+   "labels": [
+    "test-quality",
+    "tq-8",
+    "notifications"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-notifications-p1",
+  "findingIndex": 9,
+  "finding": {
+   "title": "Log-less catch blocks in notifications swallow exceptions with no AppLogger trail (EH-3)",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "EH-3",
+   "area": "features/notifications",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/notifications/presentation/providers/notification_providers.dart",
+     "line": 279,
+     "quote": "} catch (_) {\n      // Some tests build notification providers without full sync dependencies."
+    },
+    {
+     "file": "learning_tracker/lib/features/notifications/presentation/widgets/timezone_lifecycle_observer.dart",
+     "line": 62,
+     "quote": "} catch (_) {\n      // Timezone re-detection failed \u2014 keep existing tz.local."
+    },
+    {
+     "file": "learning_tracker/lib/features/notifications/domain/services/notification_initializer.dart",
+     "line": 47,
+     "quote": "} catch (_) {\n      // Platform query failed \u2014 leave tz.local as UTC rather than crash."
+    }
+   ],
+   "sites": 3,
+   "why": "None of the three call AppLogger, so a real production failure is indistinguishable from the expected/benign case. The outbox-facade catch is the most consequential: it catches ANY exception from the whole outboxSyncWriteFacadeProvider dependency chain -- not just the 'test doesn't override this provider' case its comment describes -- and silently disables cloud sync of notification settings for that session with zero diagnostic trail.",
+   "recommendation": "Log via AppLogger in all three; for the outbox-facade catch, narrow the caught condition so only the intended test-scaffolding case is swallowed and real errors are logged/propagated distinctly.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Each catch gains a corresponding AppLogger call.",
+    "A grep for catch (_) { or catch (e) { in lib/features/notifications without a following AppLogger call in the same block fails CI."
+   ],
+   "labels": [
+    "eh-3",
+    "error-handling",
+    "notifications"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-notifications-p1",
+  "findingIndex": 10,
+  "finding": {
+   "title": "Construct StreakAlertService only through its @riverpod provider (SM-7)",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "SM-7",
+   "area": "features/notifications/presentation/providers",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/notifications/presentation/providers/notification_providers.dart",
+     "line": 552,
+     "quote": "return StreakAlertService(\n    db: db,"
+    },
+    {
+     "file": "learning_tracker/lib/features/notifications/presentation/providers/notification_providers.dart",
+     "line": 681,
+     "quote": "final streakService = StreakAlertService(\n      db: db,"
+    }
+   ],
+   "sites": 1,
+   "why": "streakAlertServiceProvider is locked to activeProfileIdProvider's profile, so allProfilesReminderBootstrap, which must handle every inactive profile, can't use it and hand-constructs a second instance instead. A test that overrides streakAlertServiceProvider with a fake has no effect on inactive-profile scheduling, and any future required dependency added to StreakAlertService's constructor must be kept in sync by hand at both call sites.",
+   "recommendation": "Convert to a family-style provider parameterized by profileId and use it at both call sites.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "A test overriding the family provider for a specific inactive profileId observably changes allProfilesReminderBootstrap's behavior for that profile."
+   ],
+   "labels": [
+    "sm-7",
+    "riverpod",
+    "notifications"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-notifications-p1",
+  "findingIndex": 11,
+  "finding": {
+   "title": "Replace hardcoded hex Color literals with AppColors tokens in notifications UI",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "no_color_literal_outside_theme",
+   "area": "features/notifications/presentation",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/notifications/presentation/screens/notifications_screen.dart",
+     "line": 51,
+     "quote": "iconTint: const Color(0xFF2A4BB3),"
+    },
+    {
+     "file": "learning_tracker/lib/features/notifications/presentation/screens/notifications_screen.dart",
+     "line": 176,
+     "quote": "color: Color(0x12061D56),"
+    },
+    {
+     "file": "learning_tracker/lib/features/notifications/presentation/widgets/device_notification_toggle.dart",
+     "line": 122,
+     "quote": "activeTrackColor: const Color(0xFF123CA5),"
+    }
+   ],
+   "sites": 15,
+   "why": "Both files already import and correctly use AppColors/AppTheme for some colors, so the raw hex values are avoidable inconsistency, not a missing token system. A future theme change (dark mode, rebrand) requires hunting these two files for magic hex values instead of touching one theme file, and this violates the (currently non-enforcing, due to the custom_lint breakage) no_color_literal_outside_theme rule.",
+   "recommendation": "Promote the repeated literals to named AppColors tokens and reference those instead of inline Color(0x...) values.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Once custom_lint is fixed (tracked separately), dart run custom_lint reports zero no_color_literal_outside_theme hits in lib/features/notifications/."
+   ],
+   "labels": [
+    "theming",
+    "hygiene",
+    "notifications"
+   ]
+  }
+ }
+]

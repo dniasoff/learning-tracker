@@ -1,0 +1,191 @@
+[
+ {
+  "sourceBatch": "t2-lints-hooks",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Automate hooks/pre-commit installation instead of relying on manual copy/chmod instructions",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Rule 0 / AG-11",
+   "area": "hooks",
+   "evidence": [
+    {
+     "file": "hooks/README.md",
+     "line": 11,
+     "quote": "cp hooks/pre-commit .git/hooks/\nchmod +x .git/hooks/pre-commit"
+    },
+    {
+     "file": "hooks/pre-commit",
+     "line": 3,
+     "quote": "# Install: cp hooks/pre-commit .git/hooks/ && chmod +x .git/hooks/pre-commit"
+    }
+   ],
+   "sites": 2,
+   "why": "The pre-commit hook only runs if a contributor manually copies it into .git/hooks/ \u2014 there is no `make install-hooks`/`setup` target anywhere in either Makefile that does this for them, confirmed by grepping both Makefiles for 'hook' and finding no match. This repo's own `.git/hooks/pre-commit` is absent right now, empirically confirming the gate is not installed even in the reference checkout. CI backstops the same two checks (format/analyze), so this is not a silent-corruption risk, but it means every new contributor's first several commits get zero local pre-commit feedback and the guardrail is bypassable by simply never running the two setup lines \u2014 exactly the 'check that can never fire by default' pattern this audit area was asked to hunt.",
+   "recommendation": "Add a `make install-hooks` target (or a postinstall step referenced from the top-level setup docs) that performs the cp+chmod, and reference it from hooks/README.md/CONTRIBUTING.md instead of raw shell steps.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "A committed make/tool target installs hooks/pre-commit into .git/hooks/ without manual copy-paste.",
+    "hooks/README.md, CONTRIBUTING.md, learning_tracker/README.md, and docs/development-guide.md point to that target."
+   ],
+   "labels": [
+    "guardrail",
+    "hooks",
+    "onboarding",
+    "soft-skip"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-lints-hooks",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Anchor no_raw_logevent's analytics_service.dart whitelist check to its directory, not just filename",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-11 (lens: bypassable gate)",
+   "area": "custom_lints",
+   "evidence": [
+    {
+     "file": "packages/custom_lints/lib/src/rules/no_raw_logevent.dart",
+     "line": 46,
+     "quote": "if (path.endsWith('analytics_service.dart')) return true;"
+    }
+   ],
+   "sites": 1,
+   "why": "Every sibling rule anchors its 'authorised owner' exemption to a directory path (lib/core/theme/, lib/core/labels/, lib/core/auth/, lib/core/sync/, lib/core/logging/) \u2014 no_raw_logevent is the only one that matches by bare filename suffix. Today there is exactly one file named analytics_service.dart (lib/core/analytics/analytics_service.dart), so this is latent, not live, but any future file anywhere in the tree named exactly analytics_service.dart (a copy, a per-feature override, a rewrite-in-progress) automatically inherits the exemption and can call raw logEvent() unchecked, silently defeating the rule's purpose of forcing typed AnalyticsEvent helpers (PV-5 territory).",
+   "recommendation": "Change the check to `path.endsWith('core/analytics/analytics_service.dart')` (or `path.contains('lib/core/analytics/')`) to match the directory-anchored pattern used by every other rule in this package.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "no_raw_logevent.dart's _isWhitelisted requires the core/analytics/ directory segment, not just the filename.",
+    "A regression test asserts a decoy lib/features/x/analytics_service.dart is NOT whitelisted (depends on the missing test file being added per the companion finding)."
+   ],
+   "labels": [
+    "custom-lint",
+    "bypass",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-lints-hooks",
+  "findingIndex": 8,
+  "finding": {
+   "title": "Document all 9 shipped custom_lint rules in README.md; fix the 'eight rules' miscount",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-8",
+   "area": "custom_lints",
+   "evidence": [
+    {
+     "file": "packages/custom_lints/lib/learning_tracker_lints.dart",
+     "line": 3,
+     "quote": "/// Provides eight rules:"
+    },
+    {
+     "file": "packages/custom_lints/README.md",
+     "line": 159,
+     "quote": "## Rule 5 \u2014 `no_hardcoded_text_direction`"
+    }
+   ],
+   "sites": 2,
+   "why": "learning_tracker_lints.dart's doc comment claims 'eight rules' but lists and registers nine (NoColorLiteralOutsideTheme, NoCurriculumDisplayNameBypass, NoEToStringInUi, NoFeatureCrossImport, NoFirebaseOutsideCore, NoHardcodedDomainTerm, NoHardcodedTextDirection, NoRawLogEvent, NoRawTalker). README.md documents only 5 (Rules 1-5: curriculum-bypass, feature-cross-import, firebase-outside-core, raw-talker, hardcoded-text-direction) and its 'Configuration' disable-list matches only those 5. Verified via git log that no_color_literal_outside_theme (0c66c611), no_hardcoded_domain_term (e84e880f), and no_e_to_string_in_ui + no_raw_logevent (bc327fef) were each added in commits that never touched README.md \u2014 the doc was last updated in a56ac75b, before any of those three commits. A developer hitting one of the 4 undocumented rules gets no 'why it exists'/'how to fix' guidance the other 5 rules provide.",
+   "recommendation": "Add README.md sections for no_color_literal_outside_theme, no_hardcoded_domain_term, no_e_to_string_in_ui, and no_raw_logevent (same What/Why/How-to-fix format as Rules 1-5), extend the Configuration disable-list to all 9, and fix the doc-comment count.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "packages/custom_lints/README.md documents all 9 rules registered in learning_tracker_lints.dart.",
+    "learning_tracker_lints.dart's doc comment count matches the actual list length."
+   ],
+   "labels": [
+    "docs-drift",
+    "custom-lint",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-lints-hooks",
+  "findingIndex": 9,
+  "finding": {
+   "title": "Extend the Makefile RTL audit grep to cover Alignment.centerLeft/Right and TextAlign.left/right, not just EdgeInsets.only",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AX-1 / Rule 0",
+   "area": "custom_lints",
+   "evidence": [
+    {
+     "file": "packages/custom_lints/lib/src/rules/no_hardcoded_text_direction.dart",
+     "line": 38,
+     "quote": "'Alignment': {'centerLeft', 'centerRight'},\n    'TextAlign': {'left', 'right'},"
+    },
+    {
+     "file": "Makefile",
+     "line": 183,
+     "quote": "echo \"[10/12] EdgeInsets.only(left:|right:) \u2014 RTL violation (NFR16/UX-DR5)\"; \\"
+    }
+   ],
+   "sites": 1,
+   "why": "This is distinct from the already-baselined 'RTL grep only in root Makefile' duplication gap: even within the root Makefile's own RTL check [10/12], the pattern only matches `EdgeInsets\\.only([^)]*\\(left\\|right\\):` \u2014 it has no pattern for `Alignment.centerLeft/centerRight` or `TextAlign.left/right` at all (confirmed: zero hits for 'centerLeft', 'centerRight', or 'TextAlign' anywhere in either Makefile). Those two categories are exactly what no_hardcoded_text_direction.dart also bans, but since custom_lint is broken (baselined) and the Makefile grep never covered them either, hardcoded Alignment.centerLeft/Right or TextAlign.left/right usage in an RTL (Hebrew) app has NO functioning enforcement path today, not even the degraded one that exists for EdgeInsets.only.",
+   "recommendation": "Add `Alignment\\.(centerLeft|centerRight)` and `TextAlign\\.(left|right)` patterns to Makefile check [10/12] so the backstop has parity with the (currently broken) custom_lint rule's scope.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Makefile RTL check greps for Alignment.centerLeft/centerRight and TextAlign.left/right in addition to EdgeInsets.only(left:/right:).",
+    "A deliberately introduced Alignment.centerLeft usage makes `make audit` fail."
+   ],
+   "labels": [
+    "rtl",
+    "accessibility",
+    "guardrail",
+    "makefile",
+    "ax-1"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-platform-config-p1",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Fail fast on missing key.properties instead of silently debug-signing release Android builds (build.gradle.kts)",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Tier-2 area note (security) \u2014 AG-11-adjacent CI guardrail soft-skip",
+   "area": "learning_tracker/android/app/build.gradle.kts",
+   "evidence": [
+    {
+     "file": "learning_tracker/android/app/build.gradle.kts",
+     "line": 54,
+     "quote": "signingConfig = if (keystorePropertiesFile.exists()) {"
+    },
+    {
+     "file": "learning_tracker/android/app/build.gradle.kts",
+     "line": 57,
+     "quote": "signingConfigs.getByName(\"debug\")"
+    },
+    {
+     "file": ".github/workflows/build.yml",
+     "line": 87,
+     "quote": "echo \"Warning: KEYSTORE_BASE64 secret not set.\""
+    },
+    {
+     "file": ".github/workflows/build.yml",
+     "line": 106,
+     "quote": "run: flutter build apk --release"
+    }
+   ],
+   "sites": 1,
+   "why": "When KEYSTORE_BASE64 is unset (misconfigured secret, or a maintainer manually dispatches the 'Build APK' workflow with build_type=release before secrets are wired up), build.yml prints a warning but does not fail \u2014 it proceeds to 'flutter build apk --release'. Because key.properties was never written, Gradle's fallback here silently signs the 'release' APK with the shared, publicly-known Flutter debug keystore, then uploads it as a GitHub Actions artifact literally named learning-tracker-release-apk. Anyone who installs that artifact believing it's a genuine release build gets a debug-signed binary; since the debug key is identical across virtually all Flutter/Android-Studio installs, another developer's debug-signed build could later 'update' over it without Android's signature check objecting.",
+   "recommendation": "Make the release signingConfig fail fast (e.g. error(\"release build requested but key.properties is missing\")) instead of silently substituting debug signing, or at minimum have build.yml's keystore-decode step exit 1 when build_type == 'release' and the secret is empty instead of only warning.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "flutter build apk --release (or ./gradlew assembleRelease) fails loudly when key.properties/keystore secret is absent, instead of producing a debug-signed 'release' artifact.",
+    "build.yml's release job aborts (non-zero exit) when KEYSTORE_BASE64 is empty and build_type=release."
+   ],
+   "labels": [
+    "android",
+    "signing",
+    "ci",
+    "security"
+   ]
+  }
+ }
+]

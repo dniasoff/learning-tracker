@@ -1,0 +1,195 @@
+[
+ {
+  "sourceBatch": "t1-core-database-daos-p2",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Rewrite completion_dao_test.dart null-scope test \u2014 the null-check operator throws before the DAO method is ever called",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "test/core/database/daos/completion_dao_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/database/daos/completion_dao_test.dart",
+     "line": 233,
+     "quote": "test('getAllCompletions throws AssertionError in debug when scope is null '"
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/completion_dao_test.dart",
+     "line": 243,
+     "quote": "scope: nullableScope!,"
+    }
+   ],
+   "sites": 1,
+   "why": "Dart evaluates argument expressions before invoking the function, so `scope: nullableScope!` throws TypeError the instant the null-check operator runs \u2014 internalGetAllCompletionsCrossProfile (and any internal _assertCrossProfileScope guard inside it) is never entered. The test's own docstring claims it 'verifies the assert fires in debug mode,' but it actually only verifies core Dart null-safety semantics, unrelated to any code in completion_dao.dart. If the DAO's internal scope guard were deleted entirely, this test would still pass unchanged, so it provides zero regression coverage for the behavior it claims to protect.",
+   "recommendation": "Delete this test (Dart's null-safety already makes a null CrossProfileScope unreachable through the typed public API, so there is nothing left to regress) or rewrite it to genuinely exercise the DAO's internal guard via a testable seam.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Test either removed with a comment explaining the language-level reason, or rewritten so it demonstrably enters completion_dao.dart code before throwing",
+    "No remaining test claims to verify an internal assert that it cannot actually reach"
+   ],
+   "labels": [
+    "testing",
+    "tautological-test",
+    "coverage-gap"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-database-daos-p2",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Split learning_ledger_dao_test.dart and points_balance_dao_test.dart below the 400-line AG-3 cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "test/core/database/daos \u2014 file size",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/database/daos/learning_ledger_dao_test.dart",
+     "line": 1,
+     "quote": "import 'package:drift/drift.dart' hide isNotNull, isNull;"
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/points_balance_dao_test.dart",
+     "line": 1,
+     "quote": "import 'package:flutter_test/flutter_test.dart';"
+    }
+   ],
+   "sites": 2,
+   "why": "learning_ledger_dao_test.dart is 446 lines and points_balance_dao_test.dart is 476 lines \u2014 both hand-written, both over the AG-3 400-line cap. Every comparable DAO in this same directory (goal, stage, learning_order, curriculum_scope) already splits its tests into a `_test.dart` + `_extra_test.dart`/`_extended_test.dart` pair specifically to stay under the cap, so these two files are the outliers that never got split and are now the largest/hardest-to-navigate files in the directory.",
+   "recommendation": "Split each file the same way sibling DAOs in this directory already are \u2014 e.g. move the D14 cloud-sync-enqueue group out of points_balance_dao_test.dart into points_balance_dao_sync_test.dart, and split learning_ledger_dao_test.dart's tail groups into a companion file \u2014 following the existing naming convention.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "learning_ledger_dao_test.dart and points_balance_dao_test.dart both \u2264400 lines after split",
+    "New split files follow the existing _extra_test.dart/_extended_test.dart naming convention used elsewhere in this directory",
+    "Rule-0 checker: `find lib test -name '*.dart' ! -name '*.g.dart' | xargs wc -l | awk '$1>400{print}'` returns 0 hits for these two files"
+   ],
+   "labels": [
+    "hygiene",
+    "file-size",
+    "AG-3"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-database-daos-p3",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Split track_dao_test.dart, track_dao_extended_test.dart, and track_scoped_dao_test.dart under the 400-line AG-3 cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "test/core/database/daos",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/database/daos/track_dao_extended_test.dart",
+     "line": 1,
+     "quote": "/// Extended [TrackDao] tests covering paths not hit by track_dao_test.dart."
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/track_dao_test.dart",
+     "line": 1,
+     "quote": "import 'package:drift/drift.dart' hide isNotNull, isNull;"
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/track_scoped_dao_test.dart",
+     "line": 1,
+     "quote": "/// Tests for track-scoped DAO methods added in Story 20.2."
+    }
+   ],
+   "sites": 3,
+   "why": "track_dao_extended_test.dart is 411 lines, track_dao_test.dart is 412 lines, and track_scoped_dao_test.dart is 465 lines \u2014 all hand-written, none generated, all over the AG-3 400-line cap. The directory already has a working pattern for staying under the cap (splitting into _extra/_delete/_deactivate/_last_curriculum_guard files); these three just grew past it without a further split.",
+   "recommendation": "Split each file's largest groups into a new sibling file (e.g. track_dao_test.dart's 'R6-11: purgeHistory curriculumId isolation' group, or track_scoped_dao_test.dart's PointConfigDao/LearningLedgerDao groups) following the existing _extra/_extended naming convention already used in this directory.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "All three files are \u2264400 lines after splitting.",
+    "A Rule-0 line-count checker for AG-3 is added to make audit (e.g. `find lib test -name '*.dart' ! -name '*.g.dart' -exec wc -l {} +` gated at 400) since none currently exists."
+   ],
+   "labels": [
+    "hygiene",
+    "file-size"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-database-daos-p3",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Fix track_dao_extended_test.dart's deactivateTrack group \u2014 neither test calls deactivateTrack",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "test/core/database/daos",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/database/daos/track_dao_extended_test.dart",
+     "line": 76,
+     "quote": "test('deactivates an existing active non-personal track', () async {"
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/track_dao_extended_test.dart",
+     "line": 93,
+     "quote": "test('deactivateTrack with non-existent track is a no-op', () async {\n      await expectLater(() async {"
+    }
+   ],
+   "sites": 2,
+   "why": "Line 76's test is titled 'deactivates an existing active non-personal track' but its body only inserts a track and asserts getActiveTracks is non-empty \u2014 trackDao.deactivateTrack is never invoked. Line 93's test wraps a literally empty async closure (`() async {}()`) in `expectLater(..., completes)`, which is trivially true regardless of any DAO behavior \u2014 it doesn't call the DAO at all. Both give false confidence that deactivateTrack's non-existent-track and active-track paths are covered in this file; a future regression in deactivateTrack that this specific file's name implies it guards would not be caught here (coverage happens to survive today only because track_dao_test.dart, track_dao_delete_test.dart, and track_dao_deactivate_test.dart independently, correctly test the same scenarios).",
+   "recommendation": "Either make both tests call db.trackDao.deactivateTrack(...) and assert on the resulting row state, or delete the group outright \u2014 track_dao_deactivate_test.dart:29-37 already covers the non-existent-track case correctly and track_dao_test.dart/track_dao_delete_test.dart already cover the activate-then-deactivate case.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Every test in track_dao_extended_test.dart's deactivateTrack group either calls the method it names or is removed.",
+    "`dart test test/core/database/daos/track_dao_extended_test.dart` still passes after the fix."
+   ],
+   "labels": [
+    "test-quality",
+    "vacuous-test"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-database-daos-p3",
+  "findingIndex": 3,
+  "finding": {
+   "title": "De-duplicate the InvalidTrackOperationException.toString and W3.22 deactivate smoke tests across 3 track_dao test files",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-1 (Fowler duplication)",
+   "area": "test/core/database/daos",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/database/daos/track_dao_deactivate_test.dart",
+     "line": 45,
+     "quote": "test('toString includes the message', () {\n      const ex = InvalidTrackOperationException('test error message');"
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/track_dao_delete_test.dart",
+     "line": 320,
+     "quote": "test('InvalidTrackOperationException.toString contains message', () {\n      const e = InvalidTrackOperationException('test message');"
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/track_dao_test.dart",
+     "line": 48,
+     "quote": "test('deactivateTrack retires (no longer throws) \u2014 W3.22', () async {\n      // W3.22: deactivateTrack now delegates to retireTrack; it no longer"
+    },
+    {
+     "file": "learning_tracker/test/core/database/daos/track_dao_delete_test.dart",
+     "line": 309,
+     "quote": "test('retires (no longer throws) \u2014 W3.22', () async {\n      // W3.22: deactivateTrack now delegates to retireTrack instead of"
+    }
+   ],
+   "sites": 4,
+   "why": "Two independent tests are copy-pasted verbatim (same logic, same comments, trivially different literals) into separate files: InvalidTrackOperationException.toString is tested identically in track_dao_deactivate_test.dart and track_dao_delete_test.dart, and the activate-then-deactivate W3.22 smoke test is tested identically in track_dao_delete_test.dart and track_dao_test.dart. Each pair evidently came from independent 'add missing coverage' passes that didn't check what already existed. No functional risk today, but the exception-message format or the W3.22 behavior now needs updating in two places to stay in sync, and it inflates the very AG-3 line counts flagged separately.",
+   "recommendation": "Keep one canonical copy of each test (e.g. in track_dao_test.dart for the W3.22 case, track_dao_deactivate_test.dart for the exception case) and delete the other copy.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "InvalidTrackOperationException.toString is tested in exactly one file in this directory.",
+    "The activate-then-deactivateTrack W3.22 smoke test is tested in exactly one file in this directory."
+   ],
+   "labels": [
+    "test-quality",
+    "duplication"
+   ]
+  }
+ }
+]

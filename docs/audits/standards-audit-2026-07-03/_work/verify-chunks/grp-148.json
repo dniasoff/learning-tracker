@@ -1,0 +1,178 @@
+[
+ {
+  "sourceBatch": "t1-test-cross-p5",
+  "findingIndex": 8,
+  "finding": {
+   "title": "Add Locale('he') RTL coverage for GoalSetupForm/GoalSetupScreen and StudyDaysReadOnly",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-3",
+   "area": "test/features (widget)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/tutor_pin_dialog_and_goal_setup_l1_test.dart",
+     "line": 162,
+     "quote": "Locale locale = const Locale('en'),"
+    },
+    {
+     "file": "learning_tracker/test/features/tutor_pin_dialog_and_goal_setup_l1_test.dart",
+     "line": 401,
+     "quote": "locale: const Locale('he'),"
+    },
+    {
+     "file": "learning_tracker/test/features/tracks_studydays_and_content_hierarchy_l1_test.dart",
+     "line": 511,
+     "quote": "_buildStudyDaysReadOnlyApp(programName: 'Daf Yomi', onContinue: () {}),"
+    }
+   ],
+   "sites": 2,
+   "why": "_buildGoalFormHarness/_buildGoalScreenHarness already accept a `locale` parameter, but of the ~15 tests across groups D-I (goal-type switching, deadline mode, pace mode with Amudim/Dafim/Perakim/Pesukim unit-picker pills, submission, screen wrapper) not one passes Locale('he') \u2014 the single Hebrew test in this 1407-line file (line 401) covers only the unrelated Tutor PIN dialog. Likewise StudyDaysReadOnly (tests 10-14) has no RTL variant even though its sibling StudyDaysEditable does (test #9). TQ-3 exists precisely because 'RTL-only layout and overflow bugs\u2014which this app ships fixes for every audit wave\u2014are invisible to LTR-only tests', and GoalSetupForm's slider + segmented unit-picker pills are exactly the kind of layout most prone to RTL overflow.",
+   "recommendation": "Add at least one Locale('he') smoke test per screen (mirroring the existing StudyDaysEditable/ContentHierarchyScreen/TutorPinVerificationDialog pattern already in this batch) asserting no overflow/crash for GoalSetupForm (pace mode with a unit picker) and for StudyDaysReadOnly.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "at least one testWidgets case per screen pumps with locale: const Locale('he') and asserts find.byType(Scaffold) (or equivalent) renders without a FlutterError/overflow"
+   ],
+   "labels": [
+    "TQ-3",
+    "i18n",
+    "RTL",
+    "coverage-gap"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-test-cross-p5",
+  "findingIndex": 9,
+  "finding": {
+   "title": "Deduplicate the MockBookmarkRepository class defined identically in two test files",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-4",
+   "area": "test/integration",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/integration/bulk_prior_completion_b6_b8_test.dart",
+     "line": 85,
+     "quote": "class MockBookmarkRepository extends Mock implements BookmarkRepository {}"
+    },
+    {
+     "file": "learning_tracker/test/features/onboarding/domain/services/bulk_prior_completion_service_test.dart",
+     "line": 23,
+     "quote": "class MockBookmarkRepository extends Mock implements BookmarkRepository {}"
+    }
+   ],
+   "sites": 2,
+   "why": "The identical public top-level mock class is redefined verbatim in two files that both exercise BulkPriorCompletionService, instead of living once in test/mocks/mock_repositories.dart per this repo's own documented shared-mocks convention (testing-guide.md). Harmless today since both copies are byte-identical, but the two can silently drift (one updated for a BookmarkRepository interface change, the other missed) with no compiler signal since they're in separate libraries.",
+   "recommendation": "Move MockBookmarkRepository into test/mocks/mock_repositories.dart and import it from both call sites.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep -rn 'class MockBookmarkRepository' test/ returns exactly one definition, imported by both former call sites"
+   ],
+   "labels": [
+    "AG-4",
+    "duplication",
+    "mocktail"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-test-cross-p6",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Delete or reactivate the dead tautological placeholders in v15_to_v16_test.dart's skipped group",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-7/TQ-8",
+   "area": "test/migration",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/migration/v15_to_v16_test.dart",
+     "line": 69,
+     "quote": "true, // W3.22: derivedFromEvents removed \u2014 placeholder"
+    },
+    {
+     "file": "learning_tracker/test/migration/v15_to_v16_test.dart",
+     "line": 112,
+     "quote": "true, // W3.22: derivedFromEvents removed \u2014 placeholder"
+    }
+   ],
+   "sites": 2,
+   "why": "Both assertions are dead literals left after the derived_from_events column was removed: line 68-72 is `expect(true, isFalse, ...)` which will FAIL immediately the instant the group's `skip:` is lifted, and line 111-116 is `expect(true, isTrue, ...)` which passes forever and tests nothing. This repo's own root CLAUDE.md documents the reactivation workflow as \"remove the skip: parameter... replace the empty () {} bodies with real assertions\" \u2014 implying skipped tests should carry empty bodies, exactly the clean pattern used two files over in v18_to_v19_test.dart in this same batch. Worse, two of the four tests in this same skipped group (duplicate-commit dedup, migration-backfill row survival) contain real, still-valid assertions unrelated to the removed field and could be unskipped today, but sit dark under one blanket skip.",
+   "recommendation": "Delete the two placeholder tests (or rewrite them against whatever invariant superseded derived_from_events), and split the two tests with real assertions out of the skipped group so they run in CI now.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep for `expect(true, isFalse` / `expect(true, isTrue` with a `// placeholder` marker in test/ returns zero hits",
+    "the duplicate-commit and migration-backfill tests in this file run unskipped in CI"
+   ],
+   "labels": [
+    "test-quality",
+    "dead-code",
+    "migration"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-test-cross-p6",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Replace DateTime.now() with the DateTimeFactory clock seam in stage_sync_test.dart's track fixture",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6",
+   "area": "test/integration",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/integration/stage_sync_test.dart",
+     "line": 21,
+     "quote": "stateChangedAt: DateTime.now(),"
+    },
+    {
+     "file": "learning_tracker/test/integration/stage_sync_test.dart",
+     "line": 22,
+     "quote": "activatedAt: DateTime.now(),"
+    }
+   ],
+   "sites": 2,
+   "why": "The `_insertTrack` helper calls the real wall clock instead of `DateTimeFactory.nowUtc()` \u2014 the established deterministic seam (routes through the swappable `LocalDayClock`) that every sibling file in this same batch uses (v16_to_v17_test.dart, v17_to_v18_test.dart, restore_skip_onboarding_test.dart, etc.). Neither field is currently asserted on so it doesn't flake today, but it's a landmine: the moment an assertion is added against stateChangedAt/activatedAt, or stage-scheduling logic branches on track age, the test becomes wall-clock-dependent and can fail non-deterministically near day/DST boundaries or under a frozen-clock CI harness.",
+   "recommendation": "Swap both fields to `DateTimeFactory.nowUtc()` (or a fixed `DateTime.utc(...)` literal), matching every other file in this batch.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep for `DateTime.now()` in test/integration/stage_sync_test.dart returns zero hits"
+   ],
+   "labels": [
+    "test-quality",
+    "hermetic",
+    "wall-clock"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-test-cross-p6",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Tighten v16_to_v17_test.dart's FK-violation assertion beyond throwsA(anything)",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "test/migration",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/migration/v16_to_v17_test.dart",
+     "line": 121,
+     "quote": "throwsA(anything),"
+    }
+   ],
+   "sites": 1,
+   "why": "The test's stated purpose is \"C2: FK enforcement must reject completion with non-existent profileId\", but `throwsA(anything)` is satisfied by ANY thrown object \u2014 a coincidental exception from unrelated test-setup breakage would make this pass without the FK constraint under test ever being exercised, silently losing the regression coverage it claims to provide. Every later migration-gate test in this same directory that checks a similar constraint (v25_to_v27_test.dart, v27_to_v28_test.dart) uses a typed matcher (`isA<SqliteException>()`/`isA<Exception>()`), so this is a real regression in assertion discipline, not a stylistic choice.",
+   "recommendation": "Narrow to `throwsA(isA<SqliteException>())` (or the concrete exception type Drift/sqlite3 raises for an FK violation), matching the pattern used elsewhere in this same test directory.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "v16_to_v17_test.dart's FK test asserts a specific exception type, not `anything`"
+   ],
+   "labels": [
+    "test-quality",
+    "weak-assertion"
+   ]
+  }
+ }
+]

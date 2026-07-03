@@ -1,0 +1,216 @@
+[
+ {
+  "sourceBatch": "t1-feat-dashboard-p1",
+  "chunk": "grp-046",
+  "finding": {
+   "title": "Guard ref.watch/ref.read after in-flight awaits in dashboard_providers.dart (SM-4)",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "SM-4",
+   "area": "learning_tracker/lib/features/dashboard/presentation/providers/dashboard_providers.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/dashboard/presentation/providers/dashboard_providers.dart",
+     "line": 142,
+     "quote": "final track = await db.trackDao.getTrackById(trackId);"
+    },
+    {
+     "file": "learning_tracker/lib/features/dashboard/presentation/providers/dashboard_providers.dart",
+     "line": 155,
+     "quote": "final totalItems = await ref.watch(\n    scopedItemCountProvider(curriculum).future,"
+    },
+    {
+     "file": "learning_tracker/lib/features/dashboard/presentation/providers/dashboard_providers.dart",
+     "line": 323,
+     "quote": "await ref.read(syncWriteFacadeProvider)?.pushGamificationSettingsSnapshot();"
+    },
+    {
+     "file": "learning_tracker/lib/features/dashboard/presentation/providers/dashboard_providers.dart",
+     "line": 439,
+     "quote": "final totalItems = await ref.watch(\n    scopedItemCountProvider(curriculum).future,"
+    }
+   ],
+   "sites": 4,
+   "why": "dashboardTrackCompletionPercentage, dashboardCompletionPercentage, stripStockMilestonesEffect, and dashboardPaceStatus each call ref.watch/ref.read after an earlier await (a Drift DB read) with no ref.mounted check in between. If any of these autoDispose family providers loses its last listener while that DB read is still in flight \u2014 e.g. the user swipes the active-tracks carousel past a card or leaves the dashboard mid-load \u2014 the later ref call throws UnmountedRefException, an uncaught exception inside the async provider body. The same file's dashboardChildNextReward provider (line 343) already guards this exact hazard with `if (!ref.mounted) return null;`, proving the team knows the failure mode; it just isn't applied consistently.",
+   "recommendation": "Add `if (!ref.mounted) return <default>;` immediately after the await that precedes the later ref access in each of the four functions, mirroring the existing guard in dashboardChildNextReward.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "A targeted test that disposes the ProviderContainer (or drops the last listener) mid-await for each of the four providers confirms no UnmountedRefException escapes.",
+    "A grep/lint check for 'ref.watch|ref.read after await without a preceding ref.mounted guard' is added to make audit or riverpod_lint config."
+   ],
+   "labels": [
+    "riverpod",
+    "SM-4",
+    "dashboard",
+    "crash-risk"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epics-01-08",
+  "chunk": "grp-133",
+  "finding": {
+   "title": "Reconcile AG-3's 400-line cap with the 'one file per epic' story-acceptance convention",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "test/story_acceptance",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_07_dashboard_test.dart",
+     "line": 1224,
+     "quote": "(file total: 1224 lines \u2014 3.1x the AG-3 cap)"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_06_scheduler_test.dart",
+     "line": 1038,
+     "quote": "(file total: 1038 lines)"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/track_lifecycle_test.dart",
+     "line": 970,
+     "quote": "(file total: 970 lines)"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_02_content_test.dart",
+     "line": 936,
+     "quote": "(file total: 936 lines)"
+    },
+    {
+     "file": "learning_tracker/docs/coding-standards.md",
+     "line": 513,
+     "quote": "find lib test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400'"
+    }
+   ],
+   "sites": 8,
+   "why": "coding-standards.md AG-3 caps hand-written Dart files at 400 lines, and its own proposed [Pending] checker explicitly globs both `lib` and `test` \u2014 there is no story-acceptance carve-out (unlike AG-5, which explicitly exempts story-acceptance suites from mirroring). learning_tracker/CLAUDE.md simultaneously documents 'One file per epic' as the required structure for test/story_acceptance/epic_NN_*.dart files. The two written standards contradict each other: an epic file that starts under 400 lines is guaranteed to cross the cap as later stories are appended, which has already happened to 8 of this batch's 10 files (epic_01 at 392 and epic_05 at 381 are the only ones still under), up to 3x over at epic_07_dashboard_test.dart (1224 lines). Neither document currently resolves the conflict, so AG-3 is guaranteed to keep failing by design for this directory once its checker ships.",
+   "recommendation": "Either add a story-acceptance carve-out to AG-3 in coding-standards.md (mirroring AG-5's existing one), or change the CLAUDE.md convention to one-file-per-story so AG-3 stays enforceable as written. This is a guardrail-doc change (AG-11) and needs human review either way, not a unilateral file split.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "coding-standards.md AG-3 and learning_tracker/CLAUDE.md's story-acceptance file convention no longer contradict each other",
+    "The Rule-0 checker at coding-standards.md:513 passes for test/story_acceptance/** or has a documented, scoped exemption"
+   ],
+   "labels": [
+    "hygiene",
+    "standards-conflict",
+    "AG-3"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-scheduler-p3",
+  "chunk": "grp-095",
+  "finding": {
+   "title": "Split the four scheduler_engine test files that exceed AG-3's 400-line cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3 (hand-written Dart files <=400 lines)",
+   "area": "features/scheduler/domain/services tests",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/scheduler/domain/services/scheduler_engine_test.dart",
+     "line": 1,
+     "quote": "import 'package:flutter_test/flutter_test.dart';"
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/domain/services/scheduler_engine_schedule_types_test.dart",
+     "line": 1,
+     "quote": "// Extra coverage for SchedulerEngine \u2014 weekly and rolling schedule types."
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/domain/services/scheduler_engine_self_paced_test.dart",
+     "line": 1,
+     "quote": "import 'package:flutter_test/flutter_test.dart';"
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/domain/services/scheduler_engine_dni346_test.dart",
+     "line": 1,
+     "quote": "/// Unit tests for Story 26.3 (DNI-346) scheduler bug fixes."
+    }
+   ],
+   "sites": 4,
+   "why": "AG-3 caps hand-written Dart files (tests included, generated exempt) at 400 lines; these four all exceed it: scheduler_engine_test.dart 516, scheduler_engine_schedule_types_test.dart 507, scheduler_engine_self_paced_test.dart 431, scheduler_engine_dni346_test.dart 553 lines (wc -l, confirmed). Content quality in all four is otherwise good \u2014 distinct scenarios, hermetic hand-rolled fakes, strong exact-value assertions \u2014 the size comes from accretion across fix waves without ever re-splitting. Large files raise merge-conflict surface and make it harder for a contributor to find which of several hundred tests already covers a given branch of the 747-line scheduler_engine.dart they collectively exercise (itself already over AG-3, but that lib file is outside this batch).",
+   "recommendation": "Split by the group()s each file already has: e.g. scheduler_engine_dni346_test.dart's five 'Fix N' groups each become their own file; scheduler_engine_test.dart's legacy-pacing vs custom-order/priority-ranking groups split similarly.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "`wc -l` on every hand-written file under test/features/scheduler/ is <=400, matching the AG-3 [P]ending checker's intended threshold once implemented."
+   ],
+   "labels": [
+    "ag-3",
+    "file-size",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-settings-p3",
+  "chunk": "grp-104",
+  "finding": {
+   "title": "Route account_actions_sheet.dart's Sign Out / Delete Account icon glyphs through a theme token instead of a Colors.white literal",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "no_color_literal_outside_theme (custom_lint, currently broken/unenforced per novelty filter item 4)",
+   "area": "features/settings/presentation/widgets (account actions sheet)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/settings/presentation/widgets/account_actions_sheet.dart",
+     "line": 225,
+     "quote": "color: Colors.white,"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/presentation/widgets/account_actions_sheet.dart",
+     "line": 246,
+     "quote": "color: Colors.white,"
+    },
+    {
+     "file": "learning_tracker/test/features/settings/presentation/widgets/an7_destructive_icon_contrast_test.dart",
+     "line": 207,
+     "quote": "equals(Colors.white),"
+    }
+   ],
+   "sites": 2,
+   "why": "account_actions_sheet.dart's Sign Out and Delete Account icon glyphs are Colors.white literals, even though the rest of the same file consistently routes color through AppTheme.*/AppColors.*/theme.colorScheme.* (e.g. lines 128,140,152,160,178,188,204,261). an7_destructive_icon_contrast_test.dart pins this literal as the expected value rather than a themed constant, so the AN-7 contrast fix has no named, reusable 'high-contrast-on-errorContainer' token \u2014 a future theme edit (e.g. a dark-mode errorContainer swap) has no single place to update and could silently reintroduce an AN-7-class invisible-icon bug elsewhere that reuses the same pattern without the literal.",
+   "recommendation": "Add a named theme constant (e.g. an AppTheme.onErrorContainer-style token fixed to a contrasting value) and reference it at both call sites instead of the Colors.white literal; update an7_destructive_icon_contrast_test.dart to assert against that constant.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "account_actions_sheet.dart's two destructive-icon color values reference a named theme constant, not a Colors.white literal.",
+    "`dart run custom_lint` (once its analyzer-version crash is fixed) reports no no_color_literal_outside_theme violation for these two lines."
+   ],
+   "labels": [
+    "custom-lint",
+    "color-literal",
+    "design-system"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-sync-p2",
+  "chunk": "grp-108",
+  "finding": {
+   "title": "Split test/sync/merge/lww_symmetric_test.dart (1237 lines) \u2014 3x over the AG-3 400-line cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "test/sync/merge/lww_symmetric_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/sync/merge/lww_symmetric_test.dart",
+     "line": 1,
+     "quote": "/// Phase 3 LWW symmetry tests for every LWW merger."
+    }
+   ],
+   "sites": 1,
+   "why": "1237 hand-written lines \u2014 three times the 400-line ratchet the standard justifies as an 'agent read budget' \u2014 is why this file needed three separate Read calls during this audit. At this length the per-merger coverage is also uneven in a way that's hard to eyeball: some merger groups (BookmarkMerger, SettingsMerger, ProfileProgramMerger) get all 4 LWW invariants tested, others (LearnerProfileMerger, GoalMerger, NotificationSettingsMerger, GamificationSettingsMerger, UiPreferencesMerger) get only 2 \u2014 defensible here since the shared remoteIsNewer comparator is separately exhaustively unit-tested at the bottom of the same file, but that reasoning is only discoverable by reading the whole 1237 lines.",
+   "recommendation": "Split into one file per merger under a shared lww_symmetric/ directory, or convert to a single data-driven test iterating a List<MergerCase> table (merger instance + row builder + EntityKind + naturalKey) through the same assertions \u2014 shrinks the file and makes the per-merger coverage matrix explicit instead of implicit.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "the AG-3 checker (`find lib test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400'`) no longer lists lww_symmetric_test.dart"
+   ],
+   "labels": [
+    "hygiene",
+    "test-structure",
+    "ag-3"
+   ]
+  }
+ }
+]

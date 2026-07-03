@@ -1,0 +1,200 @@
+[
+ {
+  "sourceBatch": "t1-feat-tutoring-p1",
+  "findingIndex": 10,
+  "finding": {
+   "title": "Replace hardcoded Color/Colors literals with theme tokens across tutoring screens",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "custom_lint no_color_literal_outside_theme",
+   "area": "features/tutoring/presentation/screens",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/tutor_audit_log_screen.dart",
+     "line": 454,
+     "quote": "TutorAuditAction.configChanged => Colors.blue.shade600,"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/accept_invite_screen.dart",
+     "line": 323,
+     "quote": "backgroundColor: Color(0xFFE8E0FF),"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/decline_invite_screen.dart",
+     "line": 217,
+     "quote": "backgroundColor: AppColors.statusWarningSoft,"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/decline_invite_screen.dart",
+     "line": 221,
+     "quote": "color: Color(0xFFB07A00),"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/manage_tutors_screen.dart",
+     "line": 464,
+     "quote": "? Colors.green.shade600\n        : Colors.orange.shade700;"
+    }
+   ],
+   "sites": 33,
+   "why": "~33 sites across 6 screens (tutor_audit_log_screen.dart 11, accept_invite_screen.dart 8, decline_invite_screen.dart 6, invite_tutor_screen.dart 4, manage_tutors_screen.dart 2, manage_grants_screen.dart 2) use inline Color(0xFF...)/Colors.x.shadeN instead of AppColors/theme.colorScheme, despite AppColors already existing and being used one line away in decline_invite_screen.dart (AppColors.statusWarningSoft next to a raw Color(0xFFB07A00) for the same icon). This is exactly what the repo's own (currently non-enforcing) no_color_literal_outside_theme custom lint targets, and blocks a future dark-mode/theme change from reaching these surfaces consistently.",
+   "recommendation": "Add the missing semantic tokens to AppColors/AppTheme (status colors per TutorAuditAction, success/warning circles) and replace the literals; this is likely a repo-wide pattern worth fixing via the lint once custom_lint is unbroken, not just in tutoring.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "Once custom_lint is fixed, `dart run custom_lint` reports zero no_color_literal_outside_theme hits under lib/features/tutoring/."
+   ],
+   "labels": [
+    "theming",
+    "custom-lint",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tutoring-p1",
+  "findingIndex": 11,
+  "finding": {
+   "title": "Guard int.parse(sel.profileId) in tutored_write_router.dart",
+   "severity": "P3",
+   "confidence": "SUSPECTED",
+   "rule": "EH-3/EH-4 (unhandled exception type breaks the class's stated contract)",
+   "area": "features/tutoring/data/routers",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tutoring/data/routers/tutored_write_router.dart",
+     "line": 84,
+     "quote": "profileId: int.parse(sel.profileId),"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/data/routers/tutored_write_router.dart",
+     "line": 231,
+     "quote": "final profileIdInt = int.parse(sel.profileId);"
+    }
+   ],
+   "sites": 10,
+   "why": "The class doc says 'CF failures... are re-thrown as TutorWriteException so callers can surface a clear snackbar,' but int.parse(sel.profileId) is called unguarded at 10 sites before any CF call happens. If profileId is ever non-numeric (malformed TutoredProfileSelection, future ID-scheme change), a raw uncaught FormatException propagates instead of the documented TutorWriteException \u2014 no AppLogger context, and callers that specifically catch TutorWriteException per this class's contract won't catch it. No test in s1_tutored_write_router_test.dart exercises a non-numeric profileId, so this is unconfirmed in practice.",
+   "recommendation": "Parse once via a small helper (e.g. `_profileIdOrThrow(sel)`) that logs via AppLogger and throws a typed TutorWriteException on failure, matching the class's documented error contract; call it once instead of int.parse at each of the 10 sites.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "A test that constructs a TutoredProfileSelection with a non-numeric profileId and calls any pushX method asserts a TutorWriteException (not FormatException) is thrown and logged."
+   ],
+   "labels": [
+    "error-handling",
+    "robustness",
+    "duplication"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tutoring-p1",
+  "findingIndex": 12,
+  "finding": {
+   "title": "Add ref.mounted guards after awaits in manage_tutors_providers.dart's incomingTutorGrantsProvider",
+   "severity": "P3",
+   "confidence": "SUSPECTED",
+   "rule": "SM-4 (ref.mounted after await)",
+   "area": "features/tutoring/presentation/providers",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/providers/manage_tutors_providers.dart",
+     "line": 106,
+     "quote": "final cfResult = await useCase.callWithStatus();"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/providers/manage_tutors_providers.dart",
+     "line": 118,
+     "quote": ".read(activeTutoredProfileSelectionProvider)\n        ?.grantId;"
+    }
+   ],
+   "sites": 1,
+   "why": "incomingTutorGrantsProvider watches `authStateProvider.select((s) => s.currentUser?.firebaseUid)` and then awaits two network/DB calls before touching `ref.read` three more times (lines 118, 124, 131). If the watched uid changes mid-flight (e.g. the tutor signs out while this fetch is in progress \u2014 the exact account-switch race this file's own comments say it must defend against), Riverpod 3 tears down this build invocation and a subsequent `ref.read` throws UnmountedRefException instead of the intended AsyncError/graceful outcome. No `ref.mounted` check guards any of the three post-await reads.",
+   "recommendation": "Check `if (!ref.mounted) return const <TutorGrant>[];` (or equivalent) immediately after each await before touching ref again, mirroring the SM-4 pattern used elsewhere in Notifier methods.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "A test that invalidates authStateProvider's uid while incomingTutorGrantsProvider's future is pending does not throw UnmountedRefException."
+   ],
+   "labels": [
+    "riverpod",
+    "SM-4",
+    "race-condition"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tutoring-p1",
+  "findingIndex": 13,
+  "finding": {
+   "title": "Reconcile tutoring test-file naming and duplication with AG-5 mirroring",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-5 (test/ mirrors lib/ 1:1)",
+   "area": "test/features/tutoring",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/tutoring",
+     "line": 1,
+     "quote": "ws3_3a.._3h, s1_, s2_, s4_, r3_, t3_, f3_, ga5_, w3_41_, iter10_ prefixed files, no lib/ mirror"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/firestore_tutor_grant_repository_test.dart",
+     "line": 1,
+     "quote": "// FirestoreTutorGrantRepository unit tests \u2014 V2-R3 C3"
+    }
+   ],
+   "sites": 1,
+   "why": "Roughly 30 of the ~34 files directly under test/features/tutoring/ are named after a workstream/ticket id (ws3_3a...ws3_3h, s1_, s2_, s4_, r3_, t3_, f3_, ga5_, w3_41_, iter10_) rather than mirroring a lib/features/tutoring/** path, unlike test/features/tutoring/data/repositories/ and domain/use_cases/, which do mirror. This makes 'where is the test for file X' non-obvious (this audit had to grep several ways to find revoke/rescind/resign coverage) and has produced an actual duplicate: firestore_tutor_grant_repository_test.dart exists both flat (173 lines, largely tautological \u2014 see the TQ-8 finding) and at the correctly mirrored data/repositories/ path (1307 lines, the real suite), with no cross-reference between them.",
+   "recommendation": "Either formally document tutoring's workstream-based test naming as an accepted exception in coding-standards.md, or migrate the scenario tests under mirrored subpaths with the workstream id kept as a comment/tag; delete or merge the flat firestore_tutor_grant_repository_test.dart into its mirrored sibling.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "coding-standards.md states whether workstream-named acceptance-style tests are an accepted AG-5 exception (like story_acceptance/), or the tutoring test directory is reorganized to mirror lib/.",
+    "Only one firestore_tutor_grant_repository_test.dart remains."
+   ],
+   "labels": [
+    "test-organization",
+    "AG-5",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tutoring-p2",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Localize TutorPinValidationError.message instead of leaking raw English into tutor PIN screens",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "EH-5 / AX-2",
+   "area": "features/tutoring/domain+presentation",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tutoring/domain/services/tutor_pin_service.dart",
+     "line": 93,
+     "quote": "return const TutorPinValidationError(\n        message: 'Tutor PIN must be exactly 4 numeric digits.',"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_setup_screen.dart",
+     "line": 130,
+     "quote": "_errorMessage = message;"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_entry_gate.dart",
+     "line": 114,
+     "quote": "_errorMessage = message;"
+    }
+   ],
+   "sites": 3,
+   "why": "TutorPinValidationError carries a hand-written English message that both tutor_pin_setup_screen.dart and tutor_pin_entry_gate.dart assign straight into _errorMessage with no AppLocalizations resolution. The on-screen numpad only ever calls verifyTutorPin/setTutorPin with exactly 4 digits, so this specific branch is currently unreachable via the shipped UI \u2014 but it is a live landmine: any future caller (automation, a text-entry fallback, a reused validator) will render untranslated English to Hebrew users. This is the exact pattern already fixed for TutorGrantFailure elsewhere in the same feature, so the fix here is a straightforward extension of an established precedent.",
+   "recommendation": "Replace the message field with a stable code/enum and resolve it via AppLocalizations in both screens, mirroring the TutorGrantFailure fix.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "TutorPinValidationError carries a code, not a literal English string",
+    "tutor_pin_setup_screen.dart and tutor_pin_entry_gate.dart resolve the code via AppLocalizations with EN+HE parity",
+    "a widget test forces the validation-error branch (e.g. directly invoking the service with a malformed pin) and asserts the localized string renders"
+   ],
+   "labels": [
+    "EH-5",
+    "i18n",
+    "P2"
+   ]
+  }
+ }
+]

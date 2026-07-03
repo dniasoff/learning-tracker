@@ -1,0 +1,40 @@
+[
+ {
+  "sourceBatch": "t1-feat-dashboard-p2",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Fix make audit check 15/15's self-comparing awk so cross-feature deep imports are ever detected",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "Rule 0 (checker must detect what it claims); Rule 2; AG-11",
+   "area": "learning_tracker/Makefile (audit target, check 15/15)",
+   "evidence": [
+    {
+     "file": "learning_tracker/Makefile",
+     "line": 378,
+     "quote": "| awk -F: '{match($$1, /features\\/([^\\/]+)\\//, a); match($$0, /features\\/([^\\/]+)\\//, b); if(a[1] != b[1]) print}' \\"
+    },
+    {
+     "file": "learning_tracker/lib/features/dashboard/presentation/widgets/track_stat_grid.dart",
+     "line": 8,
+     "quote": "import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';"
+    }
+   ],
+   "sites": 1,
+   "why": "match($1,...) extracts the feature name from the FILE PATH ($1, e.g. 'dashboard'). match($0,...) is meant to extract the feature name of the IMPORTED module, but $0 is 'path:line:content' and $1 is a literal prefix of $0, so match($0,...) finds that same 'dashboard' substring inside the path prefix before it ever reaches the import statement \u2014 a[1] and b[1] are therefore always identical and 'if (a[1] != b[1])' can never be true for any input. I confirmed this by piping track_stat_grid.dart's real cross-feature import (dashboard deep-importing scheduler's daily_task.dart, not via a barrel) through the literal pipeline (0 lines out) and by isolating the awk step directly (a[1]=dashboard, b[1]=dashboard). A rough repo-wide count of the same import shape this check should be flagging runs into the hundreds (e.g. tracks\u2192scheduler \u00d731, dashboard\u2192scheduler \u00d726, settings\u2192account \u00d723 lines by a similar grep). `make audit PASSED` reads as 'Rule 2 is at least being warned about'; in reality check 15 has never printed a single violation since it was written, so the 'warn-only, pending Wave-2 fix' backlog it exists to size has been completely invisible the whole time \u2014 new cross-feature deep imports can be added freely with zero signal.",
+   "recommendation": "Fix the awk to extract the imported feature from the import string specifically (e.g. operate on a field after stripping the 'path:line:' prefix, or grep the 'package:learning_tracker/features/X/' substring in the import text only) rather than re-scanning the whole line. Add a fixture test: one known cross-feature-deep-import line must warn, one same-feature multi-segment import must not.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "make audit check 15/15 prints a WARN line citing lib/features/dashboard/presentation/widgets/track_stat_grid.dart:8 (or the fix documents an explicit, reviewed barrel exemption for domain models) on the current tree",
+    "a shell/unit test pins the checker against a same-feature multi-segment import fixture and asserts it produces no false positive"
+   ],
+   "labels": [
+    "rule-0",
+    "tooling",
+    "ci",
+    "architecture",
+    "makefile"
+   ]
+  }
+ }
+]

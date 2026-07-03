@@ -1,0 +1,43 @@
+[
+ {
+  "sourceBatch": "t1-feat-onboarding-p2",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Stop surfacing e.toString() as user-facing error text in BulkMarkScreen; route through AppErrorView/l10n",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "EH-2, EH-5, no_e_to_string_in_ui",
+   "area": "onboarding/presentation/screens",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/screens/bulk_mark_screen.dart",
+     "line": 407,
+     "quote": "_error = e.toString();"
+    },
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/screens/bulk_mark_screen.dart",
+     "line": 650,
+     "quote": "_error!,"
+    },
+    {
+     "file": "learning_tracker/test/features/onboarding/presentation/screens/onboarding_bulk_l1_test.dart",
+     "line": 1080,
+     "quote": "expect(find.textContaining('Exception: Network error'), findsOneWidget);"
+    }
+   ],
+   "sites": 1,
+   "why": "When BulkPriorCompletionService.execute() throws for any reason, the raw Dart exception's toString() renders directly in the confirmation-phase error banner shown mid-onboarding \u2014 untranslated, implementation-detail text like 'Exception: Network error'. onboarding_bulk_l1_test.dart's 'error in execute stays on confirmation with error text' test asserts this raw string as correct, so the anti-pattern is regression-protected instead of caught. bulk_mark_screen.dart already imports AppErrorView (line 11) but doesn't use it here \u2014 this is exactly the pattern the (currently non-functional) no_e_to_string_in_ui custom lint targets.",
+   "recommendation": "Catch the specific exception types execute() can throw, map them to AppLocalizations-resolved messages (or AppErrorView), and update the test to assert the localized string instead of the exception's toString().",
+   "effort": "M",
+   "acceptance_criteria": [
+    "onboarding_bulk_l1_test.dart's error-path test asserts an AppLocalizations-sourced string, verified in both Locale('en') and Locale('he'), not a literal 'Exception: ...' substring",
+    "Once custom_lint's analyzer version pin is fixed, dart run custom_lint reports no no_e_to_string_in_ui violations in bulk_mark_screen.dart"
+   ],
+   "labels": [
+    "error-handling",
+    "i18n",
+    "onboarding"
+   ]
+  }
+ }
+]

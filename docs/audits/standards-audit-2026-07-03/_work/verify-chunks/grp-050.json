@@ -1,0 +1,186 @@
+[
+ {
+  "sourceBatch": "t1-feat-dashboard-p2",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Remove the redundant test/features/dashboard/.gitkeep placeholder",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "hygiene (dead file)",
+   "area": "test/features/dashboard/.gitkeep",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/dashboard/.gitkeep",
+     "line": 1,
+     "quote": "(0-byte placeholder file)"
+    }
+   ],
+   "sites": 1,
+   "why": "The file exists solely to keep an otherwise-empty directory tracked in git, but test/features/dashboard/ has had non-empty domain/ and presentation/ subdirectories (dozens of tracked test files) for a long time \u2014 git already tracks the tree via that real content, so the .gitkeep is inert clutter a new contributor has to notice and mentally discard.",
+   "recommendation": "git rm learning_tracker/test/features/dashboard/.gitkeep.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "file removed; test discovery/CI stays green with no dependency on the placeholder"
+   ],
+   "labels": [
+    "hygiene",
+    "dead-file"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-dashboard-p3",
+  "findingIndex": 0,
+  "finding": {
+   "title": "dashboard_todays_missions_heading_test.dart: override trackHasChazaraProvider so ActiveTrackCard stops opening a real UserDatabase",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6 (hermetic tests: no real DB/network) / TQ-2 (fresh, controlled container) / Feathers seam lens",
+   "area": "test/features/dashboard/presentation/widgets (dashboard feature test)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/dashboard/presentation/widgets/dashboard_todays_missions_heading_test.dart",
+     "line": 116,
+     "quote": "anyActiveTrackHasChazaraProvider.overrideWith(\n  (ref) => Future.value(false),\n),"
+    },
+    {
+     "file": "learning_tracker/lib/features/dashboard/presentation/widgets/active_track_card.dart",
+     "line": 322,
+     "quote": ".watch(trackHasChazaraProvider(track.id))"
+    },
+    {
+     "file": "learning_tracker/lib/features/dashboard/presentation/providers/dashboard_providers.dart",
+     "line": 521,
+     "quote": "final db = ref.watch(userDatabaseProvider);\n  final count = await db.stageDao.countStagesForTrack(trackId);"
+    },
+    {
+     "file": "learning_tracker/lib/core/providers/database_provider.dart",
+     "line": 36,
+     "quote": "final database = UserDatabase(driftDatabase(name: dbName));"
+    }
+   ],
+   "sites": 1,
+   "why": "_buildApp overrides anyActiveTrackHasChazaraProvider (used by DashboardBody's chazara-review gate), but ActiveTrackCard \u2014 rendered because the test passes activeTracks: [_track()] \u2014 reads a DIFFERENT, similarly-named provider, trackHasChazaraProvider(track.id), which stays unoverridden and falls through to the real userDatabaseProvider. Confirmed by execution: running this file prints drift's own runtime warning 'WARNING (drift): It looks like you've created the database class UserDatabase multiple times... race conditions will occur and might corrupt the database' twice (once per extra testWidgets in the file), with a stack trace tracing straight through ActiveTrackCard.build -> trackHasChazaraProvider -> userDatabase -> UserDatabase(driftDatabase(...)). The 'widget' test is therefore not hermetic: it opens 3 real native Drift databases per run, the chazara-badge branch in ActiveTrackCard is exercised against whatever that ambient real DB happens to return for stageDao.countStagesForTrack(1) rather than the _track() fixture (so this test asserts nothing about, and cannot regress-guard, that branch), and it is measurably slower and flakier than the fake/in-memory pattern (test/helpers/test_database.dart) used elsewhere in the suite.",
+   "recommendation": "Add `trackHasChazaraProvider(1).overrideWith((ref) => Future.value(false))` (mirroring the existing anyActiveTrackHasChazaraProvider override) to _buildApp's overrides list, or override userDatabaseProvider directly with the shared in-memory test database helper.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "trackHasChazaraProvider(1) (or userDatabaseProvider) is overridden in _buildApp's overrides list.",
+    "`flutter test test/features/dashboard/presentation/widgets/dashboard_todays_missions_heading_test.dart` produces zero 'WARNING (drift): ... created the database class UserDatabase multiple times' output."
+   ],
+   "labels": [
+    "testing",
+    "hermeticity",
+    "dashboard",
+    "drift"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-dashboard-p3",
+  "findingIndex": 1,
+  "finding": {
+   "title": "dashboard_todays_missions_heading_test.dart: remove the blind exception-drain loop in pumpAt (proven dead, masks any real regression in the pumped tree)",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-7 (never weaken/bypass assertions without a stated, scoped justification) / Fowler stale-comment smell",
+   "area": "test/features/dashboard/presentation/widgets (dashboard feature test)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/dashboard/presentation/widgets/dashboard_todays_missions_heading_test.dart",
+     "line": 198,
+     "quote": "// an unrelated sibling card (MainFocusMissionCard's \"Start learning\"\n    // button Row) overflows \u2014 a pre-existing issue outside this finding's"
+    },
+    {
+     "file": "learning_tracker/test/features/dashboard/presentation/widgets/dashboard_todays_missions_heading_test.dart",
+     "line": 204,
+     "quote": "dynamic pending = tester.takeException();\n    while (pending != null) {"
+    }
+   ],
+   "sites": 1,
+   "why": "The loop unconditionally drains and discards ANY exception raised anywhere in the pumped DashboardBody tree, not just the specific MainFocusMissionCard overflow the adjoining comment names -- there is no type/message check. Verified by direct execution: (1) with the code as shipped, a print-probe substituted for the loop shows the pending exception is null for all 3 testWidgets in this file at its own matrix (412x915, en/he, scale 1.0/1.3) -- there is nothing to drain today; (2) after temporarily reverting main_focus_mission_card.dart's FittedBox fix back to the exact pre-fix plain Row (commit 2c62ff2c, reverted then git-restored), rerunning this file UNMODIFIED still reports 'All tests passed' with zero exceptions surfacing -- so the comment's stated justification does not reproduce under this test's own conditions either. The loop is therefore proven, executable dead code whose only live effect is to silently swallow any *actual future* exception (a provider throwing, a genuine new overflow) raised by any widget in this subtree during these three pumps, without ever failing the test.",
+   "recommendation": "Delete the unconditional while-loop. If some exception genuinely needs tolerating, capture it once via a single tester.takeException() and assert its type/message matches a specifically named, filed issue (with a // weaken-ok:-style comment and Linear id) instead of draining blind.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "The while (pending != null) { pending = tester.takeException(); } loop is removed, or replaced with a single takeException() call whose result is asserted against a named/filed exception, not silently discarded.",
+    "Re-running the file with main_focus_mission_card.dart's FittedBox reverted now fails the test (proving the guard is live, not inert)."
+   ],
+   "labels": [
+    "testing",
+    "dead-code",
+    "regression-safety",
+    "dashboard"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-dashboard-p3",
+  "findingIndex": 2,
+  "finding": {
+   "title": "dashboard_todays_missions_heading_test.dart: reuse test/helpers/overflow_harness.dart instead of hand-rolling _buildApp/pumpAt",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-3 [P] (widget tests pump via a shared helper) / Fowler duplicated code",
+   "area": "test/features/dashboard/presentation/widgets (dashboard feature test)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/dashboard/presentation/widgets/dashboard_todays_missions_heading_test.dart",
+     "line": 124,
+     "quote": "child: MaterialApp(\n      locale: locale,\n      localizationsDelegates: const ["
+    },
+    {
+     "file": "learning_tracker/test/helpers/overflow_harness.dart",
+     "line": 130,
+     "quote": "child: MaterialApp(\n      locale: locale,\n      debugShowCheckedModeBanner: false,"
+    }
+   ],
+   "sites": 1,
+   "why": "_buildApp (lines 82-146) plus pumpAt (lines 181-208) reimplement, with small unexplained divergences, the same ProviderScope + MaterialApp + l10n-delegates + MediaQuery-textScaler assembly that test/helpers/overflow_harness.dart already generalizes as `_wrap`/`expectNoOverflowAcrossDevices`, used by 16 other *_overflow_test.dart files repo-wide. Concretely: this file pumps a single fixed device size (412x915) instead of the shared matrix's 4 sizes; it sets debugShowCheckedModeBanner implicitly true (harness sets it false); its `he` locale case is only exercised at scale 1.3, not 1.0, with no stated reason, whereas the shared matrix's documented monotonicity argument exists precisely to justify which corners to skip. The bespoke exception-drain hack (finding above) only exists because this harness renders MainFocusMissionCard without the shared helper's single-assert-per-case discipline. A future fix to the shared wrapper (e.g. a new required delegate) will not propagate here.",
+   "recommendation": "Extract the heading-focused pump into a helper built on overflow_harness.dart's building blocks (or a shared `pumpApp` used consistently across dashboard widget tests) instead of a bespoke _buildApp/pumpAt pair.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "This file's app-bootstrap/pump logic is expressed in terms of a shared helper (overflow_harness.dart or an equivalent pumpApp), or the divergence is justified inline."
+   ],
+   "labels": [
+    "testing",
+    "duplication",
+    "dashboard"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-dashboard-p3",
+  "findingIndex": 3,
+  "finding": {
+   "title": "dart_test.yaml: register the dashboard and i18n @Tags used by dashboard_todays_missions_heading_test.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Rule 0 (checker/config completeness) / AG-1 tooling hygiene",
+   "area": "test config",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/dashboard/presentation/widgets/dashboard_todays_missions_heading_test.dart",
+     "line": 10,
+     "quote": "@Tags(['dashboard', 'i18n', 'overflow'])"
+    },
+    {
+     "file": "learning_tracker/dart_test.yaml",
+     "line": 168,
+     "quote": "overflow:\n  settings:"
+    }
+   ],
+   "sites": 1,
+   "why": "dart_test.yaml's tags: registry states its own purpose is to 'prevent \"unknown tag\" warnings when running flutter test --tags', and registers overflow: and settings:, but never dashboard: or i18n: anywhere in the file. Confirmed by execution: every run of this file prints 'Warning: Tags were used that weren't specified in dart_test.yaml. dashboard was used in the suite itself / i18n was used in the suite itself.' 10 other files also use the dashboard tag and 2 more use i18n, so every one of those runs repeats the same warning noise in local/CI output, burying real signal.",
+   "recommendation": "Add `dashboard:` and `i18n:` entries to dart_test.yaml's tags: block alongside the existing overflow:/settings: entries.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "dart_test.yaml declares dashboard: and i18n: tags.",
+    "`flutter test test/features/dashboard/presentation/widgets/dashboard_todays_missions_heading_test.dart` prints no 'Tags were used that weren't specified' warning."
+   ],
+   "labels": [
+    "testing",
+    "config",
+    "hygiene"
+   ]
+  }
+ }
+]

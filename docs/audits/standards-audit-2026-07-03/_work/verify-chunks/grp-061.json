@@ -1,0 +1,215 @@
+[
+ {
+  "sourceBatch": "t1-feat-learning-p2",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Remove the third copy of the tutor-write-block invariant from completion_writer_test.dart",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-5 (test/ mirrors lib/ at the mirrored path) + Fowler duplication",
+   "area": "test/features/learning/data/completion_writer_test.dart (duplicates test/features/tutoring/domain/use_cases/mark_live_completion_use_case_test.dart and test/features/tutoring/mark_live_completion_invariant_test.dart)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/learning/data/completion_writer_test.dart",
+     "line": 947,
+     "quote": "test('MarkLiveCompletionUseCase throws TutorWriteForbiddenException and '\n        'never calls the delegate for a tutor session', () async {"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/domain/use_cases/mark_live_completion_use_case_test.dart",
+     "line": 39,
+     "quote": "test('tutor session throws TutorWriteForbiddenException', () async {"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/mark_live_completion_invariant_test.dart",
+     "line": 34,
+     "quote": "test('tutor session throws TutorWriteForbiddenException and never runs the '"
+    }
+   ],
+   "sites": 1,
+   "why": "MarkLiveCompletionUseCase and TutorPermissions belong to the tutoring feature, not learning. Git history shows this is the THIRD independent copy of the identical tutor-write-block invariant: mark_live_completion_use_case_test.dart (2026-05-20, original H1 fix), mark_live_completion_invariant_test.dart (2026-05-29, second copy), then completion_writer_test.dart's 'tutor write-block' group (2026-05-30, third copy). It sits outside its mirrored path, adds ~70 lines to a file already 665 lines over the AG-3 cap, and means a change to tutor-write-block behavior must now be kept consistent across three files spanning two features instead of one.",
+   "recommendation": "Delete the 'tutor write-block' group (lines ~933-1005) from completion_writer_test.dart; the invariant is already fully owned by test/features/tutoring/.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "completion_writer_test.dart no longer imports package:learning_tracker/features/tutoring/...; TutorWriteForbiddenException coverage stays green from the two tutoring-feature test files alone"
+   ],
+   "labels": [
+    "testing",
+    "duplication",
+    "AG-5",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-learning-p2",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Split the 5 hand-written Dart files in this batch that exceed the 400-line AG-3 cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3 (hand-written Dart files stay under 400 lines)",
+   "area": "lib/features/learning/presentation/screens/learning_screen.dart + 4 test files",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/learning/presentation/screens/learning_screen.dart",
+     "line": 1,
+     "quote": "670 lines total (wc -l), hand-written (not .g.dart/.freezed.dart)"
+    },
+    {
+     "file": "learning_tracker/test/features/learning/data/completion_writer_test.dart",
+     "line": 1,
+     "quote": "1065 lines total (wc -l), hand-written"
+    },
+    {
+     "file": "learning_tracker/test/features/learning/domain/services/completion_detection_service_test.dart",
+     "line": 1,
+     "quote": "753 lines total (wc -l), hand-written"
+    },
+    {
+     "file": "learning_tracker/test/features/learning/data/repositories/completion_repository_impl_test.dart",
+     "line": 1,
+     "quote": "465 lines total (wc -l), hand-written"
+    },
+    {
+     "file": "learning_tracker/test/features/learning/data/repositories/learning_ledger_repository_impl_test.dart",
+     "line": 1,
+     "quote": "465 lines total (wc -l), hand-written"
+    }
+   ],
+   "sites": 5,
+   "why": "Files past the 400-line ratchet exceed per-file agent read budgets (content past the window is invisible to an agent editing it) and become dumping grounds -- completion_writer_test.dart in particular has absorbed unrelated tutoring-feature test content (see the triplicate-test finding) rather than staying scoped to CompletionWriter.",
+   "recommendation": "Split learning_screen.dart's private widgets (_StreakHeroCard, _LearnTaskCard, _BrowseSection, _CurriculumBrowseCard) into separate widget files; split completion_writer_test.dart and the two large repository test files along their existing numbered/grouped sections into per-concern files.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "find lib test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400' no longer lists these 5 files"
+   ],
+   "labels": [
+    "hygiene",
+    "AG-3",
+    "file-size"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-learning-p2",
+  "findingIndex": 6,
+  "finding": {
+   "title": "De-duplicate the CompletionSource 3x3 credit-tier matrix tests out of completion_writer_test.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-1 / Fowler duplication",
+   "area": "test/features/learning/data/completion_writer_test.dart (duplicates test/features/learning/domain/use_cases/mark_completion_use_case_b1_test.dart)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/learning/data/completion_writer_test.dart",
+     "line": 829,
+     "quote": "group('three-tier credit policy (CompletionSource)', () {\n    test('CompletionSource.live.creditsEngagement is true', () {"
+    },
+    {
+     "file": "learning_tracker/test/features/learning/domain/use_cases/mark_completion_use_case_b1_test.dart",
+     "line": 32,
+     "quote": "group('CompletionSourceX \u2014 tier predicates (3\u00d73 matrix)', () {\n    test('[live] creditsEngagement = true', () {"
+    }
+   ],
+   "sites": 1,
+   "why": "Both groups assert the exact same 9 facts (CompletionSource.{live,bulkInTrack,lifetimeOnly}.{creditsEngagement,creditsAchievement,creditsLifetime}). Git history shows mark_completion_use_case_b1_test.dart added them first (2026-05-20, W4.18); completion_writer_test.dart re-added an equivalent group ten days later (2026-05-30). Two files must now be kept in lockstep for one policy fact, contributing ~50 redundant lines to completion_writer_test.dart's AG-3 overage for zero added coverage.",
+   "recommendation": "Delete the 'three-tier credit policy (CompletionSource)' group from completion_writer_test.dart; leave a one-line comment pointing readers at mark_completion_use_case_b1_test.dart for the matrix.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "completion_writer_test.dart no longer asserts CompletionSource.creditsEngagement/Achievement/Lifetime directly; mark_completion_use_case_b1_test.dart retains full 9-fact coverage"
+   ],
+   "labels": [
+    "testing",
+    "duplication",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-learning-p2",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Replace wall-clock DateTime.now() with fixed UTC literals in learning-repository test fixtures",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6 (hermetic tests: no wall-clock)",
+   "area": "test/features/learning/domain/services/completion_detection_service_test.dart, data/repositories/bookmark_repository_impl_test.dart, data/repositories/completion_repository_impl_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/learning/domain/services/completion_detection_service_test.dart",
+     "line": 66,
+     "quote": "stateChangedAt: DateTime.now(),\n            activatedAt: DateTime.now(),"
+    },
+    {
+     "file": "learning_tracker/test/features/learning/data/repositories/bookmark_repository_impl_test.dart",
+     "line": 46,
+     "quote": "stateChangedAt: DateTime.now(),\n        activatedAt: DateTime.now(),"
+    },
+    {
+     "file": "learning_tracker/test/features/learning/data/repositories/completion_repository_impl_test.dart",
+     "line": 38,
+     "quote": "final now = DateTime.now();"
+    }
+   ],
+   "sites": 3,
+   "why": "These three files read the real system clock (not even .toUtc()) to satisfy required timestamp columns, while sibling files in the same batch (completion_repository_curriculum_dedup_test.dart, completion_writer_test.dart, learning_ledger_repository_impl_test.dart) consistently use DateTime.now().toUtc() or fixed DateTime.utc(...) literals -- an inconsistent idiom that Rule 0's own check 6/15 ('No DateTime.now() outside core/time') explicitly cannot catch because it scopes only to lib/ and excludes test/ entirely.",
+   "recommendation": "Replace the bare DateTime.now() calls with fixed DateTime.utc(...) literals for these non-asserted fixture columns, matching the pattern already used elsewhere in the same batch.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep -rn 'DateTime\\.now()' test/features/learning --include='*.dart' returns no hits outside intentionally wall-clock-dependent assertions"
+   ],
+   "labels": [
+    "testing",
+    "hermeticity",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-learning-p3",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Delete or merge stale learning_screen_test.dart into learning_screen_l1_test.dart",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-1",
+   "area": "test/features/learning/presentation/screens",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/learning/presentation/screens/learning_screen_test.dart",
+     "line": 19,
+     "quote": "dashboardActiveCurriculaProvider.overrideWith(\n            (ref) => Future.value([]),"
+    },
+    {
+     "file": "learning_tracker/test/features/learning/presentation/screens/learning_screen_test.dart",
+     "line": 25,
+     "quote": "dashboardUserModeProvider.overrideWith(\n            (ref) => Future.value(ProfileMode.adult),"
+    },
+    {
+     "file": "learning_tracker/test/features/learning/presentation/screens/learning_screen_test.dart",
+     "line": 60,
+     "quote": "// With no active curricula, the empty state is shown\n      expect(find.text('No active tracks'), findsOneWidget);"
+    },
+    {
+     "file": "learning_tracker/test/features/learning/presentation/screens/learning_screen_l1_test.dart",
+     "line": 310,
+     "quote": "expect(find.text('No active tracks'), findsOneWidget);"
+    }
+   ],
+   "sites": 1,
+   "why": "learning_screen_test.dart overrides dashboardActiveCurriculaProvider and dashboardUserModeProvider (lines 19-27) \u2014 I grepped learning_screen.dart's ref.watch calls and confirmed it reads neither provider; both overrides are dead, left over from before the screen was refactored onto dashboardActiveCurriculaStreamProvider/coarse-track providers. Its 'renders without error' and 'shows key UI elements' tests are a strict, weaker subset of learning_screen_l1_test.dart's empty-state tests (same setup, same assertion, less specific). Only the AppErrorView regression test (lines 70-93) is unique, and it doesn't exercise LearningScreen at all. Net effect: a second file that must be kept in sync with LearningScreen's provider surface for zero incremental protection, and it's currently out of sync (see the DB-leak finding above, which independently proves this).",
+   "recommendation": "Move the unique AppErrorView regression test to a location that actually reflects what it tests (e.g. a core/widgets AppErrorView test, or leave in learning_screen_test.dart renamed), delete the two redundant/stale tests and dead overrides, and remove learning_screen_test.dart per TQ-7 with the reason stated in the commit message.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "learning_screen_test.dart is deleted or contains only the non-duplicate AppErrorView test",
+    "No override in the remaining file references a provider LearningScreen does not read (grep ref.watch in learning_screen.dart against the override list)"
+   ],
+   "labels": [
+    "TQ-1",
+    "duplicate-tests",
+    "stale-test",
+    "hotspot"
+   ]
+  }
+ }
+]

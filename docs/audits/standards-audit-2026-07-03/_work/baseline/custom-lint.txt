@@ -1,0 +1,255 @@
+=== custom_lint ===
+Failed to build custom_lint:custom_lint:
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:10:8: Error: Error when reading '../../../.pub-cache/hosted/pub.dev/analyzer-9.0.0/lib/dart/element/element2.dart': No such file or directory
+import 'package:analyzer/dart/element/element2.dart';
+       ^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/lint_codes.dart:17:24: Error: Type 'ErrorCode' not found.
+class LintCode extends ErrorCode {
+                       ^^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/lint_codes.dart:37:9: Error: Type 'ErrorSeverity' not found.
+  final ErrorSeverity errorSeverity;
+        ^^^^^^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/lint_codes.dart:31:3: Error: Type 'ErrorType' not found.
+  ErrorType get type => ErrorType.LINT;
+  ^^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:81:5: Error: Type 'Annotatable' not found.
+    Annotatable annotatable, {
+    ^^^^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:98:24: Error: Type 'Annotatable' not found.
+  bool hasAnnotationOf(Annotatable element, {bool throwOnUnresolved = true}) =>
+                       ^^^^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:106:5: Error: Type 'Annotatable' not found.
+    Annotatable annotatable, {
+    ^^^^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:125:5: Error: Type 'Annotatable' not found.
+    Annotatable annotatable, {
+    ^^^^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:136:5: Error: Type 'ElementAnnotation' not found.
+    ElementAnnotation annotation,
+    ^^^^^^^^^^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:152:5: Error: Type 'Annotatable' not found.
+    Annotatable annotatable, {
+    ^^^^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:162:5: Error: Type 'Annotatable' not found.
+    Annotatable annotatable,
+    ^^^^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:185:5: Error: Type 'Annotatable' not found.
+    Annotatable annotatable, {
+    ^^^^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:195:25: Error: Type 'Element2' not found.
+  bool isAssignableFrom(Element2 element) =>
+                        ^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:207:18: Error: Type 'Element2' not found.
+  bool isExactly(Element2 element);
+                 ^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:222:18: Error: Type 'Element2' not found.
+  bool isSuperOf(Element2 element) {
+                 ^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:254:18: Error: Type 'Element2' not found.
+  bool isExactly(Element2 element) =>
+                 ^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:268:18: Error: Type 'Element2' not found.
+  bool isExactly(Element2 element) {
+                 ^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:297:18: Error: Type 'Element2' not found.
+  bool isExactly(Element2 element) {
+                 ^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:342:18: Error: Type 'Element2' not found.
+  bool isExactly(Element2 element) => hasSameUrl(_urlOfElement(element));
+                 ^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:359:18: Error: Type 'Element2' not found.
+  bool isExactly(Element2 element) =>
+                 ^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:369:18: Error: Type 'Element2' not found.
+  bool isExactly(Element2 element) {
+                 ^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:397:9: Error: Type 'Element2' not found.
+  final Element2 annotatedElement;
+        ^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:384:5: Error: Type 'Element2' not found.
+    Element2 annotatedElement,
+    ^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:404:32: Error: Type 'Element2' not found.
+  static SourceSpan? _findSpan(Element2 annotatedElement, int annotationIndex) {
+                               ^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:447:22: Error: Type 'Element2' not found.
+String _urlOfElement(Element2 element) => element.kind == ElementKind.DYNAMIC
+                     ^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/lint_codes.dart:25:26: Error: Undefined name 'ErrorSeverity'.
+    this.errorSeverity = ErrorSeverity.INFO,
+                         ^^^^^^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/assist.dart:113:22: Error: The getter 'libraryElement2' isn't defined for the type 'ResolvedUnitResult'.
+ - 'ResolvedUnitResult' is from 'package:analyzer/dart/analysis/results.dart' ('../../../.pub-cache/hosted/pub.dev/analyzer-9.0.0/lib/dart/analysis/results.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'libraryElement2'.
+      source: result.libraryElement2.firstFragment.source,
+                     ^^^^^^^^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/assist.dart:137:26: Error: The method 'resolveFile2' isn't defined for the type 'DartAssist'.
+ - 'DartAssist' is from 'package:custom_lint_core/src/assist.dart' ('../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/assist.dart').
+Try correcting the name to the name of an existing method, or defining a method named 'resolveFile2'.
+    final result = await resolveFile2(path: file.path);
+                         ^^^^^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/fixes.dart:151:22: Error: The getter 'libraryElement2' isn't defined for the type 'ResolvedUnitResult'.
+ - 'ResolvedUnitResult' is from 'package:analyzer/dart/analysis/results.dart' ('../../../.pub-cache/hosted/pub.dev/analyzer-9.0.0/lib/dart/analysis/results.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'libraryElement2'.
+      source: result.libraryElement2.firstFragment.source,
+                     ^^^^^^^^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/fixes.dart:171:26: Error: The method 'resolveFile2' isn't defined for the type 'DartFix'.
+ - 'DartFix' is from 'package:custom_lint_core/src/fixes.dart' ('../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/fixes.dart').
+Try correcting the name to the name of an existing method, or defining a method named 'resolveFile2'.
+    final result = await resolveFile2(path: file.path);
+                         ^^^^^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/lint_codes.dart:31:25: Error: The getter 'ErrorType' isn't defined for the type 'LintCode'.
+ - 'LintCode' is from 'package:custom_lint_core/src/lint_codes.dart' ('../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/lint_codes.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'ErrorType'.
+  ErrorType get type => ErrorType.LINT;
+                        ^^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/lint_codes.dart:37:9: Error: 'ErrorSeverity' isn't a type.
+  final ErrorSeverity errorSeverity;
+        ^^^^^^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/lint_codes.dart:40:23: Error: The getter 'uniqueName' isn't defined for the type 'LintCode'.
+ - 'LintCode' is from 'package:custom_lint_core/src/lint_codes.dart' ('../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/lint_codes.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'uniqueName'.
+  int get hashCode => uniqueName.hashCode;
+                      ^^^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/lint_codes.dart:44:33: Error: The getter 'uniqueName' isn't defined for the type 'LintCode'.
+ - 'LintCode' is from 'package:custom_lint_core/src/lint_codes.dart' ('../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/lint_codes.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'uniqueName'.
+    return other is LintCode && uniqueName == other.uniqueName;
+                                ^^^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/lint_codes.dart:44:53: Error: The getter 'uniqueName' isn't defined for the type 'LintCode'.
+ - 'LintCode' is from 'package:custom_lint_core/src/lint_codes.dart' ('../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/lint_codes.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'uniqueName'.
+    return other is LintCode && uniqueName == other.uniqueName;
+                                                    ^^^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/lint_rule.dart:82:31: Error: The getter 'name' isn't defined for the type 'LintCode'.
+ - 'LintCode' is from 'package:custom_lint_core/src/lint_codes.dart' ('../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/lint_codes.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'name'.
+    return configs.rules[code.name]?.enabled ??
+                              ^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/lint_rule.dart:167:22: Error: The getter 'libraryElement2' isn't defined for the type 'ResolvedUnitResult'.
+ - 'ResolvedUnitResult' is from 'package:analyzer/dart/analysis/results.dart' ('../../../.pub-cache/hosted/pub.dev/analyzer-9.0.0/lib/dart/analysis/results.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'libraryElement2'.
+      source: result.libraryElement2.firstFragment.source,
+                     ^^^^^^^^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/lint_rule.dart:173:14: Error: The getter 'libraryElement2' isn't defined for the type 'ResolvedUnitResult'.
+ - 'ResolvedUnitResult' is from 'package:analyzer/dart/analysis/results.dart' ('../../../.pub-cache/hosted/pub.dev/analyzer-9.0.0/lib/dart/analysis/results.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'libraryElement2'.
+      result.libraryElement2.firstFragment.source,
+             ^^^^^^^^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/lint_rule.dart:181:21: Error: The getter 'errors' isn't defined for the type 'RecordingDiagnosticListener'.
+ - 'RecordingDiagnosticListener' is from 'package:analyzer/error/listener.dart' ('../../../.pub-cache/hosted/pub.dev/analyzer-9.0.0/lib/error/listener.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'errors'.
+    return listener.errors;
+                    ^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/lint_rule.dart:189:26: Error: The method 'resolveFile2' isn't defined for the type 'DartLintRule'.
+ - 'DartLintRule' is from 'package:custom_lint_core/src/lint_rule.dart' ('../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/lint_rule.dart').
+Try correcting the name to the name of an existing method, or defining a method named 'resolveFile2'.
+    final result = await resolveFile2(path: file.path);
+                         ^^^^^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:81:5: Error: 'Annotatable' isn't a type.
+    Annotatable annotatable, {
+    ^^^^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:98:24: Error: 'Annotatable' isn't a type.
+  bool hasAnnotationOf(Annotatable element, {bool throwOnUnresolved = true}) =>
+                       ^^^^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:106:5: Error: 'Annotatable' isn't a type.
+    Annotatable annotatable, {
+    ^^^^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:125:5: Error: 'Annotatable' isn't a type.
+    Annotatable annotatable, {
+    ^^^^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:136:5: Error: 'ElementAnnotation' isn't a type.
+    ElementAnnotation annotation,
+    ^^^^^^^^^^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:141:59: Error: 'Element2' isn't a type.
+    if (result == null && throwOnUnresolved && element is Element2) {
+                                                          ^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:152:5: Error: 'Annotatable' isn't a type.
+    Annotatable annotatable, {
+    ^^^^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:162:5: Error: 'Annotatable' isn't a type.
+    Annotatable annotatable,
+    ^^^^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:185:5: Error: 'Annotatable' isn't a type.
+    Annotatable annotatable, {
+    ^^^^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:195:25: Error: 'Element2' isn't a type.
+  bool isAssignableFrom(Element2 element) =>
+                        ^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:197:19: Error: 'InterfaceElement2' isn't a type.
+      (element is InterfaceElement2 &&
+                  ^^^^^^^^^^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:202:32: Error: The getter 'element3' isn't defined for the type 'DartType'.
+ - 'DartType' is from 'package:analyzer/dart/element/type.dart' ('../../../.pub-cache/hosted/pub.dev/analyzer-9.0.0/lib/dart/element/type.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'element3'.
+    final element = staticType.element3;
+                               ^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:207:18: Error: 'Element2' isn't a type.
+  bool isExactly(Element2 element);
+                 ^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:214:32: Error: The getter 'element3' isn't defined for the type 'DartType'.
+ - 'DartType' is from 'package:analyzer/dart/element/type.dart' ('../../../.pub-cache/hosted/pub.dev/analyzer-9.0.0/lib/dart/element/type.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'element3'.
+    final element = staticType.element3;
+                               ^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:222:18: Error: 'Element2' isn't a type.
+  bool isSuperOf(Element2 element) {
+                 ^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:223:20: Error: 'InterfaceElement2' isn't a type.
+    if (element is InterfaceElement2) {
+                   ^^^^^^^^^^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:243:32: Error: The getter 'element3' isn't defined for the type 'DartType'.
+ - 'DartType' is from 'package:analyzer/dart/element/type.dart' ('../../../.pub-cache/hosted/pub.dev/analyzer-9.0.0/lib/dart/element/type.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'element3'.
+    final element = staticType.element3;
+                               ^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:254:18: Error: 'Element2' isn't a type.
+  bool isExactly(Element2 element) =>
+                 ^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:255:18: Error: 'InterfaceElement2' isn't a type.
+      element is InterfaceElement2 && element == _type.element3;
+                 ^^^^^^^^^^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:255:56: Error: The getter 'element3' isn't defined for the type 'DartType'.
+ - 'DartType' is from 'package:analyzer/dart/element/type.dart' ('../../../.pub-cache/hosted/pub.dev/analyzer-9.0.0/lib/dart/element/type.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'element3'.
+      element is InterfaceElement2 && element == _type.element3;
+                                                       ^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:258:44: Error: The getter 'element3' isn't defined for the type 'DartType'.
+ - 'DartType' is from 'package:analyzer/dart/element/type.dart' ('../../../.pub-cache/hosted/pub.dev/analyzer-9.0.0/lib/dart/element/type.dart').
+Try correcting the name to the name of an existing getter, or defining a getter or field named 'element3'.
+  String toString() => _urlOfElement(_type.element3!);
+                                           ^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:268:18: Error: 'Element2' isn't a type.
+  bool isExactly(Element2 element) {
+                 ^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:297:18: Error: 'Element2' isn't a type.
+  bool isExactly(Element2 element) {
+                 ^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:342:18: Error: 'Element2' isn't a type.
+  bool isExactly(Element2 element) => hasSameUrl(_urlOfElement(element));
+                 ^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:359:18: Error: 'Element2' isn't a type.
+  bool isExactly(Element2 element) =>
+                 ^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:369:18: Error: 'Element2' isn't a type.
+  bool isExactly(Element2 element) {
+                 ^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:384:5: Error: 'Element2' isn't a type.
+    Element2 annotatedElement,
+    ^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:397:9: Error: 'Element2' isn't a type.
+  final Element2 annotatedElement;
+        ^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:404:32: Error: 'Element2' isn't a type.
+  static SourceSpan? _findSpan(Element2 annotatedElement, int annotationIndex) {
+                               ^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:447:22: Error: 'Element2' isn't a type.
+String _urlOfElement(Element2 element) => element.kind == ElementKind.DYNAMIC
+                     ^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:447:59: Error: Undefined name 'ElementKind'.
+String _urlOfElement(Element2 element) => element.kind == ElementKind.DYNAMIC
+                                                          ^^^^^^^^^^^
+../../../.pub-cache/hosted/pub.dev/custom_lint_core-0.8.1/lib/src/type_checker.dart:449:23: Error: Undefined name 'ElementKind'.
+    : element.kind == ElementKind.NEVER
+                      ^^^^^^^^^^^
+EXIT:255

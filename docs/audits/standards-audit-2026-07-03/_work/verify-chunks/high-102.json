@@ -1,0 +1,48 @@
+[
+ {
+  "sourceBatch": "t1-story-epics-01-08",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Rewrite regression_invariants_test.dart N7 to call the production code it claims to guard",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "test/story_acceptance (regression-invariant net)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/regression_invariants_test.dart",
+     "line": 393,
+     "quote": "group('N7: pace-goal projected finish anchors to createdAt, not now', () {"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/regression_invariants_test.dart",
+     "line": 397,
+     "quote": "final createdAt = DateTime.now().subtract(const Duration(days: 7));"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/regression_invariants_test.dart",
+     "line": 406,
+     "quote": "final projected1 = createdAt.toLocal().add(\n            Duration(days: daysNeeded),"
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/screens/track_detail_screen.dart",
+     "line": 568,
+     "quote": "date: goal.createdAt.add(Duration(days: days)),"
+    }
+   ],
+   "sites": 1,
+   "why": "The file header names N7 as the regression anchor for historical bug F1 (pace-goal forecast drifted because the projected-finish date was anchored to DateTime.now() instead of goal.createdAt). The N7 test never imports or calls the real fix site (_estimatedFinish in track_detail_screen.dart, or any PaceCalculator/goal service) \u2014 it re-types the exact same date-math formula twice inline and asserts the two copies agree with each other and differ from a third, also inline, now-based computation. If a future edit reverts track_detail_screen.dart:568 from `goal.createdAt.add(...)` back to `DateTimeFactory.nowLocal().add(...)`, reintroducing F1, this test keeps passing, because there is no production code in its call path to break. The file's own stated contract ('a failing test is fixed by changing production code only \u2014 never by weakening the assertion') cannot be honored by a test with no production code to fail.",
+   "recommendation": "Extract the date-math core of _estimatedFinish into a small `@visibleForTesting` pure function (or call it via a testable service) and have N7 import and invoke that exact symbol with a fixed goal.createdAt, asserting the result stays anchored to createdAt across two calls made with different injected 'now' values via the existing fake-clock pattern (FakeLocalDayClock, already used correctly in epic_08_gamification_test.dart).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "N7 test imports and invokes the real fix (_estimatedFinish or an extracted pure function), not a re-typed copy of its formula",
+    "Reverting track_detail_screen.dart:568 to a DateTimeFactory.nowLocal()-anchored computation makes N7 fail red"
+   ],
+   "labels": [
+    "test-quality",
+    "regression-test",
+    "false-safety-net"
+   ]
+  }
+ }
+]

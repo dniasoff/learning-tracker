@@ -1,0 +1,91 @@
+diff --git a/learning_tracker/lib/core/labels/curriculum_label_providers.g.dart b/learning_tracker/lib/core/labels/curriculum_label_providers.g.dart
+index 427b90fe..9d24e7bf 100644
+--- a/learning_tracker/lib/core/labels/curriculum_label_providers.g.dart
++++ b/learning_tracker/lib/core/labels/curriculum_label_providers.g.dart
+@@ -204,6 +204,10 @@ final class RenderedLeafForRefFamily extends $Family
+ /// Renders the parent (one level above leaf) display string for [sefariaRef].
+ /// Used by the reader page's two-line AppBar — leaf big, parent small.
+ /// Returns null when the item is already at level 1.
++///
++/// Looks up Hebrew names for every ancestor segment (mirroring
++/// [renderedDisplayForRef]) so named levels like "Seder Zeraim" or "Genesis"
++/// render in Hebrew rather than as raw English organizational labels.
+ 
+ @ProviderFor(renderedParentForRef)
+ final renderedParentForRefProvider = RenderedParentForRefFamily._();
+@@ -211,6 +215,10 @@ final renderedParentForRefProvider = RenderedParentForRefFamily._();
+ /// Renders the parent (one level above leaf) display string for [sefariaRef].
+ /// Used by the reader page's two-line AppBar — leaf big, parent small.
+ /// Returns null when the item is already at level 1.
++///
++/// Looks up Hebrew names for every ancestor segment (mirroring
++/// [renderedDisplayForRef]) so named levels like "Seder Zeraim" or "Genesis"
++/// render in Hebrew rather than as raw English organizational labels.
+ 
+ final class RenderedParentForRefProvider
+     extends $FunctionalProvider<AsyncValue<String?>, String?, FutureOr<String?>>
+@@ -218,6 +226,10 @@ final class RenderedParentForRefProvider
+   /// Renders the parent (one level above leaf) display string for [sefariaRef].
+   /// Used by the reader page's two-line AppBar — leaf big, parent small.
+   /// Returns null when the item is already at level 1.
++  ///
++  /// Looks up Hebrew names for every ancestor segment (mirroring
++  /// [renderedDisplayForRef]) so named levels like "Seder Zeraim" or "Genesis"
++  /// render in Hebrew rather than as raw English organizational labels.
+   RenderedParentForRefProvider._({
+     required RenderedParentForRefFamily super.from,
+     required String super.argument,
+@@ -262,11 +274,15 @@ final class RenderedParentForRefProvider
+ }
+ 
+ String _$renderedParentForRefHash() =>
+-    r'c51c9ca08242ab972eab6410fa74e27e7839c8f0';
++    r'd4b8d01d3c43de09b5adb44002fed6c7af9a7c88';
+ 
+ /// Renders the parent (one level above leaf) display string for [sefariaRef].
+ /// Used by the reader page's two-line AppBar — leaf big, parent small.
+ /// Returns null when the item is already at level 1.
++///
++/// Looks up Hebrew names for every ancestor segment (mirroring
++/// [renderedDisplayForRef]) so named levels like "Seder Zeraim" or "Genesis"
++/// render in Hebrew rather than as raw English organizational labels.
+ 
+ final class RenderedParentForRefFamily extends $Family
+     with $FunctionalFamilyOverride<FutureOr<String?>, String> {
+@@ -282,6 +298,10 @@ final class RenderedParentForRefFamily extends $Family
+   /// Renders the parent (one level above leaf) display string for [sefariaRef].
+   /// Used by the reader page's two-line AppBar — leaf big, parent small.
+   /// Returns null when the item is already at level 1.
++  ///
++  /// Looks up Hebrew names for every ancestor segment (mirroring
++  /// [renderedDisplayForRef]) so named levels like "Seder Zeraim" or "Genesis"
++  /// render in Hebrew rather than as raw English organizational labels.
+ 
+   RenderedParentForRefProvider call(String sefariaRef) =>
+       RenderedParentForRefProvider._(argument: sefariaRef, from: this);
+diff --git a/learning_tracker/lib/features/gamification/presentation/providers/reward_config_controller.g.dart b/learning_tracker/lib/features/gamification/presentation/providers/reward_config_controller.g.dart
+index 17e0b8d9..6c928b5d 100644
+--- a/learning_tracker/lib/features/gamification/presentation/providers/reward_config_controller.g.dart
++++ b/learning_tracker/lib/features/gamification/presentation/providers/reward_config_controller.g.dart
+@@ -57,7 +57,7 @@ final class RewardConfigControllerProvider
+ }
+ 
+ String _$rewardConfigControllerHash() =>
+-    r'8e7d154037e1b644062b1e19951a54afbb434b64';
++    r'e13b59fa8fa1f4005eaf49f159511e4dda362722';
+ 
+ /// Notifier that owns all mutable form state for [RewardConfigurationScreen].
+ ///
+diff --git a/learning_tracker/lib/features/scheduler/presentation/providers/scheduler_providers.g.dart b/learning_tracker/lib/features/scheduler/presentation/providers/scheduler_providers.g.dart
+index da6a3a0c..f2bfd7e1 100644
+--- a/learning_tracker/lib/features/scheduler/presentation/providers/scheduler_providers.g.dart
++++ b/learning_tracker/lib/features/scheduler/presentation/providers/scheduler_providers.g.dart
+@@ -781,7 +781,7 @@ final class AllDailyTasksProvider
+   }
+ }
+ 
+-String _$allDailyTasksHash() => r'9b4dc5abae34dd9e579cd3c5b7222566e17d4977';
++String _$allDailyTasksHash() => r'e7133a8e94ae2dc033648a79bccadafe38035339';
+ 
+ /// Overdue task count for a single curriculum.
+ ///

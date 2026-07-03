@@ -1,0 +1,232 @@
+[
+ {
+  "sourceBatch": "t1-feat-account-p3",
+  "chunk": "grp-040",
+  "finding": {
+   "title": "Add try/catch around onSendAgain/onVerified in EmailVerificationConfirmPanel and un-skip the C6/E5 regression tests",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "EH-2/EH-3 (typed exceptions handled at the boundary; no log-less catch) discovered via disclosed-but-unfixed test skips",
+   "area": "features/account/presentation/widgets/email_verification_confirm_panel.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/account/presentation/widgets/email_verification_confirm_panel.dart",
+     "line": 165,
+     "quote": "Future<void> _wrapSendAgain() async {\n    setState(() => _sendingAgain = true);"
+    },
+    {
+     "file": "learning_tracker/lib/features/account/presentation/widgets/email_verification_confirm_panel.dart",
+     "line": 167,
+     "quote": "try {\n      await widget.onSendAgain();"
+    },
+    {
+     "file": "learning_tracker/test/features/account/presentation/widgets/email_verification_confirm_panel_test.dart",
+     "line": 520,
+     "quote": "// BUG: _wrapSendAgain uses try/finally but not try/catch, so exceptions\n      // from onSendAgain propagate as unhandled async errors, crashing the"
+    },
+    {
+     "file": "learning_tracker/test/features/account/presentation/widgets/email_verification_confirm_panel_test.dart",
+     "line": 525,
+     "quote": "skip: true,"
+    }
+   ],
+   "sites": 2,
+   "why": "`_wrapSendAgain`/`_wrapVerified` use try/finally with no catch, so any exception from the injected callback propagates as an unhandled async error instead of a graceful error state. The onVerified callback built in sign_in_controller.dart's buildVerificationCallback calls _refreshAndCheckVerified -> authRepo.reloadCurrentUser() with no surrounding try/catch, so a transient network error while the user is mid email-verification is a real, reachable path to this unhandled exception -- not just a theoretical one. Both regression tests that would catch this (C6, E5) are disclosed but left skip:true with no Linear id, so the gap is invisible to anyone not reading test source.",
+   "recommendation": "Add a catch clause to both wrapper methods that resets the loading flag and surfaces the failure (e.g. via a callback/snackbar, matching the pattern already used for signOut() failures elsewhere in this feature), then remove skip: true from C6 and E5.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "_wrapSendAgain and _wrapVerified catch and handle exceptions from the injected callbacks (no bare try/finally).",
+    "C6 and E5 in email_verification_confirm_panel_test.dart run (skip: true removed) and pass."
+   ],
+   "labels": [
+    "error-handling",
+    "unhandled-exception",
+    "untracked-bug"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-progress-p2",
+  "chunk": "grp-084",
+  "finding": {
+   "title": "Split or trim hand-written progress widget files over the 400-line AG-3 cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3 (hand-written Dart files \u2264400 lines)",
+   "area": "presentation / widgets",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/widgets/lifetime_folder_styled_widgets.dart",
+     "line": 12,
+     "quote": "class LifetimeFolderGradients {"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/widgets/siyumim_grouped_view.dart",
+     "line": 29,
+     "quote": "class SiyumimGroupedView extends ConsumerWidget {"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/widgets/curriculum_breakdown_list.dart",
+     "line": 22,
+     "quote": "class CurriculumBreakdownList extends StatefulWidget {"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/widgets/monthly_activity_sliver_calendar.dart",
+     "line": 69,
+     "quote": "class MonthlyActivitySliverCalendar extends StatefulWidget {"
+    }
+   ],
+   "sites": 4,
+   "why": "lifetime_folder_styled_widgets.dart is 650 lines (62% over the cap) and bundles a theme/gradient constants class with six unrelated standalone widget classes plus an enum in one file \u2014 the kind of file where an unrelated one-line style tweak forces a reviewer to scroll past six other widgets' worth of unrelated diff. siyumim_grouped_view.dart (437), curriculum_breakdown_list.dart (413) and monthly_activity_sliver_calendar.dart (404, also dead \u2014 see companion finding) are more modestly over (1-9%).",
+   "recommendation": "Split lifetime_folder_styled_widgets.dart along its class boundaries (e.g. lifetime_folder_gradients.dart, lifetime_folder_surface.dart, lifetime_marking_scope_row.dart); trim the other three opportunistically on next touch.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "A line-count checker (tool/ script or CI grep) enumerates these 4 paths today and is wired into make audit per Rule 0; count drops to 0 after the split."
+   ],
+   "labels": [
+    "file-size",
+    "hygiene",
+    "ag-3"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-gamification-p2",
+  "chunk": "grp-054",
+  "finding": {
+   "title": "Replace TierStyle.forTitle's hardcoded-English-string switch with a stable tier identifier",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Evans (ubiquitous language / re-derived invariant) + TQ-1 (missing unit coverage)",
+   "area": "features/gamification/presentation/widgets",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/gamification/presentation/widgets/tier_style.dart",
+     "line": 56,
+     "quote": "switch (t) {\n      case 'Bronze Star':"
+    },
+    {
+     "file": "learning_tracker/lib/features/gamification/presentation/widgets/tier_style.dart",
+     "line": 162,
+     "quote": "default:\n        return const TierStyle("
+    },
+    {
+     "file": "learning_tracker/lib/features/gamification/domain/services/reward_milestone_service.dart",
+     "line": 230,
+     "quote": "(title: 'Bronze Star', thresholdPoints: 500),"
+    }
+   ],
+   "sites": 1,
+   "why": "TierStyle.forTitle keys its visual styling entirely off the exact English milestone title string produced elsewhere (reward_milestone_service.dart's hardcoded ladder). The 7 case labels currently match, but nothing enforces that: a future rename, typo fix, or localization of a milestone title silently falls through to the generic gray `default:` style for every achievement card using that tier \u2014 no exception, no log, no test failure. grep -rln TierStyle test/ confirms there is zero test coverage anywhere in the repo pinning this mapping or the default-fallback behavior, so this class of regression would ship undetected.",
+   "recommendation": "Key TierStyle off a stable identifier (an enum or the milestone's stored id/threshold) rather than the display title string; add a unit test asserting each tier maps to its distinct style and that an unmatched key is either unreachable or explicitly logged.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "TierStyle.forTitle (or its replacement) takes a stable, non-localizable key instead of the raw title string.",
+    "New test/features/gamification/presentation/widgets/tier_style_test.dart asserts all 7 tiers plus the legend/default cases."
+   ],
+   "labels": [
+    "fragile-coupling",
+    "testing",
+    "gamification"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-progress-p3",
+  "chunk": "grp-085",
+  "finding": {
+   "title": "Rewrite CP-02/ILP-01/PP-4 progress-provider regression guards to exercise the real provider instead of a hand-rewritten stand-in",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "test/features/progress/presentation/providers",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/progress/presentation/providers/curriculum_progress_reactivity_test.dart",
+     "line": 27,
+     "quote": "curriculumProgressProvider('mishnayos').overrideWith((ref) async {"
+    },
+    {
+     "file": "learning_tracker/test/features/progress/presentation/providers/curriculum_progress_reactivity_test.dart",
+     "line": 29,
+     "quote": "ref.watch<int>(completionCommittedProvider);"
+    },
+    {
+     "file": "learning_tracker/test/features/progress/presentation/providers/items_learned_reactivity_test.dart",
+     "line": 41,
+     "quote": "              )).overrideWith((ref) async {"
+    },
+    {
+     "file": "learning_tracker/test/features/progress/presentation/providers/items_learned_reactivity_test.dart",
+     "line": 99,
+     "quote": "              )).overrideWith((ref) async {"
+    },
+    {
+     "file": "learning_tracker/test/features/progress/presentation/providers/items_learned_reactivity_test.dart",
+     "line": 146,
+     "quote": "itemsLearnedSummariesProvider(1).overrideWith((ref) async {"
+    },
+    {
+     "file": "learning_tracker/test/features/progress/presentation/providers/pp4_lifetime_chazaros_count_test.dart",
+     "line": 107,
+     "quote": "final buggyCount = completions.length;"
+    },
+    {
+     "file": "learning_tracker/test/features/progress/presentation/providers/pp4_lifetime_chazaros_count_test.dart",
+     "line": 118,
+     "quote": "final fixedCount = completions.where((c) => c.stageId > 1).length;"
+    }
+   ],
+   "sites": 6,
+   "why": "Each 'regression guard' replaces the real provider body with a hand-written stub (curriculum_progress_reactivity_test.dart, items_learned_reactivity_test.dart x3) or bypasses the provider entirely and recomputes the intended formula inline (pp4_lifetime_chazaros_count_test.dart x2, which never touches lifetimeHeaderCountersProvider or even a ProviderContainer). I confirmed the real implementations at progress_providers.dart:67/118/166, items_learned_providers.dart:182/221, and lifetime_knowledge_providers.dart:531/562 currently contain the fix (ref.watch(completionCommittedProvider) / .where((c) => c.stageId > 1)), and that these are the ONLY tests tagged CP-02/ILP-01/PP-4 in the repo. If a future refactor of any of these 6 providers drops the watch call or reverts totalChazaros to completions.length, all 6 tests keep passing and CI stays green while the previously-shipped, user-visible bugs (stale Progress/Items-Learned/Lifetime-View screens after a completion; self-contradictory 'N chazaros' header) silently ship again.",
+   "recommendation": "Follow the pattern already used correctly in this same batch (lifetime_knowledge_providers_test.dart's 'D9' group, journey_providers_test.dart): seed a real in-memory UserDatabase, read the REAL provider via ProviderContainer with only DB/content-repo/profile overridden, mutate the DB, tick completionCommittedProvider, and assert the real provider's re-fetched value changed. For PP-4, call container.read(lifetimeHeaderCountersProvider(...).future) against seeded rows instead of recomputing the formula in the test.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "Temporarily reverting the ref.watch(completionCommittedProvider) line in curriculumProgressProvider/itemsLearnedDataProvider/lifetimeViewDataProvider/itemsLearnedSummariesProvider makes the corresponding rewritten test fail red.",
+    "Temporarily reverting lifetimeHeaderCountersProvider's totalChazaros to completions.length makes the PP-4 test fail red.",
+    "No test in these 3 files fully overrides the provider under test with a hand-written body that duplicates the fix logic."
+   ],
+   "labels": [
+    "testing",
+    "riverpod",
+    "progress",
+    "tautological-test"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-onboarding-p1",
+  "chunk": "grp-068",
+  "finding": {
+   "title": "Remove unreachable English-only default parameter values in AppIntroScreen's _IntroPage",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "hygiene / dead code",
+   "area": "features/onboarding/presentation/screens",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/screens/app_intro_screen.dart",
+     "line": 432,
+     "quote": "String talmidChochomLabel = 'Talmid Chochom',"
+    },
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/screens/app_intro_screen.dart",
+     "line": 457,
+     "quote": "String talmidChochomLabel = 'Talmid Chochom',"
+    }
+   ],
+   "sites": 2,
+   "why": "Both call sites (_buildSubtitleBlock at line 292 and its internal call to _subtitleRich) always pass an explicit talmidChochomLabel: terms.talmidChochom argument, so these English-literal defaults can never actually render -- dead code that also looks like (but isn't reachable as) an AX-2 violation, wasting a reviewer's attention when auditing for hardcoded strings.",
+   "recommendation": "Make the parameter `required String talmidChochomLabel` (drop the default) so the compiler enforces callers always supply the localized value.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "flutter analyze clean after making the parameter required (proves no call site relied on the default)"
+   ],
+   "labels": [
+    "dead-code",
+    "hygiene",
+    "onboarding"
+   ]
+  }
+ }
+]

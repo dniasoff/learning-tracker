@@ -1,0 +1,210 @@
+[
+ {
+  "sourceBatch": "t1-feat-gamification-p3",
+  "findingIndex": 8,
+  "finding": {
+   "title": "Replace the wildcard `case _:` on the sealed AsyncValue switch in gamification_screen_l1_test.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "EH-6",
+   "area": "features/gamification presentation test helper",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/gamification/presentation/screens/gamification_screen_l1_test.dart",
+     "line": 143,
+     "quote": "case _:\n            return Completer<AchievementsOverview>().future;"
+    }
+   ],
+   "sites": 1,
+   "why": "AsyncValue is `sealed class AsyncValue<T>` with exactly 3 subtypes (AsyncData/AsyncLoading/AsyncError, verified in the riverpod package source). This switch handles AsyncData and AsyncError explicitly but falls back to a `case _:` wildcard for AsyncLoading instead of naming it. Per docs/coding-standards.md:197-199 (EH-6), a wildcard arm 'silently absorbs future variants and destroys' the compiler's exhaustiveness guarantee \u2014 here it also hides that the loading case is deliberately made to hang (Completer().future never completes) rather than being an oversight.",
+   "recommendation": "Change `case _:` to `case AsyncLoading():` so the switch is explicitly exhaustive.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "The switch in _buildApp's achievementsOverviewProvider override names AsyncLoading() explicitly instead of using a wildcard arm."
+   ],
+   "labels": [
+    "hygiene",
+    "EH-6"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-labels",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Delete or consolidate the 11 duplicate coverage groups in test/features/labels/domain_term_rendering_modes_test.dart",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-5 (test/ mirrors lib/ 1:1) + Fowler duplication + TQ-1 pyramid",
+   "area": "test/features/labels",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/labels/domain_term_rendering_modes_test.dart",
+     "line": 436,
+     "quote": "group('Layer 1 \u2014 CurriculumLabels (shared path, table-driven)', () {"
+    },
+    {
+     "file": "learning_tracker/test/features/labels/domain_term_rendering_modes_test.dart",
+     "line": 526,
+     "quote": "group('Layer 2 \u2014 domainTermLabels(ref)', () {"
+    },
+    {
+     "file": "learning_tracker/test/features/labels/domain_term_rendering_modes_test.dart",
+     "line": 587,
+     "quote": "group('Layer 3a \u2014 CurriculumListScreen count labels', () {"
+    },
+    {
+     "file": "learning_tracker/test/features/labels/domain_term_rendering_modes_test.dart",
+     "line": 637,
+     "quote": "group('Layer 3b \u2014 ScopeSelectionScreen level word (chumash)', () {"
+    },
+    {
+     "file": "learning_tracker/test/features/labels/domain_term_rendering_modes_test.dart",
+     "line": 699,
+     "quote": "group('Layer 4a \u2014 HierarchyProgressCard seder name (level.levelName)', () {"
+    },
+    {
+     "file": "learning_tracker/test/features/labels/domain_term_rendering_modes_test.dart",
+     "line": 758,
+     "quote": "group('Layer 4b \u2014 SiyumimGroupedView aggregate (milestone.aggregateKey)', () {"
+    },
+    {
+     "file": "learning_tracker/test/features/labels/domain_term_rendering_modes_test.dart",
+     "line": 837,
+     "quote": "group('Layer 4c \u2014 GoalSetupForm daf unit pill', () {"
+    },
+    {
+     "file": "learning_tracker/test/features/labels/domain_term_rendering_modes_test.dart",
+     "line": 889,
+     "quote": "group('Layer 4d \u2014 SacredTimeLockOverlay Shabbos greeting', () {"
+    },
+    {
+     "file": "learning_tracker/test/features/labels/domain_term_rendering_modes_test.dart",
+     "line": 941,
+     "quote": "group('Layer 4e \u2014 SacredTimeSettingsCard Shabbos header', () {"
+    },
+    {
+     "file": "learning_tracker/test/features/labels/domain_term_rendering_modes_test.dart",
+     "line": 989,
+     "quote": "group('Layer 4f \u2014 track-order container section header word', () {"
+    },
+    {
+     "file": "learning_tracker/test/features/labels/domain_term_rendering_modes_test.dart",
+     "line": 1033,
+     "quote": "group('Layer 4g \u2014 CurriculumLabel.curriculum (Mishnayos)', () {"
+    }
+   ],
+   "sites": 11,
+   "why": "This file lives in test/features/labels/, which has no lib/features/labels/ counterpart (labels are a core/labels/ concern) \u2014 one of the AG-5-flagged unmirrored test directories. Every one of its 11 groups re-pins a Hebrew-terms/nusach behavior that is already asserted, often with byte-identical fixture literals or the same override-class names, at the widget/module's correctly mirrored path: L1(primaryUnitLabel/containerCountLabel)->test/core/constants/curriculum_label_variant_test.dart:145-192; L2(chazara/shabbos)->test/core/labels/domain_term_labels_vocab_test.dart; L3a(CurriculumListScreen counts '1 Masekhtot'/'1 Mishnayot')->curriculum_list_screen_test.dart:98-155 (identical strings + comment wording); L3b(ScopeSelectionScreen chumash 'Sefer')->scope_lifetime_l1_test.dart:184-269 (identical override classes _HebrewTermsOn/_HebrewTermsOff/_VariantAshkenazi/_VariantSephardi and the same Chumash fixture); L4a(HierarchyProgressCard Tahorot/Taharos)->progress_widgets_test.dart:430-453 (identical fixture + identical comment 'Tahoros/Tahorot is the ONE seder that differs across nuschaot'); L4b(SiyumimGroupedView 'Siyum Seder Taharos'/'Tahorot')->siyumim_grouped_view_test.dart:341-421 (identical aggregateKey 'Tahorot' fixture and identical expect() strings); L4c(GoalSetupForm Dafim/Dapim)->goal_setup_screen_test.dart:262-318; L4d(SacredTimeLockOverlay 'Good Shabbos'/'Good Shabbat'/\u05e9\u05d1\u05ea)->sacred_time_lock_overlay_l10n_test.dart:69-114; L4e(SacredTimeSettingsCard header)->sacred_time_settings_card_l10n_test.dart:198-271; L4f(containerSectionHeader)->curriculum_labels_extended_test.dart:106-123 and curriculum_defaults_extended_test.dart:131-158; L4g(CurriculumLabel.curriculum Mishnayos/Mishnayot)->curriculum_label_test.dart:39-66. Concrete cost: every future change to a label/nusach format now has two call sites to update; a contributor who edits only the mirrored file (the one AG-5 says to look for) leaves this file's copy silently untouched until a full-suite run \u2014 the exact 'cross-wave drift' AG-2/AG-5's own rationale is written to prevent \u2014 and a contributor searching test/features/<feature>/ for a widget's coverage (the AG-5 contract) will not find this file at all since 'labels' isn't a real feature.",
+   "recommendation": "For each of the 11 groups, confirm the mirrored file's assertion is equivalent (9 of 11 already confirmed identical above) and delete the group here; if the file is kept as a deliberate single 'classB regression index' (its own header states these were 'found by hand + on-device'), say so explicitly and have each surviving group's comment cross-reference the mirrored file it also lives in, so the next audit wave does not add a 12th copy of the same pin.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "flutter test on test/features/labels/, test/core/labels/, test/core/constants/, and the seven touched test/features/<feature>/ dirs still passes, and the total expect( count across old+new locations for the removed groups does not decrease (TQ-7 ratchet \u2014 no assertion is lost, only the duplicate copy).",
+    "AG-5's pending checker ('[Pending] audit check for unmirrored test files' per coding-standards.md AG-5) is implemented and either passes clean for this path or the file carries an explicit exemption comment analogous to the story_acceptance/ carve-out already written into the AG-5 rule text.",
+    "No two files under test/ contain an identical expect(find.text(...)) string-literal pin for the same widget + mode combination among the 11 pairs cited in evidence."
+   ],
+   "labels": [
+    "test-quality",
+    "duplication",
+    "AG-5",
+    "maintainability"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-labels",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Cut test/features/labels/domain_term_rendering_modes_test.dart from 1088 hand-written lines to the AG-3 400-line cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "test/features/labels",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/labels/domain_term_rendering_modes_test.dart",
+     "line": 1,
+     "quote": "// Runtime-confidence layer for the Hebrew-terms enforcement."
+    }
+   ],
+   "sites": 1,
+   "why": "The file is 1088 hand-written, non-generated lines \u2014 2.72x the 400-line AG-3 ratchet \u2014 built from five separate local _build*App/_pumpProbe factories (lines 168-417) plus per-mode literal maps repeated across 11 groups instead of a shared pump helper. At this size the tail (Layers 4d-4g, lines ~883-1072) sits outside a typical single-file agent read budget, which is exactly the failure mode AG-3's stated rationale (content past the window is invisible, becomes a dumping ground) describes, and is corroborated by the finding above: the file grew by repeated append-only accretion across audit waves rather than being kept to one purpose.",
+   "recommendation": "Applying the companion duplication finding (delete the ~11 redundant groups) removes most of the file's bulk as a side effect. If any layer is kept as the sole owner of its assertion, move it into its own file under the correctly mirrored path (e.g. a Layer-1/2 pure-function file under test/core/labels/ or test/core/constants/) rather than re-growing this file.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "find learning_tracker/test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400' (the AG-3 checker text from coding-standards.md AG-3) no longer lists this file."
+   ],
+   "labels": [
+    "hygiene",
+    "AG-3",
+    "file-size"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-learning-p1",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Split completion_writer.dart and completion_repository_impl.dart under the 400-line AG-3 cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "learning/data",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/learning/data/completion_writer.dart",
+     "line": 51,
+     "quote": "class CompletionWriter {"
+    },
+    {
+     "file": "learning_tracker/lib/features/learning/data/repositories/completion_repository_impl.dart",
+     "line": 30,
+     "quote": "class CompletionRepositoryImpl implements CompletionRepository {"
+    }
+   ],
+   "sites": 2,
+   "why": "completion_writer.dart is 770 lines and completion_repository_impl.dart (a churn HOTSPOT) is 891 lines, both hand-written and both nearly double the 400-line cap. Large single-responsibility-violating files raise the odds any single edit misses a related branch (exactly the class of bug the batch's other findings are drawn from) and slow every future review.",
+   "recommendation": "Extract CompletionWriter's batch-resurrection/upgrade helpers (_resurrectTombstone, _upgradePriorMarkRow, the natural-key helpers) into a co-located mixin/helper class; extract CompletionRepositoryImpl's bookmark-advance and siyum-dispatch orchestration (_advanceBookmark, _dispatchSiyumDetectionForRefs, _bulkSourceFor) into a separate collaborator so the repository itself shrinks toward the 400-line target.",
+   "effort": "L",
+   "acceptance_criteria": [
+    "AG-3 line-count checker (pending) reports both files \u2264400 lines, or each carries a `// linelimit-ok: <reason>` waiver with a stated reason."
+   ],
+   "labels": [
+    "ag-3",
+    "file-size",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-learning-p1",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Inject BookmarkRepository (with its ContentIndex) into CompletionRepositoryImpl instead of ad-hoc-constructing it for delegated profiles",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "SM-8",
+   "area": "learning/data/repositories",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/learning/data/repositories/completion_repository_impl.dart",
+     "line": 801,
+     "quote": "bookmarkRepo = BookmarkRepositoryImpl(\n        database: _database,"
+    }
+   ],
+   "sites": 1,
+   "why": "_advanceBookmark only uses the DI-injected BookmarkRepository (wired with a ContentIndex for O(1) adjacent-item lookups via bookmarkRepositoryProvider) when the target profile equals the active session profile. For any delegated-profile completion \u2014 BulkCompletionRequest.profileId is documented for exactly this: 'add track for a child while the session active profile differs' and bulk_prior_completion_service.dart exercises it from onboarding \u2014 the code instead `new`s a fresh BookmarkRepositoryImpl without passing contentIndex:, silently falling onto the documented O(N) full-curriculum scan fallback on every bookmark advance. completion_repository_impl.dart also directly imports another feature repository (bookmark_repository_impl.dart), the pattern SM-8 exists to prevent. completion_repository_impl_test.dart's setUp never injects a bookmarkRepository at all, so this branch (and the fast/slow-path difference) is exercised by every test in the file yet never asserted \u2014 a regression here would ship silently.",
+   "recommendation": "Thread a `BookmarkRepository Function(int profileId)` factory (or the ContentIndex itself) into CompletionRepositoryImpl via its constructor/provider, matching how completionRepositoryProvider already injects CompletionDetectionService, instead of constructing BookmarkRepositoryImpl by hand inside _advanceBookmark.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "completion_repository_impl_test.dart gains a case with bookmarkProfileId != activeProfileId that asserts the ContentIndex fast path is used (e.g. mockContentRepository.getContentForCurriculum is not called when a ContentIndex is supplied)."
+   ],
+   "labels": [
+    "sm-8",
+    "sm-7",
+    "performance",
+    "di"
+   ]
+  }
+ }
+]

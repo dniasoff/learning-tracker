@@ -1,0 +1,60 @@
+[
+ {
+  "sourceBatch": "t1-feat-scheduler-p1",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Scope SchedulerLearningOrderRepository.getOrder by profileId \u2014 sibling profiles' custom content order leaks into each other's daily plan",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "profileId-in-PK / multi-profile isolation invariant (coding-standards.md); contrast with sibling repos in the same directory",
+   "area": "features/scheduler/data+domain repositories",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/scheduler/domain/repositories/scheduler_learning_order_repository.dart",
+     "line": 21,
+     "quote": "Future<List<SchedulerOrderItem>> getOrder(CurriculumId curriculumId);"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/data/repositories/scheduler_learning_order_repository_impl.dart",
+     "line": 16,
+     "quote": "Future<List<SchedulerOrderItem>> getOrder(CurriculumId curriculumId) async {"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/daos/learning_order_dao.dart",
+     "line": 30,
+     "quote": "Future<List<LearningOrderData>> getLearningOrderByCurriculum(\n    String curriculumId,"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/domain/services/scheduler_engine.dart",
+     "line": 511,
+     "quote": "final customOrderMap = {\n        for (final item in customOrder) item.sefariaRef: item.userSortOrder,"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/presentation/providers/scheduler_providers.dart",
+     "line": 140,
+     "quote": "learningOrderRepository: SchedulerLearningOrderRepositoryImpl(\n      learningOrderDao: db.learningOrderDao,"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_15_multi_profile_test.dart",
+     "line": 1587,
+     "quote": "learningOrderRepository: SchedulerLearningOrderRepositoryImpl(\n          learningOrderDao: db.learningOrderDao,"
+    }
+   ],
+   "sites": 2,
+   "why": "LearningOrder rows carry profileId in their PK ({profileId, curriculumId, sefariaRef}) precisely because each profile can set its own custom study order, but SchedulerLearningOrderRepositoryImpl.getOrder never accepts or forwards a profileId, and the underlying DAO query filters only by curriculumId. Two siblings in the same household who both learn e.g. Mishnayos and both customize their order produce rows for the SAME curriculum; SchedulerEngine._buildOrderedRefs folds ALL of them into one `sefariaRef -> userSortOrder` map (last-DB-row-wins, no defined order), so one child's manual reordering can silently override or blend into the other child's daily task ordering. The sibling repository in the exact same directory, SchedulerCompletionRepositoryImpl, does the correct thing (constructor-injected profileId, doc comment 'Scoped to a single profile so daily task generation reflects only the active profile's completion history') and production wiring in scheduler_providers.dart passes profileId to it but not to the learning-order repo two lines later \u2014 this is a demonstrated inconsistency, not a deliberate design. There is no dedicated unit test for SchedulerLearningOrderRepositoryImpl, and the multi-profile acceptance suite (epic_15_multi_profile_test.dart) constructs it without a profileId too, so nothing in the suite would catch a regression here.",
+   "recommendation": "Add a required profileId parameter to SchedulerLearningOrderRepository.getOrder and SchedulerLearningOrderRepositoryImpl, thread it into a profileId-scoped DAO query, and wire it from scheduler_providers.dart the same way completionRepository already receives it.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "SchedulerLearningOrderRepository.getOrder accepts a required profileId parameter; SchedulerLearningOrderRepositoryImpl passes it through to a profileId-scoped DAO query instead of the curriculum-only query.",
+    "LearningOrderDao exposes a profileId-scoped lookup (extend getLearningOrderByCurriculum or add a variant) and scheduler_providers.dart passes ref.watch(activeProfileIdProvider) to SchedulerLearningOrderRepositoryImpl the same way it already does for SchedulerCompletionRepositoryImpl.",
+    "New regression test: seed two profiles that each set a distinct custom order for the same curriculum sharing a sefariaRef, and assert SchedulerEngine's resulting task order for profile A is unaffected by profile B's row."
+   ],
+   "labels": [
+    "multi-profile-isolation",
+    "scheduler",
+    "data-repository",
+    "P1"
+   ]
+  }
+ }
+]

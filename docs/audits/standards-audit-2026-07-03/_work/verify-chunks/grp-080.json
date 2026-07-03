@@ -1,0 +1,234 @@
+[
+ {
+  "sourceBatch": "t1-feat-profiles-p3",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Extract a shared pumpApp/l10n test harness \u2014 25+ duplicated MaterialApp+delegate blocks across features/profiles/presentation tests",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-3",
+   "area": "test/features/profiles/presentation/** (widget-test harness helpers)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/profiles/presentation/widgets/parent_pin_keypad_dialog_test.dart",
+     "line": 59,
+     "quote": "localizationsDelegates: const [\nAppLocalizations.delegate,"
+    },
+    {
+     "file": "learning_tracker/test/features/profiles/presentation/widgets/add_profile_dialog_test.dart",
+     "line": 61,
+     "quote": "localizationsDelegates: const [\nAppLocalizations.delegate,"
+    },
+    {
+     "file": "learning_tracker/test/features/profiles/presentation/screens/parent_track_management_screen_l1_test.dart",
+     "line": 145,
+     "quote": "localizationsDelegates: const [\nAppLocalizations.delegate,"
+    },
+    {
+     "file": "learning_tracker/test/features/profiles/presentation/screens/profile_picker_screen_l1_test.dart",
+     "line": 138,
+     "quote": "localizationsDelegates: const [\nAppLocalizations.delegate,"
+    },
+    {
+     "file": "learning_tracker/test/features/profiles/presentation/screens/ts3_parent_track_archive_test.dart",
+     "line": 101,
+     "quote": "localizationsDelegates: const [\nAppLocalizations.delegate,"
+    }
+   ],
+   "sites": 25,
+   "why": "grep -c 'GlobalCupertinoLocalizations.delegate' across the 15 batch files totals 25 occurrences in 13/15 files (7 alone in parent_pin_keypad_dialog_test.dart, 3 each in add_profile_dialog_test.dart and parent_track_management_screen_l1_test.dart) \u2014 every widget test hand-rolls its own MaterialApp(locale:, localizationsDelegates: const [4 delegates], supportedLocales:, home:) wrapper. No pumpApp helper exists anywhere in test/ (repo-wide search). This is Fowler-textbook shotgun-surgery risk: adding a 5th delegate, changing supportedLocales, or fixing an RTL default requires touching dozens of call sites, and drift has already started \u2014 pp11_edit_dialog_autofocus_test.dart and pp13 write the delegate list without 'const' while most others use 'const ['.",
+   "recommendation": "Add test/helpers/pump_app.dart exporting a pumpApp(tester, {required Widget child, Locale locale = const Locale('en'), List<Override> overrides = const [], StackRouter? router}) that wraps ProviderScope+MaterialApp+the 4 delegates+supportedLocales once; migrate these 15 files onto it incrementally.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "test/helpers/pump_app.dart exists and is imported by at least the files in this batch.",
+    "grep -rc 'GlobalCupertinoLocalizations.delegate' test/features/profiles/presentation/ drops from 25 to 0 outside the new shared helper."
+   ],
+   "labels": [
+    "duplication",
+    "test-quality",
+    "profiles",
+    "harness"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-profiles-p3",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Close or auto-close inMemoryDb() in profiles _buildApp test helpers \u2014 3 files leak native Drift handles whenever db: is omitted",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6",
+   "area": "test/features/profiles/presentation/screens/{parent_settings_screen_l1_test,parent_track_management_screen_l1_test,ts14_parent_track_management_copy_test}.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/helpers/drift_memory.dart",
+     "line": 40,
+     "quote": "/// Callers MUST `await db.close()` in `tearDown` to free the native\n/// resources."
+    },
+    {
+     "file": "learning_tracker/test/features/profiles/presentation/screens/parent_settings_screen_l1_test.dart",
+     "line": 114,
+     "quote": "final resolvedDb = db ?? inMemoryDb();"
+    },
+    {
+     "file": "learning_tracker/test/features/profiles/presentation/screens/parent_track_management_screen_l1_test.dart",
+     "line": 129,
+     "quote": "final database = db ?? inMemoryDb();"
+    },
+    {
+     "file": "learning_tracker/test/features/profiles/presentation/screens/parent_track_management_screen_l1_test.dart",
+     "line": 167,
+     "quote": "final database = inMemoryDb();"
+    },
+    {
+     "file": "learning_tracker/test/features/profiles/presentation/screens/ts14_parent_track_management_copy_test.dart",
+     "line": 71,
+     "quote": "final database = db ?? inMemoryDb();"
+    }
+   ],
+   "sites": 3,
+   "why": "drift_memory.dart's own contract says callers MUST close inMemoryDb(). In these 3 files, _buildApp (and _buildAppLoading/_buildAppError, which have no db: parameter at all) construct one via `db ?? inMemoryDb()` whenever the optional db: is omitted, and the large majority of testWidgets in parent_settings_screen_l1_test.dart and parent_track_management_screen_l1_test.dart (~30 of ~40 across the two files) do omit it, so each test run leaks a native sqlite3 in-memory connection nothing ever closes \u2014 the caller has no reference to the db, so it can't be closed even in a teardown. At the scale of this test suite (dozens of files following the same pattern), this is a plausible contributor to CI slowness or file-descriptor/memory pressure.",
+   "recommendation": "Make db a required parameter (as ts3_parent_track_archive_test.dart already does correctly, forcing every call site to own+close it), or have _buildApp itself call addTearDown(() => resolvedDb.close()) so omitting db: is automatically safe.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Every _buildApp/_buildAppLoading/_buildAppError variant in these 3 files either requires db: or internally registers addTearDown to close the database it created."
+   ],
+   "labels": [
+    "resource-leak",
+    "test-quality",
+    "drift",
+    "profiles"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-profiles-p3",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Rewire pp16/ts14 regression assertions onto the real widget \u2014 pp16 tests Flutter's SliverGrid math instead of ProfileGrid's config, ts14's second test reads a bare ARB getter instead of the rendered archive dialog",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "test/features/profiles/presentation/widgets/pp16_profile_grid_tablet_height_test.dart + test/features/profiles/presentation/screens/ts14_parent_track_management_copy_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/profiles/presentation/widgets/pp16_profile_grid_tablet_height_test.dart",
+     "line": 19,
+     "quote": "import 'package:flutter/rendering.dart';\nimport 'package:flutter_test/flutter_test.dart';"
+    },
+    {
+     "file": "learning_tracker/test/features/profiles/presentation/widgets/pp16_profile_grid_tablet_height_test.dart",
+     "line": 48,
+     "quote": "const delegate = SliverGridDelegateWithMaxCrossAxisExtent(\nmaxCrossAxisExtent: 260,"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/widgets/profile_grid.dart",
+     "line": 39,
+     "quote": "gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(\nmaxCrossAxisExtent: 260,"
+    },
+    {
+     "file": "learning_tracker/test/features/profiles/presentation/screens/ts14_parent_track_management_copy_test.dart",
+     "line": 196,
+     "quote": "l10n.parentDeleteTrackArchiveBody,\ncontains(\"child's\"),"
+    }
+   ],
+   "sites": 2,
+   "why": "pp16's two tests only import package:flutter/rendering.dart and flutter_test \u2014 they never import ProfileGrid (profile_grid.dart), instead constructing SliverGridDelegateWithMaxCrossAxisExtent/WithFixedCrossAxisCount from scratch and asserting on Flutter's own layout math. Currently ProfileGrid does use maxCrossAxisExtent:260 (profile_grid.dart:39-40), so the test's numbers happen to agree today, but nothing in the test file would notice if that gridDelegate: argument were changed, removed, or reverted to FixedCrossAxisCount(2) \u2014 the exact PP-16 bug the file claims to guard. Similarly, ts14's second test reads AppLocalizations.of(context)!.parentDeleteTrackArchiveBody directly and asserts on its string content instead of opening the real archive dialog (as the sibling ts3 test's intent describes) and reading the rendered Text \u2014 it cannot catch _showDeleteDialog being edited to reference the sibling own-profile key deleteTrackArchiveBody instead.",
+   "recommendation": "pp16: pump the real ProfileGrid widget at the wide-tablet viewport and read its actual gridDelegate/tile RenderBox size instead of re-instantiating a delegate. ts14: extend a widget test that opens the real _showDeleteDialog via longPress and asserts the rendered dialog body Text equals l10n.parentDeleteTrackArchiveBody.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Reverting profile_grid.dart:39 to SliverGridDelegateWithFixedCrossAxisCount(crossAxisCount: 2, ...) fails pp16's test suite.",
+    "Swapping parent_track_management_screen.dart's dialog content to l10n.deleteTrackArchiveBody (the own-profile key) fails ts14's suite."
+   ],
+   "labels": [
+    "test-quality",
+    "profiles",
+    "tracks",
+    "regression-test-gap"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-profiles-p3",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Split 4 oversized hand-written test files in features/profiles/presentation (805-1079 lines) \u2014 over the AG-3 400-line cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "test/features/profiles/presentation/{screens,widgets}",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/profiles/presentation/widgets/parent_pin_keypad_dialog_test.dart",
+     "line": 1,
+     "quote": "// L1 widget tests for ParentPinKeypadDialog"
+    },
+    {
+     "file": "learning_tracker/test/features/profiles/presentation/screens/parent_settings_screen_l1_test.dart",
+     "line": 1,
+     "quote": "// L1 widget tests for ParentSettingsScreen"
+    },
+    {
+     "file": "learning_tracker/test/features/profiles/presentation/screens/parent_track_management_screen_l1_test.dart",
+     "line": 1,
+     "quote": "/// L1 widget tests for ParentTrackManagementScreen."
+    },
+    {
+     "file": "learning_tracker/test/features/profiles/presentation/screens/profile_picker_screen_l1_test.dart",
+     "line": 1,
+     "quote": "/// L1 widget tests for ProfilePickerScreen."
+    }
+   ],
+   "sites": 4,
+   "why": "parent_pin_keypad_dialog_test.dart (1079 lines), parent_settings_screen_l1_test.dart (999), parent_track_management_screen_l1_test.dart (902), and profile_picker_screen_l1_test.dart (805) each run 2-2.7x over the 400-line AG-3 cap, each covering many unrelated scenario groups (e.g. parent_settings mixes the tutor-permission-tile matrix, the Adjust-Points dialog, and the Pending-Prizes subtitle in one file/one main()), which is harder to navigate and increases merge-conflict surface on churned files.",
+   "recommendation": "Split each by scenario group, mirroring the ppNN/tsN per-scenario file convention already used elsewhere in this same directory (e.g. peel Adjust-Points-dialog and Pending-Prizes tests out of parent_settings_screen_l1_test.dart into their own files).",
+   "effort": "M",
+   "acceptance_criteria": [
+    "`find learning_tracker/test -name '*.dart' | xargs wc -l | awk '$1>400'` reports zero files under test/features/profiles/presentation/."
+   ],
+   "labels": [
+    "AG-3",
+    "hygiene",
+    "test-quality",
+    "profiles"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-profiles-p3",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Scope or ticket the FlutterError.onError overflow suppression in profile_picker_screen_l1_test.dart and rpr2_picker_offline_delete_test.dart he-locale tests",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-7",
+   "area": "test/features/profiles/presentation/screens/{profile_picker_screen_l1_test,rpr2_picker_offline_delete_test}.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/profiles/presentation/screens/profile_picker_screen_l1_test.dart",
+     "line": 666,
+     "quote": "FlutterError.onError = (details) {\nif (details.exceptionAsString().contains('overflowed')) return;"
+    },
+    {
+     "file": "learning_tracker/test/features/profiles/presentation/screens/rpr2_picker_offline_delete_test.dart",
+     "line": 193,
+     "quote": "FlutterError.onError = (details) {\nif (details.exceptionAsString().contains('overflowed')) return;"
+    }
+   ],
+   "sites": 2,
+   "why": "Both overrides swallow every RenderFlex-overflow FlutterError raised anywhere in the pumped tree for the remainder of the test, not just the one 'residual small profile-grid' overflow the comment names, and neither comment cites a Linear DNI-#### id (only 'tracked for the Phase 8 RTL/visual sweep'). Any new, unrelated overflow introduced later in the Hebrew-locale render of ProfilePickerScreen (or, in rpr2, the manage-sheet/confirm-dialog chain) will pass silently instead of failing CI, on an RTL app where directional-layout overflow is a named risk (AX-1).",
+   "recommendation": "Narrow the filter to the specific known widget (match its key/type in the error details), or replace the blanket catch with a `// TODO(DNI-####): remove once <widget> RTL overflow is fixed` plus a scoped skip, so unrelated future overflows still fail the test.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Introducing a synthetic RenderFlex overflow in an unrelated widget within the same pumped tree causes these two tests to fail again."
+   ],
+   "labels": [
+    "test-quality",
+    "AX-1",
+    "RTL",
+    "profiles"
+   ]
+  }
+ }
+]

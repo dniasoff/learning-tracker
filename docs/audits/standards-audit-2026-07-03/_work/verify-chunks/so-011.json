@@ -1,0 +1,180 @@
+[
+ {
+  "sourceBatch": "t1-feat-sync-p3",
+  "chunk": "grp-109",
+  "finding": {
+   "title": "Give sync_status_emission_test.dart's 'empty outbox + online + after pull \u2192 synced' test actual assertions",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (tautological/vacuous test)",
+   "area": "test/sync",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/sync/sync_status_emission_test.dart",
+     "line": 113,
+     "quote": "test('empty outbox + online + after pull \u2192 synced', () async {"
+    },
+    {
+     "file": "learning_tracker/test/sync/sync_status_emission_test.dart",
+     "line": 139,
+     "quote": "// No assertion here \u2014 pre-pull, status remains whatever the failed"
+    }
+   ],
+   "sites": 1,
+   "why": "The test's name and the file's own header matrix both promise to verify the 'synced' cell (empty outbox + online + a completed pull), but the body ends after recordDrainAttempt() with a comment admitting no assertion is made, because _EmptyGateway cannot simulate a successful pull (every real fetch throws via noSuchMethod). The test always passes regardless of whether synced emission is broken for this exact scenario \u2014 it is pure green-checkmark noise. SyncStatusSynced IS exercised elsewhere in the same file, but only via the throttled-resume branch (_everPulledOnLaunch force-set by the throttle, not by a genuinely completed pull), so the 'real successful cold pull \u2192 synced' path this test is named for has no working assertion anywhere in the file.",
+   "recommendation": "Either delete the test, or give it a gateway fake that lets pullOnLaunch complete successfully (mirroring _ProfileProgramsGateway in sync_rework_profile_programs_pull_test.dart) and assert `orchestrator.currentStatus is SyncStatusSynced` afterward.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "the 'empty outbox + online + after pull \u2192 synced' test contains at least one expect() against SyncStatus, or is removed",
+    "if kept, the pull it drives completes successfully (non-throttled) before the synced assertion"
+   ],
+   "labels": [
+    "testing",
+    "sync",
+    "coverage-gap"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-scheduler-p1",
+  "chunk": "grp-091",
+  "finding": {
+   "title": "Log SchedulerStageRepositoryImpl's schedule-JSON decode failure instead of silently swallowing it",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "EH-3 [P log-less] \u2014 no log-less catch",
+   "area": "features/scheduler/data repositories",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/scheduler/data/repositories/scheduler_stage_repository_impl.dart",
+     "line": 32,
+     "quote": "} catch (_) {\n      sched = {'type': 'delay', 'delay_days': 0};"
+    }
+   ],
+   "sites": 1,
+   "why": "If a stage's schedule JSON column is ever malformed (migration bug, manual DB edit, a bad sync-merge write), every read of that stage silently substitutes a hardcoded delay_days:0 default with zero AppLogger call \u2014 changing that stage's chazara/review timing with no diagnostic trail to explain a future 'my review schedule looks wrong' report. SchedulerStageRepositoryImpl also has no dedicated unit test file (grep across test/ confirms it is only exercised indirectly, with well-formed data, through SchedulerEngine/DailyTaskGenerator integration tests), so this fallback path is completely unexercised by the suite.",
+   "recommendation": "Log via AppLogger (including the row id and raw schedule string) in the catch before falling back, and add a unit test for the fallback path.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "The catch in _rowToSchedulerStage calls AppLogger.warning/error with the stage row id and raw schedule string before falling back to the default.",
+    "New unit test constructs a StageDefinition row with malformed schedule JSON and asserts both the fallback SchedulerStage values and that the log call fired."
+   ],
+   "labels": [
+    "error-handling",
+    "EH-3",
+    "silent-failure"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-sync-root-p2",
+  "chunk": "grp-034",
+  "finding": {
+   "title": "Fix the self-referential SY-3 timeout-message assertion in sync_orchestrator_test.dart \u2014 it never calls SyncOrchestratorImpl",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "core/sync \u2014 sync_orchestrator_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/sync/sync_orchestrator_test.dart",
+     "line": 497,
+     "quote": "const message = 'Sync timed out \u2014 tap to retry';\n      expect(message, contains('timed out'));"
+    }
+   ],
+   "sites": 1,
+   "why": "The test declares its own local `message` string literal and asserts it contains 'timed out' \u2014 guaranteed true by the literal it just wrote \u2014 then compares a bare TimeoutException.toString() against that same local constant. It never touches SyncOrchestratorImpl or its catch block, so it provides zero protection for the orchestrator's actual TimeoutException-handling path. A maintainer reading this file alone would believe SY-3's friendly-timeout-message behavior is covered right here. Genuine end-to-end coverage of the same behavior does exist, but in a different file (test/sync/sy3_sync_error_message_sanitize_test.dart, outside this batch) \u2014 this copy is dead weight that would mask a real gap if that sibling file were ever trimmed or moved.",
+   "recommendation": "Delete this test (real coverage lives in test/sync/sy3_sync_error_message_sanitize_test.dart) or rewrite it to call orchestrator.pullOnLaunch() with a TimeoutException-throwing fake gateway and assert on the emitted SyncStatusError.message, matching the pattern used two tests above it in this same file.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Test either removed with the reason in the commit message (TQ-7) or rewritten to drive pullOnLaunch() through a timeout-throwing fake gateway and assert the resulting SyncStatusError.message"
+   ],
+   "labels": [
+    "testing",
+    "sync",
+    "tautological-test"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-streak",
+  "chunk": "grp-026",
+  "finding": {
+   "title": "Pin StreakStateProvider's day-bucketing seam instead of letting streak_state_provider_test.dart depend on the host machine's timezone",
+   "severity": "P3",
+   "confidence": "SUSPECTED",
+   "rule": "TQ-6",
+   "area": "learning_tracker/test/core/streak/streak_state_provider_test.dart; learning_tracker/lib/features/gamification/streak/streak_state_provider.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/streak/streak_state_provider_test.dart",
+     "line": 59,
+     "quote": "clock = FakeLocalDayClock(DateTime.utc(2026, 5, 14, 12));"
+    },
+    {
+     "file": "learning_tracker/lib/features/gamification/streak/streak_state_provider.dart",
+     "line": 67,
+     "quote": "return const StreakReducer().reduce(events, today: _clock.today());"
+    },
+    {
+     "file": "learning_tracker/lib/core/time/local_day_clock.dart",
+     "line": 49,
+     "quote": "final local = _now.toLocal();"
+    }
+   ],
+   "sites": 1,
+   "why": "read()/watch() call StreakReducer.reduce() without pinning the injectable `dayOf` seam that streak_reducer.dart's own doc comment says exists precisely 'so tests can pin a fixed UTC offset deterministically without depending on the host machine's timezone.' Both FakeLocalDayClock.today() and the default dayOf (DateUtils.extractLocalDate, date_utils.dart:64) resolve through DateTime.toLocal(), which reads the executing machine's TZ -- confirmed empirically inside the real flutter_tester harness: `TZ=Pacific/Kiritimati flutter test` shows DateTime.utc(2026,5,14,12).toLocal() shift a full calendar day. I could not flip any assertion in this specific file under that TZ (ran the suite 3x under the sandbox default Europe/London and once under forced Pacific/Kiritimati, all 13 tests green each time) because every fixture here sits at hour 0 or hour 12 UTC and every current day-gap still lands inside the reducer's +/-1-day grace window either way -- that is a property of today's specific fixture values, not a guarantee. The sibling unit suite (test/features/sync/domain/reducers/streak_reducer_test.dart:120-158) already tests the local-vs-UTC distinction correctly by injecting dayOf directly; this integration-level file has no such seam and inherits toLocal()'s host dependency instead. A fixture pair whose UTC-hour asymmetry straddles a day boundary differently under some real TZ (e.g. clock seeded at 23:00 UTC, event at 01:00 UTC) would confirm an actual flip -- the D17 rollover test already seeds close to a boundary and is the most likely one to trip this by accident in a future edit.",
+   "recommendation": "Either give StreakStateProvider.read/watch an explicit dayOf override (mirroring the reducer's own seam) or have the test suite pin TZ=UTC explicitly (Makefile/CI env var) so pass/fail can't depend on the runner's locale.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "`TZ=Pacific/Kiritimati flutter test test/core/streak/streak_state_provider_test.dart` and the default-TZ run both stay green by construction (pinned dayOf or pinned TZ), not by coincidence of current fixture values."
+   ],
+   "labels": [
+    "TQ-6",
+    "hermeticity",
+    "clock-skew"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-domain-learning",
+  "chunk": "grp-016",
+  "finding": {
+   "title": "Fix SefariaRef.titlePart/addressPart to match the documented chapter:verse split (or fix the docs)",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Evans (ubiquitous-language contract) / TQ-7-TQ-8 spirit (test encodes the bug instead of catching it)",
+   "area": "core/domain/value_objects (sefaria)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/domain/value_objects/sefaria_ref.dart",
+     "line": 66,
+     "quote": "/// For `\"Mishnah Berakhot 1:1\"` this is `\"Mishnah Berakhot\"`."
+    },
+    {
+     "file": "learning_tracker/lib/core/domain/value_objects/sefaria_ref.dart",
+     "line": 133,
+     "quote": "r'^(.*?)(\\d+[a-z]?)$',"
+    },
+    {
+     "file": "learning_tracker/test/core/domain/value_objects/sefaria_ref_test.dart",
+     "line": 67,
+     "quote": "expect(ref.titlePart, 'Mishnah Berakhot 1:');"
+    }
+   ],
+   "sites": 1,
+   "why": "The class docstring's own worked example says titlePart of \"Mishnah Berakhot 1:1\" is \"Mishnah Berakhot\" (address \"1:1\"). The `_splitTail` regex only strips a single trailing digit run (optionally +1 letter), so it can never cross the ':' in a chapter:verse address \u2014 for that exact documented example it actually produces titlePart == \"Mishnah Berakhot 1:\" and addressPart == \"1\". The test file's own inline comment ('let's assert what we actually produce... The SefariaRef titlePart splits on the LAST pure-numeric token') shows the author noticed the mismatch and wrote the test to lock in the wrong output rather than fix the regex or the docs. Mishnah/Tanach chapter:verse is the single most common ref shape in this Torah-study app, so any future caller of titlePart/addressPart (currently unused in production) inherits silently wrong output for the primary case, with a green regression test giving false confidence.",
+   "recommendation": "Either extend `_splitTail` to also recognize a `\\d+:\\d+` chapter:verse tail as one address token, or correct the docstring to describe the actual single-digit-run behavior \u2014 then update the test to assert the corrected contract, not the current output.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "SefariaRef.parse('Mishnah Berakhot 1:1').titlePart equals whatever the corrected docstring promises (either 'Mishnah Berakhot' with the regex fixed, or the docstring rewritten to match current behavior).",
+    "sefaria_ref_test.dart's titlePart test for chapter:verse refs no longer contains a comment acknowledging the assertion doesn't match the documented contract."
+   ],
+   "labels": [
+    "dead-code",
+    "contract-mismatch",
+    "test-quality"
+   ]
+  }
+ }
+]

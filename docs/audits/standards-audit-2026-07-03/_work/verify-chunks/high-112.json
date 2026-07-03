@@ -1,0 +1,51 @@
+[
+ {
+  "sourceBatch": "t2-firebase-rules-functions-p2",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Add SR-1 changed-value-denied test to firestore_rules.test.mjs for completions/streak_events/learning_ledger/points_ledger",
+   "severity": "P0",
+   "confidence": "CONFIRMED",
+   "rule": "SR-1",
+   "area": "firestore-rules-tests (functions/test)",
+   "evidence": [
+    {
+     "file": "docs/coding-standards.md",
+     "line": 293,
+     "quote": "SR-1 \u2014 Append-only collections (`completions`, `streak_events`, `learning_ledger`, `points_ledger`) deny value mutation on update: allow only idempotent identical replay."
+    },
+    {
+     "file": "docs/coding-standards.md",
+     "line": 295,
+     "quote": "Enforce: [Pending] deny-tests in `functions/test/firestore_rules.test.mjs`: changed-value update `assertFails`, identical replay `assertSucceeds`."
+    },
+    {
+     "file": "learning_tracker/functions/test/firestore_rules.test.mjs",
+     "line": 337,
+     "quote": "describe('streak_events \u2014 owner write, tutor read, delete denied', () => {"
+    },
+    {
+     "file": "learning_tracker/firestore.rules",
+     "line": 254,
+     "quote": "allow create, update: if isOwner(uid);"
+    }
+   ],
+   "sites": 4,
+   "why": "Confirmed by grep: no `resource.data == request.resource.data`-style identical-replay guard exists anywhere in firestore.rules (447 lines, zero hits). Every SR-1-named collection's update branch is just `isOwner(uid)` (plus unrelated format checks on completions only) \u2014 an owner-authenticated client (a modified build, a compromised device, or a bug in the sync engine's outbox-retry logic) can silently overwrite an EXISTING completion's points, a streak event, or a ledger/points-ledger entry with any new value, and the rule accepts it as an ordinary update. firestore_rules.test.mjs is this repo's only server-side gate test for owner writes and its own header claims it 'locks the LOAD-BEARING security boundaries' \u2014 yet none of its 4 SR-1 describe blocks (completions:306, streak_events:337, learning_ledger:347, points_ledger:357) ever attempt a changed-value update and assert it fails; each only proves identical-value re-writes and tutor-writes are handled. This is exactly the risk coding-standards.md itself names for SR-1: 'a child's study record is tamperable' \u2014 and since points/streak/ledger entries feed reward_redemptions (real-world reward fulfilment), undetected mutation directly undermines the rewards economy's integrity, with zero test coverage to catch a regression today or after any future fix.",
+   "recommendation": "For each of completions/streak_events/learning_ledger/points_ledger, add a test that seeds a doc then attempts an owner update with a changed field value and asserts it fails; pair with a firestore.rules change adding `request.resource.data == resource.data` as an allowed alternative to full validation on update.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "firestore_rules.test.mjs adds one assertFails case per SR-1 collection where an owner updates an existing doc with a changed field value",
+    "`make test-rules` fails against today's firestore.rules and passes once firestore.rules adds an identical-replay branch for each SR-1 collection",
+    "docs/coding-standards.md SR-1 Enforce line flips from [Pending] to [Enforced] once the test lands"
+   ],
+   "labels": [
+    "security",
+    "child-data-integrity",
+    "SR-1",
+    "test-coverage",
+    "P0"
+   ]
+  }
+ }
+]

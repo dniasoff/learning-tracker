@@ -1,0 +1,45 @@
+[
+ {
+  "sourceBatch": "t1-feat-tracks-p2",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Fix the awk field-split bug in `make audit` check 15/15 that makes cross-feature-import detection a permanent no-op",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "Rule 2 / Rule 0",
+   "area": "tooling (learning_tracker/Makefile) \u2014 impacts lib/features/tracks/**",
+   "evidence": [
+    {
+     "file": "learning_tracker/Makefile",
+     "line": 378,
+     "quote": "match($$1, /features\\/([^\\/]+)\\//, a); match($$0, /features\\/([^\\/]+)\\//, b); if(a[1] != b[1]) print"
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/steps/step_chazara.dart",
+     "line": 7,
+     "quote": "import 'package:learning_tracker/features/onboarding/domain/models/wizard_result_wrapper.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/widgets/track_info_card.dart",
+     "line": 16,
+     "quote": "import 'package:learning_tracker/features/settings/presentation/providers/curriculum_scope_providers.dart';"
+    }
+   ],
+   "sites": 1,
+   "why": "Check 15/15's awk splits each `grep -rn` hit on ':' and calls match($1,...) for the file's own feature and match($0,...) for the import's feature, expecting them to differ on a real violation. But $0 is the whole line, and `grep -rn` always prints `path:line:content` first \u2014 since the file path itself contains 'features/<name>/', match($0, /features\\/([^\\/]+)\\//) finds that occurrence (the file's OWN feature) before ever reaching the import text, so a[1] and b[1] are always equal and `if(a[1] != b[1])` never fires. Reproduced by hand: piping step_chazara.dart's onboarding import through the exact command yields a1=tracks b1=tracks. The captured baseline (docs/audits/standards-audit-2026-07-03/_work/baseline/make-audit.txt) confirms this: check 14/15 (core\u2192features, different/working logic) lists 32 edges, check 15/15 prints nothing at all. A hand grep across just this 30-file batch turns up 25 real cross-feature deep imports across 13 files (onboarding, scheduler, settings, content_browsing, profiles, sync, progress, dashboard) \u2014 none of which the 'audit PASSED' result reflects.",
+   "recommendation": "Fix the awk to derive the file's own feature from a fixed prefix match on $1 only, and the import's feature from the substring AFTER the 'package:learning_tracker/features/' marker in the import text specifically (not the first 'features/' in the whole line) \u2014 e.g. split on the import URI, not on ':'. Then run it for real, triage the resulting list the same way the 32 known core\u2192features edges were baselined, and decide per-edge whether to introduce features/<Y>/providers.dart barrels or accept/document the exception.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "`make audit` check 15/15, run against the current tree, prints at least the 25 known violations found in this batch (not zero).",
+    "A regression fixture (a deliberately-added cross-feature deep import in a scratch file) causes check 15/15 to fail non-zero, then passes again once removed.",
+    "The resulting violation list is triaged/baselined the same way check 14/15's 32 edges are, in the same PR."
+   ],
+   "labels": [
+    "rule-0",
+    "layering",
+    "tooling",
+    "false-negative"
+   ]
+  }
+ }
+]

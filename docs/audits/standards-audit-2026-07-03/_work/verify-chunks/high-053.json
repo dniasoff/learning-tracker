@@ -1,0 +1,49 @@
+[
+ {
+  "sourceBatch": "t1-feat-learning-p3",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Add Locale('he') coverage for LearningScreen's error-state branches \u2014 test suite cannot catch AppErrorView's fully-hardcoded English strings",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "AX-2",
+   "area": "test/features/learning/presentation/screens",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/learning/presentation/screens/learning_screen_l1_test.dart",
+     "line": 259,
+     "quote": "testWidgets(\n    'shows AppErrorView with \"Something went wrong\" when curricula stream errors',"
+    },
+    {
+     "file": "learning_tracker/test/features/learning/presentation/screens/learning_screen_l1_test.dart",
+     "line": 528,
+     "quote": "testWidgets('daily tasks error: AppErrorView shown inside tasks section', ("
+    },
+    {
+     "file": "learning_tracker/test/features/learning/presentation/screens/learning_screen_test.dart",
+     "line": 77,
+     "quote": "await tester.pumpWidget(\n          const MaterialApp("
+    },
+    {
+     "file": "learning_tracker/lib/core/widgets/app_error_view.dart",
+     "line": 193,
+     "quote": "      icon: Icons.bug_report_outlined,\n      title: 'Something went wrong',"
+    }
+   ],
+   "sites": 3,
+   "why": "LearningScreen routes both its curricula-load error and daily-tasks-load error through AppErrorView. I read app_error_view.dart in full: every string in it ('Something went wrong', 'No connection', 'Invalid data', 'Access denied', 'Retry', 'Report this issue', the snackbar text) is a raw Dart string literal \u2014 zero AppLocalizations/l10n calls anywhere in the file. This screen is the app's home screen and a churn HOTSPOT; the test suite does have a working Locale('he') mechanism (tests 17/18 exercise it for empty/data states) but never applies it to either error-state test, so nothing in this suite would fail if a Hebrew-speaking user hits any network/permission/not-found/internal error anywhere AppErrorView is used and sees raw English text \u2014 a real, live i18n defect in an RTL app that ships EN/HE parity as a named requirement.",
+   "recommendation": "Add a Locale('he') variant of the curricula-error and daily-tasks-error tests asserting the rendered text is NOT the literal English strings (this should fail today, proving the gap per TQ-8's red-first-regression convention). File the underlying fix separately: app_error_view.dart's _ErrorConfig strings need to route through AppLocalizations/ARB keys.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "New testWidgets(..., locale: Locale('he')) variant for the curricula-error and daily-tasks-error paths exists and currently fails against app_error_view.dart as written",
+    "Once app_error_view.dart is localized (separate fix), the new Hebrew-locale tests assert the Hebrew string and assert find.text('Something went wrong') findsNothing under Locale('he')"
+   ],
+   "labels": [
+    "AX-2",
+    "i18n",
+    "hebrew",
+    "hotspot"
+   ]
+  }
+ }
+]

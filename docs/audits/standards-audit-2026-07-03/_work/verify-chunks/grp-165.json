@@ -1,0 +1,249 @@
+[
+ {
+  "sourceBatch": "t4-docs-canonical-p1",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Rewrite docs/data-models.md \u2014 it self-contradicts on schemaVersion and describes the extinct pre-rebuild schema",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-8",
+   "area": "docs/data-models.md",
+   "evidence": [
+    {
+     "file": "docs/data-models.md",
+     "line": 13,
+     "quote": "User DB \u2014 schema v4, 23 tables, 20 DAOs. Read-write."
+    },
+    {
+     "file": "docs/data-models.md",
+     "line": 701,
+     "quote": "The schema stands at v15 with incremental migrations from v1."
+    },
+    {
+     "file": "docs/data-models.md",
+     "line": 662,
+     "quote": "profiles/{profileId}/"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/user/user_database.dart",
+     "line": 159,
+     "quote": "int get schemaVersion => 32;"
+    },
+    {
+     "file": "docs/architecture.md",
+     "line": 546,
+     "quote": "| User DB | Outbox | 9 |"
+    }
+   ],
+   "sites": 3,
+   "why": "The doc disagrees with itself (v4 at the top, v15 in its own Migration History table) and both numbers are wrong against the real schemaVersion 32. Its ER diagram and table sections (lines 65-712) have no Outbox, CompletionEvents, StreakEvents, DailyPlans, or TrackLearningOrder tables \u2014 the actual backbone of the append-only ledger and sync-outbox architecture that architecture.md and delete-policy.md describe as central. It also names the Firestore path `profiles/{profileId}` where the real path (confirmed in api-contracts.md and firestore.rules) is `learner_profiles/{profileId}`. A contributor or agent using this file to understand 'what tables exist' before a schema change gets an actively wrong model of the persistence layer.",
+   "recommendation": "Regenerate data-models.md's table/ER/Firestore sections from the current Drift table classes (reuse tool/gen_arch_tables.dart's output, already authoritative for architecture.md), set schemaVersion to 32/5/1 consistently, and correct the learner_profiles path.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "docs/data-models.md states schemaVersion 32 (User DB) / 5 (Content DB) / 1 (Registry DB) in exactly one internally-consistent place",
+    "docs/data-models.md's table list includes Outbox, CompletionEvents, StreakEvents, DailyPlans, TrackLearningOrder",
+    "docs/data-models.md's Firestore collection path reads learner_profiles, matching docs/api-contracts.md and firestore.rules"
+   ],
+   "labels": [
+    "docs",
+    "drift",
+    "schema",
+    "AG-8"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t4-docs-canonical-p1",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Fix wrong Drift schemaVersion numbers in docs/developer-handbook.md and docs/architecture.md",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-8",
+   "area": "docs/developer-handbook.md, docs/architecture.md",
+   "evidence": [
+    {
+     "file": "docs/developer-handbook.md",
+     "line": 332,
+     "quote": "User DB is currently v4 (...), Content DB v3, Device Registry DB v1."
+    },
+    {
+     "file": "docs/architecture.md",
+     "line": 105,
+     "quote": "per-account, read-write; schema v14. 21 tables, 22 DAOs."
+    },
+    {
+     "file": "docs/architecture.md",
+     "line": 516,
+     "quote": "| User DB (`user_acc_<id>.db`) | v14 | 21 | 22 |"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/user/user_database.dart",
+     "line": 159,
+     "quote": "int get schemaVersion => 32;"
+    },
+    {
+     "file": "docs/coding-standards.md",
+     "line": 222,
+     "quote": "the user DB is at schemaVersion 32 with real on-device data..."
+    }
+   ],
+   "sites": 3,
+   "why": "developer-handbook.md's 'Add a new database table' walkthrough tells a contributor to bump schemaVersion from what it claims is v4 (actual 32 \u2014 off by 28 versions); architecture.md's own Database Schema table states v14, a third wrong number, two sections after also calling it v14 in prose. Only coding-standards.md (revised 2026-07-02, the day before this audit) has the correct figure. A newcomer following developer-handbook.md Part 3 would badly underestimate how much real on-device migration history exists before touching the schema.",
+   "recommendation": "Update developer-handbook.md:332 and architecture.md:105,516 to schemaVersion 32 (User DB) / 5 (Content DB), matching coding-standards.md and user_database.dart/content_database.dart.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep -rn 'schema.\\{0,4\\}v[0-9]\\+' docs/*.md returns the same User-DB version number (32) everywhere the fact is stated",
+    "developer-handbook.md's Content DB version matches content_database.dart's expectedSchemaVersion (5)"
+   ],
+   "labels": [
+    "docs",
+    "drift",
+    "schema",
+    "AG-8"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t4-docs-canonical-p1",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Update docs/architecture.md, docs/flows/add-track-flow.md, and CONTRIBUTING.md for the features/ directory reorg",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-8",
+   "area": "docs/architecture.md, docs/flows/add-track-flow.md, CONTRIBUTING.md, docs/component-inventory.md",
+   "evidence": [
+    {
+     "file": "docs/architecture.md",
+     "line": 192,
+     "quote": "The application contains 18 active feature modules (zombie features tutor_mode and test_tracking removed in Epic 25/26)."
+    },
+    {
+     "file": "docs/architecture.md",
+     "line": 231,
+     "quote": "| 18 | track_setup | Track management hub; track detail and editing screens |"
+    },
+    {
+     "file": "docs/flows/add-track-flow.md",
+     "line": 128,
+     "quote": "features/track_setup/presentation/screens/add_track_flow.dart | Main 8-step wizard widget"
+    },
+    {
+     "file": "CONTRIBUTING.md",
+     "line": 97,
+     "quote": "features/ holds 18 self-contained feature modules; each has a data/, domain/, and presentation/ folder."
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/screens/add_track_flow_screen.dart",
+     "line": 78,
+     "quote": "class AddTrackFlow extends ConsumerStatefulWidget {"
+    }
+   ],
+   "sites": 4,
+   "why": "lib/features/track_setup/, lib/features/auth/, lib/features/parent_mode/, lib/features/stages/, lib/features/learning_order/, and lib/features/track_learning_order/ no longer exist as top-level directories \u2014 `lib/features/` currently has 15 entries (account, content_browsing, dashboard, gamification, learning, notifications, onboarding, profiles, progress, sacred_time, scheduler, settings, sync, tracks, tutoring), with the old track_setup/stages/learning_order/track_learning_order merged under tracks/, auth renamed to account, and parent_mode absorbed into profiles/. add-track-flow.md's entire File Map (13 paths under features/track_setup/...) and Source line point at a directory that is gone; the actual widget lives at lib/features/tracks/setup/presentation/screens/add_track_flow_screen.dart (renamed file too). component-inventory.md's screen table (dated 2026-03-18) has roughly half its 45 listed screen names no longer matching the ~47 current @RoutePage() screens (e.g. no AccountCreationScreen/ParentModeScreen/TutorPINEntryScreen; has unlisted AccountPickerScreen/ManageGrantsScreen/PinFlowScreen/TutorAuditLogScreen etc.) \u2014 the same root cause. An agent or contributor grepping features/track_setup/ per any of these docs hits nothing.",
+   "recommendation": "Regenerate architecture.md's Feature Modules table/graph and CONTRIBUTING.md's feature count from the current lib/features/ tree; rewrite add-track-flow.md's File Map and refresh component-inventory.md's screen/widget tables against the current @RoutePage() roster.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "every path in add-track-flow.md's File Map resolves to a real file under learning_tracker/lib/",
+    "architecture.md's feature-module count and CONTRIBUTING.md's feature-module count both equal the current top-level count of lib/features/ subdirectories",
+    "component-inventory.md's screen table names match the current @RoutePage()-annotated classes"
+   ],
+   "labels": [
+    "docs",
+    "drift",
+    "architecture",
+    "AG-8"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t4-docs-canonical-p1",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Fix nonexistent 'torah' CurriculumId in docs/flows/add-track-flow.md Screen-1 table",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "doc-accuracy",
+   "area": "docs/flows/add-track-flow.md",
+   "evidence": [
+    {
+     "file": "docs/flows/add-track-flow.md",
+     "line": 207,
+     "quote": "| `torah` | \u05ea\u05d5\u05e8\u05d4 | No |"
+    },
+    {
+     "file": "learning_tracker/lib/core/enums/curriculum_id.dart",
+     "line": 22,
+     "quote": "mishnehTorah('mishneh_torah'),"
+    }
+   ],
+   "sites": 1,
+   "why": "The real 9th CurriculumId storageKey is `mishneh_torah` (Mishneh Torah, Maimonides' legal code) \u2014 there is no `torah` curriculum. This is the exact confusion component-inventory.md and developer-handbook.md separately warn readers not to make ('do not confuse with Chumash/Torah'), yet it appears as a literal table entry here, and the doc's Screen-1 curriculum list is missing Mishneh Torah entirely as a result.",
+   "recommendation": "Replace the `torah` row with `mishneh_torah` / \u05de\u05e9\u05e0\u05d4 \u05ea\u05d5\u05e8\u05d4 / Yes (it has programs \u2014 Dirshu Kinyan Torah).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "add-track-flow.md's Screen 1 curriculum table lists all 9 CurriculumId storageKeys exactly as declared in curriculum_id.dart"
+   ],
+   "labels": [
+    "docs",
+    "drift",
+    "curriculum"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t4-docs-canonical-p1",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Document the tutor-mode Firestore/Functions surface in docs/api-contracts.md and fix the stale 'indexes.json is empty' claim",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-8",
+   "area": "docs/api-contracts.md, docs/deployment-guide.md",
+   "evidence": [
+    {
+     "file": "docs/api-contracts.md",
+     "line": 9,
+     "quote": "2. **Cloud Functions** \u2014 4 callable/trigger endpoints (deletion cascades)."
+    },
+    {
+     "file": "docs/api-contracts.md",
+     "line": 73,
+     "quote": "**Live layout \u2014 `users/{uid}/...`** \u2014 every path is owner-gated by `isOwner(uid)`:"
+    },
+    {
+     "file": "docs/api-contracts.md",
+     "line": 86,
+     "quote": "**Indexes:** `firestore.indexes.json` is empty (`{\"indexes\":[],\"fieldOverrides\":[]}`)..."
+    },
+    {
+     "file": "docs/deployment-guide.md",
+     "line": 35,
+     "quote": "Firestore indexes | firebase deploy --only firestore:indexes | firestore.indexes.json (currently empty)"
+    },
+    {
+     "file": "learning_tracker/functions/src/index.ts",
+     "line": 341,
+     "quote": "export const tutorBulkPriorCompletions = onCall(CALL_OPTS, async (request) => {"
+    }
+   ],
+   "sites": 4,
+   "why": "functions/src/index.ts exports 26 Cloud Functions today, not 4 \u2014 22 of them (inviteTutor, acceptTutorInvite, revokeTutorGrant, tutorResetCompletion, tutorUpsertTrack, etc.) implement the entire tutor cross-user-access feature and are undocumented. firestore.rules has ~150 lines of top-level `tutor_grants`/`tutor_active_access` rules granting non-owner (tutor) reads on a child's records \u2014 directly at odds with api-contracts.md's characterization that 'every path is owner-gated'. firestore.indexes.json is not empty; it has 6 composite indexes, all for tutor_grants queries. This is the most privacy-sensitive feature in the codebase (cross-user access to a child's learning data, gated by SR-5) and the canonical API-contracts reference does not mention it exists.",
+   "recommendation": "Add a Tutor Mode section to api-contracts.md covering tutor_grants/tutor_active_access collections, the tutor read carve-outs in firestore.rules, the 22 tutor* Cloud Functions, and the 6 composite indexes; fix the 'indexes.json is empty' line in both api-contracts.md and deployment-guide.md.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "api-contracts.md's Cloud Functions table lists all 26 exported functions from functions/src/index.ts (or explicitly groups the tutor_* ones with a count)",
+    "api-contracts.md documents tutor_grants and tutor_active_access as top-level collections",
+    "api-contracts.md and deployment-guide.md no longer claim firestore.indexes.json is empty"
+   ],
+   "labels": [
+    "docs",
+    "drift",
+    "tutor-mode",
+    "privacy",
+    "AG-8"
+   ]
+  }
+ }
+]

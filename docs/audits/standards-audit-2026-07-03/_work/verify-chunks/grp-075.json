@@ -1,0 +1,218 @@
+[
+ {
+  "sourceBatch": "t1-feat-profiles-p1",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Add ref.mounted guards after awaits in PinFlowController before touching state",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "SM-4",
+   "area": "features/profiles/presentation/providers",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/providers/pin_flow_controller.dart",
+     "line": 274,
+     "quote": "try {\n      await pinService.setProfilePin(profileId, pin);"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/providers/pin_flow_controller.dart",
+     "line": 310,
+     "quote": "try {\n          final ok = await pinService.verifyProfilePin(profileId, pin);"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/providers/pin_flow_controller.dart",
+     "line": 350,
+     "quote": "state = state.copyWith(busy: true, errorMessage: null);\n        await pinService.setProfilePin(profileId, pin);"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/providers/pin_flow_controller.dart",
+     "line": 379,
+     "quote": "try {\n      final ok = await pinService.verifyProfilePin(profileId, pin);"
+    }
+   ],
+   "sites": 4,
+   "why": "Per SM-4 (and the digest's own note that Riverpod 3 throws UnmountedRefException), every `await` in a Notifier method must be followed by a `ref.mounted` check before touching `state`. None of the four PIN-transition handlers in this @Riverpod(keepAlive:true) notifier do this \u2014 `_handleSetup`, `_handleChange` (twice), and `_handleVerify` all assign `state = state.copyWith(...)` immediately after an `await pinService.*Pin(...)` with no guard. The confirm-step of `_handleChange` (line 350-351) is worse: it has no try/catch at all around `setProfilePin`, unlike its own sibling handlers. If the provider is invalidated/torn down while a bcrypt hash/secure-storage write is in flight (e.g. rapid navigation away, container disposal), the resulting exception is unguarded and, for the confirm-step case, has no catch clause to even convert it to a value.",
+   "recommendation": "After each await in _handleSetup/_handleChange/_handleVerify, add `if (!ref.mounted) return;` before assigning state; wrap the confirm-step setProfilePin call in the same try/catch pattern used by _handleSetup.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Every await in pin_flow_controller.dart's four handlers is followed by a ref.mounted check before state is touched",
+    "A regression test disposes the ProviderContainer mid-await and asserts no UnmountedRefException escapes",
+    "_handleChange's confirm step catches the same exception types as _handleSetup"
+   ],
+   "labels": [
+    "riverpod",
+    "sm-4",
+    "pin-flow"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-profiles-p1",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Log swallowed exceptions in profiles' log-less catch blocks instead of silently discarding them",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "EH-3 (log-less catch)",
+   "area": "features/profiles",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/profiles/data/repositories/profile_repository_impl.dart",
+     "line": 107,
+     "quote": "} catch (_) {\n      // no-op: cloud push failure is non-fatal; local write already succeeded (offline-first)"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/data/repositories/profile_repository_impl.dart",
+     "line": 159,
+     "quote": "} catch (_) {\n      // no-op: cloud push failure is non-fatal; local write already succeeded (offline-first)"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/data/repositories/profile_repository_impl.dart",
+     "line": 335,
+     "quote": "} catch (_) {\n      // no-op: cloud push failure is non-fatal; local write already succeeded."
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/screens/profile_picker_screen.dart",
+     "line": 291,
+     "quote": "} catch (_) {\n              set(() => err = null);"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/widgets/add_profile_dialog.dart",
+     "line": 51,
+     "quote": "} catch (_) {\n            set(() => err = null);"
+    }
+   ],
+   "sites": 5,
+   "why": "Five catch blocks across this batch swallow exceptions with zero AppLogger call \u2014 three in profile_repository_impl.dart discard cloud-sync push failures (create/update/self-heal) with only a code comment, and two more (profile_picker_screen.dart, add_profile_dialog.dart) silently clear a live duplicate-name validation error on any DB exception. add_profile_dialog.dart's own line 269-280 shows the correct pattern (AppLogger.instance.error with event/exception/stackTrace) right next to one of the log-less ones, proving the gap is an oversight, not a style choice. Without logging, a real production failure pattern (e.g. outbox writes silently failing on a subset of devices) leaves no telemetry trail to diagnose from.",
+   "recommendation": "Replace each `catch (_) { ... }` with a catch that logs via AppLogger.instance.warning/error (event + exception) before continuing with the existing non-fatal behavior.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "All 5 listed catch blocks call AppLogger before continuing",
+    "A grep-based Rule-0 check (or custom_lint rule, once custom_lint is unblocked) flags `catch (_) {` / `catch (e) {` blocks in lib/ with no AppLogger call in their body"
+   ],
+   "labels": [
+    "error-handling",
+    "eh-3",
+    "logging"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-profiles-p1",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Guard ProfileRepositoryImpl.deleteProfile's cloud-sync push the same way create/update/ensureDefaultProfile do",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "EH-2 / Nygard (I/O failure handling)",
+   "area": "features/profiles/data",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/profiles/data/repositories/profile_repository_impl.dart",
+     "line": 250,
+     "quote": "await _syncEngine?.deleteLearnerProfile(id);\n    _log.info("
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/data/repositories/profile_repository_impl.dart",
+     "line": 105,
+     "quote": "try {\n      await _syncEngine?.pushLearnerProfile(_toFirestorePayload(model));"
+    }
+   ],
+   "sites": 1,
+   "why": "createProfile, updateProfile, and ensureDefaultProfile all wrap their `_syncEngine?.push*` call in try/catch with an explicit 'offline-first, cloud push is non-fatal' comment. deleteProfile does not: `await _syncEngine?.deleteLearnerProfile(id)` runs bare, after the local cascade-delete transaction has already committed across ~12 tables. Both push and delete enqueue through the same outbox `_enqueue` mechanism (a local Drift insert), so they carry the same theoretical failure mode (e.g. disk-full, DB-locked). If that insert throws, the whole deleteProfile Future rejects even though the profile is already gone locally \u2014 and neither of deleteProfile's two callers in this batch (profile_edit_delete_actions.dart's deleteProfileFlow, profile_picker_screen.dart's _showDeleteDialog) catch it either, so the exception surfaces as an unhandled error in a button's onPressed handler while the delete has, in fact, already succeeded \u2014 contradicting the offline-first invariant this same file documents for every other mutation.",
+   "recommendation": "Wrap `await _syncEngine?.deleteLearnerProfile(id)` in the same non-fatal try/catch (with logging per the previous finding) used by createProfile/updateProfile/ensureDefaultProfile.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "deleteProfile's sync call is wrapped in try/catch matching its siblings, with a logged, non-fatal failure",
+    "A test with a SyncWriteFacade fake that throws on deleteLearnerProfile asserts ProfileRepositoryImpl.deleteProfile still completes normally"
+   ],
+   "labels": [
+    "error-handling",
+    "offline-first",
+    "sync"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-profiles-p1",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Convert ProfileSession to @freezed instead of hand-written ==/hashCode",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "naming/placement \u2014 domain/state models are @freezed, never hand-written ==/hashCode",
+   "area": "features/profiles/domain/models",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/profiles/domain/models/profile_session.dart",
+     "line": 22,
+     "quote": "bool operator ==(Object other) =>\n      identical(this, other) ||"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/domain/models/profile_session.dart",
+     "line": 30,
+     "quote": "int get hashCode => profileId.hashCode;"
+    }
+   ],
+   "sites": 1,
+   "why": "ProfileSession is a domain/state model living under domain/models/ (the same directory as the correctly-@freezed ProfileModel), but hand-writes operator== and hashCode instead of using @freezed as the coding standard requires. Today's implementation looks correct, but hand-rolled equality is exactly the class of bug (forgotten field, inconsistent hashCode) the @freezed rule exists to prevent, and it's inconsistent with its own sibling file in the same directory.",
+   "recommendation": "Convert ProfileSession to an abstract @freezed class with a private const constructor for the isActive getter, matching ProfileModel's pattern.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "ProfileSession is declared @freezed; dart run build_runner build generates profile_session.freezed.dart",
+    "Existing call sites (ProfileSession(profileId:), .none(), .isActive) keep compiling unchanged"
+   ],
+   "labels": [
+    "freezed",
+    "hygiene",
+    "naming"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-profiles-p1",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Split four hand-written files in features/profiles that exceed the 400-line AG-3 cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "features/profiles/presentation",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/providers/pin_flow_controller.dart",
+     "line": 131,
+     "quote": "class PinFlowController extends _$PinFlowController {"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/screens/parent_settings_screen.dart",
+     "line": 54,
+     "quote": "class ParentSettingsScreen extends ConsumerWidget {"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/screens/profile_picker_screen.dart",
+     "line": 33,
+     "quote": "class ProfilePickerScreen extends ConsumerStatefulWidget {"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/widgets/parent_pin_keypad_dialog.dart",
+     "line": 71,
+     "quote": "class _ParentPinVerificationDialog extends StatefulWidget {"
+    }
+   ],
+   "sites": 4,
+   "why": "AG-3 caps hand-written Dart files at 400 lines; four files in this batch exceed it: pin_flow_controller.dart (416), parent_settings_screen.dart (612), profile_picker_screen.dart (539), parent_pin_keypad_dialog.dart (635). Each mixes multiple concerns in one file (e.g. parent_pin_keypad_dialog.dart holds two full dialog state machines plus the shared keypad/dots/lockout widgets; parent_settings_screen.dart holds the screen plus a full points-adjustment dialog plus two private widget classes), making them harder to navigate and increasing merge-conflict surface.",
+   "recommendation": "Extract private widget/dialog classes into their own files (e.g. move _ManageRow/_WhitePanel and the points-adjust dialog out of parent_settings_screen.dart; move _PinKeypad/_PinDotsRow/_LockoutPanel out of parent_pin_keypad_dialog.dart).",
+   "effort": "L",
+   "acceptance_criteria": [
+    "All four files are at or under 400 lines",
+    "The AG-3 line-count checker (once it exists per Rule 0) passes for features/profiles"
+   ],
+   "labels": [
+    "ag-3",
+    "hygiene",
+    "file-size"
+   ]
+  }
+ }
+]

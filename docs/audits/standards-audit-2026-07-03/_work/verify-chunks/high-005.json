@@ -1,0 +1,43 @@
+[
+ {
+  "sourceBatch": "t1-core-database-daos-p1",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Wrap point_config_dao.seedDefaults, study_day_config_dao.seedDefaults, and track_learning_order_dao.upsertOrder in a transaction",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "DB-2",
+   "area": "core/database/daos",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/database/daos/point_config_dao.dart",
+     "line": 136,
+     "quote": "for (final d in fallbackDefaults) {\n        await insertConfig("
+    },
+    {
+     "file": "learning_tracker/lib/core/database/daos/study_day_config_dao.dart",
+     "line": 69,
+     "quote": "for (var day = 1; day <= 7; day++) {\n      await into(studyDayConfigs).insertOnConflictUpdate("
+    },
+    {
+     "file": "learning_tracker/lib/core/database/daos/track_learning_order_dao.dart",
+     "line": 19,
+     "quote": "for (var i = 0; i < refs.length; i++) {\n      await into(trackLearningOrder).insert("
+    }
+   ],
+   "sites": 3,
+   "why": "None of these three multi-row writers is wrapped in `db.transaction()`. If the app is killed/backgrounded mid-loop (routine on mobile), the row set is left partially written. The clearest user-visible case: track_learning_order_dao.upsertOrder is called from saveSedarimOrder/saveMasechtosOrder (lib/features/tracks/track_order/data/repositories/track_learning_order_repository_impl.dart) with the full reordered item list \u2014 tens of refs for a masechtos reorder. A crash partway through leaves some refs at their new sortOrder and others at stale values, silently scrambling the track's learning order with no error surfaced. point_config_dao.seedDefaults has a similar exposure (a stage left with no PointConfig row); study_day_config_dao.seedDefaults is lower-risk because isStudyDay() defaults a missing row to 'study' anyway.",
+   "recommendation": "Wrap each loop body in `await db.transaction(() async { ... })` so the whole seed/reorder either fully applies or fully rolls back.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "seedDefaults (both DAOs) and upsertOrder execute inside db.transaction().",
+    "A regression test forces a failure on a middle iteration (e.g. a duplicate/invalid row) and asserts none of the batch's rows persisted (all-or-nothing)."
+   ],
+   "labels": [
+    "DB-2",
+    "transactions",
+    "crash-safety"
+   ]
+  }
+ }
+]

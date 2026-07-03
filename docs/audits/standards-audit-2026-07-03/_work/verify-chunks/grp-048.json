@@ -1,0 +1,185 @@
+[
+ {
+  "sourceBatch": "t1-feat-dashboard-p1",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Inject LocalDayClock into ParentDashboardAggregator instead of hardcoding SystemLocalDayClock",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6 / SM-7",
+   "area": "learning_tracker/lib/features/dashboard/domain/services/parent_dashboard_aggregator.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/dashboard/domain/services/parent_dashboard_aggregator.dart",
+     "line": 94,
+     "quote": "clock: const SystemLocalDayClock(),"
+    },
+    {
+     "file": "learning_tracker/test/features/parent_mode/domain/services/parent_dashboard_aggregator_compute_test.dart",
+     "line": 122,
+     "quote": "final today = DateTime.now().toUtc();"
+    }
+   ],
+   "sites": 1,
+   "why": "compute({DateTime? now}) documents now as 'pass explicitly for testability', and every other metric (pace, engagement, recent-completions window) honors it \u2014 but the streak sub-computation always builds StreakStateProvider with a hardcoded SystemLocalDayClock(), which reads real DateTime.now() regardless of the now argument. The accompanying test cannot control this and is forced to call real DateTime.now() to seed matching streak_events (quoted comment at lines 119-121 explains exactly why), making that test a genuine wall-clock dependency and leaving a live day-boundary race: if the wall clock ticks past local midnight between the caller choosing now and StreakStateProvider's internal clock read, currentStreak/maxStreak reflect a different 'today' than the rest of the ParentDashboardData snapshot.",
+   "recommendation": "Accept an optional LocalDayClock clock constructor parameter (default const SystemLocalDayClock()), pass it into StreakStateProvider, and derive it from the aggregator's own now so compute(now: ...) fully determines the snapshot including streak.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "A new unit test overrides the injected clock (not real DateTime.now()) and asserts currentStreak/maxStreak for a fixed 'today', replacing the wall-clock seeding at parent_dashboard_aggregator_compute_test.dart:118-122.",
+    "The TQ-6 hermetic-test grep (no DateTime.now() outside core/time) passes for this test file."
+   ],
+   "labels": [
+    "TQ-6",
+    "clock-injection",
+    "dashboard",
+    "streak"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-dashboard-p1",
+  "findingIndex": 8,
+  "finding": {
+   "title": "Delete or wire up the unused ChazaraStatus/MomentumStatus domain models and their barrel",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler speculative-generality / dead-code",
+   "area": "learning_tracker/lib/features/dashboard/domain/models",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/dashboard/domain/models/chazara_status.dart",
+     "line": 16,
+     "quote": "class ChazaraStatus with _$ChazaraStatus {"
+    },
+    {
+     "file": "learning_tracker/lib/features/dashboard/domain/models/momentum_status.dart",
+     "line": 20,
+     "quote": "class MomentumStatus with _$MomentumStatus {"
+    },
+    {
+     "file": "learning_tracker/lib/features/dashboard/domain/models/models.dart",
+     "line": 1,
+     "quote": "export 'calendar_position.dart';\nexport 'chazara_status.dart';"
+    }
+   ],
+   "sites": 3,
+   "why": "Repo-wide grep for ChazaraStatus, MomentumStatus, and this models.dart barrel path finds no reference anywhere outside their own declaration and generated .freezed.dart files \u2014 no provider constructs them, no widget renders them. They are fully-specified, richly-documented (momentum thresholds, chazara due/overdue semantics) value classes for a feature that was designed but never wired up, and the models.dart barrel that exists to re-export them is itself imported by nothing. Each carries a generated .freezed.dart companion that build_runner keeps regenerating for code nothing calls.",
+   "recommendation": "Delete chazara_status.dart, momentum_status.dart, their .freezed.dart companions, and models.dart, or land the provider/widget that was supposed to consume them.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep -rln 'ChazaraStatus\\|MomentumStatus' lib/ returns zero results outside the deleted files, or shows a real consumer.",
+    "dart run build_runner build after deletion produces no orphaned .freezed.dart output for these files."
+   ],
+   "labels": [
+    "dead-code",
+    "dashboard"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-dashboard-p1",
+  "findingIndex": 9,
+  "finding": {
+   "title": "Clean up stale dashboard feature scaffolding: unpopulated barrel + redundant .gitkeep files",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "hygiene",
+   "area": "learning_tracker/lib/features/dashboard",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/dashboard/dashboard.dart",
+     "line": 6,
+     "quote": "// Populated in Wave 5 (W5.x) \u2014 dashboard domain and UI cleanup."
+    },
+    {
+     "file": "learning_tracker/lib/features/dashboard/presentation/widgets/.gitkeep",
+     "line": 1,
+     "quote": ""
+    }
+   ],
+   "sites": 5,
+   "why": "dashboard.dart claims to be 'Populated in Wave 5' and to be the required cross-feature entry point, but exports nothing \u2014 confirmed by repo-wide grep, nothing imports it, so today it's a documentation claim rather than an enforced boundary. Separately, four .gitkeep placeholders (domain/use_cases, presentation/providers, presentation/screens, presentation/widgets) exist purely to keep an empty directory tracked in git, but each of those directories has held real source files since the feature was built out (presentation/widgets alone now has 20 real files) \u2014 the placeholders are leftover noise in every directory listing.",
+   "recommendation": "Either populate dashboard.dart's exports (if/when another feature needs the barrel) or delete it and remove the header comment's claim; git rm the four stale .gitkeep files in now-nonempty directories.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "find lib/features/dashboard -name .gitkeep only matches directories that ls shows as otherwise empty.",
+    "dashboard.dart either has at least one export or is deleted."
+   ],
+   "labels": [
+    "hygiene",
+    "dashboard"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-dashboard-p1",
+  "findingIndex": 10,
+  "finding": {
+   "title": "Remove the discarded initialSyncComplete watch in DashboardBody.build (unnecessary rebuild)",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "PF-1 / Fowler dead-code",
+   "area": "learning_tracker/lib/features/dashboard/presentation/widgets/dashboard_body.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/dashboard/presentation/widgets/dashboard_body.dart",
+     "line": 149,
+     "quote": "final initialSyncComplete =\n        ref.watch(initialSyncCompleteProvider).asData?.value ?? false;"
+    },
+    {
+     "file": "learning_tracker/lib/features/dashboard/presentation/widgets/dashboard_body.dart",
+     "line": 217,
+     "quote": "// ignore: unused_local_variable \u2014 retained for historical documentation.\n    final _ = initialSyncComplete;"
+    }
+   ],
+   "sites": 1,
+   "why": "The value is watched, then explicitly discarded into `_`, and the discard is only possible because the team suppressed the unused_local_variable lint. DashboardBody is a ConsumerWidget rebuilt on every dashboard change; it still re-subscribes to and rebuilds on every emission of initialSyncCompleteProvider purely to throw the value away \u2014 'retained for historical documentation' belongs in a plain code comment, not a live ref.watch with a lint bypass.",
+   "recommendation": "Delete lines 149-150 and 217-218; if the history needs preserving, say so in a plain comment instead of a watched-and-discarded variable.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep -n initialSyncComplete on dashboard_body.dart returns nothing (or a real conditional use), and the ignore: unused_local_variable comment is gone."
+   ],
+   "labels": [
+    "dead-code",
+    "performance",
+    "dashboard"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-dashboard-p1",
+  "findingIndex": 11,
+  "finding": {
+   "title": "Move parent_dashboard_aggregator tests from test/features/parent_mode/ to the AG-5 mirrored path",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-5",
+   "area": "learning_tracker/lib/features/dashboard/domain/services/parent_dashboard_aggregator.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/parent_mode/domain/services/parent_dashboard_aggregator_compute_test.dart",
+     "line": 7,
+     "quote": "import 'package:learning_tracker/features/dashboard/domain/services/parent_dashboard_aggregator.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/features/dashboard/domain/services/parent_dashboard_aggregator.dart",
+     "line": 80,
+     "quote": "class ParentDashboardAggregator {"
+    }
+   ],
+   "sites": 4,
+   "why": "parent_dashboard_aggregator.dart lives in lib/features/dashboard/domain/services/, alongside track_completion_service.dart and next_reward_selector.dart, both correctly tested at test/features/dashboard/domain/services/. All four of parent_dashboard_aggregator.dart's own tests (_test.dart, _compute_test.dart, _extended_test.dart, _migration_test.dart) instead live under test/features/parent_mode/domain/services/ \u2014 a directory with no lib/features/parent_mode/ counterpart at all (the digest itself flags test/features/parent_mode as an unmirrored directory needing an AG-5 judgment call). The tests still exercise real, live code (parentDashboardDataProvider is genuinely consumed by the profiles feature), so this is pure path drift from an old feature name/rename, not stale testing of dead code \u2014 but a contributor relying on the 1:1 mirror convention to find this file's tests will not find them at the expected path.",
+   "recommendation": "git mv the four test files to test/features/dashboard/domain/services/, updating only their location \u2014 no code changes needed.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "An AG-5 checker (diff of lib/ vs test/ directory trees) reports zero unmirrored lib files with tests parked elsewhere for parent_dashboard_aggregator.dart.",
+    "The relevant story/epic test target still passes after the move."
+   ],
+   "labels": [
+    "AG-5",
+    "test-organization",
+    "dashboard"
+   ]
+  }
+ }
+]

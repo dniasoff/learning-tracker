@@ -1,0 +1,237 @@
+[
+ {
+  "sourceBatch": "t1-feat-scheduler-p5",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Delete dead StudyDayConfigRepositoryImpl/toggleStudyDay \u2014 live _toggleDay write path bypasses the repository layer (DB-1)",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "DB-1 (Notifiers/widgets mutate only via repository methods) + AG-6 (dead code)",
+   "area": "features/scheduler data/presentation boundary",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/scheduler/presentation/screens/study_day_config_screen.dart",
+     "line": 277,
+     "quote": "await db.studyDayConfigDao.upsertDayConfig("
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/data/repositories/study_day_config_repository_impl.dart",
+     "line": 54,
+     "quote": "await _dao.upsertDayConfig("
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/presentation/providers/study_day_config_providers.dart",
+     "line": 60,
+     "quote": "/// DEPRECATED / DEAD CODE \u2014 this provider has no call sites."
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/presentation/screens/study_day_config_screen_l1_test.dart",
+     "line": 269,
+     "quote": "await (db.select(db.studyDayConfigs)..where("
+    }
+   ],
+   "sites": 1,
+   "why": "grep -rn \"StudyDayConfigRepositoryImpl(\" lib/ and grep -rn \"toggleStudyDay\" lib/ (outside their own definitions) both return zero: a whole repository implementation and a whole @riverpod provider are unreachable, while the real production mutation (study_day_config_screen.dart:_toggleDay, tested by this batch's study_day_config_screen_l1_test.dart) calls the DAO directly from a widget method, violating DB-1. The dead repository/provider carry known uncorrected bugs (no sync push; invalidate fires before the write completes) per their own doc comments \u2014 a future agent who finds StudyDayConfigRepository via search and wires it in, believing that is the architecturally correct move, would silently reintroduce both bugs because the fixes were only ever applied to the screen's private duplicate.",
+   "recommendation": "Delete StudyDayConfigRepositoryImpl and toggleStudyDay (both self-documented as dead/buggy), or fix them and route _toggleDay through the repository so there is exactly one write path carrying the sync-push + invalidate-after-write-completes behavior.",
+   "acceptance_criteria": [
+    "grep -rn \"StudyDayConfigRepositoryImpl(\" lib/ returns zero (deleted) or one wired call site.",
+    "grep -rn \"toggleStudyDay\" lib/ returns zero (deleted) or a provider matching _toggleDay's sync-push/post-write-invalidate behavior.",
+    "study_day_config_screen_l1_test.dart continues passing unchanged (it asserts DB state, not call path)."
+   ],
+   "labels": [
+    "DB-1",
+    "dead-code",
+    "scheduler",
+    "architecture"
+   ],
+   "effort": "M"
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-scheduler-p5",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Extract scheduler_providers.dart's private _amnestyDayCutoffUtc/anchor-clamp so reorder_amnesty_test.dart calls it instead of hand-copying it",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (tautological/re-derived test) / Feathers seam",
+   "area": "features/scheduler/presentation/providers (hotspot: scheduler_providers.dart)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/scheduler/presentation/providers/scheduler_providers.dart",
+     "line": 481,
+     "quote": "DateTime _amnestyDayCutoffUtc(DateTime lastReorderAt) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/presentation/providers/scheduler_providers.dart",
+     "line": 683,
+     "quote": "final progAmnestyCutoff = rawAmnestyCutoff.isAfter(anchor)"
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/reorder_amnesty_test.dart",
+     "line": 221,
+     "quote": "final cutoff = DateTime.utc(local.year, local.month, local.day);"
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/reorder_amnesty_test.dart",
+     "line": 280,
+     "quote": "final clampedCutoff = rawCutoff.isAfter(anchor) ? anchor : rawCutoff;"
+    }
+   ],
+   "sites": 3,
+   "why": "_amnestyDayCutoffUtc is a private top-level function, so no test file can import and call it; the 3 'projection amnesty' tests in Scenario A (basic cutoff, mid-day cutoff, program back-date anchor-clamp) each hand-retype the algorithm instead (one comment even says 'Mimic the production day-level cutoff'). If a future edit to the real function or the isAfter(anchor) clamp regresses, these 3 tests stay green because they only check their own copy. Partial mitigation: scheduler_providers_branches_test.dart's RA1/RA2 do drive the real allDailyTasksProvider for the non-program path, but the program-specific back-date anchor-clamp scenario here has no confirmed real-path coverage elsewhere.",
+   "recommendation": "Mark _amnestyDayCutoffUtc @visibleForTesting (or move it plus the clamp expression to a small pure function in domain/projection/) and have reorder_amnesty_test.dart's three amnesty tests call it directly instead of retyping the algorithm.",
+   "acceptance_criteria": [
+    "reorder_amnesty_test.dart imports and calls the real cutoff/clamp function; no inline DateTime.utc(local.year, local.month, local.day) reimplementation remains in the test file.",
+    "A mutation flipping isAfter to isBefore in the anchor clamp (scheduler_providers.dart:683) fails this test file."
+   ],
+   "labels": [
+    "test-quality",
+    "TQ-8",
+    "seam",
+    "scheduler",
+    "hotspot"
+   ],
+   "effort": "M"
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-scheduler-p5",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Cover reminderSyncEffect's D1/D2 guards with a real ProviderContainer test instead of overdue_notifications_test.dart's hand-duplicated logic",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (tautological/re-derived test)",
+   "area": "features/notifications/presentation/providers (hotspot: notification_providers.dart)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/scheduler/overdue_notifications_test.dart",
+     "line": 10,
+     "quote": "/// O8 is a REAL characterisation test \u2014 it targets code that EXISTS today"
+    },
+    {
+     "file": "learning_tracker/test/scheduler/overdue_notifications_test.dart",
+     "line": 263,
+     "quote": "// We call scheduler.cancel() directly to show the EXPECTED call;"
+    },
+    {
+     "file": "learning_tracker/test/scheduler/overdue_notifications_test.dart",
+     "line": 452,
+     "quote": "!t.isOverdue && t.priority != DailyTaskPriority.scheduledChazara,"
+    },
+    {
+     "file": "learning_tracker/lib/features/notifications/presentation/providers/notification_providers.dart",
+     "line": 517,
+     "quote": "if (taskCount == 0) {"
+    }
+   ],
+   "sites": 4,
+   "why": "None of O8-a..d builds a ProviderContainer or overrides allDailyTasksProvider to invoke the actual reminderSyncEffect provider, contradicting the file's own docstring claim. O8-b calls scheduler.cancel() directly rather than exercising the 'if (taskCount == 0)' guard in production; O8-d hand-retypes the today-only filter instead of calling it. A regression that deletes or inverts notification_providers.dart:517-520's zero-count cancel guard, or that misses excluding a new DailyTaskPriority from the today-only filter, ships with dart test fully green. Sibling file reminder_sync_sacred_time_test.dart proves reminderSyncEffect IS reachable for real testing via allDailyTasksProvider.overrideWith(...) \u2014 this file simply doesn't use that technique for D1/D2.",
+   "recommendation": "Rewrite O8-b/O8-d to build a ProviderContainer with allDailyTasksProvider and the notification gateway/scheduler provider overridden, read reminderSyncEffectProvider, and assert against the recording gateway the effect actually drove (mirror reminder_sync_sacred_time_test.dart's pattern). Delete the unused MockNotificationGateway/mocktail import.",
+   "acceptance_criteria": [
+    "At least one test in the file invokes reminderSyncEffect/reminderSyncEffectProvider through a real ProviderContainer.",
+    "A mutation deleting the taskCount == 0 guard in notification_providers.dart fails this test file.",
+    "The unused MockNotificationGateway class and its mocktail import are removed or put to use."
+   ],
+   "labels": [
+    "test-quality",
+    "TQ-8",
+    "hotspot",
+    "notifications"
+   ],
+   "effort": "M"
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-scheduler-p5",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Split 6 oversized scheduler/notifications test files under the 400-line AG-3 cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3 (hand-written Dart files <= 400 lines)",
+   "area": "test infra (batch-wide)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/scheduler/presentation/screens/study_day_config_screen_l1_test.dart",
+     "line": 837,
+     "quote": "(837-line file; AG-3 cap is 400)"
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/reorder_amnesty_test.dart",
+     "line": 599,
+     "quote": "(599-line file; AG-3 cap is 400)"
+    },
+    {
+     "file": "learning_tracker/test/scheduler/overdue_projection_test.dart",
+     "line": 1000,
+     "quote": "(1000-line file; AG-3 cap is 400)"
+    },
+    {
+     "file": "learning_tracker/test/scheduler/overdue_durability_test.dart",
+     "line": 579,
+     "quote": "(579-line file; AG-3 cap is 400)"
+    },
+    {
+     "file": "learning_tracker/test/scheduler/overdue_notifications_test.dart",
+     "line": 508,
+     "quote": "(508-line file; AG-3 cap is 400)"
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/widgets/goal_setup_screen_test.dart",
+     "line": 509,
+     "quote": "(509-line file; AG-3 cap is 400)"
+    }
+   ],
+   "sites": 6,
+   "why": "Exceeds AG-3's stated agent-context-window rationale: this audit itself needed paginated/multi-page reads for the 1000- and 837-line files, exactly the 'content past the window is invisible' failure mode AG-3 exists to prevent.",
+   "recommendation": "Split each by existing test group (e.g. overdue_projection_test.dart into separate O1/O2/O3/O7 and F-H2/F-H4/F-M1/B2 files; study_day_config_screen_l1_test.dart along its 3 existing groups). Add the AG-3 line-count checker to make audit (currently Pending) with these 6 as the initial ratchet baseline.",
+   "acceptance_criteria": [
+    "find lib test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400' no longer lists these 6 files, or the check is landed in make audit (warn-only) with them as the tracked baseline."
+   ],
+   "labels": [
+    "AG-3",
+    "hygiene",
+    "test-quality"
+   ],
+   "effort": "M"
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-scheduler-p5",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Move goal_setup_screen_test.dart and hebrew_date_picker_test.dart out of test/features/scheduler/widgets/ into their mirrored presentation/ paths (AG-5)",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-5 (test/ mirrors lib/ 1:1)",
+   "area": "test placement (scheduler)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/scheduler/widgets/goal_setup_screen_test.dart",
+     "line": 1,
+     "quote": "import 'package:flutter/material.dart';"
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/widgets/hebrew_date_picker_test.dart",
+     "line": 1,
+     "quote": "import 'package:flutter/material.dart';"
+    }
+   ],
+   "sites": 2,
+   "why": "goal_setup_screen.dart lives at lib/features/scheduler/presentation/screens/ and hebrew_date_picker.dart at lib/features/scheduler/presentation/widgets/ \u2014 both one path segment ('presentation/') away from where their tests actually sit. The correctly-mirrored test/features/scheduler/presentation/{screens,widgets}/ directories already exist with sibling tests for the same feature (confirmed no name collision), so an agent globbing there for existing coverage finds nothing and risks writing a second, divergent test file at the correct path.",
+   "recommendation": "git mv test/features/scheduler/widgets/goal_setup_screen_test.dart test/features/scheduler/presentation/screens/goal_setup_screen_test.dart; git mv test/features/scheduler/widgets/hebrew_date_picker_test.dart test/features/scheduler/presentation/widgets/hebrew_date_picker_test.dart; delete the now-empty test/features/scheduler/widgets/ directory; fix relative helper imports.",
+   "acceptance_criteria": [
+    "test/features/scheduler/widgets/ no longer exists.",
+    "make ci is green after the move."
+   ],
+   "labels": [
+    "AG-5",
+    "test-placement",
+    "scheduler"
+   ],
+   "effort": "S"
+  }
+ }
+]

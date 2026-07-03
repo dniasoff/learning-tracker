@@ -1,0 +1,64 @@
+[
+ {
+  "sourceBatch": "t1-core-sync-root-p1",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Write server timestamps for LWW ordering fields in FirestoreGatewayImpl's push* methods (FB-2)",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "FB-2",
+   "area": "core/sync (push/gateway)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/sync/firestore_gateway_impl.dart",
+     "line": 337,
+     "quote": "..._stripInternalKeys(data),\n      'synced_at': FieldValue.serverTimestamp(),"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/firestore_gateway_impl.dart",
+     "line": 316,
+     "quote": "..._stripInternalKeys(data),\n      'synced_at': FieldValue.serverTimestamp(),"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/firestore_gateway_impl.dart",
+     "line": 369,
+     "quote": "..._stripInternalKeys(data),\n      'synced_at': FieldValue.serverTimestamp(),"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/firestore_gateway_impl.dart",
+     "line": 562,
+     "quote": "..._stripInternalKeys(data),\n      'synced_at': FieldValue.serverTimestamp(),"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/firestore_gateway_impl.dart",
+     "line": 417,
+     "quote": "..._stripInternalKeys(data),\n      'updated_at': FieldValue.serverTimestamp(),"
+    },
+    {
+     "file": "docs/sync-conflict-resolution.md",
+     "line": 16,
+     "quote": "| `learner_profiles` | **LWW** | `updatedAt` | |\n| `bookmarks` | **LWW** | `updatedAt` | |"
+    },
+    {
+     "file": "docs/coding-standards.md",
+     "line": 247,
+     "quote": "Every cross-device LWW ordering field is written as `FieldValue.serverTimestamp()`, never a client clock."
+    }
+   ],
+   "sites": 4,
+   "why": "docs/sync-conflict-resolution.md names `updatedAt` as the LWW comparison field for curriculum_tracks, goals, bookmarks and settings. pushTrack (line 337), pushSettings (316), pushBookmark (369) and pushGoal (562) all spread the caller's `data` -- which carries whatever client-clock `updated_at` the local write set -- straight through, and only add a separate `synced_at: FieldValue.serverTimestamp()` field that isn't the one the merger compares. pushLearnerProfile (line 417) shows the codebase already knows the right pattern: it explicitly overwrites `updated_at` itself with `FieldValue.serverTimestamp()` before sending. FB-2's own stated rationale is exact: 'two devices with skewed clocks writing client timestamps make last-write-wins non-deterministic -- the faster clock always wins and silently overwrites newer data.' A device with a fast or wrong clock editing a track/goal/bookmark/setting can have its stale edit incorrectly beat a genuinely later edit from another device, with the loss silent (no error, just the wrong value persisting until the next edit).",
+   "recommendation": "Apply the pushLearnerProfile pattern (server-side overwrite of the merger's LWW field) to pushTrack, pushSettings, pushBookmark, pushGoal and any other push* method whose entity is LWW-merged by a client-set timestamp field; confirm against core/sync/merge/*.dart which exact field each merger compares before changing it.",
+   "effort": "L",
+   "acceptance_criteria": [
+    "Emulator test (per FB-2's own 'Enforce' note) asserts the persisted field each merger actually compares is a server Timestamp, not a client-supplied value, for tracks/goals/bookmarks/settings.",
+    "Audit grep: no client-clock value reaches a field a merger uses for cross-device LWW comparison, across firestore_gateway_impl.dart's push* methods."
+   ],
+   "labels": [
+    "FB-2",
+    "clock-skew",
+    "sync",
+    "data-integrity"
+   ]
+  }
+ }
+]

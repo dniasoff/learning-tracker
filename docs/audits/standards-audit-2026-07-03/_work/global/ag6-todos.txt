@@ -1,0 +1,8 @@
+lib/firebase_options.dart:56:  // TODO: Run `flutterfire configure` to generate real values.
+lib/features/tutoring/presentation/providers/audit_log_providers.dart:63:    // TODO(data-layer): Replace with Firestore write.
+lib/features/scheduler/domain/services/pace_calculator.dart:7:// TODO(Epic-12): Wire this callback into the notification system (DNI notification story).
+lib/features/scheduler/domain/services/pace_calculator.dart:25:  // TODO(Epic-12): Epic 12 notification system should pass an [onPaceBehind]
+test/features/progress/presentation/screens/curriculum_progress_screen_test.dart:409:      // (F10 fix — the inline English literal + TODO(l10n) comment was
+test/story_acceptance/epic_27_story_4_widget_golden_test.dart:240:      // TODO: CompletionButton was removed in the Wave-3/4 refactor.
+test/story_acceptance/epic_14_settings_test.dart:724:        // TODO: verify version string display
+test/story_acceptance/epic_14_settings_test.dart:728:        // TODO: verify link navigation

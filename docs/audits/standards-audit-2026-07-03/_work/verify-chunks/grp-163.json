@@ -1,0 +1,223 @@
+[
+ {
+  "sourceBatch": "t2-root-tool",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Deduplicate tool/device_e2e/run{2,3,4,5,6,7}_full_suite.mjs into one parameterized orchestration module",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-1 (route through committed scripts, no ad-hoc variants) + Fowler duplication",
+   "area": "tool/device_e2e (on-device audit orchestration)",
+   "evidence": [
+    {
+     "file": "tool/device_e2e/run2_full_suite.mjs",
+     "line": 2,
+     "quote": "name: 'device-e2e-full-suite-run2',"
+    },
+    {
+     "file": "tool/device_e2e/run7_full_suite.mjs",
+     "line": 2,
+     "quote": "name: 'device-e2e-full-suite-run7',"
+    },
+    {
+     "file": "tool/device_e2e/run2_full_suite.mjs",
+     "line": 43,
+     "quote": "`## Judgment calibration (avoid the false positives from run 1)`,"
+    },
+    {
+     "file": "tool/device_e2e/run5_fix.mjs",
+     "line": 97,
+     "quote": "excluded: ['#16 RTL segmented stranded \u2014 re-rejected (deferred workflow + run-2 confirmed SegmentedButton mirrors correctly...)'],"
+    }
+   ],
+   "sites": 6,
+   "why": "diff run2_full_suite.mjs against run3/4/5/6/7 shows each 256-line file differs from run2 by EXACTLY 3 lines (name, output dir, one description string) \u2014 1536 lines of near-total copy-paste across 6 files. The concrete cost is visible: the calibration text 'avoid the false positives from run 1' (line 43) is frozen verbatim since run2, yet the SAME false positive (RTL segmented controls auto-mirroring) had to be independently rediscovered and excluded in run3 (run3_fix.mjs:104, '#10... contradicted between runs') and AGAIN in run5 (run5_fix.mjs:97, '#16... re-rejected'). Because the shared logic isn't factored into one module, a lesson learned in one run never propagates to the others \u2014 the next run(run8+) will hit the same wall.",
+   "recommendation": "Extract the shared constants/builders (DEV map, driveGuide/seedPrompt/auditPrompt/verifyPrompt, the phase pipeline) into one importable module parameterized by {runId, priorFixSummary, areaPartitions}; each runN_full_suite.mjs shrinks to its run-specific area/seed data plus a call into the shared runner. Fold the RTL-segmented-controls lesson (and similar recurring false-positives) into the shared calibration text once, permanently.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "A shared tool/device_e2e/_full_suite_lib.mjs (or similar) exports the orchestration/prompt-builder logic; runN_full_suite.mjs files import it instead of redefining it.",
+    "Each new runN_full_suite.mjs is materially smaller than 256 lines (only run-specific data), checkable by a simple line-count grep in CI/Makefile.",
+    "The RTL-segmented-controls calibration note is asserted exactly once in the shared module (grep -c across tool/device_e2e/*.mjs returns 1, not 6)."
+   ],
+   "labels": [
+    "tooling",
+    "duplication",
+    "device-e2e"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-root-tool",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Delete or fix the dead, non-compiling tool/seed_content_db.dart fragment at repo root",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Tier-2 AREA NOTE: dead code, drift between duplicated configs",
+   "area": "tool (repo-root vs learning_tracker/tool duplicate)",
+   "evidence": [
+    {
+     "file": "tool/seed_content_db.dart",
+     "line": 1,
+     "quote": "// \u2500\u2500 Phase 3: Text content \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500"
+    },
+    {
+     "file": "tool/seed_content_db.dart",
+     "line": 3,
+     "quote": "Future<int> _fetchAndInsertTextContent(ContentDatabase db, _Args args) async {"
+    },
+    {
+     "file": "learning_tracker/tool/seed_content_db.dart",
+     "line": 30,
+     "quote": "import 'dart:async';"
+    },
+    {
+     "file": "learning_tracker/Makefile",
+     "line": 236,
+     "quote": "dart run tool/seed_content_db.dart --build --no-resume"
+    }
+   ],
+   "sites": 1,
+   "why": "The file this batch was asked to audit \u2014 root-level tool/seed_content_db.dart (242 lines) \u2014 has NO imports, NO `void main()`, and references types/constants (Dio, ContentDatabase, _Args, _curricula, _maxConcurrentFetches, ...) that are defined nowhere in the file. It cannot compile as a standalone Dart script. The real, complete, actively-referenced seed-build tool lives at learning_tracker/tool/seed_content_db.dart (809 lines, proper imports, invoked by learning_tracker/Makefile:236,239 and documented everywhere as `cd learning_tracker && ...`). The root copy is tracked in git, has its own commit history, and is not referenced by any Makefile target or doc's actual invocation instructions \u2014 it is pure orphaned duplicate content that will confuse anyone (human or agent) who opens 'tool/seed_content_db.dart' from repo root expecting the real build tool.",
+   "recommendation": "Delete the root-level tool/seed_content_db.dart (git history preserves it) since the canonical tool already lives at learning_tracker/tool/seed_content_db.dart. If some workflow genuinely needs a repo-root entry point, make it a one-line wrapper that shells into the real file, not a stale content fork.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "tool/seed_content_db.dart at repo root is removed (or reduced to a documented redirect), and `dart run tool/seed_content_db.dart` from repo root either doesn't exist as a workflow or correctly delegates to learning_tracker/tool/seed_content_db.dart.",
+    "A grep/CI check fails if two files share a basename under tool/** and learning_tracker/tool/** with diverging content, to prevent recurrence."
+   ],
+   "labels": [
+    "dead-code",
+    "drift",
+    "tooling"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-root-tool",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Escape jq string interpolation in tool/linear-sync.sh before it corrupts YAML on titles/authors containing a quote",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Tier-2 AREA NOTE: correctness of tooling (silent corruption)",
+   "area": "tool (Linear sync cache + docs generation)",
+   "evidence": [
+    {
+     "file": "tool/linear-sync.sh",
+     "line": 301,
+     "quote": "\"    title: \\\"\" + .title + \"\\\"\\n\" +"
+    },
+    {
+     "file": "tool/linear-sync.sh",
+     "line": 323,
+     "quote": "\"    title: \\\"\" + .title + \"\\\"\\n\" +"
+    },
+    {
+     "file": "tool/linear-sync.sh",
+     "line": 336,
+     "quote": "\"title: \\\"\" + .title + \"\\\"\","
+    },
+    {
+     "file": "tool/linear-sync.sh",
+     "line": 381,
+     "quote": "\"title: \\\"\" + .title + \"\\\"\","
+    },
+    {
+     "file": "tool/linear-sync.sh",
+     "line": 388,
+     "quote": "\"  - author: \\\"\" + .user.name + \"\\\"\\n    body: |\\n\" + ..."
+    }
+   ],
+   "sites": 5,
+   "why": "All 5 sites build a quoted YAML scalar by raw string-concatenating a Linear-supplied value (issue title, or comment author name) between literal backslash-quotes, with no escaping of embedded `\"` characters. Any Linear issue titled e.g. `Fix \"broken\" login` (or a comment author display name containing a quote) produces a line like `title: \"Fix \"broken\" login\"` in sprint-status.yaml, the per-story .yaml cache files, AND the generated epics.md \u2014 a malformed value with no error raised anywhere in the pipeline (set -e doesn't catch it, since jq itself succeeds). Downstream, docs/planning/epics.md's AUTO:EPIC-LIST block (also written by this script) silently carries the corrupted text into checked-in documentation.",
+   "recommendation": "Replace the raw `\"...\\\"\" + .field + \"\\\"\"` concatenation with jq's `(.field | tojson)` (or `@json`) at all 5 sites, which correctly escapes embedded quotes/backslashes/newlines and is still valid YAML flow-scalar syntax.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Feed a synthetic Linear issue JSON with a `\"` in .title (and .user.name for comments) through the jq filters; the emitted YAML parses cleanly via `python3 -c \"import yaml,sys;yaml.safe_load(sys.stdin)\"` or `yq`.",
+    "All 5 sites (lines 301, 323, 336, 381, 388) use tojson/@json instead of manual quote concatenation."
+   ],
+   "labels": [
+    "correctness",
+    "silent-corruption",
+    "tooling"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-root-tool",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Reconcile the first AVD entry across avd-setup.ps1, emulators-start.ps1, and adb-connect-wsl.sh",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Tier-2 AREA NOTE: drift between duplicated configs",
+   "area": "tool (Windows/WSL2 emulator bring-up trio)",
+   "evidence": [
+    {
+     "file": "tool/avd-setup.ps1",
+     "line": 70,
+     "quote": "name      = \"lt_api24_nexus5\"\n        port      = 5554"
+    },
+    {
+     "file": "tool/emulators-start.ps1",
+     "line": 44,
+     "quote": "lt_api28_pixel2  = 5554"
+    },
+    {
+     "file": "tool/adb-connect-wsl.sh",
+     "line": 39,
+     "quote": "EXPECTED_NAMES=(lt_api28_pixel2 lt_api29_pixel3 lt_api31_pixel5 lt_api34_pixel7 lt_api36_tablet)"
+    }
+   ],
+   "sites": 3,
+   "why": "avd-setup.ps1's own $MATRIX creates the port-5554 device as API 24 on a 'Nexus 5' profile named `lt_api24_nexus5`. But emulators-start.ps1's $ALL_AVDS and adb-connect-wsl.sh's EXPECTED_NAMES/EXPECTED_APIS both expect an AVD literally named `lt_api28_pixel2` (API 28, Pixel 2) at that same port \u2014 and both agree with EACH OTHER, only avd-setup.ps1 disagrees. All 4 other matrix rows (29/31/34/36.1) match perfectly across all 3 scripts. Following avd-setup.ps1's own documented next step ('Start all 5: .\\tool\\emulators-start.ps1') on a fresh machine launches `emulator -avd lt_api28_pixel2`, which was never created \u2014 that emulator slot fails to boot, and adb-connect-wsl.sh's health check for it reports NOT FOUND.",
+   "recommendation": "Pick one name/API/device-profile for the port-5554 slot and make all 3 scripts agree \u2014 most likely revert avd-setup.ps1's first matrix row back to api=28/device='Pixel 2'/name='lt_api28_pixel2' to match the other two (already-agreeing) scripts, unless the API-24 floor change was intentional, in which case propagate it to emulators-start.ps1 and adb-connect-wsl.sh instead.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "The AVD name/API/port for the first device slot is identical across avd-setup.ps1, emulators-start.ps1, and adb-connect-wsl.sh.",
+    "Running avd-setup.ps1 followed by emulators-start.ps1 boots all 5 emulators, verified by adb-connect-wsl.sh reporting 5/5 ONLINE."
+   ],
+   "labels": [
+    "drift",
+    "tooling",
+    "windows-wsl2"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t2-root-tool",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Remove the duplicated/truncated KNOWN-DEFERRED block in tool/vision_find_pass.js",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler duplication / hygiene",
+   "area": "tool (vision-audit orchestration prompt)",
+   "evidence": [
+    {
+     "file": "tool/vision_find_pass.js",
+     "line": 151,
+     "quote": "- city subtitle still shows raw GeoNames code \"NN\" (the build SCRIPT is fixed; the cities.sqlite ASSET regen is"
+    },
+    {
+     "file": "tool/vision_find_pass.js",
+     "line": 152,
+     "quote": "- add-track wizard step-count denominator branches (6 \u2192 7 \u2192 4) by path \u2014 this is INTENDED, pinned by TS-11 tests"
+    }
+   ],
+   "sites": 1,
+   "why": "The KNOWN template string (fed verbatim into every one of the 9 parallel agent prompts via briefFor at line 213) contains ~9 'KNOWN-DEFERRED' bullets stated twice back-to-back (lines 134-151 then 152-168). The FIRST copy is truncated mid-sentence at line 151 ('...the cities.sqlite ASSET regen is') and jumps straight into an unrelated bullet already stated earlier \u2014 only the second copy (line 167-168) completes the sentence ('...pending a GeoNames source download \u2014 known, do not re-flag.'). This is accidental content left over from appending an updated list without deleting the old one; it bloats every agent invocation's prompt with garbled, redundant text.",
+   "recommendation": "Delete the first (truncated) copy of the KNOWN-DEFERRED bullet list, keeping the second, complete copy (which also has one bullet \u2014 the Hebrew-Terms-toggle-hidden note \u2014 that the first copy lacks).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "`grep -c \"add-track wizard step-count denominator branches\" tool/vision_find_pass.js` returns 1, not 2.",
+    "The KNOWN string contains no truncated sentences (each bullet's parenthetical closes)."
+   ],
+   "labels": [
+    "duplication",
+    "hygiene",
+    "prompt-quality"
+   ]
+  }
+ }
+]

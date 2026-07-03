@@ -1,0 +1,193 @@
+[
+ {
+  "sourceBatch": "t1-feat-profiles-p2",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Guard ref.read calls after the cached-profile await in TutoredChildrenSection._fireEntryPullAndNavigate",
+   "severity": "P2",
+   "confidence": "SUSPECTED",
+   "rule": "SM-4",
+   "area": "features/profiles/presentation/widgets/tutored_children_section.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/widgets/tutored_children_section.dart",
+     "line": 503,
+     "quote": "final cachedProfile = await ref"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/widgets/tutored_children_section.dart",
+     "line": 515,
+     "quote": ".read(resolvedTutoredLocalProfileIdProvider.notifier)"
+    }
+   ],
+   "sites": 2,
+   "why": "showProfileSwitcherSheet (profile_switcher_sheet.dart:43-50) calls showModalBottomSheet with neither isDismissible nor enableDrag overridden, so the sheet stays swipe/backdrop-dismissible for the whole window between the user's tap and the loading dialog appearing. The cached-mirror check at line 503 is a local DB read awaited BEFORE any dialog/barrier goes up; if the user swipes the sheet away during that window, _TutoredChildRow (a ConsumerWidget) unmounts, and the very next lines (514-516) call ref.read on a WidgetRef whose element is gone, outside any try/catch, so the exception would be unhandled. The same risk exists after the second await (svc.pull(...), up to 15s) at ~595. The author was clearly aware of this exact class of bug elsewhere in the same method (router is captured eagerly at line 487 specifically to survive unmounting; context.mounted is checked before every Navigator/ScaffoldMessenger call afterward) but the same treatment wasn't applied to these ref.read calls.",
+   "recommendation": "Check context.mounted (or capture the needed notifiers before the await) before touching ref post-await, matching the pattern already used for `router` in the same method.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "A widget test drives _enterTalmidView, dismisses the switcher sheet while the getTutoredProfile future is pending, completes the future, and asserts no uncaught exception is thrown",
+    "ref is not touched after an await without a liveness check anywhere in _fireEntryPullAndNavigate"
+   ],
+   "labels": [
+    "riverpod",
+    "sm-4",
+    "lifecycle",
+    "tutoring"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-profiles-p2",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Show user-facing error feedback on the StateError path in TutoredChildrenSection._fireEntryPullAndNavigate",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "EH-2 / UX completeness",
+   "area": "features/profiles/presentation/widgets/tutored_children_section.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/widgets/tutored_children_section.dart",
+     "line": 662,
+     "quote": "} on StateError catch (e) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/widgets/tutored_children_section.dart",
+     "line": 669,
+     "quote": "dismissLoading();"
+    }
+   ],
+   "sites": 1,
+   "why": "The permissionDenied and error branches of the preceding switch both show a ScaffoldMessenger snackbar so the user learns why they didn't land in the talmid view. The `on StateError catch` block three lines later only logs via AppLogger and calls exit()+dismissLoading() \u2014 no snackbar, no dialog. If buildTutoredPullServiceFromWidget throws (documented as the 'non-cloud accounts' case), the user taps a tutored-child row, watches the loading spinner, and it disappears with zero explanation \u2014 indistinguishable from a silent hang.",
+   "recommendation": "Add the same ScaffoldMessenger snackbar pattern (with an AppLocalizations-backed message) to the StateError catch block.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "A widget test stubs the pull service to throw StateError and asserts a SnackBar/error message appears",
+    "The StateError catch block gives feedback consistent with the permissionDenied/error branches"
+   ],
+   "labels": [
+    "error-handling",
+    "ux",
+    "tutoring"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-profiles-p2",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Extract a shared pumpApp test helper \u2014 profiles feature hand-rolls the 4-delegate MaterialApp wrapper 13 times",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-3",
+   "area": "test/features/profiles/**",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/profiles/pin_flow_and_setup_dialog_l1_test.dart",
+     "line": 151,
+     "quote": "localizationsDelegates: const ["
+    },
+    {
+     "file": "learning_tracker/test/features/profiles/presentation/an2_switcher_pin_guard_test.dart",
+     "line": 76,
+     "quote": "localizationsDelegates: const ["
+    },
+    {
+     "file": "learning_tracker/test/features/profiles/presentation/profile_switcher_sheet_test.dart",
+     "line": 83,
+     "quote": "localizationsDelegates: const ["
+    },
+    {
+     "file": "learning_tracker/test/features/profiles/presentation/screens/manage_learners_screen_l1_test.dart",
+     "line": 148,
+     "quote": "localizationsDelegates: const ["
+    }
+   ],
+   "sites": 13,
+   "why": "TQ-3 calls for widget tests to pump via a shared pumpApp helper; test/helpers/ has no such file (verified contents: drift_memory.dart, firestore_fake.dart, golden_runner.dart, migration_test_helper.dart, overflow_harness.dart, test_database.dart). Each of the 4 widget-test files in this batch hand-rolls the identical MaterialApp+localizationsDelegates+supportedLocales block (6 separate occurrences inside pin_flow_and_setup_dialog_l1_test.dart alone; 13 total in this batch), and the same block appears in 146 test files repo-wide (grepped for GlobalCupertinoLocalizations.delegate). Any future change to the delegate list, theme, or a required test-only ancestor widget requires hand-editing every copy; a missed copy silently diverges from the rest.",
+   "recommendation": "Add test/helpers/pump_app.dart exposing a pumpApp({child, overrides, locale}) helper and migrate these call sites onto it, starting with this batch's 4 files.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "test/helpers/pump_app.dart exists and is used by at least the 4 files in this batch",
+    "A tracked grep count of GlobalCupertinoLocalizations.delegate outside test/helpers/ decreases as files migrate"
+   ],
+   "labels": [
+    "testing",
+    "tq-3",
+    "duplication"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-profiles-p2",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Add a Locale('he') RTL widget-test variant for ProfileSwitcherSheet and its AN-2 PIN guard",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-3",
+   "area": "test/features/profiles/presentation/{an2_switcher_pin_guard_test.dart,profile_switcher_sheet_test.dart}",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/profiles/presentation/profile_switcher_sheet_test.dart",
+     "line": 82,
+     "quote": "locale: const Locale('en'),"
+    },
+    {
+     "file": "learning_tracker/test/features/profiles/presentation/an2_switcher_pin_guard_test.dart",
+     "line": 75,
+     "quote": "locale: const Locale('en'),"
+    }
+   ],
+   "sites": 2,
+   "why": "profile_switcher_sheet.dart is opened from every screen's profile header \u2014 a key, heavily-used surface by any reading of TQ-3 \u2014 and its own TutoredChildrenSection child already has a live RTL bug (see the PositionedDirectional finding) that a He-locale render test would have caught. an2_switcher_pin_guard_test.dart's own header calls itself a RED->GREEN regression suite but every scenario runs in English only. grep confirms zero Locale('he') references in either file, while sibling files in the same batch (pin_flow_and_setup_dialog_l1_test.dart, manage_learners_screen_l1_test.dart) both carry He-locale smoke tests, making this pair the outlier within the same feature.",
+   "recommendation": "Add a Locale('he') smoke test to each file mirroring the existing E1/E2 pattern already used in pin_flow_and_setup_dialog_l1_test.dart.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "profile_switcher_sheet_test.dart and an2_switcher_pin_guard_test.dart each have at least one testWidgets with locale: Locale('he') asserting no overflow/crash"
+   ],
+   "labels": [
+    "testing",
+    "tq-3",
+    "i18n",
+    "rtl"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-profiles-p2",
+  "findingIndex": 8,
+  "finding": {
+   "title": "Un-pin the FAB-always-visible-at-cap UX bug in manage_learners_screen_l1_test.dart or file it with a Linear id",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-6 (spirit) / TQ-7",
+   "area": "test/features/profiles/presentation/screens/manage_learners_screen_l1_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/profiles/presentation/screens/manage_learners_screen_l1_test.dart",
+     "line": 361,
+     "quote": "// BUG: ManageLearnersScreen does not visually disable the FAB or show"
+    },
+    {
+     "file": "learning_tracker/test/features/profiles/presentation/screens/manage_learners_screen_l1_test.dart",
+     "line": 377,
+     "quote": "expect(find.byType(FloatingActionButton), findsOneWidget);"
+    }
+   ],
+   "sites": 1,
+   "why": "The test's own comment names this a UX bug ('the FAB should be disabled or hidden at cap') yet asserts the current buggy behavior (findsOneWidget) as passing, with no Linear id anywhere nearby. Anyone who fixes the FAB-cap UX later has to know to come back and flip this specific assertion; nothing links the comment to a backlog item, so the gap is invisible to grooming and easy to forget, unlike a tracked TODO.",
+   "recommendation": "Either give the comment a DNI-#### id and keep the test as an explicit characterization test, or mark it skip: 'DNI-####' with the desired (not current) assertion as a red regression test.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "The FAB-cap gap has a Linear id referenced in the test file",
+    "No 'BUG:' comment describing unfixed product behavior remains without an adjacent DNI-#### id in this file"
+   ],
+   "labels": [
+    "hygiene",
+    "ag-6",
+    "testing"
+   ]
+  }
+ }
+]

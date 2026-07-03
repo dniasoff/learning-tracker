@@ -1,0 +1,199 @@
+[
+ {
+  "sourceBatch": "t1-feat-scheduler-p1",
+  "findingIndex": 9,
+  "finding": {
+   "title": "Mirror scheduler's domain/projection tests under test/features/scheduler/domain/projection per AG-5",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-5 [P] \u2014 test/ mirrors lib/ 1:1",
+   "area": "features/scheduler test organization",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/scheduler/domain/projection/overdue_projection.dart",
+     "line": 1,
+     "quote": "/// Pure overdue projection \u2014 the `project()` function."
+    },
+    {
+     "file": "learning_tracker/test/features/scheduler/data/repositories/overdue_from_elapsed_study_days_test.dart",
+     "line": 20,
+     "quote": "import 'package:learning_tracker/features/scheduler/domain/projection/projection.dart';"
+    }
+   ],
+   "sites": 1,
+   "why": "There is no test/features/scheduler/domain/projection/ directory at all \u2014 the 4-file domain/projection/ module (overdue_projection.dart, overdue_schedule.dart, overdue_types.dart, projection.dart) is instead tested from files scattered loosely under test/features/scheduler/, including overdue_from_elapsed_study_days_test.dart which sits inside the unrelated data/repositories/ test directory despite importing only domain/projection/projection.dart. A contributor looking for 'the projection tests' at the standard mirrored path won't find them, and a future agent adding coverage for overdue_projection.dart risks not noticing this file already covers related ground.",
+   "recommendation": "Relocate the projection-only test files under test/features/scheduler/domain/projection/ to match lib/features/scheduler/domain/projection/.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "overdue_from_elapsed_study_days_test.dart and the other projection-only test files (e.g. reorder_amnesty_test.dart, collapse_daf_tasks_test.dart if scoped to projection) live under test/features/scheduler/domain/projection/."
+   ],
+   "labels": [
+    "testing",
+    "AG-5",
+    "test-mirroring"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-scheduler-p2",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Populate the scheduler feature barrel (scheduler.dart) with real exports",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Rule-2 / naming-placement",
+   "area": "scheduler (feature barrel)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/scheduler/scheduler.dart",
+     "line": 4,
+     "quote": "// feature. Do NOT import deep paths directly."
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/scheduler.dart",
+     "line": 7,
+     "quote": "library scheduler;"
+    }
+   ],
+   "sites": 1,
+   "why": "The entire file is a library declaration plus a comment claiming to be the feature's public surface \u2014 it contains zero `export` statements, so importing it gives a consumer nothing usable. Grepping the whole repo confirms no file anywhere imports `features/scheduler/scheduler.dart`; every cross-feature consumer (e.g. lib/core/labels/curriculum_label.dart, lib/core/providers/calendar_providers.dart) is forced into deep imports of internal scheduler files because there is nothing else to import. The same empty-barrel pattern exists in learning.dart and profiles.dart and settings.dart (0 exports each) versus tracks.dart (26 exports, a real barrel) \u2014 so Rule 2 is currently unimplementable for scheduler even by a well-intentioned contributor, independent of the separate checker bug (see the awk finding).",
+   "recommendation": "Either populate scheduler.dart with `export` statements for the types/providers other features legitimately need (services, providers, models used cross-feature) and migrate the deep-import call sites, or formally scope down Rule 2's claim until barrels are built out feature-by-feature.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "scheduler.dart exports the symbols currently deep-imported by other features (calendar_program_service.dart, local_calendar_engine.dart, learning_program_service.dart, calendar_program_registry.dart at minimum).",
+    "Once check 15 (see companion finding) is fixed, a grep for `features/scheduler/(?!scheduler\\.dart)` from outside lib/features/scheduler/ returns zero matches."
+   ],
+   "labels": [
+    "Rule-2",
+    "layering",
+    "barrel"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-scheduler-p2",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Split the 5 oversized hand-written scheduler files under the 400-line AG-3 cap",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "scheduler (multiple layers)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/scheduler/presentation/providers/scheduler_providers.dart",
+     "line": 1,
+     "quote": "import 'dart:async';"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/domain/services/scheduler_engine.dart",
+     "line": 1,
+     "quote": "import 'dart:math';"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/presentation/screens/goal_setup_screen.dart",
+     "line": 1,
+     "quote": "import 'package:flutter/material.dart' hide DateUtils;"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/presentation/screens/study_day_config_screen.dart",
+     "line": 1,
+     "quote": "import 'package:auto_route/auto_route.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/domain/services/sefaria_ref_matcher.dart",
+     "line": 1,
+     "quote": "library;"
+    }
+   ],
+   "sites": 5,
+   "why": "scheduler_providers.dart is 1381 lines (3.4x the cap, and the batch HOTSPOT), scheduler_engine.dart is 747, goal_setup_screen.dart is 728 (HOTSPOT), study_day_config_screen.dart is 495, sefaria_ref_matcher.dart is 420. Files this size are slow to review, easy to introduce shotgun-surgery bugs in (the delay-stage date bug and the dead onCompleted chain both hid inside two of these five files), and resist the 1:1 test-mirroring convention (AG-5) since no single test file can reasonably cover a 1381-line source file's behavior space.",
+   "recommendation": "Extract cohesive chunks per file: scheduler_providers.dart's _buildProjectionTasks/_buildFreshPlan/_applyProgramCalendarOverrides/programCalendarSchedule into domain/services or domain/projection (see companion misplaced-logic finding); scheduler_engine.dart's stage-type processors (_processDelayStage/_processWeeklyStage/_processRollingStage) into their own strategy classes; goal_setup_screen.dart's deadline/pace sections into separate widget files; sefaria_ref_matcher.dart's range-expansion vs fuzzy-matching functions into two files.",
+   "effort": "L",
+   "acceptance_criteria": [
+    "Each of the 5 files is \u2264400 hand-written lines.",
+    "A committed line-count check (matching AG-3's stated limit) runs in `make audit` or CI and lists any future violator with its line count."
+   ],
+   "labels": [
+    "AG-3",
+    "file-size",
+    "hotspot"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-scheduler-p2",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Normalize config.currentDate before delay-stage due-date arithmetic in SchedulerEngine",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "DB-6 / Nygard (clock skew) / date-arithmetic",
+   "area": "scheduler/domain/services",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/scheduler/domain/services/scheduler_engine.dart",
+     "line": 368,
+     "quote": "final dueDate = previousCompletedAt.add(Duration(days: stage.delayDays));"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/domain/services/scheduler_engine.dart",
+     "line": 369,
+     "quote": "final daysUntilDue = dueDate.difference(config.currentDate).inDays;"
+    }
+   ],
+   "sites": 1,
+   "why": "config.currentDate flows in unnormalized: allDailyTasksProvider sets `now = ref.watch(clockProvider)` (a raw timestamp with time-of-day) and _buildFreshPlan passes it straight through generator.generateAll(activeCurricula, now, ...) -> ScheduleConfig(currentDate: date). previousCompletedAt also carries a real time-of-day (completion timestamps are never normalized \u2014 confirmed via completion_writer.dart). Duration.inDays truncates toward zero, so when the true calendar-day gap is exactly 1 day but the elapsed wall-clock time is <24h (e.g. item completed at 20:00 five days ago, now it's 02:00 the next calendar day \u2014 only 6h elapsed), daysUntilDue computes 0 instead of -1: a chazara item that is genuinely 1+ calendar days overdue is shown in 'due today' (scheduledTasks) instead of 'overdue' (overdueTasks), silently under-reporting overdue-ness by up to a day. This is the same class of bug (R4-1) this codebase has explicitly fixed elsewhere in the very same feature (local_calendar_engine.dart's UTC-midnight handling, goal_setup_screen.dart's daysRemaining guard, and _buildProjectionTasks's pervasive DateUtils.extractLocalDate use) \u2014 just missed in the delay-stage path.",
+   "recommendation": "Normalize both previousCompletedAt/currentCompletedAt and config.currentDate to calendar-date-only (e.g. via DateUtils.extractLocalDate) before computing daysUntilDue in _processDelayStage, matching the pattern already used in _buildProjectionTasks.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "New unit test: a delay-stage item whose previous-stage completedAt time-of-day is later than the current query's time-of-day, with a true 1-calendar-day gap, asserts the task lands in overdueTasks (not scheduledTasks).",
+    "scheduler_engine_schedule_types_test.dart / scheduler_engine_dni346_test.dart (sibling test files) continue to pass."
+   ],
+   "labels": [
+    "date-arithmetic",
+    "chazara",
+    "scheduler-engine",
+    "P2-correctness"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-scheduler-p2",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Move scheduler_providers.dart's projection/plan-building business logic into the domain layer",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "layering / Fowler misplaced-responsibility / Feathers seam",
+   "area": "scheduler/presentation/providers",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/scheduler/presentation/providers/scheduler_providers.dart",
+     "line": 496,
+     "quote": "Future<List<DailyTask>> _buildProjectionTasks({"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/presentation/providers/scheduler_providers.dart",
+     "line": 497,
+     "quote": "  required Ref ref,"
+    }
+   ],
+   "sites": 2,
+   "why": "_buildProjectionTasks and _buildFreshPlan are ~200-line pure-ish business-logic functions (amnesty cutoffs, program-vs-self-paced branching, prior-completion filtering) that belong in domain/services or domain/projection \u2014 both of which already exist as sibling directories in this exact feature for exactly this purpose. Worse, both functions take `Ref ref` directly as a parameter even though the SAME function signatures already inject `getScopedContent` and `programRepository` as plain callbacks specifically so the logic can be tested without booting Riverpod \u2014 the `ref` param undermines that seam (it's used only for one call, `curriculumLabelTextFromRef(ref, curriculum: ...)`, which could equally be injected as a callback like the others). This is why this file is 1381 lines and why testing this logic requires a real ProviderContainer instead of plain unit tests.",
+   "recommendation": "Extract _buildProjectionTasks/_buildFreshPlan/_applyProgramCalendarOverrides/programCalendarSchedule to a domain/projection or domain/services class; replace the `Ref ref` parameter with a plain `String Function(CurriculumId) trackLabelFor` callback matching the existing DI pattern used for getScopedContent/programRepository.",
+   "effort": "L",
+   "acceptance_criteria": [
+    "_buildProjectionTasks and _buildFreshPlan (or their relocated equivalents) take no Ref parameter.",
+    "A new domain-layer unit test exercises the amnesty-cutoff and program-vs-self-paced branching logic without a ProviderContainer.",
+    "scheduler_all_daily_tasks_test.dart continues to pass unmodified in behavior."
+   ],
+   "labels": [
+    "layering",
+    "testability",
+    "fowler",
+    "hotspot"
+   ]
+  }
+ }
+]

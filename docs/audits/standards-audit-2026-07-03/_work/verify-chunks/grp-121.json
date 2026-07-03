@@ -1,0 +1,235 @@
+[
+ {
+  "sourceBatch": "t1-feat-tracks-p5",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Move test/track_setup/*_test.dart into the AG-5-mirrored lib/features/tracks/setup test path",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-5 (test/ mirrors lib/ 1:1; new source file's test goes at the mirrored path, nowhere else)",
+   "area": "test/track_setup/ (top-level dir with no lib/track_setup/ counterpart)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/track_setup/mandatory_pace_test.dart",
+     "line": 1,
+     "quote": "/// Mandatory-pace invariant tests (Wave 4-C)."
+    },
+    {
+     "file": "learning_tracker/test/track_setup/clear_overdue_button_test.dart",
+     "line": 1,
+     "quote": "/// Clear Overdue re-anchor tests."
+    }
+   ],
+   "sites": 2,
+   "why": "test/track_setup/ is a bare top-level directory (not even nested under test/features/) with no lib/track_setup/ counterpart \u2014 lib/ only has lib/features/tracks/setup/. This is distinct from the already-known-and-baselined test/features/track_setup/ (legacy pre-rename dir, listed separately in the digest's unmirrored-dirs note); this sibling directory was not caught by that list and mirrors nothing. mandatory_pace_test.dart tests lib/features/tracks/setup/presentation/steps/goal_helpers.dart and lib/features/scheduler/domain/projection/projection.dart; clear_overdue_button_test.dart tests lib/features/tracks/setup/presentation/screens/edit_track_screen.dart. A contributor looking for goal_helpers.dart's or edit_track_screen.dart's tests via the mirrored path would not find them.",
+   "recommendation": "Move mandatory_pace_test.dart to test/features/tracks/setup/presentation/steps/ (merge with or place alongside goal_helpers_test.dart) and clear_overdue_button_test.dart to test/features/tracks/setup/presentation/screens/edit_track_screen_clear_overdue_test.dart.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Both files (or their content) live under a test/features/... path that mirrors their lib/ target 1:1",
+    "test/track_setup/ directory no longer exists"
+   ],
+   "labels": [
+    "testing",
+    "AG-5",
+    "hygiene",
+    "tracks"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tracks-p5",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Replace wall-clock DateTime.now() calls in step_starting_position_l1_test.dart with fixed dates",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6 (hermetic tests: no wall-clock; use clockProvider/fixed DateTimeFactory only)",
+   "area": "test/features/tracks/setup/presentation/steps/step_starting_position_l1_test.dart \u2014 StartingPositionCalendarMode B2 window group",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/tracks/setup/presentation/steps/step_starting_position_l1_test.dart",
+     "line": 787,
+     "quote": "final today = DateTime.now();"
+    },
+    {
+     "file": "learning_tracker/test/features/tracks/setup/presentation/steps/step_starting_position_l1_test.dart",
+     "line": 811,
+     "quote": "final today = DateTime.now();"
+    },
+    {
+     "file": "learning_tracker/test/features/tracks/setup/presentation/steps/step_starting_position_l1_test.dart",
+     "line": 834,
+     "quote": "final today = DateTime.now();"
+    },
+    {
+     "file": "learning_tracker/test/features/tracks/setup/presentation/steps/step_starting_position_l1_test.dart",
+     "line": 848,
+     "quote": "final today = DateTime.now();"
+    },
+    {
+     "file": "learning_tracker/test/features/tracks/setup/presentation/steps/step_starting_position_l1_test.dart",
+     "line": 861,
+     "quote": "final today = DateTime.now();"
+    },
+    {
+     "file": "learning_tracker/test/features/tracks/setup/presentation/steps/step_starting_position_l1_test.dart",
+     "line": 880,
+     "quote": "final today = DateTime.now();"
+    }
+   ],
+   "sites": 6,
+   "why": "Six tests in the 'StartingPositionCalendarMode \u2014 B2 date window' group read the real wall clock via DateTime.now() instead of a fixed date, even though the same file's section D ('ProgramStartingPosition.allowedWindow \u2014 B2 window contract', lines 1408-1509) already covers the identical invariants deterministically with DateTime(2026, 6, 1) literals, and the repo has a DateTimeFactory fixed-clock utility used elsewhere (e.g. drift_memory.dart, edit_track_screen.dart). Wall-clock reads in date-window-boundary logic are exactly the kind of test Nygard/TQ-6 flag as a latent flakiness risk (month/DST/leap-year boundaries), and they duplicate coverage the file's own section D already provides hermetically.",
+   "recommendation": "Replace `final today = DateTime.now();` with a fixed `DateTime(...)` literal (or DateTimeFactory override) in each of the 6 sites, matching the pattern already used in section D of the same file.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "No DateTime.now() calls remain in step_starting_position_l1_test.dart",
+    "Tests still pass with a pinned/fixed date, proving the assertions don't depend on the actual current day"
+   ],
+   "labels": [
+    "testing",
+    "TQ-6",
+    "hermetic",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tracks-p5",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Extract the _HebrewTermsOff/_track/_perTrackOverrides test scaffolding duplicated across 3 track-management test files",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler duplication lens (Extract Class/shared test helper) \u2014 cf. test/helpers/drift_memory.dart precedent",
+   "area": "test/features/tracks/setup/track_management_hub_*_test.dart + test/features/tracks/track_management_body_and_order_l1_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/tracks/setup/track_management_hub_last_curriculum_guard_test.dart",
+     "line": 60,
+     "quote": "class _HebrewTermsOff extends UseHebrewTerms {"
+    },
+    {
+     "file": "learning_tracker/test/features/tracks/setup/track_management_hub_screen_l1_test.dart",
+     "line": 63,
+     "quote": "class _HebrewTermsOff extends UseHebrewTerms {"
+    },
+    {
+     "file": "learning_tracker/test/features/tracks/track_management_body_and_order_l1_test.dart",
+     "line": 83,
+     "quote": "class _HebrewTermsOff extends UseHebrewTerms {"
+    },
+    {
+     "file": "learning_tracker/test/features/tracks/track_management_body_and_order_l1_test.dart",
+     "line": 125,
+     "quote": "List<Override> _perTrackOverrides(\n  List<CurriculumTrack> tracks, {"
+    }
+   ],
+   "sites": 3,
+   "why": "All three files independently redeclare identical private scaffolding: class _HebrewTermsOff extends UseHebrewTerms, a CurriculumTrack _track({...}) fixture builder, a _perTrackOverrides(...) helper, _MockStackRouter/_FakePageRouteInfo mocks, and _settle/_teardown pump helpers \u2014 none imported from a shared file, unlike DB helpers which already live centrally in test/helpers/drift_memory.dart. The copies have already drifted: track_management_body_and_order_l1_test.dart's _perTrackOverrides gained an extra chazaraEnabled parameter that the other two copies don't have, so a future change to CurriculumTrack's shape or to the per-track override set requires editing three files in lockstep, and it is easy to update one copy and miss the others (classic shotgun surgery).",
+   "recommendation": "Extract a shared test helper file (e.g. test/features/tracks/setup/helpers/track_hub_test_helpers.dart) providing _track(), _perTrackOverrides(), _HebrewTermsOff, _MockStackRouter, _FakePageRouteInfo, and the settle/teardown pump helpers; import it from all three call sites.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "_HebrewTermsOff, _track(), _perTrackOverrides(), and the mock classes are defined once and imported by the three test files",
+    "No behavioral change to existing passing tests"
+   ],
+   "labels": [
+    "testing",
+    "duplication",
+    "fowler",
+    "tracks"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tutoring-p1",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Stop interpolating e.toString() directly into tutoring error/snackbar text",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "custom_lint no_e_to_string_in_ui / EH-5",
+   "area": "features/tutoring/presentation + data",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/manage_grants_screen.dart",
+     "line": 272,
+     "quote": "SnackBar(content: Text(l10n.manageGrantsResignError(e.toString()))),"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/manage_tutors_screen.dart",
+     "line": 230,
+     "quote": "l10n.manageTutorsLoadError(e.toString()),"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/manage_tutors_screen.dart",
+     "line": 404,
+     "quote": "SnackBar(content: Text(l10n.manageTutorsRevokeError(e.toString()))),"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/data/repositories/firestore_tutor_grant_repository.dart",
+     "line": 54,
+     "quote": "return TutorGrantFailure(message: e.toString());"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/data/services/tutor_write_service.dart",
+     "line": 76,
+     "quote": "return TutorWriteFailure(message: e.toString());"
+    }
+   ],
+   "sites": 11,
+   "why": "manage_grants_screen.dart and manage_tutors_screen.dart interpolate a raw Dart exception's toString() into an otherwise-localized ARB string 4 times, so a Hebrew UI sentence ends with an untranslated English/technical fragment (e.g. a gRPC status string). The 6 matching data-layer sites (firestore_tutor_grant_repository.dart x6, tutor_write_service.dart x1) manufacture that raw string in the first place by stuffing `e.toString()` into the Failure.message field instead of a stable code, which is exactly the custom_lint `no_e_to_string_in_ui` rule this repo already has defined (currently non-enforcing because custom_lint is broken repo-wide).",
+   "recommendation": "In the 4 UI catch blocks, map to a generic localized fallback (as invite_tutor_screen.dart already does for TutorGrantFailure) instead of interpolating e.toString(); in the data layer, log e.toString() via AppLogger and return a stable failure code instead of stashing the raw text in the value the UI eventually reads.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep -rn 'e.toString()' lib/features/tutoring/presentation/ returns no UI-text interpolation sites.",
+    "Widget test confirms a thrown exception during revoke/rescind/load shows a fixed localized string regardless of the exception's message."
+   ],
+   "labels": [
+    "l10n",
+    "custom-lint",
+    "error-handling"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tutoring-p1",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Delete or wire up the dead TutorAuditLogWriter path (tutor_audit_log_writer.dart / audit_log_providers.dart)",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler dead code / AG-6 (untracked TODO)",
+   "area": "features/tutoring/domain/services + presentation/providers",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/providers/audit_log_providers.dart",
+     "line": 56,
+     "quote": "(_) => _StubAuditLogWriteRepository(),"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/providers/audit_log_providers.dart",
+     "line": 63,
+     "quote": "// TODO(data-layer): Replace with Firestore write."
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/domain/services/tutor_audit_log_writer.dart",
+     "line": 198,
+     "quote": "'${now.millisecondsSinceEpoch.toRadixString(16).padLeft(16, '0')}'"
+    }
+   ],
+   "sites": 2,
+   "why": "A repo-wide grep confirms `TutorAuditLogWriter` is constructed nowhere in lib/ \u2014 its 228 lines and the `TutorAuditLogRepository` interface it depends on are unreachable. Its own provider (`tutorAuditLogWriteRepositoryProvider`) resolves to `_StubAuditLogWriteRepository`, a permanent no-op with an ID-less TODO. The class's doc-comment claims 'every tutor write path... calls through this writer' and that entryId format is 'timestamp + 10 random hex chars (26 chars total)', but the actual `_log()` implementation has no random suffix at all \u2014 two same-millisecond calls for the same action type would collide on entryId, and per the interface's own idempotency contract ('duplicate writes with the same ULID are silently ignored') the second entry would be silently dropped if this code were ever revived as-is. Cross-checked functions/src/index.ts: the real audit trail is written server-side by each tutor*CF via `writeAuditLog(...)`, so there is no current production gap \u2014 this is confusing, misdocumented dead weight, not a live data-loss bug.",
+   "recommendation": "Delete TutorAuditLogWriter, TutorAuditLogRepository, and the stub/provider if the server-side CF audit writes are now the sole source of truth; if a client-side path is still intended, wire a real Firestore-backed implementation and fix the entryId generator to match its documented ULID claim, with a DNI-#### ticket on the TODO either way.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep -rn 'TutorAuditLogWriter' lib/ returns nothing, or returns a live call site plus a non-stub repository.",
+    "No bare `TODO(...)` without a DNI-#### id remains in audit_log_providers.dart (AG-6 grep clean)."
+   ],
+   "labels": [
+    "dead-code",
+    "AG-6",
+    "audit-log"
+   ]
+  }
+ }
+]

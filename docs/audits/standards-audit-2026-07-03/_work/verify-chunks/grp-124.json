@@ -1,0 +1,197 @@
+[
+ {
+  "sourceBatch": "t1-feat-tutoring-p2",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Extract the duplicated PIN-numpad widget trio out of tutor_pin_entry_gate.dart and tutor_pin_setup_screen.dart",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3 / Fowler-duplication",
+   "area": "features/tutoring/presentation/screens",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_entry_gate.dart",
+     "line": 302,
+     "quote": "class _TutorPinDotsRow extends StatelessWidget {"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_setup_screen.dart",
+     "line": 271,
+     "quote": "class _TutorPinDotsRow extends StatelessWidget {"
+    }
+   ],
+   "sites": 2,
+   "why": "_TutorPinDotsRow, _TutorPinNumpad, and _TutorPinKey (roughly 135 lines) are copy-pasted byte-for-byte between tutor_pin_entry_gate.dart (lines 301-436) and tutor_pin_setup_screen.dart (lines 267-405). Any visual/behavioral tweak (spacing, RTL handling, key sizing) must be made twice or the two PIN surfaces silently drift apart. This duplication is also why both files exceed AG-3's 400-line cap for hand-written Dart files (436 and 405 lines respectively) \u2014 extracting the shared widget would drop both under the limit as a side effect of the same fix.",
+   "recommendation": "Move the three private widgets into a shared file (e.g. presentation/widgets/tutor_pin_numpad.dart) and import it from both screens.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "_TutorPinDotsRow/_TutorPinNumpad/_TutorPinKey exist in exactly one file, imported by both screens",
+    "tutor_pin_entry_gate.dart and tutor_pin_setup_screen.dart are both \u2264400 lines (AG-3 checker)",
+    "existing widget tests for both screens still pass unchanged (behavior-preserving extraction)"
+   ],
+   "labels": [
+    "duplication",
+    "AG-3",
+    "P2"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tutoring-p2",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Catch and log exceptions around TutorPinService calls in the PIN entry/setup async handlers",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "EH-2 / EH-3",
+   "area": "features/tutoring/presentation/screens",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_entry_gate.dart",
+     "line": 90,
+     "quote": "try {\n      final service = ref.read(tutorPinServiceProvider);"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_entry_gate.dart",
+     "line": 117,
+     "quote": "} finally {\n      if (mounted) setState(() => _isVerifying = false);"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_setup_screen.dart",
+     "line": 118,
+     "quote": "try {\n      final service = ref.read(tutorPinServiceProvider);"
+    }
+   ],
+   "sites": 2,
+   "why": "_onPinComplete (gate) and _onConfirmPinEntered (setup) wrap their await in try/finally with no catch clause. TutorPinService.verifyTutorPin/setTutorPin only converts PinLockoutException \u2014 an underlying secure-storage failure (a real class of Android keystore/PlatformException issue this environment has hit before per the App Check debug-token flakiness on wipes) propagates as a raw, uncaught exception. Because _onPinComplete is invoked fire-and-forget (not awaited) from _appendDigit, the failure is swallowed by whatever global handler exists, with zero AppLogger call from this site and zero user feedback: _isVerifying resets to false in the finally block but _errorMessage stays null and _digits stays at 4 filled dots, leaving the user staring at a stalled numpad with no explanation and no way to retype until they notice backspace still works.",
+   "recommendation": "Add a typed catch around the await that logs via AppLogger and sets a generic, localized _errorMessage (consistent with EH-2's 'no raw exception reaches presentation').",
+   "effort": "S",
+   "acceptance_criteria": [
+    "_onPinComplete and _onConfirmPinEntered both have a catch block that calls AppLogger.instance.error and sets a localized _errorMessage",
+    "a test that makes the stubbed TutorPinService throw confirms the screen shows an error state instead of a silent stall"
+   ],
+   "labels": [
+    "EH-2",
+    "EH-3",
+    "P2"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tutoring-p2",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Type and log the catch block in TutorPinResetScreen._sendResetEmail",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "EH-3 / EH-4",
+   "area": "features/tutoring/presentation/screens",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_reset_screen.dart",
+     "line": 86,
+     "quote": "} catch (e) {\n      if (mounted) {"
+    }
+   ],
+   "sites": 1,
+   "why": "The bare `catch (e)` has no `on X` type, so per Dart semantics it catches everything thrown \u2014 including Error subtypes (StateError, TypeError, NoSuchMethodError from a programmer bug) \u2014 and silently converts all of them into the same generic 'send failed' UI message with zero AppLogger call. A real programming defect elsewhere in the call chain would present identically to a normal network failure, with no trace to diagnose it.",
+   "recommendation": "Catch a specific exception type (or at least log via AppLogger.instance.error before setting the UI message) so Error subtypes are not silently masked and failures are traceable.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "the catch block logs via AppLogger with the exception and stack trace before updating _errorMessage",
+    "the catch is narrowed to typed exceptions the send/clear operations can actually throw, not a bare catch(e)"
+   ],
+   "labels": [
+    "EH-3",
+    "EH-4",
+    "P2"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tutoring-p2",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Stop misreporting a failed local PIN clear as a failed reset email in TutorPinResetScreen",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Nygard-partial-failure",
+   "area": "features/tutoring/presentation/screens",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_reset_screen.dart",
+     "line": 76,
+     "quote": "await authRepo.sendPasswordResetEmail(email);"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_reset_screen.dart",
+     "line": 80,
+     "quote": "await pinService.clearTutorPin(widget.profileId);"
+    },
+    {
+     "file": "learning_tracker/lib/features/tutoring/presentation/screens/tutor_pin_reset_screen.dart",
+     "line": 91,
+     "quote": ")!.tutorPinResetSendFailed,"
+    }
+   ],
+   "sites": 1,
+   "why": "sendPasswordResetEmail and clearTutorPin are two sequential awaits inside one try block with one shared catch that always sets the l10n key tutorPinResetSendFailed ('Failed to send reset email...'). If the email send succeeds but the subsequent local-PIN-clear throws (a real possibility given documented secure-storage flakiness in this environment), the user is told the email failed when it actually sent \u2014 they will retry, triggering a second real password-reset email, while the actual failure (local PIN not cleared) goes unaddressed and unreported.",
+   "recommendation": "Split the two operations into separate try/catch blocks (or at minimum track which step failed) so the error message and retry behavior match what actually happened.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "a failure in clearTutorPin after a successful sendPasswordResetEmail does not show the 'send failed' string",
+    "a regression test simulates clearTutorPin throwing after a successful email send and asserts the UI does not claim the email failed"
+   ],
+   "labels": [
+    "error-handling",
+    "P2"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tutoring-p2",
+  "findingIndex": 8,
+  "finding": {
+   "title": "Add a shared pumpApp test helper instead of hand-rolled MaterialApp boilerplate in tutoring widget tests",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-3",
+   "area": "test/features/tutoring",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/tutoring/decline_invite_screen_l1_test.dart",
+     "line": 132,
+     "quote": "child: MaterialApp(\n      locale: locale,"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/accept_invite_screen_l1_test.dart",
+     "line": 178,
+     "quote": "child: MaterialApp(\n      locale: locale,"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/decline_invite_screen_overflow_test.dart",
+     "line": 173,
+     "quote": "child: MaterialApp(\n            debugShowCheckedModeBanner: false,"
+    },
+    {
+     "file": "learning_tracker/test/features/tutoring/accept_invite_screen_overflow_test.dart",
+     "line": 184,
+     "quote": "child: MaterialApp(\n            debugShowCheckedModeBanner: false,"
+    }
+   ],
+   "sites": 4,
+   "why": "TQ-3 calls for widget tests to pump through a shared pumpApp helper with l10n delegates. No such helper exists anywhere in test/helpers/ (verified by search) \u2014 every one of these 4 files (and 8 more across tutoring alone) independently reconstructs the same MaterialApp + 4 localizationsDelegates + supportedLocales block. If the delegate list or a future global wrapper (e.g. a text-scale clamp) needs to change, every file must be edited individually instead of one helper, and any file that gets the delegate list slightly wrong silently diverges in l10n behavior from its siblings.",
+   "recommendation": "Introduce test/helpers/pump_app.dart exposing a pumpApp(tester, child, {locale, overrides}) helper and migrate these call sites (and the wider suite) onto it.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "test/helpers/pump_app.dart exists with a single MaterialApp+delegates definition",
+    "the 4 files in this batch build their widget-under-test through the shared helper instead of inlining MaterialApp"
+   ],
+   "labels": [
+    "TQ-3",
+    "test-infra",
+    "P2"
+   ]
+  }
+ }
+]

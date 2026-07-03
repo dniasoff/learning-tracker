@@ -1,0 +1,94 @@
+[
+ {
+  "sourceBatch": "t1-feat-content_browsing-p1",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Localize hardcoded English strings across content_browsing screens/widgets",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "AX-2",
+   "area": "features/content_browsing/presentation",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/content_browsing/presentation/screens/curriculum_list_screen.dart",
+     "line": 27,
+     "quote": "'Browse Content',"
+    },
+    {
+     "file": "learning_tracker/lib/features/content_browsing/presentation/screens/curriculum_list_screen.dart",
+     "line": 38,
+     "quote": "tooltip: 'Search curricula',"
+    },
+    {
+     "file": "learning_tracker/lib/features/content_browsing/presentation/screens/curriculum_list_screen.dart",
+     "line": 60,
+     "quote": "'Search curricula...',"
+    },
+    {
+     "file": "learning_tracker/lib/features/content_browsing/presentation/screens/curriculum_list_screen.dart",
+     "line": 76,
+     "quote": "'CURRICULA',"
+    },
+    {
+     "file": "learning_tracker/lib/features/content_browsing/presentation/screens/curriculum_list_screen.dart",
+     "line": 98,
+     "quote": "'RECENT ACTIVITY',"
+    },
+    {
+     "file": "learning_tracker/lib/features/content_browsing/presentation/screens/curriculum_list_screen.dart",
+     "line": 244,
+     "quote": "'$pctDisplay Done',"
+    },
+    {
+     "file": "learning_tracker/lib/features/content_browsing/presentation/screens/curriculum_list_screen.dart",
+     "line": 271,
+     "quote": "'New',"
+    },
+    {
+     "file": "learning_tracker/lib/features/content_browsing/presentation/screens/curriculum_list_screen.dart",
+     "line": 358,
+     "quote": "'Start learning to see activity here',"
+    },
+    {
+     "file": "learning_tracker/lib/features/content_browsing/presentation/screens/curriculum_list_screen.dart",
+     "line": 367,
+     "quote": "'Your recent completions will appear below',"
+    },
+    {
+     "file": "learning_tracker/lib/features/content_browsing/presentation/screens/content_search_screen.dart",
+     "line": 131,
+     "quote": "tooltip: 'Clear',"
+    },
+    {
+     "file": "learning_tracker/lib/features/content_browsing/presentation/widgets/content_item_tile.dart",
+     "line": 275,
+     "quote": "'Review History',"
+    },
+    {
+     "file": "learning_tracker/lib/features/content_browsing/presentation/widgets/content_item_tile.dart",
+     "line": 283,
+     "quote": "'No completions yet.',"
+    },
+    {
+     "file": "learning_tracker/lib/features/content_browsing/presentation/widgets/item_review_breakdown.dart",
+     "line": 31,
+     "quote": "stageNames[entry.key] ?? 'Stage ${entry.key}';"
+    }
+   ],
+   "sites": 13,
+   "why": "curriculum_list_screen.dart is a live, routed, e2e-tested screen (CurriculumListRoute) with zero AppLocalizations calls anywhere in the file: a Hebrew-locale or Hebrew-Terms-mode user sees 'Browse Content', 'CURRICULA', 'RECENT ACTIVITY', 'Done', 'New' etc. in raw English on a core navigation screen of a bilingual EN+HE children's learning app. The stage-breakdown bottom sheet (content_item_tile.dart, reachable via long-press on any completed leaf) shows 'Review History'/'No completions yet.' the same way, and item_review_breakdown.dart falls back to an English 'Stage N' label whenever a stage name can't be resolved.",
+   "recommendation": "Add ARB keys (EN+HE) for each literal and route through AppLocalizations.of(context)! \u2014 mirroring the pattern already used correctly elsewhere in content_hierarchy_screen.dart and text_display_screen.dart.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep for these literal strings in the 4 listed files returns zero hits",
+    "make arb-parity still passes with the new keys present in both EN and HE ARB files",
+    "a Locale('he') widget test for curriculum_list_screen.dart asserts the new l10n keys render instead of the hardcoded English"
+   ],
+   "labels": [
+    "i18n",
+    "ax-2",
+    "hardcoded-strings"
+   ]
+  }
+ }
+]

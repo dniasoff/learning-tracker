@@ -1,0 +1,44 @@
+[
+ {
+  "sourceBatch": "t1-core-sync-outbox",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Strip row.entityKey out of the outbox dead-letter analytics event (leaks profileId + sefariaRef)",
+   "severity": "P0",
+   "confidence": "CONFIRMED",
+   "rule": "PV-1",
+   "area": "core/sync/outbox",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/sync/outbox/outbox_processor.dart",
+     "line": 266,
+     "quote": "'entity_key': row.entityKey,"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/outbox/outbox_processor.dart",
+     "line": 372,
+     "quote": "'entity_key': row.entityKey,"
+    },
+    {
+     "file": "learning_tracker/lib/features/learning/data/completion_writer.dart",
+     "line": 747,
+     "quote": "'${cmd.profileId}:${cmd.sefariaRef}:${cmd.stageId}:${cmd.trackType}:${cmd.curriculumId}';"
+    }
+   ],
+   "sites": 2,
+   "why": "For OutboxEntityKind.completion rows the outbox entityKey is literally `${profileId}:${sefariaRef}:${stageId}:${trackType}:${curriculumId}` (completion_writer.dart:747). When a row hits _maxAttempts, both dead-letter sites fire `_analytics.logEvent(LogEvents.sync.outboxDeadLettered, parameters: {..., 'entity_key': row.entityKey, ...})`, sending that exact string \u2014 a per-child profile ID plus the specific Torah reference the child studied \u2014 to Firebase Analytics. This is a NEW instance of the two categories PV-1 explicitly names as banned (`sefaria_ref`, `profile_id`), distinct from the already-baselined analytics_service.dart:56/82/87 gap, and it fires automatically (no user action) for a children's app subject to COPPA/GDPR-K whenever a sync failure persists through 10 retries \u2014 plausible on any prolonged connectivity or rules issue.",
+   "recommendation": "Never pass row.entityKey (or any of its `:`-joined constituents) as a logEvent parameter. Emit only structurally opaque fields (`entity_kind`, `attempts`); if a stable debug identifier is needed, hash entityKey locally before logging it, never send it raw.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Regression test asserts the dead-letter logEvent() parameters map never contains an 'entity_key' (or any key whose value embeds sefariaRef/profileId) for a completion row.",
+    "Extend the PV-1 audit grep (or a custom_lint rule) to fail when row.entityKey / a raw outbox entityKey flows into any logEvent(...parameters...) call."
+   ],
+   "labels": [
+    "privacy",
+    "coppa",
+    "analytics",
+    "sync"
+   ]
+  }
+ }
+]

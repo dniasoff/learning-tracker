@@ -1,0 +1,1247 @@
+{
+ "so-015": {
+  "verdicts": [
+   {
+    "index": 0,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "Verified: line 62 quote matches; StartDateWindowException(182-184) extends ValidationException, only payload is AppException.message (no code field); grep confirms zero catch sites in lib/, reached via TrackBlueprint.fromLegacyResult. Pre-formatted English message, no locale-independent code. P3 is not inflated given limited (legacy-grammar) reachability.",
+    "evidence_correction": "app_exception.dart citation says line 33 but 'final String message;' is actually at line 35 (line 33 is blank) \u2014 2-line offset, quote text itself is real and correctly found nearby; doesn't change the finding's validity."
+   },
+   {
+    "index": 1,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "All 4 class-declaration line citations exact (138/59/33/38); repo-wide grep confirms zero callers for all four classes outside their own files; test exists only for the dead ProfileCreationUseCase. Docstring's 'PinFlowController wraps this machine' is false \u2014 pin_flow_controller.dart never imports pin_flow_machine.dart and independently redefines identical PinFlowMode/PinFlowStep enums, confirming duplicated logic. 647-line total verified.",
+    "evidence_correction": ""
+   },
+   {
+    "index": 2,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "streak_event.dart:10, user_database.g.dart:8896, and the hide-import all verified exact. Self-aware docstring confirmed. Real AG-4 name collision, correctly P3 (naming/hygiene, no user-facing effect).",
+    "evidence_correction": "Finding says 'the one call site needing both today' but grep shows 4 files already import both and hide the Drift StreakEvent (streak_event_log.dart, streak_restorer.dart, streak_event_merger.dart, streak_state_provider.dart) \u2014 an undercount that if anything strengthens rather than weakens the finding."
+   },
+   {
+    "index": 3,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "lib/core/ has no l10n/ (real source is lib/l10n/); test/l10n/ holds exactly 7 files as claimed; line 32 and line 19 quotes exact; coding-standards.md:522 quote exact. Git history claim independently verified: 88e2e690 (2026-05-14, 'test-coverage-f3', adds AppLocalizations en/he smoke tests) and 80a8399a (same day, 'test-coverage-f2', adds app_localizations_coverage_test.dart) \u2014 genuine same-day parallel duplication, strong evidence for stated concrete cost. P2 justified.",
+    "evidence_correction": ""
+   },
+   {
+    "index": 4,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "Lines 451-454 and 691-694 verified exact, each doubling two tables' deletes (streakEvents+completionEvents, reordered). Enclosing tests confirmed: 'round-trip: import(export(state))...multi-profile' (line 232) and 'C3 purgedAt tombstone...' (line 605), matching the claim exactly. Harmless no-op, correctly scoped P3 test-hygiene duplication, no existing shared wipe helper found.",
+    "evidence_correction": ""
+   }
+  ]
+ },
+ "so-003": {
+  "verdicts": [
+   {
+    "index": 0,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "Verified lines 103, 395, 422 in the 449-line file: all three contain the identical 4-item File(...) candidate array plus near-identical scan-read loops. AC2/AC3 caches to a `late mainSource` scoped inside that group (unreachable from AC9), so AC9's two tests do re-scan disk independently. Real Fowler duplication; P3 hygiene fits, novel, not baselined."
+   },
+   {
+    "index": 1,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "Confirmed track_creation_service.dart:359/401 and track_edit_service.dart:106; `_saveStudyDaysLocal`/`_saveStudyDays` are byte-identical apart from a parameter name. Verified both, plus `_saveScopes`, execute inside `_database.transaction()` (opened at lines 88 and 46 respectively) \u2014 the finding's 'correctness not at risk, only round-trips' qualifier is accurate, not inflated. DB-3 (pending rule) violation is legitimately reportable per novelty filter."
+   },
+   {
+    "index": 2,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "Verified lines 171-189 and 191-209: both groups run the identical 3 scenarios (default-false, true-after-write, false-after-write) with only test names changed. `setUp` at line 9-11 resets `SharedPreferences.setMockInitialValues({})` before every test, so deleting the second group loses zero coverage as claimed. Exact match, P3 hygiene appropriate."
+   },
+   {
+    "index": 3,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "All 6 file:line/quote pairs verified exact. Confirmed app_en.arb/app_he.arb wrap `{error}` in localized text while the interpolated value is raw `error.toString()`; traced `lifetimeViewSummariesProvider` (items_learned_providers.dart:232-245) \u2014 no try/catch, so untyped exceptions genuinely reach `error`. EH-5's own rationale text in coding-standards.md:193 names this exact defect class. recent_activity_screen.dart's contrasting pattern is real (5 uses of chartFailedToLoad with no toString(), not 4 as stated \u2014 a minor immaterial miscount). P2 is solid, arguably conservative (could read P1); not inflated.",
+    "evidence_correction": "The corroborating claim 'recent_activity_screen.dart ... 4 uses' undercounts: grep confirms 5 uses of l10n.chartFailedToLoad with no error interpolation (lines 343, 378, 572, 628, 651). Does not affect the primary 6-site defect, which is fully accurate."
+   },
+   {
+    "index": 4,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "Verified line 59-60 exactly. AccountPickerScreen is a plain ConsumerWidget (no State), `registry.getAllAccounts()` is a genuine Drift `select().get()` query invoked fresh every build with zero caching \u2014 the textbook FutureBuilder-identity-reset bug. Found a concrete reachable trigger: `_onDismissed` (line 811-819) mutates the watched `accountDbFileNameProvider` before `router.replaceAll` completes on the active-account-removal path. Screen confirmed live (AccountPickerRoute referenced in 7+ files). PF-3 fits; P2 not inflated."
+   }
+  ]
+ },
+ "so-009": {
+  "verdicts": [
+   {
+    "index": 0,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "ls test/helpers/ confirms pump_app.dart absent despite TQ-3 naming it. All 4 quotes verified exact. Confirmed _buildHarness (L83) duplicated inline at L272-294/297-319 instead of reused, plus 3 more named files independently hand-roll builders. P3 matches hygiene tier, not inflated."
+   },
+   {
+    "index": 1,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "Both quotes verified exact. curriculum_tracks.dart genuinely has no deletedAt column today, only state/stateChangedAt (W3.28/W3.29). Doc is factually stale; Tier-4 canonical-doc drift rule applies cleanly. Not on baselined/known-gap list. P3 severity accurate."
+   },
+   {
+    "index": 2,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "Deep-verified: TrackConfigMerger's exact LWW scenarios (remote-newer-applies/local-newer-skips) genuinely duplicated across mergers_test.dart, lww_symmetric_test.dart, persist_updated_at_test.dart. sacred_time/DEC-26 overlap confirmed too. docs/test-options.md never mentions test/core/sync. AG-5 mislocation independently valid. P2 cost claim concrete, not inflated."
+   },
+   {
+    "index": 3,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "Verified: source class renamed to ConnectivityGateway (connectivity_gateway.dart), test file still test/core/network/connectivity_service_test.dart testing group('ConnectivityGateway'). mock_services.dart:8 quote exact. Genuine unbaselined naming drift; P3 correct."
+   },
+   {
+    "index": 4,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "All 5 quotes verified exact. Confirmed app_he.arb's manageGrantsResignError etc. interpolate {error} straight into Hebrew sentences \u2014 failure is real and reachable, not speculative. 11-site count math checks out (4 UI + 6+1 data). invite_tutor_screen.dart's contrasting friendly-mapping pattern confirmed. P2 not inflated."
+   }
+  ]
+ },
+ "so-013": {
+  "verdicts": [
+   {
+    "index": 0,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "Read all 42 tests myself: 41 assert isNotNull on a getter confirmed non-nullable in user_database.g.dart, or isNotEmpty/anything on base-table rows unaffected by the specific ref/prefetch flag under test. Claim that breaking a FK or dropping curriculumScopesRefs:true wouldn't fail these tests checks out. Real false-coverage debt; P2 fair.",
+    "evidence_correction": "Evidence items 4 and 6 (cited lines 375, 456) are off by one line \u2014 the quoted text's first line actually starts at 374 and 455 respectively. The quoted text itself is verbatim-accurate and trivially locatable; does not affect the finding's substance."
+   },
+   {
+    "index": 1,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "Confirmed lines 3 and 11 verbatim in the current file. _buildSedarimIndex/_buildMasechtosIndex call _contentRepository.getContentForCurriculum directly \u2014 a repository importing and depending on another repository, exactly SM-8's forbidden shape. MasechtaOrderingPolicy's doc comment (independently verified) corroborates the W4.22 unwind plan. Concrete testability cost stated; P2 not inflated."
+   },
+   {
+    "index": 2,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "Verified both files test LearningProgramRepository.instance with heavily overlapping coverage; cited 'sequential ids' quotes match exactly at both lines; combined line count 130+199=329 exact; daf_yomi/bavli literal checks confirmed unique to service_test.dart. Genuine unintentional duplication (neither file sits at the AG-5 mirrored path). P3 hygiene rating is conservative, not inflated."
+   },
+   {
+    "index": 3,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "File imports only the provider, no widget/pumpWidget, confirmed. CompletionButton's removal confirmed via the epic_27 TODO at the exact cited line 240. Grep confirms this is the sole test referencing optimisticCompletionStateProvider/optimisticKey \u2014 real coverage sitting at a wrong, misleading path/name under AG-5. Concrete findability cost; not inflated."
+   },
+   {
+    "index": 4,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "Confirmed the test loop breaks on the FIRST labelled Switch found, not one tied to _HebrewTermsTile specifically. Grep confirms settings_screen.dart (816-line hotspot) has exactly one Switch today, so the pass is accidental equivalence, not an encoded check. Real latent a11y-regression-guard gap; P2 fair, not inflated.",
+    "evidence_correction": "Evidence item 1 cites line 135; the quoted text ('if (semanticsNode.label.isNotEmpty) {') actually begins at line 136. Quote text itself is accurate and easily located."
+   }
+  ]
+ },
+ "so-004": {
+  "verdicts": [
+   {
+    "index": 0,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "Verified all 6 sites: content_database.dart catch(_) at 84,90,104,121 (file has zero logger refs anywhere); seed_manager.dart:336 is the lone log-less catch among 5 siblings that call _logger?.error; device_registry_database.dart:22 catches ArgumentError, confirmed extends Error via account_tier.dart:46. P3 fits, not inflated.",
+    "evidence_correction": "Evidence array quotes only 4 of the 6 counted sites (misses content_database.dart:90,121); the sites:6 count and 'why' text are still numerically accurate per my independent grep."
+   },
+   {
+    "index": 1,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "Quote matches dio_client_test.dart:51-53 exactly. talker_dio_logger confirmed as real pubspec.yaml:100 dependency, directly imported by tool/lib/dio_client.dart (the file under test), so `is TalkerDioLogger` is available and safer. P3 hygiene severity is correct, not inflated.",
+    "evidence_correction": "Finding calls talker_dio_logger a 'transitive dependency' but it's actually a direct pubspec dependency already imported by the file under test \u2014 doesn't change the finding's validity."
+   },
+   {
+    "index": 2,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "git show 92125f82 confirms exactly the 5-file move claimed, leaving the 2 test files behind at test/core/streak/. Import quotes at lines 3 and 10 match exactly; 305-line and 'two D17 tests' claims verified via wc -l/grep. Not covered by the novelty filter's named unmirrored-dir exceptions. Concrete cost stated; P2 apt.",
+    "evidence_correction": ""
+   },
+   {
+    "index": 3,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "Verified the full switch: permissionDenied/error branches (628-660) both show ScaffoldMessenger snackbars; StateError catch (662-670) only logs+exits+dismissLoading, no snackbar. Found the function's own doc comment (469-476) explicitly promises 'shows an error snackbar... never crashes' \u2014 this path violates its own documented contract, reinforcing the finding. P2 reasonable, arguably conservative given the documented-contract violation.",
+    "evidence_correction": ""
+   },
+   {
+    "index": 4,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "SUSPECTED",
+    "reasoning": "Lines 129/160/164 and the verbatim comment quotes (136-137, 161-163) all confirmed exact. outboxProcessorProvider verified to watch userDatabaseProvider (rebuilds on DB swap) while orchestrator captures its value once. account_picker_screen.dart's instant-switch path (DB swap without visible Firebase call) independently supports plausibility. Correctly hedged as SUSPECTED with a stated confirmation path; not fabricated or overclaimed.",
+    "evidence_correction": ""
+   }
+  ]
+ },
+ "so-007": {
+  "verdicts": [
+   {
+    "index": 0,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "Read app_user.dart and auth_state.dart: AppUser/AuthState/AuthUser are hand-rolled, no @freezed, no operator==, grep confirms zero custom equality anywhere. Rule text matches exactly ('never hand-write ==/hashCode'). AuthState is confirmed the return type of @Riverpod(keepAlive:true) AuthStateNotifier.build(). Quotes accurate, novel, not baselined, P3 not inflated.",
+    "evidence_correction": "The 'why' claims consumers 'exclusively' .select() down to primitives, avoiding fallout. False: grep shows 18+ sites (sync_orchestrator_providers.dart:58, outbox_providers.dart:19/51/87, profile_switcher_sheet.dart:72, app_shell.dart:140/152/453, etc.) do `ref.watch(authStateProvider)` on the whole object with no .select(). This understates rather than overstates risk, so it doesn't undermine the finding or its P3 rating."
+   },
+   {
+    "index": 1,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "All 4 quoted lines verified verbatim at cited files/lines. test/helpers/ confirmed to contain exactly the 6 files listed (no pumpApp). Per-file occurrence counts verified by grep: 6+1+5+1=13, matching claimed 'sites: 13' exactly. Repo-wide grep for GlobalCupertinoLocalizations.delegate returns exactly 146, matching claim precisely. TQ-3 correctly cited; P2 concrete-cost framing is reasonable, not inflated.",
+    "evidence_correction": ""
+   },
+   {
+    "index": 2,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "Read track_learning_order.dart: confirmed bare autoIncrement id, no profileId, uniqueKeys={trackId,sefariaRef} exactly as quoted. Doc quote at coding-standards.md:689 verified verbatim. `grep -n profileId Makefile` returns zero matches, confirming the enforcement-gap claim. Test-file quotes verified byte-accurate. Rule and novelty checks pass; P2 is not inflated (arguably conservative for a named-invariant violation).",
+    "evidence_correction": "Title's 'the one user_database table with a bare autoincrement PK' overstates uniqueness: accounts.dart, learner_profiles.dart, and sacred_window_entries.dart also have autoIncrement PKs with no profileId column. Those are defensibly out of scope (identity backbone / device-level cache, not per-profile leaf data like TrackLearningOrder's true siblings bookmarks/goals/streak_events which all carry profileId directly), so the core violation and recommendation still stand."
+   },
+   {
+    "index": 3,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "Confirmed completion_dao.dart:91-94 \u2014 scope is `required CrossProfileScope` (non-nullable), and _assertCrossProfileScope is called at line 94 inside the method body. Since Dart evaluates `nullableScope!` at the call site before invocation, the TypeError fires before the DAO method is ever entered, exactly as claimed. Test's docstring claim of exercising the internal assert is verifiably false. Quotes accurate, P3 appropriate.",
+    "evidence_correction": ""
+   },
+   {
+    "index": 4,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "drift_memory.dart:40-41 quote verified verbatim ('Callers MUST await db.close()'). Grepped all 4 files: step_starting_position_l1_test.dart has inMemoryDb() at exactly lines 222/234/251/1017/1075/1127 with zero close() calls; track_management_body_and_order_l1_test.dart has 8 creates/3 closes matching the claimed unclosed lines 158/204/304/461/929 exactly; hub_screen file's line-120 default and reset_test's single unclosed DB both verified. Every count matches precisely; P3 is appropriate, not inflated.",
+    "evidence_correction": ""
+   }
+  ]
+ },
+ "so-011": {
+  "verdicts": [
+   {
+    "index": 0,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "Verified: the test ends after recordDrainAttempt() with comment 'No assertion here' (line 139) and contains zero expect() calls for the promised synced-status scenario. SyncStatusSynced elsewhere is only exercised via throttled-resume, not a genuine completed pull, confirming the specific matrix cell is untested. Novel finding, not baselined. P2 fits: test-quality gap, no confirmed production defect."
+   },
+   {
+    "index": 1,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "Verified catch(_) at line 32 silently defaults schedule JSON with no AppLogger call. Confirmed no dedicated test file exists; repo grep shows only integration-test coverage using well-formed data, so the fallback branch is unexercised. This nonempty-but-log-less catch isn't caught by today's empty_catches lint. Novel, unbaselined. P2 fits: latent silent-failure risk, no confirmed active occurrence."
+   },
+   {
+    "index": 2,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "Verified lines 497-500: the test writes its own 'Sync timed out' string, asserts it contains 'timed out' (trivially true), then asserts a bare TimeoutException.toString() differs from that same local constant \u2014 never touching SyncOrchestratorImpl. Confirmed genuine equivalent coverage exists in sy3_sync_error_message_sanitize_test.dart:231-262, which drives the real catch block. Sound, non-inflated P2."
+   },
+   {
+    "index": 3,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "SUSPECTED",
+    "reasoning": "Core mechanism confirmed: FakeLocalDayClock.today() and DateUtils.extractLocalDate both call toLocal(), so a 'pinned' UTC clock is still host-TZ-dependent; no CI/test config pins TZ. Appropriately hedged SUSPECTED/P3, matching the finding's own honest caveats about not being able to trigger a flip.",
+    "evidence_correction": "One narrative claim doesn't hold up: 'the D17 rollover test already seeds close to a boundary' is inaccurate \u2014 that test (lines 206-236) seeds both the clock and its event at hour 12 UTC (noon), symmetric and far from a UTC-midnight boundary. The hour-0/hour-12 asymmetry the auditor describes belongs to other tests in the file. This is a minor overstatement in the supporting narrative, not in the cited evidence array, and does not undermine the core, independently-confirmed finding."
+   },
+   {
+    "index": 4,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "Manually traced regex ^(.*?)(\\d+[a-z]?)$ against 'Mishnah Berakhot 1:1': it stops at the colon, so titlePart='Mishnah Berakhot 1:', contradicting the docstring's 'Mishnah Berakhot' (also wrong in the class-level example at line 19). Test file's own comments admit the mismatch verbatim (lines 61-67). Confirmed unused in production via grep. Solid, non-inflated P2."
+   }
+  ]
+ },
+ "so-014": {
+  "verdicts": [
+   {
+    "index": 0,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "Verified: line 250 is bare `await _syncEngine?.deleteLearnerProfile(id)`; createProfile (105-109), updateProfile (157-161), ensureDefaultProfile (321-337) all wrap the same call in non-fatal try/catch. Confirmed pushLearnerProfile and deleteLearnerProfile both route through OutboxSyncWriteFacade._enqueue's unguarded `await _dao.insertOutboxRow(...)`. Checked all 4 real callers (profile_edit_delete_actions.dart:121, profile_picker_screen.dart:394, manage_learners_screen.dart:95, profile_switcher_sheet.dart:220) \u2014 none catch. Real, reachable, non-baselined. P2 conservative given a zone-guard (main.dart runZonedGuarded) would swallow the throw but skip downstream ref.invalidate calls, leaving stale UI \u2014 arguably P1, not inflated."
+   },
+   {
+    "index": 1,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "All 5 quotes (lines 77/101/127/152/177) match file verbatim. Confirmed golden_runner.dart: skipGolden:true only skips matchesGoldenFile, still pumps+settles under 'he', so it catches layout crashes but not tap/hit-testing regressions \u2014 matches the finding's precise claim. No other StatCard test file exists (checked). AC6 docstring genuinely promises en+he goldens. Novel, not baselined. P3 hygiene rating is not inflated."
+   },
+   {
+    "index": 2,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "Class body at lines 15-21 matches verbatim; `state` column confirmed bare `TextColumn` (curriculum_tracks.dart:27), no `.withConverter`. No switch statement over TrackState exists anywhere in lib/ (checked). Sibling concepts ProfileMode and CurriculumId ARE real Dart enums, confirming TrackState is an inconsistent outlier, not a house style. track_dao.dart is a confirmed churn hotspot. P3 is not inflated \u2014 arguably conservative for a hotspot file."
+   },
+   {
+    "index": 3,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "scheduler_providers.dart:481 and :683 quotes match verbatim. Test-side quote at reported line 280 matches exactly; the line-221 citation is 2 lines off (real text is at line 223, same statement, same comment block referencing `_amnestyDayCutoffUtc` by name) \u2014 minor citation slip, not fabrication. Confirmed `_amnestyDayCutoffUtc` is truly private (no cross-library call possible regardless of annotations, so the `@visibleForTesting` half of the recommendation is technically inert \u2014 but the offered alternative, extracting a public pure function, is valid and the acceptance criteria don't depend on the flawed half). Confirmed via grep that no test anywhere drives the real program-anchor-clamp path (scheduler_providers_branches_test.dart's RA1-RA3 all use `_seedPaceTrack`, non-program). Core diagnosis (tests reimplement amnesty math instead of calling production code) is real and reachable. P2 fits TQ-8's tautological-test criterion.",
+    "evidence_correction": "The reorder_amnesty_test.dart citation at line 221 is off by 2 lines \u2014 the quoted text `final cutoff = DateTime.utc(local.year, local.month, local.day);` is actually at line 223; line 221 is the tail of the 'Mimic the production day-level cutoff' comment. Immaterial to the finding's substance."
+   },
+   {
+    "index": 4,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "Quotes at lines 23 and 68 match verbatim. Confirmed `.overrideWith` fully replaces a provider's create function (standard Riverpod semantics) \u2014 the real body is provably never invoked by either test. Confirmed the real `ref.watch<int>(completionCommittedProvider)` sits at lifetime_knowledge_providers.dart:357 inside trackDualProgressMetricsProvider, matching the finding's own acceptance-criteria line number. Confirmed sibling recent_activity_reactivity_test.dart overrides only userDatabaseProvider/activeProfileIdProvider, not the provider under test \u2014 the contrast is real. File's own docstring ('Regression test for Fix 3') makes the tautology concrete. Not inflated."
+   }
+  ]
+ },
+ "so-006": {
+  "verdicts": [
+   {
+    "index": 0,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "Verified all 4 line counts exactly (1079/999/902/805 via wc -l) and all 4 line-1 quotes verbatim. Files are hand-written _test.dart (not .g.dart/.freezed.dart), 2-2.7x over AG-3's 400-line cap. Bundled as one finding with sites:4 per digest rule. Not in novelty-filter's baselined/already-captured lists. P3 matches the hygiene tier exactly, not inflated."
+   },
+   {
+    "index": 1,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "Confirmed: verifyTutorPin only catches PinLockoutException, setTutorPin has zero try/catch; both call FlutterSecureStorage which can throw platform exceptions. _onPinComplete is called unawaited (no wrapper) from a sync _appendDigit; try/finally has no catch, so _errorMessage stays null and _digits stays at 4 on throw, matching the stalled-numpad narrative exactly. P2 is not inflated given the trigger is conditional.",
+    "evidence_correction": "EH-3's text addresses existing catch blocks that are empty/log-less; here there is no catch at all, so EH-2 (raw exception must not reach presentation) is the precise fit and alone fully supports the finding \u2014 citing EH-3 is a minor stretch, not a defect in the underlying claim."
+   },
+   {
+    "index": 2,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "Core claim confirmed: lines 155/179/201/227 seed relative-time text assertions ('5m ago'/'just now'/Hebrew forms) from real DateTime.now() while the widget reads DateTimeFactory.nowLocal() (backup_sync_section.dart:478); FakeLocalDayClock/useLocalDayClock exist and go unused. Both quoted evidence entries verified accurate. P3 (hygiene, low flake risk) is not inflated.",
+    "evidence_correction": "'sites: 5' overcounts by one \u2014 line 657's DateTime.now() feeds a test that only asserts pullOnLaunch is NOT called again (verified lines 654-678); it makes no relative-time text assertion, so it isn't one of the wall-clock-sensitive sites the 'why' claims. True count is 4 (155, 179, 201, 227); the underlying defect and recommendation stand unaffected."
+   },
+   {
+    "index": 3,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "Extremely well supported: bootstrap() hardcodes tracks:const[] with an explicit DEC-32 comment ('form is always global, no track list is loaded'); usesGlobalLadder => tracks.isEmpty||isGlobalReward makes the NoTrack branch dead; a GA-3 comment explicitly states RewardSaveDuplicateThreshold is 'no longer returned.' The three cited tests' own in-file comments admit they document the invariant, never call saveReward(), or construct RewardForm by hand instead of exercising the real path \u2014 exactly as claimed. P2 (stated concrete cost: false regression confidence) is accurate, not inflated."
+   },
+   {
+    "index": 4,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "Verified _paceGranularity is late-initialized to a non-null default in initState() (step_goal.dart:65,72) before any tap, so 'goal.rawLearningUnit, isNotNull' passes regardless of the tap. Confirmed edit_track_and_detail_l1_test.dart:791-792 quote verbatim, and that EditTrackScreen's remove_rounded stepper (onPressed: _paceValue>1?...:null) has no onPressed/disabled-state test anywhere, correctly distinguished from an unrelated, genuinely-covered remove_circle_outline_rounded stepper in a different widget (SelfPacedGoalStep) in the same test tree. P3 is appropriate, not inflated."
+   }
+  ]
+ },
+ "so-002": {
+  "verdicts": [
+   {
+    "index": 0,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "Verified: grep shows AppLogger.setupFlutterErrorHandlers referenced only at its own definition (logger.dart:85) and 3x in logger_test.dart. main.dart's sole entry point \u2192 bootstrap() \u2192 bootstrapCrashlyticsHandlers (crashlytics_bootstrap.dart:26-34) independently wires both handlers to Crashlytics+AppLogger. Dead code with misleadingly-green tests; P2 'concrete cost' framing holds."
+   },
+   {
+    "index": 1,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "All 6 quotes/lines verified exact. Confirmed zero importers anywhere for restore_providers.dart/device_restore_screen.dart/sync.dart; app_router.dart imports the canonical app/restore/device_restore_screen.dart directly, proving the features/sync copy is dead. merge_rules.dart etc. imported only by stale tests, never lib/. Rule 2's 'only providers.dart barrel' text matches."
+   },
+   {
+    "index": 2,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "All 6 line numbers/quotes verified exact; SM-6 full text literally requires the '// keepAlive:' tag; none of the 6 carry it (repo grep: only 3 unique source sites repo-wide use it). Minor overstatement: cities_provider.dart:7 and sacred_location_provider.dart:12 have NO nearby rationale comment at all, contra 'why' text's claim all 6 do \u2014 doesn't change the violation.",
+    "evidence_correction": "2 of the 6 cited sites (cities_provider.dart:7 citiesRepository, sacred_location_provider.dart:12 locationService) have no preceding doc comment whatsoever, so the recommendation to 'prefix each keepAlive declaration's existing rationale' doesn't apply to them \u2014 new rationale would need to be written, not just tagged."
+   },
+   {
+    "index": 3,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "Confirmed _trackPaceCalcProvider (line 66) watches localDayClockProvider (line 101), default SystemLocalDayClock=real DateTime.now(). track_detail_screen_test.dart's _overridesFor omits it while edit_track_and_detail_l1_test.dart:301 and track_detail_goal_stale_test.dart:130 both override it. Traced 'Items remaining' assertions to cycleFraction/scopedCoarseUnitCountProvider, not paceCalc \u2014 confirms finding's own 'not flaky today' caveat is accurate, not overstated."
+   },
+   {
+    "index": 4,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "git log -S confirms the provider was added fresh in 2c346a77, not part of the 121-usage legacy backlog. Full SM-1 text (coding-standards.md:129) bans 'hand-written provider constructors' generally, not just the 3 named legacy types, so citation is accurate. Sibling providers in same file (profile_providers.dart:129/137/147, active_profile_provider.dart:42) confirmed @riverpod. Manual non-.autoDispose FutureProvider correctly never disposes per Riverpod semantics."
+   }
+  ]
+ },
+ "so-012": {
+  "verdicts": [
+   {
+    "index": 0,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "All 3 quotes match the file verbatim; confirmed no `NotificationGateway(` construction anywhere in the file, so tests 2-3 are self-referential tautologies as claimed (test 1 checking the real `dailyReminderPayload` constant is fine and correctly excluded). Rule TQ-8 tautology framing matches digest guidance. Core finding holds.",
+    "evidence_correction": "The supporting claim that real coverage exists at 'notification_gateway_test.dart:320-416' cites the wrong range \u2014 that span tests the non-per-profile `scheduleDailyReminder`, not per-profile. Actual per-profile payload coverage (which does exist, confirming real protection is elsewhere) is at lines 981-1300 (`scheduleDailyReminderForProfile`/`scheduleStreakAlertForProfile` groups). Doesn't change the tautology verdict itself."
+   },
+   {
+    "index": 1,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "wc -l confirms 446 and 476 lines for the two hand-written test files, both over the AG-3 400-line cap \u2014 matches digest's own P3 example ('a 401-line file'). Rule and severity correctly applied; both files are legitimately oversized.",
+    "evidence_correction": "'These two files are the outliers that never got split' is false for learning_ledger_dao_test.dart: companions learning_ledger_dao_extended_test.dart (158 ln) and learning_ledger_dao_extra_test.dart (241 ln) already exist \u2014 it was split twice and is still 446 lines. Only points_balance_dao_test.dart genuinely has zero companion split file. Recommendation should acknowledge a third split file is needed for learning_ledger, not a first one."
+   },
+   {
+    "index": 2,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "ga4 docstring/content mismatch is real and quotes verified verbatim: file has only 4 GamificationRoutePushGuard tests, nothing about InviteTutor's _isLoading guard. ga8's manageTutors quote also verified verbatim. Underlying placement-drift observation is genuine and citable evidence supports it.",
+    "evidence_correction": "Two inaccuracies: (1) ga8 has 2 groups, not 3 \u2014 should read '2 of 3 tests' or '1 of 2 groups'. (2) The claim that the InviteTutor busy-guard 'is actually tested' in invite_tutor_screen_l1_test.dart is false \u2014 I grepped the whole test/ tree for isLoading/_isLoading/CircularProgressIndicator near Invite* and found zero coverage anywhere; the guard is real in source (invite_tutor_screen.dart:46,104,164,286,297,303) but genuinely untested repo-wide. This is a real coverage gap dressed as mere doc-drift, arguably warranting a follow-up beyond trimming the docstring. Also AG-5 (lib/test mirroring) is a loose fit for a ticket-named regression file that was never meant to mirror lib/ 1:1."
+   },
+   {
+    "index": 3,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "Both quotes verified verbatim at cited lines. EH-5 canonical text ('stable error code or enum, never pre-formatted human message') matches the defect shape exactly: raw English sentinel strings used as brittle cross-file match keys with a silent `_ => raw` fallback. No current bug (strings currently agree), so P3/latent-risk framing is defensible, not inflated.",
+    "evidence_correction": "Scope is understated, not overstated: pin_flow_machine.dart:294,314 also emits the literal 'Failed to save PIN' matched by the same screen switch (pin_flow_screen.dart:196) \u2014 a third site sharing the identical fragile pattern beyond the 2 cited files. Strengthens rather than undermines the finding."
+   },
+   {
+    "index": 4,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "Direct read confirms near-byte-identical `_deleteDbFile` methods in both files, including matching explanatory comments about the drift_flutter 0.2.8 '.sqlite'-suffix quirk and native.dart line 51. Both cited regression test files (account_lifecycle_db_delete_test.dart, pending_local_signup_file_cleanup_test.dart) confirmed to exist on disk. Class names (AccountLifecycleService, PendingLocalSignupStore) verified correct.",
+    "evidence_correction": ""
+   }
+  ]
+ },
+ "so-010": {
+  "verdicts": [
+   {
+    "index": 0,
+    "upheld": false,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "Central claim ('Repo-wide grep confirms... this is the SOLE regression coverage') is factually false. Real widget tests exist for the exact illustrated mutations: learning_screen_l1_test.dart:360-402 tests canEditStages true/false Add-Track-CTA gating (the flip scenario cited); settings_p1_test.dart E2E-904 tests header-hidden via expectNotOnScreen; text_display_screen_l1_test.dart:772-821 asserts button.onPressed==null for tutors via Finder. Source-grep tests in t3/r3 are genuinely weak in isolation (mechanically true, TQ-8-relevant), but the claimed regression risk is largely redundant coverage, not an uncovered gap \u2014 severity/effort is inflated by the false 'sole coverage' framing.",
+    "evidence_correction": "grep -rln 'isTutorElevated|isTutoredSession' test/ shows settings_p1_test.dart, app_shell_test.dart, e2e_harness.dart also reference these; learning_screen_l1_test.dart:367/395 pumps real screen with TutorPermissions(canEditStages: false/true) and asserts find.text('Add Track') findsNothing/findsOneWidget \u2014 this would catch a `!canEditStages` inversion. text_display_screen_l1_test.dart:794-821 asserts FilledButton.onPressed is null when isTutorSession:true."
+   },
+   {
+    "index": 1,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "Verified quotes at lines 82/94/114/81 exact. grep confirms zero production callers of isShabbos/isYomTov/formatHebrewDate outside hebrew_calendar_utils.dart \u2014 other lib/ 'isShabbos' hits are an unrelated widget bool field, not calls to the utility. zmanim_window_service.dart independently implements the real geo-aware Shabbos/YomTov check. Evans/dead-code reasoning sound, correctly scoped (doesn't flag the 5 live methods in the same class), P3 matches digest guidance, not on any exclusion list.",
+    "evidence_correction": "none \u2014 evidence and reasoning verified accurate as stated."
+   },
+   {
+    "index": 2,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "Confirmed goal_repository_impl.dart:93-94 throws ArgumentError on missing goal, untested by any test in the file. Confirmed _RecordingGoalSyncFacade.deleteGoal (line 22) is a blind no-op with no payload recorder, unlike goalPayloads for pushGoal; the sole 'deleteGoal removes the goal' test (line 161) uses the sync-less `repo` instance. _syncDeleteGoal's {firestore_id, curriculum_id} payload (lines 251-254) is genuinely unverified \u2014 a real, precisely-scoped coverage gap. P2 fair, not inflated.",
+    "evidence_correction": "none \u2014 evidence and reasoning verified accurate as stated."
+   },
+   {
+    "index": 3,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "wc -l confirms exact line counts claimed: 418/578/619/472/841/1262, all hand-written (no .g.dart/.freezed.dart), all exceed AG-3's 400-line cap. Bundling 6 files into one finding correctly follows digest's own 'one root cause, N sites' consolidation rule. P3 matches digest's explicit '401-line file' P3 example; not on any known-gap/already-captured exclusion list.",
+    "evidence_correction": "none \u2014 evidence and reasoning verified accurate as stated."
+   },
+   {
+    "index": 4,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "Statically and empirically confirmed: match($0,...) always finds the same 'features/X/' substring as match($1,...) since $0's prefix is the file path itself, so a[1]!=b[1] is never true. Ran the exact pipeline: 0 output despite 1186 candidate lines; a corrected version finds dozens of genuine deep cross-feature imports (e.g. content_hierarchy_screen.dart \u2192 dashboard_providers.dart). Baseline make-audit.txt confirms all ~32 'known edges' come from check 14 alone \u2014 check 15 contributes zero, distinct from the already-known 'warn-only' policy gap. P2 fair.",
+    "evidence_correction": "none \u2014 evidence and reasoning verified accurate as stated."
+   }
+  ]
+ },
+ "so-001": {
+  "verdicts": [
+   {
+    "index": 0,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "date_utils_test.dart:11,13 quotes exact: a real DateTime.now().toUtc() wall-clock read compared with a <1s tolerance. date_utils.dart explicitly documents nowUtc() as routed through a swappable LocalDayClock specifically for test determinism (TQ-6), and every other test in the file uses fixed DateTime.utc() literals. Genuine, narrow flake source; P3/CONFIRMED is correct."
+   },
+   {
+    "index": 1,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "evidence_correction": "Lines 69-70 quotes are exact; the singleton has zero real lib/ call sites (grep: only dartdoc [LearningProgramRepository.instance] references) and deprecated_member_use_from_same_package isn't enabled, so the SM-7 violation is real and undetected by tooling. However the 'why' claims '30+ test files' use LearningProgramRepository.instance directly \u2014 actual grep shows 11 files (33 total occurrences, one file alone has 13). Core violation, deprecation, and severity (P3) still hold; only the scale narrative is inflated ~3x.",
+    "reasoning": "Core SM-7 violation confirmed statically with exact evidence; only the 'why' narrative's scale claim is inflated (see evidence_correction), which does not change the assigned severity or the validity of the underlying defect."
+   },
+   {
+    "index": 2,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "tutor_pin_reset_screen.dart:76,80,91 quotes exact: one try/catch spans both sendPasswordResetEmail and clearTutorPin, and the catch always sets tutorPinResetSendFailed regardless of which await failed. Confirmed no existing test in tutor_pin_reset_screen_l1_test.dart covers 'send succeeds, clear throws'; clearTutorPin hits FlutterSecureStorage, a real platform-channel call that can throw independently. 'Documented flakiness' phrasing is unverifiable but not load-bearing to the defect."
+   },
+   {
+    "index": 3,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "All 4 file:line quotes exact (settings_overflow_guard_test.dart:201, account_actions_test.dart:185, account_actions_sheet_nav_test.dart:135, an7_destructive_icon_contrast_test.dart:112). Grep confirms registry.close()/await registry.close() present in all 4 files while UserDatabase(NativeDatabase.memory()) is never captured to a variable or closed in any. Honestly framed as TQ-6-adjacent/Nygard rather than a strict rule hit; P3 matches the test-only blast radius."
+   },
+   {
+    "index": 4,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "manage_grants_screen.dart:234 and manage_tutors_screen.dart's matching R4-M3 block both confirmed to unawaited-fire wipeMirrorForGrant+onWipe after use-case success. Both cited tests (l369-393, l667-727) verify only the mocked use-case call \u2014 read in full, neither asserts mirror deletion or session-clear. Confirmed distinct from R3's different-trigger test and the service-level unit test (test/sync/tutored_mirror_wipe_test.dart): a genuine UI-wiring coverage gap, not a duplicate."
+   }
+  ]
+ },
+ "so-005": {
+  "verdicts": [
+   {
+    "index": 0,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "Reproduced directly: cleared .dart_tool/build, ran build_runner build clean \u2014 exactly these 3 .g.dart files changed (21 ins/1 del on curriculum_label_providers.g.dart, matching '22 lines'; 1-line hash diffs on the other two). Verified CI runs build_runner then dart analyze, confirming the drift claim. Canonical orchestrator finding (not a duplicate); severity/sites correct.",
+    "evidence_correction": ""
+   },
+   {
+    "index": 1,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "All 16 catch/catchError sites verified byte-exact at cited lines; none use an on-clause or catchError test:. Exclusion of :768 (typed _isLocalDatabaseError classifier) and :939 (rethrows after status conversion) both verified correct in context. avoid_catches_without_on_clauses confirmed absent from analysis_options.yaml \u2014 genuinely Pending, not double-enforced. P2 framing (latent future risk) not inflated.",
+    "evidence_correction": ""
+   },
+   {
+    "index": 2,
+    "upheld": true,
+    "severity": "P1",
+    "confidence": "CONFIRMED",
+    "reasoning": "All 3 cited evidence lines exact; backup_sync_section.dart guard comment verified verbatim. Correction: the 'why' prose says device_restore_service.dart embeds RestoreStatus.error's message into a rethrown Exception \u2014 actually that's SyncStatusError's message at line 175; RestoreStatus.error's message is only ever a sink for e.toString(), never re-embedded. Minor narrative mislabel, not in the core evidence array. Finding still holds and is understated: found device_restore_screen.dart:219-220 renders RestoreStatus.error's raw message directly in an unguarded Text widget \u2014 a live P1 defect, stronger than the cited support.",
+    "evidence_correction": "The 'why' text's claim that device_restore_service.dart 'embeds RestoreStatus.error's message straight into a rethrown Exception's text' is inaccurate \u2014 that behavior (embedding a .message field into a new thrown Exception) is exhibited by SyncStatusError at device_restore_service.dart:175, not RestoreStatus.error. RestoreStatus.error's message is only ever populated FROM e.toString() (device_restore_service.dart:252, restore_providers.dart:63), never read back into a new exception. Doesn't undermine the finding: independently found device_restore_screen.dart:219-220 renders RestoreStatus.error's raw .message directly in a Text widget with zero localization guard \u2014 stronger, directly-on-point evidence for the same P1 claim."
+   },
+   {
+    "index": 3,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "Quotes at lines 21-22, 119, and screen:544 verified exact. Confirmed the whole test file never imports upgrade_to_cloud_screen.dart; the simulator's phase is set purely by a test-controlled buggyBehavior flag, so reverting the real fix cannot fail it. Also checked l1_test.dart's 'covered by epic_20_hard_tier_auth_test.dart' claim \u2014 that test only covers DAO identity preservation, not cancel-button UI, so AN-5 truly has zero real coverage, reinforcing rather than weakening this finding.",
+    "evidence_correction": ""
+   },
+   {
+    "index": 4,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "Lines 21 and 113 verified exact. insertEvent() closes over the module-level const profileId=1, so the 'another profile' test at line 111 can't reuse it and re-spells StreakEventsCompanion.insert inline with profileId:2 instead. Real, minor duplication; P3/CONFIRMED is correctly scoped and not inflated.",
+    "evidence_correction": ""
+   }
+  ]
+ },
+ "so-000": {
+  "verdicts": [
+   {
+    "index": 0,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "wc -l confirms exact counts: 881/617/546/533 lines, all >2x the 400-line AG-3 cap. Confirmed completion_dao.dart has cross-profile-guarded reads (internal*CrossProfile) + groupBy aggregates; track_dao.dart's purgeHistory (407-437) has an awaited per-row update loop as cited. Grouping 4 files as one root cause matches protocol. P3 correctly conservative."
+   },
+   {
+    "index": 1,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "Line 767 quote exact-matches source. Confirmed zero AppLogger calls anywhere in the file. Confirmed Makefile grep catch\\s*(_\\?\\w*)\\s*{} is single-line-only, so this multi-line comment-body catch is invisible to it. The 'closes the gap' quote is real (lines 727-730, method doc-comment, not literally file header \u2014 trivial wording nit). P2 cost claim holds, not inflated.",
+    "evidence_correction": "The cited 'closes the gap' comment is the doc-comment immediately above _appendStreakEvent (~line 727), not the file's top header \u2014 minor mislabel, doesn't affect the claim's substance since it's in the same file and directly tied to the cited catch block."
+   },
+   {
+    "index": 2,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "wc -l confirms exact counts: 788/1842/460/453. Verified clockSkewTieBreakWindow LWW gate (lines 38/128), 7 distinct _upsertX methods, FK resolution helpers, and schedule jsonEncode/Decode all present as described. 'This batch's #1 churn hotspot' isn't from the digest's global hotspot list (file absent there) but is independently true via git log (15 commits vs \u22644 for the other 3 cited files, vs ~1.8 avg across the dir) \u2014 accurate, just informally phrased.",
+    "evidence_correction": "drift_merge_store.dart is not on the digest's own Churn-hotspots list; the '#1 churn hotspot' claim is a local (within-directory) git-log observation I independently verified as true, not a citation of the digest's list \u2014 wording could be misread as the latter."
+   },
+   {
+    "index": 3,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "Cited pair (lines 27-33) is byte-for-byte identical body, verified exactly. Third example (51-57, toString) also byte-for-byte identical, verified. Second example (39-41 vs 47-49, hashCode) is NOT byte-for-byte identical \u2014 one wraps in equals() \u2014 despite the finding's blanket 'byte-for-byte identical' framing; functionally equivalent but the acceptance criterion's textual-diff check wouldn't catch that pair.",
+    "evidence_correction": "The hashCode example (lines 39-41 vs 47-49) is functionally but not textually identical (equals() wrapper differs), contradicting the finding's 'byte-for-byte identical' framing for that specific pair; the other two cited pairs (27-33, 51-57) ARE byte-for-byte identical as claimed, and the ~6-of-50 aggregate count is accurate."
+   },
+   {
+    "index": 4,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "Both quotes exact-match source (pin_flow_controller.dart:286, parent_pin_setup_dialog.dart:122). Confirmed PinService only ever throws ArgumentError with a String literal message today. ArgumentError.message is declared 'dynamic' in dart:core, not 'Object?' as stated \u2014 same unchecked-cast risk either way, just wrong type name. Acceptance-criteria's example ArgumentError.value(42,'pin') leaves message null (3rd positional arg omitted) so wouldn't actually crash as written \u2014 flawed test suggestion, core landmine claim still correct.",
+    "evidence_correction": "dart:core declares ArgumentError.message as 'dynamic', not 'Object?' (cosmetic, same behavior). Separately, the proposed acceptance test ArgumentError.value(42, 'pin') sets message=null (3-arg form needed: e.g. ArgumentError.value(42,'pin',99)) so as literally written it would not reproduce the crash \u2014 the underlying defect claim is still valid, only the suggested regression test is imprecise."
+   }
+  ]
+ },
+ "so-022": {
+  "verdicts": [
+   {
+    "index": 0,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "Verified line 76: `tooltip: 'Curriculum settings',` is a bare literal; every other string on this screen uses l10n.*, and no matching ARB key exists in app_en.arb/app_he.arb. AX-2[P-literals] violation, not in the known-gaps list, novel. P3 matches digest's own listed example of minimal i18n findings."
+   },
+   {
+    "index": 1,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "Confirmed lib/features/parent_mode/ doesn't exist. test/features/parent_mode/ holds 10 test files; 9 genuinely import real code from features/profiles and features/dashboard (the 10th, child_mode_guard_test.dart, is a duplicate of test/core/navigation's copy, correctly excluded). All 3 cited file:line import quotes match exactly. Digest explicitly flags this dir for AG-5 judgment. P2 fair."
+   },
+   {
+    "index": 2,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "Verified exact lines: 76-91 never calls deactivateTrack (only inserts+asserts getActiveTracks non-empty); 93-97 wraps an empty async closure in expectLater(...,completes) \u2014 both vacuous. Cross-checked track_dao_deactivate_test.dart:29-37 and track_dao_test.dart:48-56 genuinely call deactivateTrack on real state, confirming the 'covered elsewhere' claim. TQ-8 tautological-test scope per digest applies. P2 apt."
+   },
+   {
+    "index": 3,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "Substance confirmed: TutorAuditLogWriter constructed nowhere in lib/ (grep), stub provider is a no-op, TODO:63 lacks a DNI id, and doc claims '10 random hex chars' but _log() uses only a millis timestamp with zero randomness. However cited line 198 does not hold that quote \u2014 it's the format-description comment; the actual code is at line 201. Uphold with correction; substance unaffected.",
+    "evidence_correction": "tutor_audit_log_writer.dart: the quote \"'${now.millisecondsSinceEpoch.toRadixString(16).padLeft(16, '0')}'\" is at line 201, not line 198. Line 198 reads \"//   yyyyMMddHHmmssSSS + 10 random hex chars (26 chars total)\" (the docstring describing the intended, unimplemented format). The other two evidence citations (audit_log_providers.dart:56 and :63) are exact matches."
+   },
+   {
+    "index": 4,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "All 5 file:line quotes verified byte-exact via sed. learning_tracker/Makefile:345's grep `catch\\s*(_\\?\\w*)\\s*{}` is single-line-only, confirmed structurally blind to these multi-line comment-then-close catches. Sibling convention (5 AppLogger.warning '..._sign_out_failed' events in the same file, close to the claimed '~6') supports the inconsistency argument. EH-3 log-less catch; P3 matches digest's own listed example verbatim."
+   }
+  ]
+ },
+ "so-023": {
+  "verdicts": [
+   {
+    "index": 0,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "Verified offline_top_banner.dart:30-31 Container(height:32) wraps a Row+Text exactly as quoted. app_shell.dart:217/233 duplicates the same 32.0 into the AppBar's PreferredSize height budget, so overflow wouldn't just clip locally, it'd collide with content below. Repo-wide grep found zero textScaler clamps. AX-4's exact text ('no fixed height: on text wrappers') matches. SUSPECTED/P2 is appropriately conservative, not inflated."
+   },
+   {
+    "index": 1,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "wc -l confirms 411/412/465 lines; all three line-1 quotes match verbatim. All hand-written (not .g.dart/.freezed.dart), and AG-3's rule text confirms no test exemption. Directory genuinely already has _extra/_delete/_deactivate/_last_curriculum_guard split files, supporting the recommendation. Correctly filed as one finding with sites:3 per digest rule 4. Not in the novelty-filter gap list."
+   },
+   {
+    "index": 2,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "dashboard_body.dart:149-150/217-218 quotes match exactly \u2014 value is watched then discarded via lint-suppressed `_`. BUG-#35/PP-15 are real tracked issues (corroborated elsewhere in the codebase and docs). initialSyncCompleteProvider has no other lib/ consumer, and the in-file PP-15 comment itself states the retention is non-functional documentation only, supporting the finding's read. Legitimate Fowler-lens dead-code cleanup; P3 is right-sized."
+   },
+   {
+    "index": 3,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "wc -l confirms 1021 lines (2.5x cap); line-1 quote matches exactly. AG-3 text confirmed to exempt only generated files, not tests. File genuinely documents numbered groups 1-17,19 in its header plus an unlisted in-body '18. R6-4 regression' section at line 801, so the proposed split boundaries are grounded in real file structure, not invented."
+   },
+   {
+    "index": 4,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "Both quotes match exactly. Verified gematriya.dart is zero-import, private-ctor, all-static. The test file already imports TutorPermissions/MarkLiveCompletionUseCase and tests ResolvedSession by name elsewhere in the same file, refuting the stated 'avoid transitive deps' excuse. gematriya_test.dart/gematriya_ts6_test.dart exist and call the real class; C1 (line 342) exercises forNumber indirectly via rendered text. Fully corroborated, honestly scored low-risk P3."
+   }
+  ]
+ },
+ "so-026": {
+  "verdicts": [
+   {
+    "index": 0,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "Quotes verified exact: story_21 wrap() (line 219-229) sets localizationsDelegates/supportedLocales; story_25_9 _wrap() (line 20-36) sets neither. CurriculumLabel (grepped) never calls AppLocalizations.of directly, so today's gap is silent as claimed. TQ-3 is Pending, so novel per digest. P3 not inflated.",
+    "evidence_correction": "Minor: a third ad hoc MaterialApp wrap exists in-batch at epic_25_story_25_20_locale_theme_test.dart (undercounts sites: 2 vs true 3+), and 'no shared pumpApp helper exists yet' overlooks test/e2e/harness/e2e_harness.dart's own pumpApp (different test tier, so not directly reusable, but the blanket claim is imprecise). Doesn't change the verdict."
+   },
+   {
+    "index": 1,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "wc -l confirms firebase_auth_gateway_impl_test.dart is exactly 496 lines, hand-written (no .g.dart/.freezed.dart suffix). AG-3's stated checker explicitly scans test/ too. Matches the digest's own P3 exemplar ('a 401-line file'). Correctly calibrated, no inflation.",
+    "evidence_correction": ""
+   },
+   {
+    "index": 2,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "Both quotes byte-exact at cited lines (27 and 243-244). getLinkedProviders independently re-derives providerId list from _firebaseAuth.currentUser instead of reusing _toAppUser's mapping - genuine Fowler duplication, not a stretch. P3 is conservative given the one-line-map scope; not inflated.",
+    "evidence_correction": ""
+   },
+   {
+    "index": 3,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "All 7 loop-header quotes exact. insertOutboxRow confirmed single-row into(outbox).insert(); drain-kick claim at outbox_sync_write_facade.dart:289-292 is byte-exact (tee/unawaited/catchError). Notably the completions section, which already batches via CompletionWriter, was correctly excluded - shows careful, non-blanket flagging. P2 (one-time bulk op, concrete perf cost) not inflated.",
+    "evidence_correction": ""
+   },
+   {
+    "index": 4,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "Docstring A1/A2 claims confirmed present (lines 19-20); repo-wide grep confirms zero test bodies actually call showDeleteLocalAccountFlow (only these 2 comment lines), and account_actions_test.dart is silent too - the coverage-gap claim is real and the irreversible-delete framing matches the function's own docstring.",
+    "evidence_correction": "'Called from 3 lib sites including the HOTSPOT account_actions.dart' is wrong - account_actions.dart:502 is the definition, not a call site. Actual call sites are 2 (parent_settings_screen.dart:356, account_actions_sheet.dart:267); a 4th hit (account_picker_screen.dart:810) is just a comment. Doesn't undermine the core finding, which stands on the missing-test evidence alone."
+   }
+  ]
+ },
+ "so-020": {
+  "verdicts": [
+   {
+    "index": 0,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "Verified exact quotes: line 49 `contains('3')` vs line 81 `isNotEmpty`. Confirmed both en/he generated todaysLearning() interpolate $count, so an ARB placeholder drop would still pass the HE isNotEmpty check. Real asymmetric rigor, not baselined elsewhere. P3 matches ladder (hygiene, not inflated)."
+   },
+   {
+    "index": 1,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "Reproduced the claim independently: grep for groupItemsByNextLevel(/collapseAmudLeaf(/itemDisplayName(/levelValueAt(/HierarchyBrowser( in test/ returns zero hits; content_grouping_test.dart doesn't exist; coarse_unit_leaf_refs_test.dart covers only 2 functions; HierarchySelectionPanel does wrap HierarchyBrowser (3-level indirection confirmed). Quotes match exactly. Not inflated."
+   },
+   {
+    "index": 2,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "Both quotes exact (date_utils.dart:57, goal_setup_screen.dart:1). Confirmed goal_setup_screen.dart actually calls project DateUtils.extractLocalDate (needing the hide), it's the only file repo-wide using `hide DateUtils`, and 16 lib/ + 32 test/ files import both unqualified without hiding either \u2014 a real, already-manifested collision risk. AG-4 tag is a slight stretch (rule's literal text targets intra-repo duplicates, not SDK shadowing) but the underlying agent-grep footgun rationale applies directly; not fabricated or inflated."
+   },
+   {
+    "index": 3,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "wc -l confirms exactly 536 lines, closing brace at line 536 matches quote verbatim. File is hand-written (not .g.dart/.freezed.dart), so not AG-3-exempt. 22 group() blocks confirm the mixed-concerns claim. P3 is literally the digest's own worked example (\"a 401-line file\") \u2014 correctly calibrated, not inflated."
+   },
+   {
+    "index": 4,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "All 4 quotes verified exact (test:1,8; chart_data.dart:66; recent_activity_screen.dart:188). Grepped all of lib/ and test/: zero call sites reference ChartTimeRange.*.displayName outside chart_data.dart's own definition and its own test \u2014 genuinely dead, and recent_activity_screen.dart does use l10n.chartLast7Days instead. Finding correctly hedges the AX-2 tie (\"would violate... the moment anyone wired it up\") rather than overclaiming a live violation. P2 reasonable for a false-confidence coverage-chasing test propping up dead noncompliant code."
+   }
+  ]
+ },
+ "so-027": {
+  "verdicts": [
+   {
+    "index": 0,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "wc -l confirms 866/1255/573 lines exactly; line-1 quotes match verbatim in all 3 files. AG-3's checker command (`find lib test -name '*.dart' ...`) explicitly scans test/, so these are in scope. Digest names 'a 401-line file' as its canonical P3 example \u2014 severity matches exactly. Not in known-gaps/already-captured lists."
+   },
+   {
+    "index": 1,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "All 5 import lines verified exact. Commits f99aee14/21e9c357 confirmed via git log (dates, messages: 'core/services/ is now empty and removed'); dir holds only .gitkeep. docs/architecture.md:442 and coding-standards.md:652 confirmed still pointing at core/services/, an actual contradiction. P2 fits: stated concrete cost, no user-visible bug.",
+    "evidence_correction": "The 'why' claims the destination dir '~30 other test files'; actual count is 12 (21 if counting all of domain/ recursively). Rhetorical overstatement only \u2014 doesn't affect the cited file:line evidence or the core mirroring/docs-drift claim."
+   },
+   {
+    "index": 2,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "Checked the actual batchlist file (t1-feat-sync-p3.txt): exactly 16 files assigned, and exactly 8 exceed 400 lines with the precise counts cited (858/672/662/642/514/455/409/405). Opening-line quotes verified verbatim. A 9th large sync file (tutored_pull_isolation_test.dart) correctly belongs to a different batch (p4), not a missed site."
+   },
+   {
+    "index": 3,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "wc -l confirms 429/468/1337 lines exactly; closing-brace quotes at the cited final lines match verbatim. AG-3's checker text confirmed to include test/. The '3.3x the cap' arithmetic (1337/400) is correct. P3 matches the digest's explicit file-size convention; no inflation."
+   },
+   {
+    "index": 4,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "All 5 file:line citations verified verbatim (screen:21, repo:10 'class TextSegment', 3 test imports at 39/73/9). domain/entities/ confirmed to hold only .gitkeep; grep shows TextContent/TextSegment defined nowhere but the data-layer file, no domain interface mediates. Presentation-data ban text matches coding-standards.md:657 exactly. P2 appropriate \u2014 real leak, no user-visible bug."
+   }
+  ]
+ },
+ "so-019": {
+  "verdicts": [
+   {
+    "index": 0,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "Quotes exact at both lines. completedAt/activatedAt derive from DateTimeFactory.nowUtc() (LocalDayClock, overridable via useLocalDayClock), but neither test file calls useLocalDayClock/FakeLocalDayClock \u2014 grep confirms zero clock-override in both files, so both assertions truly race the real system clock. FakeLocalDayClock pattern is genuinely used elsewhere (epic_08_gamification_test.dart:199,211). P3 flake-risk framing is accurate, not inflated."
+   },
+   {
+    "index": 1,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "Quotes exact. Confirmed sibling file progress_summary_card.dart:39-43 carries the exact described bug-fix comment/PositionedDirectional pattern, and TierIconBox is used inside a Row (achievement_tier_card.dart:77) so the Stack's Positioned(right:) genuinely mis-mirrors under RTL. Literal AX-1 text/lint only names EdgeInsets/Alignment, not Positioned, so 'rule:AX-1' slightly overstates letter-of-rule fit, but the defect and P2 cost are real."
+   },
+   {
+    "index": 2,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "All 6 quotes verified exact at cited lines. Read all 6 files in full: goal_entity_extended/extra genuinely re-test DeadlineTarget/PacePeriodTarget/firestoreId/fromFirestore in near-duplicate form (~20 overlapping tests); content-repository pair share an identical 'returns empty list when content is empty' test; daily_task_generator pair share identically-named tests. 'TQ-7' tag is a mislabel (TQ-7 is anti-weakening, not duplication) but this is a legitimate Fowler-lens finding the digest explicitly allows; recommendation's AG-5 file-placement claim verified via class-location grep."
+   },
+   {
+    "index": 3,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "SUSPECTED",
+    "reasoning": "Quotes exact; independently recounted all Positioned(left/right) instances in both files and got exactly 6, matching 'sites'. Verified app_intro_screen_l1_test.dart:384-394 RTL smoke test only asserts GlowingCtaButton presence, no badge-placement check. Honestly hedged as 'spirit'/SUSPECTED given plausible decorative-collage intent \u2014 well-calibrated, not overclaimed as a confirmed bug."
+   },
+   {
+    "index": 4,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "Quotes exact at all 5 cited lines incl. drift_memory.dart's MUST-close contract. Read _buildApp/_buildAppLoading bodies: db is a local var passed only to overrideWithValue with no onDispose/addTearDown, so callers omitting db: truly cannot close it \u2014 confirmed at scale (~39/45 call sites in one file alone). ts3_parent_track_archive_test.dart's required-db pattern cited in the recommendation verified accurate. 'TQ-6' tag stretches 'hermetic' but the documented-contract violation and leak are real; P2 not inflated."
+   }
+  ]
+ },
+ "so-024": {
+  "verdicts": [
+   {
+    "index": 0,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "Confirmed: line 599 hardcodes 'you@quest.com' while sibling fields (name, password) use l10n keys. ARB has matching signInEmailHint (app_en.arb:1041) but no signup key. The 'iter9 l10n regression' test group (line 270) asserts every other field/CTA but never this hint \u2014 genuine AX-2 gap, P3 reasonable for a placeholder."
+   },
+   {
+    "index": 1,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "Confirmed regex dup at line 161, matching curriculum_label.dart:364's private _hebrew (comment admits it's a copy). But the 'four independent copies incl. core/enums/curriculum_id.dart' claim is false \u2014 that 61-line file has no Hebrew regex at all; only 3 real copies exist. Core defect and recommendation still stand; count is inflated.",
+    "evidence_correction": "core/enums/curriculum_id.dart does not contain any Hebrew-script regex (verified full 61-line file \u2014 only a doc comment mentioning 'Display name in Hebrew'). Real copies are 3: track_learning_order_screen.dart:161, curriculum_label.dart:364, core/theme/text_styles.dart:150 \u2014 not 4."
+   },
+   {
+    "index": 2,
+    "upheld": false,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "Read packages/custom_lints/lib/src/rules/no_color_literal_outside_theme.dart: it only flags Color(0x\u2026) hex-literal constructor calls, never Colors.* static constants. Its own test suite has an explicit case 'does not flag named Color constants (e.g. Colors.white)'. The cited rule and acceptance criteria are factually false for these 3 Colors.grey/Colors.white sites; no other standards rule bars them. Misread rule.",
+    "evidence_correction": "no_color_literal_outside_theme.dart lines 71-84 only match InstanceCreationExpression of type 'Color' with a hex IntegerLiteral argument \u2014 Colors.grey/Colors.white are PrefixedIdentifier static field accesses, structurally untouched by this rule (confirmed by test 'does not flag named Color constants'). The acceptance criterion 'reports zero hits ... once repaired' is already and always true, fix or no fix."
+   },
+   {
+    "index": 3,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "Confirmed lines 226-227/277-278 use DateTime.now().toUtc() (4 sites) vs setUp's DateTimeFactory.nowUtc() (lines 37-38). Makefile check 6/15 (lines 316-317) greps only lib/, excluding test/ \u2014 matches coding-standards.md:479's stated pending TQ-6 gap exactly. No assertion reads these timestamps; correctly scoped as a clock-discipline inconsistency, P3 appropriate."
+   },
+   {
+    "index": 4,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "Confirmed line 47 error branch discards error/stack via SizedBox.shrink(); AppLogger is imported (line 6) and used with the identical warning(event:,exception:,stackTrace:) signature elsewhere in this same file (lines 534, 618), proving the omission is real, not stylistic. Test profile_picker_and_tutored_l1_test.dart:258 labels this 'silent fail' and checks only UI. Textbook EH-3 log-less-catch example, P3 correct."
+   }
+  ]
+ },
+ "so-008": {
+  "verdicts": [
+   {
+    "index": 0,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "Confirmed: content_result.dart:2 class + calendar_cycle_dao.dart:55 method quotes match exactly. Grep confirms ContentResult/ContentLoaded/ContentNotFound and the 3 legacy DAO methods have zero lib/ callers, only self-tests reference them. Genuine dead code, not in baseline/known-gaps lists. P3 fits ladder (hygiene, no stated user-facing cost). Uphold.",
+    "evidence_correction": ""
+   },
+   {
+    "index": 1,
+    "upheld": true,
+    "severity": "P1",
+    "confidence": "CONFIRMED",
+    "reasoning": "Confirmed duplication at both cited lines + 3 more sites (5 total, grep-verified). Traced deeper: FirebaseException.toString()='[firebase_auth/code] msg'; regex \\[([a-z-]+)\\] never matches it (underscore+slash) \u2014 verified live with a regex test. So the 'email-already-in-use' merge branch is broken NOW, not just on a hypothetical future SDK bump as claimed. P1 justified, if anything conservative.",
+    "evidence_correction": "The finding frames the bug as contingent on 'if a Firebase Auth SDK bump changes the exception's string format.' I traced the actual currently-pinned dependency chain (firebase_auth 6.5.1 -> firebase_auth_platform_interface 9.0.1 -> FirebaseException.toString() in firebase_core_platform_interface 7.0.1 = '[$plugin/$code] $message') and confirmed with a live regex test that RegExp(r'\\[([a-z-]+)\\]') never matches '[firebase_auth/email-already-in-use] ...' because of the underscore and slash. I also traced the call chain (upgrade()->_auth.createUserAccount->AuthRepositoryImpl->FirebaseAuthGateway->raw firebase_auth SDK) and found no exception conversion anywhere, so the raw FirebaseAuthException really does reach _extractFirebaseCode. This means the described failure is not a future risk but an already-live, reachable defect today, given the SDK version actually pinned in pubspec.lock. This strengthens rather than weakens the finding."
+   },
+   {
+    "index": 2,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "All 42 quotes verified byte-accurate (checked exhaustively). Story 1.3 truly is just 2 vacuous asserts as claimed. But mapping evidence lines to group() boundaries shows real span is stories 1.1,1.2,1.3,1.4,1.5,1.8,1.9,1.10 (8, incl. 1.2's 13 sites) \u2014 not '6 stories incl. 1.7' as stated; 1.7's asserts (hasLength/containsAll) are genuine behavioral checks. Core finding + P2 severity stand; only the story-count narrative is wrong.",
+    "evidence_correction": "The 'why' claims tautological assertions are 'spread across 6 of Epic 1's 12 stories (1.1, 1.3, 1.4, 1.5, 1.7, 1.9)'. I mapped every cited line to its enclosing group('Story 1.N', ...) block (grepped exact group boundaries) and found the true set is 1.1, 1.2, 1.3, 1.4, 1.5, 1.8, 1.9, 1.10 \u2014 8 stories, not 6. Story 1.2 alone contributes 13 of the 42 cited sites (lines 102, 110-119, 121-122) yet is omitted from the story list entirely, while Story 1.7 (lines 220-243) contains zero cited lines and its two tests use real assertions (hasLength(9), containsAll(...)) that are not vacuous. This is a factual error in the summary sentence, not in the underlying per-line evidence, which I independently confirmed accurate at all 42 sites."
+   },
+   {
+    "index": 3,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "Quotes at lines 1 and 4 match exactly. Confirmed test/core/sync/codec/ does not exist (lib/core/sync/codec/ has 15 files); test/core/sync/merge/ exists but lacks ui_preferences_merger_test.dart. Independently confirmed test/sync/codec_rules_contract_test.dart and test/sync/merge/stage_definitions_roundtrip_test.dart also reference StageDefinitionCodec, proving the 'third location' claim. Genuine AG-5 violation, not story-acceptance-exempt. P2 fits Pending-rule org debt. Uphold.",
+    "evidence_correction": ""
+   },
+   {
+    "index": 4,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "Confirmed dead overrides: learning_screen.dart's ref.watch calls include neither dashboardActiveCurriculaProvider nor dashboardUserModeProvider (grep-verified full list). learning_screen_l1_test.dart:310 confirmed a strictly stronger empty-state assertion (also checks 'Add Track'). The AppErrorView test (lines 70-93) verified to build a bare Scaffold, not LearningScreen. learning_screen.dart is a named churn hotspot. P2 (stated 'currently out of sync' maintenance cost) is appropriate, not inflated.",
+    "evidence_correction": ""
+   }
+  ]
+ },
+ "so-016": {
+  "verdicts": [
+   {
+    "index": 0,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "Traced the write path the finding admits is unconfirmed: firestore_gateway_impl.dart:386 adds synced_at via serverTimestamp() but leaves client-derived updated_at unchanged; drift_merge_store.dart's remoteIsNewer only prefers synced_at within a 5s window, else falls back to raw client-clock comparison \u2014 exactly the failure mode claimed. Cited quotes verified exact. P2 not inflated."
+   },
+   {
+    "index": 1,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "Verified all quotes exact (sentinel test lines 88/74; barrel file is literally a 2-line re-export at profile_scoped_preference_keys.dart). Confirmed exactly 7 of 9 non-generated lib/core/preferences files lack mirrored tests. Confirmed the cross-referenced 'HebrewDatePreference default-drift' finding is real (grp-023), not fabricated. Rule 2 applied to a feature-to-core barrel is a defensible reading of its stated rationale."
+   },
+   {
+    "index": 2,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "Verified: tutored_pull_isolation_test.dart is 767 lines; _ChildDataGateway spans lines 48-333 (286 lines), _NoPushPipeline 336-456 (121 lines) \u2014 exactly as claimed, >400 combined. write_tee_status_update_test.dart quotes exact at 34/85. Repo grep confirms 23 files implement FirestoreGateway, 21 beyond these two, matching the '20+' claim. AG-3 fit and severity not inflated."
+   },
+   {
+    "index": 3,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "Read lines 1143-1156 myself: ledgerEntries has only the single positive entry; the unmark_seder entry is described in a comment but never coded. B17 (line 1083) asserts the materially same single-seder case, confirming duplication. Grepped every other lifetime_tree_builder test file \u2014 none exercise 'unmark_' \u2014 so the gap is real, unguarded elsewhere, and not overstated."
+   },
+   {
+    "index": 4,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "Confirmed test/features/scheduler/domain/projection/ does not exist (ls exit 2) while lib/.../projection/ has 4 files. Quote at overdue_from_elapsed_study_days_test.dart:20 exact; file sits under data/repositories/ despite importing only domain/projection code. reorder_amnesty/collapse_daf_tasks are hedged as 'if scoped to projection', not overclaimed. P3 is correctly calibrated \u2014 no cost narrative attached."
+   }
+  ]
+ },
+ "so-021": {
+  "verdicts": [
+   {
+    "index": 0,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "Verified try/finally lacks catch at both cited sites; traced the real unguarded path (_wrapVerified -> buildVerificationCallback -> _refreshAndCheckVerified -> reloadCurrentUser, no try/catch anywhere) confirming a genuinely reachable unhandled exception on network failure. Confirmed skip:true tests carry no Linear id. P2 is reasonable, arguably conservative, not inflated.",
+    "evidence_correction": "EH-2/EH-3 rule-fit is a bit loose (no catch clause exists to call 'empty/log-less'; EH-2 is about layer-boundary conversion) but the underlying defect and reachability are independently confirmed."
+   },
+   {
+    "index": 1,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "Line counts (650/437/413/404) and all four class-declaration quotes verified exact against the files; none are generated. Grouping four independent files as one finding with sites:4 matches the digest's 'same defect, N sites -> one finding' rule. P3 matches the digest's own '401-line file' example verbatim.",
+    "evidence_correction": ""
+   },
+   {
+    "index": 2,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "Switch/default and ladder quotes verified exact; grep confirms zero test coverage anywhere for TierStyle. Real re-derived-invariant coupling (7 case-literals vs ladder strings), currently non-breaking so P2 (not P1) is correct. TQ-1 citation is loose -- it's about pyramid shape, not missing coverage -- but doesn't undermine the Evans-lens defect.",
+    "evidence_correction": "TQ-1 ('pyramid-shaped suite') is not really about per-class unit coverage; Feathers' 'where's the seam' lens fits better than TQ-1 as cited. Does not change the verdict."
+   },
+   {
+    "index": 3,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "Every cited line verified exact, incl. real fix locations (progress_providers.dart:67/118/166, items_learned_providers.dart:182/221, lifetime_knowledge_providers.dart:531/562). PP-4's test never touches the provider at all -- it seeds a DB and recomputes the intended formula inline, so it can never go red on a regression. Textbook TQ-8 tautology across all 6 sites; airtight.",
+    "evidence_correction": ""
+   },
+   {
+    "index": 4,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "Both default-value quotes verified exact. Confirmed exactly 2 explicit call sites to _buildSubtitleBlock and 1 to _subtitleRich, all private methods confined to this one file, so no other caller can exist. Defaults are genuinely, provably unreachable dead code; P3 hygiene severity is correctly scoped, not inflated.",
+    "evidence_correction": ""
+   }
+  ]
+ },
+ "so-029": {
+  "verdicts": [
+   {
+    "index": 0,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "Verified account_bootstrap.dart:23,49,51 verbatim. registry is constructed at line 23 inside the try; resolveActiveAccountId()/findById() (lines 30,33) can throw before registry.close() at line 49 runs; catch at 51 never closes it. Confirmed single call site (bootstrap.dart:53), no retry. Nygard lens applies per-file, not just core/sync. P3 matches stated low real-world impact \u2014 not inflated."
+   },
+   {
+    "index": 1,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "Read all 3 cited sites: track_learning_order_screen.dart:166 and :193, learning_order_screen.dart:126 \u2014 identical 7-line overdueCount-fetch/mounted-check/ReorderConfirmDialog block, differing only in local var names. Genuine Fowler duplication, correctly named as Extract Method. P3 hygiene is consistent with the digest's own tier examples, not inflated."
+   },
+   {
+    "index": 2,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "Confirmed epic_25_schema_core_test.dart:615/625 stub-then-assert-own-stub on a mocktail AuthRepository mock. Verified real behavioral coverage exists separately: test/features/auth/data/repositories/auth_repository_impl_test.dart (536 lines) exercises AuthRepositoryImpl against mocked FirebaseAuth/GoogleSignIn, corroborating the claim of redundant false-confidence coverage. TQ-8 text matches exactly. P3 not inflated."
+   },
+   {
+    "index": 3,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "All 3 cited imports verified to point at real, extant lib/features/tracks/{setup,stages,track_order} files (not stale). Confirmed test/features/tracks/{setup,track_order} mirrored dirs exist in parallel (stages has none, correctly hedged in the recommendation). Digest's own 'Unmirrored test dirs' protocol explicitly names these exact directories for this exact judgment \u2014 directly responsive, novel, correctly scoped to AG-5."
+   },
+   {
+    "index": 4,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "grep confirms exactly 4 catches in file: 577/598 log via the file's own documented F20 AppLogger pattern, 436/654 (the cited ones) do not \u2014 quotes exact. Traced callee programCalendarPositionProvider: 5 distinct real StateError throw sites (missing enrollment/program/apiKey/calendar-key), so the silent 0-overdue fallback is plausible, not contrived hypothetical \u2014 supports 'concrete cost' P2 over the digest's default-P3 log-less-catch framing."
+   }
+  ]
+ },
+ "so-017": {
+  "verdicts": [
+   {
+    "index": 0,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "All 4 quotes verified at exact lines; each loop confirmed inside its enclosing transaction(). Drift batch() supports per-row update() with distinct where clauses, so the fix is technically sound. Bundling insert+update loops as one DB-3 root cause matches the digest's grouping rule. P2 fits the stated write-amplification cost; not inflated."
+   },
+   {
+    "index": 1,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "Verified real drift_merge_store.dart:140-151 D15 fallback against both fakes exactly as quoted: mergers_test fake omits the raw-updated_at fallback; round-trip fake has no skew window at all. drift_merge_store_test.dart exists, so that reference isn't fabricated. No current test hits the divergent branch, matching P3's conservative, non-inflated severity."
+   },
+   {
+    "index": 2,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "All 5 quotes verified at cited lines. Grep confirms 8+1=9 raw Color(0x...) literals. 0xFFF1F3FA is duplicated verbatim in both files; 0xFF0038A8 is absent from AppTheme (brandBlueDeep=0xFF3F41AB, a different value). Both 'Bug 7' and 'Bug 7 (re-fix)' comments confirmed present, supporting the recurring-cost claim. P2 is appropriate, not inflated."
+   },
+   {
+    "index": 3,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "Quote matches connectivity_gateway.dart:14 exactly; InternetAddress.lookup has no dart:io cancellation API, so timeout() truly leaves the OS lookup running - accurate claim. Minor flaw: the account_actions.dart 'offline-account conversion' example is actually delete-account code, not conversion - only an illustrative aside, not the cited evidence. P3 not inflated.",
+    "evidence_correction": "account_actions.dart:226's isOnline call is inside showDeleteAccountFlow (delete-account-requires-internet), not an offline-account-conversion retry path; the core evidence at connectivity_gateway.dart:14 is unaffected."
+   },
+   {
+    "index": 4,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "Zero external callers of TrackManagementBody confirmed via grep; doc-comment quote exact. Git log confirms hub_screen last touched 2026-06-11 (TS-1..16 fix) vs body last touched 2026-05-20 (colour pass) - exact match. The cited 26.20 AC4 source-grep pattern is real, not fabricated. P2 is apt, not inflated.",
+    "evidence_correction": "Evidence cites track_management_hub_screen.dart:24 but the quoted function signature/body actually sits at lines 25-26; line 24 is the last line of the preceding doc comment. Quote text itself is verbatim-accurate, just off by one line."
+   }
+  ]
+ },
+ "so-028": {
+  "verdicts": [
+   {
+    "index": 0,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "Verified: firestore_codec.dart:57-58's claim that the SDK auto-converts ISO strings to Timestamp is false, confirmed by firestore_gateway_impl.dart's dedicated _timestampifyCompletedAt patch (158-222) and firestore.rules:247-249's documented streak_events production incident. entity_codec.dart's docstring never mentions this real mechanism. Quotes accurate, reasoning sound, P2 fitting for latent-footgun documentation debt."
+   },
+   {
+    "index": 1,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "evidence_correction": "main.dart:15-34 wraps the app in runZonedGuarded; its handler calls AppLogger.instance.handle(error, stack) AND Crashlytics.recordError(fatal:true) for any uncaught error in this unawaited .then() chain \u2014 the write's failure is not actually silent/log-less as claimed. Also, the cited 'good' catch at line 298 is itself log-less for non-permission-denied TutorWriteException codes.",
+    "reasoning": "Core defect survives correction: the DB write (line 277) has no local catch or user feedback, and ref.invalidate (288) skips the mounted-guard the SnackBar (299) has \u2014 a genuine disposed-ref crash risk. But the finding's central claim ('silently swallowed, no AppLogger call') is factually wrong; a global handler already logs and reports it as fatal."
+   },
+   {
+    "index": 2,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "Quotes exact: test:21 imports app_shell.dart; app_shell.dart:418 defines ProfileSwitcherBar, confirmed reading only profile/tutoring providers. Mitigating nuance the finding omits: it also uses router_provider.dart's navigatorKey (line 569) as a documented fix spanning two Navigator contexts \u2014 real router coupling, not pure accretion. The placement/AG-5 mirroring gap itself is still real; P3 is fair."
+   },
+   {
+    "index": 3,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "Fully verified via grep: dashboard_screen.dart, backup_sync_section.dart, sync_status_indicator.dart import exclusively core/sync/providers/sync_status_providers.dart; sync_providers.dart's copy has zero consumers anywhere. 'Also delegates here' is demonstrably false \u2014 no import links the files. Bodies are logically identical (inline comments differ in wording, not literally character-for-character). Dead code, P2 fair."
+   },
+   {
+    "index": 4,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "All 5 line counts verified exact via wc -l (790/718/414/413/403, all hand-written, none generated). Every named private widget class (_HeroHeader, _CurriculumPointsCard, _StepperControl, _RoundStepButton, _SaveBar, _RewardPreview, _InlineRewardsSection) confirmed present. gamification_screen.dart's contrasting extraction into 8 widget files (295 lines) verified. Airtight; P2 fair given two files ~2x cap."
+   }
+  ]
+ },
+ "so-018": {
+  "verdicts": [
+   {
+    "index": 0,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "All 5 quotes verified verbatim at cited lines. Grep confirms per-file counts (11/8/4/2/2) except decline_invite_screen.dart: cited evidence line 217 is AppColors.statusWarningSoft (the compliant token, used for contrast) not a violation \u2014 real count there is 5 not 6, so total is ~32 sites not 33. Core finding, rule mapping, and P3 severity are sound.",
+    "evidence_correction": "decline_invite_screen.dart has 5 real color-literal violations (221,306,310,372,376), not 6 \u2014 the finding's own evidence item at line 217 (AppColors.statusWarningSoft) is the compliant token used for contrast, not itself a violation; total is ~32 sites, not 33."
+   },
+   {
+    "index": 1,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "crashlytics_service.dart:51/62 quotes exact; sibling streak_milestone_analytics_observer.dart's catchError-guard contrast confirmed. Dart SDK docs confirm unawaited() truly doesn't guard errors ('that error...will be considered unhandled'), so the core risk is real and the fix recommendation stands despite the mechanism inaccuracy below.",
+    "evidence_correction": "main.dart quote is at line 31, not 27. The claimed mechanism ('delivered back into the very same Zone installed by runZonedGuarded') is wrong: reading dart-sdk/lib/async/zone_api.dart shows onError runs via parentZone.runBinary(), i.e. in the zone that CALLED runZonedGuarded, not the forked/guarded zone. A more plausible reentrant path is PlatformDispatcher.instance.onError, separately overridden in crashlytics_bootstrap.dart:30-34 to also call recordError \u2014 uncited evidence that would actually support the claim."
+   },
+   {
+    "index": 2,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "Confirmed exact mismatch: test asserts '\u05de\u05d1\u05d9\u05d0' (present tense) findsNothing while ARB has '\u05d4\u05d1\u05d9\u05d0' (past tense) at app_he.arb:2657 \u2014 one-word diff exactly as claimed; assertion is genuinely vacuous. Precedent citation (app_intro_screen_l1_test.dart's AppLocalizations.delegate.load + findsOneWidget pattern) verified accurate at lines 414-419.",
+    "evidence_correction": "The claim that 'the test's own docstring states the suite's purpose is guarding against English-string leaks' is not literally present in the file; the file header only lists 'HE locale: intentChooser phase mounts without overflow' as coverage. Doesn't change the core finding \u2014 the assertion is still vacuous."
+   },
+   {
+    "index": 3,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "Independently spot-checked 3 of the claimed duplicate pairs (fullPath includeLevelLabel=false on mishnayos/['Zeraim'], level(mishnayos,0) RangeError, dailyTargets-covers-all-curricula) \u2014 all genuinely near-identical scenario+assertion across files, confirming the duplication pattern. Shared 1270-line source (curriculum_defaults.dart houses both classes) and ~1213-line 4-file test total both verified exact.",
+    "evidence_correction": "None needed \u2014 all cited evidence and derived counts verified accurate."
+   },
+   {
+    "index": 4,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "All quotes verified exact at cited lines (58, 118, 191). SystemLocalDayClock confirmed real wall-clock (DateTime.now().toUtc()); sibling study_day_config_sync_test.dart confirmed using FakeLocalDayClock(DateTime.utc(2026,5,21)) for the identical OutboxSyncWriteFacade. TQ-6 'pending: extend to test/' citation matches coding-standards.md:479 verbatim. Honest, non-inflated P3.",
+    "evidence_correction": "None needed \u2014 all cited evidence verified accurate."
+   }
+  ]
+ },
+ "so-025": {
+  "verdicts": [
+   {
+    "index": 0,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "Lines 142/155/323/439 verified verbatim; ref.mounted/UnmountedRefException are real Riverpod 3 APIs (pub-cache riverpod-3.2.1 ref.dart:14,110,236). Line 343's own guard proves the team knows this hazard. Evidence omits a citation for dashboardCompletionPercentage (lines 189-190) though I independently confirmed that 4th site is real too. P2 is appropriately conservative.",
+    "evidence_correction": "Evidence array cites lines 142,155,323,439 (covering 3 of the 4 named functions) \u2014 dashboardCompletionPercentage's identical unguarded ref.watch after await at lines 189-190 is the 4th named site but has no matching evidence entry; I confirmed it independently and it is real."
+   },
+   {
+    "index": 1,
+    "upheld": true,
+    "severity": "P2",
+    "confidence": "CONFIRMED",
+    "reasoning": "All 4 line counts + coding-standards.md:513 quote verified verbatim. Found the batch's own source list (_work/batchlists/t1-story-epics-01-08.txt): exactly 10 files, 8 over 400 lines, epic_01(392)/epic_05(381) the only ones under \u2014 'sites: 8' is precisely correct. AG-3 truly lacks AG-5's story-acceptance carve-out; CLAUDE.md's 'one file per epic' convention confirmed verbatim.",
+    "evidence_correction": "The 'sites: 8'/'this batch's 10 files' claim isn't backed by 8 file:line evidence entries (only 4 given quotes) but is exactly confirmed via docs/audits/standards-audit-2026-07-03/_work/batchlists/t1-story-epics-01-08.txt, which lists all 10 batch files with line counts matching the claim precisely (8 over 400, 2 under)."
+   },
+   {
+    "index": 2,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "All 4 line counts (516/507/431/553) and byte-exact quotes verified via wc -l/sed; the cited 747-line scheduler_engine.dart figure confirmed. The 5 'Fix N' groups referenced in the split recommendation for scheduler_engine_dni346_test.dart exist exactly as described (group() at lines 107,215,328,396,484). No factual issues found; P3 hygiene is correctly not inflated.",
+    "evidence_correction": ""
+   },
+   {
+    "index": 3,
+    "upheld": false,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "Cited rule no_color_literal_outside_theme only fires on Color(0x\u2026) hex-literal constructor calls (packages/custom_lints/lib/src/rules/no_color_literal_outside_theme.dart:71-88: addInstanceCreationExpression, typeName=='Color'). Its own test asserts Colors.white must NOT be flagged ('Named constants must not be flagged', no_color_literal_outside_theme_test.dart:74-88). The rule structurally cannot ever catch this pattern; the acceptance criterion is vacuous. Misread rule.",
+    "evidence_correction": "Rule citation is factually wrong: no_color_literal_outside_theme excludes Colors.* named constants by explicit design and unit test. No other coding-standards.md rule bans Colors.white; it's the established app-wide pattern (app_theme.dart onError/onPrimary/etc., and this very file's own line 97 'color: Colors.white')."
+   },
+   {
+    "index": 4,
+    "upheld": true,
+    "severity": "P3",
+    "confidence": "CONFIRMED",
+    "reasoning": "1237-line count and line-1 quote confirmed exactly. Verified per-merger test tallies directly: Bookmark/Settings=4 tests, LearnerProfile/Notification/Gamification/UiPreferences=2, and GoalMerger's nuanced '2 LWW invariants + 1 unrelated pace_granularity regression' (not a 3rd invariant) checks out exactly at lines 867/889/912. remoteIsNewer comparator group confirmed at line 1131. Precise, honest finding.",
+    "evidence_correction": ""
+   }
+  ]
+ }
+}

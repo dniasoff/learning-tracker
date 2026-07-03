@@ -1,0 +1,248 @@
+[
+ {
+  "sourceBatch": "t1-core-providers-prefs",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Add ProviderContainer-based tests for core/preferences notifiers; replace the string-grep sentinel test; fix the misplaced/illegitimate profile_scoped_preference_keys_test.dart barrel import",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-5 (test mirrors lib) + TQ-8 (weak/non-behavioral assertion) + Rule 2 (no unauthorized re-export barrels)",
+   "area": "core/preferences (testing)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/preferences/hebrew_terms_sentinel_test.dart",
+     "line": 88,
+     "quote": "final hasSentinelGuard =\n            source.contains('profileId == 0') ||"
+    },
+    {
+     "file": "learning_tracker/test/core/preferences/hebrew_terms_sentinel_test.dart",
+     "line": 74,
+     "quote": "File('lib/core/preferences/preference_providers.dart'),\n          File('../lib/core/preferences/preference_providers.dart'),"
+    },
+    {
+     "file": "learning_tracker/test/features/sync/domain/profile_scoped_preference_keys_test.dart",
+     "line": 8,
+     "quote": "import 'package:learning_tracker/features/sync/domain/profile_scoped_preference_keys.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/features/sync/domain/profile_scoped_preference_keys.dart",
+     "line": 2,
+     "quote": "export 'package:learning_tracker/core/preferences/profile_scoped_preference_keys.dart';"
+    }
+   ],
+   "sites": 7,
+   "why": "hebrew_terms_sentinel_test.dart's only coverage of the IL-1 sentinel-guard mechanism is a test that reads preference_providers.dart off disk as text via a CWD-dependent File() probe and checks for the substring 'profileId == 0' \u2014 it passes whether or not UseHebrewTerms.build() actually preserves state, and would still pass if the guard were pasted into an unrelated function; it is also fragile since the two hardcoded relative paths break if the runner's CWD differs. Meanwhile 7 of the 9 non-generated files in lib/core/preferences/ (hebrew_date_preference.dart, nikud_preference.dart, text_display_preference.dart, transliteration_variant_preference.dart, profile_scoped_preference.dart, preference_providers.dart, and effectively profile_scoped_preference_keys.dart) have no test at their mirrored test/core/preferences/ path. profile_scoped_preference_keys.dart IS tested, but only via test/features/sync/domain/profile_scoped_preference_keys_test.dart, which imports the class through an unauthorized 2-line re-export barrel (lib/features/sync/domain/profile_scoped_preference_keys.dart) instead of importing core/preferences/ directly \u2014 exactly the kind of extra re-export barrel Rule 2 prohibits. This organizational split is why this batch's readUseHebrewCalendar/HebrewDatePreference default-drift finding went uncaught: the two halves of the same invariant are tested, if at all, in disconnected files/directories.",
+   "recommendation": "Add test/core/preferences/{hebrew_date_preference,nikud_preference,text_display_preference,transliteration_variant_preference,profile_scoped_preference,preference_providers}_test.dart with real ProviderContainer-driven assertions. Replace hebrew_terms_sentinel_test.dart's source-grep sub-test with a ProviderContainer test that drives UseHebrewTerms through a real-id -> 0 -> real-id transition and asserts state is preserved. Delete lib/features/sync/domain/profile_scoped_preference_keys.dart, repoint its one import at core/preferences/ directly, and move the test file to test/core/preferences/profile_scoped_preference_keys_test.dart.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "Every lib/core/preferences/*.dart (excluding .g.dart) has a mirrored test/core/preferences/*_test.dart, per AG-5.",
+    "hebrew_terms_sentinel_test.dart no longer reads source files off disk; the sentinel-guard assertion drives real Notifier behavior through a ProviderContainer.",
+    "lib/features/sync/domain/profile_scoped_preference_keys.dart (the re-export barrel) is deleted; grep -rn \"export 'package:learning_tracker/core\" lib/features/sync/ returns nothing for this symbol."
+   ],
+   "labels": [
+    "testing",
+    "preferences",
+    "AG-5",
+    "P2"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-providers-prefs",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Add '// keepAlive:' justification comments to the 8 bare keepAlive:true providers in preference_providers.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "SM-6 (every keepAlive: true carries an inline justification comment)",
+   "area": "core/preferences (riverpod hygiene)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/preferences/preference_providers.dart",
+     "line": 28,
+     "quote": "@Riverpod(keepAlive: true)\nHebrewDatePreference hebrewDatePreference(Ref ref) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/preferences/preference_providers.dart",
+     "line": 35,
+     "quote": "@Riverpod(keepAlive: true)\nNikudPreference nikudPreference(Ref ref) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/preferences/preference_providers.dart",
+     "line": 42,
+     "quote": "@Riverpod(keepAlive: true)\nTransliterationVariantPreference transliterationVariantPreference(Ref ref) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/preferences/preference_providers.dart",
+     "line": 49,
+     "quote": "@Riverpod(keepAlive: true)\nTextDisplayPreference textDisplayPreference(Ref ref) {"
+    },
+    {
+     "file": "learning_tracker/lib/core/preferences/preference_providers.dart",
+     "line": 125,
+     "quote": "@Riverpod(keepAlive: true)\nclass UseHebrewDate extends _$UseHebrewDate {"
+    },
+    {
+     "file": "learning_tracker/lib/core/preferences/preference_providers.dart",
+     "line": 145,
+     "quote": "@Riverpod(keepAlive: true)\nclass ShowNikudPref extends _$ShowNikudPref {"
+    },
+    {
+     "file": "learning_tracker/lib/core/preferences/preference_providers.dart",
+     "line": 210,
+     "quote": "@Riverpod(keepAlive: true)\nclass CurrentTransliterationVariant extends _$CurrentTransliterationVariant {"
+    },
+    {
+     "file": "learning_tracker/lib/core/preferences/preference_providers.dart",
+     "line": 231,
+     "quote": "@Riverpod(keepAlive: true)\nclass CurrentFontSize extends _$CurrentFontSize {"
+    }
+   ],
+   "sites": 8,
+   "why": "docs/coding-standards.md:154 requires 'every keepAlive: true carries an inline // keepAlive: justification'; the tagged-comment convention is already established elsewhere in this codebase (core/sync/providers/sync_orchestrator_providers.dart:51, features/profiles/.../pin_flow_controller.dart:127, features/content_browsing/.../content_providers.dart:12) but 8 of this file's 11 keepAlive sites carry zero comment of any kind, and even the one that does explain itself (hebrewTermsPreference, line 19-20) doesn't use the tagged format \u2014 so a future SM-6 audit grep has nothing to anchor on here.",
+   "recommendation": "Add a one-line '// keepAlive: <reason>' above each, e.g. '// keepAlive: profile-scoped singleton preference store; lives for the app session.'",
+   "effort": "S",
+   "acceptance_criteria": [
+    "A grep for 'keepAlive: true' in this file with no '// keepAlive' comment within 2 lines above returns zero hits (the SM-6 pending audit check)."
+   ],
+   "labels": [
+    "hygiene",
+    "riverpod",
+    "SM-6",
+    "P3"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-providers-prefs",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Guard _bindObserver's post-await 'state =' write with ref.mounted in preference_providers.dart",
+   "severity": "P3",
+   "confidence": "SUSPECTED",
+   "rule": "SM-4 (check ref.mounted after any await in a Notifier method/async callback before touching state)",
+   "area": "core/preferences (riverpod async safety)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/preferences/preference_providers.dart",
+     "line": 62,
+     "quote": "final sub = pref.observe(profileId).listen(onValue);\n  ref.onDispose(sub.cancel);"
+    },
+    {
+     "file": "learning_tracker/lib/core/preferences/preference_providers.dart",
+     "line": 64,
+     "quote": "pref.read(profileId).then(onValue);"
+    }
+   ],
+   "sites": 1,
+   "why": "_bindObserver's pref.read(profileId).then(onValue) sets state after an unguarded await, with no ref.mounted check, inside a callback registered from build() by all 5 keepAlive preference notifiers. Per SM-4 this should no-op if the provider was disposed while the read was in flight (e.g. a test that builds one of these notifiers in a ProviderContainer and disposes the container immediately). Confirm by: build UseHebrewDate/ShowNikudPref/etc. in a ProviderContainer, dispose the container synchronously right after first read, and check whether an unhandled exception surfaces from the pending pref.read().then() callback.",
+   "recommendation": "Add 'if (!ref.mounted) return;' at the top of the onValue callback inside _bindObserver, before 'if (value != state) state = value;'.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "_bindObserver's onValue callback no-ops when ref.mounted is false.",
+    "A test that disposes a ProviderContainer immediately after building one of the 5 keepAlive notifiers passes with no unhandled exception."
+   ],
+   "labels": [
+    "riverpod",
+    "SM-4",
+    "async-safety",
+    "P3"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-services",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Move test/core/services/*_test.dart to mirror their real lib/features/scheduler/domain/services/ location (AG-5)",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-5 \u2014 test/ mirrors lib/ 1:1; new source file's test at mirrored path",
+   "area": "test/core/services (stale post-refactor location)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/services/calendar_program_registry_test.dart",
+     "line": 2,
+     "quote": "import 'package:learning_tracker/features/scheduler/domain/services/calendar_program_registry.dart';"
+    },
+    {
+     "file": "learning_tracker/test/core/services/cross_curriculum_aggregator_test.dart",
+     "line": 3,
+     "quote": "import 'package:learning_tracker/features/scheduler/domain/services/cross_curriculum_aggregator.dart';"
+    },
+    {
+     "file": "learning_tracker/test/core/services/learning_program_repository_test.dart",
+     "line": 12,
+     "quote": "import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';"
+    },
+    {
+     "file": "learning_tracker/test/core/services/learning_program_service_test.dart",
+     "line": 8,
+     "quote": "import 'package:learning_tracker/features/scheduler/domain/services/learning_program_service.dart';"
+    },
+    {
+     "file": "learning_tracker/test/core/services/calendar_program_service_ref_extraction_test.dart",
+     "line": 1,
+     "quote": "import 'package:flutter_test/flutter_test.dart';"
+    }
+   ],
+   "sites": 5,
+   "why": "Commits 21e9c357 and f99aee14 (W2.23-W2.25, both 2026-05-20) relocated CalendarProgramRegistry, CalendarProgramService, CrossCurriculumAggregator and LearningProgramService out of lib/core/services/ into lib/features/scheduler/domain/services/, explicitly because core/services/ was 'misplaced' (f99aee14 commit message: 'core/services/ is now empty and removed' \u2014 only a .gitkeep now remains). The 5 test files were never moved. test/features/scheduler/domain/services/ already holds ~30 other test files for that exact directory (local_calendar_engine_test.dart, sefaria_ref_matcher_test.dart, pace_calculator_test.dart, etc.) but not these 5 \u2014 anyone browsing the mirrored location for coverage of these classes will conclude they're untested and may duplicate it (see the next finding, where that already happened). docs/architecture.md:442 and docs/coding-standards.md:652 still describe lib/core/services/ as the canonical home for cross-curriculum services, actively contradicting the refactor that emptied it.",
+   "recommendation": "Move all 5 files to test/features/scheduler/domain/services/. Delete lib/core/services/.gitkeep (and the directory) if the core/services/ pattern is retired for good, or update docs/architecture.md and docs/coding-standards.md in the same PR (AG-8) if it should still exist for some future cross-feature service.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "All 5 test files exist at test/features/scheduler/domain/services/ and no longer under test/core/services/",
+    "docs/architecture.md and docs/coding-standards.md placement guidance for cross-curriculum services matches the actual lib/ layout",
+    "A Rule-0 checker for AG-5 (e.g. a script diffing lib/**/*.dart source stems against test/**/*_test.dart stems) exists or is filed as a follow-up",
+    "flutter test still green after the move"
+   ],
+   "labels": [
+    "testing",
+    "AG-5",
+    "refactor-debris",
+    "docs-drift"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-services",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Delete or re-target calendar_program_service_ref_extraction_test.dart \u2014 tests hand-duplicated logic absent from production",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (tautological/illusory coverage) + dead-code sweep",
+   "area": "test/core/services (dead test)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/services/calendar_program_service_ref_extraction_test.dart",
+     "line": 5,
+     "quote": "/// The actual method is private, so we test the same extraction algorithm"
+    },
+    {
+     "file": "learning_tracker/test/core/services/calendar_program_service_ref_extraction_test.dart",
+     "line": 7,
+     "quote": "String extractSefariaRefFromLink(String? link, String fallback) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/domain/services/calendar_program_service.dart",
+     "line": 69,
+     "quote": "/// Historically orchestrated Sefaria + Hebcal API calls with a 24-hour"
+    }
+   ],
+   "sites": 1,
+   "why": "This 66-line file has no import of any production symbol \u2014 its only import is flutter_test itself \u2014 because it defines and tests its own hand-copied reimplementation of a once-private URL-parsing method. That method no longer exists anywhere: `grep -rn sefaria.org lib/` returns zero hits, and CalendarProgramService's own docstring confirms why \u2014 after Story 19.4 it is 'a thin delegate over LocalCalendarEngine: every call is a local-DB read, no network traffic, no JSON parsing, no cache.' The test can never fail regardless of what CalendarProgramService actually does, so it gives false confidence that Sefaria-ref extraction is covered when there is zero real coverage.",
+   "recommendation": "Delete the file \u2014 the logic and its risk surface are gone from production. If Sefaria-URL ref extraction still matters somewhere (e.g. a build-time seed-generation script under tool/), point a new test at that real symbol instead.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "File removed from test/ (or rewritten to import and exercise a real, currently-live production symbol)",
+    "flutter test / make test-all-stories stays green with no coverage claimed for the removed dead code"
+   ],
+   "labels": [
+    "dead-code",
+    "test-quality",
+    "P2"
+   ]
+  }
+ }
+]

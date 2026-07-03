@@ -1,0 +1,62 @@
+[
+ {
+  "sourceBatch": "t1-feat-profiles-p4",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Stop ProfileRepositoryImpl.updateProfile silently swallowing tutor Cloud-Function write failures",
+   "severity": "P0",
+   "confidence": "CONFIRMED",
+   "rule": "EH-2/EH-3 (typed errors must reach a boundary as values, no log-less catch) + Nygard lens (retry-assumption mismatch across facade implementations)",
+   "area": "features/profiles/data/repositories/profile_repository_impl.dart + features/profiles/presentation/widgets/profile_edit_delete_actions.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/profiles/data/repositories/profile_repository_impl.dart",
+     "line": 159,
+     "quote": "} catch (_) {\n      // no-op: cloud push failure is non-fatal; local write already succeeded (offline-first)"
+    },
+    {
+     "file": "learning_tracker/lib/features/sync/presentation/providers/sync_providers.dart",
+     "line": 75,
+     "quote": "/// When a tutor session is active ([activeTutoredProfileSelectionProvider] !=\n/// null) the outbox facade is wrapped by a [TutoredWriteRouter]"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/widgets/profile_edit_delete_actions.dart",
+     "line": 46,
+     "quote": "} on TutorWriteException catch (e) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/data/repositories/profile_repository_impl.dart",
+     "line": 134,
+     "quote": "throw DuplicateProfileNameException(trimmedName);"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/data/repositories/profile_repository_impl.dart",
+     "line": 107,
+     "quote": "} catch (_) {\n      // no-op: cloud push failure is non-fatal; local write already succeeded (offline-first)"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/data/repositories/profile_repository_impl.dart",
+     "line": 335,
+     "quote": "} catch (_) {\n      // no-op: cloud push failure is non-fatal; local write already succeeded."
+    }
+   ],
+   "sites": 3,
+   "why": "ProfileRepositoryImpl wraps every _syncEngine?.pushLearnerProfile(...) call in a blanket catch(_) {} (createProfile:104-109, updateProfile:157-161, self-heal:321-336), on the premise that 'local write already succeeded (offline-first)' and the push will retry later. That premise only holds when _syncEngine is the durable OutboxSyncWriteFacade. Per sync_providers.dart:75-78, when a tutor session is active, _syncEngine is instead a TutoredWriteRouter that turns pushLearnerProfile into a one-shot, non-retryable Cloud Function RPC (tutorEditProfile). When that RPC fails (network drop, CF timeout, or the tutor's grant expiring mid-session), the failure is discarded: updateProfile still returns its local model as if the push succeeded, so the tutor's own local mirror shows the rename/mode/avatar change permanently while the owner's actual Firestore profile was never touched \u2014 a silent, non-retryable divergence between what the tutor sees and what actually persisted, with zero error surfaced. This also makes editProfileFlow's dedicated 'on TutorWriteException catch' (profile_edit_delete_actions.dart:46) dead code: repo.updateProfile can only ever let StateError or DuplicateProfileNameException (line 134) escape to its caller, and editProfileFlow doesn't catch the latter at all, so even a same-account name collision on the Edit flow throws unhandled \u2014 unlike ProfilePickerScreen's own separate rename dialog, which does catch DuplicateProfileNameException. profile_edit_delete_actions_test.dart exercises neither path (zero references to TutorWriteException or DuplicateProfileNameException in the whole file).",
+   "recommendation": "Only swallow pushLearnerProfile failures when the underlying facade is genuinely durable/retryable (OutboxSyncWriteFacade); let a TutorWriteException-shaped failure propagate (or convert it to a typed Result the caller must handle) so editProfileFlow's existing catch becomes reachable and can tell the tutor the edit didn't save. Add a catch for DuplicateProfileNameException in editProfileFlow mirroring profile_picker_screen.dart's _showRenameDialog.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "ProfileRepositoryImpl no longer unconditionally swallows pushLearnerProfile failures when the sync facade is the tutor-routed (non-durable) path",
+    "editProfileFlow catches DuplicateProfileNameException and shows the existing profileNameTaken feedback, matching profile_picker_screen.dart's rename dialog",
+    "New regression test: a failed tutor-routed pushLearnerProfile surfaces a user-visible error from editProfileFlow (currently unreachable code path)",
+    "New regression test: updateProfile throwing DuplicateProfileNameException from the Edit dialog shows an error instead of throwing unhandled"
+   ],
+   "labels": [
+    "profiles",
+    "tutoring",
+    "sync",
+    "silent-data-loss",
+    "error-handling"
+   ]
+  }
+ }
+]

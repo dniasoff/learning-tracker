@@ -1,0 +1,82 @@
+[
+ {
+  "sourceBatch": "t1-core-theme-widgets",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Route AppErrorView/ErrorDisplay/PinEntryWidget user-facing strings through AppLocalizations instead of hardcoded English",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "AX-2 / EH-5",
+   "area": "core/widgets",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/widgets/app_error_view.dart",
+     "line": 112,
+     "quote": "label: const Text('Retry'),"
+    },
+    {
+     "file": "learning_tracker/lib/core/widgets/app_error_view.dart",
+     "line": 163,
+     "quote": "subtitle: error.message,"
+    },
+    {
+     "file": "learning_tracker/lib/core/widgets/app_error_view.dart",
+     "line": 193,
+     "quote": "title: 'Something went wrong',"
+    },
+    {
+     "file": "learning_tracker/lib/core/widgets/app_error_view.dart",
+     "line": 171,
+     "quote": "title: 'Access denied',"
+    },
+    {
+     "file": "learning_tracker/lib/core/widgets/app_error_view.dart",
+     "line": 139,
+     "quote": "child: const Text('Report this issue'),"
+    },
+    {
+     "file": "learning_tracker/lib/core/widgets/error_display.dart",
+     "line": 52,
+     "quote": "label: const Text('Retry'),"
+    },
+    {
+     "file": "learning_tracker/lib/core/widgets/pin_entry_widget.dart",
+     "line": 14,
+     "quote": "this.title = 'Enter PIN',"
+    },
+    {
+     "file": "learning_tracker/lib/core/widgets/pin_entry_widget.dart",
+     "line": 146,
+     "quote": "'Too many failed attempts',"
+    },
+    {
+     "file": "learning_tracker/lib/core/widgets/pin_entry_widget.dart",
+     "line": 154,
+     "quote": "'Try again in ${widget.lockoutRemainingMinutes} minute(s)',"
+    },
+    {
+     "file": "learning_tracker/lib/core/widgets/pin_entry_widget.dart",
+     "line": 205,
+     "quote": "TextButton(onPressed: _clearPin, child: const Text('Clear')),"
+    }
+   ],
+   "sites": 18,
+   "why": "This is a Hebrew-first RTL app (docs/hebrew-terms.md, device-locale Hebrew testing in project memory), yet these 3 core widgets never call AppLocalizations \u2014 18 literal English occurrences across the 3 files. AppErrorView is the documented canonical replacement for ad-hoc error UI and is used from 16+ screens (dashboard, learning, bulk-mark, profile-picker among them); ErrorDisplay is live in 4 progress screens; PinEntryWidget gates every parent-mode entry. Any Hebrew-locale user who goes offline, hits a permission error, or mistypes the parent PIN 3 times sees raw English text (\"Too many failed attempts\", \"Retry\", \"Something went wrong\") embedded in an otherwise-Hebrew UI. This isn't a missing-infrastructure gap: app_en.arb already has `actionRetry: \"Retry\"` (line 1122) and an ICU-ready `tutorPinLockedOut: \"Too many attempts. Locked for {minutes} minute(s).\"` (line 2765) for the exact lockout-countdown case \u2014 the existing keys are simply not called. Line 163's `subtitle: error.message` additionally pipes a raw `AppException.message` (declared as \"Human-readable description\" in app_exception.dart) straight to the UI, which is exactly what EH-5 forbids.",
+   "recommendation": "Thread AppLocalizations into AppErrorView._configFor (pass context/l10n in), replace error_display.dart's literal 'Retry' with l10n.actionRetry, and replace pin_entry_widget.dart's 4 literals with new/existing ARB keys (reuse the tutorPinLockedOut ICU pattern for the minute(s) string). Convert ValidationException to a stable code/enum resolved via ARB rather than surfacing .message directly.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "AppErrorView, ErrorDisplay, and PinEntryWidget contain zero raw Text('...') English literals \u2014 verifiable by a grep/lint (e.g. a working `no_hardcoded_domain_term`-style custom_lint or a Rule-0 grep for quoted capitalized strings in Text() calls under core/widgets).",
+    "EN/HE ARB parity check (`make arb-parity`) still passes 1421/1421 after new keys are added.",
+    "test/core/widgets/app_error_view_test.dart, error_display_test.dart, pin_entry_widget_test.dart updated to assert against resolved l10n values or widget keys, not literal English \u2014 and fail red if a literal is reintroduced.",
+    "ValidationException.message no longer reaches AppErrorView's subtitle directly; a stable code/enum is resolved via AppLocalizations instead."
+   ],
+   "labels": [
+    "i18n",
+    "hebrew",
+    "core-widgets",
+    "AX-2",
+    "EH-5"
+   ]
+  }
+ }
+]

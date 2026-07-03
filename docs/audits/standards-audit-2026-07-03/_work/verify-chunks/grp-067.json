@@ -1,0 +1,189 @@
+[
+ {
+  "sourceBatch": "t1-feat-onboarding-p1",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Stop surfacing PinService's raw ArgumentError.message as OnboardingParentPinStep's error text",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "EH-2 / EH-5",
+   "area": "features/onboarding/presentation/steps",
+   "sites": 1,
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/steps/onboarding_parent_pin_step.dart",
+     "line": 67,
+     "quote": "_pinError = e.message as String?;"
+    }
+   ],
+   "why": "The domain layer's exception message is an English literal that reaches the presentation layer verbatim and unlocalized (PinService throws ArgumentError('PIN must be exactly 4 numeric digits') at pin_service.dart:65,135,199), so a Hebrew-locale parent sees this exact English sentence when setting up a child's PIN. It is also brittle cross-layer coupling: ArgumentError.message is typed Object?, so the `as String?` cast is only safe because every current throw site happens to pass a String -- changing any one of the three pin_service.dart throw sites to ArgumentError.value(...) would turn a benign validation failure into an unhandled TypeError in this catch block.",
+   "recommendation": "Give PinService a typed error (enum or sealed class per EH-2/EH-6) instead of ArgumentError(String), and resolve the display string in the widget via AppLocalizations.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "PinService validation failure exposed as a typed value/enum, not ArgumentError with a formatted message",
+    "a test asserts the PIN-mismatch/invalid-PIN error text is resolved via AppLocalizations for both en and he locales"
+   ],
+   "labels": [
+    "error-handling",
+    "i18n",
+    "onboarding",
+    "pin"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-onboarding-p1",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Split hand-written onboarding files that exceed the 400-line AG-3 cap",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "features/onboarding (presentation + domain)",
+   "sites": 6,
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/steps/wizard_steps.dart",
+     "line": 807,
+     "quote": "807 lines total (hand-written .dart file) \u2014 2x the AG-3 cap"
+    },
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/screens/bulk_mark_screen.dart",
+     "line": 744,
+     "quote": "744 lines total (hand-written .dart file) \u2014 1.9x the AG-3 cap"
+    },
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/steps/onboarding_profile_creation_step.dart",
+     "line": 550,
+     "quote": "550 lines total (hand-written .dart file)"
+    },
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/screens/app_intro_screen.dart",
+     "line": 535,
+     "quote": "535 lines total (hand-written .dart file)"
+    },
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/screens/onboarding_screen.dart",
+     "line": 495,
+     "quote": "495 lines total (hand-written .dart file)"
+    },
+    {
+     "file": "learning_tracker/lib/features/onboarding/domain/services/bulk_prior_completion_service.dart",
+     "line": 443,
+     "quote": "443 lines total (hand-written .dart file)"
+    }
+   ],
+   "why": "wizard_steps.dart alone packs 6 distinct step widgets (choose-method, select-preset, 3 custom-builder steps) plus their state classes and 3 shared card widgets into one file, making it the single largest source of the AX-2 findings above -- a reviewer has to scroll past 800 lines to catch a missed l10n call -- and the hardest file in the batch to safely change. Each of these 6 files is also on the digest's HOTSPOT churn list, which is exactly the maintenance cost AG-3 exists to bound.",
+   "recommendation": "Split wizard_steps.dart into one file per step plus a shared-widgets file; extract onboarding_profile_creation_step.dart's pillPair/modeCard local builders into standalone widgets; extract bulk_mark_screen.dart's four _build* phase methods into separate widget classes.",
+   "effort": "L",
+   "acceptance_criteria": [
+    "a Rule-0 line-count check fails on any hand-written lib/**/*.dart over 400 lines and prints file:line-count",
+    "all 6 files reduced under 400 lines via behavior-preserving extraction; existing tests pass unmodified apart from import updates"
+   ],
+   "labels": [
+    "file-size",
+    "AG-3",
+    "hygiene",
+    "onboarding"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-onboarding-p1",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Replace inline BookmarkRepositoryImpl construction in BulkPriorCompletionService with a DI seam",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "SM-7",
+   "area": "features/onboarding/domain/services",
+   "sites": 1,
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/onboarding/domain/services/bulk_prior_completion_service.dart",
+     "line": 281,
+     "quote": "final bookmarkRepo = profileId != null\n          ? BookmarkRepositoryImpl("
+    }
+   ],
+   "why": "The constructor already receives an injected BookmarkRepository, but execute() silently ignores it whenever profileId is non-null and hand-builds a second, differently-scoped BookmarkRepositoryImpl that talks to _database directly. A test overriding bookmarkRepositoryProvider with a fake to verify bookmark-setting behavior will not observe calls made through this branch -- the fake is bypassed and the real Drift database is hit instead, which is exactly the 'can this be tested without booting Drift?' seam SM-7/Feathers asks about. The same shortcut recurs in completion_repository_impl.dart:801, so it is a repeated idiom, not a one-off.",
+   "recommendation": "Add a bookmarkRepositoryForProfileProvider(int profileId) family provider (or thread the target profileId into the injected repository) instead of constructing the Impl class by hand inside a domain service.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "a test overriding the bookmark repository provider with a fake observes the bookmark write for both the profileId!=null and profileId==null branches of execute()"
+   ],
+   "labels": [
+    "di",
+    "testability",
+    "SM-7",
+    "onboarding"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-onboarding-p1",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Log the swallowed exception in BulkMarkScreen._loadPreExistingCompletions's catch block",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "EH-3",
+   "area": "features/onboarding/presentation/screens",
+   "sites": 1,
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/screens/bulk_mark_screen.dart",
+     "line": 149,
+     "quote": "} catch (_) {\n      // Non-fatal: if pre-tick loading fails just open with unticked state."
+    }
+   ],
+   "why": "The B7 pre-tick feature (pre-checking previously-completed items when the bulk-mark screen opens) fails completely silently on any exception -- DB error, malformed hierarchy data -- with zero telemetry. If pre-ticking breaks in production (e.g. after a schema change), nobody will know; users will see every item as unticked and may re-mark (and re-earn siyum credit for) content already completed, with no log line to diagnose why.",
+   "recommendation": "Log via AppLogger.instance.warning(event: ..., exception: e, stackTrace: st) before falling through to the unticked-state fallback, matching the pattern already used in _expungeRefs's .catchError a few lines below in the same file.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "a test that forces getContentForCurriculum/getCompletionsByCurriculum to throw asserts AppLogger.instance received a warning/error call",
+    "the log-less-catch half of the Rule-0 empty-catch checker (once shipped) flags any catch block in lib/ with no AppLogger call and no rethrow"
+   ],
+   "labels": [
+    "error-handling",
+    "EH-3",
+    "observability",
+    "onboarding"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-onboarding-p1",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Await BulkMarkScreen._expungeRefs's expunge writes before invalidating dependent providers",
+   "severity": "P2",
+   "confidence": "SUSPECTED",
+   "rule": "Nygard-lens (unordered I/O)",
+   "area": "features/onboarding/presentation/screens",
+   "sites": 1,
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/screens/bulk_mark_screen.dart",
+     "line": 303,
+     "quote": "service\n          .expungePriorCompletions("
+    },
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/screens/bulk_mark_screen.dart",
+     "line": 319,
+     "quote": "ref.invalidate(dashboardCompletionPercentageProvider(widget.curriculumId));"
+    }
+   ],
+   "why": "The loop fires expungePriorCompletions (which internally does multiple awaited DB writes) without awaiting it, then immediately calls ref.invalidate on the dashboard/progress providers. Because those providers are manually invalidated rather than backed by a reactive .watch() stream, the invalidated providers can refetch before the un-awaited expunge write lands, showing the user a stale (pre-expunge) completion count right after unticking a previously-marked item. Confirming this needs a widget test with a deliberately delayed fake CompletionRepository asserting the provider's value immediately after _toggleItem completes.",
+   "recommendation": "await Future.wait(refs.map((r) => service.expungePriorCompletions(...))) before the ref.invalidate calls, or move invalidation into a .whenComplete() continuation.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "a test with an artificially delayed expunge write asserts the dashboard provider reflects the post-expunge count immediately after the awaited toggle completes, not the pre-expunge count"
+   ],
+   "labels": [
+    "race-condition",
+    "riverpod",
+    "onboarding"
+   ]
+  }
+ }
+]

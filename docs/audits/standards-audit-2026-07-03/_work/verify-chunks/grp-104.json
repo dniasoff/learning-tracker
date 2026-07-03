@@ -1,0 +1,204 @@
+[
+ {
+  "sourceBatch": "t1-feat-settings-p3",
+  "findingIndex": 10,
+  "finding": {
+   "title": "Route account_actions_sheet.dart's Sign Out / Delete Account icon glyphs through a theme token instead of a Colors.white literal",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "no_color_literal_outside_theme (custom_lint, currently broken/unenforced per novelty filter item 4)",
+   "area": "features/settings/presentation/widgets (account actions sheet)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/settings/presentation/widgets/account_actions_sheet.dart",
+     "line": 225,
+     "quote": "color: Colors.white,"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/presentation/widgets/account_actions_sheet.dart",
+     "line": 246,
+     "quote": "color: Colors.white,"
+    },
+    {
+     "file": "learning_tracker/test/features/settings/presentation/widgets/an7_destructive_icon_contrast_test.dart",
+     "line": 207,
+     "quote": "equals(Colors.white),"
+    }
+   ],
+   "sites": 2,
+   "why": "account_actions_sheet.dart's Sign Out and Delete Account icon glyphs are Colors.white literals, even though the rest of the same file consistently routes color through AppTheme.*/AppColors.*/theme.colorScheme.* (e.g. lines 128,140,152,160,178,188,204,261). an7_destructive_icon_contrast_test.dart pins this literal as the expected value rather than a themed constant, so the AN-7 contrast fix has no named, reusable 'high-contrast-on-errorContainer' token \u2014 a future theme edit (e.g. a dark-mode errorContainer swap) has no single place to update and could silently reintroduce an AN-7-class invisible-icon bug elsewhere that reuses the same pattern without the literal.",
+   "recommendation": "Add a named theme constant (e.g. an AppTheme.onErrorContainer-style token fixed to a contrasting value) and reference it at both call sites instead of the Colors.white literal; update an7_destructive_icon_contrast_test.dart to assert against that constant.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "account_actions_sheet.dart's two destructive-icon color values reference a named theme constant, not a Colors.white literal.",
+    "`dart run custom_lint` (once its analyzer-version crash is fixed) reports no no_color_literal_outside_theme violation for these two lines."
+   ],
+   "labels": [
+    "custom-lint",
+    "color-literal",
+    "design-system"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-settings-p4",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Rewrite sign_out_dialog_l10n_test.dart to exercise the real showSignOutConfirmation, not a hand-copied dialog",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "features/settings (test suite) \u2014 presentation/widgets",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/settings/presentation/widgets/sign_out_dialog_l10n_test.dart",
+     "line": 47,
+     "quote": "// Build the inner dialog widget directly (same builder used / inside showSignOutConfirmation) rather than calling the full"
+    },
+    {
+     "file": "learning_tracker/test/features/settings/presentation/widgets/sign_out_dialog_l10n_test.dart",
+     "line": 62,
+     "quote": "l10n.signOut,"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/presentation/utils/account_actions.dart",
+     "line": 103,
+     "quote": "AppLocalizations.of(context)!.signOutConfirmTitle,"
+    }
+   ],
+   "sites": 1,
+   "why": "All 4 tests in this file (verified green via `flutter test`) pump a Dialog the test author re-typed inline; the file never imports account_actions.dart, so it can never call the real showSignOutConfirmation. The copy even reads a different l10n getter for the title (l10n.signOut) than production uses (l10n.signOutConfirmTitle) \u2014 they coincide today only because both EN and HE ARB values happen to match. If a future edit to the real dialog (a HOTSPOT file, most-churned across fix waves) reintroduces a hardcoded string, breaks the reauth/sign-out flow, or diverges the title key, this suite stays green and the regression ships untested.",
+   "recommendation": "Either (a) extract the dialog's UI into a standalone widget (e.g. SignOutConfirmationDialog) that showSignOutConfirmation calls, and pump that widget directly in the test, or (b) build a full ProviderScope harness (router/registry/auth overrides) and call showSignOutConfirmation itself. Delete the inline duplicate.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "sign_out_dialog_l10n_test.dart imports and invokes the production showSignOutConfirmation (or a widget it delegates to) rather than a hand-copied Dialog.",
+    "Temporarily hardcoding an English string inside the real dialog builder makes this suite fail red; reverting makes it pass green.",
+    "Title text assertions resolve through the same AppLocalizations getter the production widget uses (signOutConfirmTitle), not a stand-in (signOut)."
+   ],
+   "labels": [
+    "testing",
+    "settings",
+    "false-coverage",
+    "l10n"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-settings-p4",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Add the showDeleteLocalAccountFlow tests settings_utils_test.dart's docstring claims already exist",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "features/settings (test suite) \u2014 presentation/utils",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/settings/settings_utils_test.dart",
+     "line": 19,
+     "quote": "//   A1. showDeleteLocalAccountFlow: non-localBorn auth state \u2192 exits immediately / //   A2. showDeleteLocalAccountFlow: localBorn \u2192 delete dialog shown"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/presentation/utils/account_actions.dart",
+     "line": 506,
+     "quote": "final authState = ref.read(authStateProvider); / if (!authState.isLocalBorn) return;"
+    }
+   ],
+   "sites": 1,
+   "why": "Running the file (`flutter test settings_utils_test.dart`) shows exactly 11 tests (S1-S11); A1/A2 don't exist. `grep -rn showDeleteLocalAccountFlow test/` across the whole repo returns zero hits outside this docstring, and account_actions_test.dart (which the comment says 'does not cover' this) also has none. showDeleteLocalAccountFlow is the irreversible local-account-deletion path (closes the Drift handle, deletes the account DB file, clears the device-registry row and session) called from 3 lib sites including the HOTSPOT account_actions.dart; it ships with zero regression coverage while a comment implies it's covered.",
+   "recommendation": "Write A1 (non-localBorn auth state returns without showing any dialog) and A2 (localBorn auth state shows the delete-confirmation dialog and, once confirmed, drives the delete-local-account path) using the same DB/registry fakes account_management_service_test.dart already has, or delete the stale docstring lines if coverage is intentionally deferred and track it as a real ticket instead.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "test/features/settings/settings_utils_test.dart (or a relocated file, see AG-5 finding) contains passing A1 and A2 tests exercising showDeleteLocalAccountFlow directly.",
+    "grep -rn 'showDeleteLocalAccountFlow' test/ matches at least one real test body, not just a comment."
+   ],
+   "labels": [
+    "testing",
+    "settings",
+    "coverage-gap",
+    "account-deletion"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-settings-p4",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Move PointConfigScreen and send_logs_service tests off the settings grab-bag files onto AG-5-mirrored paths",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-5",
+   "area": "features/settings (test suite) / features/gamification",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/settings/settings_screen_and_point_config_l1_test.dart",
+     "line": 53,
+     "quote": "import 'package:learning_tracker/features/gamification/presentation/screens/point_config_screen.dart';"
+    },
+    {
+     "file": "learning_tracker/test/features/settings/settings_utils_test.dart",
+     "line": 1,
+     "quote": "// Mixed unit + widget tests for: / //   lib/features/settings/presentation/utils/send_logs_service.dart"
+    }
+   ],
+   "sites": 2,
+   "why": "PointConfigScreen lives in lib/features/gamification/presentation/screens/, not settings, yet its only widget-level coverage sits in a settings-tree file with no gamification counterpart; a developer looking under test/features/gamification/ for PointConfigScreen tests finds nothing. Meanwhile SettingsScreen \u2014 a HOTSPOT most-churned across fix waves \u2014 now has its coverage split across 3 unrelated files (this one, presentation/screens/settings_screen_test.dart, and settings_screen_r5_regression_test.dart) with no single mirrored source of truth. settings_utils_test.dart is a literal '_utils'-named grab-bag combining send_logs_service.dart coverage with an unfulfilled account_actions.dart supplement \u2014 the '_utils.dart god-file' pattern the naming rules explicitly forbid, applied to a test file.",
+   "recommendation": "Move the PointConfigScreen tests to test/features/gamification/presentation/screens/point_config_screen_test.dart. Move/merge the SettingsScreen tests into the existing test/features/settings/presentation/screens/settings_screen_test.dart. Rename settings_utils_test.dart's send_logs_service.dart coverage to test/features/settings/presentation/utils/send_logs_service_test.dart.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "test/features/gamification/presentation/screens/point_config_screen_test.dart exists and lib/features/gamification/presentation/screens/point_config_screen.dart's tests live only there.",
+    "SettingsScreen's widget-level tests are discoverable from a single mirrored path (or a cross-reference in settings_screen_test.dart) rather than 3 unrelated top-level files.",
+    "No file under test/ is named '<feature>_utils_test.dart' without a same-named lib file to mirror."
+   ],
+   "labels": [
+    "hygiene",
+    "testing",
+    "settings",
+    "gamification",
+    "test-organization"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-settings-p4",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Split the 3 settings test files that exceed the 400-line AG-3 limit (866/1255/573 lines)",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "features/settings (test suite)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/settings/presentation/widgets/backup_sync_section_l1_test.dart",
+     "line": 1,
+     "quote": "// L1 behaviour tests for BackupSyncSection (DNI-188)."
+    },
+    {
+     "file": "learning_tracker/test/features/settings/settings_screen_and_point_config_l1_test.dart",
+     "line": 1,
+     "quote": "// L1 widget tests for SettingsScreen + PointConfigScreen"
+    },
+    {
+     "file": "learning_tracker/test/features/settings/settings_utils_test.dart",
+     "line": 1,
+     "quote": "// Mixed unit + widget tests for:"
+    }
+   ],
+   "sites": 3,
+   "why": "`wc -l` gives 866 / 1255 / 573 lines respectively \u2014 2.2x / 3.1x / 1.4x the 400-line hand-written-Dart ceiling. Files this large are slow to review end-to-end, hide unrelated concerns behind one main(), and make it easier for a reviewer to miss that a change touched an untested branch (as in the A1/A2 gap in the same file).",
+   "recommendation": "Split each file along its existing group() boundaries \u2014 e.g. backup_sync_section_l1_test.dart into a synced/syncing/pending file and a degraded/re-auth file; settings_screen_and_point_config_l1_test.dart per the AG-5 finding above; settings_utils_test.dart into send_logs_service_test.dart plus the (currently missing) account_actions supplement.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "`find test -name '*_test.dart' | xargs wc -l | awk '$1>400{print}'` no longer lists any of these 3 paths.",
+    "A committed Rule-0 checker (e.g. a line-count script wired into `make audit`) fails CI on any hand-written .dart file over 400 lines, since no such checker exists today for AG-3."
+   ],
+   "labels": [
+    "hygiene",
+    "testing",
+    "settings",
+    "file-size"
+   ]
+  }
+ }
+]

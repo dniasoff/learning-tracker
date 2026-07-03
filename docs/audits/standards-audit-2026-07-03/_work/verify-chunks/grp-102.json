@@ -1,0 +1,228 @@
+[
+ {
+  "sourceBatch": "t1-feat-settings-p2",
+  "findingIndex": 9,
+  "finding": {
+   "title": "Route UserProfileHeaderCard's 9 raw Color literals through AppColors tokens (no_color_literal_outside_theme)",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "custom_lint: no_color_literal_outside_theme",
+   "area": "features/settings/presentation/widgets",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/settings/presentation/widgets/user_profile_header_card.dart",
+     "line": 142,
+     "quote": "const Color(0xFFE65100),"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/presentation/widgets/user_profile_header_card.dart",
+     "line": 136,
+     "quote": "const Color(0xFFE8F4FD),"
+    },
+    {
+     "file": "learning_tracker/lib/core/theme/app_colors.dart",
+     "line": 188,
+     "quote": "static const Color accentBurntOrange = Color(0xFFE65100);"
+    }
+   ],
+   "sites": 9,
+   "why": "The custom_lint rule no_color_literal_outside_theme currently enforces nothing repo-wide (dart run custom_lint is broken -- baselined), but the underlying violations are still real and reportable per the audit digest. This widget already imports and uses AppColors.inkMidGrey/AppColors.surfaceE9 (lines 231, 277) for some colors, yet inlines 9 fresh Color(0x...) hex literals for the parent/tutor badge pair, the avatar ring, two shadow tints, and the cloud-off icon/text -- one of which (0xFFE65100, line 142) is byte-for-byte identical to the already-defined AppColors.accentBurntOrange (app_colors.dart:188). A future rebrand of that accent color would silently miss this usage.",
+   "recommendation": "Add named tokens to AppColors for the badge-pair and shadow-tint colors, replace all 9 literals with AppColors.* references (reusing accentBurntOrange for the 0xFFE65100 case).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "0 raw Color(0x literals remain in user_profile_header_card.dart.",
+    "no_color_literal_outside_theme passes on this file once custom_lint is repaired."
+   ],
+   "labels": [
+    "theme-tokens",
+    "custom-lint",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-settings-p3",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Replace scope_lifetime_l1_test.dart's tautological lifetimeOnly-source test with one that drives the real _markSelections call",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (tautological test asserts what the mock returns)",
+   "area": "features/settings/presentation/screens (lifetime marking)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/settings/presentation/screens/scope_lifetime_l1_test.dart",
+     "line": 1425,
+     "quote": "await stub.recordCompletionsBatch(const []);"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/presentation/screens/lifetime_marking_screen.dart",
+     "line": 592,
+     "quote": "await repo.recordCompletionsBatch(batchItems);"
+    }
+   ],
+   "sites": 1,
+   "why": "The test titled 'Completion-credit policy: recordCompletionsBatch default source is lifetimeOnly (not live)' never touches LifetimeCurriculumMarkingScreen. It builds its own _MockLearningLedgerRepository, calls `stub.recordCompletionsBatch(const [])` directly, and asserts the captured source resolves via a `?? CompletionSource.lifetimeOnly` fallback written inside the test's own thenAnswer closure \u2014 a fact about the test's mock, not about production code. The real call site (lifetime_marking_screen.dart:592) omits `source:` and relies on the repository interface's default; if a future edit added an explicit `source: CompletionSource.live` there (silently breaking the 'lifetime marks never inflate streak/points' product rule), this suite would keep passing.",
+   "recommendation": "Rewrite the test to drive LifetimeCurriculumMarkingScreen's real Save flow with a captured mock and assert on the actual invocation's arguments (or, if HierarchySelectionPanel truly can't be driven at L1 as the file's comments claim, assert against the widget's captured call rather than a standalone stub) so the test fails if _markSelections is changed to pass an explicit source override.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "The regression test fails (red) when lifetime_marking_screen.dart:592 is changed to `repo.recordCompletionsBatch(batchItems, source: CompletionSource.live)`, and passes on the current code."
+   ],
+   "labels": [
+    "TQ-8",
+    "tautological-test",
+    "product-rule"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-settings-p3",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Extract a shared pumpApp test helper instead of duplicating ProviderScope/MaterialApp scaffolding across 9 settings test files",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-3 (shared pumpApp helper convention)",
+   "area": "features/settings (test infrastructure)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/settings/presentation/screens/scope_lifetime_l1_test.dart",
+     "line": 243,
+     "quote": "Widget _buildScopeApp({"
+    },
+    {
+     "file": "learning_tracker/test/features/settings/presentation/screens/scope_lifetime_l1_test.dart",
+     "line": 288,
+     "quote": "Widget _buildLifetimeApp({"
+    },
+    {
+     "file": "learning_tracker/test/features/settings/presentation/screens/settings_screen_r5_regression_test.dart",
+     "line": 180,
+     "quote": "Widget _buildSettings({"
+    },
+    {
+     "file": "learning_tracker/test/features/settings/presentation/screens/settings_screen_test.dart",
+     "line": 74,
+     "quote": "Widget createTestWidget({"
+    },
+    {
+     "file": "learning_tracker/test/features/settings/presentation/screens/st3_settings_switch_a11y_test.dart",
+     "line": 54,
+     "quote": "Widget _buildSettings({"
+    },
+    {
+     "file": "learning_tracker/test/features/settings/presentation/screens/upgrade_to_cloud_screen_l1_test.dart",
+     "line": 103,
+     "quote": "Widget _buildApp({"
+    },
+    {
+     "file": "learning_tracker/test/features/settings/presentation/utils/account_actions_test.dart",
+     "line": 169,
+     "quote": "Widget _buildApp({"
+    },
+    {
+     "file": "learning_tracker/test/features/settings/presentation/widgets/account_actions_sheet_nav_test.dart",
+     "line": 123,
+     "quote": "Widget _buildApp({"
+    },
+    {
+     "file": "learning_tracker/test/features/settings/presentation/widgets/an7_destructive_icon_contrast_test.dart",
+     "line": 101,
+     "quote": "Widget _buildApp({"
+    },
+    {
+     "file": "learning_tracker/test/features/settings/presentation/widgets/backup_sync_error_l10n_test.dart",
+     "line": 64,
+     "quote": "Widget _buildHarness({required SyncStatus syncStatus}) {"
+    }
+   ],
+   "sites": 9,
+   "why": "9 of the 11 files in this batch hand-roll their own ProviderScope+MaterialApp+localizationsDelegates+supportedLocales widget factory (scope_lifetime_l1_test.dart alone defines 3). No test/helpers/pump_app.dart exists anywhere in the repo despite TQ-3 naming it as the reviewed convention \u2014 the only genuinely shared harness in this batch is the unrelated overflow_harness.dart. Each copy can drift independently: a future required override has to be hand-added to every one of these ~10 near-identical blocks instead of once, and a missing delegate/override in one copy silently produces different behavior (e.g. RTL/l10n) than its siblings.",
+   "recommendation": "Introduce test/helpers/pump_app.dart exporting a pumpApp/buildTestApp helper that wraps ProviderScope(overrides) + MaterialApp(locale, delegates, supportedLocales, home), and migrate these 9 local builders to call it, keeping only the per-screen `home` widget and override list as parameters.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "test/helpers/pump_app.dart exists and is imported by the 9 files listed in evidence in place of their local _buildApp/_buildSettings/_buildHarness/createTestWidget/_buildScopeApp functions."
+   ],
+   "labels": [
+    "TQ-3",
+    "duplication",
+    "test-infrastructure"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-settings-p3",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Tighten st3_settings_switch_a11y_test.dart to assert the Hebrew-Terms Switch specifically, not any labelled Switch",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (assertion weaker than what the source can do wrong)",
+   "area": "features/settings/presentation/screens (accessibility regression)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/settings/presentation/screens/st3_settings_switch_a11y_test.dart",
+     "line": 135,
+     "quote": "if (semanticsNode.label.isNotEmpty) {\n          foundLabelledSwitch = true;"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/presentation/screens/settings_screen.dart",
+     "line": 401,
+     "quote": "child: Switch(\n          value: useHebrew,"
+    }
+   ],
+   "sites": 1,
+   "why": "S1's assertion loops every `Switch` widget found in SettingsScreen and passes as soon as ANY of them has a non-empty semantics label \u2014 it never isolates the Hebrew-Terms tile's own Switch. Today settings_screen.dart has exactly one bare `Switch(` (confirmed by grep), so the test is currently equivalent to the intended check, but that equivalence is accidental, not encoded. A second labelled Switch added anywhere else on the (816-line, HOTSPOT) SettingsScreen in a future change would make this ST-3 regression guard keep passing even if `_HebrewTermsTile`'s own `Semantics(label: ...)` wrapper were removed or broken.",
+   "recommendation": "Locate the Switch that is a descendant of the PreferenceListTile carrying l10n.hebrewTermsPreference (or add a Key to _HebrewTermsTile's Switch) and assert that specific Switch's semantics label contains/equals l10n.hebrewTermsPreference, not 'any switch in the screen has a label'.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "The test fails if a second, unrelated, labelled Switch is added to SettingsScreen while _HebrewTermsTile's Semantics wrapper is removed."
+   ],
+   "labels": [
+    "TQ-8",
+    "accessibility",
+    "weak-assertion"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-settings-p3",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Replace upgrade_to_cloud_cancel_collision_test.dart's synthetic phase simulator with a test that drives the real _CollisionBlock",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (regression test must fail without the fix, red-first)",
+   "area": "features/settings/presentation/screens (upgrade-to-cloud)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/settings/presentation/screens/upgrade_to_cloud_cancel_collision_test.dart",
+     "line": 21,
+     "quote": "// Because we cannot instantiate private sealed classes from outside the\n// library, we test via a custom widget that exposes the phase transition"
+    },
+    {
+     "file": "learning_tracker/test/features/settings/presentation/screens/upgrade_to_cloud_cancel_collision_test.dart",
+     "line": 119,
+     "quote": "'FIXED behavior (AN-5): cancel returns to form phase (form-visible appears)',"
+    },
+    {
+     "file": "learning_tracker/lib/features/settings/presentation/screens/upgrade_to_cloud_screen.dart",
+     "line": 544,
+     "quote": "onCancel: () {\n                        setState(() => _phase = const _PhaseForm());"
+    }
+   ],
+   "sites": 1,
+   "why": "Both the 'BUGGY' and 'FIXED' tests pump a hand-written `_CollisionCancelSimulator` whose behaviour is selected entirely by a `buggyBehavior` flag the test itself sets \u2014 neither test imports, renders, or interacts with `upgrade_to_cloud_screen.dart`'s real `_CollisionBlock`/`_UpgradeToCloudScreenState`. Reverting the actual AN-5 fix at upgrade_to_cloud_screen.dart:544-546 (e.g. changing `_PhaseForm()` back to `_PhaseCollision()`) would not fail this suite \u2014 it tests a parallel reimplementation, not the fixed code, so it provides zero regression protection despite its name and file header claiming otherwise. The sibling file upgrade_to_cloud_screen_l1_test.dart honestly `skip: true`s the same scenario with a documented Isolate limitation instead of faking a pass.",
+   "recommendation": "Add a `@visibleForTesting` seam (e.g. an injectable PasswordHasher/verification hook that resolves without Isolate.spawn) so the real _CollisionBlock can be reached and its onCancel exercised directly in a widget test; until that seam exists, rename this file/tests to make clear they validate a simulated model only, and don't count them as AN-5 regression coverage in the suite inventory.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "A test exists that pumps the real UpgradeToCloudScreen (or _CollisionBlock via an exposed seam), and reverting upgrade_to_cloud_screen.dart:544-546 to the pre-AN-5 behavior makes that test fail."
+   ],
+   "labels": [
+    "TQ-8",
+    "fake-test",
+    "regression-coverage"
+   ]
+  }
+ }
+]

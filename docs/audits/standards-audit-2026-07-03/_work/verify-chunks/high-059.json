@@ -1,0 +1,54 @@
+[
+ {
+  "sourceBatch": "t1-feat-onboarding-p1",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Check ref.mounted/State.mounted before touching state after await in onboarding async flows",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "SM-4",
+   "area": "features/onboarding/presentation (controller, screens, steps)",
+   "sites": 5,
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/providers/onboarding_controller.dart",
+     "line": 69,
+     "quote": "await current.save(ref);\n    if (!state.hasNext) return null;"
+    },
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/screens/bulk_mark_screen.dart",
+     "line": 358,
+     "quote": "setState(() {\n      _resolvedItems = resolved;"
+    },
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/screens/bulk_mark_screen.dart",
+     "line": 381,
+     "quote": "final result = await service.execute(...);\n\n      setState(() {"
+    },
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/screens/bulk_mark_screen.dart",
+     "line": 406,
+     "quote": "} catch (e) {\n      setState(() {\n        _error = e.toString();"
+    },
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/steps/onboarding_profile_creation_step.dart",
+     "line": 133,
+     "quote": "ref.read(selectedProfileIdProvider.notifier).select(profile.id);\n    await PendingLocalSignupStore.finalizeAfterFirstProfile(ref);"
+    }
+   ],
+   "why": "Riverpod 3 throws UnmountedRefException when a disposed Notifier's ref/state is touched, and Flutter throws on setState() after dispose(). OnboardingController is @riverpod (autoDispose); if the wizard screen holding it is popped while current.save(ref) (a DB-touching step save) is in flight, advance() resumes and unconditionally reads/writes state, crashing. bulk_mark_screen.dart demonstrably knows the correct pattern -- _loadPreExistingCompletions checks mounted twice -- yet _proceedToConfirmation and both branches of _executeBulkMark omit it after their own awaits, so backgrounding the app or hitting back during a multi-hundred-item bulk-mark write reproduces the same crash class.",
+   "recommendation": "Add `if (!ref.mounted) return;` / `if (!mounted) return;` immediately after every await that is followed by a state=/setState/provider touch, matching the pattern already used correctly elsewhere in the same files.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "a notifier/widget test that disposes the provider/widget mid-await (pump then pop before the fake repository's Future completes) passes without throwing",
+    "a grep-based Rule-0 checker (or the fixed custom_lint) flags `state =`/`setState(` appearing after an `await` in a Notifier/State method without an intervening mounted guard"
+   ],
+   "labels": [
+    "riverpod",
+    "lifecycle",
+    "crash",
+    "onboarding"
+   ]
+  }
+ }
+]

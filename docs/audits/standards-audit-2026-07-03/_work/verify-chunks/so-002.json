@@ -1,0 +1,214 @@
+[
+ {
+  "sourceBatch": "t1-core-analytics-logging",
+  "chunk": "grp-003",
+  "finding": {
+   "title": "Remove or explicitly justify AppLogger.setupFlutterErrorHandlers \u2014 dead code duplicating crashlytics_bootstrap.dart's live handlers",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "dead-code (Everything sweep) / Fowler duplication",
+   "area": "core/logging",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/logging/logger.dart",
+     "line": 85,
+     "quote": "static void setupFlutterErrorHandlers() {"
+    },
+    {
+     "file": "learning_tracker/lib/app/bootstrap/crashlytics_bootstrap.dart",
+     "line": 26,
+     "quote": "FlutterError.onError = (FlutterErrorDetails details) {"
+    },
+    {
+     "file": "learning_tracker/lib/app/bootstrap/bootstrap.dart",
+     "line": 40,
+     "quote": "crashlytics = bootstrapCrashlyticsHandlers("
+    },
+    {
+     "file": "learning_tracker/test/core/logging/logger_test.dart",
+     "line": 54,
+     "quote": "AppLogger.setupFlutterErrorHandlers();"
+    }
+   ],
+   "sites": 1,
+   "why": "Grepping every .dart file in the repo shows AppLogger.setupFlutterErrorHandlers is referenced nowhere except its own definition and its 3 unit tests in logger_test.dart. Production's bootstrap chain (bootstrap.dart:40) installs FlutterError.onError/PlatformDispatcher.onError exclusively via bootstrapCrashlyticsHandlers in app/bootstrap/crashlytics_bootstrap.dart \u2014 a completely independent implementation of the same responsibility that also forwards to Crashlytics (setupFlutterErrorHandlers only forwards to Talker). A maintainer reading logger_test.dart's 3 green tests would reasonably believe this is the production error-handling path; if some future refactor swaps main.dart's wiring back to this method for 'simplicity', fatal-crash reporting silently stops reaching Crashlytics while Talker logs keep looking healthy, and the existing green test suite would not catch it since it only ever exercises the unused copy.",
+   "recommendation": "Delete AppLogger.setupFlutterErrorHandlers and its 3 tests, or \u2014 if it's meant as a documented fallback for contexts without Crashlytics wired \u2014 rename it and add a comment cross-referencing crashlytics_bootstrap.dart so the duplication is intentional and visible rather than accidental drift.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep -rn 'setupFlutterErrorHandlers' lib/ returns only its own definition, or a caller with a comment explaining the split from crashlytics_bootstrap.dart",
+    "No test exercises a code path unreachable from main.dart's actual bootstrap chain"
+   ],
+   "labels": [
+    "dead-code",
+    "hygiene",
+    "P2",
+    "logging"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-sync-p1",
+  "chunk": "grp-106",
+  "finding": {
+   "title": "Six leftover migration re-export shims in features/sync/ are unused by production code and violate Rule 2's 'only providers.dart barrel' clause",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Rule-2",
+   "area": "features/sync (all layers)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/sync/domain/merge_rules.dart",
+     "line": 2,
+     "quote": "export 'package:learning_tracker/core/sync/merge/merge_rules.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/features/sync/domain/profile_scoped_preference_keys.dart",
+     "line": 2,
+     "quote": "export 'package:learning_tracker/core/preferences/profile_scoped_preference_keys.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/features/sync/domain/services/device_restore_service.dart",
+     "line": 2,
+     "quote": "export 'package:learning_tracker/app/restore/device_restore_service.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/features/sync/presentation/providers/restore_providers.dart",
+     "line": 2,
+     "quote": "export 'package:learning_tracker/app/restore/restore_providers.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/features/sync/presentation/screens/device_restore_screen.dart",
+     "line": 2,
+     "quote": "export 'package:learning_tracker/app/restore/device_restore_screen.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/features/sync/sync.dart",
+     "line": 8,
+     "quote": "library sync;"
+    }
+   ],
+   "sites": 6,
+   "why": "Rule 2 states the providers.dart barrel is 'the only sanctioned re-export file. Do not add other barrel/re-export files.' These six are bare `export '...';` shims (or, for sync.dart, an empty library-only file with zero exports) left over from moves labelled W1.4/W1.7/W1.8 in their own comments. Grepping every .dart file in the repo: restore_providers.dart, device_restore_screen.dart, and sync.dart have zero importers anywhere, even in tests. merge_rules.dart, profile_scoped_preference_keys.dart, and device_restore_service.dart are imported only by test files, never by lib/ production code, which already uses the canonical core/app paths directly. sync.dart's comment additionally claims 'the legacy sync stack is being deleted in Wave 2... After deletion, sync infrastructure lives in lib/core/sync/', which is stale -- OutboxSyncWriteFacade and LocalDataUploadService are the live, current replacement and were never meant to be deleted. A developer trusting this comment or grepping 'where is merge_rules defined' gets actively misleading signal.",
+   "recommendation": "Delete all six files; repoint the test files that still import the deprecated paths (merge_rules_test.dart, profile_scoped_preference_keys_test.dart, device_restore_service's story-acceptance tests) at their canonical locations, moving them to the AG-5-mirrored test path in the process.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep confirms zero remaining files under lib/features/sync/ that are bare export re-directs to core/ or app/.",
+    "merge_rules_test.dart and profile_scoped_preference_keys_test.dart import from lib/core/sync/merge/merge_rules.dart and lib/core/preferences/profile_scoped_preference_keys.dart respectively, at the AG-5-mirrored test path."
+   ],
+   "labels": [
+    "Rule-2",
+    "dead-code",
+    "AG-5",
+    "migration-debris"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-sacred_time",
+  "chunk": "grp-089",
+  "finding": {
+   "title": "Add the required `// keepAlive:` justification comment to Sacred Time's 6 keepAlive providers",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "SM-6",
+   "area": "state-management/providers",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/sacred_time/presentation/providers/cities_provider.dart",
+     "line": 7,
+     "quote": "@Riverpod(keepAlive: true)\nCitiesRepository citiesRepository(Ref ref) {"
+    },
+    {
+     "file": "learning_tracker/lib/features/sacred_time/presentation/providers/sacred_location_provider.dart",
+     "line": 12,
+     "quote": "@Riverpod(keepAlive: true)\nLocationService locationService(Ref ref) => const LocationService();"
+    },
+    {
+     "file": "learning_tracker/lib/features/sacred_time/presentation/providers/sacred_windows_provider.dart",
+     "line": 13,
+     "quote": "@Riverpod(keepAlive: true)\nList<SacredWindow> sacredWindows(Ref ref) {"
+    }
+   ],
+   "sites": 6,
+   "why": "coding-standards.md SM-6 requires every keepAlive: true to carry an inline // keepAlive: comment; these 6 declarations (cities_provider.dart:7, sacred_location_provider.dart:12/17/123, sacred_windows_provider.dart:13/33) have nearby doc comments explaining rationale but none use the required tag, so a future audit grep for the literal marker (as SM-6's own Enforce plan proposes) would still flag all 6 as unjustified even though they are reasoned. This mirrors a repo-wide gap (only ~6/86 keepAlive sites in lib/ use the tag), not something unique to this feature.",
+   "recommendation": "Prefix each keepAlive declaration's existing rationale with the literal `// keepAlive: ...` tag so the future audit grep can find it.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "All 6 keepAlive providers in this batch carry a // keepAlive:-prefixed comment",
+    "A grep for 'keepAlive: true' paired with a check for the tag on the preceding line finds no gaps in this feature"
+   ],
+   "labels": [
+    "hygiene",
+    "riverpod",
+    "documentation"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-tracks-p4",
+  "chunk": "grp-120",
+  "finding": {
+   "title": "Override localDayClockProvider in track_detail_screen_test.dart to remove its wall-clock dependency",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6",
+   "area": "features/tracks/setup/presentation/screens (track_detail_screen_test.dart)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/tracks/setup/presentation/screens/track_detail_screen_test.dart",
+     "line": 94,
+     "quote": "userDatabaseProvider.overrideWith((ref) => db),\n    // Goal writes go through goalRepositoryProvider,"
+    },
+    {
+     "file": "learning_tracker/test/features/tracks/setup/presentation/screens/edit_track_and_detail_l1_test.dart",
+     "line": 301,
+     "quote": "localDayClockProvider.overrideWithValue(\n        FakeLocalDayClock(DateTime.utc(2026, 5, 30)),"
+    }
+   ],
+   "sites": 1,
+   "why": "TrackDetailScreen reads localDayClockProvider via _trackPaceCalcProvider (default = SystemLocalDayClock, real DateTime.now()). track_detail_screen_test.dart's _overridesFor list never overrides it, while every sibling file that mounts the same screen in this batch (track_detail_goal_stale_test.dart, edit_track_and_detail_l1_test.dart) does, with FakeLocalDayClock pinned to 2026-05-30. No current assertion in track_detail_screen_test.dart depends on paceCalc's output, so this isn't flaky today, but it's one inconsistent override away from date-dependent flakiness the moment someone adds an assertion that touches TrackInfoCard's pace-derived text (days-remaining, projected finish), and it's inconsistent with the established pattern in the same directory.",
+   "recommendation": "Add localDayClockProvider.overrideWithValue(FakeLocalDayClock(DateTime.utc(2026, 5, 30))) (or another fixed date) to _overridesFor, matching the sibling files.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "track_detail_screen_test.dart's _overridesFor includes a localDayClockProvider override with a fixed date"
+   ],
+   "labels": [
+    "hermeticity",
+    "wall-clock",
+    "tracks-setup"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-profiles-p2",
+  "chunk": "grp-077",
+  "finding": {
+   "title": "Migrate switcherSheetPinGuardRequiredProvider to @riverpod codegen and move it to presentation/providers/",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "SM-1 / placement convention",
+   "area": "features/profiles/presentation/widgets/profile_switcher_sheet.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/widgets/profile_switcher_sheet.dart",
+     "line": 28,
+     "quote": "final switcherSheetPinGuardRequiredProvider = FutureProvider<bool>((ref) async {"
+    }
+   ],
+   "sites": 1,
+   "why": "This provider was added fresh in commit 2c346a77 ('AN-2 gate escalating actions... wave-B'), not part of the 121-usage legacy backlog the standard exempts \u2014 SM-1 explicitly says to count new additions. Every other provider in the same feature already uses @riverpod codegen (profile_providers.dart:129,137,147; active_profile_provider.dart:42). Because it's a manually-declared, non-family FutureProvider it is never autoDispose: once any widget reads it, it and its watch of profileListStreamProvider/activeProfileIdProvider stay alive for the app's remaining lifetime, not just while the switcher sheet is open. The doc comment's stated reason for going manual ('so tests can inject a known result without touching FlutterSecureStorage') doesn't require it \u2014 codegen providers are equally overridable in tests, as the neighboring codegen providers demonstrate.",
+   "recommendation": "Rewrite as an @riverpod FutureProvider<bool> under presentation/providers/, keeping the same override-based test seam.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "switcherSheetPinGuardRequiredProvider is annotated @riverpod and lives in lib/features/profiles/presentation/providers/",
+    "an2_switcher_pin_guard_test.dart's existing overrides continue to pass unmodified",
+    "No manually-declared top-level Provider/FutureProvider remains under presentation/widgets/ in this feature"
+   ],
+   "labels": [
+    "riverpod",
+    "sm-1",
+    "placement"
+   ]
+  }
+ }
+]

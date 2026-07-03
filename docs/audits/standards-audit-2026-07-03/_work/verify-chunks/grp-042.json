@@ -1,0 +1,217 @@
+[
+ {
+  "sourceBatch": "t1-feat-auth",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Move test/features/auth/** to mirror lib/features/account/** (orphaned test directory)",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-5 (test mirrors lib 1:1)",
+   "area": "test/features/auth/**",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/auth/domain/models/auth_state_test.dart",
+     "line": 8,
+     "quote": "import 'package:learning_tracker/features/account/domain/models/auth_state.dart';"
+    },
+    {
+     "file": "learning_tracker/test/features/auth/presentation/screens/sign_in_screen_test.dart",
+     "line": 14,
+     "quote": "import 'package:learning_tracker/features/account/presentation/screens/sign_in_screen.dart';"
+    },
+    {
+     "file": "learning_tracker/test/features/auth/domain/services/local_auth_service_test.dart",
+     "line": 4,
+     "quote": "import 'package:learning_tracker/features/account/domain/services/local_auth_service.dart';"
+    },
+    {
+     "file": "learning_tracker/test/features/auth/data/repositories/auth_repository_impl_test.dart",
+     "line": 7,
+     "quote": "import 'package:learning_tracker/features/account/data/repositories/auth_repository_impl.dart';"
+    }
+   ],
+   "sites": 8,
+   "why": "There is no lib/features/auth/ anywhere in the repo (confirmed via `find lib/features -maxdepth 1`) \u2014 every subject under test lives in lib/features/account/** or lib/core/auth/**. A contributor grepping test/features/account/ for existing auth coverage (the layout every other feature follows) won't find these 8 files and has no signal they exist; that is exactly how the pending_local_signup.dart suite ended up duplicated twice inside this same orphaned directory instead of being caught in review (see companion finding).",
+   "recommendation": "git mv the whole tree to test/features/account/**, one-to-one with the lib path each file's own imports already point at (auth_state_test.dart -> domain/models/, sign_in_screen_test.dart -> presentation/screens/, local_auth_service_test.dart/auth_exceptions_test.dart/pending_local_*_test.dart -> domain/services/), drop the now-redundant .gitkeep, and check for any CI/coverage globs pinned to the old path.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "test/features/auth/ no longer exists; each moved file lives at the path mirroring its subject's lib/ location",
+    "dart test (or the relevant make test-epic-* targets) is green after the move with no import breakage",
+    "the [Pending] AG-5 mirroring checker, once it lands, passes for this slice"
+   ],
+   "labels": [
+    "testing",
+    "AG-5",
+    "hygiene",
+    "auth"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-auth",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Delete or merge the duplicate pending_local_signup test suites",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler duplication / test-suite hygiene",
+   "area": "test/features/auth/domain/services/",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/auth/domain/services/pending_local_registration_test.dart",
+     "line": 38,
+     "quote": "test('returns null when accountId is missing', () {"
+    },
+    {
+     "file": "learning_tracker/test/features/auth/domain/services/pending_local_signup_test.dart",
+     "line": 60,
+     "quote": "test('tryParse returns null when required fields are missing', () {"
+    },
+    {
+     "file": "learning_tracker/test/features/auth/domain/services/pending_local_registration_test.dart",
+     "line": 167,
+     "quote": "test('tryReserveEmail fails when email already reserved', () async {"
+    },
+    {
+     "file": "learning_tracker/test/features/auth/domain/services/pending_local_signup_test.dart",
+     "line": 201,
+     "quote": "test('duplicate reservation fails', () async {"
+    }
+   ],
+   "sites": 2,
+   "why": "Both files import the same lib/features/account/domain/services/pending_local_signup.dart and independently re-derive the same test matrix \u2014 tryParse null/missing-field/malformed-JSON handling, toJson round-trip, and every tryReserveEmail/releaseEmail case-insensitivity/multi-email scenario \u2014 219 + 317 = 536 lines maintaining one behavior twice, with neither file referencing the other. Any future change to PendingLocalRegistration's JSON shape or the reservation semantics has to be applied in both files or one silently goes stale.",
+   "recommendation": "Keep pending_local_signup_test.dart (correctly named after its subject file) and delete pending_local_registration_test.dart; a line-by-line comparison shows no assertion in the latter that the former lacks.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Only one test file covers PendingLocalRegistration/PendingLocalSignupStore",
+    "No distinct test case present in the deleted file is missing from the survivor",
+    "dart test on the surviving file is green"
+   ],
+   "labels": [
+    "testing",
+    "duplication",
+    "auth"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-auth",
+  "findingIndex": 2,
+  "finding": {
+   "title": "sign_in_screen_test.dart never exercises the registry-mode / forgot-password logic on this churn-hotspot screen",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (regression coverage) / AREA NOTE test-pins-behavior",
+   "area": "test/features/auth/presentation/screens/sign_in_screen_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/auth/presentation/screens/sign_in_screen_test.dart",
+     "line": 18,
+     "quote": "group('SignInScreen', () {\n    setUp(debugResetLastKnownOnline);"
+    },
+    {
+     "file": "learning_tracker/lib/features/account/presentation/screens/sign_in_screen.dart",
+     "line": 153,
+     "quote": "SignInModeHint _effectiveSignInMode({required bool isOnline}) {"
+    }
+   ],
+   "sites": 1,
+   "why": "Every test in this file only varies the connectivity stream (true/false/empty) and reads static widget output; grepping the whole test/ tree for RegistryMatchKind returns zero hits anywhere in the repo, so the debounced device-registry lookup (Epic 21.7: _onEmailChanged/_effectiveSignInMode/_registrySubtitle) that decides which mode card and hint text a returning user sees is completely unverified. The file also never calls tester.enterText or tester.tap, so the documented SI-WP-01 regression (error snackbar silently dropped because the show-error callback was wired inside a postFrameCallback) and the AN-11 forgot-password flow (deliberately shows the same snackbar on success and failure to avoid email enumeration) have no regression test \u2014 the next edit to this hotspot can reintroduce either bug with nothing to catch it.",
+   "recommendation": "Add widget tests that enter an email to trigger the 300ms registry debounce and assert the rendered mode card/hint for at least localBorn, cloudBorn, and notOnDevice x online/offline; add an interaction test that submits sign-in and asserts the error snackbar appears (locks in SI-WP-01); add a forgot-password test asserting identical snackbar copy on a resolving vs. throwing authRepositoryProvider override.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "New tests fail against a reverted _effectiveSignInMode (or a reverted SI-WP-01 initState fix) and pass against current code",
+    "RegistryMatchKind (or its rendered effect) is asserted by at least one test in this file",
+    "A forgot-password test exists asserting identical success/failure snackbar text"
+   ],
+   "labels": [
+    "testing",
+    "coverage-gap",
+    "hotspot",
+    "auth"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-auth",
+  "findingIndex": 3,
+  "finding": {
+   "title": "auth_state_test.dart triplicates the same AuthState assertions across parallel groups",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler duplication / test hygiene",
+   "area": "test/features/auth/domain/models/auth_state_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/auth/domain/models/auth_state_test.dart",
+     "line": 95,
+     "quote": "test('AuthState.initializing sets sessionStatus=initializing', () {"
+    },
+    {
+     "file": "learning_tracker/test/features/auth/domain/models/auth_state_test.dart",
+     "line": 202,
+     "quote": "test('has sessionStatus=initializing and null user/tier', () {"
+    },
+    {
+     "file": "learning_tracker/test/features/auth/domain/models/auth_state_test.dart",
+     "line": 149,
+     "quote": "test('displayIdentifier returns display name when present', () {"
+    },
+    {
+     "file": "learning_tracker/test/features/auth/domain/models/auth_state_test.dart",
+     "line": 229,
+     "quote": "test('returns displayName when non-empty', () {"
+    }
+   ],
+   "sites": 1,
+   "why": "The 'AuthState' group (lines 88-199) and the three later groups 'AuthState.initializing' (201-210), 'AuthState.displayIdentifier' (222-254) and 'AuthState.copyWith' (256-306) each re-assert behavior the earlier group already covers, with only cosmetic renaming \u2014 307 lines cover roughly what ~180 would. Every future field added to AuthState needs the same edit made twice to stay accurate.",
+   "recommendation": "Delete the three later duplicate groups (or the earlier inline assertions) and keep one canonical group per behavior.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "No two groups in the file assert the same AuthState behavior",
+    "dart test on the trimmed file is green with the same set of distinct behaviors covered"
+   ],
+   "labels": [
+    "testing",
+    "duplication",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-auth",
+  "findingIndex": 4,
+  "finding": {
+   "title": "auth_integration_test.dart is fully subsumed by auth_repository_impl_test.dart",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler duplication / TQ-1 (pyramid-shaped suite)",
+   "area": "test/features/auth/auth_integration_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/auth/auth_integration_test.dart",
+     "line": 11,
+     "quote": "class MockFirebaseAuthGateway extends Mock implements FirebaseAuthGateway {}"
+    },
+    {
+     "file": "learning_tracker/test/features/auth/data/repositories/auth_repository_impl_test.dart",
+     "line": 15,
+     "quote": "class MockFirebaseAuthGateway extends Mock implements FirebaseAuthGateway {}"
+    }
+   ],
+   "sites": 1,
+   "why": "auth_integration_test.dart's single 'end-to-end' test (sign in with email then sign out, asserting the mapped AppUser stream) re-derives, near line-for-line, the same mock setup as auth_repository_impl_test.dart and re-covers ground already split across that file's signInWithEmail/signOut/onAuthStateChanged groups. Both files mock the exact same two gateways with no other collaborator wired in, so this isn't really an integration test \u2014 it's a second, smaller unit-test file for the same class, adding no scenario the 536-line sibling doesn't already cover.",
+   "recommendation": "Delete auth_integration_test.dart; if the multi-step subscribe-then-signIn-then-signOut stream sequencing is considered a distinct scenario worth keeping, fold it into auth_repository_impl_test.dart's onAuthStateChanged group instead of maintaining a separate file.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "auth_integration_test.dart removed (or its unique scenario merged) with no loss of asserted behavior",
+    "dart test green after removal"
+   ],
+   "labels": [
+    "testing",
+    "duplication",
+    "hygiene"
+   ]
+  }
+ }
+]

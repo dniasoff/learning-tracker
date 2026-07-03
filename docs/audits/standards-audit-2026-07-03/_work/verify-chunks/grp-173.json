@@ -1,0 +1,166 @@
+[
+ {
+  "sourceBatch": "t4-docs-triage-p5",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Archive or rewrite epic-19 sync stories 19-8/19-9 \u2014 both still target a SyncEngine/syncEngineProvider architecture that has been deleted",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Tier-4 triage protocol (presents-as-current vs point-in-time); related AG-8/AG-9",
+   "area": "docs/stories/implementation (epic 19 sync)",
+   "evidence": [
+    {
+     "file": "docs/stories/implementation/19-8-syncengine-conditional-activation.md",
+     "line": 3,
+     "quote": "Status: ready-for-dev"
+    },
+    {
+     "file": "docs/stories/implementation/19-8-syncengine-conditional-activation.md",
+     "line": 126,
+     "quote": "final syncEngineProvider = Provider<SyncEngine?>((ref) {"
+    },
+    {
+     "file": "docs/stories/implementation/19-8-syncengine-conditional-activation.md",
+     "line": 637,
+     "quote": "SUPERSEDED-ARCHITECTURE NOTE: This story's activation rule (\"has Firebase account \u2192 activate\") is from the March model."
+    },
+    {
+     "file": "docs/stories/implementation/19-9-multi-device-sync.md",
+     "line": 3,
+     "quote": "Status: ready-for-dev"
+    },
+    {
+     "file": "docs/stories/implementation/19-9-multi-device-sync.md",
+     "line": 82,
+     "quote": "Review `_mergeCompletions()` in `sync_engine.dart`:"
+    },
+    {
+     "file": "learning_tracker/lib/features/sync/presentation/providers/sync_providers.dart",
+     "line": 81,
+     "quote": "W2.35: [syncEngineProvider] deleted \u2014 this is the sole write-path provider."
+    }
+   ],
+   "sites": 2,
+   "why": "These are the only two files in the batch still marked ready-for-dev, i.e. presented as live, pickable backlog rather than history. Both prescribe editing lib/features/sync/data/sync_engine.dart, making syncEngineProvider nullable, and adding SyncEngine.pushAllLocalData()/OfflineQueue.enqueue* calls. None of that exists anymore: SyncEngine, syncEngineProvider, and sync_engine.dart itself were deleted during the SyncOrchestrator+outbox rewrite (proven by the DNI-333/334/335 decomposition stories in this same batch and by the 'syncEngineProvider deleted' comment in sync_providers.dart) \u2014 the only remaining trace is a `.skip`-suffixed dead test file (test/features/sync/data/sync_engine_test.dart.skip). This repo runs an autonomous batch/worktree-per-story workflow (evidenced by the DNI-378..383 dev-agent records in this batch); a developer or agent that pulls '19-8' or '19-9' off the ready-for-dev backlog would burn a full worktree cycle trying to resurrect a provider that was deliberately deleted, risking a regression to the pre-outbox sync design. 19-8's own AC-3 goal (SyncStatus.localOnly) is already shipped via SyncOrchestrator, so the story is redundant as well as stale \u2014 only 19-8 carries a partial self-aware 'SUPERSEDED-ARCHITECTURE' note (and even that leaves Status at ready-for-dev); 19-9 carries no such warning at all.",
+   "recommendation": "Move 19-8 and 19-9 to docs/_archive/superseded/ (the repo already uses this location, e.g. docs/_archive/superseded/epic-15-stories/15.11-profile-scoped-providers-sync.md) with a pointer to what actually replaced them (DNI-333/334/335 SyncEngine decomp, DNI-342 tier threading, the SyncOrchestrator/outbox architecture) \u2014 or rewrite their ACs against SyncOrchestrator if the underlying user-facing goal is still open. Add a cheap Rule-0 doc-lint: for every docs/stories/implementation/*.md with Status in {ready-for-dev, backlog, todo}, grep the class/provider names listed under its 'File:' targets against lib/ and fail the audit if a named symbol doesn't resolve \u2014 this would have caught the drift immediately.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "19-8 and 19-9 no longer sit at Status: ready-for-dev while referencing symbols (SyncEngine, syncEngineProvider) absent from lib/ \u2014 either archived/superseded-tagged or rewritten against SyncOrchestrator.",
+    "A grep-based checker (make audit target or tool/ script) flags any ready-for-dev/backlog story whose 'File:' targets don't exist in lib/, preventing silent recurrence."
+   ],
+   "labels": [
+    "docs",
+    "stale-story",
+    "sync-architecture",
+    "tier4-triage"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t4-docs-triage-p5",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Backfill or formally waive verification evidence on epic-21 'done' stories \u2014 16 files ship an all-unchecked task list and an empty Dev Agent Record",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-9 (non-trivial changes carry verification evidence)",
+   "area": "docs/stories/implementation (epic 21 multi-account)",
+   "evidence": [
+    {
+     "file": "docs/stories/implementation/21-1-device-account-registry.md",
+     "line": 104,
+     "quote": "## Dev Agent Record"
+    },
+    {
+     "file": "docs/stories/implementation/21-2-per-account-database-isolation.md",
+     "line": 148,
+     "quote": "## Dev Agent Record"
+    },
+    {
+     "file": "docs/stories/implementation/21-3-session-auto-resume.md",
+     "line": 91,
+     "quote": "## Dev Agent Record"
+    },
+    {
+     "file": "docs/stories/implementation/21-4-session-persistence.md",
+     "line": 97,
+     "quote": "## Dev Agent Record"
+    },
+    {
+     "file": "docs/stories/implementation/21-5-unified-signup-email-password.md",
+     "line": 126,
+     "quote": "## Dev Agent Record"
+    },
+    {
+     "file": "docs/stories/implementation/21-6-unified-signup-google.md",
+     "line": 103,
+     "quote": "## Dev Agent Record"
+    },
+    {
+     "file": "docs/stories/implementation/21-7-unified-signin-smart-routing.md",
+     "line": 150,
+     "quote": "## Dev Agent Record"
+    },
+    {
+     "file": "docs/stories/implementation/21-8-unified-signin-google.md",
+     "line": 66,
+     "quote": "## Dev Agent Record"
+    },
+    {
+     "file": "docs/stories/implementation/21-9-account-picker-screen.md",
+     "line": 96,
+     "quote": "## Dev Agent Record"
+    },
+    {
+     "file": "docs/stories/implementation/21-10-signout-to-picker.md",
+     "line": 74,
+     "quote": "## Dev Agent Record"
+    },
+    {
+     "file": "docs/stories/implementation/21-11-add-account-from-picker.md",
+     "line": 78,
+     "quote": "## Dev Agent Record"
+    },
+    {
+     "file": "docs/stories/implementation/21-12-upgrade-multi-account.md",
+     "line": 65,
+     "quote": "## Dev Agent Record"
+    },
+    {
+     "file": "docs/stories/implementation/21-13-remove-cloud-from-device.md",
+     "line": 78,
+     "quote": "## Dev Agent Record"
+    },
+    {
+     "file": "docs/stories/implementation/21-14-delete-local-account.md",
+     "line": 88,
+     "quote": "## Dev Agent Record"
+    },
+    {
+     "file": "docs/stories/implementation/21-15-delete-cloud-account-full.md",
+     "line": 127,
+     "quote": "## Dev Agent Record"
+    },
+    {
+     "file": "docs/stories/implementation/21-16-cloud-function-deletion.md",
+     "line": 135,
+     "quote": "## Dev Agent Record"
+    }
+   ],
+   "sites": 16,
+   "why": "All 16 epic-21 stories carry 'Status: done' yet every Tasks/Subtasks checkbox in every file is unchecked ('- [ ]', never '- [x]') and every Dev Agent Record section is the unfilled template stub (blank 'Agent Model Used' / 'Completion Notes List' / 'Change Log' headers, no content) \u2014 in sharp contrast to every DNI-32x/33x/34x/35x/37x/38x story in this same batch, which carries a populated file list, dated change log, and test-run counts (e.g. 'flutter test \u2014 1810 passing'). Grepping lib/ shows the epic-21 feature set (device registry, per-account DB isolation, session persistence, account picker, tiered deletion, the onUserDeleted cloud function) genuinely exists, so the work itself was not skipped \u2014 but the documents supply no verifiable completion trail a reviewer or future incident investigator could check the 'done' claim against, unlike every other done/review story in the folder.",
+   "recommendation": "Not worth rewriting 16 historical files retroactively. Forward-looking fix: make the story-authoring skill (or a docs-triage Rule-0 checker) refuse Status: done/review when Tasks/Subtasks still contain an unchecked '- [ ]' line or the Dev Agent Record section is the unfilled template \u2014 this is exactly the discipline the later Epic-25+ process already adopted by convention; enforce it instead of leaving it as convention.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "A checker (doc-lint or make audit rule) fails when a docs/stories/implementation/*.md has Status: done/review and still contains an unchecked '- [ ]' line in Tasks/Subtasks, or a Dev Agent Record section with only empty headers.",
+    "New stories merged after this finding are not left with Status: done and a blank Dev Agent Record."
+   ],
+   "labels": [
+    "docs",
+    "process-hygiene",
+    "verification-evidence",
+    "tier4-triage"
+   ]
+  }
+ }
+]

@@ -1,0 +1,197 @@
+[
+ {
+  "sourceBatch": "t1-feat-dashboard-p1",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Split hand-written dashboard files exceeding the 400-line cap (AG-3)",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "learning_tracker/lib/features/dashboard",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/dashboard/presentation/providers/dashboard_providers.dart",
+     "line": 1,
+     "quote": "541 lines total \u2014 13 provider declarations plus 5 domain-model classes in one file"
+    },
+    {
+     "file": "learning_tracker/lib/features/dashboard/presentation/widgets/dashboard_body.dart",
+     "line": 1,
+     "quote": "547 lines total \u2014 one ConsumerWidget.build() spanning roughly 440 lines"
+    },
+    {
+     "file": "learning_tracker/lib/features/dashboard/presentation/widgets/active_track_card.dart",
+     "line": 1,
+     "quote": "414 lines total \u2014 one ConsumerWidget.build() spanning roughly 350 lines"
+    }
+   ],
+   "sites": 3,
+   "why": "Each file mixes multiple unrelated concerns in one build method/module (greeting-chip logic, sync-gating logic, per-track focus-pill derivation, 13 independent Riverpod providers), forcing readers to scroll past hundreds of unrelated lines and raising shotgun-surgery/merge-conflict risk \u2014 exactly the threshold AG-3 sets to keep files reviewable.",
+   "recommendation": "Split dashboard_providers.dart along its logical groups (curricula, streak/points, reward, pace) into separate provider files under the existing providers barrel; extract dashboard_body.dart's greeting/date header and sync-gating block into their own widgets; extract active_track_card.dart's focus-pill/label-resolution logic into a helper class.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "A Rule-0 line-count checker (e.g. a Makefile/awk one-liner) fails CI for any hand-written lib/ file >400 lines and is wired into make audit.",
+    "All three files are \u2264400 lines after refactor; flutter analyze and the relevant story_acceptance suites stay green."
+   ],
+   "labels": [
+    "AG-3",
+    "file-size",
+    "dashboard"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-dashboard-p1",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Delete or wire up the orphaned dashboardModelProvider composition layer",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler dead-code / SM-1",
+   "area": "learning_tracker/lib/features/dashboard/presentation/providers/dashboard_model_provider.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/dashboard/presentation/providers/dashboard_model_provider.dart",
+     "line": 90,
+     "quote": "final dashboardModelProvider = Provider.autoDispose<AsyncValue<DashboardModel>>("
+    },
+    {
+     "file": "learning_tracker/lib/features/dashboard/presentation/screens/dashboard_screen.dart",
+     "line": 88,
+     "quote": "final userModeAsync = ref.watch(dashboardUserModeProvider);"
+    }
+   ],
+   "sites": 1,
+   "why": "The file's own doc comment says widgets 'previously watched 5-10 individual providers [and] now watch this one provider' (DNI-350/26.7), but dashboard_screen.dart \u2014 the only screen that could use it \u2014 still watches dashboardActiveTracksStreamProvider, dashboardUserModeProvider, dashboardStreakProvider, and activeProfileProvider directly and never references dashboardModelProvider/DashboardModel (confirmed by repo-wide grep). The only remaining consumer is the file's own acceptance test, so this 143-line composition layer is pure maintenance cost today: any leaf-provider change now has two places to stay consistent, and the second is invisible in the real UI.",
+   "recommendation": "Either finish the DNI-350 migration (make dashboard_screen.dart/dashboard_body.dart consume dashboardModelProvider and delete the direct leaf-provider watches) or delete dashboard_model_provider.dart and its dedicated test.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "grep -rn dashboardModelProvider lib/ returns either a real widget consumer in addition to the provider file, or zero results after deletion.",
+    "test/story_acceptance/epic_26_story_26_7_dashboard_model_provider_test.dart is updated or removed to match, not left pointing at unreachable code."
+   ],
+   "labels": [
+    "dead-code",
+    "riverpod",
+    "dashboard"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-dashboard-p1",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Remove the dead dashboardChildNextReward pipeline \u2014 result is computed but never displayed",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler dead-code / performance",
+   "area": "learning_tracker/lib/features/dashboard",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/dashboard/presentation/widgets/child_points_rewards_tab_card.dart",
+     "line": 28,
+     "quote": "final AsyncValue<DashboardChildNextReward?> nextRewardAsync;"
+    },
+    {
+     "file": "learning_tracker/lib/features/dashboard/presentation/widgets/dashboard_body.dart",
+     "line": 394,
+     "quote": "nextRewardAsync: ref.watch(dashboardChildNextRewardProvider),"
+    },
+    {
+     "file": "learning_tracker/lib/features/dashboard/presentation/providers/dashboard_providers.dart",
+     "line": 354,
+     "quote": "final points = await milestoneService.getTrackPointsTotalForRewards(\n      track.id,\n    );"
+    }
+   ],
+   "sites": 3,
+   "why": "ChildPointsRewardsTabCard.build() never reads nextRewardAsync (the field appears only in its own declaration, confirmed by grep); its own doc comment admits 'this value is no longer displayed' (DEC-32/R4o-M1). Its only caller (dashboard_body.dart:394) still watches dashboardChildNextRewardProvider, which for every active track sequentially awaits two DB calls (getTrackPointsTotalForRewards, getMilestonesForTrack) in an N+1 loop, plus stripStockMilestonesEffect, getGlobalPointsForRewards, and getGlobalMilestones \u2014 real Drift I/O executed on every child-profile dashboard render purely to build a value that is thrown away.",
+   "recommendation": "Delete the nextRewardAsync parameter from ChildPointsRewardsTabCard and the ref.watch(dashboardChildNextRewardProvider) call in dashboard_body.dart; if the feature is truly product-cut, also delete dashboardChildNextReward, DashboardChildNextReward, and NextRewardSelector/next_reward_selector.dart, updating the ref.invalidate call sites in dashboard_screen.dart, reward_config_controller.dart, and after_track_change_invalidation.dart in the same change.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "grep -rn nextRewardAsync lib/ returns nothing after cleanup, or shows a real read.",
+    "If the provider is deleted, flutter analyze is clean (no dangling ref.invalidate targets) and all three invalidation call sites are updated in the same PR."
+   ],
+   "labels": [
+    "dead-code",
+    "performance",
+    "dashboard",
+    "gamification"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-dashboard-p1",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Delete or relocalize the orphaned CurriculumSummaryCard (zero production callers, raw English strings)",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AX-2 / Fowler dead-code",
+   "area": "learning_tracker/lib/features/dashboard/presentation/widgets/curriculum_summary_card.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/dashboard/presentation/widgets/curriculum_summary_card.dart",
+     "line": 90,
+     "quote": "'No projection',"
+    },
+    {
+     "file": "learning_tracker/lib/features/dashboard/presentation/widgets/curriculum_summary_card.dart",
+     "line": 77,
+     "quote": "'$percentage complete',"
+    },
+    {
+     "file": "learning_tracker/lib/features/dashboard/presentation/widgets/curriculum_summary_card.dart",
+     "line": 129,
+     "quote": "PaceStatusType.onPace => 'On pace',"
+    }
+   ],
+   "sites": 1,
+   "why": "CurriculumSummaryCard is instantiated nowhere in lib/ \u2014 its only two call sites repo-wide are test/golden/store_screenshots_test.dart and test/story_acceptance/epic_07_dashboard_test.dart. Every user-facing label ('No projection', '$percentage complete', 'Next: \u2026', 'On pace', 'Xd ahead', 'Xd behind') is a raw English literal with no AppLocalizations/ARB entry \u2014 a straight AX-2 violation that would leak untranslated English to Hebrew users if this widget were ever reachable again. The two tests exercising it currently pin the behavior of UI the app never shows, which is worse than no test: they keep passing (and the golden image keeps needing maintenance) even as the widget drifts from the live dashboard design.",
+   "recommendation": "Delete curriculum_summary_card.dart and its two orphaned tests; or, if the per-curriculum summary view is coming back, route its strings through AppLocalizations and switch it to the CurriculumSummary type the rest of the dashboard actually uses (see the paired AG-4 finding).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep -rln CurriculumSummaryCard lib/ returns zero results after deletion, or a real screen renders it.",
+    "If kept: make arb-parity still passes and every literal above has an ARB key."
+   ],
+   "labels": [
+    "dead-code",
+    "AX-2",
+    "i18n",
+    "dashboard"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-dashboard-p1",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Rename one of the two top-level CurriculumSummary classes (AG-4 duplicate)",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-4",
+   "area": "learning_tracker/lib/features/dashboard, learning_tracker/lib/features/scheduler",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/dashboard/domain/services/parent_dashboard_aggregator.dart",
+     "line": 36,
+     "quote": "class CurriculumSummary {"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/domain/services/cross_curriculum_aggregator.dart",
+     "line": 5,
+     "quote": "class CurriculumSummary {"
+    }
+   ],
+   "sites": 2,
+   "why": "Two unrelated top-level classes share the name CurriculumSummary: parent_dashboard_aggregator.dart's version has fields (curriculum, completionPercentage, paceStatus: PaceStatusType, points); cross_curriculum_aggregator.dart's version has different fields (curriculumId, completionPercentage, paceStatus: PaceStatus?, nextDueItem, todayTaskCount, lastCompletionAt). A future unqualified import or IDE auto-import can silently pick the wrong shape, and grepping for 'the CurriculumSummary type' returns two different contracts with overlapping field names.",
+   "recommendation": "Rename one \u2014 e.g. ParentDashboardCurriculumSummary in parent_dashboard_aggregator.dart \u2014 to make the two types textually distinct.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "An AG-4 uniqueness checker (grep for duplicate `^class <Name>` across lib/) is added to make audit and reports zero duplicates for this pair."
+   ],
+   "labels": [
+    "AG-4",
+    "naming"
+   ]
+  }
+ }
+]

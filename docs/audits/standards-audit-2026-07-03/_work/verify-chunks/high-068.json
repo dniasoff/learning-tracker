@@ -1,0 +1,55 @@
+[
+ {
+  "sourceBatch": "t1-feat-profiles-p4",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Fix ProfilePickerScreen._showDeleteDialog forking deleteProfileFlow and regressing Bug B",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler duplicate-code / TQ-8 (regression test gap)",
+   "area": "features/profiles/presentation/screens/profile_picker_screen.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/screens/profile_picker_screen.dart",
+     "line": 396,
+     "quote": "if (sel == profile.id) {\n      ref.read(selectedProfileIdProvider.notifier).clear();"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/screens/profile_picker_screen.dart",
+     "line": 399,
+     "quote": "ref.invalidate(profileListProvider);"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/widgets/profile_edit_delete_actions.dart",
+     "line": 18,
+     "quote": "and the profile switcher/manager sheet so the two never fork."
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/widgets/profile_edit_delete_actions.dart",
+     "line": 133,
+     "quote": "ref.read(selectedProfileIdProvider.notifier).select(next.id);"
+    },
+    {
+     "file": "learning_tracker/test/features/profiles/profile_picker_deep_l1_test.dart",
+     "line": 516,
+     "quote": "await tester.pumpWidget(\n          _buildPicker(router: router, profiles: profiles, db: db),"
+    }
+   ],
+   "sites": 1,
+   "why": "profile_edit_delete_actions.dart's deleteProfileFlow is documented as the canonical, shared delete implementation 'so the two never fork,' and ProfileSwitcherSheet correctly calls it. But ProfilePickerScreen has its own separate _showDeleteDialog that duplicates the same feature: when the deleted profile is the currently-selected one, it unconditionally calls selectedProfileIdProvider.notifier.clear() (line 397) instead of auto-switching to a remaining profile like the fixed 'Bug B' behavior in deleteProfileFlow (lines 131-136) does, and it only invalidates profileListProvider afterward \u2014 skipping profileListStreamProvider/activeProfileProvider/selectedProfileProvider, which deleteProfileFlow also invalidates. This is the second time this exact file has drifted from the canonical flow (a neighboring comment records an earlier 'R-PR2' fix that had to catch this file up on the offline-delete guard removed by R3-10), showing the fork keeps re-diverging because nothing forces the two implementations to move together. profile_picker_deep_l1_test.dart's own 'F: Delete flow' group (F1-F3) never passes a selectedId matching the deleted profile, so this exact regression path has zero coverage \u2014 the same gap that let the original Bug B ship before it was fixed in the other twin.",
+   "recommendation": "Delete _showDeleteDialog's bespoke selection/invalidation logic (profile_picker_screen.dart:394-399) and call the shared deleteProfileFlow(context, ref, profile) instead, exactly as ProfileSwitcherSheet already does. Add a widget test that deletes the currently-selected profile from the Picker's long-press menu and asserts selectedProfileIdProvider lands on a remaining profile, not null.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "profile_picker_screen.dart's delete path calls the shared deleteProfileFlow (or an equivalent single helper) instead of duplicating selection/invalidation logic",
+    "New test: deleting the currently-selected profile via ProfilePickerScreen's long-press menu asserts selectedProfileIdProvider auto-switches to a remaining profile, not null",
+    "grep for a second 'selectedProfileIdProvider.notifier).clear()' call outside profile_edit_delete_actions.dart returns none, or is justified inline"
+   ],
+   "labels": [
+    "profiles",
+    "duplication",
+    "state-management",
+    "regression"
+   ]
+  }
+ }
+]

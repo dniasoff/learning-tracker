@@ -1,0 +1,186 @@
+[
+ {
+  "sourceBatch": "t1-core-l10n",
+  "chunk": "grp-018",
+  "finding": {
+   "title": "Assert digit interpolation in he.todaysLearning(5) test \u2014 it only checks isNotEmpty while the EN counterpart checks contains('3')",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "learning_tracker/test/core/l10n/app_localizations_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/core/l10n/app_localizations_test.dart",
+     "line": 49,
+     "quote": "expect(en.todaysLearning(3), contains('3'));"
+    },
+    {
+     "file": "learning_tracker/test/core/l10n/app_localizations_test.dart",
+     "line": 81,
+     "quote": "expect(he.todaysLearning(5), isNotEmpty);"
+    }
+   ],
+   "sites": 1,
+   "why": "The EN test explicitly verifies the {count} placeholder is substituted into the rendered string; the HE test for the identical method only checks isNotEmpty. If a translator or a bad ARB edit drops the {count} placeholder from lib/l10n/app_he.arb's todaysLearning message (leaving a static '\u05dc\u05d9\u05de\u05d5\u05d3 \u05d4\u05d9\u05d5\u05dd' with no digit), the HE test still passes while the equivalent EN regression would fail. In a bilingual app where Hebrew is the RTL-primary locale, the weaker locale currently gets the weaker regression check.",
+   "recommendation": "Change line 81 to `expect(he.todaysLearning(5), contains('5'))` to match the rigor of the EN test at line 49.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "he.todaysLearning(5) test asserts contains('5') (or an equivalent digit-presence check), not just isNotEmpty",
+    "Test fails if lib/l10n/app_he.arb's todaysLearning message loses its {count} placeholder on regeneration"
+   ],
+   "labels": [
+    "test-quality",
+    "l10n",
+    "TQ-8"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-content",
+  "chunk": "grp-006",
+  "finding": {
+   "title": "Add direct unit/widget tests for content_grouping.dart's groupItemsByNextLevel and for HierarchyBrowser",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-5 + TQ-1 (pyramid-shaped suite)",
+   "area": "core/content",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/content/content_grouping.dart",
+     "line": 19,
+     "quote": "List<ContentItem> groupItemsByNextLevel({"
+    },
+    {
+     "file": "learning_tracker/lib/core/content/hierarchy_browser.dart",
+     "line": 34,
+     "quote": "class HierarchyBrowser extends ConsumerStatefulWidget {"
+    }
+   ],
+   "sites": 2,
+   "why": "Repo-wide grep for groupItemsByNextLevel(, collapseAmudLeaf(, itemDisplayName(, levelValueAt(, and HierarchyBrowser( inside test/ finds zero direct references. content_grouping.dart's only test file, coarse_unit_leaf_refs_test.dart, covers 2 of its ~8 exported symbols and isn't even AG-5-named for this source (the mirrored name would be content_grouping_test.dart, which doesn't exist). HierarchyBrowser is exercised only transitively, three levels down, through unrelated parent-widget tests (bulk_mark_screen_test.dart, recent_activity_and_hierarchy_panel_l1_test.dart, r2_panel_leaf_crumb_ellipsis_test.dart) \u2014 never directly. This is the concrete reason the maxBrowseDepth dead-branch bug (separate finding) and content_tree.dart's parent() off-by-one (separate finding, in the sibling keepAlive-provider file which likewise has no direct unit test, only story-acceptance coverage) went unnoticed: the pure logic they live in has no focused unit test that would exercise the argument or the ordering that triggers them.",
+   "recommendation": "Add test/core/content/content_grouping_test.dart covering groupItemsByNextLevel (including the maxBrowseDepth branch), collapseAmudLeaf, itemDisplayName, and levelValueAt directly; add a HierarchyBrowser widget test independent of HierarchySelectionPanel.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "test/core/content/content_grouping_test.dart exists and unit-tests groupItemsByNextLevel directly, including a maxBrowseDepth case.",
+    "A widget test pumps HierarchyBrowser directly (drill-down, navigateBack, autoAdvanceSingleOption, empty state) without going through HierarchySelectionPanel."
+   ],
+   "labels": [
+    "core/content",
+    "AG-5",
+    "test-coverage"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-core-nav-utils",
+  "chunk": "grp-019",
+  "finding": {
+   "title": "Rename core/utils/date_utils.dart's DateUtils class off the Flutter SDK's own DateUtils name",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-4 (public top-level symbol names unique across lib/)",
+   "area": "lib/core/utils (naming)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/core/utils/date_utils.dart",
+     "line": 57,
+     "quote": "class DateUtils {"
+    },
+    {
+     "file": "learning_tracker/lib/features/scheduler/presentation/screens/goal_setup_screen.dart",
+     "line": 1,
+     "quote": "import 'package:flutter/material.dart' hide DateUtils;"
+    }
+   ],
+   "sites": 1,
+   "why": "package:flutter/material.dart exports its own `abstract final class DateUtils` (src/material/date.dart:247, re-exported at material.dart:65) with methods like isSameDay/getDaysInMonth used elsewhere in this repo (e.g. monthly_activity_sliver_calendar.dart calls Flutter's DateUtils.getDaysInMonth). This project's core/utils/date_utils.dart declares a second, unrelated `class DateUtils` with different semantics (isSameLocalDay is deliberately UTC\u2192local-day aware per the P5 streak-boundary pattern; Flutter's isSameDay is a raw field compare). At least 14 lib/ files and 25+ test files import both material.dart and this file unqualified; exactly one file (goal_setup_screen.dart:1) already needed `hide DateUtils` to compile because it calls the project's DateUtils.extractLocalDate. Any of the other ~39 files is one `DateUtils.` autocomplete away from either a hard \"ambiguous import\" compile error or \u2014 if an agent \"fixes\" it by hiding the wrong side \u2014 silently swapping in Flutter's timezone-naive comparison where the streak-safe local-day comparison was intended, a domain the whole file exists to get right.",
+   "recommendation": "Rename the project's class (e.g. LocalDayUtils) or fold its 4 static methods into DateTimeFactory in the same file, so it no longer shadows the Flutter SDK name. Remove goal_setup_screen.dart's now-unnecessary `hide DateUtils` after the rename.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "`grep -rn \"^class DateUtils\" learning_tracker/lib/` returns no matches (class renamed).",
+    "goal_setup_screen.dart's `hide DateUtils` clause is removed and the file still compiles, confirming no remaining ambiguity."
+   ],
+   "labels": [
+    "naming",
+    "ag-4",
+    "footgun"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-auth",
+  "chunk": "grp-043",
+  "finding": {
+   "title": "auth_repository_impl_test.dart exceeds the 400-line AG-3 cap (536 lines)",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "test/features/auth/data/repositories/auth_repository_impl_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/auth/data/repositories/auth_repository_impl_test.dart",
+     "line": 536,
+     "quote": "}"
+    }
+   ],
+   "sites": 1,
+   "why": "coding-standards.md's own stated rationale for AG-3 applies directly: at 536 lines the file exceeds a typical per-file agent read budget and mixes ~15 unrelated method groups (sign-in, sign-up, Google auth, email-link, action codes, display-name, delete) in one file. Deleting the redundant auth_integration_test.dart (companion finding) doesn't fix this \u2014 it's a separate file \u2014 this one needs its own split.",
+   "recommendation": "Split along the existing group() boundaries, e.g. keep email/password + Google sign-in/sign-out in this file and move the email-link, action-code, and low-level-passthrough groups into a second file such as auth_repository_impl_actions_test.dart.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "File(s) covering AuthRepositoryImpl are each <=400 lines",
+    "find lib test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400' no longer lists this file once the AG-3 checker lands"
+   ],
+   "labels": [
+    "hygiene",
+    "AG-3",
+    "file-size"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-progress-p2",
+  "chunk": "grp-084",
+  "finding": {
+   "title": "Stop pinning the dead, unlocalized ChartTimeRange.displayName getter with a coverage-chasing test",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (tautological / coverage-chasing tests) intersecting AX-2",
+   "area": "test quality",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/progress/domain/models/chart_data_test.dart",
+     "line": 1,
+     "quote": "// Tests for ChartTimeRange.displayName \u2014 covers lines 42-45 (uncovered)."
+    },
+    {
+     "file": "learning_tracker/test/features/progress/domain/models/chart_data_test.dart",
+     "line": 8,
+     "quote": "expect(ChartTimeRange.last7Days.displayName, '7 Days');"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/domain/models/chart_data.dart",
+     "line": 66,
+     "quote": "ChartTimeRange.last7Days => '7 Days',"
+    },
+    {
+     "file": "learning_tracker/lib/features/progress/presentation/screens/recent_activity_screen.dart",
+     "line": 188,
+     "quote": "ChartTimeRange.last7Days => l10n.chartLast7Days,"
+    }
+   ],
+   "sites": 1,
+   "why": "chart_data_test.dart's own header says it exists to 'cover' previously-uncovered lines \u2014 its four tests simply assert the literal English strings the source hardcodes ('7 Days'/'30 Days'/'All Time'), the textbook tautological pattern (compare-against-what-the-source-literally-returns). Worse, the getter under test is dead: the only real caller, recent_activity_screen.dart, ignores ChartTimeRange.displayName entirely and switches through proper AppLocalizations getters (l10n.chartLast7Days etc.) instead. So this test spends 25 lines locking in a hardcoded-English getter that (a) no production code calls and (b) would violate AX-2 the moment anyone wired it up, and its passing status gives false confidence.",
+   "recommendation": "Delete chart_data_test.dart together with the ChartTimeRange.displayName getter itself, since recent_activity_screen.dart already has the correct localized replacement \u2014 don't keep a passing test whose only job is protecting a hardcoded-English string from ever being fixed.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Either ChartTimeRange.displayName and its test are removed, or the getter is rebuilt on AppLocalizations and the test asserts against l10n fixtures instead of literal English."
+   ],
+   "labels": [
+    "test-quality",
+    "dead-code",
+    "i18n"
+   ]
+  }
+ }
+]

@@ -1,0 +1,211 @@
+[
+ {
+  "sourceBatch": "t4-docs-canonical-p1",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Correct the analyzer lint-rule count in docs/coding-standards.md (claims 83, actual 79)",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "doc-accuracy",
+   "area": "docs/coding-standards.md",
+   "evidence": [
+    {
+     "file": "docs/coding-standards.md",
+     "line": 695,
+     "quote": "a deliberately hand-rolled explicit list (83 rules in `analysis_options.yaml`)..."
+    },
+    {
+     "file": "learning_tracker/analysis_options.yaml",
+     "line": 21,
+     "quote": "- always_declare_return_types"
+    }
+   ],
+   "sites": 1,
+   "why": "analysis_options.yaml's linter.rules block has exactly 79 entries (lines 21-99), not 83. development-guide.md's independent '~80 lints' hedge happens to be accurate; coding-standards.md's precise '83' is not, and this is the doc explicitly positioned as authoritative for the lint baseline.",
+   "recommendation": "Change '83 rules' to '79 rules' at coding-standards.md:695, or make the count self-verifying by having Rule 0 tooling count the block.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "docs/coding-standards.md's stated linter.rules count matches `awk '/^linter:/,0' analysis_options.yaml | grep -c '^    - '`"
+   ],
+   "labels": [
+    "docs",
+    "drift",
+    "lint"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t4-docs-canonical-p1",
+  "findingIndex": 6,
+  "finding": {
+   "title": "Update docs/component-inventory.md and docs/api-contracts.md for the firebaseFirestoreProvider relocation to core/sync/",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-8",
+   "area": "docs/component-inventory.md, docs/api-contracts.md",
+   "evidence": [
+    {
+     "file": "docs/component-inventory.md",
+     "line": 46,
+     "quote": "| `firebaseFirestoreProvider` | keepAlive | `FirebaseFirestore.instance` |"
+    },
+    {
+     "file": "docs/api-contracts.md",
+     "line": 19,
+     "quote": "...the only `lib/` file allowed to import `cloud_firestore`."
+    },
+    {
+     "file": "learning_tracker/lib/core/providers/firebase_providers.dart",
+     "line": 6,
+     "quote": "/// Note: `firebaseFirestoreProvider` has moved to"
+    },
+    {
+     "file": "learning_tracker/lib/core/sync/providers/firestore_instance_provider.dart",
+     "line": 12,
+     "quote": "final firebaseFirestoreProvider = Provider<FirebaseFirestore>((ref) {"
+    }
+   ],
+   "sites": 2,
+   "why": "component-inventory.md's 'Core Providers (lib/core/providers/)' table lists firebaseFirestoreProvider as living in lib/core/providers/, but it was moved (per DNI-333, per the provider file's own comment) to lib/core/sync/providers/firestore_instance_provider.dart. Separately, api-contracts.md claims FirestoreGatewayImpl is 'the only lib/ file allowed to import cloud_firestore', but firestore_instance_provider.dart also imports it (both are within core/sync/, so Rule 3 itself is not violated \u2014 the 'only' claim is just false).",
+   "recommendation": "Move firebaseFirestoreProvider's table row to a core/sync/ providers section in component-inventory.md; soften api-contracts.md's 'the only file' wording to name both sanctioned import sites.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "component-inventory.md's Core Providers table locates firebaseFirestoreProvider at core/sync/providers/firestore_instance_provider.dart",
+    "api-contracts.md no longer claims a single exclusive cloud_firestore import site"
+   ],
+   "labels": [
+    "docs",
+    "drift",
+    "firebase"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t4-docs-canonical-p1",
+  "findingIndex": 7,
+  "finding": {
+   "title": "Refresh stale audit-check/ARB-key/test-file counts in docs/development-guide.md",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-8",
+   "area": "docs/development-guide.md",
+   "evidence": [
+    {
+     "file": "docs/development-guide.md",
+     "line": 94,
+     "quote": "make audit                          # 13 enforcement greps + custom_lint"
+    },
+    {
+     "file": "docs/development-guide.md",
+     "line": 42,
+     "quote": "app_en.arb, app_he.arb (~468 keys, keep in parity \u2014 see make arb-parity)"
+    },
+    {
+     "file": "docs/development-guide.md",
+     "line": 72,
+     "quote": "### Test layout (`learning_tracker/test/`, 359 files)"
+    },
+    {
+     "file": "docs/development-guide.md",
+     "line": 107,
+     "quote": "Firebase confined \u2014 firebase_auth/cloud_firestore/firebase_storage only in core/sync/ + features/auth/"
+    },
+    {
+     "file": "learning_tracker/Makefile",
+     "line": 482,
+     "quote": "echo \"22/22 \u2014 Every lib/core/labels/ file touching displayNameEn/He must be variant-aware...\""
+    }
+   ],
+   "sites": 4,
+   "why": "learning_tracker/Makefile's audit target runs 22 checks (not 13); lib/l10n/app_en.arb has 1421 translatable keys (not ~468 \u2014 a 3x undercount); learning_tracker/test/ has 770 *_test.dart files (not 359 \u2014 more than double). The Firebase-confinement summary also omits core/auth/, which legitimately imports firebase_auth (auth_gateway_user.dart, firebase_auth_gateway_impl.dart, etc.) alongside core/sync/ and features/auth/. This file is explicitly positioned (via CONTRIBUTING.md) as 'the authoritative reference for setup, testing, and conventions' \u2014 a contributor sizing the test suite or the audit gate off these numbers gets roughly 2-3x wrong figures.",
+   "recommendation": "Re-derive all four figures from the live repo (Makefile check count, arb key count via the arb-parity tool, test file count, and the core/auth/ Firebase-confinement location) and update development-guide.md.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "development-guide.md's stated audit check count matches the number of numbered checks in learning_tracker/Makefile's audit target",
+    "development-guide.md's ARB key count matches app_en.arb's non-metadata key count",
+    "development-guide.md's test file count matches `find learning_tracker/test -name '*_test.dart' | wc -l`"
+   ],
+   "labels": [
+    "docs",
+    "drift",
+    "counts",
+    "AG-8"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t4-docs-canonical-p1",
+  "findingIndex": 8,
+  "finding": {
+   "title": "Reconcile contradictory ci.yml job counts in docs/architecture.md (4) and docs/deployment-guide.md (8) \u2014 actual is 7",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-8",
+   "area": "docs/architecture.md, docs/deployment-guide.md",
+   "evidence": [
+    {
+     "file": "docs/architecture.md",
+     "line": 568,
+     "quote": "The GitHub Actions CI (`ci.yml`) runs 4 jobs on every PR and push..."
+    },
+    {
+     "file": "docs/deployment-guide.md",
+     "line": 44,
+     "quote": "Triggers: PRs to main/dev, pushes to main/dev/dev/**. 8 mostly-parallel jobs:"
+    },
+    {
+     "file": ".github/workflows/ci.yml",
+     "line": 15,
+     "quote": "format-check:"
+    }
+   ],
+   "sites": 2,
+   "why": ".github/workflows/ci.yml defines exactly 7 top-level jobs (format-check, analyze, audit, lint, test, firestore-rules, arb-parity \u2014 confirmed by grepping the job keys at lines 15,49,102,146,185,294,359). architecture.md's CI Matrix table lists only 4 (format, analyze, test, firestore-rules), silently dropping audit/lint/arb-parity and even misnaming 'format' vs the real 'format-check' key. deployment-guide.md lists 8, double-counting 'coverage-floor' as job #6 separate from 'test' (job #5) when coverage-floor is actually a step inside the single test job. Two canonical docs disagree with each other and with the code on a fact a contributor would use to reason about what gates a merge.",
+   "recommendation": "Regenerate both CI sections from ci.yml's actual job list (7: format-check, analyze, audit, lint, test [incl. coverage-floor step], firestore-rules, arb-parity).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "architecture.md's CI Matrix and deployment-guide.md's job list both enumerate exactly the 7 job keys defined in .github/workflows/ci.yml"
+   ],
+   "labels": [
+    "docs",
+    "drift",
+    "ci"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t4-docs-canonical-p1",
+  "findingIndex": 9,
+  "finding": {
+   "title": "Mark hebrew-terms.md \u00a711 item 5 as fixed \u2014 the make audit grep already targets the right symbol",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "doc-accuracy",
+   "area": "docs/hebrew-terms.md",
+   "evidence": [
+    {
+     "file": "docs/hebrew-terms.md",
+     "line": 151,
+     "quote": "The `make audit` layering grep targets a symbol name (`hebrewTermsScriptProvider`) that does not exist..."
+    },
+    {
+     "file": "learning_tracker/Makefile",
+     "line": 322,
+     "quote": "echo \"7/15 \u2014 No useHebrewTermsProvider read outside core/labels...\"; \\"
+    }
+   ],
+   "sites": 1,
+   "why": "learning_tracker/Makefile check 7 already greps for `useHebrewTermsProvider` (the real provider name), not `hebrewTermsScriptProvider` \u2014 which has zero occurrences anywhere in the repo. Every sibling item in this same numbered list (3, 4, 6, 7, 8) that got fixed carries a '\u2014 FIXED (A4)' annotation; item 5 is missing one, so the doc still presents a working control as broken. A reader could waste time re-\"fixing\" a grep that already works, or distrust a control that is functioning.",
+   "recommendation": "Add '\u2014 FIXED' to hebrew-terms.md \u00a711 item 5, or remove it if the underlying grep-correction was folded into an earlier commit.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "hebrew-terms.md \u00a711 item 5 either is removed or carries a FIXED annotation consistent with its siblings"
+   ],
+   "labels": [
+    "docs",
+    "drift",
+    "hebrew-terms"
+   ]
+  }
+ }
+]

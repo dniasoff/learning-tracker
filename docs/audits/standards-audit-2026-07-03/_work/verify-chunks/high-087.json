@@ -1,0 +1,49 @@
+[
+ {
+  "sourceBatch": "t1-feat-tracks-p1",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Fix learning_tracker/Makefile check 15/15 cross-feature-import awk \u2014 it can never detect a violation",
+   "severity": "P1",
+   "confidence": "CONFIRMED",
+   "rule": "Rule 0 (checker must actually fail) / Rule 2 (no cross-feature deep imports)",
+   "area": "learning_tracker/Makefile (evidenced via features/tracks/setup import graph)",
+   "evidence": [
+    {
+     "file": "learning_tracker/Makefile",
+     "line": 377,
+     "quote": "| grep -P \"features/([^/]+)/(?!\\1\\.dart)\" \\"
+    },
+    {
+     "file": "learning_tracker/Makefile",
+     "line": 378,
+     "quote": "awk -F: '{match($$1, /features\\/([^\\/]+)\\//, a); match($$0, /features\\/([^\\/]+)\\//, b); if(a[1] != b[1]) print}'"
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/screens/edit_track_screen.dart",
+     "line": 20,
+     "quote": "import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/providers/after_track_change_invalidation.dart",
+     "line": 6,
+     "quote": "import 'package:learning_tracker/features/dashboard/presentation/providers/dashboard_providers.dart';"
+    }
+   ],
+   "sites": 1,
+   "why": "grep -n emits 'path:line:content', so the file's own path (which always contains 'features/<owning-feature>/') appears in $0 BEFORE the import statement text. awk's match($0, /features\\/([^/]+)\\//, b) returns the FIRST match in the line \u2014 the file's own feature \u2014 not the imported feature, so b[1] always equals a[1] (both extracted from the same file-path segment) and the `a[1] != b[1]` guard can never be true. Reproduced directly: running the exact pipeline against lib/features/ yields 0 hits, and the committed baseline (docs/audits/standards-audit-2026-07-03/_work/baseline/make-audit.txt) shows check 15/15 printing no WARN block at all \u2014 a silent, false PASS. My batch alone contains ~50 real deep cross-feature import lines (dashboard/, scheduler/, sync/, onboarding/, content_browsing/, profiles/, settings/ providers imported directly instead of via a feature barrel) that this check should be listing as warn-only violations and never does.",
+   "recommendation": "Fix the awk to extract the imported feature name from the import token specifically (e.g. `grep -oP \"features/[^/]+/\" <<<\"$import_part\"` after splitting off the file:line prefix), verify it now emits the WARN list, then use it to start triaging the real cross-feature-import backlog per Rule 2.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "A synthetic fixture file importing a different feature's deep path makes `make audit` check 15/15 print a WARN/file:line for it",
+    "Running the fixed check against current lib/features/tracks/setup/** surfaces its real deep cross-feature imports instead of zero"
+   ],
+   "labels": [
+    "tooling",
+    "broken-checker",
+    "layering",
+    "rule-2"
+   ]
+  }
+ }
+]

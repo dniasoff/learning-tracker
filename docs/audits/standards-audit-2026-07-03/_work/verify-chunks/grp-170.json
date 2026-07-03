@@ -1,0 +1,248 @@
+[
+ {
+  "sourceBatch": "t4-docs-triage-p1",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Fix the GoalSetupScreen \"provably-dead \u2014 delete\" verdict in docs/planning/on-device-preflight-cheatsheet.md before anyone acts on it",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-8",
+   "area": "docs/planning",
+   "evidence": [
+    {
+     "file": "docs/planning/on-device-preflight-cheatsheet.md",
+     "line": 45,
+     "quote": "Delete the whole file lib/features/scheduler/presentation/screens/goal_setup_screen.dart (both GoalSetupForm and GoalSetupScreen are dead)... Do NOT spend on-device test effort mounting GoalSetupScreen/GoalSetupForm: there is no in-app path to it."
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/screens/track_detail_screen.dart",
+     "line": 788,
+     "quote": "builder: (_) => GoalSetupScreen("
+    },
+    {
+     "file": "learning_tracker/lib/features/tracks/setup/presentation/screens/track_detail_screen.dart",
+     "line": 692,
+     "quote": "? () => _openGoalEdit(track, curriculum)"
+    },
+    {
+     "file": "docs/planning/e2e-test-suite-plan.md",
+     "line": 15,
+     "quote": "Non-routed screens (Navigator push only) | **6** | `ScopeSelectionScreen`, `GoalSetupScreen`, `EditTrackScreen`..."
+    }
+   ],
+   "sites": 1,
+   "why": "track_detail_screen.dart (a churn-hotspot file) wires `_openGoalEdit`, called from an onTap at line 692, which pushes `GoalSetupScreen` via `Navigator.push(MaterialPageRoute(...))` at line 788 \u2014 this is the live \"Edit Goal\" flow, reachable and reachable-only via Navigator (never @RoutePage-routed, which is exactly why the cheatsheet's router/`.gr.dart` grep missed it). A later doc in the same repo, e2e-test-suite-plan.md (2026-06-18), independently and correctly classifies GoalSetupScreen as reachable (\"Navigator push only\"), directly contradicting this cheatsheet's \"provably-dead\" verdict. The cheatsheet is explicitly framed as an action list (\"pre-flight cheat-sheet\") with an unambiguous, confident delete instruction; anyone or any agent treating it as current guidance today would delete a live, user-reachable screen \u2014 a real functional regression (the Edit-Goal button on Track Detail would 404/crash).",
+   "recommendation": "Strike or correct the GoalSetupScreen entry (cross-reference e2e-test-suite-plan.md's classification) and add a one-line banner to the top of the cheatsheet stating its verdicts are a snapshot as of the 2026-05-31 commit and must be re-grepped before acting, since \u2014 as this very file shows \u2014 the underlying code moves.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "The GoalSetupScreen section no longer recommends deletion, or is removed/marked resolved-incorrect.",
+    "A dated \"snapshot, re-verify before acting\" disclaimer is added near the top of the file.",
+    "Spot check: `grep -rn 'GoalSetupScreen(' learning_tracker/lib` continues to show the track_detail_screen.dart call site as the acceptance check that the doc no longer disagrees with."
+   ],
+   "labels": [
+    "docs",
+    "dead-code-risk",
+    "planning-docs"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t4-docs-triage-p1",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Update stale status/title headers in living docs/planning/ files whose own body or code shows the work is already done",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-8",
+   "area": "docs/planning",
+   "evidence": [
+    {
+     "file": "docs/planning/daf-unit-display-scope.md",
+     "line": 3,
+     "quote": "**Status:** Scoped, product decisions made (2026-06-14). Phase 1 in progress."
+    },
+    {
+     "file": "docs/planning/daf-unit-display-scope.md",
+     "line": 146,
+     "quote": "### FINAL STATUS (2026-06-14) \u2014 daf-unit work COMPLETE"
+    },
+    {
+     "file": "docs/planning/overdue-refactor-architecture.md",
+     "line": 5,
+     "quote": "| **Status** | Draft \u2014 for review |"
+    },
+    {
+     "file": "docs/planning/e2e-test-suite-plan.md",
+     "line": 5,
+     "quote": "**Date:** 2026-06-18 \u00b7 **Status:** Planning \u2014 implementation-ready; Wave 1 builds on proven harness..."
+    },
+    {
+     "file": "docs/planning/epics.md",
+     "line": 12,
+     "quote": "# learning-tracker - Epic 19 Breakdown"
+    }
+   ],
+   "sites": 4,
+   "why": "daf-unit-display-scope.md's own header contradicts its own footer within the same file (verified against 5 real commits: ffba2a26, 5e6ada50, f8ec2828, c6e28970, 053957a3, all present in git log). overdue-refactor-architecture.md is marked Draft, yet learning_tracker/lib/features/scheduler/.../scheduler_providers.dart:1096-1098 has a comment explicitly citing \"architecture \u00a711 step 4\" as the reason the backfill machinery was deleted \u2014 the design shipped. e2e-test-suite-plan.md says \"Planning\"; test/e2e/journeys/ already has 35 P0/P1/P2 files and the harness it names as aspirational already exists. epics.md's title names only Epic 19 while its 854 lines run through Epic 27, all *(Done)*. None of these are factually wrong about the underlying work, but a reader skimming only the header (the common case) gets the wrong picture of what's left to do, which risks duplicate work or under-prioritizing a doc that's actually irrelevant/settled.",
+   "recommendation": "Refresh each header/title to match the body: daf-unit-display-scope.md and overdue-refactor-architecture.md to \"Complete\"/\"Implemented\", e2e-test-suite-plan.md's status to reflect Wave 1-3 progress against the 35 existing journey files, and epics.md's title to name the full epic range it now covers (or split it so each epic has its own breakdown file).",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Each listed file's top-of-doc status/title is consistent with its own last section or with a quick grep-based check (commit hashes for daf-unit; scheduler_providers.dart comments for overdue-refactor; test/e2e/journeys count for e2e-test-suite-plan).",
+    "No other action required \u2014 these are label-only fixes, not content rewrites."
+   ],
+   "labels": [
+    "docs",
+    "hygiene",
+    "status-drift"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t4-docs-triage-p2",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Update docs/qa/legacy auth scenarios and docs/planning upgrade-flow UX specs for the credential-less offline-account redesign",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-8",
+   "area": "docs/qa/legacy, docs/planning (auth/onboarding)",
+   "evidence": [
+    {
+     "file": "docs/qa/legacy/01-product-overview.md",
+     "line": 199,
+     "quote": "Password hashed with argon2id, stored in local SQLite | None. No sync, no backup"
+    },
+    {
+     "file": "docs/qa/legacy/02-auth-and-accounts.md",
+     "line": 152,
+     "quote": "AUTH-06: Email/password signup (local-born, airplane mode) ... Enter a password that meets strength requirements"
+    },
+    {
+     "file": "docs/qa/legacy/03-onboarding.md",
+     "line": 75,
+     "quote": "Local-born account created per `02-auth-and-accounts.md`"
+    },
+    {
+     "file": "docs/qa/legacy/13-settings.md",
+     "line": 551,
+     "quote": "The argon2id hash in SQLite is updated to the new password"
+    },
+    {
+     "file": "docs/planning/ux-upgrade-flow-spec.md",
+     "line": 105,
+     "quote": "For security, please enter your account password. This is the same password you use to sign in"
+    },
+    {
+     "file": "docs/planning/ux-upgrade-flow-visual.md",
+     "line": 57,
+     "quote": "W-02 \u2014 Confirm password (\u00a75.2)"
+    }
+   ],
+   "sites": 6,
+   "why": "signup_screen.dart's offline path is documented in-code as credential-less ('no email, no password') per the 2026-06-14 product decision, confirmed still true today. All 6 docs above (linked from docs/index.md's active reference sections, none carrying a staleness banner) still describe/design around a password-based local-born account with argon2id verification. A tester running AUTH-06/SET-23 cannot find the password-entry UI they're told to test (false failure or wasted time); an engineer implementing the upgrade flow could copy ux-upgrade-flow-spec.md \u00a75.2's 'verify existing password' step into new code, which cannot work once `passwordHash` is null for a credential-less account.",
+   "recommendation": "Add the same staleness-banner pattern already used well elsewhere in this repo (two-database-architecture.md, v1-developer-roadmap.md) to these 6 files, or rewrite the affected scenarios/screens to match the credential-less flow and the convert-on-reconnect upgrade entry point.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "Each of the 6 files carries a dated staleness banner pointing at the current onboarding/upgrade design, or its password-signup content is rewritten to match signup_screen.dart.",
+    "docs/index.md links only to auth docs that are current or explicitly marked historical."
+   ],
+   "labels": [
+    "docs",
+    "auth",
+    "drift"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t4-docs-triage-p2",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Reconcile qa/legacy and ux-patterns-quick-reference tutor-mode docs with the grant-based tutoring redesign",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "AG-8",
+   "area": "docs/qa/legacy, docs/planning",
+   "evidence": [
+    {
+     "file": "docs/qa/legacy/11-tutor-mode.md",
+     "line": 3,
+     "quote": "all 5 routes, `TutorPinGuard` active, 7 screens ... deprioritized ... no new investment"
+    },
+    {
+     "file": "docs/qa/legacy/11-tutor-mode.md",
+     "line": 265,
+     "quote": "TUTOR-10 | P0 | Cannot mark completions in tutor mode"
+    },
+    {
+     "file": "docs/qa/legacy/05-multi-track.md",
+     "line": 292,
+     "quote": "TRACK-10 | P1 | Activate tutor track prompts PIN setup"
+    },
+    {
+     "file": "docs/qa/legacy/10-parent-mode.md",
+     "line": 832,
+     "quote": "Tutor mode is read-only (FR100) while parent mode has full write access."
+    },
+    {
+     "file": "docs/planning/ux-patterns-quick-reference.md",
+     "line": 75,
+     "quote": "`TutorPinGuard` \u2014 Requires tutor PIN entry (both modes)"
+    }
+   ],
+   "sites": 5,
+   "why": "grep confirms TutorPinGuard no longer exists anywhere in lib/ \u2014 superseded by an invite/accept/revoke M:N grant model under lib/features/tutoring/ (tutor_grant.dart, tutor_pin_entry_gate.dart, invite_tutor_screen.dart, manage_tutors_screen.dart). The 'deprioritized, no new investment' claim in 11-tutor-mode.md's own callout is itself now contradicted by this same repo's later planning docs (tutor-mode-brief.md 2026-05-20, tutor-talmid-view-plan 2026-05-26, tutor-edit-propagation-plan 2026-05-28), whose trackers record a completed multi-week rebuild that also gave tutors Manage-Tracks and Bulk-prior write access beyond 'strictly read-only.' A tester using these docs looks for a self-service Settings PIN flow that no longer exists, and would flag the now-intentional edit capability as a regression against a stale spec.",
+   "recommendation": "Mark 11-tutor-mode.md and the tutor cross-references in 05-multi-track.md/10-parent-mode.md as superseded by the grant-based model (or move 11-tutor-mode.md fully under docs/_archive, matching the existing Epic-11 archive entry), and correct the ux-patterns-quick-reference.md route-guard table.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "11-tutor-mode.md's banner reflects the grant-based redesign instead of asserting 'no new investment,' or the file moves to docs/_archive.",
+    "grep -r TutorPinGuard docs/ returns only files explicitly marked historical."
+   ],
+   "labels": [
+    "docs",
+    "tutoring",
+    "drift"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t4-docs-triage-p2",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Rewrite docs/planning/testing-quick-reference.md \u2014 it teaches the banned mockito pattern and cites nonexistent files",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-4",
+   "area": "docs/planning",
+   "evidence": [
+    {
+     "file": "docs/planning/testing-quick-reference.md",
+     "line": 106,
+     "quote": "@GenerateMocks([CompletionDao])"
+    },
+    {
+     "file": "docs/planning/testing-quick-reference.md",
+     "line": 51,
+     "quote": "**File:** `test/features/learning/domain/models/completion_test.dart`"
+    },
+    {
+     "file": "docs/planning/testing-quick-reference.md",
+     "line": 615,
+     "quote": "import 'package:learning_tracker/features/content/data/adapters/mishnayos_adapter.dart';"
+    }
+   ],
+   "sites": 1,
+   "why": "coding-standards.md TQ-4 bans new mockito; the live suite has 0 mockito imports and 182 mocktail-based test files, so every worked example in this doc uses the disallowed framework. It is dated 2026-02-08 with no staleness marker and is linked from docs/index.md's 'Planning and design' section (described there as reflecting 'the current code'). None of the concrete files it cites (curriculum_card.dart, mishnayos_adapter.dart, the adapters/ directory) exist in lib/, and its 'API Tests (Sefaria)' section describes a runtime HTTP-fetch content architecture that contradicts the actual build-time-bundled content design confirmed in docs/qa/legacy/07-content-browsing.md (FR6). A contributor or AI agent following this doc would reintroduce a banned test framework and reference dead paths.",
+   "recommendation": "Rewrite against current mocktail-based test helpers and real file paths, or replace with a pointer to the current testing guide plus a superseded banner in the meantime.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "The doc contains zero `package:mockito` code examples.",
+    "Every **File:** path cited resolves to a real file under lib/ or test/."
+   ],
+   "labels": [
+    "docs",
+    "testing",
+    "drift"
+   ]
+  }
+ }
+]

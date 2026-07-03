@@ -1,0 +1,217 @@
+[
+ {
+  "sourceBatch": "t1-story-epics-09-16",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Deduplicate the 6 copies of _insertTrack() in story_acceptance tests onto the existing shared seedTrack() helper",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler-duplication (TQ-6 seam bypass)",
+   "area": "test/story_acceptance (shared test helpers)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_09_onboarding_test.dart",
+     "line": 44,
+     "quote": "Future<int> _insertTrack(UserDatabase db) async {"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_10_parent_mode_test.dart",
+     "line": 69,
+     "quote": "Future<int> _insertTrack(UserDatabase db) async {"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_12_notifications_test.dart",
+     "line": 50,
+     "quote": "Future<int> _insertTrack(UserDatabase db) async {"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_14_settings_test.dart",
+     "line": 33,
+     "quote": "Future<int> _insertTrack(UserDatabase db) async {"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_15_multi_profile_test.dart",
+     "line": 49,
+     "quote": "Future<int> _insertTrack(UserDatabase db) async {"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_16_pace_dashboard_test.dart",
+     "line": 27,
+     "quote": "Future<int> _insertTrack(UserDatabase db) async {"
+    }
+   ],
+   "sites": 6,
+   "why": "Six of the seven files in this batch reimplement the identical 13-line _insertTrack() (insert a mishnayos curriculum_tracks row with DateTime.now() for stateChangedAt/activatedAt) instead of calling the shared seedTrack() already in test/helpers/drift_memory.dart:82-98 \u2014 which epic_13_cloud_sync_test.dart (the 7th file) uses correctly. seedTrack() itself uses the injectable DateTimeFactory.nowUtc() (a LocalDayClock-backed seam per lib/core/utils/date_utils.dart:8-18), while all 6 duplicates use a raw, unfakeable DateTime.now(), bypassing the seam the rest of the codebase standardizes on. Any future change to curriculum_tracks' required columns needs 7 edits instead of 1, and copies can silently diverge, as the clock call already has.",
+   "recommendation": "Delete the 6 private _insertTrack() functions and call seedTrack(db, profileId: 1) from test/helpers/drift_memory.dart at each site, as epic_13_cloud_sync_test.dart already does.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "grep -rn 'Future<int> _insertTrack' learning_tracker/test/story_acceptance/*.dart returns zero matches.",
+    "All 6 files call the shared seedTrack() helper instead."
+   ],
+   "labels": [
+    "duplication",
+    "test-helpers",
+    "TQ-6"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epics-09-16",
+  "findingIndex": 5,
+  "finding": {
+   "title": "Add Linear DNI ids to the two TODO comments in epic_14_settings_test.dart's skipped app-info group",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-6",
+   "area": "test/story_acceptance/epic_14 (Story 14.4, skip-wrapped)",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_14_settings_test.dart",
+     "line": 724,
+     "quote": "// TODO: verify version string display"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_14_settings_test.dart",
+     "line": 728,
+     "quote": "// TODO: verify link navigation"
+    }
+   ],
+   "sites": 2,
+   "why": "AG-6 requires every TODO/FIXME to carry a Linear id (DNI-####). These two are bare, inside a group already skip:-wrapped as 'Backlog: app info screen not yet implemented' \u2014 when Story 14.4 is picked up there is no ticket link from the test back to tracked work.",
+   "recommendation": "Add the Story 14.4 Linear id to both, e.g. `// TODO(DNI-####): verify version string display`, or drop the TODOs since the surrounding group/skip reason already documents the backlog status.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Both TODOs either carry a DNI-#### id or are removed."
+   ],
+   "labels": [
+    "AG-6",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epics-17-20",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Import the real childAwareText instead of re-implementing it inline in epic_18_track_overhaul_test.dart",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "test/story_acceptance",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_18_track_overhaul_test.dart",
+     "line": 318,
+     "quote": "// Import the helper function indirectly by testing its logic"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_18_track_overhaul_test.dart",
+     "line": 324,
+     "quote": "String childAwareText(\n              String adult,"
+    },
+    {
+     "file": "learning_tracker/lib/features/onboarding/presentation/screens/onboarding_screen.dart",
+     "line": 32,
+     "quote": "String childAwareText(\n  String adultText,"
+    }
+   ],
+   "sites": 1,
+   "why": "The real, public childAwareText already lives at onboarding_screen.dart:32 and is already correctly imported and tested by test/features/onboarding/presentation/screens/onboarding_screen_test.dart and onboarding_bulk_l1_test.dart. This third copy defines its own private closure with the same logic and asserts against that closure. If a future story changes the real substitution rule, this AC-2/AC-3 'story acceptance' test keeps passing against its own frozen copy \u2014 a false-green regression gate on exactly the behavior it claims to verify.",
+   "recommendation": "Delete the inline closure; import childAwareText from onboarding_screen.dart and assert against it directly, as the two feature-level tests already do.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Test imports and calls the real onboarding_screen.dart childAwareText instead of a local reimplementation",
+    "grep -n 'String childAwareText' learning_tracker/test/story_acceptance/epic_18_track_overhaul_test.dart returns no match"
+   ],
+   "labels": [
+    "test-quality",
+    "tautological-test",
+    "epic-18"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epics-17-20",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Assert completion_events rows survive purgeHistory with purgedAt set, not just that the tombstone view is empty",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "test/story_acceptance",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_18_story_18x_track_restore_test.dart",
+     "line": 112,
+     "quote": "// Completions are tombstoned (purgedAt set), not deleted."
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_18_story_18x_track_restore_test.dart",
+     "line": 114,
+     "quote": "final after = await db.completionDao.getCompletionsByTrack(trackId);"
+    },
+    {
+     "file": "learning_tracker/lib/core/database/daos/completion_dao.dart",
+     "line": 581,
+     "quote": "completionsView,\n    )..where((t) => t.trackId.equals(trackId))).get();"
+    }
+   ],
+   "sites": 1,
+   "why": "getCompletionsByTrack reads completionsView, which already filters purgedAt IS NULL. A regression that hard-deletes completion_events rows inside TrackDao.purgeHistory \u2014 instead of tombstoning them, breaking the C3/N8 append-only invariant documented at track_dao.dart:404-406 \u2014 would produce the exact same empty result from this test. The test's own comment claims to verify 'tombstoned, not deleted' but its assertions cannot distinguish the two outcomes.",
+   "recommendation": "Add a raw query against completion_events (bypassing completionsView) asserting the row count for the track is unchanged from before the purge and that purgedAt is non-null on every row.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Test additionally selects raw completion_events rows for trackId after purgeHistory and asserts row count is unchanged and purgedAt is non-null on each",
+    "Changing purgeHistory's tombstone UPDATE to a DELETE causes this test to fail"
+   ],
+   "labels": [
+    "test-quality",
+    "weak-assertion",
+    "append-only-invariant",
+    "epic-18"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epics-17-20",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Fix or rename AT-19.3.6 \u2014 it never exercises SeedManager's first-launch gzip decompression",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8",
+   "area": "test/story_acceptance",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_19_offline_first_test.dart",
+     "line": 318,
+     "quote": "'AT-19.3.6 SeedManager decompresses a gzipped seed on first launch',"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_19_offline_first_test.dart",
+     "line": 344,
+     "quote": "// Verify SeedManager's path/backup plumbing without mocking the"
+    },
+    {
+     "file": "learning_tracker/test/core/database/seed_manager_test.dart",
+     "line": 12,
+     "quote": "/// 6. No DB at all (first launch) \u2014 _extractSeedDb called \u2192 throws SeedManagerException"
+    }
+   ],
+   "sites": 1,
+   "why": "The test pre-writes a plain content.db into the target dir before calling ensureContentDb, so dbFile.existsSync() is true and SeedManager takes the Step-3 'already installed, check version, no-op' branch (seed_manager.dart:96-148) \u2014 never Step 2's first-launch _extractSeedDb/_decompressAndWrite gzip path (seed_manager.dart:220-247). This isn't just a misfiled test: the dedicated unit suite test/core/database/seed_manager_test.dart documents in its own header that its 'first launch' branch only covers the rootBundle-unavailable throw, never a successful decompress. No automated test anywhere in the repo verifies that the gzip stream decode which installs every user's content database on first run actually produces correct output, while this acceptance test's title asserts that exact AC is proven.",
+   "recommendation": "Either expose _decompressAndWrite as @visibleForTesting and feed it a real gzip fixture asserting byte-correct round-trip, or add a widget-test that overrides the asset bundle with a small gzip fixture through ensureContentDb end-to-end; rename this test to describe what it actually checks (no-op on an up-to-date DB) if the coverage gap is filed separately.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "A test exists that feeds SeedManager real (or fixture) gzip bytes through the first-launch code path and asserts the decompressed content.db is byte-correct / opens with expected rows",
+    "AT-19.3.6's title matches the branch it exercises, or is superseded by the new test"
+   ],
+   "labels": [
+    "test-quality",
+    "coverage-gap",
+    "epic-19",
+    "seed-manager"
+   ]
+  }
+ }
+]

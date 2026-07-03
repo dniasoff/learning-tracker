@@ -1,0 +1,205 @@
+[
+ {
+  "sourceBatch": "t1-story-epic-25",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Split 6 story-acceptance test files that exceed the 400-line AG-3 cap",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "AG-3",
+   "area": "test/story_acceptance",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_25_schema_core_test.dart",
+     "line": 1,
+     "quote": "/// Story acceptance tests for Epic 25 \u2014 Schema + Core Foundation. (2036 lines total)"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_25_story_12_sync_decomp_part1_test.dart",
+     "line": 1,
+     "quote": "/// Story acceptance tests for Epic 25 \u2014 Story 25.12 (DNI-333): (718 lines total)"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_25_story_16_streak_test.dart",
+     "line": 1,
+     "quote": "/// Story acceptance tests for Epic 25 / Story 25.16 (DNI-337): (564 lines total)"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_25_story_13_merge_router_test.dart",
+     "line": 1,
+     "quote": "/// Story acceptance tests for Epic 25 \u2014 Story 25.13 (DNI-334): (501 lines total)"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_25_story_25_20_locale_theme_test.dart",
+     "line": 1,
+     "quote": "/// Story acceptance tests for Story 25.20 (DNI-341) \u2014 MaterialApp locale (449 lines total)"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_25_story_18_pin_guard_test.dart",
+     "line": 1,
+     "quote": "/// Story acceptance tests for Epic 25 \u2014 Story 25.18 (DNI-339): (402 lines total)"
+    }
+   ],
+   "sites": 6,
+   "why": "AG-3's own enforcement command (`find lib test -name '*.dart' ... | xargs wc -l | awk '$1>400'`) explicitly covers test/. Content past a file's length is outside typical per-file agent read budgets and the file becomes a dumping ground for unrelated concerns \u2014 epic_25_schema_core_test.dart is 5x over the cap at 2036 lines and bundles 8 unrelated stories (25.3, 25.5, 25.7, 25.8, 25.10, 25.11, 25.17, 25.19) under one non-story-numbered slug, unlike all 12 sibling epic_25 files which are one-file-per-story.",
+   "recommendation": "Split epic_25_schema_core_test.dart along its existing per-story group() boundaries into epic_25_story_{3,5,7,8,10,11,17,19}_*_test.dart to match the one-file-per-story convention already used everywhere else in this batch; trim story_12/13/16/18/25_20 by extracting large fixture/fake blocks (e.g. the FirestoreGateway fakes) into test/helpers/.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "`find learning_tracker/test learning_tracker/lib -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart' | xargs wc -l | awk '$1>400'` no longer lists any of these 6 files",
+    "each split-out file keeps its @Tags(['epic_25']) and story tag, and `make test-story-25.<N>` still passes for each story"
+   ],
+   "labels": [
+    "AG-3",
+    "test-quality",
+    "hygiene"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epic-25",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Deduplicate the two full 40-method FirestoreGateway fakes in epic_25_story_12_sync_decomp_part1_test.dart",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Fowler duplication (shotgun surgery)",
+   "area": "test/story_acceptance",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_25_story_12_sync_decomp_part1_test.dart",
+     "line": 242,
+     "quote": "class _RecordingGateway implements FirestoreGateway {"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_25_story_12_sync_decomp_part1_test.dart",
+     "line": 475,
+     "quote": "class _PagingGateway implements FirestoreGateway {"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_25_story_12_sync_decomp_part1_test.dart",
+     "line": 441,
+     "quote": "// W6.13: fetchAuditLogEntries added to FirestoreGateway interface."
+    }
+   ],
+   "sites": 2,
+   "why": "_RecordingGateway (lines 242-467) and _PagingGateway (lines 475-697) each hand-implement all 40 FirestoreGateway methods with near-identical no-op bodies. The file's own retrofit comments ('W6.13: fetchAuditLogEntries added...', 'T1.gateway \u2014 parent-scoped child reads (stub)') appear in both classes, proving every past interface addition already had to be pasted into both by hand; the identical pattern repeats in 20+ other test files repo-wide (test/sync/*, test/core/sync/*), so the next FirestoreGateway method is N-way shotgun surgery, and a forgotten override silently returns a stale default in one fake but not the other.",
+   "recommendation": "Extract a shared `NoOpFirestoreGateway` base (all 40 methods returning empty/no-op defaults) into test/helpers/ or test/mocks/; have _RecordingGateway/_PagingGateway extend it and override only the handful of methods each test actually exercises.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "_RecordingGateway and _PagingGateway shrink to only their overridden methods plus the shared base",
+    "adding a new FirestoreGateway method requires editing the shared base once, not every fake in this file"
+   ],
+   "labels": [
+    "fowler-duplication",
+    "test-quality",
+    "maintenance-cost"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epic-25",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Replace the tautological AuthRepository mock-shape test in epic_25_schema_core_test.dart with real coverage or delete it",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 (tautological/over-mocked test)",
+   "area": "test/story_acceptance",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_25_schema_core_test.dart",
+     "line": 615,
+     "quote": "when(() => repo.currentUser).thenReturn(null);"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_25_schema_core_test.dart",
+     "line": 625,
+     "quote": "expect(repo.currentUser, isNull);"
+    }
+   ],
+   "sites": 1,
+   "why": "The test stubs every AuthRepository member on a mocktail Mock and then asserts the mock returns exactly what it was just told to return \u2014 it can never fail regardless of what AuthRepositoryImpl actually does, so it gives false confidence that Story 25.11's 'sole firebase_auth consumer' AC is under test. Real behavioural coverage already exists separately in test/features/auth/data/repositories/auth_repository_impl_test.dart, so today this test adds zero net verification while reading like acceptance coverage for the story.",
+   "recommendation": "Delete the runtime expect() calls and keep this as a documented compile-only shape check (a referenced-but-uncalled function is enough to prove the interface compiles), or point the docstring at auth_repository_impl_test.dart so reviewers don't mistake mock-echo assertions for behavioural coverage.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "test either exercises AuthRepositoryImpl directly or is reduced to a compile-time shape check with no expect() calls that only echo their own stubs"
+   ],
+   "labels": [
+    "tautological-test",
+    "over-mocked",
+    "TQ-8"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epic-25",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Fix the two-call wall-clock race in epic_25_schema_core_test.dart's SystemLocalDayClock.today() test",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-6",
+   "area": "test/story_acceptance",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_25_schema_core_test.dart",
+     "line": 1140,
+     "quote": "final today = clock.today();"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_25_schema_core_test.dart",
+     "line": 1141,
+     "quote": "final sysNow = DateTime.now();"
+    }
+   ],
+   "sites": 1,
+   "why": "clock.today() and DateTime.now() are two independent wall-clock reads compared for equal year/month/day; if local midnight falls between the two calls the assertions intermittently disagree \u2014 a hairline but real flake source, exactly the class TQ-6 exists to keep out of test/ (test/ is not yet covered by the DateTime.now() audit grep that already protects lib/).",
+   "recommendation": "Capture one DateTime.now() first and derive both the expected y/m/d and the clock.today() call from it, or bracket clock.today() between a before/after DateTime.now() pair instead of comparing to a second independent read.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "test reads the wall clock once (or brackets before/after) instead of comparing two independent DateTime.now()-derived values"
+   ],
+   "labels": [
+    "TQ-6",
+    "wall-clock",
+    "flaky-test-risk"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-story-epic-25",
+  "findingIndex": 4,
+  "finding": {
+   "title": "Consolidate the ad hoc MaterialApp test-wrap helpers in story_21 and story_25_9 into a shared pumpApp",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-3",
+   "area": "test/story_acceptance",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_25_story_21_multi_account_threading_test.dart",
+     "line": 219,
+     "quote": "Widget wrap({required AuthState authState, required Widget child}) =>"
+    },
+    {
+     "file": "learning_tracker/test/story_acceptance/epic_25_story_25_9_test.dart",
+     "line": 20,
+     "quote": "Widget _wrap(\n  Widget child, {"
+    }
+   ],
+   "sites": 2,
+   "why": "No shared, reviewed pumpApp helper exists yet (TQ-3 is still [Pending] repo-wide); each file hand-rolls its own MaterialApp wrapper and the two disagree on localization wiring \u2014 story_21's wrap() sets localizationsDelegates/supportedLocales but story_25_9's _wrap() sets neither. It only works today because the CurriculumLabel widgets under test in story_25_9 don't call AppLocalizations.of(context); the first future test added to that harness that does will throw MissingLocalizationsDelegate with no forcing function that would have caught it earlier.",
+   "recommendation": "Add test/helpers/pump_app.dart with one canonical ProviderScope + MaterialApp(localizationsDelegates:, supportedLocales:) wrapper taking overrides + child, and migrate both local helpers onto it.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "test/helpers/pump_app.dart exists and both files call it instead of their local wrap/_wrap",
+    "a widget added to epic_25_story_25_9_test.dart that calls AppLocalizations.of(context) resolves without a missing-delegate error"
+   ],
+   "labels": [
+    "TQ-3",
+    "test-infra",
+    "duplication"
+   ]
+  }
+ }
+]

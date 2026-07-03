@@ -1,0 +1,199 @@
+[
+ {
+  "sourceBatch": "t1-feat-profiles-p1",
+  "findingIndex": 13,
+  "finding": {
+   "title": "Replace unchecked e.message as String? casts in PIN dialogs with a null-safe read",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "hygiene / defensive coding",
+   "area": "features/profiles/presentation",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/providers/pin_flow_controller.dart",
+     "line": 286,
+     "quote": "errorMessage: e.message as String?,"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/widgets/parent_pin_setup_dialog.dart",
+     "line": 122,
+     "quote": "_errorMessage = e.message as String?;"
+    }
+   ],
+   "sites": 2,
+   "why": "ArgumentError.message is typed Object? in dart:core, not String?. Both sites hard-cast it with `as String?`, which would throw a TypeError if PinService ever threw an ArgumentError constructed with a non-String message (e.g. ArgumentError.value(...)). Today PinService only ever throws `ArgumentError('PIN must be exactly 4 numeric digits')` so this never fires, but the cast is a landmine for the next caller of setProfilePin/setTutorPin-style methods that doesn't preserve that convention.",
+   "recommendation": "Use `e.message?.toString() ?? <fallback>` instead of the unchecked cast in both places.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Both sites read e.message without an unchecked String cast",
+    "A test constructing ArgumentError.value(42, 'pin') and feeding it through does not crash"
+   ],
+   "labels": [
+    "hygiene",
+    "defensive-coding"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-profiles-p2",
+  "findingIndex": 0,
+  "finding": {
+   "title": "Populate features/profiles/profiles.dart barrel exports so Rule 2 is satisfiable for the whole feature",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Rule 2 (barrel-only cross-feature imports) / Rule 0",
+   "area": "features/profiles (barrel)",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/profiles/profiles.dart",
+     "line": 7,
+     "quote": "library profiles;"
+    },
+    {
+     "file": "learning_tracker/lib/app/router/app_shell.dart",
+     "line": 16,
+     "quote": "import 'package:learning_tracker/features/profiles/presentation/widgets/profile_switcher_sheet.dart';"
+    }
+   ],
+   "sites": 1,
+   "why": "Every other actually-used feature barrel re-exports its public API (account.dart 21 exports, tracks.dart 26, tutoring.dart 22, progress.dart 1); profiles.dart has zero `export` statements, so its own header comment ('Import this barrel... Do NOT import deep paths directly') is impossible to follow. Grepping lib/features/**/*.dart for `features/profiles/` outside the profiles feature itself finds 65 files across 10+ other features deep-importing active_profile_provider.dart, profile_providers.dart, profile_model.dart, pin_service.dart etc. directly (plus lib/app/router/app_shell.dart, which can't even use the barrel since it exports nothing). Rule 2 is therefore 100% unenforceable for the single most cross-cut feature in the app: any future rename/move inside features/profiles/ breaks an unpredictable subset of 65+ files with no compiler-visible contract boundary.",
+   "recommendation": "Populate profiles.dart with export statements for the feature's actual public surface (profile_model.dart, profile_repository.dart, pin_service.dart, active_profile_provider.dart, profile_providers.dart, profile_switcher_sheet.dart, etc.), mirroring the structure already used in tutoring.dart, then migrate consumers off deep imports incrementally.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "features/profiles/profiles.dart exports every symbol currently deep-imported by 2+ other features",
+    "learning_tracker/Makefile check 15/15 (once its self-comparison bug is fixed, see the tutored_children_section.dart finding) shows a declining, tracked count of profiles/ deep imports outside the feature",
+    "New cross-feature consumers of profiles/ import only features/profiles/profiles.dart"
+   ],
+   "labels": [
+    "layering",
+    "rule-2",
+    "barrel",
+    "architecture"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-profiles-p2",
+  "findingIndex": 1,
+  "finding": {
+   "title": "Fix Makefile check 15/15's self-comparison bug and route tutored_children_section.dart's tutoring imports through tutoring.dart",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "Rule 2 / Rule 0",
+   "area": "features/profiles/presentation/widgets/tutored_children_section.dart + Makefile",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/widgets/tutored_children_section.dart",
+     "line": 14,
+     "quote": "import 'package:learning_tracker/features/tutoring/domain/models/session_role.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/widgets/tutored_children_section.dart",
+     "line": 17,
+     "quote": "import 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart';"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/widgets/tutored_children_section.dart",
+     "line": 18,
+     "quote": "import 'package:learning_tracker/features/tutoring/presentation/screens/tutor_pin_entry_gate.dart';"
+    },
+    {
+     "file": "learning_tracker/Makefile",
+     "line": 378,
+     "quote": "if(a[1] != b[1]) print}' \\"
+    }
+   ],
+   "sites": 5,
+   "why": "4 of these 5 imports (session_role.dart, tutor_grant_aggregate.dart, active_tutored_profile_provider.dart, tutor_pin_entry_gate.dart) are already exported by features/tutoring/tutoring.dart \u2014 the sibling file profile_switcher_sheet.dart in the same directory correctly imports that barrel (its line 20) for the same feature. Only manage_tutors_providers.dart (for incomingTutorGrantsProvider) is genuinely missing from the barrel. This slips past `make audit` check 15/15 because its awk script has a self-comparison bug: `match($0, ...)` matches the FIRST 'features/xxx/' substring in the whole grep output line, which is always inside the file-path field before the first colon \u2014 so the 'import feature' capture always equals the 'file's own feature' capture, and `if(a[1] != b[1])` is never true. I reproduced the exact check-15/15 pipeline by hand against the current tree: 0 lines of output, despite these 5 real violations existing right now, proving the check has never actually detected a cross-feature deep import.",
+   "recommendation": "Fix the awk to extract the import's target feature from the substring after the first colon (not from $0, which includes the file path), not from the whole line; add `export 'package:learning_tracker/features/tutoring/presentation/providers/manage_tutors_providers.dart';` to tutoring.dart; switch tutored_children_section.dart's 5 imports to a single `import 'package:learning_tracker/features/tutoring/tutoring.dart';`.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "Running check 15/15's grep+awk pipeline against a deliberately reintroduced cross-feature deep import (negative control) prints a WARN line",
+    "After the fix, tutored_children_section.dart imports only features/tutoring/tutoring.dart for tutoring symbols",
+    "flutter analyze and dart run build_runner remain clean after the barrel export addition"
+   ],
+   "labels": [
+    "layering",
+    "rule-2",
+    "rule-0",
+    "makefile",
+    "checker-bug"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-profiles-p2",
+  "findingIndex": 2,
+  "finding": {
+   "title": "Migrate switcherSheetPinGuardRequiredProvider to @riverpod codegen and move it to presentation/providers/",
+   "severity": "P3",
+   "confidence": "CONFIRMED",
+   "rule": "SM-1 / placement convention",
+   "area": "features/profiles/presentation/widgets/profile_switcher_sheet.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/widgets/profile_switcher_sheet.dart",
+     "line": 28,
+     "quote": "final switcherSheetPinGuardRequiredProvider = FutureProvider<bool>((ref) async {"
+    }
+   ],
+   "sites": 1,
+   "why": "This provider was added fresh in commit 2c346a77 ('AN-2 gate escalating actions... wave-B'), not part of the 121-usage legacy backlog the standard exempts \u2014 SM-1 explicitly says to count new additions. Every other provider in the same feature already uses @riverpod codegen (profile_providers.dart:129,137,147; active_profile_provider.dart:42). Because it's a manually-declared, non-family FutureProvider it is never autoDispose: once any widget reads it, it and its watch of profileListStreamProvider/activeProfileIdProvider stay alive for the app's remaining lifetime, not just while the switcher sheet is open. The doc comment's stated reason for going manual ('so tests can inject a known result without touching FlutterSecureStorage') doesn't require it \u2014 codegen providers are equally overridable in tests, as the neighboring codegen providers demonstrate.",
+   "recommendation": "Rewrite as an @riverpod FutureProvider<bool> under presentation/providers/, keeping the same override-based test seam.",
+   "effort": "S",
+   "acceptance_criteria": [
+    "switcherSheetPinGuardRequiredProvider is annotated @riverpod and lives in lib/features/profiles/presentation/providers/",
+    "an2_switcher_pin_guard_test.dart's existing overrides continue to pass unmodified",
+    "No manually-declared top-level Provider/FutureProvider remains under presentation/widgets/ in this feature"
+   ],
+   "labels": [
+    "riverpod",
+    "sm-1",
+    "placement"
+   ]
+  }
+ },
+ {
+  "sourceBatch": "t1-feat-profiles-p2",
+  "findingIndex": 3,
+  "finding": {
+   "title": "Add AN-2 PIN-guard regression tests for switch-account, add-profile, and switch-to-adult-profile",
+   "severity": "P2",
+   "confidence": "CONFIRMED",
+   "rule": "TQ-8 / TQ-1",
+   "area": "test/features/profiles/presentation/an2_switcher_pin_guard_test.dart",
+   "evidence": [
+    {
+     "file": "learning_tracker/test/features/profiles/presentation/an2_switcher_pin_guard_test.dart",
+     "line": 2,
+     "quote": "/// (edit, delete, add profile, switch account, switch to adult profile) behind"
+    },
+    {
+     "file": "learning_tracker/lib/features/profiles/presentation/widgets/profile_switcher_sheet.dart",
+     "line": 59,
+     "quote": "/// AN-2: Escalating actions (switch to adult profile, edit, delete, switch"
+    },
+    {
+     "file": "learning_tracker/test/e2e/journeys/profiles_p1_test.dart",
+     "line": 911,
+     "quote": "// The sheet renders without crashing even with pinGuardRequired=true."
+    }
+   ],
+   "sites": 3,
+   "why": "Both the widget's own class doc and this test file's header promise PIN-guard coverage for 5 escalating actions, but the test bodies only tap the per-row edit and delete IconButtons (plus one no-guard control case). Nothing taps the 'Switch account' ListTile, the 'Add Profile' ListTile, or a non-active profile row while pinGuardRequired=true. test/e2e/journeys/profiles_p1_test.dart (E2E-718, outside this batch) independently confirms the gap: its own comment says 'Full PIN challenge drive requires device integration test' and only asserts the sheet renders without crashing, never that tapping Add Profile actually raises the PIN dialog. A future refactor of _guardEscalating's call sites for these 3 actions could silently let a child-context user reach account switching or profile creation with no test catching it.",
+   "recommendation": "Add 3 testWidgets to an2_switcher_pin_guard_test.dart mirroring the existing edit/delete cases: tap 'Switch account', tap 'Add Profile', and tap a non-active adult profile row, each with pinGuardRequired=true, asserting find.text('Enter Parent PIN') appears.",
+   "effort": "M",
+   "acceptance_criteria": [
+    "an2_switcher_pin_guard_test.dart has passing tests for switch-account, add-profile, and switch-to-adult-profile with pinGuardRequired=true",
+    "Each new test fails (red) if its corresponding _guardEscalating wrapper is removed from profile_switcher_sheet.dart",
+    "The file's header outline accurately lists every covered action"
+   ],
+   "labels": [
+    "testing",
+    "tq-8",
+    "pin-guard",
+    "child-safety"
+   ]
+  }
+ }
+]

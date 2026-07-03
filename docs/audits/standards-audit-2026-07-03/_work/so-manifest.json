@@ -1,0 +1,812 @@
+{
+ "so-000": [
+  {
+   "sourceBatch": "t1-core-database-daos-p1",
+   "origChunk": "grp-007",
+   "title": "Split completion_dao.dart, points_balance_dao.dart, track_dao.dart, and completion_dao_extended_test.dart under the 400-line AG-3 cap"
+  },
+  {
+   "sourceBatch": "t1-feat-learning-p1",
+   "origChunk": "grp-059",
+   "title": "Narrow and log the catch-all in CompletionRepositoryImpl._appendStreakEvent"
+  },
+  {
+   "sourceBatch": "t1-core-sync-merge",
+   "origChunk": "grp-030",
+   "title": "Split the four hand-written files in core/sync/merge that exceed the 400-line AG-3 cap"
+  },
+  {
+   "sourceBatch": "t1-feat-scheduler-p3",
+   "origChunk": "grp-096",
+   "title": "Collapse duplicate equality/hashCode/toString assertions inside delta_value_test.dart"
+  },
+  {
+   "sourceBatch": "t1-feat-profiles-p1",
+   "origChunk": "grp-077",
+   "title": "Replace unchecked e.message as String? casts in PIN dialogs with a null-safe read"
+  }
+ ],
+ "so-001": [
+  {
+   "sourceBatch": "t1-core-nav-utils",
+   "origChunk": "grp-020",
+   "title": "Replace date_utils_test.dart's real DateTime.now() read with a fixed/injected clock"
+  },
+  {
+   "sourceBatch": "t1-feat-scheduler-p2",
+   "origChunk": "grp-094",
+   "title": "Migrate scheduler-adjacent tests off the deprecated LearningProgramRepository.instance singleton"
+  },
+  {
+   "sourceBatch": "t1-feat-tutoring-p2",
+   "origChunk": "grp-124",
+   "title": "Stop misreporting a failed local PIN clear as a failed reset email in TutorPinResetScreen"
+  },
+  {
+   "sourceBatch": "t1-feat-settings-p3",
+   "origChunk": "grp-103",
+   "title": "Close the in-memory UserDatabase created inline in settings test ProviderScope overrides"
+  },
+  {
+   "sourceBatch": "t1-feat-tutoring-p3",
+   "origChunk": "grp-126",
+   "title": "Verify TutoredMirrorWipeService fires on tutor resign/revoke in manage_grants_screen_l1_test.dart and manage_tutors_screen_l1_test.dart"
+  }
+ ],
+ "so-002": [
+  {
+   "sourceBatch": "t1-core-analytics-logging",
+   "origChunk": "grp-003",
+   "title": "Remove or explicitly justify AppLogger.setupFlutterErrorHandlers \u2014 dead code duplicating crashlytics_bootstrap.dart's live handlers"
+  },
+  {
+   "sourceBatch": "t1-feat-sync-p1",
+   "origChunk": "grp-106",
+   "title": "Six leftover migration re-export shims in features/sync/ are unused by production code and violate Rule 2's 'only providers.dart barrel' clause"
+  },
+  {
+   "sourceBatch": "t1-feat-sacred_time",
+   "origChunk": "grp-089",
+   "title": "Add the required `// keepAlive:` justification comment to Sacred Time's 6 keepAlive providers"
+  },
+  {
+   "sourceBatch": "t1-feat-tracks-p4",
+   "origChunk": "grp-120",
+   "title": "Override localDayClockProvider in track_detail_screen_test.dart to remove its wall-clock dependency"
+  },
+  {
+   "sourceBatch": "t1-feat-profiles-p2",
+   "origChunk": "grp-077",
+   "title": "Migrate switcherSheetPinGuardRequiredProvider to @riverpod codegen and move it to presentation/providers/"
+  }
+ ],
+ "so-003": [
+  {
+   "sourceBatch": "t1-story-epic-25",
+   "origChunk": "grp-130",
+   "title": "Extract the 3x-duplicated 4-path file-candidate search in epic_25_story_25_20_locale_theme_test.dart into one helper"
+  },
+  {
+   "sourceBatch": "t1-feat-tracks-p1",
+   "origChunk": "grp-113",
+   "title": "Deduplicate TrackCreationService/TrackEditService's verbatim study-day persistence loop"
+  },
+  {
+   "sourceBatch": "t1-feat-sacred_time",
+   "origChunk": "grp-090",
+   "title": "Delete the duplicate readInIsrael/writeInIsrael test group in sacred_time_preferences_test.dart"
+  },
+  {
+   "sourceBatch": "t1-feat-progress-p1",
+   "origChunk": "grp-082",
+   "title": "Stop interpolating raw error.toString() into localized error messages across progress screens"
+  },
+  {
+   "sourceBatch": "t1-feat-account-p1",
+   "origChunk": "grp-036",
+   "title": "Cache the account list Future instead of constructing it fresh inside AccountPickerScreen.build()"
+  }
+ ],
+ "so-004": [
+  {
+   "sourceBatch": "t1-core-database-root-p1",
+   "origChunk": "grp-011",
+   "title": "Type and log the swallowed catch blocks in content_database.dart, seed_manager.dart, and DeviceAccountX"
+  },
+  {
+   "sourceBatch": "t1-core-network",
+   "origChunk": "grp-022",
+   "title": "Use `is TalkerDioLogger` instead of a runtimeType.toString() string match in dio_client_test.dart"
+  },
+  {
+   "sourceBatch": "t1-core-streak",
+   "origChunk": "grp-026",
+   "title": "Relocate test/core/streak/*_test.dart to mirror lib/features/gamification/streak/ (AG-5)"
+  },
+  {
+   "sourceBatch": "t1-feat-profiles-p2",
+   "origChunk": "grp-078",
+   "title": "Show user-facing error feedback on the StateError path in TutoredChildrenSection._fireEntryPullAndNavigate"
+  },
+  {
+   "sourceBatch": "t1-core-sync-providers",
+   "origChunk": "grp-032",
+   "title": "Resolve outboxProcessor lazily in syncOrchestratorProvider instead of capturing it by value"
+  }
+ ],
+ "so-005": [
+  {
+   "sourceBatch": "orchestrator",
+   "origChunk": "grp-133",
+   "title": "Regenerate and commit stale codegen for curriculum_label_providers and 2 other .g.dart files; add the AG-7 freshness gate"
+  },
+  {
+   "sourceBatch": "t1-core-sync-root-p1",
+   "origChunk": "grp-033",
+   "title": "Type the catch/catchError clauses across sync_orchestrator.dart, pull_pipeline.dart and tutored_listener_supervisor.dart (EH-4)"
+  },
+  {
+   "sourceBatch": "t1-feat-sync-p1",
+   "origChunk": "grp-106",
+   "title": "SyncStatus.error and RestoreStatus.error carry a free-text message instead of a stable code, inviting raw/untranslated text downstream"
+  },
+  {
+   "sourceBatch": "t1-feat-settings-p3",
+   "origChunk": "grp-102",
+   "title": "Replace upgrade_to_cloud_cancel_collision_test.dart's synthetic phase simulator with a test that drives the real _CollisionBlock"
+  },
+  {
+   "sourceBatch": "t1-core-streak",
+   "origChunk": "grp-027",
+   "title": "Parameterize insertEvent() by profileId in streak_state_provider_test.dart instead of duplicating the raw companion insert"
+  }
+ ],
+ "so-006": [
+  {
+   "sourceBatch": "t1-feat-profiles-p3",
+   "origChunk": "grp-080",
+   "title": "Split 4 oversized hand-written test files in features/profiles/presentation (805-1079 lines) \u2014 over the AG-3 400-line cap"
+  },
+  {
+   "sourceBatch": "t1-feat-tutoring-p2",
+   "origChunk": "grp-124",
+   "title": "Catch and log exceptions around TutorPinService calls in the PIN entry/setup async handlers"
+  },
+  {
+   "sourceBatch": "t1-feat-settings-p4",
+   "origChunk": "grp-105",
+   "title": "Override the injectable LocalDayClock in backup_sync_section_l1_test.dart's relative-time assertions"
+  },
+  {
+   "sourceBatch": "t1-feat-gamification-p3",
+   "origChunk": "grp-056",
+   "title": "Stop testing RewardSaveNoTrack/RewardSaveDuplicateThreshold \u2014 both sealed variants are unreachable post-DEC-32/GA-3"
+  },
+  {
+   "sourceBatch": "t1-feat-tracks-p4",
+   "origChunk": "grp-119",
+   "title": "Tighten the granularity and pace-floor assertions in step_chazara_goal_l1_test.dart and edit_track_and_detail_l1_test.dart to match what their own titles/comments claim"
+  }
+ ],
+ "so-007": [
+  {
+   "sourceBatch": "t1-feat-account-p1",
+   "origChunk": "grp-038",
+   "title": "Make AppUser/AuthState/AuthUser @freezed instead of hand-rolled classes without value equality"
+  },
+  {
+   "sourceBatch": "t1-feat-profiles-p2",
+   "origChunk": "grp-078",
+   "title": "Extract a shared pumpApp test helper \u2014 profiles feature hand-rolls the 4-delegate MaterialApp wrapper 13 times"
+  },
+  {
+   "sourceBatch": "t1-core-database-root-p2",
+   "origChunk": "grp-013",
+   "title": "Add profileId to TrackLearningOrder \u2014 the one user_database table with a bare autoincrement PK, and make audit's claimed profileId check doesn't exist"
+  },
+  {
+   "sourceBatch": "t1-core-database-daos-p2",
+   "origChunk": "grp-010",
+   "title": "Rewrite completion_dao_test.dart null-scope test \u2014 the null-check operator throws before the DAO method is ever called"
+  },
+  {
+   "sourceBatch": "t1-feat-tracks-p5",
+   "origChunk": "grp-120",
+   "title": "Close every inMemoryDb() Drift database opened by tracks/setup and track_order widget tests"
+  }
+ ],
+ "so-008": [
+  {
+   "sourceBatch": "t1-core-database-root-p1",
+   "origChunk": "grp-012",
+   "title": "Delete or wire up dead code kept alive only by its own tests: ContentResult and CalendarCycleDao's legacy methods"
+  },
+  {
+   "sourceBatch": "t1-feat-account-p2",
+   "origChunk": "grp-039",
+   "title": "Extract the duplicated _extractFirebaseCode regex parser out of MagicLinkService and UpgradeToCloudService"
+  },
+  {
+   "sourceBatch": "t1-story-epics-01-08",
+   "origChunk": "grp-133",
+   "title": "Delete or replace compile-time-tautological assertions across Epic 1/2 acceptance tests"
+  },
+  {
+   "sourceBatch": "t1-core-sync-root-p2",
+   "origChunk": "grp-034",
+   "title": "Move codecs_and_mergers_test.dart's two suites to their AG-5-mirrored paths under test/core/sync/codec/ and test/core/sync/merge/"
+  },
+  {
+   "sourceBatch": "t1-feat-learning-p3",
+   "origChunk": "grp-061",
+   "title": "Delete or merge stale learning_screen_test.dart into learning_screen_l1_test.dart"
+  }
+ ],
+ "so-009": [
+  {
+   "sourceBatch": "t1-feat-gamification-p3",
+   "origChunk": "grp-057",
+   "title": "Introduce test/helpers/pump_app.dart \u2014 6 gamification test files hand-roll near-identical MaterialApp/ProviderScope boilerplate"
+  },
+  {
+   "sourceBatch": "t1-core-database-tables",
+   "origChunk": "grp-016",
+   "title": "Update docs/delete-policy.md \u2014 curriculum_tracks moved from deletedAt to state/stateChangedAt in W3.28/W3.29"
+  },
+  {
+   "sourceBatch": "t1-feat-sync-p2",
+   "origChunk": "grp-108",
+   "title": "Consolidate test/sync/'s merger and round-trip tests into the AG-5-mirrored test/core/sync/ location \u2014 they duplicate existing coverage"
+  },
+  {
+   "sourceBatch": "t1-core-network",
+   "origChunk": "grp-021",
+   "title": "Rename connectivity_service_test.dart to connectivity_gateway_test.dart to match its renamed source class"
+  },
+  {
+   "sourceBatch": "t1-feat-tutoring-p1",
+   "origChunk": "grp-121",
+   "title": "Stop interpolating e.toString() directly into tutoring error/snackbar text"
+  }
+ ],
+ "so-010": [
+  {
+   "sourceBatch": "t1-feat-tutoring-p3",
+   "origChunk": "grp-126",
+   "title": "Replace source-text-grep assertions with real widget tests in t3_readonly_surfaces_gating_test.dart and r3_shell_revocation_exit_test.dart"
+  },
+  {
+   "sourceBatch": "t1-core-nav-utils",
+   "origChunk": "grp-020",
+   "title": "Remove dead isShabbos/isYomTov/formatHebrewDate from HebrewCalendarUtils (superseded by zmanim_window_service)"
+  },
+  {
+   "sourceBatch": "t1-feat-scheduler-p3",
+   "origChunk": "grp-095",
+   "title": "Add regression tests for GoalRepositoryImpl's not-found and delete-sync payload paths"
+  },
+  {
+   "sourceBatch": "t1-feat-onboarding-p2",
+   "origChunk": "grp-069",
+   "title": "Split the 6 hand-written onboarding files that exceed the 400-line AG-3 cap"
+  },
+  {
+   "sourceBatch": "t1-feat-onboarding-p2",
+   "origChunk": "grp-068",
+   "title": "Fix the always-passing awk comparison in Makefile check 15/15 (no-cross-feature-deep-imports)"
+  }
+ ],
+ "so-011": [
+  {
+   "sourceBatch": "t1-feat-sync-p3",
+   "origChunk": "grp-109",
+   "title": "Give sync_status_emission_test.dart's 'empty outbox + online + after pull \u2192 synced' test actual assertions"
+  },
+  {
+   "sourceBatch": "t1-feat-scheduler-p1",
+   "origChunk": "grp-091",
+   "title": "Log SchedulerStageRepositoryImpl's schedule-JSON decode failure instead of silently swallowing it"
+  },
+  {
+   "sourceBatch": "t1-core-sync-root-p2",
+   "origChunk": "grp-034",
+   "title": "Fix the self-referential SY-3 timeout-message assertion in sync_orchestrator_test.dart \u2014 it never calls SyncOrchestratorImpl"
+  },
+  {
+   "sourceBatch": "t1-core-streak",
+   "origChunk": "grp-026",
+   "title": "Pin StreakStateProvider's day-bucketing seam instead of letting streak_state_provider_test.dart depend on the host machine's timezone"
+  },
+  {
+   "sourceBatch": "t1-core-domain-learning",
+   "origChunk": "grp-016",
+   "title": "Fix SefariaRef.titlePart/addressPart to match the documented chapter:verse split (or fix the docs)"
+  }
+ ],
+ "so-012": [
+  {
+   "sourceBatch": "t1-feat-notifications-p2",
+   "origChunk": "grp-066",
+   "title": "Replace ws5_per_profile_test.dart's tautological payload-format assertions with real NotificationGateway verification"
+  },
+  {
+   "sourceBatch": "t1-core-database-daos-p2",
+   "origChunk": "grp-010",
+   "title": "Split learning_ledger_dao_test.dart and points_balance_dao_test.dart below the 400-line AG-3 cap"
+  },
+  {
+   "sourceBatch": "t1-feat-gamification-p2",
+   "origChunk": "grp-055",
+   "title": "Fix regression-test provenance drift in ga4/ga8 gamification test files"
+  },
+  {
+   "sourceBatch": "t1-feat-profiles-p1",
+   "origChunk": "grp-076",
+   "title": "Replace PinFlowController's raw-English error-string matching with a stable error code"
+  },
+  {
+   "sourceBatch": "t1-feat-account-p2",
+   "origChunk": "grp-038",
+   "title": "Extract the duplicated drift .sqlite-suffix delete helper out of AccountLifecycleService and PendingLocalSignupStore"
+  }
+ ],
+ "so-013": [
+  {
+   "sourceBatch": "t1-core-database-root-p4",
+   "origChunk": "grp-014",
+   "title": "Replace vacuous isNotNull/isNotEmpty assertions in user_database_managers_refs_test.dart with relationship-verifying checks"
+  },
+  {
+   "sourceBatch": "t1-feat-tracks-p2",
+   "origChunk": "grp-115",
+   "title": "Stop TrackLearningOrderRepositoryImpl importing ContentRepository directly \u2014 compose in a service/notifier (SM-8)"
+  },
+  {
+   "sourceBatch": "t1-core-services",
+   "origChunk": "grp-024",
+   "title": "Merge duplicate LearningProgramRepository test suites (learning_program_repository_test.dart + learning_program_service_test.dart)"
+  },
+  {
+   "sourceBatch": "t1-feat-learning-p3",
+   "origChunk": "grp-062",
+   "title": "Rename/relocate completion_button_optimistic_test.dart to presentation/providers/optimistic_completion_provider_test.dart"
+  },
+  {
+   "sourceBatch": "t1-feat-settings-p3",
+   "origChunk": "grp-102",
+   "title": "Tighten st3_settings_switch_a11y_test.dart to assert the Hebrew-Terms Switch specifically, not any labelled Switch"
+  }
+ ],
+ "so-014": [
+  {
+   "sourceBatch": "t1-feat-profiles-p1",
+   "origChunk": "grp-075",
+   "title": "Guard ProfileRepositoryImpl.deleteProfile's cloud-sync push the same way create/update/ensureDefaultProfile do"
+  },
+  {
+   "sourceBatch": "t1-story-epic-26",
+   "origChunk": "grp-131",
+   "title": "Add a Locale('he') behavioral variant to StatCard's interactive widget tests (epic_26_story_26_16)"
+  },
+  {
+   "sourceBatch": "t1-core-database-daos-p1",
+   "origChunk": "grp-008",
+   "title": "Replace track_dao.dart's stringly-typed TrackState class with a real Dart enum"
+  },
+  {
+   "sourceBatch": "t1-feat-scheduler-p5",
+   "origChunk": "grp-098",
+   "title": "Extract scheduler_providers.dart's private _amnestyDayCutoffUtc/anchor-clamp so reorder_amnesty_test.dart calls it instead of hand-copying it"
+  },
+  {
+   "sourceBatch": "t1-feat-progress-p4",
+   "origChunk": "grp-086",
+   "title": "Rewrite track_dual_progress_reactivity_test.dart so it stops overriding the provider it claims to guard"
+  }
+ ],
+ "so-015": [
+  {
+   "sourceBatch": "t1-core-domain-learning",
+   "origChunk": "grp-017",
+   "title": "Give StartDateWindowException a stable error code instead of a raw pre-formatted English message (EH-5)"
+  },
+  {
+   "sourceBatch": "t1-feat-profiles-p1",
+   "origChunk": "grp-074",
+   "title": "Delete four dead domain-layer files in features/profiles/domain (pin_flow_machine.dart, profile_creation_use_case.dart, set_parent_pin_use_case.dart, verify_parent_pin_use_case.dart)"
+  },
+  {
+   "sourceBatch": "t1-core-streak",
+   "origChunk": "grp-026",
+   "title": "Rename the domain StreakEvent so it stops colliding with Drift's generated StreakEvent row class"
+  },
+  {
+   "sourceBatch": "t1-core-l10n",
+   "origChunk": "grp-018",
+   "title": "Move test/core/l10n/app_localizations_test.dart to test/l10n/ \u2014 it has no lib/core/l10n/ mirror and duplicates app_localizations_coverage_test.dart"
+  },
+  {
+   "sourceBatch": "t1-story-epic-26",
+   "origChunk": "grp-131",
+   "title": "Dedupe the copy-pasted DB-wipe block in epic_26_story_23 \u2014 duplicate per-table delete calls in both tests"
+  }
+ ],
+ "so-016": [
+  {
+   "sourceBatch": "t1-feat-notifications-p1",
+   "origChunk": "grp-064",
+   "title": "Use a clock-skew-safe timestamp, not client clock, for notification_settings updated_at LWW field"
+  },
+  {
+   "sourceBatch": "t1-core-providers-prefs",
+   "origChunk": "grp-023",
+   "title": "Add ProviderContainer-based tests for core/preferences notifiers; replace the string-grep sentinel test; fix the misplaced/illegitimate profile_scoped_preference_keys_test.dart barrel import"
+  },
+  {
+   "sourceBatch": "t1-feat-sync-p4",
+   "origChunk": "grp-111",
+   "title": "Extract a shared no-op FirestoreGateway/PushPipeline fake \u2014 hand-duplicated stubs push tutored_pull_isolation_test.dart to 767 lines"
+  },
+  {
+   "sourceBatch": "t1-feat-progress-p5",
+   "origChunk": "grp-088",
+   "title": "Complete B18 in siyumim_timeline_and_lifetime_providers_test.dart to actually exercise the unmark-after-mark ledger conflict it documents"
+  },
+  {
+   "sourceBatch": "t1-feat-scheduler-p1",
+   "origChunk": "grp-092",
+   "title": "Mirror scheduler's domain/projection tests under test/features/scheduler/domain/projection per AG-5"
+  }
+ ],
+ "so-017": [
+  {
+   "sourceBatch": "t1-core-database-daos-p1",
+   "origChunk": "grp-007",
+   "title": "Replace awaited per-row insert/update loops with Drift batch() in curriculum_scope_dao, stage_dao, and track_dao.purgeHistory"
+  },
+  {
+   "sourceBatch": "t1-core-sync-merge",
+   "origChunk": "grp-030",
+   "title": "Fix hand-rolled test _FakeMergeStore.remoteIsNewer implementations to match DriftMergeStore's clock-skew/D15 semantics"
+  },
+  {
+   "sourceBatch": "t1-app-l10n-p1",
+   "origChunk": "grp-000",
+   "title": "Centralize app_shell.dart / persistent_switcher_scaffold.dart color literals into AppTheme instead of scattering/duplicating hex values"
+  },
+  {
+   "sourceBatch": "t1-core-network",
+   "origChunk": "grp-022",
+   "title": "Cancel or document the leaked DNS-lookup Future in ConnectivityGateway.isOnline on timeout"
+  },
+  {
+   "sourceBatch": "t1-story-epic-26",
+   "origChunk": "grp-130",
+   "title": "Confirm TrackManagementBody is wired into a real screen \u2014 it currently has zero callers in lib/"
+  }
+ ],
+ "so-018": [
+  {
+   "sourceBatch": "t1-feat-tutoring-p1",
+   "origChunk": "grp-123",
+   "title": "Replace hardcoded Color/Colors literals with theme tokens across tutoring screens"
+  },
+  {
+   "sourceBatch": "t1-core-analytics-logging",
+   "origChunk": "grp-003",
+   "title": "Guard CrashlyticsService's unawaited analytics calls with catchError \u2014 unguarded rejection can re-enter the runZonedGuarded fatal-error handler"
+  },
+  {
+   "sourceBatch": "t1-feat-onboarding-p2",
+   "origChunk": "grp-070",
+   "title": "Fix onboarding_screen_l1_test.dart's intentChooser Hebrew assertion to match the real ARB string"
+  },
+  {
+   "sourceBatch": "t1-core-small-a",
+   "origChunk": "grp-025",
+   "title": "Deduplicate near-identical CurriculumLabels test coverage spread across 3 test files"
+  },
+  {
+   "sourceBatch": "t1-feat-sync-p3",
+   "origChunk": "grp-110",
+   "title": "Use FakeLocalDayClock instead of wall-clock (SystemLocalDayClock/DateTime.now()) in test/sync hermetic tests"
+  }
+ ],
+ "so-019": [
+  {
+   "sourceBatch": "t1-story-epics-01-08",
+   "origChunk": "grp-133",
+   "title": "Inject a fake clock instead of comparing against real DateTime.now() in completion/restore timing assertions"
+  },
+  {
+   "sourceBatch": "t1-feat-gamification-p2",
+   "origChunk": "grp-053",
+   "title": "Use directional layout APIs instead of EdgeInsets.only(left/right) and Positioned(right:) in gamification widgets"
+  },
+  {
+   "sourceBatch": "t1-feat-scheduler-p3",
+   "origChunk": "grp-094",
+   "title": "Deduplicate near-identical scheduler test files added across separate fix waves"
+  },
+  {
+   "sourceBatch": "t1-feat-onboarding-p2",
+   "origChunk": "grp-070",
+   "title": "Confirm whether Positioned(left:/right:) illustration badges in intro pages need PositionedDirectional for RTL"
+  },
+  {
+   "sourceBatch": "t1-feat-profiles-p3",
+   "origChunk": "grp-080",
+   "title": "Close or auto-close inMemoryDb() in profiles _buildApp test helpers \u2014 3 files leak native Drift handles whenever db: is omitted"
+  }
+ ],
+ "so-020": [
+  {
+   "sourceBatch": "t1-core-l10n",
+   "origChunk": "grp-018",
+   "title": "Assert digit interpolation in he.todaysLearning(5) test \u2014 it only checks isNotEmpty while the EN counterpart checks contains('3')"
+  },
+  {
+   "sourceBatch": "t1-core-content",
+   "origChunk": "grp-006",
+   "title": "Add direct unit/widget tests for content_grouping.dart's groupItemsByNextLevel and for HierarchyBrowser"
+  },
+  {
+   "sourceBatch": "t1-core-nav-utils",
+   "origChunk": "grp-019",
+   "title": "Rename core/utils/date_utils.dart's DateUtils class off the Flutter SDK's own DateUtils name"
+  },
+  {
+   "sourceBatch": "t1-feat-auth",
+   "origChunk": "grp-043",
+   "title": "auth_repository_impl_test.dart exceeds the 400-line AG-3 cap (536 lines)"
+  },
+  {
+   "sourceBatch": "t1-feat-progress-p2",
+   "origChunk": "grp-084",
+   "title": "Stop pinning the dead, unlocalized ChartTimeRange.displayName getter with a coverage-chasing test"
+  }
+ ],
+ "so-021": [
+  {
+   "sourceBatch": "t1-feat-account-p3",
+   "origChunk": "grp-040",
+   "title": "Add try/catch around onSendAgain/onVerified in EmailVerificationConfirmPanel and un-skip the C6/E5 regression tests"
+  },
+  {
+   "sourceBatch": "t1-feat-progress-p2",
+   "origChunk": "grp-084",
+   "title": "Split or trim hand-written progress widget files over the 400-line AG-3 cap"
+  },
+  {
+   "sourceBatch": "t1-feat-gamification-p2",
+   "origChunk": "grp-054",
+   "title": "Replace TierStyle.forTitle's hardcoded-English-string switch with a stable tier identifier"
+  },
+  {
+   "sourceBatch": "t1-feat-progress-p3",
+   "origChunk": "grp-085",
+   "title": "Rewrite CP-02/ILP-01/PP-4 progress-provider regression guards to exercise the real provider instead of a hand-rewritten stand-in"
+  },
+  {
+   "sourceBatch": "t1-feat-onboarding-p1",
+   "origChunk": "grp-068",
+   "title": "Remove unreachable English-only default parameter values in AppIntroScreen's _IntroPage"
+  }
+ ],
+ "so-022": [
+  {
+   "sourceBatch": "t1-feat-progress-p1",
+   "origChunk": "grp-082",
+   "title": "Localize the hardcoded 'Curriculum settings' tooltip in curriculum_progress_screen.dart"
+  },
+  {
+   "sourceBatch": "t1-feat-parent_mode",
+   "origChunk": "grp-072",
+   "title": "Relocate test/features/parent_mode/** to mirror lib/features/profiles and lib/features/dashboard (AG-5 orphan test tree)"
+  },
+  {
+   "sourceBatch": "t1-core-database-daos-p3",
+   "origChunk": "grp-010",
+   "title": "Fix track_dao_extended_test.dart's deactivateTrack group \u2014 neither test calls deactivateTrack"
+  },
+  {
+   "sourceBatch": "t1-feat-tutoring-p1",
+   "origChunk": "grp-121",
+   "title": "Delete or wire up the dead TutorAuditLogWriter path (tutor_audit_log_writer.dart / audit_log_providers.dart)"
+  },
+  {
+   "sourceBatch": "t1-feat-account-p1",
+   "origChunk": "grp-037",
+   "title": "Log the comment-only catch blocks that structurally evade the single-line empty-catch grep"
+  }
+ ],
+ "so-023": [
+  {
+   "sourceBatch": "t1-feat-account-p2",
+   "origChunk": "grp-039",
+   "title": "Remove the fixed height:32 on OfflineTopBanner's Container so large text-scale doesn't clip it"
+  },
+  {
+   "sourceBatch": "t1-core-database-daos-p3",
+   "origChunk": "grp-010",
+   "title": "Split track_dao_test.dart, track_dao_extended_test.dart, and track_scoped_dao_test.dart under the 400-line AG-3 cap"
+  },
+  {
+   "sourceBatch": "t1-feat-dashboard-p1",
+   "origChunk": "grp-048",
+   "title": "Remove the discarded initialSyncComplete watch in DashboardBody.build (unnecessary rebuild)"
+  },
+  {
+   "sourceBatch": "t1-feat-learning-p3",
+   "origChunk": "grp-062",
+   "title": "Split learning_screen_l1_test.dart (1021 lines) \u2014 exceeds AG-3's 400-line hand-written-file cap by 2.5x"
+  },
+  {
+   "sourceBatch": "t1-feat-content_browsing-p2",
+   "origChunk": "grp-046",
+   "title": "Fix the tautological 'Gematriya correctness' test in text_display_screen_deep_l1_test.dart to call the real Gematriya.forNumber"
+  }
+ ],
+ "so-024": [
+  {
+   "sourceBatch": "t1-feat-onboarding-p3",
+   "origChunk": "grp-071",
+   "title": "Localize signup_screen.dart's hardcoded 'you@quest.com' email hint and extend the iter9 l10n regression test to cover it"
+  },
+  {
+   "sourceBatch": "t1-feat-tracks-p3",
+   "origChunk": "grp-118",
+   "title": "De-duplicate the Hebrew-script detection regex in TrackLearningOrderScreen"
+  },
+  {
+   "sourceBatch": "t1-feat-content_browsing-p1",
+   "origChunk": "grp-045",
+   "title": "Replace raw Colors.* literals with theme colors in content_browsing widgets"
+  },
+  {
+   "sourceBatch": "t1-feat-profiles-p2",
+   "origChunk": "grp-079",
+   "title": "Replace DateTime.now() wall-clock calls with DateTimeFactory.nowUtc() in profile_creation_use_case_test.dart"
+  },
+  {
+   "sourceBatch": "t1-feat-profiles-p4",
+   "origChunk": "grp-081",
+   "title": "Log TutoredChildrenSection's AsyncValue error branch instead of swallowing it silently"
+  }
+ ],
+ "so-025": [
+  {
+   "sourceBatch": "t1-feat-dashboard-p1",
+   "origChunk": "grp-046",
+   "title": "Guard ref.watch/ref.read after in-flight awaits in dashboard_providers.dart (SM-4)"
+  },
+  {
+   "sourceBatch": "t1-story-epics-01-08",
+   "origChunk": "grp-133",
+   "title": "Reconcile AG-3's 400-line cap with the 'one file per epic' story-acceptance convention"
+  },
+  {
+   "sourceBatch": "t1-feat-scheduler-p3",
+   "origChunk": "grp-095",
+   "title": "Split the four scheduler_engine test files that exceed AG-3's 400-line cap"
+  },
+  {
+   "sourceBatch": "t1-feat-settings-p3",
+   "origChunk": "grp-104",
+   "title": "Route account_actions_sheet.dart's Sign Out / Delete Account icon glyphs through a theme token instead of a Colors.white literal"
+  },
+  {
+   "sourceBatch": "t1-feat-sync-p2",
+   "origChunk": "grp-108",
+   "title": "Split test/sync/merge/lww_symmetric_test.dart (1237 lines) \u2014 3x over the AG-3 400-line cap"
+  }
+ ],
+ "so-026": [
+  {
+   "sourceBatch": "t1-story-epic-25",
+   "origChunk": "grp-129",
+   "title": "Consolidate the ad hoc MaterialApp test-wrap helpers in story_21 and story_25_9 into a shared pumpApp"
+  },
+  {
+   "sourceBatch": "t1-core-auth",
+   "origChunk": "grp-005",
+   "title": "Split firebase_auth_gateway_impl_test.dart \u2014 496 lines exceeds the 400-line AG-3 ratchet"
+  },
+  {
+   "sourceBatch": "t1-core-auth",
+   "origChunk": "grp-004",
+   "title": "Extract the duplicated provider-ID mapping in FirebaseAuthGatewayImpl into one helper"
+  },
+  {
+   "sourceBatch": "t1-feat-sync-p1",
+   "origChunk": "grp-106",
+   "title": "LocalDataUploadService.pushAllLocalData enqueues every entity kind via a per-row awaited loop instead of a batched outbox write"
+  },
+  {
+   "sourceBatch": "t1-feat-settings-p4",
+   "origChunk": "grp-104",
+   "title": "Add the showDeleteLocalAccountFlow tests settings_utils_test.dart's docstring claims already exist"
+  }
+ ],
+ "so-027": [
+  {
+   "sourceBatch": "t1-feat-settings-p4",
+   "origChunk": "grp-104",
+   "title": "Split the 3 settings test files that exceed the 400-line AG-3 limit (866/1255/573 lines)"
+  },
+  {
+   "sourceBatch": "t1-core-services",
+   "origChunk": "grp-023",
+   "title": "Move test/core/services/*_test.dart to mirror their real lib/features/scheduler/domain/services/ location (AG-5)"
+  },
+  {
+   "sourceBatch": "t1-feat-sync-p3",
+   "origChunk": "grp-110",
+   "title": "Trim or split the 8 test/sync files exceeding the 400-line AG-3 cap"
+  },
+  {
+   "sourceBatch": "t1-feat-gamification-p2",
+   "origChunk": "grp-054",
+   "title": "3 gamification test files exceed the AG-3 400-line cap"
+  },
+  {
+   "sourceBatch": "t1-feat-content_browsing-p2",
+   "origChunk": "grp-045",
+   "title": "Move TextContent/TextSegment out of text_cache_repository.dart (data layer) into domain/entities/ so presentation and its tests stop importing the data layer"
+  }
+ ],
+ "so-028": [
+  {
+   "sourceBatch": "t1-core-sync-codec",
+   "origChunk": "grp-027",
+   "title": "Correct FirestoreCodec.encodeDateTime's false claim that the Firestore SDK auto-converts ISO-8601 strings to Timestamp"
+  },
+  {
+   "sourceBatch": "t1-feat-scheduler-p2",
+   "origChunk": "grp-093",
+   "title": "Wrap the DB write in StudyDayConfigScreen._toggleDay with catch/log and a consistent mounted guard"
+  },
+  {
+   "sourceBatch": "t1-feat-profiles-p4",
+   "origChunk": "grp-081",
+   "title": "Move ProfileSwitcherBar out of app/router/app_shell.dart to restore AG-5 test mirroring"
+  },
+  {
+   "sourceBatch": "t1-core-sync-providers",
+   "origChunk": "grp-032",
+   "title": "Delete the dead duplicate syncStatusStreamProvider/syncStatusProvider in features/sync/presentation/providers/sync_providers.dart and fix the false 'delegates here' comment in sync_status_providers.dart"
+  },
+  {
+   "sourceBatch": "t1-feat-gamification-p1",
+   "origChunk": "grp-051",
+   "title": "Split point_config_screen.dart and reward_configuration_screen.dart (and trim 3 more) below the 400-line hand-written file cap"
+  }
+ ],
+ "so-029": [
+  {
+   "sourceBatch": "t1-app-l10n-p1",
+   "origChunk": "grp-001",
+   "title": "Close the DeviceRegistryDatabase connection on account_bootstrap.dart's exception path"
+  },
+  {
+   "sourceBatch": "t1-feat-tracks-p3",
+   "origChunk": "grp-118",
+   "title": "Extract the repeated reorder-amnesty confirm-dialog preamble in the tracks reorder screens"
+  },
+  {
+   "sourceBatch": "t1-story-epic-25",
+   "origChunk": "grp-129",
+   "title": "Replace the tautological AuthRepository mock-shape test in epic_25_schema_core_test.dart with real coverage or delete it"
+  },
+  {
+   "sourceBatch": "t1-feat-tracks-p2",
+   "origChunk": "grp-116",
+   "title": "Consolidate the tracks/{setup,stages,track_order} test suite onto mirrored paths under test/features/tracks/** (AG-5)"
+  },
+  {
+   "sourceBatch": "t1-feat-progress-p4",
+   "origChunk": "grp-086",
+   "title": "Log the two silent catch blocks in lifetime_knowledge_providers.dart via AppLogger"
+  }
+ ]
+}
