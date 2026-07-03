@@ -823,7 +823,7 @@ void main() {
   });
 
   // ══════════════════════════════════════════════════════════════════════════
-  // 7. Three-tier credit policy (CompletionSource / BatchPlan semantics)
+  // 7. Three-tier credit policy (CompletionSource semantics)
   // ══════════════════════════════════════════════════════════════════════════
 
   group('three-tier credit policy (CompletionSource)', () {
