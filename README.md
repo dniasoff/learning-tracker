@@ -114,7 +114,7 @@ make ci                     # verify before submitting
 # Open a PR against dev
 ```
 
-Coding standards live in [`coding-standards.md`](coding-standards.md). The project uses story-based TDD — run `make test-story-X.Y` to validate individual stories.
+Coding standards live in [`docs/coding-standards.md`](docs/coding-standards.md). The project uses story-based TDD — run `make test-story-X.Y` to validate individual stories.
 
 ## Documentation
 

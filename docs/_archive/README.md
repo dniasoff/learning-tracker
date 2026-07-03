@@ -35,6 +35,7 @@ Docs replaced by newer canonical versions still present under `docs/planning/`.
 - [`development-handoff-2026-02-11.md`](superseded/development-handoff-2026-02-11.md) — One-time handoff to development. Subsumed by the developer handbook.
 - [`component-specifications-2026-02-11.md`](superseded/component-specifications-2026-02-11.md) — Early component catalogue. Replaced by `docs/component-inventory.md`.
 - [`product-brief-2026-01-03.md`](superseded/product-brief-2026-01-03.md) — Original product brief. PRD (`docs/planning/prd.md`) is the active reference.
+- [`coding-standards-2026-02-10.md`](superseded/coding-standards-2026-02-10.md) — Original root-level coding standards. Contradicted the canonical [`docs/coding-standards.md`](../coding-standards.md) (e.g. required `DateTime.now().toUtc()` where the canonical doc bans `DateTime.now()` outside `core/time` entirely). Archived 2026-07-03 (AUD-docs-04); `make audit` check 23 keeps a second `coding-standards.md` from reappearing outside this folder.
 - `epic-15-stories/` — 14 story files from the original Multi-Profile epic. Work delivered under Epics 18 and 21.
 
 ### epic-qa-reports/

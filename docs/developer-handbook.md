@@ -351,7 +351,7 @@ Both run against `dev` as the primary integration branch.
 
 ## Part 4 — Coding Standards
 
-Full rules live in [`coding-standards.md`](../coding-standards.md). The non-negotiables:
+Full rules live in [`coding-standards.md`](coding-standards.md). The non-negotiables:
 
 1. **Use `AsyncValue`, not custom state classes.** All async state in providers uses Riverpod's `AsyncValue<T>`.
 2. **`DateTime` MUST use UTC.** Store and compare in UTC; convert to local only at display.

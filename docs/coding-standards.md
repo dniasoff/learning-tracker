@@ -712,18 +712,18 @@ Already enabled and load-bearing (do not remove): `unawaited_futures`, `use_buil
 
 ## Enforcement — `make audit` and CI
 
-> ⚠️ **Two Makefiles currently exist with divergent audit sets.** The **authoritative** target is `learning_tracker/Makefile`'s `audit` (22 checks, below). The repo-root `Makefile` carries an older 12-grep variant whose RTL check (`EdgeInsets.only(left:/right:)`) was never ported to the inner set. **Consolidation is required** (tracked in [Compliance Gaps](#current-compliance-gaps-2026-07-02)): union the check sets into one target, renumber sequentially, and have the other Makefile delegate.
+> ⚠️ **Two Makefiles currently exist with divergent audit sets.** The **authoritative** target is `learning_tracker/Makefile`'s `audit` (23 checks, below). The repo-root `Makefile` carries an older 12-grep variant whose RTL check (`EdgeInsets.only(left:/right:)`) was never ported to the inner set. **Consolidation is required** (tracked in [Compliance Gaps](#current-compliance-gaps-2026-07-02)): union the check sets into one target, renumber sequentially, and have the other Makefile delegate.
 
 Run before pushing:
 
 ```bash
-cd learning_tracker && make audit   # 22 enforcement checks
+cd learning_tracker && make audit   # 23 enforcement checks
 dart run custom_lint                # 9 custom rules (see reference below)
 ```
 
-### The 22 enforcement checks (`learning_tracker/Makefile`)
+### The 23 enforcement checks (`learning_tracker/Makefile`)
 
-Each check must return zero matching lines (except the two marked warn-only). The odd numbering (`1/15 … 22/22`) is accretion from fix waves — renumber on consolidation.
+Each check must return zero matching lines (except the two marked warn-only). The odd numbering (`1/15 … 23/23`) is accretion from fix waves — renumber on consolidation.
 
 | # | What it checks |
 |---|----------------|
@@ -749,6 +749,7 @@ Each check must return zero matching lines (except the two marked warn-only). Th
 | 20 | No raw `curriculumId`/`storageKey` rendered in `Text()` |
 | 21 | No nusach-specific domain-term ARB getter used directly in feature presentation |
 | 22 | Every `lib/core/labels/` file touching `displayNameEn/He` must be variant-aware |
+| 23 | Only one file named `coding-standards.md` exists outside `docs/_archive/` (AG-8, AUD-docs-04) |
 
 Root-Makefile-only check to port on consolidation: **No `EdgeInsets.only(left:|right:)`** (RTL violation — AX-1).
 

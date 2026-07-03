@@ -274,7 +274,7 @@ lint: ## Run custom_lint (skips gracefully if not in pubspec)
 	  echo "custom_lint not in pubspec — skipping (add custom_lint to dev_dependencies when ready)"; \
 	fi
 
-audit: ## Run all 22 enforcement greps (NFR19) — exits non-zero on any violation
+audit: ## Run all 23 enforcement greps (NFR19) — exits non-zero on any violation
 	@echo "=== audit: enforcement greps ==="
 	@FAIL=0; \
 	echo "1/15 — No Firebase imports outside core/auth or core/sync"; \
@@ -497,9 +497,25 @@ audit: ## Run all 22 enforcement greps (NFR19) — exits non-zero on any violati
 	    FAIL=1; \
 	  fi; \
 	done; \
+	echo "23/23 — Only one file named coding-standards.md outside docs/_archive (AUD-docs-04, AG-8)"; \
+	# docs/coding-standards.md is the sole canonical standards doc; a second \
+	# file with the same name (e.g. a stale root copy) is a doc that can lie \
+	# to an agent that lands on the wrong one — AG-8. \
+	HITS=$$(find .. -name "coding-standards.md" \
+	    -not -path "*/_archive/*" \
+	    -not -path "*/.git/*" \
+	    -not -path "*/node_modules/*" \
+	    -not -path "*/build/*" \
+	    -not -path "*/.dart_tool/*"); \
+	COUNT=$$(echo "$$HITS" | grep -c .); \
+	if [ "$$COUNT" -ne 1 ]; then \
+	  echo "  Expected exactly one coding-standards.md outside docs/_archive/ (docs/coding-standards.md is canonical); found $$COUNT:"; \
+	  echo "$$HITS"; \
+	  FAIL=1; \
+	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \
 	  exit 1; \
 	else \
-	  echo "=== audit PASSED — all 22 greps clean ==="; \
+	  echo "=== audit PASSED — all 23 greps clean ==="; \
 	fi
