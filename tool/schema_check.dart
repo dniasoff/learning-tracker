@@ -42,9 +42,6 @@ const _defaultTablesDir = 'learning_tracker/lib/core/database/tables';
 /// is the snake_case form (Drift's default).
 ///
 /// Tables intentionally omitted from this list (and why):
-///   - Completions, Goals, LearningLedger, Streaks: profile-scoped but
-///     lack a composite UNIQUE/index today. DNI-323 / DNI-324 will add
-///     them and append the table here.
 ///   - Accounts, LearnerProfiles, UserProfiles, Profiles: account- or
 ///     identity-scoped; not per-profile.
 ///   - CalendarCycles, DailyContent, TextCache, TextDownloadStatus,
@@ -58,6 +55,7 @@ const _defaultWhitelist = <String>{
   'CurriculumScopes',
   'CurriculumTracks',
   'DailyPlans',
+  'Goals',
   'LearningLedger',
   'LearningOrder',
   'Outbox',

@@ -204,6 +204,10 @@ final class RenderedLeafForRefFamily extends $Family
 /// Renders the parent (one level above leaf) display string for [sefariaRef].
 /// Used by the reader page's two-line AppBar — leaf big, parent small.
 /// Returns null when the item is already at level 1.
+///
+/// Looks up Hebrew names for every ancestor segment (mirroring
+/// [renderedDisplayForRef]) so named levels like "Seder Zeraim" or "Genesis"
+/// render in Hebrew rather than as raw English organizational labels.
 
 @ProviderFor(renderedParentForRef)
 final renderedParentForRefProvider = RenderedParentForRefFamily._();
@@ -211,6 +215,10 @@ final renderedParentForRefProvider = RenderedParentForRefFamily._();
 /// Renders the parent (one level above leaf) display string for [sefariaRef].
 /// Used by the reader page's two-line AppBar — leaf big, parent small.
 /// Returns null when the item is already at level 1.
+///
+/// Looks up Hebrew names for every ancestor segment (mirroring
+/// [renderedDisplayForRef]) so named levels like "Seder Zeraim" or "Genesis"
+/// render in Hebrew rather than as raw English organizational labels.
 
 final class RenderedParentForRefProvider
     extends $FunctionalProvider<AsyncValue<String?>, String?, FutureOr<String?>>
@@ -218,6 +226,10 @@ final class RenderedParentForRefProvider
   /// Renders the parent (one level above leaf) display string for [sefariaRef].
   /// Used by the reader page's two-line AppBar — leaf big, parent small.
   /// Returns null when the item is already at level 1.
+  ///
+  /// Looks up Hebrew names for every ancestor segment (mirroring
+  /// [renderedDisplayForRef]) so named levels like "Seder Zeraim" or "Genesis"
+  /// render in Hebrew rather than as raw English organizational labels.
   RenderedParentForRefProvider._({
     required RenderedParentForRefFamily super.from,
     required String super.argument,
@@ -262,11 +274,15 @@ final class RenderedParentForRefProvider
 }
 
 String _$renderedParentForRefHash() =>
-    r'c51c9ca08242ab972eab6410fa74e27e7839c8f0';
+    r'd4b8d01d3c43de09b5adb44002fed6c7af9a7c88';
 
 /// Renders the parent (one level above leaf) display string for [sefariaRef].
 /// Used by the reader page's two-line AppBar — leaf big, parent small.
 /// Returns null when the item is already at level 1.
+///
+/// Looks up Hebrew names for every ancestor segment (mirroring
+/// [renderedDisplayForRef]) so named levels like "Seder Zeraim" or "Genesis"
+/// render in Hebrew rather than as raw English organizational labels.
 
 final class RenderedParentForRefFamily extends $Family
     with $FunctionalFamilyOverride<FutureOr<String?>, String> {
@@ -282,6 +298,10 @@ final class RenderedParentForRefFamily extends $Family
   /// Renders the parent (one level above leaf) display string for [sefariaRef].
   /// Used by the reader page's two-line AppBar — leaf big, parent small.
   /// Returns null when the item is already at level 1.
+  ///
+  /// Looks up Hebrew names for every ancestor segment (mirroring
+  /// [renderedDisplayForRef]) so named levels like "Seder Zeraim" or "Genesis"
+  /// render in Hebrew rather than as raw English organizational labels.
 
   RenderedParentForRefProvider call(String sefariaRef) =>
       RenderedParentForRefProvider._(argument: sefariaRef, from: this);

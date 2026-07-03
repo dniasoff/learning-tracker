@@ -120,12 +120,86 @@ void main() {
       await insertTestGoal(description: 'Goal 2');
       await insertTestGoal(curriculumId: 'yerushalmi', description: 'Other');
 
-      final deleted = await database.goalDao.deleteGoalsByCurriculum('bavli');
+      final deleted = await database.goalDao.deleteGoalsByCurriculum(
+        'bavli',
+        1,
+      );
       expect(deleted, 2);
 
       final all = await database.goalDao.getAllGoals();
       expect(all, hasLength(1));
       expect(all.first.curriculumId, 'yerushalmi');
+    });
+
+    // Regression (AUD-guardrails-01): deleteGoalsByCurriculum() previously
+    // filtered only by curriculumId, so two profiles sharing a curriculum
+    // (e.g. two children both on 'bavli') would have BOTH of their goals
+    // deleted by one profile's cleanup call. Multiple profiles CAN share a
+    // curriculumId — this is not a hypothetical.
+    test('deleteGoalsByCurriculum does not delete another profile\'s goal '
+        'when two profiles share a curriculumId', () async {
+      // profile 1 (id=1) is seeded in setUp with a 'bavli' track.
+      await insertTestGoal(description: 'Profile 1 goal');
+
+      // Second profile, independently on the same curriculum. Uses its own
+      // account (seedProfile() can't be called twice — accounts.email is
+      // UNIQUE) but that mirrors two sibling child profiles under the same
+      // parent equally well: only learner_profiles.id needs to differ.
+      final account2 = await database
+          .into(database.accounts)
+          .insert(
+            AccountsCompanion.insert(
+              email: 'test2@example.com',
+              tier: 'localBorn',
+              displayName: 'Test User 2',
+              createdAt: now,
+              updatedAt: now,
+            ),
+          );
+      await database
+          .into(database.learnerProfiles)
+          .insert(
+            LearnerProfilesCompanion.insert(
+              accountId: account2,
+              displayName: 'Test User 2',
+              mode: 'child',
+              createdAt: now,
+              updatedAt: now,
+            ),
+          ); // profile id=2
+      final track2 = await database
+          .into(database.curriculumTracks)
+          .insert(
+            CurriculumTracksCompanion.insert(
+              profileId: 2,
+              curriculumId: 'bavli',
+              stateChangedAt: now,
+              activatedAt: now,
+            ),
+          );
+      await database.goalDao.insertGoal(
+        GoalsCompanion.insert(
+          profileId: 2,
+          curriculumId: 'bavli',
+          trackId: track2,
+          description: const Value('Profile 2 goal'),
+          createdAt: now,
+          updatedAt: now,
+        ),
+      );
+
+      // Profile 1 cleans up its own 'bavli' goals.
+      final deleted = await database.goalDao.deleteGoalsByCurriculum(
+        'bavli',
+        1,
+      );
+      expect(deleted, 1);
+
+      // Profile 2's goal on the same curriculum must survive untouched.
+      final remaining = await database.goalDao.getAllGoals();
+      expect(remaining, hasLength(1));
+      expect(remaining.first.profileId, 2);
+      expect(remaining.first.description, 'Profile 2 goal');
     });
 
     test('upsertGoalByTrack inserts when no existing goal', () async {

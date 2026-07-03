@@ -6,6 +6,18 @@ import 'package:learning_tracker/core/database/tables/learner_profiles.dart';
 ///
 /// Each goal has a target completion percentage and optional deadline.
 /// Multiple goals per curriculum are allowed.
+///
+/// Schema v33: added a non-unique composite index on `(profileId,
+/// curriculumId)` so `profileId` structurally participates in the
+/// profile-scoping key (Story 25.1 multi-profile-leak invariant), matching
+/// the pattern already used by the `outbox` table. Non-unique — deliberately
+/// does NOT enforce one-goal-per-curriculum, since multiple goals per
+/// curriculum remain allowed (goals are keyed one-per-track via
+/// `GoalDao.upsertGoalByTrack`, not one-per-curriculum).
+@TableIndex(
+  name: 'goals_profile_curriculum',
+  columns: {#profileId, #curriculumId},
+)
 class Goals extends Table {
   IntColumn get id => integer().autoIncrement()();
 
