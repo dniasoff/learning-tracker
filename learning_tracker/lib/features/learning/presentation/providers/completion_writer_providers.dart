@@ -25,6 +25,12 @@ CompletionWriter completionWriter(Ref ref) {
 /// ```dart
 /// ref.read(completionCommittedProvider.notifier).increment();
 /// ```
+///
+/// keepAlive: true — must survive across screens so completion-dependent
+/// providers can detect a commit that happened while they were unmounted.
+/// autoDispose would reset the counter to 0 the moment no watcher is
+/// active, silently dropping that signal for the next screen that starts
+/// watching.
 @Riverpod(keepAlive: true)
 class CompletionCommitted extends _$CompletionCommitted {
   @override

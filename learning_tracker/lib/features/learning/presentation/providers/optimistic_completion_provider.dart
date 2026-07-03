@@ -14,6 +14,11 @@ String optimisticKey({
 ///
 /// This enables sub-100ms perceived response when tapping "Mark Complete":
 /// the UI reads from this set first, then falls back to the DB query.
+///
+/// keepAlive: true — entries must survive navigation between screens while
+/// the DB write is still in flight. autoDispose would clear the set the
+/// moment no widget is watching, reverting the optimistic UI before the
+/// write confirms.
 @Riverpod(keepAlive: true)
 class OptimisticCompletionState extends _$OptimisticCompletionState {
   @override

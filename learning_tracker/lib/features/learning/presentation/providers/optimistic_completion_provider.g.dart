@@ -13,6 +13,11 @@ part of 'optimistic_completion_provider.dart';
 ///
 /// This enables sub-100ms perceived response when tapping "Mark Complete":
 /// the UI reads from this set first, then falls back to the DB query.
+///
+/// keepAlive: true — entries must survive navigation between screens while
+/// the DB write is still in flight. autoDispose would clear the set the
+/// moment no widget is watching, reverting the optimistic UI before the
+/// write confirms.
 
 @ProviderFor(OptimisticCompletionState)
 final optimisticCompletionStateProvider = OptimisticCompletionStateProvider._();
@@ -22,6 +27,11 @@ final optimisticCompletionStateProvider = OptimisticCompletionStateProvider._();
 ///
 /// This enables sub-100ms perceived response when tapping "Mark Complete":
 /// the UI reads from this set first, then falls back to the DB query.
+///
+/// keepAlive: true — entries must survive navigation between screens while
+/// the DB write is still in flight. autoDispose would clear the set the
+/// moment no widget is watching, reverting the optimistic UI before the
+/// write confirms.
 final class OptimisticCompletionStateProvider
     extends $NotifierProvider<OptimisticCompletionState, Set<String>> {
   /// Holds a set of completion keys that have been optimistically marked as
@@ -29,6 +39,11 @@ final class OptimisticCompletionStateProvider
   ///
   /// This enables sub-100ms perceived response when tapping "Mark Complete":
   /// the UI reads from this set first, then falls back to the DB query.
+  ///
+  /// keepAlive: true — entries must survive navigation between screens while
+  /// the DB write is still in flight. autoDispose would clear the set the
+  /// moment no widget is watching, reverting the optimistic UI before the
+  /// write confirms.
   OptimisticCompletionStateProvider._()
     : super(
         from: null,
@@ -64,6 +79,11 @@ String _$optimisticCompletionStateHash() =>
 ///
 /// This enables sub-100ms perceived response when tapping "Mark Complete":
 /// the UI reads from this set first, then falls back to the DB query.
+///
+/// keepAlive: true — entries must survive navigation between screens while
+/// the DB write is still in flight. autoDispose would clear the set the
+/// moment no widget is watching, reverting the optimistic UI before the
+/// write confirms.
 
 abstract class _$OptimisticCompletionState extends $Notifier<Set<String>> {
   Set<String> build();
