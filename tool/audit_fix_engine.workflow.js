@@ -196,12 +196,12 @@ function mergePrompt(mode, payloadJson) {
       '2. rebasedSha = git rev-parse HEAD. Cheap post-rebase gates: cd learning_tracker && make audit && flutter analyze; then flutter test on payload.testsToRun (if non-empty); root make arb-parity if payload.touchedStrings. Any red: git checkout ' + BRANCH + '; return status=failed with the failing tail.',
       '3. git checkout ' + BRANCH + '; git merge --no-ff <rebasedSha> -m "fix(audit): <payload.cid> - <N> finding(s): <ids>" with trailer line Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>',
       '4. Ledger update (use jq or python3 on ' + LEDGER + '): for each payload.findingsMerged row set status=merged, commits=[the merged commit SHAs], reviewRounds, acVerified (from payload), notes. For each payload.findingsRefuted: status=skipped-refuted, notes=evidence, and append a dated entry to ' + KILLLOG + ' (create the file with a header if absent). For each payload.findingsBlocked: status=blocked, notes=reason. Validate the ledger still parses (jq) and row count is unchanged. Commit: "ledger(<cid>): <counts>" with the sonnet trailer.',
-      '5. Worktree cleanup: for each path in payload.worktreesToRemove run git worktree remove --force <path> (tolerate already-gone).',
+      '5. Worktree cleanup: for each path in payload.worktreesToRemove run git worktree remove --force <path> (tolerate already-gone). Then delete orphaned auto-created worktree branches: git worktree prune; for each branch matching git branch --list "worktree-*" NOT checked out in any remaining worktree (cross-check git worktree list --porcelain), verify patch-equivalence with git cherry ' + BRANCH + ' <branch> - if EVERY line starts with "-" (all patches already in ' + BRANCH + ') or the branch tip is an ancestor (git merge-base --is-ancestor), delete it with git branch -D <branch> and note it; if any "+" line remains, LEAVE the branch and report it in notes (unmerged work is never force-deleted).',
       '6. If payload.pushNow is true: git push origin ' + BRANCH + ' (report exit).',
     ].join('\n') : [
       'MODE ledger-only - steps (no code merge; the item produced no mergeable diff):',
       '1. Ledger update on ' + LEDGER + ' exactly as in merge mode step 4 (refuted -> skipped-refuted + kill-log addendum; blocked -> blocked with reason). Validate with jq; commit "ledger(<cid>): <counts>" with the sonnet trailer.',
-      '2. Worktree cleanup per payload.worktreesToRemove (git worktree remove --force, tolerate already-gone).',
+      '2. Worktree cleanup per payload.worktreesToRemove (git worktree remove --force, tolerate already-gone), then the same orphaned worktree-* branch deletion protocol as merge mode step 5 (git worktree prune; patch-equivalence via git cherry ' + BRANCH + ' before -D; leave and report anything with unmerged patches).',
     ].join('\n')),
     'Return structured fields: status (merged|ledger-only|conflict-bounce|failed), mergeSha (empty if none), mergeBase (conflict-bounce only), conflictFiles, pushed, notes (include failing command tails on failed).',
   ].join('\n')
@@ -285,7 +285,7 @@ async function runComponent(comp, roundNum, compIdx) {
 
   if (fixedIds.length > 0) {
     while (true) {
-      const rev = await ga(reviewerPrompt(cid, tip, dispatchIds, JSON.stringify({ status: b.status, perFinding: b.perFinding, testsAdded: b.testsAdded, gateResults: b.gateResults })), { label: 'review:' + cid + '-r' + (reviewRounds + 1), phase: 'Review', model: 'opus', schema: REVIEW_SCHEMA })
+      const rev = await ga(reviewerPrompt(cid, tip, dispatchIds, JSON.stringify({ status: b.status, perFinding: b.perFinding, testsAdded: b.testsAdded, gateResults: b.gateResults })), { label: 'review:' + cid + '-r' + (reviewRounds + 1), phase: 'Review', model: 'opus', isolation: 'worktree', schema: REVIEW_SCHEMA })
       if (!rev) { blocked = blocked.concat(fixedIds.filter(function (id) { return !refuted.some(function (r) { return r.id === id }) }).map(function (id) { return { id: id, note: 'review agent lost (quota)' } })); break }
       reviewRounds++
       for (const rid of rev.refutedIds) {
@@ -358,7 +358,12 @@ while (!quotaDead) {
   log('Wave ' + WAVE + ' round ' + roundNum + ': ' + remaining.length + ' findings across ' + comps.length + ' file-disjoint components (P0-first)')
   const beforeMerged = mergedCount
   const beforeTerminal = outcomes.merged.length + outcomes.refuted.length + outcomes.blocked.length
-  await parallel(comps.map(function (c, i) { return function () { return runComponent(c, roundNum, i + 1) } }))
+  await parallel(comps.map(function (c, i) { return function () {
+    return runComponent(c, roundNum, i + 1).catch(function (e) {
+      log('component r' + roundNum + 'c' + (i + 1) + ' crashed (' + String(e).slice(0, 140) + ') - re-queueing its unfinished findings')
+      for (const id of c.ids) if (F[id].state === 'building') F[id].state = 'todo'
+    })
+  } }))
   const progressed = (mergedCount > beforeMerged) || ((outcomes.merged.length + outcomes.refuted.length + outcomes.blocked.length) > beforeTerminal)
   if (!progressed) { dryRounds++; if (dryRounds >= 2) { log('NO-PROGRESS CAP: 2 rounds without any terminal outcome - stopping the loop, residue goes to reconcile') ; break } } else dryRounds = 0
 }
