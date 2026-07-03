@@ -8,6 +8,7 @@ import 'package:learning_tracker/core/network/sefaria/models/content_item.dart';
 import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
+import 'package:learning_tracker/features/gamification/domain/services/reward_milestone_service.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_state_provider.dart';
 import 'package:learning_tracker/features/learning/data/repositories/bookmark_repository_impl.dart';
 import 'package:learning_tracker/features/learning/data/repositories/completion_repository_impl.dart';
@@ -20,6 +21,9 @@ import '../../../../helpers/test_database.dart';
 class MockSyncEngine extends Mock implements SyncWriteFacade {}
 
 class MockContentRepository extends Mock implements ContentRepository {}
+
+class MockRewardMilestoneService extends Mock
+    implements RewardMilestoneService {}
 
 void main() {
   setUpAll(() {
@@ -257,6 +261,49 @@ void main() {
         expect(c1.points, isNot(equals(c2.points)));
       },
     );
+
+    test('honors an injected rewardMilestoneServiceFactory over the real '
+        'Drift-backed service (AUD-learning-10)', () async {
+      // The shared setUp() seeds a Goal row for this track, so the real
+      // (ad-hoc-constructed) RewardMilestoneService would report
+      // eligible=true here — see "creates completion record with correct
+      // data" above, which asserts points > 0 with this exact fixture.
+      // Injecting a factory whose fake always reports ineligible and
+      // observing points drop to 0 conclusively proves the factory seam
+      // — not a same-behavior ad-hoc construction — is what's consulted.
+      final fakeReward = MockRewardMilestoneService();
+      when(
+        () => fakeReward.trackCountsTowardRewardPoints(any()),
+      ).thenAnswer((_) async => false);
+
+      final repositoryWithFakeReward = CompletionRepositoryImpl(
+        database: database,
+        syncEngine: mockSyncEngine,
+        contentRepository: mockContentRepository,
+        activeProfileId: learnerId,
+        rewardMilestoneServiceFactory: (profileId) => fakeReward,
+      );
+
+      final completion = (await repositoryWithFakeReward.markComplete(
+        const CompletionRequest(
+          curriculumId: 'mishnayos',
+          sefariaRef: 'Mishnah Berachot 1:1',
+          stageId: 1,
+          trackType: 'personal',
+        ),
+      )).completion;
+
+      expect(
+        completion.points,
+        0,
+        reason:
+            'The injected RewardMilestoneService factory reported the '
+            'track ineligible; markComplete must honor it instead of an '
+            'ad-hoc-constructed real service that would see the seeded '
+            'Goal and report eligible=true.',
+      );
+      verify(() => fakeReward.trackCountsTowardRewardPoints(any())).called(1);
+    });
   });
 
   group('bulkMarkComplete', () {

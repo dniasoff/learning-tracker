@@ -39,6 +39,8 @@ class CompletionRepositoryImpl implements CompletionRepository {
   final int _activeProfileId;
   final CompletionWriter _completionWriter;
   final StageDefinitionRepository? _stageRepository;
+  final RewardMilestoneService Function(int profileId)
+  _rewardMilestoneServiceFactory;
 
   CompletionRepositoryImpl({
     required UserDatabase database,
@@ -51,6 +53,8 @@ class CompletionRepositoryImpl implements CompletionRepository {
     int activeProfileId = 0,
     CompletionWriter? completionWriter,
     StageDefinitionRepository? stageRepository,
+    RewardMilestoneService Function(int profileId)?
+    rewardMilestoneServiceFactory,
   }) : _database = database,
        _syncEngine = syncEngine,
        _outboxFacade = outboxFacade,
@@ -60,7 +64,18 @@ class CompletionRepositoryImpl implements CompletionRepository {
        _completionDetectionService = completionDetectionService,
        _activeProfileId = activeProfileId,
        _completionWriter = completionWriter ?? CompletionWriter(database),
-       _stageRepository = stageRepository;
+       _stageRepository = stageRepository,
+       // AUD-learning-10 (SM-7): default preserves the prior ad-hoc-per-call
+       // construction exactly (same `database`, per-call `profileId` — the
+       // service is genuinely profile-scoped, e.g. bulk completions for a
+       // delegated profile != activeProfileId, so a single shared instance
+       // would be a correctness regression, not just a DI cleanup). Tests
+       // gain a seam to inject a fake without exercising the real
+       // Drift-backed service.
+       _rewardMilestoneServiceFactory =
+           rewardMilestoneServiceFactory ??
+           ((profileId) =>
+               RewardMilestoneService(database, profileId: profileId));
 
   @override
   Future<MarkCompletionResult> markComplete(
@@ -135,10 +150,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
       //    (bulkInTrack / lifetimeOnly sources — engagement tier suppressed).
       var points = 0;
       if (awardGamificationPoints) {
-        final rewardService = RewardMilestoneService(
-          _database,
-          profileId: _activeProfileId,
-        );
+        final rewardService = _rewardMilestoneServiceFactory(_activeProfileId);
         final eligible = await rewardService.trackCountsTowardRewardPoints(
           trackId,
         );
@@ -536,10 +548,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
       profileId: profileId,
     );
 
-    final rewardService = RewardMilestoneService(
-      _database,
-      profileId: profileId,
-    );
+    final rewardService = _rewardMilestoneServiceFactory(profileId);
     final eligibleForRewards = await rewardService
         .trackCountsTowardRewardPoints(trackId);
     final allowPoints =
