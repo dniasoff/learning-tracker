@@ -144,11 +144,21 @@ jobs:
   # used to crash the tool outright. learning_tracker/pubspec.yaml and
   # packages/custom_lints/pubspec.yaml now pin an unreleased-but-merged
   # analyzer-9-compatible commit via dependency_overrides (see the comments
-  # there), so the tool runs and correctly reports real diagnostics. It still
-  # surfaces ~1,840 pre-existing violations across 8/9 rules that have never
-  # been enforced before, so this step stays warn-only (not a silent skip —
-  # see docs/coding-standards.md "custom_lint toolchain status") until that
-  # debt is remediated. Flip to hard-fail only after that lands.
+  # there), which does fix that compile crash. It does NOT make this step
+  # meaningful, though: making `dart run custom_lint` discover the project
+  # requires `analyzer: plugins: [custom_lint]` in analysis_options.yaml, and
+  # enabling that marker breaks the `analyze` job's hard gate instead
+  # (analysis_server's legacy plugin loader re-resolves custom_lint from
+  # pub.dev, ignoring dependency_overrides, and 0.8.2 isn't published there —
+  # see the comment above the `analyzer:` block in
+  # learning_tracker/analysis_options.yaml, and docs/coding-standards.md
+  # "custom_lint toolchain status", for the full story). With the marker
+  # necessarily omitted, this step currently exits 0 with "No issues found!"
+  # regardless of real violations (0 projects discovered, not 0 violations) —
+  # it is a no-op, not a meaningful check. Left in place (warn-only) so it
+  # starts reporting real diagnostics again the moment the toolchain conflict
+  # is resolved (analyzer-9-compatible pub.dev release, or migrating off
+  # custom_lint); do not treat a green run here as a signal either way.
   lint:
     name: lint
     runs-on: ubuntu-latest
@@ -178,11 +188,11 @@ jobs:
         working-directory: learning_tracker
         run: flutter pub get
 
-      - name: Run custom_lint (warn-only pending pre-existing-violation remediation)
+      - name: Run custom_lint (currently a no-op — see AUD-guardrails-03 comment above)
         working-directory: learning_tracker
         run: |
           if dart pub deps --json 2>/dev/null | grep -q '"custom_lint"'; then
-            dart run custom_lint || echo "::warning::custom_lint reported violations — tool itself is fixed (AUD-guardrails-03); see docs/coding-standards.md for the pre-existing-debt count and remediation status."
+            dart run custom_lint || echo "::warning::custom_lint reported violations — see docs/coding-standards.md 'custom_lint toolchain status'. Note: a clean/silent run here does NOT mean the codebase is clean; the CLI currently cannot discover the project (AUD-guardrails-03) so it normally exits 0 without scanning anything."
           else
             echo "::notice::custom_lint not in pubspec — skipping"
           fi

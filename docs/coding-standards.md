@@ -60,7 +60,7 @@ Corollaries:
 
 ## Layering Rules
 
-The dependency direction is strictly `app → features → core`. These five rules are **invariants** — violations must never be committed. Each rule is enforced by a custom lint in `packages/custom_lints/` (landed; see [Custom Lints Reference](#custom-lints-reference)) plus a `make audit` grep. Note: CI currently runs custom_lint **warn-only** because custom_lint 0.8.1 requires analyzer ^8 while the app pins ^9 — the audit greps are the hard gate until that resolves.
+The dependency direction is strictly `app → features → core`. These five rules are **invariants** — violations must never be committed. Each rule is enforced by a custom lint in `packages/custom_lints/` (landed; see [Custom Lints Reference](#custom-lints-reference)) plus a `make audit` grep. Note: CI currently runs custom_lint **warn-only**, and the tool cannot presently discover this project at all (see "custom_lint toolchain status" under [Enforcement](#enforcement--make-audit-and-ci)) — the audit greps are the hard gate until that resolves.
 
 ### Rule 1 — No `core/` → `features/` imports
 
@@ -427,7 +427,7 @@ The offline account model (credential-less local account, converted on reconnect
 
 **AX-1 — Horizontal spacing and alignment use `EdgeInsetsDirectional` / `AlignmentDirectional` (`start`/`end`); never `EdgeInsets(left:/right:)` or `Alignment.centerLeft/Right`.**
 **Why:** directional geometry flips automatically under `TextDirection.rtl`; hardcoded left/right renders on the wrong side in Hebrew.
-**Enforce:** [Enforced] `no_hardcoded_text_direction` custom lint + **root** audit check 10. ⚠️ This check exists only in the root Makefile's audit, not the inner 22 — see [Enforcement](#enforcement--make-audit-and-ci).
+**Enforce:** [Enforced] `no_hardcoded_text_direction` custom lint + **root** audit check 10. ⚠️ This check exists only in the root Makefile's audit, not the inner 23 — see [Enforcement](#enforcement--make-audit-and-ci).
 **Source:** api.flutter.dev — EdgeInsetsDirectional
 
 **AX-2 — No hardcoded user-facing strings: every displayed string, date, number, and plural comes from `AppLocalizations`/ARB (ICU plurals, not hand-built), with `app_en.arb` and `app_he.arb` key-for-key in sync.**
@@ -712,18 +712,18 @@ Already enabled and load-bearing (do not remove): `unawaited_futures`, `use_buil
 
 ## Enforcement — `make audit` and CI
 
-> ⚠️ **Two Makefiles currently exist with divergent audit sets.** The **authoritative** target is `learning_tracker/Makefile`'s `audit` (22 checks, below). The repo-root `Makefile` carries an older 12-grep variant whose RTL check (`EdgeInsets.only(left:/right:)`) was never ported to the inner set. **Consolidation is required** (tracked in [Compliance Gaps](#current-compliance-gaps-2026-07-02)): union the check sets into one target, renumber sequentially, and have the other Makefile delegate.
+> ⚠️ **Two Makefiles currently exist with divergent audit sets.** The **authoritative** target is `learning_tracker/Makefile`'s `audit` (23 checks, below). The repo-root `Makefile` carries an older 12-grep variant whose RTL check (`EdgeInsets.only(left:/right:)`) was never ported to the inner set. **Consolidation is required** (tracked in [Compliance Gaps](#current-compliance-gaps-2026-07-02)): union the check sets into one target, renumber sequentially, and have the other Makefile delegate.
 
 Run before pushing:
 
 ```bash
-cd learning_tracker && make audit   # 22 enforcement checks
-dart run custom_lint                # 9 custom rules (see reference below)
+cd learning_tracker && make audit   # 23 enforcement checks
+dart run custom_lint                # currently non-functional — see "custom_lint toolchain status" below; do not rely on its exit code
 ```
 
-### The 22 enforcement checks (`learning_tracker/Makefile`)
+### The 23 enforcement checks (`learning_tracker/Makefile`)
 
-Each check must return zero matching lines (except the two marked warn-only). The odd numbering (`1/15 … 22/22`) is accretion from fix waves — renumber on consolidation.
+Each check must return zero matching lines (except the two marked warn-only). The odd numbering (`1/15 … 23/23`) is accretion from fix waves — renumber on consolidation.
 
 | # | What it checks |
 |---|----------------|
@@ -749,6 +749,7 @@ Each check must return zero matching lines (except the two marked warn-only). Th
 | 20 | No raw `curriculumId`/`storageKey` rendered in `Text()` |
 | 21 | No nusach-specific domain-term ARB getter used directly in feature presentation |
 | 22 | Every `lib/core/labels/` file touching `displayNameEn/He` must be variant-aware |
+| 23 | No `custom_lint` analyzer plugin marker in `analysis_options.yaml` (AUD-guardrails-03 — breaks the `dart analyze --fatal-infos` hard gate; see "custom_lint toolchain status" below) |
 
 Root-Makefile-only check to port on consolidation: **No `EdgeInsets.only(left:|right:)`** (RTL violation — AX-1).
 
@@ -759,13 +760,13 @@ Root-Makefile-only check to port on consolidation: **No `EdgeInsets.only(left:|r
 | format-check | `dart format --set-exit-if-changed .` | hard gate |
 | analyze | codegen (`build_runner`, asset prep) then `dart analyze --fatal-infos` | hard gate |
 | audit | `make audit` | ⚠️ **soft-skips** if target considered absent — must hard-fail |
-| custom_lint | `dart run custom_lint` | ⚠️ **warn-only** — tool is fixed (AUD-guardrails-03) and runs clean of crashes, but the codebase has ~1,840 pre-existing violations across 8/9 rules; hard-fail once that debt is remediated |
+| custom_lint | `dart run custom_lint` | ⚠️ **non-functional** — the compile crash is fixed (AUD-guardrails-03), but the CLI cannot currently run at all in CI/local without also breaking the `analyze` hard gate; it silently reports "No issues found!" (0 projects discovered, not 0 violations) — see "custom_lint toolchain status" below |
 | test + coverage | `make ci` then lcov floor | hard gate, line coverage ≥ 60% (generated files excluded), cannot drop on a PR |
 | firestore-rules | emulator + `firestore_rules.test.mjs` | ⚠️ **soft-skips** if the suite file is missing — must hard-fail (TQ-9) |
 
-Until the soft-skips are removed, **local `make audit` + `dart run custom_lint` are the real gate** — run them.
+Until the soft-skips are removed, **local `make audit` is the real gate** — run it. (`dart run custom_lint` is currently a no-op; do not treat its exit code as a signal — see below.)
 
-#### custom_lint toolchain status (AUD-guardrails-03, resolved 2026-07-03)
+#### custom_lint toolchain status (AUD-guardrails-03, partially resolved 2026-07-03 — CLI currently non-functional)
 
 pub.dev's latest `custom_lint`/`custom_lint_core` (0.8.1) only support analyzer
 `^8`, but this project pins analyzer `^9` (forced by `json_serializable` /
@@ -779,25 +780,57 @@ migrates off custom_lint (a rewrite of all 9 rules — tracked as a follow-up,
 not done here), `learning_tracker/pubspec.yaml` and
 `packages/custom_lints/pubspec.yaml` pin the unreleased 0.8.2 commit via
 `dependency_overrides` (`git:` + `path:`, see the comments in both files for
-the exact ref), and `learning_tracker/analysis_options.yaml` re-enables
-`analyzer: plugins: [custom_lint]` (verified not to affect `dart analyze` —
-plugin diagnostics don't surface there, only via the dedicated CLI, so this
-is required for `dart run custom_lint` to discover the project at all).
+the exact ref). **This part of the fix is real and stands**: `custom_lint_core`
+now compiles cleanly against analyzer 9, confirmed via `dart test` in
+`packages/custom_lints` (88/88 passing) and by manually enabling the plugin
+marker in a scratch run and injecting a deliberate raw-`talker`-import
+violation, which the tool correctly caught.
 
-With the crash fixed, `dart run custom_lint` now performs a real analysis and
-correctly reports genuine violations — verified by injecting a deliberate
-raw-`talker`-import violation and confirming it was caught before removing
-it. Running it against the current tree reports **1,840 issues** across 8 of
-the 9 rules (only `no_hardcoded_domain_term` is currently clean):
-`no_feature_cross_import` (1,193), `no_color_literal_outside_theme` (474),
-`no_curriculum_display_name_bypass` (114), `no_e_to_string_in_ui` (32),
-`no_raw_talker` (13), `no_raw_logevent` (8), `no_firebase_outside_core` (5),
-`no_hardcoded_text_direction` (1). This is pre-existing debt the rules have
-never been able to see before now — not a regression from this fix. It
-mirrors `make audit` checks #14–15, which tolerate the same
-cross-feature/core-import legacy violations as warn-only pending a
-Wave-2 cleanup. Remediating the 1,840 violations (or re-triaging severities)
-is a separate, tracked follow-up; CI stays warn-only until that lands.
+That manual scratch run, however, surfaced a second, blocking problem: making
+`dart run custom_lint` actually discover this project requires
+`analyzer: plugins: [custom_lint]` in `learning_tracker/analysis_options.yaml`
+(confirmed in custom_lint's own source — `CustomLintWorkspace._isCustomLintEnabled`
+gates workspace discovery on this exact marker, identically in both the
+pub.dev 0.8.1 release and the git-pinned 0.8.2 commit; without it the CLI
+finds zero projects and prints a **false** "No issues found!"). But enabling
+that marker breaks the real CI hard gate: analysis_server's *legacy plugin
+loader* (a separate code path from custom_lint's own CLI, used by `dart
+analyze`/`flutter analyze` when `analyzer: plugins:` is set) re-resolves
+`custom_lint` in its own isolated pub context under
+`~/.dartServer/.plugin_manager/`, ignoring this project's
+`dependency_overrides` entirely, and tries to fetch `custom_lint 0.8.2`
+straight from pub.dev — which doesn't exist there (only 0.8.1 is published).
+Version solving fails and `dart analyze --fatal-infos` (the actual CI gate,
+`.github/workflows/ci.yml` `analyze` job, `make analyze`) exits non-zero
+(verified: exit 4) **even on an otherwise zero-diagnostic tree** — a crash
+message, not a real diagnostic. `flutter analyze` swallows this crash and
+still exits 0, which is why it is not a reliable substitute for verifying
+this gate.
+
+Because of that conflict, `learning_tracker/analysis_options.yaml` keeps the
+plugin marker **omitted** (see the comment above the `analyzer:` block there)
+and `make audit` check 23/23 fails the build if it is ever re-added. The
+consequence: `dart run custom_lint` cannot currently discover this project at
+all and silently reports "No issues found!" — not because the codebase is
+clean, but because the tool finds no workspace to scan. Do not read a green
+`dart run custom_lint` as a passing signal; it is not currently a working
+checker. During the scratch run with the marker manually (temporarily)
+enabled, the tool reported **1,840 issues** across 8 of the 9 rules (only
+`no_hardcoded_domain_term` was clean): `no_feature_cross_import` (1,193),
+`no_color_literal_outside_theme` (474), `no_curriculum_display_name_bypass`
+(114), `no_e_to_string_in_ui` (32), `no_raw_talker` (13), `no_raw_logevent`
+(8), `no_firebase_outside_core` (5), `no_hardcoded_text_direction` (1) — real,
+pre-existing debt the rules had never been able to see before, not a
+regression from this fix, and it mirrors `make audit` checks #14–15, which
+already tolerate the same cross-feature/core-import legacy violations as
+warn-only. That count is a one-time observation, not a live/enforced number:
+it cannot be reproduced via the normal CLI or CI path today, because doing so
+requires the same marker that breaks `analyze`. Remediating the 1,840
+violations is moot until the CLI can run without breaking the hard gate —
+either a real analyzer-9-compatible pub.dev release of custom_lint, or
+migrating off it entirely (both out of scope here; the latter is already
+tracked above as a follow-up). CI's `custom_lint` step stays warn-only and is
+not currently a meaningful check either way.
 
 ---
 
@@ -831,7 +864,7 @@ Live violations of the rules above, verified in the working tree on this date. E
 | Two `firebase.json` disagree on the Firestore emulator port (9090 vs 8080) | TQ-9 | root vs `learning_tracker/`; rules suite hardcodes 8080 |
 | `make ci` doesn't run `test-rules`; CI rules job soft-skips | TQ-9 | `learning_tracker/Makefile` `ci:` target; `ci.yml` |
 | CI soft-skips `audit` | Rule 0 | `ci.yml` — local `make audit` is the real gate meanwhile |
-| custom_lint runs clean (AUD-guardrails-03 fixed the toolchain) but reports ~1,840 pre-existing violations across 8/9 rules; CI stays warn-only | Rule 0 | see "custom_lint toolchain status" under Enforcement above |
+| custom_lint compile crash is fixed (AUD-guardrails-03) but the CLI still can't run: it needs an analysis_options.yaml marker that breaks the `dart analyze --fatal-infos` hard gate, so it silently discovers 0 projects; ~1,840 pre-existing violations across 8/9 rules were observed in a one-time manual scratch run and are not currently re-checkable via CLI/CI | Rule 0 | see "custom_lint toolchain status" under Enforcement above |
 | Two divergent Makefile audit sets; RTL grep only in root | AX-1, Rule 0 | consolidate into one authoritative target |
 | ~121 legacy Riverpod provider usages | SM-1 | migration backlog; diff-scoped enforcement meanwhile |
 | No `drift_schemas/` exports or generated migration tests (schemaVersion 32) | DB-4 | adopt `drift_dev schema dump` workflow |
