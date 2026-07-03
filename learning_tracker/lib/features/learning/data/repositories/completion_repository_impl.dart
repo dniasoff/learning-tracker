@@ -34,6 +34,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
   final OutboxSyncWriteFacade? _outboxFacade;
   final ContentRepository _contentRepository;
   final BookmarkRepository? _bookmarkRepository;
+  final BookmarkRepository Function(int profileId)? _bookmarkRepositoryFactory;
   final CompletionDetectionService? _completionDetectionService;
   final int _activeProfileId;
   final CompletionWriter _completionWriter;
@@ -45,6 +46,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
     required ContentRepository contentRepository,
     OutboxSyncWriteFacade? outboxFacade,
     BookmarkRepository? bookmarkRepository,
+    BookmarkRepository Function(int profileId)? bookmarkRepositoryFactory,
     CompletionDetectionService? completionDetectionService,
     int activeProfileId = 0,
     CompletionWriter? completionWriter,
@@ -54,6 +56,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
        _outboxFacade = outboxFacade,
        _contentRepository = contentRepository,
        _bookmarkRepository = bookmarkRepository,
+       _bookmarkRepositoryFactory = bookmarkRepositoryFactory,
        _completionDetectionService = completionDetectionService,
        _activeProfileId = activeProfileId,
        _completionWriter = completionWriter ?? CompletionWriter(database),
@@ -807,9 +810,16 @@ class CompletionRepositoryImpl implements CompletionRepository {
   /// Advance the bookmark to the next item in learning order.
   ///
   /// Uses the injected [BookmarkRepository] when it matches [bookmarkProfileId]
-  /// (or the session active profile); otherwise builds a profile-scoped
-  /// [BookmarkRepositoryImpl] so delegated flows (e.g. parent + child track) sync
-  /// the correct bookmark.
+  /// (or the session active profile). For delegated flows (e.g. parent +
+  /// child track, bulk-mark-prior during onboarding) where the target
+  /// profile differs, prefers [_bookmarkRepositoryFactory] — injected by
+  /// `completionRepositoryProvider` with the same [BookmarkRepositoryImpl]
+  /// wiring (including `ContentIndex`) as `bookmarkRepositoryProvider`, so
+  /// delegated advances keep the O(1) adjacent-item fast path instead of
+  /// silently falling back to an O(N) scan (AUD-learning-04). Only when
+  /// neither is supplied (e.g. a test constructing this repository
+  /// directly) does this build an ad-hoc, non-indexed
+  /// [BookmarkRepositoryImpl] itself.
   Future<void> _advanceBookmark({
     required String curriculumId,
     required String completedSefariaRef,
@@ -818,9 +828,12 @@ class CompletionRepositoryImpl implements CompletionRepository {
     final pid = bookmarkProfileId ?? _activeProfileId;
 
     final injected = _bookmarkRepository;
+    final factory = _bookmarkRepositoryFactory;
     late final BookmarkRepository bookmarkRepo;
     if (injected != null && pid == _activeProfileId) {
       bookmarkRepo = injected;
+    } else if (factory != null) {
+      bookmarkRepo = factory(pid);
     } else {
       bookmarkRepo = BookmarkRepositoryImpl(
         database: _database,

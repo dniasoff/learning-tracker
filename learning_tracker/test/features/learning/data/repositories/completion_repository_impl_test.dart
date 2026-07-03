@@ -1,5 +1,6 @@
 import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/content/content_index.dart';
 import 'package:learning_tracker/core/database/daos/profile_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
@@ -8,6 +9,7 @@ import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
 import 'package:learning_tracker/features/gamification/streak/streak_state_provider.dart';
+import 'package:learning_tracker/features/learning/data/repositories/bookmark_repository_impl.dart';
 import 'package:learning_tracker/features/learning/data/repositories/completion_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_request.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
@@ -460,6 +462,119 @@ void main() {
             learnerId,
           );
       expect(bookmark?.sefariaRef, ref2);
+    });
+  });
+
+  group('bookmarkRepositoryFactory — delegated profile (AUD-learning-04)', () {
+    test('delegated-profile advance uses the injected ContentIndex fast path, '
+        'not the O(N) content-repo scan', () async {
+      const curriculumId = 'mishnayos';
+      const ref1 = 'Mishnah Berachot 1:1';
+      const ref2 = 'Mishnah Berachot 1:2';
+      final now = DateTime.now();
+
+      // A second profile, delegated-to (e.g. parent bulk-marking prior
+      // learning for a child while the session's active profile is the
+      // parent) — deliberately NOT `learnerId`/`_activeProfileId`.
+      final delegateRow = await database
+          .into(database.learnerProfiles)
+          .insertReturning(
+            ProfilesCompanion.insert(
+              accountId: 1,
+              displayName: 'Delegate',
+              mode: 'child',
+              createdAt: now,
+              updatedAt: now,
+            ),
+          );
+      final delegateProfileId = delegateRow.id;
+      expect(delegateProfileId, isNot(learnerId));
+
+      final delegateTrackRow = await database
+          .into(database.curriculumTracks)
+          .insertReturning(
+            CurriculumTracksCompanion.insert(
+              profileId: delegateProfileId,
+              curriculumId: curriculumId,
+              stateChangedAt: now,
+              activatedAt: now,
+            ),
+          );
+
+      const item1 = ContentItem(
+        curriculumId: curriculumId,
+        sefariaRef: ref1,
+        displayNameEn: 'Berachot 1:1',
+        displayNameHe: '',
+        isLeaf: true,
+        sortOrder: 1,
+        level1: 'Seder Zeraim',
+      );
+      const item2 = ContentItem(
+        curriculumId: curriculumId,
+        sefariaRef: ref2,
+        displayNameEn: 'Berachot 1:2',
+        displayNameHe: '',
+        isLeaf: true,
+        sortOrder: 2,
+        level1: 'Seder Zeraim',
+      );
+      final contentIndex = ContentIndex.fromCurricula({
+        CurriculumId.mishnayos: [item1, item2],
+      });
+
+      // A repository wired with a bookmarkRepositoryFactory carrying a
+      // ContentIndex — mirrors how completionRepositoryProvider wires
+      // production. activeProfileId stays `learnerId`; the bulk request
+      // below targets the delegate profile, so the injected same-profile
+      // `bookmarkRepository` (unset here) could never apply — only the
+      // factory can serve this profile.
+      final delegatingRepository = CompletionRepositoryImpl(
+        database: database,
+        syncEngine: mockSyncEngine,
+        contentRepository: mockContentRepository,
+        activeProfileId: learnerId,
+        bookmarkRepositoryFactory: (profileId) => BookmarkRepositoryImpl(
+          database: database,
+          syncEngine: mockSyncEngine,
+          contentRepository: mockContentRepository,
+          profileId: profileId,
+          contentIndex: contentIndex,
+        ),
+      );
+
+      await delegatingRepository.bulkMarkComplete(
+        BulkCompletionRequest(
+          curriculumId: curriculumId,
+          sefariaRefs: const [ref1],
+          stageId: 1,
+          trackType: 'personal',
+          profileId: delegateProfileId,
+          // Routes through _bulkMarkCompletePriorOptimized — the leanest
+          // path to _advanceBookmark, avoiding unrelated reward/streak
+          // collaborators.
+          awardGamificationPoints: false,
+        ),
+      );
+
+      // AUD-learning-04: the delegated-profile advance must resolve via
+      // the O(1) ContentIndex, never fall back to the O(N) content-repo
+      // scan `BookmarkRepositoryImpl` uses when no index is supplied.
+      verifyNever(() => mockContentRepository.getContentForCurriculum(any()));
+
+      final bookmark = await database.bookmarkDao
+          .getBookmarkByCurriculumTrackAndProfile(
+            curriculumId,
+            delegateTrackRow.id,
+            delegateProfileId,
+          );
+      expect(
+        bookmark?.sefariaRef,
+        ref2,
+        reason:
+            'The ContentIndex fast path must resolve the same next-item '
+            'as the O(N) scan it replaces.',
+      );
     });
   });
 }

@@ -10,29 +10,46 @@ import 'package:learning_tracker/features/learning/domain/repositories/bookmark_
 import 'package:learning_tracker/features/profiles/presentation/providers/active_profile_provider.dart';
 import 'package:learning_tracker/features/sync/presentation/providers/sync_providers.dart';
 
+/// Factory for a [BookmarkRepository] scoped to an arbitrary profile,
+/// carrying the same [ContentIndex]/sync/gateway wiring as
+/// [bookmarkRepositoryProvider] (which is hard-scoped to the active
+/// profile).
+///
+/// AUD-learning-04: `CompletionRepositoryImpl` uses this (via
+/// `completionRepositoryProvider`) so delegated-profile bookmark advances
+/// (e.g. `bulkMarkComplete` with `profileId` != the active profile — parent
+/// bulk-marking prior learning for a child) keep the O(1) adjacent-item
+/// fast path instead of falling back to an ad-hoc, non-indexed
+/// [BookmarkRepositoryImpl].
+final bookmarkRepositoryFactoryProvider =
+    Provider<BookmarkRepository Function(int profileId)>((ref) {
+      final database = ref.watch(userDatabaseProvider);
+      final syncFacade = ref.watch(syncWriteFacadeProvider);
+      final firestoreGateway = ref.watch(firestoreGatewayProvider);
+      final contentRepository = ref.watch(contentRepositoryProvider);
+      // ContentIndex may still be loading — pass null until it's ready so
+      // the repository falls back to its O(N) scan path (correct
+      // behaviour, just slightly slower during the first warmup).
+      final contentIndex = ref.watch(contentIndexProvider).asData?.value;
+
+      return (profileId) => BookmarkRepositoryImpl(
+        database: database,
+        syncEngine: syncFacade,
+        firestoreGateway: firestoreGateway,
+        contentRepository: contentRepository,
+        profileId: profileId,
+        contentIndex: contentIndex,
+      );
+    });
+
 /// Provider for bookmark repository, scoped to the active profile.
 ///
 /// Injects [ContentIndex] (Story 26.14 / DNI-357) so [advanceBookmark] and
 /// [initializeBookmark] use O(1) adjacent-item lookups instead of O(N) scans.
 final bookmarkRepositoryProvider = Provider<BookmarkRepository>((ref) {
-  final database = ref.watch(userDatabaseProvider);
-  final syncFacade = ref.watch(syncWriteFacadeProvider);
-  final firestoreGateway = ref.watch(firestoreGatewayProvider);
-  final contentRepository = ref.watch(contentRepositoryProvider);
+  final factory = ref.watch(bookmarkRepositoryFactoryProvider);
   final profileId = ref.watch(activeProfileIdProvider);
-  // ContentIndex may still be loading — pass null until it's ready so the
-  // repository falls back to its O(N) scan path (correct behaviour, just
-  // slightly slower during the first warmup).
-  final contentIndex = ref.watch(contentIndexProvider).asData?.value;
-
-  return BookmarkRepositoryImpl(
-    database: database,
-    syncEngine: syncFacade,
-    firestoreGateway: firestoreGateway,
-    contentRepository: contentRepository,
-    profileId: profileId,
-    contentIndex: contentIndex,
-  );
+  return factory(profileId);
 });
 
 /// Provider family for a specific bookmark (one track per curriculum).
