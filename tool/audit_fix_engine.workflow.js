@@ -25,6 +25,8 @@ const FINAL_WAVE = !!cfg.finalWave
 const PUSH_EVERY = cfg.pushEvery || 3
 const CHUNK = cfg.chunkSize || 8
 const LINEAR_TEAM = cfg.linearTeam || 'DNI'
+const MAXP = cfg.maxParallel || 0
+const PREBUILT = Array.isArray(cfg.preBuilt) ? cfg.preBuilt : []
 
 const REPO = '/home/daniel/repos/learning-tracker'
 const BRANCH = 'audit-fix/2026-07-03'
@@ -43,12 +45,21 @@ let consecFail = 0
 let quotaDead = false
 const outcomes = { merged: [], refuted: [], blocked: [] }
 
+// slot semaphore: at most MAXP agents in flight, slots hand over directly (always full while work remains)
+let semActive = 0
+const semWait = []
+function semRelease() { const w = semWait.shift(); if (w) { w() } else { semActive-- } }
 async function ga(prompt, opts) {
   if (quotaDead) return null
-  const r = await agent(prompt, opts)
+  if (MAXP > 0) {
+    if (semActive >= MAXP) { await new Promise(function (res) { semWait.push(res) }) } else { semActive++ }
+    if (quotaDead) { semRelease(); return null }
+  }
+  let r = null
+  try { r = await agent(prompt, opts) } finally { if (MAXP > 0) semRelease() }
   if (r === null || r === undefined) {
     consecFail++
-    if (consecFail >= 3) { quotaDead = true; log('QUOTA GUARD tripped: 3 consecutive agent failures - no new launches; finishing bookkeeping') }
+    if (consecFail >= 3 && !quotaDead) { quotaDead = true; log('QUOTA GUARD tripped: 3 consecutive agent failures - no new launches; finishing bookkeeping') }
     return null
   }
   consecFail = 0
@@ -260,13 +271,14 @@ const MERGE_SCHEMA = {
 }
 
 // ---------- per-component pipeline ----------
-async function runComponent(comp, roundNum, compIdx) {
+async function runComponent(comp, roundNum, compIdx, preB) {
   const cid = 'w' + WAVE + 'r' + roundNum + 'c' + compIdx
-  const dispatchIds = comp.ids.slice(0, CHUNK)
+  const dispatchIds = preB ? comp.ids.slice() : comp.ids.slice(0, CHUNK)
   for (const id of dispatchIds) F[id].state = 'building'
   const worktrees = []
 
-  const b = await ga(builderPrompt(comp, cid, dispatchIds), { label: 'build:' + cid, phase: 'Build', model: 'sonnet', isolation: 'worktree', schema: BUILD_SCHEMA })
+  const b = preB ? preB.build : await ga(builderPrompt(comp, cid, dispatchIds), { label: 'build:' + cid, phase: 'Build', model: 'sonnet', isolation: 'worktree', schema: BUILD_SCHEMA })
+  if (preB && b) log(cid + ': harvested pre-built ' + (b.tipSha || '').slice(0, 10) + ' for ' + dispatchIds.join(','))
   if (!b) { for (const id of dispatchIds) F[id].state = 'todo'; return }
   if (b.worktreePath) worktrees.push(b.worktreePath)
   const claims = {}
@@ -347,12 +359,31 @@ async function runComponent(comp, roundNum, compIdx) {
   })
 }
 
+// ---------- harvested pre-built components: straight to review->merge, concurrent with the round loop ----------
+let prebuiltPromise = Promise.resolve()
+if (PREBUILT.length) {
+  const valid = PREBUILT.filter(function (pb) { return Array.isArray(pb.ids) && pb.ids.length && pb.ids.every(function (id) { return F[id] }) && pb.build && pb.build.tipSha })
+  if (valid.length !== PREBUILT.length) log('WARNING: ' + (PREBUILT.length - valid.length) + ' preBuilt entries invalid/unknown ids - dropped (their findings stay todo)')
+  log('Processing ' + valid.length + ' harvested pre-built components (skip build; review -> merge)')
+  for (const pb of valid) for (const id of pb.ids) F[id].state = 'building'
+  prebuiltPromise = parallel(valid.map(function (pb, i) { return function () {
+    return runComponent({ ids: pb.ids.slice(), files: [], sev: 0 }, 0, i + 1, pb).catch(function (e) {
+      log('prebuilt c' + (i + 1) + ' crashed (' + String(e).slice(0, 120) + ') - re-queueing its findings')
+      for (const id of pb.ids) if (F[id].state === 'building') F[id].state = 'todo'
+    })
+  } }))
+}
+
 // ---------- round loop until dry ----------
 let roundNum = 0
 let dryRounds = 0
 while (!quotaDead) {
   const remaining = Object.keys(F).filter(function (id) { return F[id].state === 'todo' })
-  if (remaining.length === 0) break
+  if (remaining.length === 0) {
+    await prebuiltPromise
+    if (Object.keys(F).filter(function (id) { return F[id].state === 'todo' }).length === 0) break
+    continue
+  }
   roundNum++
   const comps = cluster(remaining)
   log('Wave ' + WAVE + ' round ' + roundNum + ': ' + remaining.length + ' findings across ' + comps.length + ' file-disjoint components (P0-first)')
@@ -367,6 +398,7 @@ while (!quotaDead) {
   const progressed = (mergedCount > beforeMerged) || ((outcomes.merged.length + outcomes.refuted.length + outcomes.blocked.length) > beforeTerminal)
   if (!progressed) { dryRounds++; if (dryRounds >= 2) { log('NO-PROGRESS CAP: 2 rounds without any terminal outcome - stopping the loop, residue goes to reconcile') ; break } } else dryRounds = 0
 }
+await prebuiltPromise
 await serialized(async function () { return null })
 
 // ---------- reconcile residue ----------
