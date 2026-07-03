@@ -19,6 +19,15 @@ class GoalDao extends DatabaseAccessor<UserDatabase>
   @override
   Expression<int> profileIdColumn($GoalsTable t) => t.profileId;
 
+  /// Returns every goal for every profile on this device.
+  ///
+  /// AUD-guardrails-01: intentionally NOT profile-scoped. Its only two
+  /// production callers — `DataExportImportService` (whole-account JSON
+  /// export/import) and `LocalDataUploadService` (bulk local→cloud upload) —
+  /// deliberately operate across every profile on the account and preserve
+  /// each row's own `profileId` field. Adding a profileId filter here would
+  /// silently drop other profiles' goals from account-level export/upload.
+  /// Callers that need one profile's goals should use [getGoalsByProfile].
   Future<List<Goal>> getAllGoals() => select(goals).get();
 
   // ========== Profile-Scoped Queries ==========
@@ -57,8 +66,20 @@ class GoalDao extends DatabaseAccessor<UserDatabase>
   Future<int> deleteGoal(int id) =>
       (delete(goals)..where((t) => t.id.equals(id))).go();
 
-  Future<int> deleteGoalsByCurriculum(String curriculumId) =>
-      (delete(goals)..where((t) => t.curriculumId.equals(curriculumId))).go();
+  /// Deletes every goal for [curriculumId] scoped to [profileId].
+  ///
+  /// AUD-guardrails-01: previously filtered by curriculumId alone, so two
+  /// profiles sharing a curriculumId (e.g. two children both tracking
+  /// Mishnayos) would have BOTH of their goals wiped by one profile's
+  /// cleanup call. `profileId` is required to keep this call cross-profile
+  /// safe by construction.
+  Future<int> deleteGoalsByCurriculum(String curriculumId, int profileId) =>
+      (delete(goals)..where(
+            (t) =>
+                t.curriculumId.equals(curriculumId) &
+                t.profileId.equals(profileId),
+          ))
+          .go();
 
   // ========== Track-Scoped Queries (Story 20.2) ==========
 

@@ -77,11 +77,13 @@ grep -r "import 'package:learning_tracker/features/" \
 
 ### Rule 2 — No cross-feature deep imports
 
-`lib/features/X/` MUST NOT import directly from `lib/features/Y/<anything-other-than-providers.dart>`.
+`lib/features/X/` MUST NOT import directly from `lib/features/Y/<anything-other-than-Y.dart>`.
 
-Features are independent vertical slices. The only permitted cross-feature reference is the feature's public surface file `lib/features/Y/providers.dart`. If that file does not exist yet, the importing feature must go through a core provider or core service instead.
+Features are independent vertical slices. The only permitted cross-feature reference is the feature's public surface file `lib/features/Y/Y.dart` (e.g. `lib/features/tutoring/tutoring.dart`) — named after the feature directory itself, per `learning_tracker/CLAUDE.md`. If that file does not exist yet, the importing feature must go through a core provider or core service instead.
 
-The `providers.dart` barrel is the **only** sanctioned re-export file. Do not add other barrel/re-export files — deep re-export chains defeat "where is X defined?" search and hide layering violations from both agents and reviewers.
+The `Y.dart` barrel is the **only** sanctioned re-export file per feature. Do not add other barrel/re-export files — deep re-export chains defeat "where is X defined?" search and hide layering violations from both agents and reviewers.
+
+*(AUD-learning-02: this rule previously named the barrel `providers.dart`, contradicting `learning_tracker/CLAUDE.md`'s `Y.dart` and matching zero of the 15 barrel files that actually exist in `lib/features/*/` — all 15 are `Y.dart`. Reconciled to the convention already in universal use rather than proposing a 15-file, all-consumers rename.)*
 
 **Lint:** `no_feature_cross_import` · **Audit:** inner check 15 (currently warn-only pending legacy cleanup)
 
@@ -741,7 +743,7 @@ Each check must return zero matching lines (except the two marked warn-only). Th
 | 12 | No `currentAccountId` hardcoded to 1 |
 | 13 | No raw `HebrewTerms.` calls in `lib/features/` |
 | 14 | No `features/` imports inside `lib/core/` — **warn-only** pending legacy cleanup (Rule 1) |
-| 15 | No cross-feature deep imports (must use `providers.dart` barrel) — **warn-only** pending legacy cleanup (Rule 2) |
+| 15 | No cross-feature deep imports (must use `Y.dart` barrel) — **warn-only** pending legacy cleanup (Rule 2) |
 | 16 | No raw `profile.mode` string comparisons (use `ProfileMode` enum) |
 | 17 | No raw `account.tier` string comparisons (use `AccountTier`/`UserTier` enum) |
 | 18 | No direct `FirestoreGateway.push*` outside `lib/core/sync/` |

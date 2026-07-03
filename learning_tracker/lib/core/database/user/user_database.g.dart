@@ -13248,6 +13248,10 @@ abstract class _$UserDatabase extends GeneratedDatabase {
     'learning_ledger_profile_ulid',
     'CREATE UNIQUE INDEX learning_ledger_profile_ulid ON learning_ledger (profile_id, ulid)',
   );
+  late final Index goalsProfileCurriculum = Index(
+    'goals_profile_curriculum',
+    'CREATE INDEX goals_profile_curriculum ON goals (profile_id, curriculum_id)',
+  );
   late final Index streakEventsNaturalKey = Index(
     'streak_events_natural_key',
     'CREATE UNIQUE INDEX streak_events_natural_key ON streak_events (profile_id, day_utc, event_type)',
@@ -13340,6 +13344,7 @@ abstract class _$UserDatabase extends GeneratedDatabase {
     completionEventsNaturalKey,
     learningLedgerProfileCreated,
     learningLedgerProfileUlid,
+    goalsProfileCurriculum,
     streakEventsNaturalKey,
     outboxProfileKind,
   ];

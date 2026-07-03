@@ -93,6 +93,12 @@ part 'user_database.g.dart';
 ///   `updated_at` LWW column already existed). Columns only — the Wave-B
 ///   sync agent wires the DAO/sync and backfills these going forward.
 ///
+/// Schema v33 (AUD-guardrails-01 — profileId-in-PK invariant gap closure):
+/// - Added a non-unique composite index `goals_profile_curriculum` on
+///   `goals(profile_id, curriculum_id)` so `profileId` structurally
+///   participates in the Goals table's profile-scoping key, matching every
+///   other profile-scoped table. Additive index only — no data loss.
+///
 /// This database uses standard Drift migrations and holds all user-generated
 /// content: profiles, progress, configuration, streaks, and sync state.
 /// It is the only database that accepts writes at runtime.
@@ -156,7 +162,7 @@ class UserDatabase extends _$UserDatabase {
   UserDatabase(super.e);
 
   @override
-  int get schemaVersion => 32;
+  int get schemaVersion => 33;
 
   // drift_dev cannot express WHERE in a Dart-defined view's `as()` body
   // (cascade `..where()` confuses the generator).  The auto-generated SQL for
@@ -186,6 +192,7 @@ class UserDatabase extends _$UserDatabase {
       // WS9 (v26): CHECK on learner_profiles.mode + drop accounts.userMode
       //            (row-preserving rebuilds).
       // WS9 (v27): additive ulid columns for Wave-B points sync.
+      // AUD-guardrails-01 (v33): additive composite index on goals.
       onUpgrade: (Migrator m, int from, int to) async {
         if (from < 25) {
           await m.createTable(pointsBalance);
@@ -379,6 +386,22 @@ class UserDatabase extends _$UserDatabase {
             learnerProfiles.tutorRemoteProfileId,
           );
           await m.addColumn(learnerProfiles, learnerProfiles.tutorGrantId);
+        }
+        if (from < 33) {
+          // AUD-guardrails-01: Goals lacked profileId in its profile-scoping
+          // key (schema_check.dart whitelist gap). Additive, non-unique
+          // composite index — no data loss, no uniqueness change.
+          // Guard: partial-schema migration paths (e.g. older upgrade tests
+          // that model only their own migration's tables) may not have
+          // created `goals` yet, so only run when present — same pattern as
+          // the `hasLedger` guards above.
+          final hasGoals = await customSelect(
+            'SELECT 1 FROM sqlite_master '
+            "WHERE type = 'table' AND name = 'goals'",
+          ).get();
+          if (hasGoals.isNotEmpty) {
+            await m.createIndex(goalsProfileCurriculum);
+          }
         }
       },
     );

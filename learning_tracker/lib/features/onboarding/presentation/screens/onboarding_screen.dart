@@ -7,8 +7,7 @@ import 'package:learning_tracker/core/constants/curriculum_defaults.dart';
 import 'package:learning_tracker/core/navigation/app_router.dart';
 import 'package:learning_tracker/core/theme/app_theme.dart';
 import 'package:learning_tracker/core/widgets/app_bar_title.dart';
-import 'package:learning_tracker/features/account/onboarding/presentation/screens/onboarding_intent_screen.dart'; // W6.1
-import 'package:learning_tracker/features/account/presentation/providers/auth_state_provider.dart';
+import 'package:learning_tracker/features/account/account.dart'; // W6.1
 import 'package:learning_tracker/features/onboarding/presentation/providers/onboarding_resume_store.dart';
 import 'package:learning_tracker/features/onboarding/presentation/steps/onboarding_add_another_prompt_step.dart';
 import 'package:learning_tracker/features/onboarding/presentation/steps/onboarding_done_step.dart';
