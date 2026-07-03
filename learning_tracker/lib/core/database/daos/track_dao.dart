@@ -274,6 +274,48 @@ class TrackDao extends DatabaseAccessor<UserDatabase>
     });
   }
 
+  /// Archive a track by setting state = 'archived'. Unlike
+  /// [deleteTrackAndData], config data (goals, stage_definitions,
+  /// daily_plan, point_config, curriculum_scope, study_day_config,
+  /// track_learning_order) is intentionally preserved — that is the whole
+  /// distinction between "Archive (keep history)" and "Delete and wipe
+  /// history" in the UI (AUD-profiles-01).
+  ///
+  /// Use this for the archive path of a deactivate-track flow, where the
+  /// user may want to reactivate the same configuration later.
+  Future<void> archiveTrack(int trackId) async {
+    final track = await getTrackById(trackId);
+    if (track == null) return;
+
+    final now = DateTimeFactory.nowUtc();
+    await db.transaction(() async {
+      await (update(
+        curriculumTracks,
+      )..where((t) => t.id.equals(trackId))).write(
+        CurriculumTracksCompanion(
+          state: const Value(TrackState.archived),
+          stateChangedAt: Value(now),
+        ),
+      );
+      // I-5: push the archive to Firestore so other devices apply it.
+      await db.outboxDao.insertOutboxRow(
+        OutboxCompanion.insert(
+          profileId: track.profileId,
+          entityKind: OutboxEntityKind.track,
+          entityKey: 'track_archive:$trackId',
+          payload: jsonEncode({
+            'track_id': trackId,
+            'curriculum_id': track.curriculumId,
+            'state': TrackState.archived,
+            'archived_at': now.toUtc().toIso8601String(),
+            'profile_id': track.profileId,
+          }),
+          createdAt: now,
+        ),
+      );
+    });
+  }
+
   /// Get every track row for a profile (active and inactive).
   ///
   /// Used by the sync engine to push the full per-profile track state to

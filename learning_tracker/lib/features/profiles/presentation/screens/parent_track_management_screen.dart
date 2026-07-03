@@ -287,11 +287,15 @@ class _ParentTrackManagementScreenState
           .firstOrNull;
       if (curriculum != null) {
         try {
-          // Route through CurriculumActivationService which enforces the
-          // last-curriculum invariant (throws LastActiveCurriculumException).
+          // AUD-profiles-01: route through the archive path — not
+          // deactivate(), which hard-deletes goals/stages/point config via
+          // deleteTrackAndData and would make "Archive (keep history)"
+          // behave exactly like "Delete and wipe history". archive() still
+          // enforces the last-curriculum invariant (throws
+          // LastActiveCurriculumException).
           await ref
               .read(curriculumActivationServiceProvider)
-              .deactivate(curriculum);
+              .archive(curriculum);
           await invalidateAfterTrackDataChange(ref, track.profileId);
         } on LastActiveCurriculumException {
           if (!mounted) return;
