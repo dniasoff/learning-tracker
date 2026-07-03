@@ -279,13 +279,22 @@ void main() {
   });
 
   group('T3.gating — Learning screen: permission-gated Add Track CTA', () {
-    test('AC3: learning_screen imports activeTutoredProfileProvider', () {
+    test('AC3: learning_screen imports the tutored-profile provider '
+        '(directly or via the tutoring.dart barrel)', () {
+      // AUD-learning-02 (Rule 2 — no cross-feature deep imports) routed this
+      // through features/tutoring/tutoring.dart instead of importing
+      // active_tutored_profile_provider.dart directly; the barrel re-exports
+      // it in full (see tutoring.dart), so the provider is still reachable —
+      // only the import path changed. Accept either form so this AC keeps
+      // testing "the provider is reachable", not "which file states so".
       expect(
-        learningSrc,
-        contains('active_tutored_profile_provider.dart'),
+        learningSrc.contains('active_tutored_profile_provider.dart') ||
+            learningSrc.contains("features/tutoring/tutoring.dart'"),
+        isTrue,
         reason:
-            'learning_screen.dart must import the tutored provider to gate '
-            'the Add Track CTA by tutor permissions',
+            'learning_screen.dart must import the tutored provider (directly '
+            'or via the tutoring.dart barrel) to gate the Add Track CTA by '
+            'tutor permissions',
       );
     });
 
