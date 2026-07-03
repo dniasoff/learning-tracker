@@ -5,6 +5,7 @@ import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/profiles/data/repositories/profile_repository_impl.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
+import 'package:learning_tracker/features/tutoring/tutoring.dart';
 
 import '../../../../helpers/test_database.dart';
 
@@ -17,6 +18,57 @@ class _CapturingProfileFacade implements SyncWriteFacade {
   @override
   Future<void> pushLearnerProfile(Map<String, dynamic> profile) async {
     capturedPayloads.add(Map<String, dynamic>.from(profile));
+  }
+
+  @override
+  Future<void> deleteLearnerProfile(int profileId) async {}
+  @override
+  Future<void> pushGamificationSettingsSnapshot() async {}
+  @override
+  Future<void> pushUiPreferencesSnapshot() async {}
+  @override
+  Future<void> pushBookmark(Map<String, dynamic> bookmark) async {}
+  @override
+  Future<void> pushSettings(Map<String, dynamic> settings) async {}
+  @override
+  Future<void> pushGoal(Map<String, dynamic> goal) async {}
+  @override
+  Future<void> deleteGoal(Map<String, dynamic> payload) async {}
+  @override
+  Future<void> pushCurriculumTrack(Map<String, dynamic> trackData) async {}
+  @override
+  Future<void> pushLearningOrder({
+    required int profileId,
+    required String curriculumId,
+    required List<Map<String, dynamic>> items,
+    required DateTime updatedAt,
+  }) async {}
+  @override
+  Future<void> pushStageDefinitions({
+    required int trackId,
+    required String curriculumId,
+    required List<Map<String, dynamic>> stages,
+    required DateTime updatedAt,
+  }) async {}
+  @override
+  Future<void> pushStudyDayConfig(Map<String, dynamic> payload) async {}
+  @override
+  Future<void> deleteCompletion(String completionId) async {}
+  @override
+  Future<void> pushProfileProgram(Map<String, dynamic> payload) async {}
+}
+
+/// [SyncWriteFacade] whose [pushLearnerProfile] always fails the way a
+/// tutor-routed [TutoredWriteRouter] does on a Cloud Function error — used by
+/// the AUD-profiles-02 regression group below. All other operations are
+/// no-ops; the test only exercises the profile push.
+class _TutorRoutedFailingFacade implements SyncWriteFacade {
+  @override
+  Future<void> pushLearnerProfile(Map<String, dynamic> profile) async {
+    throw const TutorWriteException(
+      'permission denied',
+      code: 'permission-denied',
+    );
   }
 
   @override
@@ -620,4 +672,92 @@ void main() {
       expect(stageId, isPositive);
     });
   });
+
+  // ── AUD-profiles-02: tutor-routed pushLearnerProfile failures must not be
+  // swallowed — see profile_edit_delete_actions.dart's `on TutorWriteException`
+  // handler, which was unreachable while ProfileRepositoryImpl caught every
+  // pushLearnerProfile failure with a blanket `catch (_) {}`.
+
+  group(
+    'AUD-profiles-02 — TutorWriteException from pushLearnerProfile propagates',
+    () {
+      late UserDatabase db;
+      late _TutorRoutedFailingFacade facade;
+      late ProfileRepositoryImpl repoWithTutorRouter;
+
+      setUp(() async {
+        db = createTestDatabase();
+        facade = _TutorRoutedFailingFacade();
+        repoWithTutorRouter = ProfileRepositoryImpl(db, syncEngine: facade);
+        await db
+            .into(db.accounts)
+            .insert(
+              AccountsCompanion.insert(
+                email: 'tutor-routed@test.com',
+                tier: 'cloudBorn',
+                displayName: 'Tutor-Routed Account',
+                createdAt: DateTimeFactory.nowUtc(),
+                updatedAt: DateTimeFactory.nowUtc(),
+              ),
+            );
+      });
+
+      tearDown(() => db.close());
+
+      test(
+        'updateProfile propagates TutorWriteException instead of swallowing it',
+        () async {
+          // Seed the profile directly (bypassing createProfile, which would
+          // also hit the tutor-routed facade and throw on the initial push).
+          final now = DateTimeFactory.nowUtc();
+          final id = await db
+              .into(db.learnerProfiles)
+              .insert(
+                LearnerProfilesCompanion.insert(
+                  accountId: 1,
+                  displayName: 'Original',
+                  mode: 'child',
+                  createdAt: now,
+                  updatedAt: now,
+                ),
+              );
+
+          // `expectLater` + `await` (not the sync `expect(closure, ...)`
+          // idiom) so the update's local write has actually completed before
+          // the follow-up read below — otherwise the read can race ahead of
+          // the still-pending `updateProfile` future.
+          await expectLater(
+            repoWithTutorRouter.updateProfile(id: id, displayName: 'Renamed'),
+            throwsA(isA<TutorWriteException>()),
+            reason:
+                'a tutor-routed push failure must reach the caller so '
+                'editProfileFlow\'s TutorWriteException handler can surface '
+                'a snackbar — silently swallowing it strands the tutor with '
+                'no feedback and a local mirror that disagrees with the '
+                'owner\'s actual Firestore profile',
+          );
+
+          // Local write still stands (offline-first) even though the push
+          // failed — only the push failure must be surfaced, not the local
+          // mutation rolled back.
+          final local = await repoWithTutorRouter.getProfileById(id);
+          expect(local!.displayName, 'Renamed');
+        },
+      );
+
+      test(
+        'createProfile propagates TutorWriteException instead of swallowing it',
+        () async {
+          await expectLater(
+            repoWithTutorRouter.createProfile(
+              accountId: 1,
+              displayName: 'New Learner',
+              mode: 'child',
+            ),
+            throwsA(isA<TutorWriteException>()),
+          );
+        },
+      );
+    },
+  );
 }

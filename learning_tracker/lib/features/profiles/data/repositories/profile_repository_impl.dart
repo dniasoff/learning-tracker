@@ -7,6 +7,10 @@ import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/profiles/domain/models/profile_model.dart';
 import 'package:learning_tracker/features/profiles/domain/repositories/profile_repository.dart';
+// AUD-profiles-02: TutorWriteException must propagate out of pushLearnerProfile
+// (see below) instead of being swallowed by the offline-first catch-all — only
+// the barrel import is permitted across the feature boundary (Rule 2).
+import 'package:learning_tracker/features/tutoring/tutoring.dart';
 
 final _log = AppLogger.instance;
 
@@ -101,9 +105,18 @@ class ProfileRepositoryImpl implements ProfileRepository {
       event: 'profile_repo_create_done',
       fields: {'profileId': model.id},
     );
-    // Profile creation must succeed offline-first even if cloud push fails.
+    // Profile creation must succeed offline-first even if cloud push fails —
+    // but only when the failure is actually retryable. AUD-profiles-02: when
+    // a tutor session is active, `_syncEngine` is a `TutoredWriteRouter`
+    // (sync_providers.dart) that turns this into a one-shot, non-retryable
+    // Cloud Function RPC; swallowing that failure the same way as a durable
+    // outbox push silently strands the caller with no error. Let
+    // `TutorWriteException` propagate; keep swallowing genuine
+    // offline-first push failures on the durable (outbox) path.
     try {
       await _syncEngine?.pushLearnerProfile(_toFirestorePayload(model));
+    } on TutorWriteException {
+      rethrow;
     } catch (_) {
       // no-op: cloud push failure is non-fatal; local write already succeeded (offline-first)
     }
@@ -154,8 +167,14 @@ class ProfileRepositoryImpl implements ProfileRepository {
 
     final updated = await _db.profileDao.getProfileById(id);
     final model = ProfileModel.fromDriftRow(updated!);
+    // AUD-profiles-02: see the createProfile push above — a tutor-routed
+    // push failure (`TutorWriteException`) must reach the caller (editProfileFlow
+    // catches it and shows a snackbar) instead of being swallowed here as if
+    // the durable offline-first outbox had queued a retry.
     try {
       await _syncEngine?.pushLearnerProfile(_toFirestorePayload(model));
+    } on TutorWriteException {
+      rethrow;
     } catch (_) {
       // no-op: cloud push failure is non-fatal; local write already succeeded (offline-first)
     }
@@ -318,6 +337,8 @@ class ProfileRepositoryImpl implements ProfileRepository {
 
     // Mirror to the cloud so the healed profile survives re-install / sync.
     // Offline-first: a push failure is non-fatal — the local write stands.
+    // AUD-profiles-02: still let a TutorWriteException propagate (see
+    // createProfile above) rather than swallow it as a durable-outbox retry.
     try {
       await _syncEngine?.pushLearnerProfile(
         _toFirestorePayload(
@@ -332,6 +353,8 @@ class ProfileRepositoryImpl implements ProfileRepository {
           ),
         ),
       );
+    } on TutorWriteException {
+      rethrow;
     } catch (_) {
       // no-op: cloud push failure is non-fatal; local write already succeeded.
     }
