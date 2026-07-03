@@ -12,6 +12,7 @@ import 'package:drift/drift.dart' show Value;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 import 'package:learning_tracker/core/time/local_day_clock.dart';
 import 'package:learning_tracker/features/content_browsing/domain/repositories/content_repository.dart';
@@ -23,6 +24,8 @@ import 'package:mocktail/mocktail.dart';
 import '../../../../helpers/drift_memory.dart';
 
 class _MockContentRepository extends Mock implements ContentRepository {}
+
+class _MockOutboxFacade extends Mock implements OutboxSyncWriteFacade {}
 
 void main() {
   setUpAll(() {
@@ -157,4 +160,63 @@ void main() {
       );
     },
   );
+
+  group('AUD-learning-06 — streak tee failure is logged, not swallowed', () {
+    setUp(() => AppLogger.init());
+
+    test('enqueueStreakPayload throwing is logged via AppLogger, and '
+        'markComplete still succeeds', () async {
+      final outboxFacade = _MockOutboxFacade();
+      when(
+        () => outboxFacade.enqueueStreakPayload(any()),
+      ).thenThrow(Exception('simulated outbox enqueue failure'));
+
+      final contentRepo = _MockContentRepository();
+      when(
+        () => contentRepo.getContentForCurriculum(any()),
+      ).thenAnswer((_) async => const []);
+
+      final repo = CompletionRepositoryImpl(
+        database: db,
+        syncEngine: null,
+        outboxFacade: outboxFacade,
+        contentRepository: contentRepo,
+        activeProfileId: profileId,
+      );
+
+      // Must NOT throw: _appendStreakEvent runs inside markComplete's
+      // transaction — a "telemetry tee" failure must never roll back or
+      // fail the primary completion write.
+      final result = await repo.markComplete(
+        const CompletionRequest(
+          curriculumId: 'mishnayos',
+          sefariaRef: 'Mishnah_Berakhot_1',
+          stageId: 1,
+          trackType: 'personal',
+        ),
+      );
+      expect(result.completion.sefariaRef, 'Mishnah_Berakhot_1');
+
+      // The local streak_events insert happens before the failing outbox
+      // enqueue, so it must still have landed.
+      final localStreaks = await db.select(db.streakEvents).get();
+      expect(
+        localStreaks,
+        hasLength(1),
+        reason: 'local streak event must still be appended',
+      );
+
+      final history = AppLogger.instance.talker.history
+          .map((e) => e.generateTextMessage())
+          .toList();
+      expect(
+        history.any((m) => m.contains('completion_streak_tee_failed')),
+        isTrue,
+        reason:
+            'Expected the enqueueStreakPayload failure to be logged via '
+            'AppLogger instead of silently dropped by catch (_) {}. '
+            'Talker history: $history',
+      );
+    });
+  });
 }

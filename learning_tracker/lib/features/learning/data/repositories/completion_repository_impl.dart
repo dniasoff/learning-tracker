@@ -5,6 +5,7 @@ import 'package:learning_tracker/core/database/daos/completion_dao.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/enums/curriculum_id.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 import 'package:learning_tracker/core/sync/codec/streak_event_codec.dart';
 import 'package:learning_tracker/core/sync/sync_write_facade.dart';
 import 'package:learning_tracker/core/time/ulid.dart';
@@ -33,10 +34,13 @@ class CompletionRepositoryImpl implements CompletionRepository {
   final OutboxSyncWriteFacade? _outboxFacade;
   final ContentRepository _contentRepository;
   final BookmarkRepository? _bookmarkRepository;
+  final BookmarkRepository Function(int profileId)? _bookmarkRepositoryFactory;
   final CompletionDetectionService? _completionDetectionService;
   final int _activeProfileId;
   final CompletionWriter _completionWriter;
   final StageDefinitionRepository? _stageRepository;
+  final RewardMilestoneService Function(int profileId)
+  _rewardMilestoneServiceFactory;
 
   CompletionRepositoryImpl({
     required UserDatabase database,
@@ -44,19 +48,34 @@ class CompletionRepositoryImpl implements CompletionRepository {
     required ContentRepository contentRepository,
     OutboxSyncWriteFacade? outboxFacade,
     BookmarkRepository? bookmarkRepository,
+    BookmarkRepository Function(int profileId)? bookmarkRepositoryFactory,
     CompletionDetectionService? completionDetectionService,
     int activeProfileId = 0,
     CompletionWriter? completionWriter,
     StageDefinitionRepository? stageRepository,
+    RewardMilestoneService Function(int profileId)?
+    rewardMilestoneServiceFactory,
   }) : _database = database,
        _syncEngine = syncEngine,
        _outboxFacade = outboxFacade,
        _contentRepository = contentRepository,
        _bookmarkRepository = bookmarkRepository,
+       _bookmarkRepositoryFactory = bookmarkRepositoryFactory,
        _completionDetectionService = completionDetectionService,
        _activeProfileId = activeProfileId,
        _completionWriter = completionWriter ?? CompletionWriter(database),
-       _stageRepository = stageRepository;
+       _stageRepository = stageRepository,
+       // AUD-learning-10 (SM-7): default preserves the prior ad-hoc-per-call
+       // construction exactly (same `database`, per-call `profileId` — the
+       // service is genuinely profile-scoped, e.g. bulk completions for a
+       // delegated profile != activeProfileId, so a single shared instance
+       // would be a correctness regression, not just a DI cleanup). Tests
+       // gain a seam to inject a fake without exercising the real
+       // Drift-backed service.
+       _rewardMilestoneServiceFactory =
+           rewardMilestoneServiceFactory ??
+           ((profileId) =>
+               RewardMilestoneService(database, profileId: profileId));
 
   @override
   Future<MarkCompletionResult> markComplete(
@@ -131,10 +150,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
       //    (bulkInTrack / lifetimeOnly sources — engagement tier suppressed).
       var points = 0;
       if (awardGamificationPoints) {
-        final rewardService = RewardMilestoneService(
-          _database,
-          profileId: _activeProfileId,
-        );
+        final rewardService = _rewardMilestoneServiceFactory(_activeProfileId);
         final eligible = await rewardService.trackCountsTowardRewardPoints(
           trackId,
         );
@@ -187,14 +203,37 @@ class CompletionRepositoryImpl implements CompletionRepository {
       // Per completion_source.dart, bulkInTrack credits achievement so a
       // learner who bulk-marks a complete masechta still earns the siyum.
       if (_completionDetectionService != null && creditsAchievement) {
+        // AUD-learning-01 / EH-3: this call is intentionally fire-and-forget
+        // (a slow siyum scan must never block or fail the primary completion
+        // write), but completion_detection_service.dart has no try/catch of
+        // its own. Without a local catch path here, any failure (closed DB
+        // mid profile-switch, a malformed content lookup, …) permanently and
+        // silently drops the B1 siyum credit for this unit, surfaced only as
+        // a generic "fatal" report by the global zone handler with no
+        // domain context. Log it here instead so the failure — and which
+        // completion caused it — is visible without depending on that
+        // catch-all.
         unawaited(
-          _completionDetectionService.checkAndRecordCompletions(
-            curriculumId: request.curriculumId,
-            sefariaRef: request.sefariaRef,
-            trackType: request.trackType,
-            profileId: _activeProfileId,
-            markedBy: _activeProfileId,
-          ),
+          _completionDetectionService
+              .checkAndRecordCompletions(
+                curriculumId: request.curriculumId,
+                sefariaRef: request.sefariaRef,
+                trackType: request.trackType,
+                profileId: _activeProfileId,
+                markedBy: _activeProfileId,
+              )
+              .catchError((Object error, StackTrace stackTrace) {
+                AppLogger.instance.error(
+                  event: 'completion_siyum_detection_failed',
+                  fields: {
+                    'curriculumId': request.curriculumId,
+                    'sefariaRef': request.sefariaRef,
+                    'trackType': request.trackType,
+                  },
+                  exception: error,
+                  stackTrace: stackTrace,
+                );
+              }),
         );
       }
 
@@ -509,10 +548,7 @@ class CompletionRepositoryImpl implements CompletionRepository {
       profileId: profileId,
     );
 
-    final rewardService = RewardMilestoneService(
-      _database,
-      profileId: profileId,
-    );
+    final rewardService = _rewardMilestoneServiceFactory(profileId);
     final eligibleForRewards = await rewardService
         .trackCountsTowardRewardPoints(trackId);
     final allowPoints =
@@ -719,8 +755,11 @@ class CompletionRepositoryImpl implements CompletionRepository {
 
   /// Append a streak event locally and tee it into the outbox for cloud sync.
   ///
-  /// Silently ignores the unique-key conflict that happens when the same
-  /// completion is teed twice (idempotent).
+  /// The natural key `(profileId, dayUtc, eventType)` is UNIQUE (DNI-323),
+  /// so the same completion teed twice in one day is an EXPECTED, benign
+  /// conflict — `insertOrIgnore` below makes SQLite silently skip that row
+  /// instead of throwing. There is nothing to catch or log for that specific
+  /// case; it never reaches [_appendStreakEvent]'s catch clause at all.
   ///
   /// Phase 1 — streak events used to be local-only on completion; only the
   /// once-per-upgrade `LocalDataUploadService.pushAllLocalData` shipped them
@@ -764,8 +803,23 @@ class CompletionRepositoryImpl implements CompletionRepository {
         );
         await facade.enqueueStreakPayload(payload);
       }
-    } catch (_) {
-      // Defensive: never let a telemetry tee block the primary write.
+    } on Exception catch (e, stackTrace) {
+      // AUD-learning-06 / EH-3 / EH-4: narrowed from a bare `catch (_)`,
+      // which also trapped programming-error Errors (masking real bugs) and
+      // logged nothing — a codec bug, closed-DB race, or genuine outbox
+      // failure was indistinguishable from the benign duplicate-key case
+      // documented above (which, per insertOrIgnore, never actually reaches
+      // here). Every Exception that does reach this point is unexpected:
+      // still never let this "telemetry tee" block or roll back the primary
+      // completion write (this runs inside markComplete's transaction), but
+      // always log it so the gap is visible in Crashlytics/Talker instead of
+      // silently dropped.
+      AppLogger.instance.error(
+        event: 'completion_streak_tee_failed',
+        fields: {'profileId': profileId},
+        exception: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 
@@ -783,9 +837,16 @@ class CompletionRepositoryImpl implements CompletionRepository {
   /// Advance the bookmark to the next item in learning order.
   ///
   /// Uses the injected [BookmarkRepository] when it matches [bookmarkProfileId]
-  /// (or the session active profile); otherwise builds a profile-scoped
-  /// [BookmarkRepositoryImpl] so delegated flows (e.g. parent + child track) sync
-  /// the correct bookmark.
+  /// (or the session active profile). For delegated flows (e.g. parent +
+  /// child track, bulk-mark-prior during onboarding) where the target
+  /// profile differs, prefers [_bookmarkRepositoryFactory] — injected by
+  /// `completionRepositoryProvider` with the same [BookmarkRepositoryImpl]
+  /// wiring (including `ContentIndex`) as `bookmarkRepositoryProvider`, so
+  /// delegated advances keep the O(1) adjacent-item fast path instead of
+  /// silently falling back to an O(N) scan (AUD-learning-04). Only when
+  /// neither is supplied (e.g. a test constructing this repository
+  /// directly) does this build an ad-hoc, non-indexed
+  /// [BookmarkRepositoryImpl] itself.
   Future<void> _advanceBookmark({
     required String curriculumId,
     required String completedSefariaRef,
@@ -794,9 +855,12 @@ class CompletionRepositoryImpl implements CompletionRepository {
     final pid = bookmarkProfileId ?? _activeProfileId;
 
     final injected = _bookmarkRepository;
+    final factory = _bookmarkRepositoryFactory;
     late final BookmarkRepository bookmarkRepo;
     if (injected != null && pid == _activeProfileId) {
       bookmarkRepo = injected;
+    } else if (factory != null) {
+      bookmarkRepo = factory(pid);
     } else {
       bookmarkRepo = BookmarkRepositoryImpl(
         database: _database,
