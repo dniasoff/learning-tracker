@@ -497,11 +497,16 @@ class DataExportImportService {
     );
   }
 
-  /// Imports data from a JSON string, replacing all existing data.
+  /// Imports data from a JSON string, replacing the data of the profiles
+  /// (and accounts) present in the payload only.
   ///
-  /// Per-profile import: deletes all existing rows and re-inserts from the
-  /// export payload. Does not hard-delete accounts not present in the export
-  /// (accounts are the identity anchor — they are upserted by displayName).
+  /// AUD-settings-03: scoped per-profile import. Every clear-step below is
+  /// scoped to the accountIds/profileIds present in [jsonString] — an
+  /// account or learner profile that exists on this device but is absent
+  /// from the import payload (e.g. a sibling profile not covered by an
+  /// older or narrower backup file) is left completely untouched. Rows for
+  /// the imported accounts/profiles are deleted and re-inserted from the
+  /// export payload, so re-importing the same profile is idempotent.
   ///
   /// Runs in a transaction — all or nothing. Throws on failure
   /// and rolls back all changes.
@@ -511,25 +516,80 @@ class DataExportImportService {
     // Validate first
     validateAndPreview(jsonString);
 
+    // The set of accounts and learner profiles this import payload covers.
+    // `profileId` throughout the user-data tables is a learner-profile id
+    // (docs/data-models.md — "Profile scoping"); `accounts` is scoped
+    // separately by its own id (the identity anchor).
+    final importedAccountIds = (data['userProfiles'] as List)
+        .map((u) => (u as Map<String, dynamic>)['id'] as int? ?? 0)
+        .toSet();
+    final importedProfileIds = (data['learnerProfiles'] as List? ?? [])
+        .map((p) => (p as Map<String, dynamic>)['id'] as int? ?? 0)
+        .toSet();
+
     await _database.transaction(() async {
-      // Clear existing user data (order: FK children before parents).
-      // W3.20: `streaks` and `completions` tables dropped — no longer cleared.
-      await _database.delete(_database.streakEvents).go();
-      await _database.delete(_database.completionEvents).go();
-      await _database.delete(_database.learningLedger).go();
-      await _database.delete(_database.dailyPlans).go();
-      await _database.delete(_database.trackLearningOrder).go();
-      await _database.delete(_database.learningOrder).go();
-      await _database.delete(_database.bookmarks).go();
-      await _database.delete(_database.goals).go();
-      await _database.delete(_database.studyDayConfigs).go();
-      await _database.delete(_database.pointConfigs).go();
-      await _database.delete(_database.stageDefinitions).go();
-      await _database.delete(_database.profilePrograms).go();
-      await _database.delete(_database.curriculumScopes).go();
-      await _database.delete(_database.curriculumTracks).go();
-      await _database.delete(_database.learnerProfiles).go();
-      await _database.delete(_database.accounts).go();
+      // trackLearningOrder has no profileId column — it is scoped via the
+      // curriculumTracks it belongs to, so this must be read before
+      // curriculumTracks is cleared below.
+      final trackIdsToClear = importedProfileIds.isEmpty
+          ? const <int>{}
+          : (await (_database.select(
+                  _database.curriculumTracks,
+                )..where((t) => t.profileId.isIn(importedProfileIds))).get())
+                .map((t) => t.id)
+                .toSet();
+
+      // Clear existing user data for the imported profiles/accounts only
+      // (order: FK children before parents). W3.20: `streaks` and
+      // `completions` tables dropped — no longer cleared.
+      await (_database.delete(
+        _database.streakEvents,
+      )..where((t) => t.profileId.isIn(importedProfileIds))).go();
+      await (_database.delete(
+        _database.completionEvents,
+      )..where((t) => t.profileId.isIn(importedProfileIds))).go();
+      await (_database.delete(
+        _database.learningLedger,
+      )..where((t) => t.profileId.isIn(importedProfileIds))).go();
+      await (_database.delete(
+        _database.dailyPlans,
+      )..where((t) => t.profileId.isIn(importedProfileIds))).go();
+      await (_database.delete(
+        _database.trackLearningOrder,
+      )..where((t) => t.trackId.isIn(trackIdsToClear))).go();
+      await (_database.delete(
+        _database.learningOrder,
+      )..where((t) => t.profileId.isIn(importedProfileIds))).go();
+      await (_database.delete(
+        _database.bookmarks,
+      )..where((t) => t.profileId.isIn(importedProfileIds))).go();
+      await (_database.delete(
+        _database.goals,
+      )..where((t) => t.profileId.isIn(importedProfileIds))).go();
+      await (_database.delete(
+        _database.studyDayConfigs,
+      )..where((t) => t.profileId.isIn(importedProfileIds))).go();
+      await (_database.delete(
+        _database.pointConfigs,
+      )..where((t) => t.profileId.isIn(importedProfileIds))).go();
+      await (_database.delete(
+        _database.stageDefinitions,
+      )..where((t) => t.profileId.isIn(importedProfileIds))).go();
+      await (_database.delete(
+        _database.profilePrograms,
+      )..where((t) => t.profileId.isIn(importedProfileIds))).go();
+      await (_database.delete(
+        _database.curriculumScopes,
+      )..where((t) => t.profileId.isIn(importedProfileIds))).go();
+      await (_database.delete(
+        _database.curriculumTracks,
+      )..where((t) => t.profileId.isIn(importedProfileIds))).go();
+      await (_database.delete(
+        _database.learnerProfiles,
+      )..where((t) => t.id.isIn(importedProfileIds))).go();
+      await (_database.delete(
+        _database.accounts,
+      )..where((t) => t.id.isIn(importedAccountIds))).go();
 
       // --- Import accounts (userProfiles) ---
       // Preserve original IDs so that all profileId FKs in other tables
