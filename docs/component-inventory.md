@@ -291,9 +291,7 @@ Persist for the lifetime of the app process.
 
 #### Learning
 
-- `CompletionAnimation` -- Celebration animation on completion
 - `PointsPopup` -- Points-earned overlay
-- `CompletionFeedbackController` -- Orchestrates completion feedback
 - `TrackSelectorBottomSheet` -- Track selection modal
 - `BookmarkCard` -- Bookmarked item card
 - `BulkCompletionDialog` -- Bulk completion confirmation
