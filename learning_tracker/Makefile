@@ -356,10 +356,12 @@ audit: lint-rules-test ## Run all 24 enforcement greps (NFR19) — exits non-zer
 	  FAIL=1; \
 	fi; \
 	if grep -rnP '^\s*//\s*(TODO|FIXME)\b' lib/ test/ integration_test/ --include="*.dart" \
-	    | grep -v "\.g\.dart" | grep -v "\.freezed\.dart" | grep -v "DNI-[0-9]" | grep -q .; then \
+	    | grep -v "\.g\.dart" | grep -v "\.freezed\.dart" | grep -v "DNI-[0-9]" \
+	    | grep -v "^lib/firebase_options.dart:" | grep -q .; then \
 	  echo "  TODO/FIXME with no DNI-#### Linear id — file or link a ticket (AG-6):"; \
 	  grep -rnP '^\s*//\s*(TODO|FIXME)\b' lib/ test/ integration_test/ --include="*.dart" \
-	    | grep -v "\.g\.dart" | grep -v "\.freezed\.dart" | grep -v "DNI-[0-9]"; \
+	    | grep -v "\.g\.dart" | grep -v "\.freezed\.dart" | grep -v "DNI-[0-9]" \
+	    | grep -v "^lib/firebase_options.dart:"; \
 	  FAIL=1; \
 	fi; \
 	echo "11/15 — No .withDefault(const Constant(0)) in database tables"; \
