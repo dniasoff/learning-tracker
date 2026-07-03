@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:learning_tracker/core/analytics/analytics_service.dart';
+import 'package:learning_tracker/core/logging/logger.dart';
 
 /// Thin wrapper around [FirebaseCrashlytics] that can be substituted in tests.
 ///
@@ -48,7 +49,25 @@ class FirebaseCrashlyticsService implements CrashlyticsService {
   Future<void> recordFlutterFatalError(FlutterErrorDetails details) {
     // W7.15: fire crash_reported alongside the Crashlytics upload so every
     // fatal crash is also reflected in Firebase Analytics.
-    unawaited(_analytics.logCrashReported(fatal: true));
+    //
+    // AUD-core-logging-01: guarded with .catchError so a rejected analytics
+    // Future (platform-channel failure, SDK not yet initialized, offline
+    // queue full) is swallowed and logged instead of escaping as an
+    // uncaught zone error during fatal-crash handling — matches the guard
+    // pattern in streak_milestone_analytics_observer.dart.
+    unawaited(
+      _analytics.logCrashReported(fatal: true).catchError((
+        Object e,
+        StackTrace st,
+      ) {
+        AppLogger.instance.warning(
+          event: 'crashlytics_analytics_log_failed',
+          fields: {'fatal': true},
+          exception: e,
+          stackTrace: st,
+        );
+      }),
+    );
     return _crashlytics.recordFlutterFatalError(details);
   }
 
@@ -59,7 +78,22 @@ class FirebaseCrashlyticsService implements CrashlyticsService {
     bool fatal = false,
   }) {
     // Story 27.14 (DNI-390): fire crash_reported event alongside Crashlytics.
-    unawaited(_analytics.logCrashReported(fatal: fatal));
+    //
+    // AUD-core-logging-01: guarded with .catchError — see
+    // recordFlutterFatalError above for why this matters.
+    unawaited(
+      _analytics.logCrashReported(fatal: fatal).catchError((
+        Object e,
+        StackTrace st,
+      ) {
+        AppLogger.instance.warning(
+          event: 'crashlytics_analytics_log_failed',
+          fields: {'fatal': fatal},
+          exception: e,
+          stackTrace: st,
+        );
+      }),
+    );
     return _crashlytics.recordError(error, stack, fatal: fatal);
   }
 
