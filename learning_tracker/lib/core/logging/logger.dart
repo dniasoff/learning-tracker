@@ -248,6 +248,9 @@ class PiiRedactor {
     'to',
     'recipient',
     'email_to',
+    // Transactional email body field — rendered plaintextBody can embed a
+    // tutor's raw email address and/or a child's name (AUD-core-email-01)
+    'body',
   };
 
   /// Email address pattern for scrubbing bare addresses from strings.
