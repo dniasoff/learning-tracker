@@ -20,7 +20,7 @@ emit-fixtures: ## Regenerate write_payloads.json from Dart codec encode() output
 
 test-functions: ## Run Cloud Functions tests (real handlers vs firestore emulator) (L5)
 	npm --prefix functions run build
-	firebase emulators:exec --only firestore,auth --project demo-cf "node --test --test-concurrency=1 functions/test/cf_*.test.mjs"
+	firebase emulators:exec --only firestore,auth --project demo-cf "npm --prefix functions test"
 
 test-story-4.1: ## Run Story 4.1 (Track Management) acceptance tests
 	flutter test test/story_acceptance/epic_04_multi_track_test.dart
@@ -211,7 +211,7 @@ test-story-i4: ## Run Story I-4 (Curriculum overlap deduplication) acceptance te
 test-epic-28: ## Run all Epic 28 (Curriculum overlap) acceptance tests
 	flutter test test/story_acceptance/epic_28_curriculum_overlap_test.dart
 
-ci: analyze validate-calendar lint-rules-test test ## Run full CI pipeline (analyze + seed validation + lint-rules-test + all tests)
+ci: analyze validate-calendar lint-rules-test test test-functions ## Run full CI pipeline (analyze + seed validation + lint-rules-test + all tests + Cloud Functions tests)
 
 analyze: ## Run dart analyze (matches CI --fatal-infos flag)
 	dart analyze --fatal-infos
