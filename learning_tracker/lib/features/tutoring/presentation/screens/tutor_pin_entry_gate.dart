@@ -202,6 +202,7 @@ class _TutorPinEntryGateState extends ConsumerState<TutorPinEntryGate> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.close_rounded),
+          tooltip: l10n.actionClose,
           onPressed: widget.onCancel,
         ),
         title: Text(l10n.tutorPinAppBarTitle),
@@ -419,6 +420,7 @@ class _TutorPinNumpad extends StatelessWidget {
                   Icons.backspace_outlined,
                   color: Theme.of(context).colorScheme.error,
                   size: 24,
+                  semanticLabel: AppLocalizations.of(context)!.pinBackspace,
                 ),
               ),
             ),
@@ -444,7 +446,14 @@ class _TutorPinKey extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(999),
-        child: SizedBox(height: 52, child: Center(child: child)),
+        // AX-4: size from content instead of a fixed height so an enlarged
+        // digit glyph at high accessibility text scales is not clipped.
+        // The 14dp vertical padding keeps the tap target close to the
+        // original 52dp height at the default text scale.
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 14),
+          child: Center(child: child),
+        ),
       ),
     );
   }
