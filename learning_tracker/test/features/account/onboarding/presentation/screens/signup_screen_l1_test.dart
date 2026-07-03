@@ -781,13 +781,18 @@ void main() {
   // ── Cloud signup — InvalidInputException ──────────────────────────────────
 
   testWidgets(
-    'cloud signup: InvalidInputException shows the exception reason in snackbar',
+    'cloud signup: InvalidInputException resolves code via AppLocalizations '
+    '(AUD-account-17) — never shows the raw English reason',
     (tester) async {
       final auth = _MockAuthRepository();
       when(() => auth.currentUser).thenReturn(null);
-      when(
-        () => auth.signUp(any(), any(), any()),
-      ).thenThrow(const InvalidInputException('email', 'invalid format'));
+      when(() => auth.signUp(any(), any(), any())).thenThrow(
+        const InvalidInputException(
+          'email',
+          InvalidInputCode.invalidEmail,
+          'invalid format',
+        ),
+      );
 
       await tester.pumpWidget(_buildApp(online: true, authRepo: auth));
       await tester.pump();
@@ -802,7 +807,12 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(seconds: 1));
 
-      expect(find.textContaining('invalid format'), findsOneWidget);
+      // The localized message shows — NOT the raw, log-only `reason` string.
+      expect(
+        find.textContaining('Please enter a valid email address'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('invalid format'), findsNothing);
 
       await tester.pumpWidget(const SizedBox.shrink());
       await tester.pump(Duration.zero);

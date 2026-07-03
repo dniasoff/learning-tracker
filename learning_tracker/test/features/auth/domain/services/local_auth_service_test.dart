@@ -80,6 +80,30 @@ void main() {
         throwsA(isA<InvalidInputException>()),
       );
     });
+
+    // AUD-account-17: the client-side form validator
+    // (auth_validators.validatePassword) has always accepted 6+ character
+    // passwords, but LocalAuthService re-derived its own, stricter 8-char
+    // floor. A form-valid 6-7 char password would pass the UI, then throw an
+    // untranslated InvalidInputException the moment it reached this service.
+    // Both layers must now agree on one shared floor
+    // (AppConstants.minLocalPasswordLength) so this can no longer happen.
+    test('accepts a 6-7 character password — the form-valid boundary — '
+        'without throwing InvalidInputException', () async {
+      final sixChar = await service.signUp(
+        email: 'six@example.com',
+        password: 'abcdef',
+        displayName: 'Six',
+      );
+      expect(sixChar.email, 'six@example.com');
+
+      final sevenChar = await service.signUp(
+        email: 'seven@example.com',
+        password: 'abcdefg',
+        displayName: 'Seven',
+      );
+      expect(sevenChar.email, 'seven@example.com');
+    });
   });
 
   group('LocalAuthService.signIn', () {
