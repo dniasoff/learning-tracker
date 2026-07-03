@@ -1,8 +1,19 @@
+import 'dart:async';
+
+import 'package:firebase_crashlytics/firebase_crashlytics.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/analytics/analytics_service.dart';
 import 'package:learning_tracker/core/logging/crashlytics_service.dart';
+import 'package:mocktail/mocktail.dart';
 
 void main() {
+  setUpAll(() {
+    registerFallbackValue(
+      FlutterErrorDetails(exception: Exception('fallback')),
+    );
+  });
+
   group('NullCrashlyticsService', () {
     late NullCrashlyticsService service;
 
@@ -68,6 +79,122 @@ void main() {
       );
     });
   });
+
+  group('FirebaseCrashlyticsService — analytics failures stay contained '
+      '(AUD-core-logging-01)', () {
+    late MockFirebaseCrashlytics mockCrashlytics;
+
+    setUp(() {
+      mockCrashlytics = MockFirebaseCrashlytics();
+      when(
+        () => mockCrashlytics.recordError(
+          any<Object>(),
+          any<StackTrace?>(),
+          fatal: any(named: 'fatal'),
+        ),
+      ).thenAnswer((_) async {});
+      when(
+        () => mockCrashlytics.recordFlutterFatalError(any()),
+      ).thenAnswer((_) async {});
+    });
+
+    test('a rejecting analytics call inside recordFlutterFatalError does not '
+        'escape as an uncaught zone error', () async {
+      final service = FirebaseCrashlyticsService(
+        mockCrashlytics,
+        analytics: const _AlwaysThrowingAnalyticsService(),
+      );
+      final details = FlutterErrorDetails(
+        exception: Exception('flutter fatal error'),
+        stack: StackTrace.current,
+      );
+
+      var uncaughtZoneErrors = 0;
+      final done = Completer<void>();
+
+      unawaited(
+        runZonedGuarded(
+          () async {
+            await service.recordFlutterFatalError(details);
+            // Give the unguarded analytics Future a chance to reject and
+            // propagate to the zone error handler, exactly as it would in
+            // the running app.
+            await Future<void>.delayed(Duration.zero);
+            await Future<void>.delayed(Duration.zero);
+            done.complete();
+          },
+          (error, stack) {
+            uncaughtZoneErrors++;
+          },
+        ),
+      );
+
+      await done.future;
+
+      expect(
+        uncaughtZoneErrors,
+        0,
+        reason:
+            'The rejected AnalyticsService.logCrashReported() Future '
+            'fired from recordFlutterFatalError must be caught locally, '
+            'not leak into the zone error handler',
+      );
+    });
+
+    test('a rejecting analytics call inside recordError does not re-trigger '
+        'recordError via the zone error handler', () async {
+      final service = FirebaseCrashlyticsService(
+        mockCrashlytics,
+        analytics: const _AlwaysThrowingAnalyticsService(),
+      );
+
+      var recordErrorCalls = 0;
+      Future<void> callRecordError() {
+        recordErrorCalls++;
+        return service.recordError(
+          Exception('fatal crash #$recordErrorCalls'),
+          StackTrace.current,
+          fatal: true,
+        );
+      }
+
+      final done = Completer<void>();
+
+      // Mirrors main.dart's runZonedGuarded wiring (lines 15-34): the zone
+      // error handler unconditionally forwards any uncaught zone error to
+      // CrashlyticsService.recordError as fatal, fire-and-forget.
+      unawaited(
+        runZonedGuarded(
+          () async {
+            await callRecordError();
+            // Give the unguarded analytics Future a chance to reject and
+            // propagate to the zone error handler, exactly as it would in
+            // the running app.
+            await Future<void>.delayed(Duration.zero);
+            await Future<void>.delayed(Duration.zero);
+            done.complete();
+          },
+          (error, stack) {
+            unawaited(callRecordError());
+          },
+        ),
+      );
+
+      await done.future;
+      // Extra pump so a reentrant call (if the defect is present) has
+      // settled before asserting the final count.
+      await Future<void>.delayed(Duration.zero);
+
+      expect(
+        recordErrorCalls,
+        1,
+        reason:
+            'A rejected analytics Future inside recordError must not '
+            'escape to the runZonedGuarded error handler and cause '
+            'recordError to be invoked a second time',
+      );
+    });
+  });
 }
 
 /// A recording [CrashlyticsService] that captures what identifier was set.
@@ -93,5 +220,22 @@ class _RecordingCrashlyticsService implements CrashlyticsService {
   Future<void> setUserIdentifier(int? profileId) async {
     // Mirror the encoding from FirebaseCrashlyticsService
     lastIdentifier = profileId == null ? '' : '$profileId';
+  }
+}
+
+/// Mocks the Firebase Crashlytics SDK type so the real
+/// [FirebaseCrashlyticsService] implementation can be exercised in tests
+/// without a live Firebase app, per AUD-core-logging-01.
+class MockFirebaseCrashlytics extends Mock implements FirebaseCrashlytics {}
+
+/// Analytics double whose every call rejects, simulating a platform-channel
+/// failure (offline analytics queue full, SDK not yet initialized, etc.)
+/// per AUD-core-logging-01.
+class _AlwaysThrowingAnalyticsService extends AnalyticsService {
+  const _AlwaysThrowingAnalyticsService();
+
+  @override
+  Future<void> logEvent(String name, {Map<String, Object?>? parameters}) async {
+    throw Exception('analytics call always fails in this test double');
   }
 }
