@@ -274,7 +274,7 @@ lint-rules-test: ## Run packages/custom_lints unit tests (dart test) — AUD-gua
 	@echo "Running packages/custom_lints unit tests..."
 	@(cd ../packages/custom_lints && dart pub get && dart test) 1>&2
 
-audit: lint-rules-test ## Run all 24 enforcement greps (NFR19) — exits non-zero on any violation
+audit: lint-rules-test ## Run all 25 enforcement greps (NFR19) — exits non-zero on any violation
 	@echo "=== audit: enforcement greps ==="
 	@FAIL=0; \
 	echo "1/15 — No Firebase imports outside core/auth or core/sync"; \
@@ -504,7 +504,7 @@ audit: lint-rules-test ## Run all 24 enforcement greps (NFR19) — exits non-zer
 	    FAIL=1; \
 	  fi; \
 	done; \
-	echo "23/24 — No custom_lint analyzer plugin marker (AUD-guardrails-03: breaks the dart analyze --fatal-infos hard gate)"; \
+	echo "23/25 — No custom_lint analyzer plugin marker (AUD-guardrails-03: breaks the dart analyze --fatal-infos hard gate)"; \
 	# analysis_server's legacy plugin loader re-resolves `custom_lint` from \
 	# pub.dev in an isolated pub context that ignores dependency_overrides — \
 	# since only custom_lint 0.8.1 is published (this project needs the \
@@ -520,7 +520,7 @@ audit: lint-rules-test ## Run all 24 enforcement greps (NFR19) — exits non-zer
 	  grep -nE '^\s*-\s*custom_lint\s*$$' analysis_options.yaml; \
 	  FAIL=1; \
 	fi; \
-	echo "24/24 — No duplicate public top-level type names across lib/ (AG-4)"; \
+	echo "24/25 — No duplicate public top-level type names across lib/ (AG-4)"; \
 	DUPES=$$(grep -rnoP '^(sealed\s+|abstract\s+|base\s+|final\s+|interface\s+)*(mixin\s+class\s+|class\s+|enum\s+|mixin\s+)\K[A-Za-z_]\w*' lib/ --include="*.dart" \
 	    | grep -v '\.g\.dart:' | grep -v '\.freezed\.dart:' \
 	    | awk -F: '{name=$$3; if (name !~ /^_/) print $$1"\t"name}' \
@@ -532,9 +532,25 @@ audit: lint-rules-test ## Run all 24 enforcement greps (NFR19) — exits non-zer
 	  echo "$$DUPES"; \
 	  FAIL=1; \
 	fi; \
+	echo "25/25 — Only one file named coding-standards.md outside docs/_archive (AUD-docs-04, AG-8)"; \
+	# docs/coding-standards.md is the sole canonical standards doc; a second \
+	# file with the same name (e.g. a stale root copy) is a doc that can lie \
+	# to an agent that lands on the wrong one — AG-8. \
+	HITS=$$(find .. -name "coding-standards.md" \
+	    -not -path "*/_archive/*" \
+	    -not -path "*/.git/*" \
+	    -not -path "*/node_modules/*" \
+	    -not -path "*/build/*" \
+	    -not -path "*/.dart_tool/*"); \
+	COUNT=$$(echo "$$HITS" | grep -c .); \
+	if [ "$$COUNT" -ne 1 ]; then \
+	  echo "  Expected exactly one coding-standards.md outside docs/_archive/ (docs/coding-standards.md is canonical); found $$COUNT:"; \
+	  echo "$$HITS"; \
+	  FAIL=1; \
+	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \
 	  exit 1; \
 	else \
-	  echo "=== audit PASSED — all 24 greps clean ==="; \
+	  echo "=== audit PASSED — all 25 greps clean ==="; \
 	fi

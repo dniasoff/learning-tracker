@@ -114,6 +114,31 @@ void main() {
           'Pre-existing violations from Epics 25–26 not yet resolved; '
           're-enable once make audit is fully clean (DNI-389 tracks this)',
     );
+
+    test('check 23/23 asserts exactly one coding-standards.md outside '
+        'docs/_archive/ (AUD-docs-04)', () async {
+      final result = await Process.run('make', [
+        'audit',
+      ], workingDirectory: packageDir);
+      final stdout = result.stdout.toString();
+      expect(
+        stdout,
+        contains('23/23'),
+        reason:
+            'make audit must run the coding-standards.md uniqueness '
+            'check (AUD-docs-04).\n'
+            'stdout=$stdout\nstderr=${result.stderr}',
+      );
+      expect(
+        stdout,
+        isNot(contains('Expected exactly one coding-standards.md')),
+        reason:
+            'docs/coding-standards.md must be the only file named '
+            'coding-standards.md outside docs/_archive/ — a duplicate '
+            'root copy would regress AUD-docs-04.\n'
+            'stdout=$stdout\nstderr=${result.stderr}',
+      );
+    });
   });
 
   group('make audit check 15/15 cross-feature-import detector '

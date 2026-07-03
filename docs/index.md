@@ -24,6 +24,7 @@ For domain-specific deep dives, see the flows and planning sections below.
 - [Project Overview](project-overview.md)
 - [Developer Handbook](developer-handbook.md)
 - [Architecture (current state)](architecture.md)
+- [Coding Standards](coding-standards.md)
 - [Data Models](data-models.md)
 - [Component Inventory](component-inventory.md)
 - [Source Tree Analysis](source-tree-analysis.md)
@@ -97,7 +98,6 @@ Parked, superseded, and historical material. Not active reference.
 ## Outside `docs/`
 
 - [`README.md`](../README.md) — the repo's public front page (features, install, contribute).
-- [`coding-standards.md`](../coding-standards.md) — enforced coding rules.
 - [`CLAUDE.md`](../CLAUDE.md) — pointer for AI agents; they should come to this index.
 - [`LICENSE`](../LICENSE) — MIT.
 

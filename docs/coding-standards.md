@@ -714,20 +714,20 @@ Already enabled and load-bearing (do not remove): `unawaited_futures`, `use_buil
 
 ## Enforcement — `make audit` and CI
 
-> ⚠️ **Two Makefiles currently exist with divergent audit sets.** The **authoritative** target is `learning_tracker/Makefile`'s `audit` (23 checks, below). The repo-root `Makefile` carries an older 12-grep variant whose RTL check (`EdgeInsets.only(left:/right:)`) was never ported to the inner set. **Consolidation is required** (tracked in [Compliance Gaps](#current-compliance-gaps-2026-07-02)): union the check sets into one target, renumber sequentially, and have the other Makefile delegate.
+> ⚠️ **Two Makefiles currently exist with divergent audit sets.** The **authoritative** target is `learning_tracker/Makefile`'s `audit` (25 checks, below). The repo-root `Makefile` carries an older 12-grep variant whose RTL check (`EdgeInsets.only(left:/right:)`) was never ported to the inner set. **Consolidation is required** (tracked in [Compliance Gaps](#current-compliance-gaps-2026-07-02)): union the check sets into one target, renumber sequentially, and have the other Makefile delegate.
 
 Run before pushing:
 
 ```bash
-cd learning_tracker && make audit   # 23 enforcement checks + packages/custom_lints unit tests
+cd learning_tracker && make audit   # 25 enforcement checks + packages/custom_lints unit tests
 dart run custom_lint                # currently non-functional — see "custom_lint toolchain status" below; do not rely on its exit code
 ```
 
 `make audit` (and `make ci`) depend on `lint-rules-test`, which runs `dart test` inside `packages/custom_lints/` — the unit-test suite that exercises each of the 9 custom lint rules' own matching/whitelist logic (independent of whether the `custom_lint` plugin itself can attach to the analyzer — see the warn-only note below). This is a hard gate: it never soft-skips (AUD-guardrails-17).
 
-### The 23 enforcement checks (`learning_tracker/Makefile`)
+### The 25 enforcement checks (`learning_tracker/Makefile`)
 
-Each check must return zero matching lines (except the two marked warn-only). The odd numbering (`1/15 … 23/23`) is accretion from fix waves — renumber on consolidation.
+Each check must return zero matching lines (except the two marked warn-only). The odd numbering (`1/15 … 25/25`) is accretion from fix waves — renumber on consolidation.
 
 | # | What it checks |
 |---|----------------|
@@ -740,7 +740,7 @@ Each check must return zero matching lines (except the two marked warn-only). Th
 | 7 | No `useHebrewTermsProvider` read outside `core/labels`, `core/preferences`, settings/onboarding screens |
 | 8 | No `displayNameEn/He` outside `core/labels` (non-generated) |
 | 9 | No empty catch blocks |
-| 10 | No banned TODO/FIXME/XXX marker phrases (to be generalized per AG-6) |
+| 10 | No banned `XXX: temporary` marker; every `// TODO`/`// FIXME` comment carries a `DNI-####` Linear id (AG-6, AUD-repo-02) |
 | 11 | No `.withDefault(const Constant(0))` in database tables |
 | 12 | No `currentAccountId` hardcoded to 1 |
 | 13 | No raw `HebrewTerms.` calls in `lib/features/` |
@@ -754,6 +754,8 @@ Each check must return zero matching lines (except the two marked warn-only). Th
 | 21 | No nusach-specific domain-term ARB getter used directly in feature presentation |
 | 22 | Every `lib/core/labels/` file touching `displayNameEn/He` must be variant-aware |
 | 23 | No `custom_lint` analyzer plugin marker in `analysis_options.yaml` (AUD-guardrails-03 — breaks the `dart analyze --fatal-infos` hard gate; see "custom_lint toolchain status" below) |
+| 24 | No duplicate public top-level type (`class`/`enum`/`mixin`) names across `lib/` (AG-4, AUD-repo-01) |
+| 25 | Only one file named `coding-standards.md` exists outside `docs/_archive/` (AG-8, AUD-docs-04) |
 
 Root-Makefile-only check to port on consolidation: **No `EdgeInsets.only(left:|right:)`** (RTL violation — AX-1).
 
