@@ -95,24 +95,21 @@ class _TutorPinEntryGateState extends ConsumerState<TutorPinEntryGate> {
       );
       if (!mounted) return;
       final l10n = AppLocalizations.of(context)!;
-      switch (result) {
-        case TutorPinSuccess():
-          widget.onPinVerified();
-        case TutorPinIncorrect():
-          setState(() {
-            _digits = '';
-            _errorMessage = l10n.tutorPinIncorrect;
-          });
-        case TutorPinLockedOut(:final remainingMinutes):
-          setState(() {
-            _digits = '';
-            _errorMessage = l10n.tutorPinLockedOut(remainingMinutes);
-          });
-        case TutorPinValidationError(:final message):
-          setState(() {
-            _digits = '';
-            _errorMessage = message;
-          });
+      final errorMessage = switch (result) {
+        TutorPinSuccess() => null,
+        TutorPinIncorrect() => l10n.tutorPinIncorrect,
+        TutorPinLockedOut(:final remainingMinutes) => l10n.tutorPinLockedOut(
+          remainingMinutes,
+        ),
+        TutorPinValidationError(:final message) => message,
+      };
+      if (errorMessage == null) {
+        widget.onPinVerified();
+      } else {
+        setState(() {
+          _digits = '';
+          _errorMessage = errorMessage;
+        });
       }
     } finally {
       if (mounted) setState(() => _isVerifying = false);

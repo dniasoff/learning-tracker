@@ -122,27 +122,23 @@ class _TutorPinSetupScreenState extends ConsumerState<TutorPinSetupScreen> {
         rawPin: pin,
       );
       if (!mounted) return;
-      switch (result) {
-        case TutorPinSuccess():
-          widget.onPinSet();
-        case TutorPinValidationError(:final message):
-          setState(() {
-            _errorMessage = message;
-            _step = _TutorPinSetupStep.enterPin;
-            _firstPin = null;
-            _digits = '';
-          });
-        case TutorPinIncorrect():
-        case TutorPinLockedOut():
-          // Not expected during setup — treat as generic error.
-          setState(() {
-            _errorMessage = AppLocalizations.of(
-              context,
-            )!.tutorPinSetupSaveError;
-            _step = _TutorPinSetupStep.enterPin;
-            _firstPin = null;
-            _digits = '';
-          });
+      final errorMessage = switch (result) {
+        TutorPinSuccess() => null,
+        TutorPinValidationError(:final message) => message,
+        // Not expected during setup — treat as generic error.
+        TutorPinIncorrect() || TutorPinLockedOut() => AppLocalizations.of(
+          context,
+        )!.tutorPinSetupSaveError,
+      };
+      if (errorMessage == null) {
+        widget.onPinSet();
+      } else {
+        setState(() {
+          _errorMessage = errorMessage;
+          _step = _TutorPinSetupStep.enterPin;
+          _firstPin = null;
+          _digits = '';
+        });
       }
     } finally {
       if (mounted) setState(() => _isSaving = false);
