@@ -101,6 +101,9 @@ void main() {
     required _MockOutboxFacade outboxFacade,
   }) {
     when(() => outboxFacade.enqueueLedgerEntry(any())).thenAnswer((_) async {});
+    // AUD-learning-03: the ledger repo now requests a post-commit drain
+    // (write-tee) instead of enqueueing through the facade directly.
+    when(() => outboxFacade.requestSyncDrain()).thenAnswer((_) async {});
     // Stub getContentForCurriculum used by bookmark advance path.
     when(
       () => contentRepo.getContentForCurriculum(any()),
