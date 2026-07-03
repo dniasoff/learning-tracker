@@ -1,7 +1,7 @@
 ---
 title: Documentation Archive
 description: Index of parked, superseded, or scrapped documentation. Nothing here is active.
-date: 2026-04-19
+date: 2026-07-03
 ---
 
 # Documentation Archive
@@ -12,6 +12,7 @@ This folder is a **graveyard, not a reference**. Everything here is one of:
 - **Superseded** — docs replaced by newer, canonical versions elsewhere.
 - **Historical QA** — epic-specific checklists and reports kept for audit only.
 - **Tooling notes** — stale harness/agent instructions.
+- **Legacy run logs** — point-in-time orchestration/review output from a completed agent workflow run.
 
 Do not treat any file under `_archive/` as current project state. If you find yourself needing information from here, check the active docs first (`docs/index.md`) and promote back only with explicit approval.
 
@@ -53,6 +54,15 @@ Stale harness and tooling instructions. None of these tools are active on this r
 - [`VALIDATION_NOTES.md`](tooling-notes/VALIDATION_NOTES.md) — Ad-hoc validation checklist.
 - [`app_flow.md`](tooling-notes/app_flow.md) — Early app-flow diagram notes.
 - `app_architecture.eraserdiagram` — Eraser diagram source; architecture is documented in `docs/architecture.md` and `docs/planning/architecture.md`.
+
+### bmad-output-legacy/
+
+The former top-level `_bmad-output/` directory, moved here wholesale. Point-in-time orchestration logs, adversarial-review findings, and truth-verification reports from a completed refactor effort, written before root `CLAUDE.md` was updated to route BMAD agent output into `docs/` instead. Kept for audit trail only — internal cross-references between these files (e.g. `_bmad-output/refactor-task-tracker.md`) are historical and were not rewritten.
+
+- [`refactor-task-tracker.md`](bmad-output-legacy/refactor-task-tracker.md) — master task tracker for the refactor wave.
+- [`refactor-orchestration-log.md`](bmad-output-legacy/refactor-orchestration-log.md) — append-only orchestration history for the same effort.
+- [`adversarial-review-report.md`](bmad-output-legacy/adversarial-review-report.md) — cross-epic adversarial review summary (Epics 24–27); per-epic detail in `review/epic_24.md`…`review/epic_27.md`.
+- `refactor-s{1-5}-log.md`, `refactor-v{1,2,3,5}-*.md`, `refactor-bug-fix-verification.md`, `refactor-hardcoded-placeholder-audit.md`, `refactor-manual-smoke-checklist.md`, `refactor-progress-aggregator-analysis.md`, `refactor-wake-up-summary.md` — per-stream logs and verification reports from the same wave.
 
 ## Why archive instead of delete?
 
