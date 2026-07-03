@@ -237,7 +237,7 @@ void main() {
   group('Story 27.4 — interaction tests', tags: ['story_27_4'], () {
     test(
       'CompletionButton — constructor surface locks required fields',
-      // TODO: CompletionButton was removed in the Wave-3/4 refactor.
+      // TODO(DNI-393): CompletionButton was removed in the Wave-3/4 refactor.
       // Skip until a replacement widget is identified or this test is deleted.
       skip:
           'CompletionButton widget no longer exists (removed in Wave-3/4 refactor)',

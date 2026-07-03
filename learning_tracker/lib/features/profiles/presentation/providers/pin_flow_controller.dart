@@ -1,43 +1,16 @@
+import 'package:learning_tracker/features/profiles/domain/services/pin_flow_machine.dart'
+    show PinFlowMode, PinFlowStep;
 import 'package:learning_tracker/features/profiles/domain/services/pin_service.dart';
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 
+// Re-export so existing importers of this file keep seeing PinFlowMode /
+// PinFlowStep without an extra import (AG-4 dedup — these enums have exactly
+// one definition now: pin_flow_machine.dart's pure domain layer).
+export 'package:learning_tracker/features/profiles/domain/services/pin_flow_machine.dart'
+    show PinFlowMode, PinFlowStep;
+
 part 'pin_flow_controller.g.dart';
-
-// ---------------------------------------------------------------------------
-// PinFlowMode
-// ---------------------------------------------------------------------------
-
-/// Which PIN task the user is performing.
-enum PinFlowMode {
-  /// First-time or post-wipe PIN creation. Two steps: enter → confirm.
-  setup,
-
-  /// Change an existing PIN. Three steps: verify current → enter new → confirm.
-  change,
-
-  /// Verify the existing PIN to unlock a guarded route.
-  verify,
-}
-
-// ---------------------------------------------------------------------------
-// PinFlowStep
-// ---------------------------------------------------------------------------
-
-/// Internal progress through the flow.
-enum PinFlowStep {
-  /// Verifying the current PIN (change mode only).
-  verifyCurrent,
-
-  /// Entering the new PIN (setup and change modes).
-  enterNew,
-
-  /// Confirming the new PIN (setup and change modes).
-  confirm,
-
-  /// Terminal state — the flow is complete.
-  done,
-}
 
 // ---------------------------------------------------------------------------
 // PinFlowState

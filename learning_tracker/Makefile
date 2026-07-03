@@ -278,7 +278,7 @@ lint-rules-test: ## Run packages/custom_lints unit tests (dart test) — AUD-gua
 	@echo "Running packages/custom_lints unit tests..."
 	@(cd ../packages/custom_lints && dart pub get && dart test) 1>&2
 
-audit: lint-rules-test ## Run all 23 enforcement greps (NFR19) — exits non-zero on any violation
+audit: lint-rules-test ## Run all 24 enforcement greps (NFR19) — exits non-zero on any violation
 	@echo "=== audit: enforcement greps ==="
 	@FAIL=0; \
 	echo "1/15 — No Firebase imports outside core/auth or core/sync"; \
@@ -350,9 +350,16 @@ audit: lint-rules-test ## Run all 23 enforcement greps (NFR19) — exits non-zer
 	  grep -rn "catch\s*(_\?\w*)\s*{}" lib/ --include="*.dart" | grep -v "\.g\.dart"; \
 	  FAIL=1; \
 	fi; \
-	echo "10/15 — No banned TODO/FIXME/XXX markers"; \
-	if grep -rn "TODO: refactor later\|FIXME: hardcoded for now\|XXX: temporary" lib/ --include="*.dart" | grep -q .; then \
-	  grep -rn "TODO: refactor later\|FIXME: hardcoded for now\|XXX: temporary" lib/ --include="*.dart"; \
+	echo "10/15 — No banned XXX markers; every TODO/FIXME carries a Linear id DNI-#### (AG-6)"; \
+	if grep -rn "XXX: temporary" lib/ --include="*.dart" | grep -q .; then \
+	  grep -rn "XXX: temporary" lib/ --include="*.dart"; \
+	  FAIL=1; \
+	fi; \
+	if grep -rnP '^\s*//\s*(TODO|FIXME)\b' lib/ test/ integration_test/ --include="*.dart" \
+	    | grep -v "\.g\.dart" | grep -v "\.freezed\.dart" | grep -v "DNI-[0-9]" | grep -q .; then \
+	  echo "  TODO/FIXME with no DNI-#### Linear id — file or link a ticket (AG-6):"; \
+	  grep -rnP '^\s*//\s*(TODO|FIXME)\b' lib/ test/ integration_test/ --include="*.dart" \
+	    | grep -v "\.g\.dart" | grep -v "\.freezed\.dart" | grep -v "DNI-[0-9]"; \
 	  FAIL=1; \
 	fi; \
 	echo "11/15 — No .withDefault(const Constant(0)) in database tables"; \
@@ -499,7 +506,7 @@ audit: lint-rules-test ## Run all 23 enforcement greps (NFR19) — exits non-zer
 	    FAIL=1; \
 	  fi; \
 	done; \
-	echo "23/23 — No custom_lint analyzer plugin marker (AUD-guardrails-03: breaks the dart analyze --fatal-infos hard gate)"; \
+	echo "23/24 — No custom_lint analyzer plugin marker (AUD-guardrails-03: breaks the dart analyze --fatal-infos hard gate)"; \
 	# analysis_server's legacy plugin loader re-resolves `custom_lint` from \
 	# pub.dev in an isolated pub context that ignores dependency_overrides — \
 	# since only custom_lint 0.8.1 is published (this project needs the \
@@ -515,9 +522,21 @@ audit: lint-rules-test ## Run all 23 enforcement greps (NFR19) — exits non-zer
 	  grep -nE '^\s*-\s*custom_lint\s*$$' analysis_options.yaml; \
 	  FAIL=1; \
 	fi; \
+	echo "24/24 — No duplicate public top-level type names across lib/ (AG-4)"; \
+	DUPES=$$(grep -rnoP '^(sealed\s+|abstract\s+|base\s+|final\s+|interface\s+)*(mixin\s+class\s+|class\s+|enum\s+|mixin\s+)\K[A-Za-z_]\w*' lib/ --include="*.dart" \
+	    | grep -v '\.g\.dart:' | grep -v '\.freezed\.dart:' \
+	    | awk -F: '{name=$$3; if (name !~ /^_/) print $$1"\t"name}' \
+	    | sort -u \
+	    | awk -F'\t' '{count[$$2]++; files[$$2]=files[$$2]" "$$1} END {for (n in count) if (count[n] > 1) print n": "files[n]}' \
+	    | sort); \
+	if [ -n "$$DUPES" ]; then \
+	  echo "  Public top-level type name defined in more than one lib/ file — rename or delete the duplicate (AG-4):"; \
+	  echo "$$DUPES"; \
+	  FAIL=1; \
+	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \
 	  exit 1; \
 	else \
-	  echo "=== audit PASSED — all 23 greps clean ==="; \
+	  echo "=== audit PASSED — all 24 greps clean ==="; \
 	fi

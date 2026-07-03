@@ -153,13 +153,13 @@ Future<CurriculumProgressData> curriculumProgress(
 ///
 /// Family provider keyed by curriculumId per P3.
 ///
-/// F2 fix: uses [PaceCalculator.compute] from the progress domain so that
+/// F2 fix: uses [ProgressPaceCalculator.compute] from the progress domain so that
 /// bulk-marked completions (sentinel date 2000-01-01) are excluded from live
 /// velocity via the [trackStartDate] filter. Previously the scheduler's
-/// [PaceCalculator.calculate] received ALL personal completions including
+/// [ProgressPaceCalculator.calculate] received ALL personal completions including
 /// bulk entries, causing phantom "Ahead by 296 days on day 1" results.
 @riverpod
-Future<PaceCalculator?> curriculumPaceStatus(
+Future<ProgressPaceCalculator?> curriculumPaceStatus(
   Ref ref,
   String curriculumId,
 ) async {
@@ -252,7 +252,7 @@ Future<PaceCalculator?> curriculumPaceStatus(
   final targetDate = DateUtils.extractLocalDate(goal.targetDate!.toLocal());
   final today = DateUtils.extractLocalDate(now);
 
-  return PaceCalculator.compute(
+  return ProgressPaceCalculator.compute(
     totalItems: totalItems,
     bulkBaseline: bulkBaseline,
     liveProgress: liveProgress,

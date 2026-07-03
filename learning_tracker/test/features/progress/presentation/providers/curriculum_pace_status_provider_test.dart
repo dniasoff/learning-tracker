@@ -258,7 +258,7 @@ void main() {
       expect(result, isNotNull);
       expect(
         result!.paceStatus,
-        PaceStatus.graceWindow,
+        ProgressPaceStatus.graceWindow,
         reason:
             'Day 0 is always graceWindow — bulk entries must not leak into '
             'live velocity and inflate paceVariance',
@@ -266,8 +266,8 @@ void main() {
       expect(result.bulkBaseline, 1336);
       expect(result.liveProgress, 0);
       expect(result.paceVariance, 0.0);
-      // Critically: must NOT be PaceStatus.ahead
-      expect(result.paceStatus, isNot(PaceStatus.ahead));
+      // Critically: must NOT be ProgressPaceStatus.ahead
+      expect(result.paceStatus, isNot(ProgressPaceStatus.ahead));
     },
   );
 
@@ -332,7 +332,7 @@ void main() {
       // paceVariance = 150 - 100.8 = 49.2  → > requiredVelocity(3.36) → ahead
       expect(
         result.paceStatus,
-        PaceStatus.ahead,
+        ProgressPaceStatus.ahead,
         reason: '150 live items vs 100.8 expected (3.36/day * 30 days) → ahead',
       );
     },
@@ -390,7 +390,7 @@ void main() {
       // paceVariance = 10 - 100.8 = -90.8 → < -3.36 → behind
       expect(
         result.paceStatus,
-        PaceStatus.behind,
+        ProgressPaceStatus.behind,
         reason: '10 live items vs 100.8 expected (3.36/day * 30 days) → behind',
       );
     },
@@ -480,12 +480,12 @@ void main() {
       expect(result.paceVariance, 0.0);
       expect(
         result.paceStatus,
-        PaceStatus.onTrack,
+        ProgressPaceStatus.onTrack,
         reason:
             '50 distinct items done vs 50 expected → onTrack; a row-based '
             'numerator would yield 150 vs 50 → phantom ahead',
       );
-      expect(result.paceStatus, isNot(PaceStatus.ahead));
+      expect(result.paceStatus, isNot(ProgressPaceStatus.ahead));
     },
   );
 

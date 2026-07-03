@@ -8,14 +8,14 @@ void main() {
   // Reference dates — all expressed as local-day midnights.
   final today = day(2026, 5, 20);
 
-  group('PaceCalculator', () {
+  group('ProgressPaceCalculator', () {
     // -------------------------------------------------------------------------
     // Test 1 — Day 1 grace window
     // -------------------------------------------------------------------------
     test(
       'day 1 (today == trackStart): always graceWindow regardless of bulk',
       () {
-        final calc = PaceCalculator.compute(
+        final calc = ProgressPaceCalculator.compute(
           totalItems: 1000,
           bulkBaseline: 1000, // fully done in bulk
           liveProgress: 0,
@@ -25,7 +25,7 @@ void main() {
         );
 
         expect(calc.isInGraceWindow, isTrue);
-        expect(calc.paceStatus, PaceStatus.graceWindow);
+        expect(calc.paceStatus, ProgressPaceStatus.graceWindow);
         // Elapsed days = 0 → no velocity signal
         expect(calc.actualVelocity, 0.0);
         // Required velocity = (1000-1000)/365 = 0
@@ -40,7 +40,7 @@ void main() {
       // trackStart = 1 day ago → elapsed = 1 = kPaceGraceWindowDays
       final trackStart = today.subtract(const Duration(days: 1));
 
-      final calc = PaceCalculator.compute(
+      final calc = ProgressPaceCalculator.compute(
         totalItems: 200,
         bulkBaseline: 0,
         liveProgress: 0,
@@ -56,7 +56,7 @@ void main() {
             'elapsed (1) == kPaceGraceWindowDays ($kPaceGraceWindowDays), '
             'should still be in grace window',
       );
-      expect(calc.paceStatus, PaceStatus.graceWindow);
+      expect(calc.paceStatus, ProgressPaceStatus.graceWindow);
     });
 
     // -------------------------------------------------------------------------
@@ -74,7 +74,7 @@ void main() {
         final trackStart = today.subtract(const Duration(days: 4));
         final targetDate = trackStart.add(const Duration(days: 100));
 
-        final calc = PaceCalculator.compute(
+        final calc = ProgressPaceCalculator.compute(
           totalItems: 1000,
           bulkBaseline: 500,
           liveProgress: 40,
@@ -92,7 +92,7 @@ void main() {
           reason:
               'elapsed days (4) > kPaceGraceWindowDays ($kPaceGraceWindowDays)',
         );
-        expect(calc.paceStatus, PaceStatus.ahead);
+        expect(calc.paceStatus, ProgressPaceStatus.ahead);
         expect(
           calc.paceVarianceInDays,
           closeTo(4.0, 0.001),
@@ -112,7 +112,7 @@ void main() {
       final trackStart = today.subtract(const Duration(days: 4));
       final targetDate = trackStart.add(const Duration(days: 100));
 
-      final calc = PaceCalculator.compute(
+      final calc = ProgressPaceCalculator.compute(
         totalItems: 1000,
         bulkBaseline: 500,
         liveProgress: 0,
@@ -123,7 +123,7 @@ void main() {
 
       expect(calc.isInGraceWindow, isFalse);
       expect(calc.paceVariance, closeTo(-20.0, 0.001));
-      expect(calc.paceStatus, PaceStatus.behind);
+      expect(calc.paceStatus, ProgressPaceStatus.behind);
       expect(calc.paceVarianceInDays, isNegative);
     });
 
@@ -134,7 +134,7 @@ void main() {
       'zero-divide safety: targetDate == trackStartDate → requiredVelocity = 0, no exception',
       () {
         expect(
-          () => PaceCalculator.compute(
+          () => ProgressPaceCalculator.compute(
             totalItems: 500,
             bulkBaseline: 0,
             liveProgress: 0,
@@ -145,7 +145,7 @@ void main() {
           returnsNormally,
         );
 
-        final calc = PaceCalculator.compute(
+        final calc = ProgressPaceCalculator.compute(
           totalItems: 500,
           bulkBaseline: 0,
           liveProgress: 0,
@@ -161,7 +161,7 @@ void main() {
           reason:
               'requiredVelocity == 0 → paceVarianceInDays must be 0 not NaN',
         );
-        expect(calc.paceStatus, PaceStatus.graceWindow);
+        expect(calc.paceStatus, ProgressPaceStatus.graceWindow);
       },
     );
 
@@ -174,7 +174,7 @@ void main() {
       // date 2000-01-01). trackStart = today, liveProgress = 0.
       // bulkBaseline should absorb all items so requiredVelocity = 0.
       // Elapsed days = 0 → graceWindow. paceVariance should be 0.
-      final calc = PaceCalculator.compute(
+      final calc = ProgressPaceCalculator.compute(
         totalItems: 1336,
         bulkBaseline: 1336,
         liveProgress: 0,
@@ -191,12 +191,12 @@ void main() {
       expect(calc.paceVariance, 0.0);
       expect(
         calc.paceStatus,
-        PaceStatus.graceWindow,
+        ProgressPaceStatus.graceWindow,
         reason: 'day 0 is always in grace window',
       );
       // Must NOT be ahead or behind — bulk completions are not live velocity
-      expect(calc.paceStatus, isNot(PaceStatus.ahead));
-      expect(calc.paceStatus, isNot(PaceStatus.behind));
+      expect(calc.paceStatus, isNot(ProgressPaceStatus.ahead));
+      expect(calc.paceStatus, isNot(ProgressPaceStatus.behind));
     });
 
     // -------------------------------------------------------------------------
@@ -211,7 +211,7 @@ void main() {
         final trackStart = today.subtract(const Duration(days: 10));
         final targetDate = trackStart.add(const Duration(days: 100));
 
-        final calc = PaceCalculator.compute(
+        final calc = ProgressPaceCalculator.compute(
           totalItems: 200,
           bulkBaseline: 0,
           liveProgress: 20,
@@ -223,7 +223,7 @@ void main() {
         expect(calc.requiredVelocity, closeTo(2.0, 0.001));
         expect(calc.paceVariance, closeTo(0.0, 0.001));
         expect(calc.isInGraceWindow, isFalse);
-        expect(calc.paceStatus, PaceStatus.onTrack);
+        expect(calc.paceStatus, ProgressPaceStatus.onTrack);
       },
     );
 
@@ -238,7 +238,7 @@ void main() {
       final trackStart = today.subtract(const Duration(days: 10));
       final targetDate = trackStart.add(const Duration(days: 100));
 
-      final calc = PaceCalculator.compute(
+      final calc = ProgressPaceCalculator.compute(
         totalItems: 200,
         bulkBaseline: 0,
         liveProgress: 21,
@@ -250,7 +250,7 @@ void main() {
       expect(calc.paceVariance, closeTo(1.0, 0.001));
       expect(
         calc.paceStatus,
-        PaceStatus.onTrack,
+        ProgressPaceStatus.onTrack,
         reason:
             'paceVariance (1.0) < requiredVelocity (2.0): within 1-day tolerance',
       );
@@ -260,7 +260,7 @@ void main() {
     // Equality and hashCode
     // -------------------------------------------------------------------------
     test('two instances with identical inputs are equal', () {
-      PaceCalculator make() => PaceCalculator.compute(
+      ProgressPaceCalculator make() => ProgressPaceCalculator.compute(
         totalItems: 100,
         bulkBaseline: 10,
         liveProgress: 5,

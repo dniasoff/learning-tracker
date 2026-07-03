@@ -1,5 +1,5 @@
 /// Grace window in calendar days from track start during which pace status is
-/// always [PaceStatus.graceWindow] regardless of actual progress.
+/// always [ProgressPaceStatus.graceWindow] regardless of actual progress.
 ///
 /// Days 0 and 1 (elapsed days ≤ 1 since track start). From day 2 onward the
 /// actual vs required velocity comparison kicks in. Decided by owner 2026-05-20.
@@ -15,7 +15,7 @@ const int kPaceGraceWindowDays = 1;
 ///   required velocity.
 /// - [behind] — liveProgress trails expected progress by more than one day's
 ///   required velocity.
-enum PaceStatus { graceWindow, onTrack, ahead, behind }
+enum ProgressPaceStatus { graceWindow, onTrack, ahead, behind }
 
 /// Immutable value object that computes all pace-related metrics for a track.
 ///
@@ -39,10 +39,10 @@ enum PaceStatus { graceWindow, onTrack, ahead, behind }
 /// - `targetDate == trackStartDate` → [requiredVelocity] = 0 and
 ///   [paceVarianceInDays] = 0; no division by zero.
 /// - `today == trackStartDate` (day 0) → [actualVelocity] = 0 and status is
-///   always [PaceStatus.graceWindow].
+///   always [ProgressPaceStatus.graceWindow].
 ///
-/// Use [PaceCalculator.compute] to create an instance.
-class PaceCalculator {
+/// Use [ProgressPaceCalculator.compute] to create an instance.
+class ProgressPaceCalculator {
   // ---------------------------------------------------------------------------
   // Inputs
   // ---------------------------------------------------------------------------
@@ -96,13 +96,13 @@ class PaceCalculator {
   final bool isInGraceWindow;
 
   /// The overall pace status derived from the inputs and computed fields.
-  final PaceStatus paceStatus;
+  final ProgressPaceStatus paceStatus;
 
   // ---------------------------------------------------------------------------
   // Private constructor — all fields pre-computed
   // ---------------------------------------------------------------------------
 
-  const PaceCalculator._({
+  const ProgressPaceCalculator._({
     required this.totalItems,
     required this.bulkBaseline,
     required this.liveProgress,
@@ -132,7 +132,7 @@ class PaceCalculator {
   /// [trackStartDate]  — date the track was configured (local-day midnight).
   /// [targetDate]      — user-set finish date (local-day midnight).
   /// [today]           — today's local-day midnight.
-  factory PaceCalculator.compute({
+  factory ProgressPaceCalculator.compute({
     required int totalItems,
     required int bulkBaseline,
     required int liveProgress,
@@ -173,18 +173,18 @@ class PaceCalculator {
     final isInGraceWindow = elapsedDays <= kPaceGraceWindowDays;
 
     // Derive pace status.
-    final PaceStatus paceStatus;
+    final ProgressPaceStatus paceStatus;
     if (isInGraceWindow) {
-      paceStatus = PaceStatus.graceWindow;
+      paceStatus = ProgressPaceStatus.graceWindow;
     } else if (paceVariance > requiredVelocity) {
-      paceStatus = PaceStatus.ahead;
+      paceStatus = ProgressPaceStatus.ahead;
     } else if (paceVariance < -requiredVelocity) {
-      paceStatus = PaceStatus.behind;
+      paceStatus = ProgressPaceStatus.behind;
     } else {
-      paceStatus = PaceStatus.onTrack;
+      paceStatus = ProgressPaceStatus.onTrack;
     }
 
-    return PaceCalculator._(
+    return ProgressPaceCalculator._(
       totalItems: totalItems,
       bulkBaseline: bulkBaseline,
       liveProgress: liveProgress,
@@ -208,7 +208,7 @@ class PaceCalculator {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      other is PaceCalculator &&
+      other is ProgressPaceCalculator &&
           other.totalItems == totalItems &&
           other.bulkBaseline == bulkBaseline &&
           other.liveProgress == liveProgress &&
@@ -228,7 +228,7 @@ class PaceCalculator {
 
   @override
   String toString() =>
-      'PaceCalculator('
+      'ProgressPaceCalculator('
       'totalItems: $totalItems, '
       'bulkBaseline: $bulkBaseline, '
       'liveProgress: $liveProgress, '
