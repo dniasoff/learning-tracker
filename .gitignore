@@ -20,3 +20,9 @@ firebase-debug.log
 
 # Firebase emulator debug logs
 **/firestore-debug.log
+
+# Repo-root build scratch space (AUD-repo-04). learning_tracker/ has its own
+# .gitignore covering learning_tracker/build/ (Flutter + `make seed` output);
+# this covers the repo root in case a tool script is ever run from there.
+/build/
+/*.log
