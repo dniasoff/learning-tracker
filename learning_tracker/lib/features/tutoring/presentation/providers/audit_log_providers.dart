@@ -60,7 +60,7 @@ class _StubAuditLogWriteRepository implements TutorAuditLogRepository {
   @override
   Future<void> appendEntry(TutorAuditLogEntry entry) async {
     // No-op stub. The real implementation writes to Firestore via Admin SDK.
-    // TODO(data-layer): Replace with Firestore write.
+    // TODO(data-layer): Replace with Firestore write. (DNI-393)
   }
 }
 

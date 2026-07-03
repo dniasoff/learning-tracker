@@ -721,11 +721,11 @@ void main() {
     skip: 'Backlog: app info screen not yet implemented',
     () {
       test('about screen shows app version', () {
-        // TODO: verify version string display
+        // TODO(DNI-393): verify version string display
       });
 
       test('privacy policy and terms links are accessible', () {
-        // TODO: verify link navigation
+        // TODO(DNI-393): verify link navigation
       });
     },
   );

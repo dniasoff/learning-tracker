@@ -346,9 +346,16 @@ audit: ## Run all 23 enforcement greps (NFR19) — exits non-zero on any violati
 	  grep -rn "catch\s*(_\?\w*)\s*{}" lib/ --include="*.dart" | grep -v "\.g\.dart"; \
 	  FAIL=1; \
 	fi; \
-	echo "10/15 — No banned TODO/FIXME/XXX markers"; \
-	if grep -rn "TODO: refactor later\|FIXME: hardcoded for now\|XXX: temporary" lib/ --include="*.dart" | grep -q .; then \
-	  grep -rn "TODO: refactor later\|FIXME: hardcoded for now\|XXX: temporary" lib/ --include="*.dart"; \
+	echo "10/15 — No banned XXX markers; every TODO/FIXME carries a Linear id DNI-#### (AG-6)"; \
+	if grep -rn "XXX: temporary" lib/ --include="*.dart" | grep -q .; then \
+	  grep -rn "XXX: temporary" lib/ --include="*.dart"; \
+	  FAIL=1; \
+	fi; \
+	if grep -rnP '^\s*//\s*(TODO|FIXME)\b' lib/ test/ integration_test/ --include="*.dart" \
+	    | grep -v "\.g\.dart" | grep -v "\.freezed\.dart" | grep -v "DNI-[0-9]" | grep -q .; then \
+	  echo "  TODO/FIXME with no DNI-#### Linear id — file or link a ticket (AG-6):"; \
+	  grep -rnP '^\s*//\s*(TODO|FIXME)\b' lib/ test/ integration_test/ --include="*.dart" \
+	    | grep -v "\.g\.dart" | grep -v "\.freezed\.dart" | grep -v "DNI-[0-9]"; \
 	  FAIL=1; \
 	fi; \
 	echo "11/15 — No .withDefault(const Constant(0)) in database tables"; \

@@ -4,7 +4,7 @@ import 'package:learning_tracker/features/scheduler/domain/models/pace_status.da
 /// Callback invoked when pace drops to [PaceStatusType.behind].
 ///
 /// [daysBehind] is the absolute number of days behind (always positive).
-// TODO(Epic-12): Wire this callback into the notification system (DNI notification story).
+// TODO(Epic-12): Wire this callback into the notification system (DNI notification story). (DNI-393)
 typedef PaceBehindCallback = void Function(int daysBehind);
 
 /// Pure computation for pace tracking.
@@ -22,7 +22,7 @@ class PaceCalculator {
   ///   (at least 7 days of history for rolling average)
   /// [today] — current date (UTC)
   /// [onPaceBehind] — optional callback fired when status is behind.
-  // TODO(Epic-12): Epic 12 notification system should pass an [onPaceBehind]
+  // TODO(Epic-12): Epic 12 notification system should pass an [onPaceBehind] (DNI-393)
   //  callback to trigger "falling behind" notifications.
   static PaceStatus calculate({
     required DateTime goalStartDate,
