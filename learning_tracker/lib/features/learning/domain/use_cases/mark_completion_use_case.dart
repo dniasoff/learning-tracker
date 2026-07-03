@@ -5,8 +5,6 @@ import 'package:learning_tracker/features/learning/domain/entities/completion_so
 import 'package:learning_tracker/features/learning/domain/entities/mark_completion_result.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/completion_repository.dart';
 
-export 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
-
 /// Use case for marking a single content item as completed.
 ///
 /// Orchestrates the completion flow, gating side effects according to
