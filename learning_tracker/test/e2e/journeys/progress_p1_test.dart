@@ -668,19 +668,19 @@ void main() {
 
   group('E2E-814 — Curriculum Progress: pace indicator states', () {
     // Uses a fixed clockProvider so pace arithmetic is deterministic.
-    // All three PaceStatus outcomes are exercised (on-pace, ahead, behind).
+    // All three ProgressPaceStatus outcomes are exercised (on-pace, ahead, behind).
 
     /// Fixed today for all E2E-814 sub-tests.
     final fixedToday = DateTime.utc(2026, 6, 18);
 
-    /// A [PaceCalculator] configured for "on-pace" (within one day's variance).
+    /// A [ProgressPaceCalculator] configured for "on-pace" (within one day's variance).
     ///
     ///   trackStartDate = 2026-01-01
     ///   targetDate     = 2026-12-31 (365 days)
     ///   totalItems     = 365
     ///   liveProgress   = 169  (exactly requiredVelocity × elapsedDays = 1 × 169)
     ///   → paceVariance = 0  → onTrack
-    final onPacePaceCalc = PaceCalculator.compute(
+    final onPacePaceCalc = ProgressPaceCalculator.compute(
       totalItems: 365,
       bulkBaseline: 0,
       liveProgress: 169,
@@ -689,11 +689,11 @@ void main() {
       today: fixedToday,
     );
 
-    /// A [PaceCalculator] configured for "ahead" (> 1 day's items done extra).
+    /// A [ProgressPaceCalculator] configured for "ahead" (> 1 day's items done extra).
     ///
     ///   Same window; liveProgress = 220 vs expected ≈ 169
     ///   → paceVariance = +51 days
-    final aheadPaceCalc = PaceCalculator.compute(
+    final aheadPaceCalc = ProgressPaceCalculator.compute(
       totalItems: 365,
       bulkBaseline: 0,
       liveProgress: 220,
@@ -702,11 +702,11 @@ void main() {
       today: fixedToday,
     );
 
-    /// A [PaceCalculator] configured for "behind" (> 1 day's items missing).
+    /// A [ProgressPaceCalculator] configured for "behind" (> 1 day's items missing).
     ///
     ///   Same window; liveProgress = 100 vs expected ≈ 169
     ///   → paceVariance ≈ −69 days
-    final behindPaceCalc = PaceCalculator.compute(
+    final behindPaceCalc = ProgressPaceCalculator.compute(
       totalItems: 365,
       bulkBaseline: 0,
       liveProgress: 100,
@@ -717,9 +717,9 @@ void main() {
 
     // Verify pace status is computed correctly before relying on UI assertions.
     setUp(() {
-      expect(onPacePaceCalc.paceStatus, PaceStatus.onTrack);
-      expect(aheadPaceCalc.paceStatus, PaceStatus.ahead);
-      expect(behindPaceCalc.paceStatus, PaceStatus.behind);
+      expect(onPacePaceCalc.paceStatus, ProgressPaceStatus.onTrack);
+      expect(aheadPaceCalc.paceStatus, ProgressPaceStatus.ahead);
+      expect(behindPaceCalc.paceStatus, ProgressPaceStatus.behind);
     });
 
     testWidgets(

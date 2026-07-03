@@ -56,7 +56,7 @@ final _trackGoalProvider = FutureProvider.autoDispose.family<Goal?, int>(
       ref.watch(userDatabaseProvider).goalDao.getGoalByTrack(trackId),
 );
 
-/// Computes a [PaceCalculator] for the given [CurriculumTrack].
+/// Computes a [ProgressPaceCalculator] for the given [CurriculumTrack].
 ///
 /// Live completions: `completedAt >= track.activatedAt` (excluding sentinel).
 /// Bulk baseline: completions with the sentinel date (2000-01-01).
@@ -64,7 +64,7 @@ final _trackGoalProvider = FutureProvider.autoDispose.family<Goal?, int>(
 /// targetDate: deadline-goal date when available; otherwise today (so
 ///   requiredVelocity returns 0 — not meaningful for pace goals).
 final _trackPaceCalcProvider = FutureProvider.autoDispose
-    .family<PaceCalculator, CurriculumTrack>((ref, track) async {
+    .family<ProgressPaceCalculator, CurriculumTrack>((ref, track) async {
       final db = ref.watch(userDatabaseProvider);
       final profileId = track.profileId;
 
@@ -106,7 +106,7 @@ final _trackPaceCalcProvider = FutureProvider.autoDispose
 
       final today = clock.today();
 
-      return PaceCalculator.compute(
+      return ProgressPaceCalculator.compute(
         totalItems: totalItems,
         bulkBaseline: bulkBaseline,
         liveProgress: liveCount,

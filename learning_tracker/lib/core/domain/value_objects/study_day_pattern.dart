@@ -36,12 +36,12 @@ enum DayKind {
 /// - At least one weekday maps to [DayKind.study].
 ///
 /// ## Equality
-/// Two [StudyDayPattern]s are equal when they have identical weekday→DayKind
+/// Two [WeeklyStudyDayPattern]s are equal when they have identical weekday→DayKind
 /// mappings (order-independent Map equality).
 ///
 /// ## Usage
 /// ```dart
-/// final pattern = StudyDayPattern({
+/// final pattern = WeeklyStudyDayPattern({
 ///   1: DayKind.study,   // Monday
 ///   2: DayKind.study,   // Tuesday
 ///   ...
@@ -51,12 +51,12 @@ enum DayKind {
 ///
 /// final kind = pattern.dayKindFor(clock.today().weekday);
 /// ```
-class StudyDayPattern {
-  /// Creates a [StudyDayPattern] from [entries] (weekday 1..7 → [DayKind]).
+class WeeklyStudyDayPattern {
+  /// Creates a [WeeklyStudyDayPattern] from [entries] (weekday 1..7 → [DayKind]).
   ///
   /// All entries must use weekday values 1..7; at least one must be
   /// [DayKind.study]. Throws [ArgumentError] on violation.
-  StudyDayPattern(Map<int, DayKind> entries)
+  WeeklyStudyDayPattern(Map<int, DayKind> entries)
     : _entries = Map.unmodifiable(entries) {
     for (final key in entries.keys) {
       if (key < 1 || key > 7) {
@@ -69,7 +69,7 @@ class StudyDayPattern {
     }
     if (!entries.values.any((d) => d == DayKind.study)) {
       throw ArgumentError(
-        'StudyDayPattern must contain at least one study day.',
+        'WeeklyStudyDayPattern must contain at least one study day.',
       );
     }
   }
@@ -81,11 +81,11 @@ class StudyDayPattern {
   // ---------------------------------------------------------------------------
 
   /// The default pattern: all 7 days are study days.
-  factory StudyDayPattern.allStudy() =>
-      StudyDayPattern({for (var i = 1; i <= 7; i++) i: DayKind.study});
+  factory WeeklyStudyDayPattern.allStudy() =>
+      WeeklyStudyDayPattern({for (var i = 1; i <= 7; i++) i: DayKind.study});
 
   /// Convenience pattern: Mon–Fri study, Sat–Sun review.
-  factory StudyDayPattern.weekdaysStudy() => StudyDayPattern({
+  factory WeeklyStudyDayPattern.weekdaysStudy() => WeeklyStudyDayPattern({
     1: DayKind.study,
     2: DayKind.study,
     3: DayKind.study,
@@ -124,7 +124,7 @@ class StudyDayPattern {
   @override
   bool operator ==(Object other) {
     if (identical(this, other)) return true;
-    if (other is! StudyDayPattern) return false;
+    if (other is! WeeklyStudyDayPattern) return false;
     if (_entries.length != other._entries.length) return false;
     for (final entry in _entries.entries) {
       if (other._entries[entry.key] != entry.value) return false;
@@ -142,6 +142,6 @@ class StudyDayPattern {
     final days = _entries.entries.toList()
       ..sort((a, b) => a.key.compareTo(b.key));
     final repr = days.map((e) => '${e.key}:${e.value.name}').join(', ');
-    return 'StudyDayPattern{$repr}';
+    return 'WeeklyStudyDayPattern{$repr}';
   }
 }

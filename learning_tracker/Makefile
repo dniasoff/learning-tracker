@@ -274,7 +274,7 @@ lint: ## Run custom_lint (skips gracefully if not in pubspec)
 	  echo "custom_lint not in pubspec — skipping (add custom_lint to dev_dependencies when ready)"; \
 	fi
 
-audit: ## Run all 22 enforcement greps (NFR19) — exits non-zero on any violation
+audit: ## Run all 23 enforcement greps (NFR19) — exits non-zero on any violation
 	@echo "=== audit: enforcement greps ==="
 	@FAIL=0; \
 	echo "1/15 — No Firebase imports outside core/auth or core/sync"; \
@@ -497,9 +497,21 @@ audit: ## Run all 22 enforcement greps (NFR19) — exits non-zero on any violati
 	    FAIL=1; \
 	  fi; \
 	done; \
+	echo "23/23 — No duplicate public top-level type names across lib/ (AG-4)"; \
+	DUPES=$$(grep -rnoP '^(sealed\s+|abstract\s+|base\s+|final\s+|interface\s+)*(mixin\s+class\s+|class\s+|enum\s+|mixin\s+)\K[A-Za-z_]\w*' lib/ --include="*.dart" \
+	    | grep -v '\.g\.dart:' | grep -v '\.freezed\.dart:' \
+	    | awk -F: '{name=$$3; if (name !~ /^_/) print $$1"\t"name}' \
+	    | sort -u \
+	    | awk -F'\t' '{count[$$2]++; files[$$2]=files[$$2]" "$$1} END {for (n in count) if (count[n] > 1) print n": "files[n]}' \
+	    | sort); \
+	if [ -n "$$DUPES" ]; then \
+	  echo "  Public top-level type name defined in more than one lib/ file — rename or delete the duplicate (AG-4):"; \
+	  echo "$$DUPES"; \
+	  FAIL=1; \
+	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \
 	  exit 1; \
 	else \
-	  echo "=== audit PASSED — all 22 greps clean ==="; \
+	  echo "=== audit PASSED — all 23 greps clean ==="; \
 	fi

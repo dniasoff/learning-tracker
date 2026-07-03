@@ -50,7 +50,7 @@ Widget _wrap(Widget child) {
   );
 }
 
-// Reference date for PaceCalculator fixtures.
+// Reference date for ProgressPaceCalculator fixtures.
 final _today = DateTime(2026, 5, 20);
 
 void main() {
@@ -109,19 +109,19 @@ void main() {
     );
   });
 
-  group('PaceIndicator', () {
+  group('ProgressPaceIndicator', () {
     // -----------------------------------------------------------------------
-    // Helper: create a PaceCalculator for a track started N days ago
+    // Helper: create a ProgressPaceCalculator for a track started N days ago
     // with the given liveProgress.
     // totalItems=200, bulkBaseline=0, targetDate= trackStart+100 days.
     // -----------------------------------------------------------------------
-    PaceCalculator makePace({
+    ProgressPaceCalculator makePace({
       required int elapsedDays,
       required int liveProgress,
       int bulkBaseline = 0,
     }) {
       final trackStart = _today.subtract(Duration(days: elapsedDays));
-      return PaceCalculator.compute(
+      return ProgressPaceCalculator.compute(
         totalItems: 200,
         bulkBaseline: bulkBaseline,
         liveProgress: liveProgress,
@@ -135,7 +135,11 @@ void main() {
       // elapsed=10, requiredVelocity=2/day, expected=20, live=0 → variance=-20
       // paceVarianceInDays = -20/2 = -10 → behind by 10 days
       await tester.pumpWidget(
-        _wrap(PaceIndicator(pace: makePace(elapsedDays: 10, liveProgress: 0))),
+        _wrap(
+          ProgressPaceIndicator(
+            pace: makePace(elapsedDays: 10, liveProgress: 0),
+          ),
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -146,7 +150,11 @@ void main() {
     testWidgets('shows on-track status', (tester) async {
       // elapsed=10, requiredVelocity=2/day, expected=20, live=20 → variance=0 → onTrack
       await tester.pumpWidget(
-        _wrap(PaceIndicator(pace: makePace(elapsedDays: 10, liveProgress: 20))),
+        _wrap(
+          ProgressPaceIndicator(
+            pace: makePace(elapsedDays: 10, liveProgress: 20),
+          ),
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -158,7 +166,11 @@ void main() {
       // elapsed=10, requiredVelocity=2/day, expected=20, live=40
       // paceVariance=20, paceVarianceInDays=20/2=10 → ahead by 10 days
       await tester.pumpWidget(
-        _wrap(PaceIndicator(pace: makePace(elapsedDays: 10, liveProgress: 40))),
+        _wrap(
+          ProgressPaceIndicator(
+            pace: makePace(elapsedDays: 10, liveProgress: 40),
+          ),
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -172,9 +184,9 @@ void main() {
       // Day 1 (elapsed=1 == kPaceGraceWindowDays) → graceWindow → "On pace"
       await tester.pumpWidget(
         _wrap(
-          PaceIndicator(
+          ProgressPaceIndicator(
             // 1336 bulk baseline, 0 live → Mishnayos-bug fixture
-            pace: PaceCalculator.compute(
+            pace: ProgressPaceCalculator.compute(
               totalItems: 1336,
               bulkBaseline: 1336,
               liveProgress: 0,

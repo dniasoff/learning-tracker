@@ -86,7 +86,7 @@ class TrackInfoCard extends ConsumerWidget {
   final Goal? goal;
 
   /// Pre-computed pace metrics for the track.
-  final PaceCalculator? paceCalc;
+  final ProgressPaceCalculator? paceCalc;
 
   /// When true, dates are rendered using the Hebrew calendar formatter.
   final bool useHebrewCalendar;
@@ -121,7 +121,7 @@ class TrackInfoCard extends ConsumerWidget {
     final targetDate = goal?.targetDate?.toLocal();
     final remainingDays = targetDate?.difference(today).inDays;
 
-    // 2c — pace velocity in the track's unit. PaceCalculator velocities are in
+    // 2c — pace velocity in the track's unit. ProgressPaceCalculator velocities are in
     // LEAF units (amudim). For a daf-paced track, convert to daf/day using the
     // daf-per-amud ratio (coarse count ÷ leaf count) and label it "daf/day".
     final curriculum = CurriculumId.values
@@ -237,7 +237,7 @@ class TrackInfoCard extends ConsumerWidget {
   String _requiredPaceLabel(
     AppLocalizations l10n,
     Goal goal,
-    PaceCalculator? paceCalc,
+    ProgressPaceCalculator? paceCalc,
     DateTime today, {
     required double unitPerLeaf,
     required String paceUnit,
@@ -270,7 +270,7 @@ class TrackInfoCard extends ConsumerWidget {
 
   String _actualPaceLabel(
     AppLocalizations l10n,
-    PaceCalculator? paceCalc, {
+    ProgressPaceCalculator? paceCalc, {
     required double unitPerLeaf,
     required String paceUnit,
   }) {

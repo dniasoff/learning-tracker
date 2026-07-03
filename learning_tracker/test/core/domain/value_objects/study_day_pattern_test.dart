@@ -28,40 +28,40 @@ void main() {
     });
   });
 
-  group('StudyDayPattern', () {
+  group('WeeklyStudyDayPattern', () {
     // -------------------------------------------------------------------------
     // Construction + validation
     // -------------------------------------------------------------------------
 
     group('construction', () {
       test('constructs with valid map', () {
-        final p = StudyDayPattern({1: DayKind.study, 2: DayKind.review});
+        final p = WeeklyStudyDayPattern({1: DayKind.study, 2: DayKind.review});
         expect(p.entries.length, 2);
       });
 
       test('throws for weekday 0', () {
         expect(
-          () => StudyDayPattern({0: DayKind.study, 1: DayKind.study}),
+          () => WeeklyStudyDayPattern({0: DayKind.study, 1: DayKind.study}),
           throwsArgumentError,
         );
       });
 
       test('throws for weekday 8', () {
         expect(
-          () => StudyDayPattern({1: DayKind.study, 8: DayKind.study}),
+          () => WeeklyStudyDayPattern({1: DayKind.study, 8: DayKind.study}),
           throwsArgumentError,
         );
       });
 
       test('throws when no study day is present', () {
         expect(
-          () => StudyDayPattern({1: DayKind.review, 2: DayKind.review}),
+          () => WeeklyStudyDayPattern({1: DayKind.review, 2: DayKind.review}),
           throwsArgumentError,
         );
       });
 
       test('allows a map with only study days', () {
-        final p = StudyDayPattern({
+        final p = WeeklyStudyDayPattern({
           for (var i = 1; i <= 7; i++) i: DayKind.study,
         });
         expect(p.studyDaysPerWeek, 7);
@@ -74,7 +74,7 @@ void main() {
 
     group('allStudy', () {
       test('creates 7-day study pattern', () {
-        final p = StudyDayPattern.allStudy();
+        final p = WeeklyStudyDayPattern.allStudy();
         expect(p.studyDaysPerWeek, 7);
         for (var i = 1; i <= 7; i++) {
           expect(p.dayKindFor(i), DayKind.study);
@@ -84,20 +84,20 @@ void main() {
 
     group('weekdaysStudy', () {
       test('Mon-Fri are study days', () {
-        final p = StudyDayPattern.weekdaysStudy();
+        final p = WeeklyStudyDayPattern.weekdaysStudy();
         for (var i = 1; i <= 5; i++) {
           expect(p.isStudyDay(i), isTrue);
         }
       });
 
       test('Sat-Sun are review days', () {
-        final p = StudyDayPattern.weekdaysStudy();
+        final p = WeeklyStudyDayPattern.weekdaysStudy();
         expect(p.isReviewDay(6), isTrue);
         expect(p.isReviewDay(7), isTrue);
       });
 
       test('studyDaysPerWeek is 5', () {
-        expect(StudyDayPattern.weekdaysStudy().studyDaysPerWeek, 5);
+        expect(WeeklyStudyDayPattern.weekdaysStudy().studyDaysPerWeek, 5);
       });
     });
 
@@ -106,10 +106,10 @@ void main() {
     // -------------------------------------------------------------------------
 
     group('dayKindFor', () {
-      late StudyDayPattern pattern;
+      late WeeklyStudyDayPattern pattern;
 
       setUp(() {
-        pattern = StudyDayPattern({1: DayKind.study, 2: DayKind.review});
+        pattern = WeeklyStudyDayPattern({1: DayKind.study, 2: DayKind.review});
       });
 
       test('returns mapped value', () {
@@ -129,26 +129,26 @@ void main() {
 
     group('equality', () {
       test('equal patterns with same entries', () {
-        final a = StudyDayPattern({1: DayKind.study, 2: DayKind.review});
-        final b = StudyDayPattern({1: DayKind.study, 2: DayKind.review});
+        final a = WeeklyStudyDayPattern({1: DayKind.study, 2: DayKind.review});
+        final b = WeeklyStudyDayPattern({1: DayKind.study, 2: DayKind.review});
         expect(a, equals(b));
       });
 
       test('not equal for different entries', () {
-        final a = StudyDayPattern({1: DayKind.study, 2: DayKind.study});
-        final b = StudyDayPattern({1: DayKind.study, 2: DayKind.review});
+        final a = WeeklyStudyDayPattern({1: DayKind.study, 2: DayKind.study});
+        final b = WeeklyStudyDayPattern({1: DayKind.study, 2: DayKind.review});
         expect(a, isNot(equals(b)));
       });
 
       test('not equal for different key sets', () {
-        final a = StudyDayPattern({1: DayKind.study});
-        final b = StudyDayPattern({1: DayKind.study, 2: DayKind.study});
+        final a = WeeklyStudyDayPattern({1: DayKind.study});
+        final b = WeeklyStudyDayPattern({1: DayKind.study, 2: DayKind.study});
         expect(a, isNot(equals(b)));
       });
 
       test('hashCode consistent with equality', () {
-        final a = StudyDayPattern.allStudy();
-        final b = StudyDayPattern.allStudy();
+        final a = WeeklyStudyDayPattern.allStudy();
+        final b = WeeklyStudyDayPattern.allStudy();
         expect(a.hashCode, equals(b.hashCode));
       });
     });
@@ -158,7 +158,7 @@ void main() {
     // -------------------------------------------------------------------------
 
     test('toString includes day numbers', () {
-      final p = StudyDayPattern({1: DayKind.study, 2: DayKind.review});
+      final p = WeeklyStudyDayPattern({1: DayKind.study, 2: DayKind.review});
       final str = p.toString();
       expect(str, contains('1'));
       expect(str, contains('2'));

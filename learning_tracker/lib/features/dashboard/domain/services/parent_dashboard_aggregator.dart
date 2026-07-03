@@ -15,7 +15,7 @@ import 'package:learning_tracker/features/tracks/stages/domain/repositories/stag
 
 /// Aggregated analytics data for the parent dashboard.
 class ParentDashboardData {
-  final List<CurriculumSummary> curricula;
+  final List<ParentCurriculumSummary> curricula;
   final int globalPoints;
   final int currentStreak;
   final int maxStreak;
@@ -33,13 +33,13 @@ class ParentDashboardData {
 }
 
 /// Per-curriculum summary for the parent dashboard.
-class CurriculumSummary {
+class ParentCurriculumSummary {
   final CurriculumId curriculum;
   final double completionPercentage;
   final PaceStatusType paceStatus;
   final int points;
 
-  const CurriculumSummary({
+  const ParentCurriculumSummary({
     required this.curriculum,
     required this.completionPercentage,
     required this.paceStatus,
@@ -119,7 +119,7 @@ class ParentDashboardAggregator {
     final globalPoints = completions.fold<int>(0, (sum, c) => sum + c.points);
 
     // Per-curriculum summaries
-    final curriculaSummaries = <CurriculumSummary>[];
+    final curriculaSummaries = <ParentCurriculumSummary>[];
     for (final curriculum in activeCurricula) {
       final summary = await _computeCurriculumSummary(
         curriculum,
@@ -212,7 +212,7 @@ class ParentDashboardAggregator {
     return (fullyCompleted / totalItems).clamp(0.0, 1.0);
   }
 
-  Future<CurriculumSummary> _computeCurriculumSummary(
+  Future<ParentCurriculumSummary> _computeCurriculumSummary(
     CurriculumId curriculum,
     List<Completion> completions,
     DateTime now,
@@ -221,7 +221,7 @@ class ParentDashboardAggregator {
     final points = completions.fold<int>(0, (sum, c) => sum + c.points);
     final paceStatus = await _computePaceStatus(curriculum, completions, now);
 
-    return CurriculumSummary(
+    return ParentCurriculumSummary(
       curriculum: curriculum,
       completionPercentage: completionPct,
       paceStatus: paceStatus,
