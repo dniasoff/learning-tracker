@@ -16,7 +16,6 @@ export 'domain/services/local_auth_service.dart';
 export 'domain/services/pending_local_signup.dart';
 export 'domain/services/session_persistence_service.dart';
 export 'domain/services/upgrade_to_cloud_service.dart';
-export 'onboarding/domain/validators/auth_validators.dart';
 // Onboarding screens
 export 'onboarding/presentation/screens/onboarding_intent_screen.dart';
 export 'onboarding/presentation/screens/signup_screen.dart';
