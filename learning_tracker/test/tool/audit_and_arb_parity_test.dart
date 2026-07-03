@@ -12,6 +12,12 @@
 // asserting a clean exit code. A separate live-clean assertion is
 // guarded with a skip note so it can be re-enabled once all
 // violations are resolved.
+//
+// NOTE (AUD-guardrails-17): `audit` now depends on `lint-rules-test`, which
+// runs `dart pub get && dart test` inside packages/custom_lints/ before the
+// greps run. That suite's analyzer-per-test harness alone takes ~30s, which
+// blows the default 30s `test()` timeout — the two tests below that shell
+// out to `make audit` carry an explicit longer timeout to account for it.
 
 import 'dart:io';
 
@@ -24,61 +30,72 @@ void main() {
   final repoRoot = Directory.current.parent.path;
 
   group('make audit (DNI-389 — Story 27.13 AC1)', () {
-    test('prints N/total headers for all 17 greps', () async {
-      final result = await Process.run('make', [
-        'audit',
-      ], workingDirectory: packageDir);
-      final stdout = result.stdout.toString();
-      // The target must attempt all 17 greps regardless of whether
-      // earlier ones fail, so every N/total header must appear.
-      // Greps 1-15 are labelled N/15; greps 16-17 are labelled N/17.
-      for (var i = 1; i <= 15; i++) {
-        expect(
-          stdout,
-          contains('$i/15'),
-          reason:
-              'make audit must run grep $i of 15.\n'
-              'stdout=$stdout\nstderr=${result.stderr}',
-        );
-      }
-      for (var i = 16; i <= 17; i++) {
-        expect(
-          stdout,
-          contains('$i/17'),
-          reason:
-              'make audit must run grep $i of 17.\n'
-              'stdout=$stdout\nstderr=${result.stderr}',
-        );
-      }
-    });
+    test(
+      'prints N/total headers for all 17 greps',
+      () async {
+        final result = await Process.run('make', [
+          'audit',
+        ], workingDirectory: packageDir);
+        final stdout = result.stdout.toString();
+        // The target must attempt all 17 greps regardless of whether
+        // earlier ones fail, so every N/total header must appear.
+        // Greps 1-15 are labelled N/15; greps 16-17 are labelled N/17.
+        for (var i = 1; i <= 15; i++) {
+          expect(
+            stdout,
+            contains('$i/15'),
+            reason:
+                'make audit must run grep $i of 15.\n'
+                'stdout=$stdout\nstderr=${result.stderr}',
+          );
+        }
+        for (var i = 16; i <= 17; i++) {
+          expect(
+            stdout,
+            contains('$i/17'),
+            reason:
+                'make audit must run grep $i of 17.\n'
+                'stdout=$stdout\nstderr=${result.stderr}',
+          );
+        }
+      },
+      // AUD-guardrails-17: `audit` now depends on `lint-rules-test`
+      // (packages/custom_lints/ `dart test`), which alone takes ~30s.
+      timeout: const Timeout(Duration(minutes: 3)),
+    );
 
-    test('prints file:line paths for violations', () async {
-      final result = await Process.run('make', [
-        'audit',
-      ], workingDirectory: packageDir);
-      final stdout = result.stdout.toString();
-      // When there are violations, each hit must contain a colon
-      // indicating file:line format. We verify this if any violation
-      // output is present (i.e. a line that looks like a grep hit).
-      final hitLines = stdout
-          .split('\n')
-          .where(
-            (line) =>
-                line.contains('.dart:') &&
-                !line.startsWith('[') &&
-                line.isNotEmpty,
-          )
-          .toList();
+    test(
+      'prints file:line paths for violations',
+      () async {
+        final result = await Process.run('make', [
+          'audit',
+        ], workingDirectory: packageDir);
+        final stdout = result.stdout.toString();
+        // When there are violations, each hit must contain a colon
+        // indicating file:line format. We verify this if any violation
+        // output is present (i.e. a line that looks like a grep hit).
+        final hitLines = stdout
+            .split('\n')
+            .where(
+              (line) =>
+                  line.contains('.dart:') &&
+                  !line.startsWith('[') &&
+                  line.isNotEmpty,
+            )
+            .toList();
 
-      // Either there are no violations (OK) or each hit has file:line.
-      for (final line in hitLines) {
-        expect(
-          RegExp(r'\.dart:\d+:').hasMatch(line),
-          isTrue,
-          reason: 'violation line must match file:line format: $line',
-        );
-      }
-    });
+        // Either there are no violations (OK) or each hit has file:line.
+        for (final line in hitLines) {
+          expect(
+            RegExp(r'\.dart:\d+:').hasMatch(line),
+            isTrue,
+            reason: 'violation line must match file:line format: $line',
+          );
+        }
+      },
+      // AUD-guardrails-17: see timeout rationale above.
+      timeout: const Timeout(Duration(minutes: 3)),
+    );
 
     test(
       'exits 0 when codebase is fully clean [skip until Epics 26–27 violations resolved]',

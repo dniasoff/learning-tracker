@@ -99,6 +99,11 @@ jobs:
 
   # ── 3. audit ───────────────────────────────────────────────────────────────
   # Runs `make audit` when the target exists; skips gracefully if not yet landed.
+  # `make audit` (learning_tracker/Makefile, the authoritative audit target)
+  # depends on `lint-rules-test`, which runs `dart test` inside
+  # packages/custom_lints/ — the unit-test suite for the 9 custom lint rules
+  # themselves (AUD-guardrails-17). That suite is a hard gate: a regression in
+  # any rule's matching/whitelist logic fails `make audit`, hence this job.
   audit:
     name: audit
     runs-on: ubuntu-latest
@@ -120,7 +125,8 @@ jobs:
           path: |
             ~/.pub-cache
             learning_tracker/.dart_tool
-          key: ${{ runner.os }}-pub-${{ hashFiles('learning_tracker/pubspec.lock') }}
+            packages/custom_lints/.dart_tool
+          key: ${{ runner.os }}-pub-${{ hashFiles('learning_tracker/pubspec.lock', 'packages/custom_lints/pubspec.lock') }}
           restore-keys: |
             ${{ runner.os }}-pub-
 
@@ -182,6 +188,9 @@ jobs:
           fi
 
   # ── 5. test + 6. coverage-floor ────────────────────────────────────────────
+  # `make ci` (learning_tracker/Makefile) also depends on `lint-rules-test`
+  # (packages/custom_lints/ unit tests — AUD-guardrails-17), so this job
+  # doubles up the same coverage as the `audit` job above.
   test:
     name: test
     runs-on: ubuntu-latest
@@ -203,7 +212,8 @@ jobs:
           path: |
             ~/.pub-cache
             learning_tracker/.dart_tool
-          key: ${{ runner.os }}-pub-${{ hashFiles('learning_tracker/pubspec.lock') }}
+            packages/custom_lints/.dart_tool
+          key: ${{ runner.os }}-pub-${{ hashFiles('learning_tracker/pubspec.lock', 'packages/custom_lints/pubspec.lock') }}
           restore-keys: |
             ${{ runner.os }}-pub-
 
