@@ -719,9 +719,11 @@ Already enabled and load-bearing (do not remove): `unawaited_futures`, `use_buil
 Run before pushing:
 
 ```bash
-cd learning_tracker && make audit   # 23 enforcement checks
+cd learning_tracker && make audit   # 23 enforcement checks + packages/custom_lints unit tests
 dart run custom_lint                # currently non-functional — see "custom_lint toolchain status" below; do not rely on its exit code
 ```
+
+`make audit` (and `make ci`) depend on `lint-rules-test`, which runs `dart test` inside `packages/custom_lints/` — the unit-test suite that exercises each of the 9 custom lint rules' own matching/whitelist logic (independent of whether the `custom_lint` plugin itself can attach to the analyzer — see the warn-only note below). This is a hard gate: it never soft-skips (AUD-guardrails-17).
 
 ### The 23 enforcement checks (`learning_tracker/Makefile`)
 
@@ -761,9 +763,9 @@ Root-Makefile-only check to port on consolidation: **No `EdgeInsets.only(left:|r
 |------|---------|--------|
 | format-check | `dart format --set-exit-if-changed .` | hard gate |
 | analyze | codegen (`build_runner`, asset prep) then `dart analyze --fatal-infos` | hard gate |
-| audit | `make audit` | ⚠️ **soft-skips** if target considered absent — must hard-fail |
+| audit | `make audit` (includes `lint-rules-test` — `packages/custom_lints/` unit tests, AUD-guardrails-17) | ⚠️ job **soft-skips** if target considered absent — must hard-fail; `lint-rules-test` itself never soft-skips |
 | custom_lint | `dart run custom_lint` | ⚠️ **non-functional** — the compile crash is fixed (AUD-guardrails-03), but the CLI cannot currently run at all in CI/local without also breaking the `analyze` hard gate; it silently reports "No issues found!" (0 projects discovered, not 0 violations) — see "custom_lint toolchain status" below |
-| test + coverage | `make ci` then lcov floor | hard gate, line coverage ≥ 60% (generated files excluded), cannot drop on a PR |
+| test + coverage | `make ci` (also includes `lint-rules-test`) then lcov floor | hard gate, line coverage ≥ 60% (generated files excluded), cannot drop on a PR |
 | firestore-rules | emulator + `firestore_rules.test.mjs` | ⚠️ **soft-skips** if the suite file is missing — must hard-fail (TQ-9) |
 
 Until the soft-skips are removed, **local `make audit` is the real gate** — run it. (`dart run custom_lint` is currently a no-op; do not treat its exit code as a signal — see below.)
@@ -851,6 +853,8 @@ Nine custom lint rules live in `packages/custom_lints/` (landed) and run via `da
 | `no_color_literal_outside_theme` | Color literals bypassing `core/theme/` tokens |
 | `no_e_to_string_in_ui` | Raw exception `.toString()` surfaced in UI (EH-5) |
 | `no_raw_logevent` | Analytics events bypassing the typed event layer (PV-5) |
+
+Each rule's own matching/whitelist logic has a `package:test` unit-test file under `packages/custom_lints/test/`, run via `make lint-rules-test` (`cd learning_tracker && make lint-rules-test`, or `cd packages/custom_lints && dart test` directly). This is wired into `make audit` / `make ci` and runs on every PR — independent of whether the `custom_lint` plugin itself can attach to the analyzer (AUD-guardrails-17).
 
 ---
 

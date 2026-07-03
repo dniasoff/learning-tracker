@@ -1,4 +1,4 @@
-.PHONY: help test test-invariants test-rules test-functions emit-fixtures test-story-4.1 test-story-5.2 test-story-6.1 test-story-6.3 test-story-6.4 test-story-6.5 test-story-7.1 test-story-7.2 test-story-7.3 test-story-8.4 test-epic-8 test-story-9.4 test-epic-9 test-story-10.4 test-story-10.5 test-epic-10 test-story-12.4 test-epic-12 test-story-13.1 test-story-13.2 test-epic-13 test-story-14.1 test-story-14.2 test-story-14.3 test-epic-14 test-story-15.5 test-story-15.6 test-story-15.8 test-epic-15 test-epic-21 test-story-24.7 test-epic-24 test-story-25.3 test-story-25.5 test-story-25.8 test-story-25.9 test-story-25.10 test-story-25.11 test-story-25.12 test-story-25.13 test-story-25.14 test-story-25.15 test-story-25.19 test-story-25.20 test-story-25.21 test-story-25.22 test-epic-25 test-story-26.7 test-story-26.11 test-story-26.13 test-story-26.15 test-story-26.16 test-epic-26 test-story-27.1 test-story-27.3 test-story-27.4 test-story-27.6 test-story-27.7 test-story-27.8 test-story-27.9 test-story-F5 test-epic-27 test-story-i4 test-epic-28 ci analyze format format-check validate-calendar seed seed-mongo-up seed-restore seed-down audit lint
+.PHONY: help test test-invariants test-rules test-functions emit-fixtures test-story-4.1 test-story-5.2 test-story-6.1 test-story-6.3 test-story-6.4 test-story-6.5 test-story-7.1 test-story-7.2 test-story-7.3 test-story-8.4 test-epic-8 test-story-9.4 test-epic-9 test-story-10.4 test-story-10.5 test-epic-10 test-story-12.4 test-epic-12 test-story-13.1 test-story-13.2 test-epic-13 test-story-14.1 test-story-14.2 test-story-14.3 test-epic-14 test-story-15.5 test-story-15.6 test-story-15.8 test-epic-15 test-epic-21 test-story-24.7 test-epic-24 test-story-25.3 test-story-25.5 test-story-25.8 test-story-25.9 test-story-25.10 test-story-25.11 test-story-25.12 test-story-25.13 test-story-25.14 test-story-25.15 test-story-25.19 test-story-25.20 test-story-25.21 test-story-25.22 test-epic-25 test-story-26.7 test-story-26.11 test-story-26.13 test-story-26.15 test-story-26.16 test-epic-26 test-story-27.1 test-story-27.3 test-story-27.4 test-story-27.6 test-story-27.7 test-story-27.8 test-story-27.9 test-story-F5 test-epic-27 test-story-i4 test-epic-28 ci analyze format format-check validate-calendar seed seed-mongo-up seed-restore seed-down audit lint lint-rules-test
 
 help: ## Show this help message
 	@echo 'Usage: make [target]'
@@ -215,7 +215,7 @@ test-story-i4: ## Run Story I-4 (Curriculum overlap deduplication) acceptance te
 test-epic-28: ## Run all Epic 28 (Curriculum overlap) acceptance tests
 	flutter test test/story_acceptance/epic_28_curriculum_overlap_test.dart
 
-ci: analyze validate-calendar test ## Run full CI pipeline (analyze + seed validation + all tests)
+ci: analyze validate-calendar lint-rules-test test ## Run full CI pipeline (analyze + seed validation + lint-rules-test + all tests)
 
 analyze: ## Run dart analyze (matches CI --fatal-infos flag)
 	dart analyze --fatal-infos
@@ -274,7 +274,11 @@ lint: ## Run custom_lint (skips gracefully if not in pubspec)
 	  echo "custom_lint not in pubspec — skipping (add custom_lint to dev_dependencies when ready)"; \
 	fi
 
-audit: ## Run all 23 enforcement greps (NFR19) — exits non-zero on any violation
+lint-rules-test: ## Run packages/custom_lints unit tests (dart test) — AUD-guardrails-17
+	@echo "Running packages/custom_lints unit tests..."
+	@(cd ../packages/custom_lints && dart pub get && dart test) 1>&2
+
+audit: lint-rules-test ## Run all 23 enforcement greps (NFR19) — exits non-zero on any violation
 	@echo "=== audit: enforcement greps ==="
 	@FAIL=0; \
 	echo "1/15 — No Firebase imports outside core/auth or core/sync"; \
