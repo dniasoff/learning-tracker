@@ -24,6 +24,9 @@
 //  15.  New-learning task icon — newLearning priority → Icons.auto_stories_rounded.
 //  16.  No track-type labels anywhere (no 'Personal'/'Standard'/'Custom'/'אישי').
 //  17.  Hebrew (RTL) smoke — screen pumps without error under 'he' locale.
+//  17b. AUD-learning-05 regression: task-card + browse-card chevrons swap to
+//       chevron_left_rounded in RTL, chevron_right_rounded in LTR (AX-3 /
+//       IL-7 defect class).
 //  19.  E4 regression: tapping a Browse card pushes ContentHierarchyRoute via
 //       context.router — never fires an external URL / launchUrl.
 //
@@ -797,6 +800,89 @@ void main() {
       await tester.pump(Duration.zero);
     },
   );
+
+  // ── 17b. AUD-learning-05 regression: chevron mirrors in RTL (AX-3) ──────────
+  //
+  // Icon has no matchTextDirection parameter of its own (that field lives on
+  // IconData, and chevron_right_rounded does not set it), so Flutter never
+  // auto-mirrors this glyph. In the Hebrew (RTL) locale, the ambient
+  // Directionality already moves the daily-task-card and curriculum-browse-card
+  // "go to detail" chevrons to the visual left edge — the icon must swap to
+  // chevron_left_rounded there too, or the arrow points back into the card
+  // instead of toward the forward-navigation direction (the IL-7
+  // breadcrumb-chevron defect class; see breadcrumb_navigation.dart's
+  // breadcrumbSeparatorIcon for the established direction-aware pattern).
+
+  testWidgets('Hebrew locale (RTL): task-card and browse-card chevrons flip to '
+      'chevron_left_rounded', (tester) async {
+    await tester.pumpWidget(
+      _buildScreen(
+        curricula: [CurriculumId.mishnayos],
+        tasks: [_task()],
+        locale: const Locale('he'),
+      ),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(
+      find.byWidgetPredicate(
+        (widget) => widget is Icon && widget.icon == Icons.chevron_left_rounded,
+      ),
+      findsWidgets,
+      reason:
+          'In RTL (Hebrew), the _LearnTaskCard and _CurriculumBrowseCard '
+          'disclosure chevrons must render chevron_left_rounded so the '
+          'arrow points toward the forward-navigation direction '
+          '(AUD-learning-05, AX-3).',
+    );
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Icon && widget.icon == Icons.chevron_right_rounded,
+      ),
+      findsNothing,
+      reason:
+          'The un-mirrored chevron_right_rounded must not appear in RTL — '
+          'that was the pre-fix defect (arrow pointing back into the card).',
+    );
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(Duration.zero);
+  });
+
+  testWidgets('English locale (LTR): task-card and browse-card chevrons stay '
+      'chevron_right_rounded', (tester) async {
+    await tester.pumpWidget(
+      _buildScreen(curricula: [CurriculumId.mishnayos], tasks: [_task()]),
+    );
+    await tester.pump();
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Icon && widget.icon == Icons.chevron_right_rounded,
+      ),
+      findsWidgets,
+      reason:
+          'In LTR (English), the disclosure chevrons must stay '
+          'chevron_right_rounded (AUD-learning-05 must not regress the '
+          'default direction).',
+    );
+    expect(
+      find.byWidgetPredicate(
+        (widget) => widget is Icon && widget.icon == Icons.chevron_left_rounded,
+      ),
+      findsNothing,
+      reason:
+          'chevron_left_rounded must not appear in LTR (English) — the '
+          'chevron only flips for RTL locales (AUD-learning-05).',
+    );
+
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(Duration.zero);
+  });
 
   // ── 18. R6-4 regression: streak provider loading/error states ───────────────
   //

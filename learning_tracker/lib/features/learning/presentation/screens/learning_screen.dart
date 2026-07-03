@@ -505,9 +505,19 @@ class _LearnTaskCard extends ConsumerWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: Color(0xFFA2A8B6),
+              // AUD-learning-05 (AX-3 / IL-7 defect class): swap the glyph for
+              // RTL so the "go to detail" chevron keeps pointing toward the
+              // forward-navigation edge instead of back into the card. Icon
+              // has no matchTextDirection parameter of its own (that field
+              // lives on IconData and chevron_right_rounded does not set
+              // it) — direction-aware icon selection is the established
+              // pattern in this codebase (see
+              // breadcrumb_navigation.dart's breadcrumbSeparatorIcon).
+              Icon(
+                Directionality.of(context) == TextDirection.rtl
+                    ? Icons.chevron_left_rounded
+                    : Icons.chevron_right_rounded,
+                color: const Color(0xFFA2A8B6),
                 size: 22,
               ),
             ],
@@ -611,9 +621,15 @@ class _CurriculumBrowseCard extends StatelessWidget {
                   ),
                 ),
               ),
-              const Icon(
-                Icons.chevron_right_rounded,
-                color: Color(0xFFA2A8B6),
+              // AUD-learning-05 (AX-3 / IL-7 defect class): swap the glyph for
+              // RTL so the "go to detail" chevron keeps pointing toward the
+              // forward-navigation edge instead of back into the card. See
+              // the matching comment on _LearnTaskCard's chevron above.
+              Icon(
+                Directionality.of(context) == TextDirection.rtl
+                    ? Icons.chevron_left_rounded
+                    : Icons.chevron_right_rounded,
+                color: const Color(0xFFA2A8B6),
                 size: 22,
               ),
             ],
