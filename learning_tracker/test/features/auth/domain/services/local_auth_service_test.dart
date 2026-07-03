@@ -1,8 +1,11 @@
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:learning_tracker/core/constants/app_constants.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/features/account/domain/services/local_auth_service.dart';
 import 'package:learning_tracker/features/account/domain/services/password_hasher.dart';
+import 'package:learning_tracker/features/onboarding/domain/validators/auth_validators.dart'
+    as validators;
 
 void main() {
   late UserDatabase db;
@@ -104,6 +107,42 @@ void main() {
       );
       expect(sevenChar.email, 'seven@example.com');
     });
+  });
+
+  group('password-length invariant (AUD-account-20)', () {
+    // Locks in that the client-side form validator
+    // (auth_validators.validatePassword) and the domain-layer check in
+    // LocalAuthService derive from the SAME constant
+    // (AppConstants.minLocalPasswordLength) and therefore agree at the
+    // boundary — one character below the floor is rejected by both, exactly
+    // at the floor is accepted by both.
+    test(
+      'UI validator and LocalAuthService agree at the boundary length',
+      () async {
+        final belowFloor = 'a' * (AppConstants.minLocalPasswordLength - 1);
+        final atFloor = 'a' * AppConstants.minLocalPasswordLength;
+
+        // UI validator (client-side, synchronous).
+        expect(validators.validatePassword(belowFloor), isNotNull);
+        expect(validators.validatePassword(atFloor), isNull);
+
+        // LocalAuthService (domain-layer, async).
+        expect(
+          () => service.signUp(
+            email: 'below-floor@example.com',
+            password: belowFloor,
+            displayName: 'Below Floor',
+          ),
+          throwsA(isA<InvalidInputException>()),
+        );
+        final atFloorProfile = await service.signUp(
+          email: 'at-floor@example.com',
+          password: atFloor,
+          displayName: 'At Floor',
+        );
+        expect(atFloorProfile.email, 'at-floor@example.com');
+      },
+    );
   });
 
   group('LocalAuthService.signIn', () {
