@@ -1,7 +1,11 @@
+import 'dart:convert';
+
 import 'package:drift/drift.dart' as drift;
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
 import 'package:learning_tracker/core/sync/codec/learning_ledger_codec.dart';
+import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart'
+    show OutboxEntityKind;
 import 'package:learning_tracker/core/time/ulid.dart';
 import 'package:learning_tracker/core/utils/date_utils.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
@@ -15,6 +19,16 @@ import 'package:learning_tracker/features/sync/data/outbox_sync_write_facade.dar
 /// which silently dropped writes when offline. Every ledger entry now lands
 /// in the outbox in the same call so the next drain (write-tee, pull-complete,
 /// connectivity, periodic) ships it to Firestore.
+///
+/// AUD-learning-03 (DB-2): the ledger insert and its outbox row are written
+/// inside the SAME `_database.transaction()`, so a crash between the two
+/// steps can never strand a ledger row without a matching outbox row. The
+/// outbox insert goes straight to `_database.outboxDao` — never through
+/// [OutboxSyncWriteFacade.enqueueLedgerEntry], whose own class doc states the
+/// local write and the outbox insert are "not transactional at this layer".
+/// [OutboxSyncWriteFacade.requestSyncDrain] is called once the transaction
+/// has committed so the freshly-written rows still push promptly (mirrors
+/// the D14 fix in `PointsBalanceDao` and the RC1 fix in `CompletionWriter`).
 class LearningLedgerRepositoryImpl implements LearningLedgerRepository {
   final UserDatabase _database;
   final OutboxSyncWriteFacade? _outboxFacade;
@@ -68,9 +82,24 @@ class LearningLedgerRepositoryImpl implements LearningLedgerRepository {
         ),
       );
 
-  Future<void> _syncLedgerEntry(LearningLedgerData entry) async {
-    await _outboxFacade?.enqueueLedgerEntry(_ledgerDataToSyncMap(entry));
-  }
+  /// Builds the outbox row that pushes [entry] to Firestore, stamped
+  /// [enqueuedAt].
+  ///
+  /// Mirrors the kind/key/payload shape
+  /// [OutboxSyncWriteFacade.enqueueLedgerEntry] would have produced. Callers
+  /// insert the result directly via `_database.outboxDao.insertOutboxRow`
+  /// (or a `_database.batch()`) INSIDE their own open transaction — see the
+  /// AUD-learning-03 class doc above.
+  OutboxCompanion _outboxRowFor(
+    LearningLedgerData entry,
+    DateTime enqueuedAt,
+  ) => OutboxCompanion.insert(
+    profileId: entry.profileId,
+    entityKind: OutboxEntityKind.learningLedgerEntry,
+    entityKey: entry.unitIdentifier,
+    payload: jsonEncode(_ledgerDataToSyncMap(entry)),
+    createdAt: enqueuedAt,
+  );
 
   @override
   Future<LearningLedgerData> recordCompletion({
@@ -101,30 +130,45 @@ class LearningLedgerRepositoryImpl implements LearningLedgerRepository {
     // Mirrors recordCompletionsBatch.
     final completedAt = source.creditsEngagement ? now : _kSentinelDate;
 
-    final id = await _database.learningLedgerDao.insertEntry(
-      LearningLedgerCompanion.insert(
-        profileId: _activeProfileId,
-        ulid: drift.Value(newUlid(now)),
-        curriculumId: curriculumId,
-        entryScope: entryScope,
-        unitIdentifier: unitIdentifier,
-        unitDisplayNameHe: unitDisplayNameHe,
-        unitDisplayNameEn: unitDisplayNameEn,
-        trackType: trackType,
-        trackId: drift.Value(trackId),
-        completedAt: completedAt,
-        completionNumber: completionNumber,
-        markedBy: markedBy,
-        isManual: drift.Value(isManual),
-      ),
-    );
+    // AUD-learning-03 (DB-2): the ledger insert and its outbox row commit or
+    // roll back together — a crash between the two would otherwise strand a
+    // ledger row (e.g. a manual siyum mark) that never reaches Firestore or a
+    // second device, since nothing re-derives a missing outbox row from an
+    // existing ledger row.
+    final entry = await _database.transaction(() async {
+      final id = await _database.learningLedgerDao.insertEntry(
+        LearningLedgerCompanion.insert(
+          profileId: _activeProfileId,
+          ulid: drift.Value(newUlid(now)),
+          curriculumId: curriculumId,
+          entryScope: entryScope,
+          unitIdentifier: unitIdentifier,
+          unitDisplayNameHe: unitDisplayNameHe,
+          unitDisplayNameEn: unitDisplayNameEn,
+          trackType: trackType,
+          trackId: drift.Value(trackId),
+          completedAt: completedAt,
+          completionNumber: completionNumber,
+          markedBy: markedBy,
+          isManual: drift.Value(isManual),
+        ),
+      );
 
-    final entry = await _database.learningLedgerDao.getEntryById(id);
-    if (entry == null) {
-      throw StateError('Failed to load ledger row after insert (id=$id)');
-    }
+      final inserted = await _database.learningLedgerDao.getEntryById(id);
+      if (inserted == null) {
+        throw StateError('Failed to load ledger row after insert (id=$id)');
+      }
 
-    await _syncLedgerEntry(entry);
+      if (_outboxFacade != null) {
+        await _database.outboxDao.insertOutboxRow(_outboxRowFor(inserted, now));
+      }
+
+      return inserted;
+    });
+
+    // Write-tee: kick the drain now that the row has actually committed
+    // (mirrors the D14 pattern in PointsBalanceDao).
+    await _outboxFacade?.requestSyncDrain();
 
     return entry;
   }
@@ -156,7 +200,19 @@ class LearningLedgerRepositoryImpl implements LearningLedgerRepository {
         ? DateTimeFactory.nowUtc()
         : _kSentinelDate;
 
+    // AUD-learning-03 (DB-2): every ledger row AND its outbox row commit or
+    // roll back together as one unit. Previously the outbox enqueue ran in a
+    // separate loop AFTER this transaction closed, so a crash mid-loop could
+    // leave some of [items] durably in learning_ledger with no matching
+    // outbox row — nothing re-derives a missing outbox row from an existing
+    // ledger row.
     await _database.transaction(() async {
+      // Outbox: one row per entry (the push pipeline batches contiguous
+      // learning_ledger_entry rows on drain), collected here and flushed via
+      // one batch() below — DB-3: bulk same-shape writes use batch(), never
+      // a loop of individually awaited inserts.
+      final outboxRows = <OutboxCompanion>[];
+
       for (final item in items) {
         final existingCount = await _database.learningLedgerDao
             .getCompletionCount(
@@ -191,20 +247,22 @@ class LearningLedgerRepositoryImpl implements LearningLedgerRepository {
           throw StateError('Failed to load ledger row after insert (id=$id)');
         }
         results.add(entry);
+        if (_outboxFacade != null) {
+          outboxRows.add(_outboxRowFor(entry, now));
+        }
+      }
+
+      if (outboxRows.isNotEmpty) {
+        await _database.batch((b) {
+          _database.outboxDao.batchInsertOutboxRows(b, outboxRows);
+        });
       }
     });
 
+    // Write-tee: kick the drain now that the batch has actually committed
+    // (mirrors the D14 pattern in PointsBalanceDao).
     if (results.isNotEmpty) {
-      // Outbox: one row per entry. The push pipeline batches contiguous
-      // learning_ledger_entry rows when it drains (gateway already has a
-      // batched writer), so per-entry enqueue still results in a single
-      // Firestore WriteBatch on the wire.
-      final facade = _outboxFacade;
-      if (facade != null) {
-        for (final entry in results) {
-          await facade.enqueueLedgerEntry(_ledgerDataToSyncMap(entry));
-        }
-      }
+      await _outboxFacade?.requestSyncDrain();
     }
 
     return results;

@@ -1,6 +1,14 @@
-import 'package:drift/drift.dart' show Value;
+import 'package:drift/drift.dart'
+    show
+        ApplyInterceptor,
+        BatchedStatements,
+        QueryExecutor,
+        QueryInterceptor,
+        Value;
+import 'package:drift/native.dart';
 import 'package:learning_tracker/core/database/user/user_database.dart';
 import 'package:learning_tracker/core/domain/value_objects/profile_mode.dart';
+import 'package:learning_tracker/core/sync/outbox/outbox_processor.dart';
 import 'package:learning_tracker/features/learning/data/repositories/learning_ledger_repository_impl.dart';
 import 'package:learning_tracker/features/learning/domain/entities/completion_source.dart';
 import 'package:learning_tracker/features/learning/domain/repositories/learning_ledger_repository.dart';
@@ -11,6 +19,38 @@ import 'package:test/test.dart';
 import '../../../../helpers/test_database.dart';
 
 class _MockOutboxFacade extends Mock implements OutboxSyncWriteFacade {}
+
+/// AUD-learning-03 regression harness: simulates a real mid-transaction
+/// failure (disk error, crash) on the write that touches the `outbox`
+/// table — either a single-row INSERT ([runInsert]) or a batched INSERT
+/// ([runBatched], used by [LearningLedgerRepositoryImpl.recordCompletionsBatch])
+/// — while every other statement (including the `learning_ledger` inserts)
+/// passes through untouched. Proves the fix at the real Drift/SQLite level,
+/// not through a mocked collaborator.
+class _ThrowOnOutboxWrite extends QueryInterceptor {
+  @override
+  Future<int> runInsert(
+    QueryExecutor executor,
+    String statement,
+    List<Object?> args,
+  ) {
+    if (statement.contains('"outbox"')) {
+      throw Exception('AUD-learning-03: simulated outbox insert failure');
+    }
+    return executor.runInsert(statement, args);
+  }
+
+  @override
+  Future<void> runBatched(
+    QueryExecutor executor,
+    BatchedStatements statements,
+  ) {
+    if (statements.statements.any((sql) => sql.contains('"outbox"'))) {
+      throw Exception('AUD-learning-03: simulated outbox batch-insert failure');
+    }
+    return executor.runBatched(statements);
+  }
+}
 
 void main() {
   late UserDatabase db;
@@ -49,6 +89,10 @@ void main() {
     when(
       () => mockOutboxFacade.enqueueLedgerEntry(any()),
     ).thenAnswer((_) async {});
+    // AUD-learning-03: recordCompletion/recordCompletionsBatch now request a
+    // post-commit drain (the write-tee) instead of routing the enqueue
+    // itself through the facade.
+    when(() => mockOutboxFacade.requestSyncDrain()).thenAnswer((_) async {});
   });
 
   tearDown(() async {
@@ -114,9 +158,9 @@ void main() {
         expect(entry2.completionNumber, 2);
       });
 
-      test('pushes to sync engine after insert', () async {
+      test('enqueues an outbox row for the entry after insert', () async {
         final repo = createRepo();
-        await repo.recordCompletion(
+        final entry = await repo.recordCompletion(
           curriculumId: 'mishna',
           entryScope: 'masechta',
           unitIdentifier: 'Berakhot',
@@ -127,9 +171,18 @@ void main() {
           isManual: false,
         );
 
-        // The repository routes ledger pushes through the outbox facade now —
-        // verify the enqueue happened exactly once.
-        verify(() => mockOutboxFacade.enqueueLedgerEntry(any())).called(1);
+        // AUD-learning-03: the outbox row is now written directly against
+        // OutboxDao inside the SAME transaction as the ledger insert (DB-2),
+        // not via a facade call — assert the durable outcome (a pending
+        // outbox row for this entry) instead of a mock interaction.
+        final outbox = await db.outboxDao.getPendingByKind(
+          OutboxEntityKind.learningLedgerEntry,
+          1,
+        );
+        expect(outbox, hasLength(1));
+        expect(outbox.single.entityKey, entry.unitIdentifier);
+        // The write-tee drain is still requested once the row has committed.
+        verify(() => mockOutboxFacade.requestSyncDrain()).called(1);
       });
 
       test(
@@ -244,7 +297,7 @@ void main() {
     });
 
     group('recordCompletionsBatch', () {
-      test('inserts multiple rows and pushes one ledger batch', () async {
+      test('inserts multiple rows and enqueues one outbox row each', () async {
         final repo = createRepo();
         final entries = await repo.recordCompletionsBatch([
           const LedgerManualBatchItem(
@@ -272,9 +325,22 @@ void main() {
         expect(entries, hasLength(2));
         expect(entries.first.completionNumber, 1);
         expect(entries.last.completionNumber, 1);
-        // The batch path enqueues one outbox row per entry; the legacy
-        // direct-batch gateway call is no longer used.
-        verify(() => mockOutboxFacade.enqueueLedgerEntry(any())).called(2);
+        // AUD-learning-03: outbox rows are written directly against
+        // OutboxDao inside the SAME transaction as the batch's ledger
+        // inserts (DB-2, via one batch() flush) — assert the durable
+        // outcome instead of a facade mock call.
+        final outbox = await db.outboxDao.getPendingByKind(
+          OutboxEntityKind.learningLedgerEntry,
+          1,
+          limit: 100,
+        );
+        expect(outbox, hasLength(2));
+        expect(
+          outbox.map((row) => row.entityKey),
+          containsAll(<String>['A', 'B']),
+        );
+        // The write-tee drain is requested once per batch, not once per row.
+        verify(() => mockOutboxFacade.requestSyncDrain()).called(1);
       });
 
       // ── WS8 sentinel date tests ────────────────────────────────────────────
@@ -400,6 +466,114 @@ void main() {
           }
         },
       );
+    });
+
+    // AUD-learning-03 (DB-2): the ledger insert and its outbox row must
+    // commit or roll back TOGETHER. These use a real Drift/SQLite failure
+    // (via _ThrowOnOutboxWrite) injected at the exact statement that writes
+    // the `outbox` table, rather than a mocked collaborator — the fixed
+    // repository no longer calls the outbox facade from inside the
+    // transaction at all (see the class doc on LearningLedgerRepositoryImpl),
+    // so this is the only way to prove the atomicity guarantee end-to-end.
+    group('AUD-learning-03 — ledger/outbox atomicity (DB-2)', () {
+      test('recordCompletion: a failing outbox insert rolls back the ledger '
+          'row too (no ledger row survives without its outbox pair)', () async {
+        final failingDb = UserDatabase(
+          NativeDatabase.memory().interceptWith(_ThrowOnOutboxWrite()),
+        );
+        await seedProfile(failingDb);
+        addTearDown(failingDb.close);
+
+        final repo = LearningLedgerRepositoryImpl(
+          database: failingDb,
+          outboxFacade: mockOutboxFacade,
+          activeProfileId: 1,
+          activeProfileMode: ProfileMode.adult,
+        );
+
+        await expectLater(
+          repo.recordCompletion(
+            curriculumId: 'mishna',
+            entryScope: 'masechta',
+            unitIdentifier: 'Berakhot',
+            unitDisplayNameHe: 'ברכות',
+            unitDisplayNameEn: 'Berakhot',
+            trackType: 'personal',
+            markedBy: 1,
+            isManual: false,
+          ),
+          throwsA(anything),
+        );
+
+        final ledgerRows = await failingDb.learningLedgerDao
+            .getEntriesByProfile(1);
+        expect(
+          ledgerRows,
+          isEmpty,
+          reason:
+              'DB-2: the ledger insert must roll back when its paired '
+              'outbox insert fails — otherwise the ledger row is stranded '
+              'local-only and never reaches Firestore or a second device',
+        );
+        final outboxRows = await failingDb.select(failingDb.outbox).get();
+        expect(outboxRows, isEmpty);
+      });
+
+      test('recordCompletionsBatch: a failing outbox insert rolls back EVERY '
+          'ledger row in the batch (no ledger row survives without its '
+          'outbox pair)', () async {
+        final failingDb = UserDatabase(
+          NativeDatabase.memory().interceptWith(_ThrowOnOutboxWrite()),
+        );
+        await seedProfile(failingDb);
+        addTearDown(failingDb.close);
+
+        final repo = LearningLedgerRepositoryImpl(
+          database: failingDb,
+          outboxFacade: mockOutboxFacade,
+          activeProfileId: 1,
+          activeProfileMode: ProfileMode.adult,
+        );
+
+        await expectLater(
+          repo.recordCompletionsBatch([
+            const LedgerManualBatchItem(
+              curriculumId: 'mishna',
+              entryScope: 'level1',
+              unitIdentifier: 'A',
+              unitDisplayNameHe: 'א',
+              unitDisplayNameEn: 'A',
+              trackType: 'personal',
+              markedBy: 1,
+              isManual: true,
+            ),
+            const LedgerManualBatchItem(
+              curriculumId: 'mishna',
+              entryScope: 'level1',
+              unitIdentifier: 'B',
+              unitDisplayNameHe: 'ב',
+              unitDisplayNameEn: 'B',
+              trackType: 'personal',
+              markedBy: 1,
+              isManual: true,
+            ),
+          ]),
+          throwsA(anything),
+        );
+
+        final ledgerRows = await failingDb.learningLedgerDao
+            .getEntriesByProfile(1);
+        expect(
+          ledgerRows,
+          isEmpty,
+          reason:
+              'DB-2: neither ledger row may survive when the batch '
+              'outbox insert fails — a partial commit would strand '
+              'ledger rows with no outbox pair',
+        );
+        final outboxRows = await failingDb.select(failingDb.outbox).get();
+        expect(outboxRows, isEmpty);
+      });
     });
 
     group('getLifetimeLedger', () {

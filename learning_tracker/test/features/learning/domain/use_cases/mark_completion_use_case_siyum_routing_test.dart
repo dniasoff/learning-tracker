@@ -137,6 +137,9 @@ void main() {
     ).thenAnswer((_) async => []);
 
     when(() => outboxFacade.enqueueLedgerEntry(any())).thenAnswer((_) async {});
+    // AUD-learning-03: the ledger repo now requests a post-commit drain
+    // (write-tee) instead of enqueueing through the facade directly.
+    when(() => outboxFacade.requestSyncDrain()).thenAnswer((_) async {});
 
     when(() => syncFacade.pushBookmark(any())).thenAnswer((_) async {});
     when(

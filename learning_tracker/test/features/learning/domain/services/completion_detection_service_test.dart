@@ -56,6 +56,9 @@ void main() {
     when(
       () => mockOutboxFacade.enqueueLedgerEntry(any()),
     ).thenAnswer((_) async {});
+    // AUD-learning-03: the ledger repo now requests a post-commit drain
+    // (write-tee) instead of enqueueing through the facade directly.
+    when(() => mockOutboxFacade.requestSyncDrain()).thenAnswer((_) async {});
 
     final trackRow = await db
         .into(db.curriculumTracks)
