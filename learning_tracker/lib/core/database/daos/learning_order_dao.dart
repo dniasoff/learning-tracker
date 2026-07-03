@@ -27,11 +27,19 @@ class LearningOrderDao extends DatabaseAccessor<UserDatabase>
   Future<LearningOrderData?> getLearningOrderById(int id) =>
       (select(learningOrder)..where((t) => t.id.equals(id))).getSingleOrNull();
 
+  /// Scoped to [profileId] — the table holds every sibling profile's rows
+  /// for the same account (AUD-core-database-02: an unscoped query here
+  /// leaks one profile's custom order into a sibling's).
   Future<List<LearningOrderData>> getLearningOrderByCurriculum(
-    String curriculumId,
-  ) =>
+    String curriculumId, {
+    required int profileId,
+  }) =>
       (select(learningOrder)
-            ..where((t) => t.curriculumId.equals(curriculumId))
+            ..where(
+              (t) =>
+                  t.curriculumId.equals(curriculumId) &
+                  t.profileId.equals(profileId),
+            )
             ..orderBy([(t) => OrderingTerm.asc(t.userSortOrder)]))
           .get();
 
@@ -105,7 +113,18 @@ class LearningOrderDao extends DatabaseAccessor<UserDatabase>
   }
 
   /// Delete all learning order rows for a curriculum (reset to default).
-  Future<int> deleteAllForCurriculum(String curriculumId) => (delete(
-    learningOrder,
-  )..where((t) => t.curriculumId.equals(curriculumId))).go();
+  ///
+  /// Scoped to [profileId] — see [getLearningOrderByCurriculum]; an
+  /// unscoped delete here silently wipes a sibling profile's custom order
+  /// (AUD-core-database-02).
+  Future<int> deleteAllForCurriculum(
+    String curriculumId, {
+    required int profileId,
+  }) =>
+      (delete(learningOrder)..where(
+            (t) =>
+                t.curriculumId.equals(curriculumId) &
+                t.profileId.equals(profileId),
+          ))
+          .go();
 }

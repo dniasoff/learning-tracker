@@ -146,6 +146,7 @@ void main() {
 
       final deleted = await db.learningOrderDao.deleteAllForCurriculum(
         'mishnayos',
+        profileId: 1,
       );
       expect(deleted, 2);
 
@@ -157,6 +158,7 @@ void main() {
     test('returns 0 when no rows for curriculum', () async {
       final deleted = await db.learningOrderDao.deleteAllForCurriculum(
         'no_such_curriculum',
+        profileId: 1,
       );
       expect(deleted, 0);
     });

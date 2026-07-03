@@ -147,10 +147,14 @@ void main() {
     test(
       'advanceBookmark follows custom learning order when one exists',
       () async {
-        // Custom order: ref3, ref1, ref2
+        // Custom order: ref3, ref1, ref2. `repository` defaults to
+        // profileId 0, so fixtures must be seeded under the same profile it
+        // reads from (AUD-core-database-02: these rows used to be seeded
+        // under profileId 1 and only "worked" because the DAO ignored
+        // profileId).
         await database.learningOrderDao.insertLearningOrder(
           LearningOrderCompanion.insert(
-            profileId: 1,
+            profileId: 0,
             curriculumId: CurriculumId.mishnayos.storageKey,
             sefariaRef: _ref3,
             userSortOrder: 0,
@@ -158,7 +162,7 @@ void main() {
         );
         await database.learningOrderDao.insertLearningOrder(
           LearningOrderCompanion.insert(
-            profileId: 1,
+            profileId: 0,
             curriculumId: CurriculumId.mishnayos.storageKey,
             sefariaRef: _ref1,
             userSortOrder: 1,
@@ -166,7 +170,7 @@ void main() {
         );
         await database.learningOrderDao.insertLearningOrder(
           LearningOrderCompanion.insert(
-            profileId: 1,
+            profileId: 0,
             curriculumId: CurriculumId.mishnayos.storageKey,
             sefariaRef: _ref2,
             userSortOrder: 2,

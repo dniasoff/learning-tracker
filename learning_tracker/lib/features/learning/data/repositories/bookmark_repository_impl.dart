@@ -232,7 +232,10 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
   }) async {
     // Check if custom learning order exists for this curriculum
     final customOrder = await _database.learningOrderDao
-        .getLearningOrderByCurriculum(curriculumId.storageKey);
+        .getLearningOrderByCurriculum(
+          curriculumId.storageKey,
+          profileId: _profileId,
+        );
 
     if (customOrder.isNotEmpty) {
       // Use custom learning order
@@ -280,7 +283,10 @@ class BookmarkRepositoryImpl implements BookmarkRepository {
   Future<String?> _getFirstItemId({required CurriculumId curriculumId}) async {
     // Check if custom learning order exists for this curriculum
     final customOrder = await _database.learningOrderDao
-        .getLearningOrderByCurriculum(curriculumId.storageKey);
+        .getLearningOrderByCurriculum(
+          curriculumId.storageKey,
+          profileId: _profileId,
+        );
 
     if (customOrder.isNotEmpty) {
       return customOrder.first.sefariaRef;

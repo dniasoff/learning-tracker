@@ -29,6 +29,7 @@ void main() {
 
       final rows = await database.learningOrderDao.getLearningOrderByCurriculum(
         'mishnayos',
+        profileId: 1,
       );
       expect(rows, hasLength(1));
       expect(rows.first.sefariaRef, 'Berakhot');
@@ -57,7 +58,7 @@ void main() {
         );
 
         final rows = await database.learningOrderDao
-            .getLearningOrderByCurriculum('mishnayos');
+            .getLearningOrderByCurriculum('mishnayos', profileId: 1);
         expect(rows, hasLength(1));
         expect(rows.first.userSortOrder, 5);
       },
@@ -92,7 +93,7 @@ void main() {
         );
 
         final rows = await database.learningOrderDao
-            .getLearningOrderByCurriculum('mishnayos');
+            .getLearningOrderByCurriculum('mishnayos', profileId: 1);
         expect(rows.map((r) => r.sefariaRef).toList(), [
           'Berakhot',
           'Peah',
@@ -121,12 +122,15 @@ void main() {
           ),
         );
 
-        await database.learningOrderDao.deleteAllForCurriculum('mishnayos');
+        await database.learningOrderDao.deleteAllForCurriculum(
+          'mishnayos',
+          profileId: 1,
+        );
 
         final mishnayosRows = await database.learningOrderDao
-            .getLearningOrderByCurriculum('mishnayos');
+            .getLearningOrderByCurriculum('mishnayos', profileId: 1);
         final bavliRows = await database.learningOrderDao
-            .getLearningOrderByCurriculum('bavli');
+            .getLearningOrderByCurriculum('bavli', profileId: 1);
 
         expect(mishnayosRows, isEmpty);
         expect(bavliRows, hasLength(1));
