@@ -66,6 +66,30 @@ const _defaultWhitelist = <String>{
   'StudyDayConfigs',
 };
 
+/// AUD-core-database-01 (2026-07-03): the profile-scoped tables whose
+/// `profileId` column is intentionally NOT backed by an
+/// `.references(LearnerProfiles, #id, onDelete: KeyAction.cascade)` FK.
+///
+/// SQLite (Drift) cannot add a FK to an existing column without a full
+/// table-rebuild migration; adding one to these 6 tables was judged
+/// higher-risk than the existing compensating-delete pattern already used by
+/// `ProfileRepositoryImpl.deleteProfile`. Every table listed here MUST be
+/// cleared explicitly, BEFORE the `learner_profiles` row is deleted, by BOTH:
+///   - `ProfileRepositoryImpl.deleteProfile` (own-profile delete), and
+///   - `ProfileDao._wipeNonCascadingMirrorRows` (tutored-mirror wipe).
+/// Do not add a table to this list without adding the matching delete call to
+/// both sites and a regression test proving the rows are purged (see
+/// `test/sync/tutored_mirror_wipe_test.dart` and
+/// `test/features/profiles/data/repositories/profile_repository_impl_test.dart`).
+const _fkCascadeExemptTables = <String>{
+  'CurriculumTracks',
+  'DailyPlans',
+  'Outbox',
+  'PointConfigs',
+  'ProfilePrograms',
+  'StudyDayConfigs',
+};
+
 class _Violation {
   _Violation(this.tableClass, this.tableFile, this.reasons);
   final String tableClass;
@@ -92,6 +116,18 @@ class _TableDecl {
   bool get hasAutoIncrementId => RegExp(
     r'\bget\s+id\s*=>\s*integer\(\)\.autoIncrement\(\)',
   ).hasMatch(body);
+
+  /// AUD-core-database-01: true when the `profileId` column declares
+  /// `.references(LearnerProfiles, ...)` — i.e. an FK to the profiles table,
+  /// which the `beforeOpen: PRAGMA foreign_keys = ON` pragma enforces
+  /// (`onDelete: KeyAction.cascade` is what actually purges child rows on
+  /// profile delete; this checker only verifies the FK reference itself
+  /// exists, per AUD-core-database-01's acceptance criteria).
+  bool get hasProfileIdLearnerProfilesFk {
+    final match = RegExp(r'get\s+profileId\s*=>([\s\S]*?);').firstMatch(body);
+    if (match == null) return false;
+    return match.group(1)!.contains('references(LearnerProfiles');
+  }
 
   /// Returns the column-name sets declared in `primaryKey`, e.g.
   /// `Set<Column> get primaryKey => {profileId, curriculumId};` →
@@ -275,10 +311,48 @@ List<_Violation> _validate(List<_TableDecl> decls, Set<String> whitelist) {
   return violations;
 }
 
+/// AUD-core-database-01 — unlike [_validate] (which only checks tables on an
+/// explicit accretion whitelist, so a forgotten table is silently skipped),
+/// this scans EVERY table declared in [decls] that has a `profileId` column
+/// and requires it to carry a `.references(LearnerProfiles, ...)` FK, unless
+/// the table is named in [exempt]. This is a deny-by-default check: a new
+/// table with a `profileId` column and no FK fails the moment it's added,
+/// with no whitelist entry required to "turn the check on" for it.
+List<_Violation> _validateForeignKeyCascade(
+  List<_TableDecl> decls,
+  Set<String> exempt,
+) {
+  final violations = <_Violation>[];
+  for (final decl in decls) {
+    // LearnerProfiles itself is keyed on `id`, not `profileId` — not subject
+    // to this check.
+    if (decl.className == 'LearnerProfiles') continue;
+    if (!decl.hasProfileIdColumn) continue;
+    if (exempt.contains(decl.className)) continue;
+    if (decl.hasProfileIdLearnerProfilesFk) continue;
+
+    violations.add(
+      _Violation(decl.className, decl.file, [
+        '`profileId` has no `.references(LearnerProfiles, #id, onDelete: '
+            'KeyAction.cascade)` FK and `${decl.className}` is not in '
+            '`_fkCascadeExemptTables` (tool/schema_check.dart). Either add '
+            'the FK, or — if a migration is too risky right now — add the '
+            'table to `_fkCascadeExemptTables` AFTER adding matching '
+            'compensating-delete calls to both '
+            '`ProfileRepositoryImpl.deleteProfile` and '
+            '`ProfileDao._wipeNonCascadingMirrorRows`, with a regression '
+            'test proving the rows are purged (AUD-core-database-01).',
+      ]),
+    );
+  }
+  return violations;
+}
+
 void _printUsage() {
   stderr.writeln(
     'Usage: dart run tool/schema_check.dart '
-    '[--tables-dir <path>] [--whitelist <Name1,Name2>]',
+    '[--tables-dir <path>] [--whitelist <Name1,Name2>] '
+    '[--check-fk-cascade <true|false>] [--fk-exempt <Name1,Name2>]',
   );
 }
 
@@ -290,6 +364,14 @@ void main(List<String> argv) {
 int _run(List<String> argv) {
   var tablesDir = _defaultTablesDir;
   Set<String> whitelist = _defaultWhitelist;
+  // AUD-core-database-01: on by default so the bare `dart run
+  // tool/schema_check.dart` invocation (Makefile / CI) always checks the
+  // real schema. Existing tests targeting the PK/composite-index invariant
+  // with synthetic single-table fixtures opt out explicitly, since those
+  // fixtures don't declare a real `LearnerProfiles` FK and aren't exercising
+  // this invariant.
+  var checkFkCascade = true;
+  Set<String> fkExempt = _fkCascadeExemptTables;
 
   for (var i = 0; i < argv.length; i++) {
     final arg = argv[i];
@@ -307,6 +389,30 @@ int _run(List<String> argv) {
         return 2;
       }
       whitelist = argv[++i]
+          .split(',')
+          .map((s) => s.trim())
+          .where((s) => s.isNotEmpty)
+          .toSet();
+    } else if (arg == '--check-fk-cascade') {
+      if (i + 1 >= argv.length) {
+        stderr.writeln('Error: --check-fk-cascade requires a value.');
+        _printUsage();
+        return 2;
+      }
+      final value = argv[++i].trim().toLowerCase();
+      if (value != 'true' && value != 'false') {
+        stderr.writeln('Error: --check-fk-cascade must be true or false.');
+        _printUsage();
+        return 2;
+      }
+      checkFkCascade = value == 'true';
+    } else if (arg == '--fk-exempt') {
+      if (i + 1 >= argv.length) {
+        stderr.writeln('Error: --fk-exempt requires a value.');
+        _printUsage();
+        return 2;
+      }
+      fkExempt = argv[++i]
           .split(',')
           .map((s) => s.trim())
           .where((s) => s.isNotEmpty)
@@ -329,31 +435,60 @@ int _run(List<String> argv) {
 
   final decls = _parseTablesDir(dir);
   final violations = _validate(decls, whitelist);
+  final fkViolations = checkFkCascade
+      ? _validateForeignKeyCascade(decls, fkExempt)
+      : const <_Violation>[];
 
-  if (violations.isEmpty) {
+  if (violations.isEmpty && fkViolations.isEmpty) {
     print(
       'schema_check OK — '
-      '${whitelist.length} profile-scoped tables verified.',
+      '${whitelist.length} profile-scoped tables verified'
+      '${checkFkCascade ? ' + FK-cascade check clean' : ''}.',
     );
     return 0;
   }
 
-  stderr.writeln(
-    'schema_check FAILED — '
-    '${violations.length} table(s) violate v1 invariants:\n',
-  );
-  for (final v in violations) {
-    stderr.writeln('  ${v.tableClass}  (${v.tableFile})');
-    for (final reason in v.reasons) {
-      stderr.writeln('    - $reason');
+  if (violations.isNotEmpty) {
+    stderr.writeln(
+      'schema_check FAILED — '
+      '${violations.length} table(s) violate v1 invariants:\n',
+    );
+    for (final v in violations) {
+      stderr.writeln('  ${v.tableClass}  (${v.tableFile})');
+      for (final reason in v.reasons) {
+        stderr.writeln('    - $reason');
+      }
+      stderr.writeln('');
     }
-    stderr.writeln('');
+    stderr.writeln(
+      'Remediation: see Story 25.1 / Story 25.6 in '
+      '`docs/planning/epics-greenfield-rebuild.md`. Every profile-scoped '
+      'table must have `profileId` in its profile-scoping key (PK or '
+      'composite UNIQUE) and at least one composite index / UNIQUE / PK.',
+    );
   }
-  stderr.writeln(
-    'Remediation: see Story 25.1 / Story 25.6 in '
-    '`docs/planning/epics-greenfield-rebuild.md`. Every profile-scoped '
-    'table must have `profileId` in its profile-scoping key (PK or '
-    'composite UNIQUE) and at least one composite index / UNIQUE / PK.',
-  );
+
+  if (fkViolations.isNotEmpty) {
+    stderr.writeln(
+      'schema_check FAILED — '
+      '${fkViolations.length} table(s) have a `profileId` column with no '
+      'FK-cascade to LearnerProfiles and no exemption entry:\n',
+    );
+    for (final v in fkViolations) {
+      stderr.writeln('  ${v.tableClass}  (${v.tableFile})');
+      for (final reason in v.reasons) {
+        stderr.writeln('    - $reason');
+      }
+      stderr.writeln('');
+    }
+    stderr.writeln(
+      'Remediation: see AUD-core-database-01. Add '
+      '`.references(LearnerProfiles, #id, onDelete: KeyAction.cascade)` to '
+      'the profileId column, or add the table to `_fkCascadeExemptTables` '
+      'in tool/schema_check.dart together with the matching '
+      'compensating-delete calls and regression test.',
+    );
+  }
+
   return 1;
 }

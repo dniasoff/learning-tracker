@@ -169,17 +169,63 @@ class ProfileDao extends DatabaseAccessor<UserDatabase> with _$ProfileDaoMixin {
 
   // ── Mirror wipe helpers (T5.lifecycle) ──────────────────────────────────
 
+  /// AUD-core-database-01: the 6 profile-scoped tables that do NOT carry an
+  /// `ON DELETE CASCADE` FK on `profileId` — see `tool/schema_check.dart`'s
+  /// `_fkCascadeExemptTables` for the authoritative list and the reasoning.
+  /// `ProfileRepositoryImpl.deleteProfile` already clears these explicitly
+  /// before removing a *own* `learner_profiles` row; the tutored-mirror wipe
+  /// path (below) must do the same or a revoked tutoring grant leaves the
+  /// child's mirrored curriculum/schedule data on the tutor's device forever.
+  ///
+  /// Ordering matters: `point_configs`/`study_day_configs` hold a
+  /// non-nullable FK to `curriculum_tracks` (PRAGMA foreign_keys = ON), so
+  /// they must be cleared BEFORE `curriculum_tracks` itself — mirrors the
+  /// order in `ProfileRepositoryImpl.deleteProfile`.
+  Future<void> _wipeNonCascadingMirrorRows(int profileId) async {
+    await (db.delete(
+      db.pointConfigs,
+    )..where((t) => t.profileId.equals(profileId))).go();
+    await (db.delete(
+      db.studyDayConfigs,
+    )..where((t) => t.profileId.equals(profileId))).go();
+    await (db.delete(
+      db.curriculumTracks,
+    )..where((t) => t.profileId.equals(profileId))).go();
+    await (db.delete(
+      db.profilePrograms,
+    )..where((t) => t.profileId.equals(profileId))).go();
+    await (db.delete(
+      db.dailyPlans,
+    )..where((t) => t.profileId.equals(profileId))).go();
+    await (db.delete(
+      db.outbox,
+    )..where((t) => t.profileId.equals(profileId))).go();
+  }
+
   /// Delete the tutored-mirror profile row for [grantId].
   ///
-  /// The FK `ON DELETE CASCADE` on every child table (completions,
-  /// streak_events, learning_ledger, bookmarks, goals, etc.) means a single
-  /// row delete here purges all mirrored data. Returns the number of rows
-  /// deleted (0 or 1).
+  /// The FK `ON DELETE CASCADE` on most child tables (completions,
+  /// streak_events, learning_ledger, bookmarks, goals, etc.) means the
+  /// `learner_profiles` row delete purges most mirrored data automatically.
+  /// AUD-core-database-01: 6 tables (curriculum_tracks, daily_plans, outbox,
+  /// point_configs, profile_programs, study_day_configs) have NO such FK, so
+  /// [_wipeNonCascadingMirrorRows] clears them explicitly first — in the same
+  /// transaction, so a mid-wipe crash never leaves a half-purged mirror.
+  /// Returns the number of `learner_profiles` rows deleted (0 or 1).
   Future<int> deleteTutoredMirrorByGrantId(String grantId) =>
-      (delete(learnerProfiles)..where(
-            (t) => t.isTutored.equals(true) & t.tutorGrantId.equals(grantId),
-          ))
-          .go();
+      db.transaction<int>(() async {
+        final row =
+            await (select(learnerProfiles)..where(
+                  (t) =>
+                      t.isTutored.equals(true) & t.tutorGrantId.equals(grantId),
+                ))
+                .getSingleOrNull();
+        if (row == null) return 0;
+        await _wipeNonCascadingMirrorRows(row.id);
+        return (delete(
+          learnerProfiles,
+        )..where((t) => t.id.equals(row.id))).go();
+      });
 
   /// Returns ALL tutored-mirror rows for [accountId] (own profiles excluded).
   ///
@@ -193,10 +239,19 @@ class ProfileDao extends DatabaseAccessor<UserDatabase> with _$ProfileDaoMixin {
 
   /// Delete ALL tutored-mirror rows for the current account (used on sign-out).
   ///
+  /// AUD-core-database-01: see [deleteTutoredMirrorByGrantId] — the same 6
+  /// non-cascading tables are cleared for every wiped mirror, in the same
+  /// transaction as the bulk `learner_profiles` delete.
   /// Returns the number of deleted rows (≥ 0).
   Future<int> deleteAllTutoredMirrors(int accountId) =>
-      (delete(learnerProfiles)..where(
-            (t) => t.accountId.equals(accountId) & t.isTutored.equals(true),
-          ))
-          .go();
+      db.transaction<int>(() async {
+        final rows = await getTutoredMirrorsForAccount(accountId);
+        for (final row in rows) {
+          await _wipeNonCascadingMirrorRows(row.id);
+        }
+        return (delete(learnerProfiles)..where(
+              (t) => t.accountId.equals(accountId) & t.isTutored.equals(true),
+            ))
+            .go();
+      });
 }

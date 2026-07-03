@@ -27,12 +27,27 @@ void main() {
     }
   });
 
-  Future<ProcessResult> runCheck({String? tablesDir, String? whitelist}) async {
+  Future<ProcessResult> runCheck({
+    String? tablesDir,
+    String? whitelist,
+    // AUD-core-database-01: the FK-cascade check is ON by default (it must
+    // be, so the bare `dart run tool/schema_check.dart` invocation used by
+    // the Makefile/CI actually checks it). These PK/composite-index tests
+    // use synthetic single-table fixtures that don't declare a real
+    // `LearnerProfiles` FK and aren't exercising that invariant, so they opt
+    // out explicitly — see the dedicated 'FK-cascade check' group below for
+    // FK-cascade coverage.
+    bool checkFkCascade = false,
+    String? fkExempt,
+  }) async {
     final args = <String>[
       'run',
       scriptPath,
       if (tablesDir != null) ...['--tables-dir', tablesDir],
       if (whitelist != null) ...['--whitelist', whitelist],
+      '--check-fk-cascade',
+      checkFkCascade.toString(),
+      if (fkExempt != null) ...['--fk-exempt', fkExempt],
     ];
     return Process.run('dart', args, workingDirectory: repoRoot);
   }
@@ -195,9 +210,12 @@ class OutboxLike extends Table {
     );
   });
 
-  test('default invocation passes against the live v1 schema', () async {
-    // No --tables-dir / --whitelist: exercise the real defaults so the
-    // tool is wired to actually check the repo.
+  test('default invocation passes against the live v1 schema '
+      '(PK/composite-index + FK-cascade, AUD-core-database-01)', () async {
+    // No --tables-dir / --whitelist / --check-fk-cascade: exercise the
+    // real defaults so the tool is wired to actually check the repo —
+    // this covers both the PK/composite-index invariant AND the
+    // FK-cascade invariant, since the latter defaults to ON.
     final result = await Process.run('dart', [
       'run',
       scriptPath,
@@ -208,6 +226,190 @@ class OutboxLike extends Table {
       reason:
           'live v1 schema must satisfy invariants.\n'
           'stdout=${result.stdout}\nstderr=${result.stderr}',
+    );
+    expect(result.stdout.toString(), contains('FK-cascade check clean'));
+  });
+
+  // ── AUD-core-database-01: FK-cascade check ─────────────────────────────
+  //
+  // A profile-scoped table's `profileId` column must carry an
+  // `.references(LearnerProfiles, ...)` FK, UNLESS it is named in
+  // `_fkCascadeExemptTables` — a deny-by-default check that scans every
+  // parsed table, not just ones on the PK/composite-index whitelist. This
+  // is what would have caught curriculum_tracks/daily_plans/outbox/
+  // point_configs/profile_programs/study_day_configs missing the FK before
+  // it became a silent tutored-mirror data-retention gap.
+
+  group('FK-cascade check (AUD-core-database-01)', () {
+    test('exits non-zero when a profileId column has no LearnerProfiles FK '
+        'and is not exempt', () async {
+      writeTable('missing_fk.dart', '''
+import 'package:drift/drift.dart';
+
+class MissingFk extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get profileId => integer()();
+  TextColumn get name => text()();
+
+  @override
+  List<Set<Column>> get uniqueKeys => [
+    {profileId, name},
+  ];
+}
+''');
+
+      final result = await runCheck(
+        tablesDir: fixtureDir.path,
+        whitelist: 'MissingFk',
+        checkFkCascade: true,
+      );
+
+      expect(result.exitCode, isNonZero);
+      expect(result.stderr.toString(), contains('MissingFk'));
+      expect(
+        result.stderr.toString(),
+        contains('FK-cascade'),
+        reason: 'failure output should name the FK-cascade invariant',
+      );
+      expect(
+        result.stderr.toString(),
+        contains('AUD-core-database-01'),
+        reason: 'failure output should point at the remediation doc',
+      );
+    });
+
+    test(
+      'exits 0 when a profileId column declares the LearnerProfiles FK',
+      () async {
+        writeTable('has_fk.dart', '''
+import 'package:drift/drift.dart';
+import 'package:learning_tracker/core/database/tables/learner_profiles.dart';
+
+class HasFk extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get profileId =>
+      integer().references(LearnerProfiles, #id, onDelete: KeyAction.cascade)();
+  TextColumn get name => text()();
+
+  @override
+  List<Set<Column>> get uniqueKeys => [
+    {profileId, name},
+  ];
+}
+''');
+
+        final result = await runCheck(
+          tablesDir: fixtureDir.path,
+          whitelist: 'HasFk',
+          checkFkCascade: true,
+        );
+
+        expect(
+          result.exitCode,
+          0,
+          reason: 'stdout=${result.stdout}\nstderr=${result.stderr}',
+        );
+      },
+    );
+
+    test('exits 0 when a profileId column has no FK but the table is listed '
+        'in --fk-exempt', () async {
+      writeTable('exempted.dart', '''
+import 'package:drift/drift.dart';
+
+class Exempted extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  IntColumn get profileId => integer()();
+  TextColumn get name => text()();
+
+  @override
+  List<Set<Column>> get uniqueKeys => [
+    {profileId, name},
+  ];
+}
+''');
+
+      final result = await runCheck(
+        tablesDir: fixtureDir.path,
+        whitelist: 'Exempted',
+        checkFkCascade: true,
+        fkExempt: 'Exempted',
+      );
+
+      expect(
+        result.exitCode,
+        0,
+        reason: 'stdout=${result.stdout}\nstderr=${result.stderr}',
+      );
+    });
+
+    test(
+      'a table WITHOUT a profileId column is never flagged, exempt or not',
+      () async {
+        writeTable('no_profile_id.dart', '''
+import 'package:drift/drift.dart';
+
+class NoProfileId extends Table {
+  IntColumn get id => integer().autoIncrement()();
+  TextColumn get name => text()();
+}
+''');
+
+        final result = await runCheck(
+          tablesDir: fixtureDir.path,
+          // Empty whitelist: this test targets ONLY the FK-cascade check —
+          // NoProfileId would also fail the (unrelated) PK/composite-index
+          // check if whitelisted for it, which is not what this test is
+          // about.
+          whitelist: '',
+          checkFkCascade: true,
+        );
+
+        expect(
+          result.exitCode,
+          0,
+          reason: 'stdout=${result.stdout}\nstderr=${result.stderr}',
+        );
+      },
+    );
+
+    test(
+      'the live v1 schema exemption list is exactly the AUD-core-database-01 '
+      '6 tables — a new violator must fail even without touching the '
+      'whitelist',
+      () async {
+        // Real tables dir, but shrink the fk-exempt list to empty so ANY
+        // real table missing the FK fails. This proves the 6 known-gap
+        // tables are the ONLY ones currently relying on the exemption —
+        // if a 7th ever appears, this test starts failing until it's
+        // deliberately added to `_fkCascadeExemptTables`.
+        final result = await Process.run('dart', [
+          'run',
+          scriptPath,
+          '--check-fk-cascade',
+          'true',
+          '--fk-exempt',
+          '',
+        ], workingDirectory: repoRoot);
+
+        expect(result.exitCode, isNonZero);
+        for (final table in [
+          'CurriculumTracks',
+          'DailyPlans',
+          'Outbox',
+          'PointConfigs',
+          'ProfilePrograms',
+          'StudyDayConfigs',
+        ]) {
+          expect(
+            result.stderr.toString(),
+            contains(table),
+            reason:
+                '$table is a known FK-cascade gap (AUD-core-database-01) and '
+                'must be reported when the exemption list is emptied',
+          );
+        }
+      },
     );
   });
 
