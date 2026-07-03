@@ -18,7 +18,7 @@ import 'package:learning_tracker/features/dashboard/presentation/providers/dashb
 import 'package:learning_tracker/features/profiles/presentation/providers/profile_providers.dart';
 import 'package:learning_tracker/features/scheduler/domain/models/daily_task.dart';
 import 'package:learning_tracker/features/scheduler/presentation/providers/scheduler_providers.dart';
-import 'package:learning_tracker/features/tutoring/presentation/providers/active_tutored_profile_provider.dart';
+import 'package:learning_tracker/features/tutoring/tutoring.dart';
 import 'package:learning_tracker/l10n/app_localizations.dart';
 
 @RoutePage()

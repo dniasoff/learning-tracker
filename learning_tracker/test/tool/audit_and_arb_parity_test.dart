@@ -207,6 +207,76 @@ void main() {
     );
   });
 
+  group('make audit check 15/15 — AUD-learning-02', () {
+    test(
+      'regression: learning_screen.dart tutoring import no longer flagged',
+      () async {
+        final result = await Process.run('make', [
+          'audit',
+        ], workingDirectory: packageDir);
+        expect(
+          result.stdout.toString(),
+          isNot(contains('learning_screen.dart:21')),
+          reason:
+              'learning_screen.dart now imports '
+              'activeTutoredProfileSelectionProvider via '
+              'features/tutoring/tutoring.dart, which already exported it',
+        );
+      },
+    );
+
+    test('AC1: adding then removing a throwaway cross-feature import flips '
+        'check 15/15 from clean to WARN and back', () async {
+      // A disposable feature directory outside any real feature, so this
+      // can never collide with a real barrel and is unmistakable debris
+      // if cleanup is ever interrupted.
+      final fixtureDir = Directory(
+        '$packageDir/lib/features/zzz_audit_fixture_do_not_commit',
+      );
+      final fixtureFile = File(
+        '${fixtureDir.path}/zzz_audit_fixture_do_not_commit.dart',
+      );
+
+      Future<String> auditStdout() async {
+        final result = await Process.run('make', [
+          'audit',
+        ], workingDirectory: packageDir);
+        return result.stdout.toString();
+      }
+
+      try {
+        await fixtureDir.create(recursive: true);
+        // A real cross-feature deep import (not through dashboard's own
+        // barrel) — exactly the shape check 15/15 exists to catch.
+        fixtureFile.writeAsStringSync(
+          "import 'package:learning_tracker/features/dashboard/"
+          "presentation/providers/dashboard_providers.dart';\n",
+        );
+
+        final withFixture = await auditStdout();
+        expect(
+          withFixture,
+          contains('zzz_audit_fixture_do_not_commit.dart'),
+          reason:
+              'a genuine new cross-feature deep import must be caught, '
+              'not silently swallowed like before AUD-guardrails-02',
+        );
+      } finally {
+        if (fixtureFile.existsSync()) fixtureFile.deleteSync();
+        if (fixtureDir.existsSync()) {
+          fixtureDir.deleteSync(recursive: true);
+        }
+      }
+
+      final clean = await auditStdout();
+      expect(
+        clean,
+        isNot(contains('zzz_audit_fixture_do_not_commit.dart')),
+        reason: 'removing the fixture restores a clean pass for that file',
+      );
+    });
+  });
+
   group('tool/arb_parity_check.dart (DNI-389 — Story 27.13 AC2)', () {
     final scriptPath = '$repoRoot/tool/arb_parity_check.dart';
 
