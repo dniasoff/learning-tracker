@@ -36,7 +36,7 @@ class NoHardcodedDomainTerm extends DartLintRule {
         "Hardcoded Torah domain term in UI — render via domainTermLabels / "
         'CurriculumLabels / l10n so it honours the Hebrew-terms + '
         'Ashkenazi/Sephardi settings.',
-    errorSeverity: ErrorSeverity.WARNING,
+    errorSeverity: DiagnosticSeverity.WARNING,
   );
 
   /// Curated, conservative list of high-signal Torah domain terms.
@@ -145,7 +145,7 @@ class NoHardcodedDomainTerm extends DartLintRule {
   /// [InstanceCreationExpression] or [MethodInvocation], else null.
   static String? _invocationName(AstNode? node) {
     if (node is InstanceCreationExpression) {
-      return node.constructorName.type.name2.lexeme;
+      return node.constructorName.type.name.lexeme;
     }
     if (node is MethodInvocation) {
       return node.methodName.name;

@@ -16,7 +16,7 @@ class NoCurriculumDisplayNameBypass extends DartLintRule {
         "Direct access to '.displayNameEn' / '.displayNameHe' is not allowed "
         'outside lib/core/labels/. '
         'Use CurriculumLabelRenderer instead.',
-    errorSeverity: ErrorSeverity.ERROR,
+    errorSeverity: DiagnosticSeverity.ERROR,
   );
 
   /// Property names that are restricted.

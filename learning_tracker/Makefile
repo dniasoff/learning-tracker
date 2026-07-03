@@ -274,7 +274,7 @@ lint: ## Run custom_lint (skips gracefully if not in pubspec)
 	  echo "custom_lint not in pubspec — skipping (add custom_lint to dev_dependencies when ready)"; \
 	fi
 
-audit: ## Run all 22 enforcement greps (NFR19) — exits non-zero on any violation
+audit: ## Run all 23 enforcement greps (NFR19) — exits non-zero on any violation
 	@echo "=== audit: enforcement greps ==="
 	@FAIL=0; \
 	echo "1/15 — No Firebase imports outside core/auth or core/sync"; \
@@ -497,9 +497,25 @@ audit: ## Run all 22 enforcement greps (NFR19) — exits non-zero on any violati
 	    FAIL=1; \
 	  fi; \
 	done; \
+	echo "23/23 — No custom_lint analyzer plugin marker (AUD-guardrails-03: breaks the dart analyze --fatal-infos hard gate)"; \
+	# analysis_server's legacy plugin loader re-resolves `custom_lint` from \
+	# pub.dev in an isolated pub context that ignores dependency_overrides — \
+	# since only custom_lint 0.8.1 is published (this project needs the \
+	# unreleased analyzer-9-compatible 0.8.2 git commit), enabling the marker \
+	# crashes `dart analyze --fatal-infos` (exit 4, even on a clean tree). \
+	# `flutter analyze` swallows the crash and still exits 0, so it will NOT \
+	# catch a regression here — this grep is the real backstop. See \
+	# docs/coding-standards.md "custom_lint toolchain status". \
+	if grep -qE '^\s*-\s*custom_lint\s*$$' analysis_options.yaml; then \
+	  echo "  analysis_options.yaml enables 'analyzer: plugins: [custom_lint]', which crashes"; \
+	  echo "  dart analyze --fatal-infos via analysis_server's legacy plugin loader (see comment"; \
+	  echo "  above the (now removed) plugins: key in analysis_options.yaml for the full story):"; \
+	  grep -nE '^\s*-\s*custom_lint\s*$$' analysis_options.yaml; \
+	  FAIL=1; \
+	fi; \
 	if [ "$$FAIL" -eq 1 ]; then \
 	  echo "=== audit FAILED — fix violations above ==="; \
 	  exit 1; \
 	else \
-	  echo "=== audit PASSED — all 22 greps clean ==="; \
+	  echo "=== audit PASSED — all 23 greps clean ==="; \
 	fi

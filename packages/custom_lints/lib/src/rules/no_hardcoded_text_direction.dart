@@ -26,7 +26,7 @@ class NoHardcodedTextDirection extends DartLintRule {
         "Use direction-aware alternatives (EdgeInsetsDirectional, "
         "AlignmentDirectional.centerStart/centerEnd, TextAlign.start/end) "
         "so the UI works correctly in both LTR and RTL locales.",
-    errorSeverity: ErrorSeverity.WARNING,
+    errorSeverity: DiagnosticSeverity.WARNING,
   );
 
   // -------------------------------------------------------------------------

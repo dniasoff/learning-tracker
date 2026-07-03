@@ -32,10 +32,9 @@ class NoEToStringInUi extends DartLintRule {
 
   static const _code = LintCode(
     name: 'no_e_to_string_in_ui',
-    problemMessage:
-        "Avoid calling '.toString()' on exception variables inside "
+    problemMessage: "Avoid calling '.toString()' on exception variables inside "
         'presentation/. Use a localised error message or AppErrorView instead.',
-    errorSeverity: ErrorSeverity.WARNING,
+    errorSeverity: DiagnosticSeverity.WARNING,
   );
 
   /// Identifier names commonly used for caught exceptions.

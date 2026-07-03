@@ -142,22 +142,19 @@ dev_dependencies:
   crypto: ^3.0.6
 
   # Custom lint rules (DNI-386/387)
-  # NOTE: custom_lint 0.8.1 requires analyzer ^8 but the project uses analyzer ^9
-  # (forced by json_serializable/riverpod_generator). The analysis-server plugin
-  # is disabled in analysis_options.yaml; enforcement runs via `dart run custom_lint`
-  # in a separate process that uses the packages/custom_lints env. Upgrade once
-  # custom_lint releases a version compatible with analyzer ^9.
+  # NOTE: custom_lint 0.8.1 is pub.dev's latest and requires analyzer ^8, but
+  # this project needs analyzer ^9 (forced by json_serializable/riverpod_generator).
+  # AUD-guardrails-03: pinned to a git commit with unreleased analyzer-9 support
+  # (see dependency_overrides below) so `dart run custom_lint` actually runs.
+  # The analysis-server plugin stays disabled in analysis_options.yaml — that is
+  # a separate, unverified code path; enforcement is via `dart run custom_lint`.
   custom_lint: ^0.8.1
   learning_tracker_lints:
     path: ../packages/custom_lints
   mongo_dart: ^0.10.8
 
 # Pin analyzer to 9.0.x so json_serializable >=9 and riverpod_generator ^4.0.3
-# resolve. custom_lint 0.8.1 requires analyzer ^8 but runs as a separate process
-# so the incompatibility only surfaces as a build failure of the plugin binary;
-# to avoid that, the plugin entry-point in analysis_options.yaml is disabled and
-# custom_lint is invoked directly via 'dart run custom_lint' from the
-# packages/custom_lints environment which has analyzer: ^8.
+# resolve.
   cloud_functions_platform_interface: any
   firebase_core_platform_interface: any
 dependency_overrides:
@@ -168,6 +165,30 @@ dependency_overrides:
   # Remove these pins once riverpod_generator supports analyzer ^10.
   json_serializable: ">=6.13.0 <6.13.1"
   mockito: ">=5.6.4 <5.6.5"
+  # AUD-guardrails-03: custom_lint 0.8.1 (pub.dev's latest) requires analyzer
+  # ^8, incompatible with analyzer ^9 above — `dart run custom_lint` crashed
+  # (exit 255) compiling custom_lint_core against analyzer 9 (Element2 was
+  # removed; see docs/coding-standards.md "custom_lint toolchain status").
+  # Upstream merged analyzer-9 support as 0.8.2 ("Handle analyzer 9.0", PR
+  # invertase/dart_custom_lint#374, 2025-12-30) but never published it to
+  # pub.dev — the repo now says it's "no longer under active development" in
+  # favor of package:analysis_server_plugin. Pin the git commit with that fix
+  # until either a pub.dev release appears or this repo migrates off custom_lint.
+  custom_lint:
+    git:
+      url: https://github.com/invertase/dart_custom_lint.git
+      ref: "2df6a13c5f02764878d8cadf4382724bffafb714"
+      path: packages/custom_lint
+  custom_lint_core:
+    git:
+      url: https://github.com/invertase/dart_custom_lint.git
+      ref: "2df6a13c5f02764878d8cadf4382724bffafb714"
+      path: packages/custom_lint_core
+  custom_lint_builder:
+    git:
+      url: https://github.com/invertase/dart_custom_lint.git
+      ref: "2df6a13c5f02764878d8cadf4382724bffafb714"
+      path: packages/custom_lint_builder
 
 flutter_launcher_icons:
   image_path: "assets/images/icon.png"

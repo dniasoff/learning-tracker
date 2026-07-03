@@ -20,7 +20,7 @@ class NoFeatureCrossImport extends DartLintRule {
     problemMessage:
         "Cross-feature import detected: 'features/X/…' imported from 'features/Y/…'. "
         "Only the barrel 'features/X/X.dart' is allowed across feature boundaries.",
-    errorSeverity: ErrorSeverity.ERROR,
+    errorSeverity: DiagnosticSeverity.ERROR,
   );
 
   // Matches: package:learning_tracker/features/<feature>/...
