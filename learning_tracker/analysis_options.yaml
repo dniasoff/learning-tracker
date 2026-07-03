@@ -7,10 +7,15 @@ analyzer:
   errors:
     invalid_annotation_target: ignore
     experimental_member_use: ignore
-  # custom_lint plugin intentionally omitted: custom_lint 0.8.1 requires
-  # analyzer ^8 but the project uses analyzer ^9 (forced by json_serializable
-  # and riverpod_generator). Loading the plugin crashes the analysis server.
-  # Custom lint rules are enforced separately via `dart run custom_lint`.
+  # AUD-guardrails-03: required so `dart run custom_lint` discovers this
+  # project as a workspace root (custom_lint's CLI checks for this marker
+  # even for the standalone command, not just IDE/analysis-server loading).
+  # Verified this does not surface plugin diagnostics through `dart analyze`
+  # itself (those only show via the dedicated `dart run custom_lint` CLI) and
+  # does not affect `flutter analyze`'s exit code — see
+  # docs/coding-standards.md "custom_lint toolchain status".
+  plugins:
+    - custom_lint
   language:
     strict-casts: true
     strict-inference: true

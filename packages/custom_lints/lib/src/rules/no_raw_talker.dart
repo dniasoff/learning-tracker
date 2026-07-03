@@ -22,7 +22,7 @@ class NoRawTalker extends DartLintRule {
     problemMessage:
         "Direct import of 'package:talker/talker.dart' is not allowed outside "
         "lib/core/logging/. Obtain the logger via the core logging abstraction.",
-    errorSeverity: ErrorSeverity.ERROR,
+    errorSeverity: DiagnosticSeverity.ERROR,
   );
 
   /// The exact URI that is restricted.

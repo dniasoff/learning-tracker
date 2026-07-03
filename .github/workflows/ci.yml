@@ -138,11 +138,17 @@ jobs:
           fi
 
   # ── 4. lint ────────────────────────────────────────────────────────────────
-  # Runs custom_lint when the package is present and the analyzer version is
-  # compatible. custom_lint 0.8.1 requires analyzer ^8 but the main app forces
-  # analyzer ^9 (needed by json_serializable/riverpod_generator). Until a
-  # custom_lint release supports analyzer ^9, this step emits a warning and
-  # continues so that the rest of CI is not blocked.
+  # Runs custom_lint. AUD-guardrails-03 (2026-07-03): pub.dev's latest
+  # custom_lint/custom_lint_core (0.8.1) only support analyzer ^8, but the app
+  # forces analyzer ^9 (needed by json_serializable/riverpod_generator) — this
+  # used to crash the tool outright. learning_tracker/pubspec.yaml and
+  # packages/custom_lints/pubspec.yaml now pin an unreleased-but-merged
+  # analyzer-9-compatible commit via dependency_overrides (see the comments
+  # there), so the tool runs and correctly reports real diagnostics. It still
+  # surfaces ~1,840 pre-existing violations across 8/9 rules that have never
+  # been enforced before, so this step stays warn-only (not a silent skip —
+  # see docs/coding-standards.md "custom_lint toolchain status") until that
+  # debt is remediated. Flip to hard-fail only after that lands.
   lint:
     name: lint
     runs-on: ubuntu-latest
@@ -172,11 +178,11 @@ jobs:
         working-directory: learning_tracker
         run: flutter pub get
 
-      - name: Run custom_lint (skip gracefully if package absent or incompatible)
+      - name: Run custom_lint (warn-only pending pre-existing-violation remediation)
         working-directory: learning_tracker
         run: |
           if dart pub deps --json 2>/dev/null | grep -q '"custom_lint"'; then
-            dart run custom_lint || echo "::warning::custom_lint failed — likely analyzer version conflict (custom_lint 0.8.1 needs analyzer ^8, project uses ^9). Upgrade custom_lint when a ^9-compatible release is available."
+            dart run custom_lint || echo "::warning::custom_lint reported violations — tool itself is fixed (AUD-guardrails-03); see docs/coding-standards.md for the pre-existing-debt count and remediation status."
           else
             echo "::notice::custom_lint not in pubspec — skipping"
           fi

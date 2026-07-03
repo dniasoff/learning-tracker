@@ -759,11 +759,45 @@ Root-Makefile-only check to port on consolidation: **No `EdgeInsets.only(left:|r
 | format-check | `dart format --set-exit-if-changed .` | hard gate |
 | analyze | codegen (`build_runner`, asset prep) then `dart analyze --fatal-infos` | hard gate |
 | audit | `make audit` | ⚠️ **soft-skips** if target considered absent — must hard-fail |
-| custom_lint | `dart run custom_lint` | ⚠️ **warn-only** (custom_lint 0.8.1 needs analyzer ^8; app pins ^9 — upgrade when compatible) |
+| custom_lint | `dart run custom_lint` | ⚠️ **warn-only** — tool is fixed (AUD-guardrails-03) and runs clean of crashes, but the codebase has ~1,840 pre-existing violations across 8/9 rules; hard-fail once that debt is remediated |
 | test + coverage | `make ci` then lcov floor | hard gate, line coverage ≥ 60% (generated files excluded), cannot drop on a PR |
 | firestore-rules | emulator + `firestore_rules.test.mjs` | ⚠️ **soft-skips** if the suite file is missing — must hard-fail (TQ-9) |
 
 Until the soft-skips are removed, **local `make audit` + `dart run custom_lint` are the real gate** — run them.
+
+#### custom_lint toolchain status (AUD-guardrails-03, resolved 2026-07-03)
+
+pub.dev's latest `custom_lint`/`custom_lint_core` (0.8.1) only support analyzer
+`^8`, but this project pins analyzer `^9` (forced by `json_serializable` /
+`riverpod_generator`) — running `dart run custom_lint` used to crash with exit
+255 compiling `custom_lint_core` against analyzer 9 (`Element2` was removed).
+Upstream (`invertase/dart_custom_lint`) merged analyzer-9 support as 0.8.2
+("Handle analyzer 9.0", PR #374, 2025-12-30) but never published it to
+pub.dev — the repo's README now says the project is "no longer under active
+development" in favour of `package:analysis_server_plugin`. Until this repo
+migrates off custom_lint (a rewrite of all 9 rules — tracked as a follow-up,
+not done here), `learning_tracker/pubspec.yaml` and
+`packages/custom_lints/pubspec.yaml` pin the unreleased 0.8.2 commit via
+`dependency_overrides` (`git:` + `path:`, see the comments in both files for
+the exact ref), and `learning_tracker/analysis_options.yaml` re-enables
+`analyzer: plugins: [custom_lint]` (verified not to affect `dart analyze` —
+plugin diagnostics don't surface there, only via the dedicated CLI, so this
+is required for `dart run custom_lint` to discover the project at all).
+
+With the crash fixed, `dart run custom_lint` now performs a real analysis and
+correctly reports genuine violations — verified by injecting a deliberate
+raw-`talker`-import violation and confirming it was caught before removing
+it. Running it against the current tree reports **1,840 issues** across 8 of
+the 9 rules (only `no_hardcoded_domain_term` is currently clean):
+`no_feature_cross_import` (1,193), `no_color_literal_outside_theme` (474),
+`no_curriculum_display_name_bypass` (114), `no_e_to_string_in_ui` (32),
+`no_raw_talker` (13), `no_raw_logevent` (8), `no_firebase_outside_core` (5),
+`no_hardcoded_text_direction` (1). This is pre-existing debt the rules have
+never been able to see before now — not a regression from this fix. It
+mirrors `make audit` checks #14–15, which tolerate the same
+cross-feature/core-import legacy violations as warn-only pending a
+Wave-2 cleanup. Remediating the 1,840 violations (or re-triaging severities)
+is a separate, tracked follow-up; CI stays warn-only until that lands.
 
 ---
 
@@ -796,7 +830,8 @@ Live violations of the rules above, verified in the working tree on this date. E
 | No committed `storage.rules` | ST-1 | Storage serves `content/v1/...` on console-only rules |
 | Two `firebase.json` disagree on the Firestore emulator port (9090 vs 8080) | TQ-9 | root vs `learning_tracker/`; rules suite hardcodes 8080 |
 | `make ci` doesn't run `test-rules`; CI rules job soft-skips | TQ-9 | `learning_tracker/Makefile` `ci:` target; `ci.yml` |
-| CI soft-skips `audit` and runs custom_lint warn-only | Rule 0 | `ci.yml` — local runs are the real gate meanwhile |
+| CI soft-skips `audit` | Rule 0 | `ci.yml` — local `make audit` is the real gate meanwhile |
+| custom_lint runs clean (AUD-guardrails-03 fixed the toolchain) but reports ~1,840 pre-existing violations across 8/9 rules; CI stays warn-only | Rule 0 | see "custom_lint toolchain status" under Enforcement above |
 | Two divergent Makefile audit sets; RTL grep only in root | AX-1, Rule 0 | consolidate into one authoritative target |
 | ~121 legacy Riverpod provider usages | SM-1 | migration backlog; diff-scoped enforcement meanwhile |
 | No `drift_schemas/` exports or generated migration tests (schemaVersion 32) | DB-4 | adopt `drift_dev schema dump` workflow |

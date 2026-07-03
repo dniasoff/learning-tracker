@@ -21,7 +21,7 @@ class NoFirebaseOutsideCore extends DartLintRule {
     problemMessage:
         "Firebase packages may only be imported inside lib/core/auth/ or "
         "lib/core/sync/. Use the domain abstractions from those layers instead.",
-    errorSeverity: ErrorSeverity.ERROR,
+    errorSeverity: DiagnosticSeverity.ERROR,
   );
 
   /// Firebase package URI prefixes that are restricted.

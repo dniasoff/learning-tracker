@@ -37,7 +37,7 @@ class NoRawLogEvent extends DartLintRule {
         "Direct calls to 'logEvent(name, …)' are not allowed outside "
         'analytics_service.dart. '
         'Add a typed helper method to AnalyticsService and call that instead.',
-    errorSeverity: ErrorSeverity.ERROR,
+    errorSeverity: DiagnosticSeverity.ERROR,
   );
 
   /// Returns true when [filePath] is the authorised analytics service file.

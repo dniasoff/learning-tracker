@@ -7,9 +7,40 @@ environment:
   sdk: '>=3.0.0 <4.0.0'
 
 dependencies:
-  analyzer: ^8.0.0
+  analyzer: ^9.0.0
   analyzer_plugin: ^0.13.0
   custom_lint_builder: ^0.8.1
 
 dev_dependencies:
   test: ^1.24.0
+
+# AUD-guardrails-03: pub.dev's latest custom_lint_builder/custom_lint_core
+# (0.8.1) only support analyzer ^8, which conflicts with this workspace's
+# analyzer ^9 (forced by json_serializable/riverpod_generator — see
+# learning_tracker/pubspec.yaml). Upstream (invertase/dart_custom_lint)
+# merged analyzer 9 support as 0.8.2 ("Handle analyzer 9.0", PR #374,
+# 2025-12-30) but never published it to pub.dev — the repo's README now
+# says the project is "no longer under active development" in favor of
+# package:analysis_server_plugin. Until this repo migrates off custom_lint
+# (a rewrite of all 9 rules — out of scope here), pin the git commit that
+# has the analyzer-9-compatible 0.8.2 build so `dart run custom_lint`
+# actually runs. Re-evaluate if 0.8.2+ ever lands on pub.dev.
+dependency_overrides:
+  custom_lint_builder:
+    git:
+      url: https://github.com/invertase/dart_custom_lint.git
+      ref: "2df6a13c5f02764878d8cadf4382724bffafb714"
+      path: packages/custom_lint_builder
+  custom_lint_core:
+    git:
+      url: https://github.com/invertase/dart_custom_lint.git
+      ref: "2df6a13c5f02764878d8cadf4382724bffafb714"
+      path: packages/custom_lint_core
+  # custom_lint_builder@0.8.2 (git) has a tight `custom_lint: 0.8.2` dependency;
+  # that exact version isn't on pub.dev either, so it must be overridden here
+  # too even though this package never runs the custom_lint CLI itself.
+  custom_lint:
+    git:
+      url: https://github.com/invertase/dart_custom_lint.git
+      ref: "2df6a13c5f02764878d8cadf4382724bffafb714"
+      path: packages/custom_lint

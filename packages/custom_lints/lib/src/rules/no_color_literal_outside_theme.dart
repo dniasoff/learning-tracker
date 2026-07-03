@@ -39,7 +39,7 @@ class NoColorLiteralOutsideTheme extends DartLintRule {
     problemMessage:
         "Direct Color(0x…) hex literals are not allowed outside lib/core/theme/. "
         "Use a named constant from AppColors or AppTheme instead.",
-    errorSeverity: ErrorSeverity.WARNING,
+    errorSeverity: DiagnosticSeverity.WARNING,
   );
 
   /// Returns true when the file is inside the authorised theme directory.
@@ -70,7 +70,7 @@ class NoColorLiteralOutsideTheme extends DartLintRule {
 
     context.registry.addInstanceCreationExpression((node) {
       // Only flag `Color(...)` constructor calls.
-      final typeName = node.constructorName.type.name2.lexeme;
+      final typeName = node.constructorName.type.name.lexeme;
       if (typeName != 'Color') return;
 
       // Must have exactly one argument that is a hex integer literal.
