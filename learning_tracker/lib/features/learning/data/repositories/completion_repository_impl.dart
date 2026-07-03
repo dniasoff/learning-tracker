@@ -746,8 +746,11 @@ class CompletionRepositoryImpl implements CompletionRepository {
 
   /// Append a streak event locally and tee it into the outbox for cloud sync.
   ///
-  /// Silently ignores the unique-key conflict that happens when the same
-  /// completion is teed twice (idempotent).
+  /// The natural key `(profileId, dayUtc, eventType)` is UNIQUE (DNI-323),
+  /// so the same completion teed twice in one day is an EXPECTED, benign
+  /// conflict — `insertOrIgnore` below makes SQLite silently skip that row
+  /// instead of throwing. There is nothing to catch or log for that specific
+  /// case; it never reaches [_appendStreakEvent]'s catch clause at all.
   ///
   /// Phase 1 — streak events used to be local-only on completion; only the
   /// once-per-upgrade `LocalDataUploadService.pushAllLocalData` shipped them
@@ -791,8 +794,23 @@ class CompletionRepositoryImpl implements CompletionRepository {
         );
         await facade.enqueueStreakPayload(payload);
       }
-    } catch (_) {
-      // Defensive: never let a telemetry tee block the primary write.
+    } on Exception catch (e, stackTrace) {
+      // AUD-learning-06 / EH-3 / EH-4: narrowed from a bare `catch (_)`,
+      // which also trapped programming-error Errors (masking real bugs) and
+      // logged nothing — a codec bug, closed-DB race, or genuine outbox
+      // failure was indistinguishable from the benign duplicate-key case
+      // documented above (which, per insertOrIgnore, never actually reaches
+      // here). Every Exception that does reach this point is unexpected:
+      // still never let this "telemetry tee" block or roll back the primary
+      // completion write (this runs inside markComplete's transaction), but
+      // always log it so the gap is visible in Crashlytics/Talker instead of
+      // silently dropped.
+      AppLogger.instance.error(
+        event: 'completion_streak_tee_failed',
+        fields: {'profileId': profileId},
+        exception: e,
+        stackTrace: stackTrace,
+      );
     }
   }
 
