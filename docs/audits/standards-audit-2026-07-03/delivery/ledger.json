@@ -215,13 +215,15 @@
     {
       "id": "AUD-learning-02",
       "wave": 0,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P1",
       "title": "Reconcile the Rule 2 barrel filename (providers.dart vs Y.dart) and fix the dead cross-feature-import checker",
-      "commits": [],
+      "commits": [
+        "8a071e37"
+      ],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "Wave-0 build attempt landed unmerged on branch worktree-wf_db098473-725-2 (commit 8a071e37, tip of the chained component). Run ended (no-progress cap / loop end) before an independent review+merge -- needs re-review, not a rebuild, next sitting."
     },
     {
       "id": "AUD-tracks-03",
@@ -259,13 +261,15 @@
     {
       "id": "AUD-guardrails-01",
       "wave": 0,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P1",
       "title": "Add Goals to tool/schema_check.dart's whitelist — the profileId-in-PK Rule-0 checker silently skips it",
-      "commits": [],
+      "commits": [
+        "c7d271fe"
+      ],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "Wave-0 build attempt landed unmerged on branch worktree-wf_db098473-725-2 (commit c7d271fe); gates reported green in the commit body (schema_check, goal_dao tests, flutter analyze, make audit). Run ended (no-progress cap / loop end) before an independent review+merge -- needs re-review, not a rebuild, next sitting."
     },
     {
       "id": "AUD-app-02",
@@ -501,13 +505,15 @@
     {
       "id": "AUD-guardrails-02",
       "wave": 0,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P1",
       "title": "Fix the cross-feature-deep-import checker (Makefile audit 15/15) — its awk logic can never fire",
-      "commits": [],
+      "commits": [
+        "30dc641c"
+      ],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "Wave-0 build attempt landed unmerged on branch worktree-wf_db098473-725-2 (commit 30dc641c, chained in the same file-overlap component). Run ended (no-progress cap / loop end) before an independent review+merge -- needs re-review, not a rebuild, next sitting."
     },
     {
       "id": "AUD-dashboard-02",
@@ -765,13 +771,15 @@
     {
       "id": "AUD-learning-01",
       "wave": 0,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P1",
       "title": "Harden or test the failure path of the unawaited CompletionDetectionService call in CompletionRepositoryImpl.markComplete",
-      "commits": [],
+      "commits": [
+        "e01d5269"
+      ],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "Wave-0 build attempt landed unmerged on branch worktree-wf_db098473-725-1 (commit e01d5269); gates reported green in the commit body (6 targeted flutter test files, flutter analyze, make audit). Run ended (no-progress cap / loop end) before an independent review+merge -- needs re-review, not a rebuild, next sitting."
     },
     {
       "id": "AUD-onboarding-05",
@@ -974,13 +982,16 @@
     {
       "id": "AUD-guardrails-03",
       "wave": 0,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P1",
       "title": "Repair the broken custom_lint toolchain so the nine custom lints enforce again",
-      "commits": [],
-      "reviewRounds": 0,
+      "commits": [
+        "895774b8",
+        "2d304875"
+      ],
+      "reviewRounds": 1,
       "acVerified": [],
-      "notes": ""
+      "notes": "Wave-0 build attempted twice. Round 1 (895774b8, branch worktree-wf_db098473-725-3: analyzer-9 dependency_overrides pin) was bounced by opus review on 3 findings -- dart-analyze plugin-loader regression, overstated AC1 status, missing regression guard. Round 2 (2d304875, reachable only via worktree wf_db098473-725-43's detached HEAD + this session's reflog -- NOT on a named branch) addresses all three per its commit body, incl. a new make-audit check 23/23 guarding the regression class. Round 2 never reached a recorded re-review/merge before the run ended (no-progress cap / loop end). Needs re-review, not a rebuild; 2d304875 should be salvaged to a named branch (doctrine 3.12b) before any worktree cleanup -- it is the least durably-anchored commit in this wave's residue."
     },
     {
       "id": "AUD-sync-01",
@@ -1007,13 +1018,15 @@
     {
       "id": "AUD-learning-03",
       "wave": 0,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P1",
       "title": "Wrap LearningLedgerRepositoryImpl's ledger insert and outbox enqueue in one transaction",
-      "commits": [],
+      "commits": [
+        "34e0fac9"
+      ],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "Wave-0 build attempt landed unmerged on branch worktree-wf_db098473-725-4 (commit 34e0fac9); gates reported green in the commit body. Run ended (no-progress cap / loop end) before an independent review+merge -- needs re-review, not a rebuild, next sitting."
     },
     {
       "id": "AUD-firebase-02",
@@ -1370,13 +1383,15 @@
     {
       "id": "AUD-core-logging-01",
       "wave": 0,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "Guard CrashlyticsService's unawaited analytics calls with catchError — unguarded rejection can re-enter the runZonedGuarded fatal-error handler",
-      "commits": [],
+      "commits": [
+        "29447a74"
+      ],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "not attempted: no-progress cap / loop end [engine-reported classification, applied per orchestrator instruction]. Reconciliation correction: a build attempt DOES exist on disk -- commit 29447a74 on branch worktree-wf_db098473-725-7, with a red-to-green test transition and green flutter analyze / make audit / arb-parity reported in the commit body. This item was in fact built; it never reached a recorded review/merge before the no-progress-cap checkpoint ended the run. Treat as needing review+merge, not a rebuild, next sitting -- flagged for the wave-0 closing-gate reviewer."
     },
     {
       "id": "AUD-core-domain-02",
@@ -1502,13 +1517,16 @@
     {
       "id": "AUD-core-labels-03",
       "wave": 0,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "Regenerate and commit stale codegen for curriculum_label_providers and 2 other .g.dart files; add the AG-7 freshness gate",
-      "commits": [],
+      "commits": [
+        "78524345",
+        "de75c49c"
+      ],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "Wave-0 build attempt landed unmerged on branch worktree-wf_db098473-725-6: 78524345 regenerates the 3 stale .g.dart files, de75c49c adds the AG-7 codegen-freshness CI gate. Gates reported green in both commit bodies. Run ended (no-progress cap / loop end) before an independent review+merge -- needs re-review, not a rebuild, next sitting."
     },
     {
       "id": "AUD-profiles-11",
@@ -1711,13 +1729,15 @@
     {
       "id": "AUD-learning-06",
       "wave": 0,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "Narrow and log the catch-all in CompletionRepositoryImpl._appendStreakEvent",
-      "commits": [],
+      "commits": [
+        "73c48955"
+      ],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "Wave-0 build attempt landed unmerged on branch worktree-wf_db098473-725-1 (commit 73c48955, chained in the same file-overlap component). Run ended (no-progress cap / loop end) before an independent review+merge -- needs re-review, not a rebuild, next sitting."
     },
     {
       "id": "AUD-scheduler-11",
@@ -3130,24 +3150,28 @@
     {
       "id": "AUD-learning-07",
       "wave": 0,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "Wire BatchPlan into CompletionWriter.commitBatch or delete the unused sealed hierarchy and its test",
-      "commits": [],
+      "commits": [
+        "28e9fe2d"
+      ],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "Wave-0 build attempt landed unmerged on branch worktree-wf_db098473-725-1 (commit 28e9fe2d, chained in the same file-overlap component). Run ended (no-progress cap / loop end) before an independent review+merge -- needs re-review, not a rebuild, next sitting."
     },
     {
       "id": "AUD-learning-08",
       "wave": 0,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "Wire up or delete the dead CompletionAnimation / CompletionFeedbackController widgets",
-      "commits": [],
+      "commits": [
+        "23f0d924"
+      ],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "Wave-0 build attempt landed unmerged on branch worktree-wf_db098473-725-10 (commit 23f0d924). Run ended (no-progress cap / loop end) before an independent review+merge -- needs re-review, not a rebuild, next sitting."
     },
     {
       "id": "AUD-notifications-06",
@@ -3878,13 +3902,13 @@
     {
       "id": "AUD-learning-05",
       "wave": 0,
-      "status": "todo",
+      "status": "skipped-refuted",
       "severity": "P2",
       "title": "Mirror the daily-task-card chevron icon for RTL (Icons.chevron_right_rounded needs matchTextDirection)",
       "commits": [],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "Wave-0 engine classification: skipped-refuted (no code change; no commit exists for this id anywhere in the run's history). The register verify step had rated this CONFIRMED/UPHELD (1/1, no refutations) at audit time, and the current tree still shows both call sites (learning_screen.dart:509,615) without matchTextDirection -- so this was not refuted as already-fixed-in-code. This reconciliation pass could not recover the wave-0 builder/reviewer's specific delivery-time refutation rationale from any persisted artifact (no review transcript or write-up survives on disk; only the engine's summary verdict was handed to this reconciliation step). See delivery/kill-log-addendum.md. Flagged for the wave-0 closing-gate reviewer to confirm or reopen with real evidence before this wave is certified."
     },
     {
       "id": "AUD-notifications-08",
@@ -4208,13 +4232,15 @@
     {
       "id": "AUD-docs-04",
       "wave": 0,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "Archive the stale 993-line root coding-standards.md superseded by docs/coding-standards.md",
-      "commits": [],
+      "commits": [
+        "f55ef55a"
+      ],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "Wave-0 build attempt landed unmerged on branch worktree-wf_db098473-725-8 (commit f55ef55a). Run ended (no-progress cap / loop end) before an independent review+merge -- needs re-review, not a rebuild, next sitting."
     },
     {
       "id": "AUD-t-story-acceptance-03",
@@ -4329,13 +4355,15 @@
     {
       "id": "AUD-guardrails-17",
       "wave": 0,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "Wire packages/custom_lints/test/ into CI or a make target — the entire suite runs nowhere today",
-      "commits": [],
+      "commits": [
+        "3e859e9c"
+      ],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "Wave-0 build attempt landed unmerged on branch worktree-wf_db098473-725-9 (commit 3e859e9c). Run ended (no-progress cap / loop end) before an independent review+merge -- needs re-review, not a rebuild, next sitting."
     },
     {
       "id": "AUD-guardrails-06",
@@ -4417,13 +4445,15 @@
     {
       "id": "AUD-learning-04",
       "wave": 0,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "Inject BookmarkRepository (with its ContentIndex) into CompletionRepositoryImpl instead of ad-hoc-constructing it for delegated profiles",
-      "commits": [],
+      "commits": [
+        "883990c5"
+      ],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "Wave-0 build attempt landed unmerged on branch worktree-wf_db098473-725-1 (commit 883990c5, chained after AUD-learning-01 in the same file-overlap component). Run ended (no-progress cap / loop end) before an independent review+merge -- needs re-review, not a rebuild, next sitting."
     },
     {
       "id": "AUD-onboarding-11",
@@ -4516,13 +4546,15 @@
     {
       "id": "AUD-repo-01",
       "wave": 0,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P2",
       "title": "De-duplicate 7 public type names defined in two files each (AG-4)",
-      "commits": [],
+      "commits": [
+        "a3619891"
+      ],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "Wave-0 build attempt landed unmerged on branch worktree-wf_db098473-725-5 (commit a3619891, lands the AG-4 audit check); gates reported green in the commit body (~450 tests across touched renames, make audit, dart analyze). Run ended (no-progress cap / loop end) before an independent review+merge -- needs re-review, not a rebuild, next sitting."
     },
     {
       "id": "AUD-docs-11",
@@ -6122,13 +6154,15 @@
     {
       "id": "AUD-repo-04",
       "wave": 0,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P3",
       "title": "Remove committed build artifacts (build/) and the accidental 'clear' file from git",
-      "commits": [],
+      "commits": [
+        "5801fc99"
+      ],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "Wave-0 build attempt landed unmerged on branch worktree-wf_db098473-725-13 (commit 5801fc99). Run ended (no-progress cap / loop end) before an independent review+merge -- needs re-review, not a rebuild, next sitting."
     },
     {
       "id": "AUD-t-story-acceptance-26",
@@ -6782,35 +6816,41 @@
     {
       "id": "AUD-learning-10",
       "wave": 0,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P3",
       "title": "Inject RewardMilestoneService into CompletionRepositoryImpl instead of constructing it ad hoc per call",
-      "commits": [],
+      "commits": [
+        "1f965295"
+      ],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "Wave-0 build attempt landed unmerged on branch worktree-wf_db098473-725-1 (commit 1f965295, chained in the same file-overlap component). Run ended (no-progress cap / loop end) before an independent review+merge -- needs re-review, not a rebuild, next sitting."
     },
     {
       "id": "AUD-learning-09",
       "wave": 0,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P3",
       "title": "Add the required inline keepAlive justification to CompletionCommitted and OptimisticCompletionState",
-      "commits": [],
+      "commits": [
+        "a1f7e124"
+      ],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "Wave-0 build attempt landed unmerged on branch worktree-wf_db098473-725-11 (commit a1f7e124). Run ended (no-progress cap / loop end) before an independent review+merge -- needs re-review, not a rebuild, next sitting."
     },
     {
       "id": "AUD-learning-11",
       "wave": 0,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P3",
       "title": "Remove the completion_source.dart re-export from mark_completion_use_case.dart",
-      "commits": [],
+      "commits": [
+        "2294dac3"
+      ],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "Wave-0 build attempt landed unmerged on branch worktree-wf_db098473-725-1 (commit 2294dac3, tip of the chained component). Run ended (no-progress cap / loop end) before an independent review+merge -- needs re-review, not a rebuild, next sitting."
     },
     {
       "id": "AUD-t-learning-03",
@@ -7563,13 +7603,15 @@
     {
       "id": "AUD-repo-05",
       "wave": 0,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P3",
       "title": "Remove the inert .gitattributes merge=beads directive for a gitignored path",
-      "commits": [],
+      "commits": [
+        "0c4c0c41"
+      ],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "Wave-0 build attempt landed unmerged on branch worktree-wf_db098473-725-14 (commit 0c4c0c41). Run ended (no-progress cap / loop end) before an independent review+merge -- needs re-review, not a rebuild, next sitting."
     },
     {
       "id": "AUD-guardrails-29",
@@ -8102,24 +8144,28 @@
     {
       "id": "AUD-repo-03",
       "wave": 0,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P3",
       "title": "Archive legacy _bmad-output/ reports per the CLAUDE.md output-path policy",
-      "commits": [],
+      "commits": [
+        "3ce64b84"
+      ],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "Wave-0 build attempt landed unmerged on branch worktree-wf_db098473-725-12 (commit 3ce64b84). Run ended (no-progress cap / loop end) before an independent review+merge -- needs re-review, not a rebuild, next sitting."
     },
     {
       "id": "AUD-repo-02",
       "wave": 0,
-      "status": "todo",
+      "status": "blocked",
       "severity": "P3",
       "title": "Add Linear IDs to the 8 untracked TODO/FIXME comments (AG-6)",
-      "commits": [],
+      "commits": [
+        "ddc2af09"
+      ],
       "reviewRounds": 0,
       "acVerified": [],
-      "notes": ""
+      "notes": "Wave-0 build attempt landed unmerged on branch worktree-wf_db098473-725-5 (commit ddc2af09, chained after AUD-repo-01 in the same file-overlap component). Run ended (no-progress cap / loop end) before an independent review+merge -- needs re-review, not a rebuild, next sitting."
     },
     {
       "id": "AUD-t-story-acceptance-27",
